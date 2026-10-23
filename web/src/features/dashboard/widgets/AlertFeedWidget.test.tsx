@@ -208,17 +208,16 @@ describe('AlertFeedWidget — shell states', () => {
 });
 
 describe('AlertFeedWidget — populated narrow tile', () => {
-  it('renders one drill-through row per alert with severity-label subtitles', () => {
+  it('renders one drill-through row per alert with no severity subtitles', () => {
     renderWidget(NARROW);
 
     expect(screen.getByText('Battery critically low')).toBeInTheDocument();
     expect(screen.getByText('Tire pressure warning')).toBeInTheDocument();
     expect(screen.getByText('Software update available')).toBeInTheDocument();
 
-    // Subtitle = severity label (narrow tile) — one per canonical severity.
-    expect(screen.getByText('Critical')).toBeInTheDocument();
-    expect(screen.getByText('Warning')).toBeInTheDocument();
-    expect(screen.getByText('Info')).toBeInTheDocument();
+    expect(screen.queryByText('Critical')).not.toBeInTheDocument();
+    expect(screen.queryByText('Warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('Info')).not.toBeInTheDocument();
 
     expect(screen.getAllByRole('link')).toHaveLength(3);
   });
@@ -244,39 +243,45 @@ describe('AlertFeedWidget — populated narrow tile', () => {
     expect(href).not.toContain('vehicle_id');
   });
 
-  it('normalises legacy severities: an "error" alert is labelled "Critical"', () => {
+  it('normalises legacy severities without adding a visible severity label', () => {
     mockAlerts.mockReturnValue(
       qr({ data: [makeAlert({ id: 9, severity: 'error', title: 'Fault detected', message: 'Inverter fault' })] }),
     );
     renderWidget(NARROW);
 
     expect(screen.getByText('Fault detected')).toBeInTheDocument();
-    expect(screen.getByText('Critical')).toBeInTheDocument();
+    expect(screen.queryByText('Critical')).not.toBeInTheDocument();
   });
 });
 
 describe('AlertFeedWidget — wide tile', () => {
-  it('shows the alert message as the subtitle and suppresses the severity label', () => {
+  it('shows the alert title without a fabricated message or severity label', () => {
     renderWidget(WIDE);
 
-    expect(screen.getByText('Pack at 2%')).toBeInTheDocument();
-    expect(screen.getByText('Front-left soft')).toBeInTheDocument();
-    expect(screen.getByText('v2025 is ready')).toBeInTheDocument();
+    expect(screen.queryByText('Pack at 2%')).not.toBeInTheDocument();
+    expect(screen.queryByText('Front-left soft')).not.toBeInTheDocument();
+    expect(screen.queryByText('v2025 is ready')).not.toBeInTheDocument();
 
-    // Labels are not used as subtitles on a wide tile.
     expect(screen.queryByText('Critical')).toBeNull();
     expect(screen.queryByText('Warning')).toBeNull();
   });
 
-  it('falls back to the severity label when a wide-tile alert has an empty message', () => {
+  it('does not add a severity label for a wide-tile alert with an empty message', () => {
     mockAlerts.mockReturnValue(
       qr({ data: [makeAlert({ id: 5, severity: 'critical', title: 'Silent alert', message: '' })] }),
     );
     renderWidget(WIDE);
 
     expect(screen.getByText('Silent alert')).toBeInTheDocument();
-    // Pre-hardening the row would have had no subtitle at all.
-    expect(screen.getByText('Critical')).toBeInTheDocument();
+    expect(screen.queryByText('Critical')).not.toBeInTheDocument();
+  });
+
+  it('renders a truthful attention summary and All alerts footer link', () => {
+    renderWidget(WIDE);
+
+    expect(screen.getByText('2 need attention')).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: /All alerts/i });
+    expect(link).toHaveAttribute('href', '/notifications/inbox');
   });
 });
 
@@ -307,7 +312,7 @@ describe('AlertFeedWidget — null-safety & sizing', () => {
     mockAlerts.mockReturnValue(qr({ data: makeMany(15) }));
     renderWidget(WIDE);
 
-    expect(screen.getAllByRole('link')).toHaveLength(12);
+    expect(screen.getAllByRole('listitem')).toHaveLength(12);
   });
 });
 

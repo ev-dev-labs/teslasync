@@ -1,17 +1,17 @@
 import { useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trophy } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
-import { Button } from '@/components/ui';
 import { useLifetimeStats } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useAchievementCelebrationPrefs } from '@/hooks/useAchievementCelebrationPrefs';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { safeArray } from '@/lib/safeArray';
-import { AchievementBadge } from '@/features/analytics/components/AchievementBadge';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { Caption, Text } from '@/components/ui';
 
 /**
  * Parse an achievement `unlocked_at` ISO string into a sortable epoch-ms value.
@@ -36,8 +36,7 @@ export function unlockedTs(unlockedAt: string | null): number {
  *
  * Sort order: `unlocked_at desc`. Achievements with no `unlocked_at` (still
  * locked) are excluded entirely. Click a badge → deep-link into the lifetime
- * page with `?achievement={id}` so the deep-link logic scrolls
- * to + pulses the badge.
+ * page with `?achievement={id}` so the deep-link logic identifies the card.
  *
  * Honours `useAchievementCelebrationPrefs.showOnDashboard`: when off, the
  * widget renders an opt-out empty state instead of the badge strip so the
@@ -49,7 +48,7 @@ export function unlockedTs(unlockedAt: string | null): number {
  */
 export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const navigate = useNavigate();
+  const { formatDate } = useDateFormat();
   const vehiclesQuery = useVehicles();
   const { data: vehicles } = vehiclesQuery;
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -85,13 +84,6 @@ export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: 
     void refetch();
   }, [idStr, vehiclesQuery.refetch, refetch]);
 
-  const handleOpen = useCallback(
-    (achievementId: string) => {
-      navigate(`/lifetime?achievement=${encodeURIComponent(achievementId)}`);
-    },
-    [navigate],
-  );
-
   const title = t('widget.recentlyUnlocked.title', 'Recently unlocked');
   const icon = <Trophy className="h-3.5 w-3.5 text-amber-400" />;
 
@@ -123,21 +115,41 @@ export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: 
       onRefresh={handleRefresh}
     >
       {recent.length > 0 ? (
-        <ul className="flex flex-wrap gap-3 items-start" data-testid="recently-unlocked-list">
-          {recent.map(a => (
-            <li key={a.id}>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => handleOpen(a.id)}
-                className="h-auto rounded-lg p-1 hover:bg-white/[0.04] focus-visible:ring-yellow-500/50"
-                aria-label={t('achievements.viewNamed', 'View achievement: {{name}}', { name: a.name })}
+        <ul
+          className="grid grid-cols-3 gap-2"
+          data-testid="recently-unlocked-list"
+        >
+          {recent.map((achievement, index) => {
+            const timestamp = unlockedTs(achievement.unlocked_at);
+            const dateLabel = timestamp > 0
+              ? formatDate(achievement.unlocked_at)
+              : '—';
+            const name = achievement.name?.trim() || '—';
+            const icon = achievement.icon?.trim() || null;
+
+            return (
+            <li key={achievement.id || `achievement-${index}`} className="min-w-0">
+              <Link
+                to={`/lifetime?achievement=${encodeURIComponent(achievement.id)}`}
+                aria-label={t('achievements.viewNamed', 'View achievement: {{name}}', { name })}
+                className="group flex min-h-24 min-w-0 flex-col items-center rounded-lg border border-[var(--border-subtle)] px-2.5 py-2 text-center transition-colors duration-fast motion-reduce:transition-none hover:bg-[var(--surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)]"
               >
-                <AchievementBadge achievement={a} size="sm" />
-              </Button>
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--semantic-warning)]/20 bg-[var(--semantic-warning)]/10 text-amber-300"
+                  aria-hidden="true"
+                >
+                  {icon || <Trophy className="h-4 w-4" />}
+                </span>
+                <Text as="span" size="sm" weight="semibold" className="mt-1 max-w-full truncate text-[var(--text-primary)]">
+                  {name}
+                </Text>
+                <Caption className="mt-0.5 block max-w-full truncate tabular-nums text-[var(--text-muted)]">
+                  {dateLabel}
+                </Caption>
+              </Link>
             </li>
-          ))}
+            );
+          })}
         </ul>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

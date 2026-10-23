@@ -3,18 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { AlertOctagon, ShieldAlert, AlertTriangle, CarFront, Navigation } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
-import type { StatMetric } from '@/components/data-display';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import { useSafetyHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
 
 import { cleanSafetyEnum, isSafetyEnumActive } from '@/lib/safetyEnum';
 import { WidgetShell } from './WidgetShell';
-import { WidgetEventFeed } from './shared';
-import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useRangeState } from '@/hooks/useRangeState';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { WidgetDetailCard, WidgetStatGrid, type DetailEntry, type StatGridItem } from './shared';
 
 export type Severity = 'info' | 'warning' | 'critical';
 
@@ -159,6 +158,8 @@ function CompactView({
 export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { fmtInt } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
+  const { startInstant, endInstantExclusive } = useRangeState({ defaultPresetId: '30d' });
   const vehicleQuery = useVehicles();
   const { data: vehicles } = vehicleQuery;
   const vehicleState = useDataState(vehicleQuery);
@@ -181,52 +182,35 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
   const isCompact = size.cols <= 1;
   const list = useMemo(() => history ?? [], [history]);
 
-  const feedItems = useMemo<EventFeedItem[]>(
-    () =>
-      list.map((snap, i) => {
-        const rec = snap as unknown as Record<string, unknown>;
-        const event = classifySnapshot(rec);
-        return {
-          // Stable index-derived key when the row has no id — never
-          // Math.random(), which would remount every row on each refetch.
-          id: snap.id ?? `safety-${i}`,
-          icon: event.icon,
-          title: safetyEventTitle(event.type, rec, t),
-          subtitle: buildSubtitle(rec, t),
-          timestamp: snap.created_at ?? '',
-          color: event.color,
-          severity: event.severity,
-          wrap: true,
-        };
-      }),
-    [list, t],
-  );
+  const { windowRows, priorRows } = useMemo(() => {
+    const startMs = Date.parse(startInstant);
+    const endMs = Date.parse(endInstantExclusive);
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+      return { windowRows: [] as typeof list, priorRows: [] as typeof list };
+    }
+    const durationMs = endMs - startMs;
+    const priorStartMs = startMs - durationMs;
+    const current: typeof list = [];
+    const prior: typeof list = [];
+    for (const row of list) {
+      const ts = Date.parse(row.created_at ?? '');
+      if (!Number.isFinite(ts)) continue;
+      if (ts >= startMs && ts < endMs) current.push(row);
+      else if (ts >= priorStartMs && ts < startMs) prior.push(row);
+    }
+    return { windowRows: current, priorRows: prior };
+  }, [list, startInstant, endInstantExclusive]);
 
-  // Stats: 30-day total, most common type, trend
   const stats = useMemo(() => {
-    const now = Date.now();
-    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
-    const sixtyDaysAgo = now - 60 * 24 * 60 * 60 * 1000;
-
-    const recent = list.filter(
-      (s) => new Date(s.created_at ?? '').getTime() >= thirtyDaysAgo,
-    );
-    const prior = list.filter((s) => {
-      const ts = new Date(s.created_at ?? '').getTime();
-      return ts >= sixtyDaysAgo && ts < thirtyDaysAgo;
-    });
-
     const typeCounts: Record<string, number> = {};
-    for (const snap of recent) {
+    for (const snap of windowRows) {
       const ev = classifySnapshot(snap as unknown as Record<string, unknown>);
       typeCounts[ev.type] = (typeCounts[ev.type] ?? 0) + 1;
     }
-
     const sorted = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
     const mostCommonType = sorted[0]?.[0] as SafetyEventType | undefined;
-
-    const recentCount = recent.length;
-    const priorCount = prior.length;
+    const recentCount = windowRows.length;
+    const priorCount = priorRows.length;
     let trend = '—';
     if (priorCount > 0 && recentCount > priorCount) trend = '↑';
     else if (priorCount > 0 && recentCount < priorCount) trend = '↓';
@@ -238,19 +222,53 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
       mostCommon: mostCommonType ? safetyTypeLabel(mostCommonType, t) : '—',
       trend,
     };
-  }, [list, t]);
-  const metrics: StatMetric[] = [
-    { metricId: 'count', occurrenceId: 'safety-returned-events', rawValue: history === undefined ? null : stats.totalEvents,
-      label: t('widget.safetyTotal', 'Events (30d)'),
-      context: t('widget.safety.priorCount', 'Returned snapshots in the preceding 30-day comparison window: {{count}}.', { replace: { count: history === undefined ? '—' : fmtInt(stats.priorCount) } }) },
-    { metricId: 'text', occurrenceId: 'safety-most-common', rawValue: stats.mostCommon === '—' ? null : stats.mostCommon,
-      label: t('widget.safetyMostCommon', 'Most common') },
-    { metricId: 'status', occurrenceId: 'safety-trend', rawValue: stats.trend === '—' ? null : stats.trend,
+  }, [windowRows, priorRows, t]);
+
+  const entries = useMemo<DetailEntry[]>(() => {
+    return [...windowRows].sort((a, b) => {
+      const ta = Date.parse(a.created_at ?? '');
+      const tb = Date.parse(b.created_at ?? '');
+      return (Number.isFinite(tb) ? tb : Number.NEGATIVE_INFINITY) -
+        (Number.isFinite(ta) ? ta : Number.NEGATIVE_INFINITY);
+    }).map((snap, i) => {
+      const rec = snap as unknown as Record<string, unknown>;
+      const event = classifySnapshot(rec);
+      const status = event.severity === 'critical' ? 'error'
+        : event.severity === 'warning' ? 'warning' : 'info';
+      const timestamp = snap.created_at;
+      const dateLabel = timestamp && Number.isFinite(Date.parse(timestamp))
+        ? formatDateTime(timestamp)
+        : '—';
+      return {
+        id: snap.id ?? `safety-${i}`,
+        label: safetyEventTitle(event.type, rec, t),
+        sublabel: `${dateLabel}${buildSubtitle(rec, t) !== '—' ? ` · ${buildSubtitle(rec, t)}` : ''}`,
+        value: '',
+        status,
+      };
+    });
+  }, [windowRows, formatDateTime, t]);
+
+  const gridStats = useMemo<StatGridItem[]>(() => [
+    {
+      label: t('widget.safetyTotal', 'Events'),
+      value: fmtInt(stats.totalEvents),
+      sublabel: stats.totalEvents === 1
+        ? t('widget.safety.snapshotSingular', 'snapshot')
+        : t('widget.safety.snapshotPlural', 'snapshots'),
+    },
+    {
+      label: t('widget.safetyMostCommon', 'Most common'),
+      value: stats.mostCommon,
+    },
+    {
       label: t('widget.safetyTrend', 'Trend'),
-      context: stats.trend === '↑' ? t('widget.trendUp', 'Increasing')
+      value: stats.trend === '—' ? null : stats.trend,
+      sublabel: stats.trend === '↑' ? t('widget.trendUp', 'Increasing')
         : stats.trend === '↓' ? t('widget.trendDown', 'Decreasing')
-          : stats.trend === '→' ? t('widget.trendFlat', 'Stable') : undefined },
-  ];
+          : stats.trend === '→' ? t('widget.trendFlat', 'Stable') : undefined,
+    },
+  ], [fmtInt, stats, t]);
 
   return (
     <WidgetShell
@@ -266,7 +284,7 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
       onRefresh={() => refetch()}
     >
       {isCompact ? (
-        list.length > 0 ? (
+        windowRows.length > 0 ? (
           <CompactView
             totalEvents={stats.totalEvents}
             mostCommon={stats.mostCommon}
@@ -282,19 +300,10 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
         )
       ) : (
         <div className="flex flex-col gap-3 h-full min-h-0">
-          {/* Stat cards row */}
-          <DashboardSourceBrief metrics={metrics} state={displayState}
-            eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
-            title={t('widget.safety.summaryTitle', 'Returned safety-history summary')}
-            description={t('widget.safety.summaryDescription', 'Counts and classifications summarize loaded snapshots; a warning setting is not a detected intervention.')}
-            scope={t('widget.safety.summaryScope', 'Vehicle {{id}} · returned snapshots in the last 30 days, compared with the preceding 30 days; loaded history is not complete event coverage.', { id: vid ?? '—' })}
-            loading={isLoading && history === undefined} testId="dashboard-safety-history-brief" />
-
-          {/* Event feed */}
+          <WidgetStatGrid stats={gridStats} cols={3} />
           <div className="flex-1 min-h-0 overflow-y-auto">
-            <WidgetEventFeed
-              items={feedItems}
-              maxItems={10}
+            <WidgetDetailCard
+              entries={entries.slice(0, 10)}
               compact={false}
               emptyMessage={t('widget.noSafetyEvents', 'No safety events recorded')}
               emptyIcon={<AlertOctagon className="h-5 w-5" />}

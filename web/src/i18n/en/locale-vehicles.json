@@ -4011,9 +4011,7 @@
   },
   "vehicleHero": {
     "action": {
-      "commands": "Commands",
-      "details": "Details",
-      "liveMap": "Live map"
+      "details": "Details"
     },
     "gauge": {
       "battery": "Battery",
@@ -4028,12 +4026,6 @@
       "alt": "{{name}} photo"
     },
     "stat": {
-      "firmware": "Firmware",
-      "insideTemp": "Inside temp",
-      "odometer": "Odometer",
-      "outsideTemp": "Outside temp",
-      "power": "Power",
-      "range": "Range",
       "sentry": "Sentry",
       "status": "Status"
     },
@@ -4126,7 +4118,8 @@
   "widget": {
     "motorPerformance": {
       "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
-    }
+    },
+    "verifiedFields": "{{count}} verified fields"
   },
   "yearReview": {
     "aiNarration": {

@@ -129,6 +129,8 @@ const POPULATED = infoResponse({
   nameplate_energy: 27000, // Wh → 27.0 kWh
   battery_count: 2, // Count is separate from the site's 27.0 kWh total.
   version: '23.44.30.9',
+  backup_reserve_percent: 20,
+  default_real_mode: 'self_consumption',
   installation_time_zone: 'America/Los_Angeles',
 });
 
@@ -197,8 +199,8 @@ it('uses the canonical responsive details while preserving all three complete so
   });
   const list = container.querySelector('dl');
   expect(list).toHaveClass('@container/kv-list');
-  expect(list?.querySelectorAll('dt')).toHaveLength(3);
-  expect(list?.querySelectorAll('dd')).toHaveLength(3);
+  expect(list?.querySelectorAll('dt')).toHaveLength(5);
+  expect(list?.querySelectorAll('dd')).toHaveLength(5);
   expect(screen.getByText(firmware)).not.toHaveClass('truncate');
   expect(screen.queryByText(timezone)).not.toBeInTheDocument();
   expect(screen.getByText(/27\.00 kWh/)).toBeInTheDocument();
@@ -228,6 +230,10 @@ describe('EnergySiteInfoWidget — full view (populated)', () => {
     expect(screen.getByText('2 · 27.00 kWh')).toBeInTheDocument();
     expect(screen.getByText('Gateway firmware')).toBeInTheDocument();
     expect(screen.getByText('23.44.30.9')).toBeInTheDocument();
+    expect(screen.getByText('Backup reserve')).toBeInTheDocument();
+    expect(screen.getByText('Operating mode')).toBeInTheDocument();
+    expect(screen.getByText('20%')).toBeInTheDocument();
+    expect(screen.getByText('Self-Powered')).toBeInTheDocument();
     expect(screen.queryByText('Installation timezone')).not.toBeInTheDocument();
     expect(screen.queryByText('America/Los_Angeles')).not.toBeInTheDocument();
   });
@@ -257,9 +263,11 @@ describe('EnergySiteInfoWidget — null-safety', () => {
     expect(screen.getByText('Solar system')).toBeInTheDocument();
     expect(screen.getByText('Powerwalls')).toBeInTheDocument();
     expect(screen.getByText('Gateway firmware')).toBeInTheDocument();
+    expect(screen.getByText('Backup reserve')).toBeInTheDocument();
+    expect(screen.getByText('Operating mode')).toBeInTheDocument();
 
     // … but every value is the em-dash placeholder, never "undefined kW" etc.
-    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.getAllByText('—')).toHaveLength(5);
     expect(screen.queryByText(/kWh/)).toBeNull();
     expect(screen.queryByText(/kW/)).toBeNull();
     expect(screen.queryByText(/undefined/)).toBeNull();
@@ -400,7 +408,7 @@ describe('EnergySiteInfoWidget — refresh', () => {
     });
     expect(screen.getByText('0.00 kW')).toBeInTheDocument();
     expect(screen.getByText('0 · 0.00 kWh')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(1);
+    expect(screen.getAllByText('—')).toHaveLength(3);
   });
 
   it('retains measured site capacity when the battery count is unknown', () => {

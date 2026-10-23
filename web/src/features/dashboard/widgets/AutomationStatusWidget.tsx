@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Workflow, Clock } from 'lucide-react';
+import { Workflow } from 'lucide-react';
 import { Badge, Caption, Text, Toggle } from '@/components/ui';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -11,32 +11,7 @@ import type { Automation } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { WidgetBigNumber } from './shared';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
-
-function formatRelativeTime(dateStr: string | null, t: (k: string, f: string) => string, fmtInt: (value: unknown) => string): string {
-  if (!dateStr) return '—';
-  const ts = new Date(dateStr).getTime();
-  // Guard unparseable timestamps so a malformed value renders as an em dash
-  // instead of "NaNd ago".
-  if (Number.isNaN(ts)) return '—';
-  const diff = Date.now() - ts;
-  // `next_fire_time` is a future instant, so `diff` is negative there. Render
-  // future times as "in Xm" rather than collapsing every one of them to the
-  // past-tense "Just now".
-  const future = diff < 0;
-  const minutes = Math.floor(Math.abs(diff) / 60_000);
-  // relative-time: last or next automation run
-  if (minutes < 1) return t('widget.justNow', 'Just now');
-  const value =
-    minutes < 60
-      ? `${fmtInt(minutes)}m`
-      : minutes < 1_440
-        ? `${fmtInt(Math.floor(minutes / 60))}h`
-        : `${fmtInt(Math.floor(minutes / 1_440))}d`;
-  return future
-    ? `${t('widget.in', 'in')} ${value}`
-    : `${value} ${t('widget.ago', 'ago')}`;
-}
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 function getStatusBadge(
   a: Automation,
@@ -93,9 +68,14 @@ function AutomationRow({
   actionsDisabledReason?: string;
 }) {
   const toggle = useToggleAutomation();
-  const { fmtInt } = useNumberFormatting();
   const status = getStatusBadge(automation, t);
+  const { formatDateTime, formatRelative } = useDateFormat();
   const lastRun = automation.last_triggered_at;
+  const nextRun = automation.next_fire_time;
+  const scheduleSource = nextRun ?? lastRun;
+  const schedule = scheduleSource
+    ? formatRelative(scheduleSource).replace(/^just now$/i, t('widget.justNow', 'Just now'))
+      : '—';
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2 py-1.5 border-b border-[var(--border-subtle)] last:border-b-0">
@@ -106,25 +86,12 @@ function AutomationRow({
             {status.label}
           </Badge>
         </div>
-        <div className="flex flex-wrap items-center gap-2 mt-0.5">
-          {lastRun && (
-            <Caption
-              className="flex items-center gap-0.5"
-              title={t('widget.lastRun', 'Last run')}
-            >
-              <Clock className="h-2.5 w-2.5" aria-hidden="true" />
-              {formatRelativeTime(lastRun, t, fmtInt)}
-            </Caption>
-          )}
-          {automation.next_fire_time && (
-            <Caption
-              className="flex items-center gap-0.5"
-              title={t('widget.nextRun', 'Next run')}
-            >
-              <span aria-hidden="true">⏰</span> {formatRelativeTime(automation.next_fire_time, t, fmtInt)}
-            </Caption>
-          )}
-        </div>
+        <Caption
+          className="block mt-0.5"
+          title={nextRun ? formatDateTime(nextRun) : lastRun ? formatDateTime(lastRun) : undefined}
+        >
+          {schedule}
+        </Caption>
       </div>
       {showToggle && (
         <Toggle
@@ -162,8 +129,22 @@ function FullView({
   actionsDisabled: boolean;
   actionsDisabledReason?: string;
 }) {
+  const enabled = automations.filter((automation) => automation.enabled).length;
+  const failing = automations.filter((automation) => automation.consecutive_failures > 0 && automation.enabled).length;
+  const { fmtInt } = useNumberFormatting();
   return (
     <div className="h-full flex flex-col gap-2">
+      <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] pb-1.5">
+        <div className="flex min-w-0 items-baseline gap-1">
+          <Text variant="bodySm" mono>{fmtInt(enabled)}</Text>
+          <Caption>{t('widget.active', 'Active')}</Caption>
+        </div>
+        {failing > 0 && (
+          <Badge variant="warning" size="sm" dot>
+            {fmtInt(failing)} {t('widget.failing', 'Failing')}
+          </Badge>
+        )}
+      </div>
       {/* Automation list */}
       <div className="flex-1 min-h-0 overflow-auto">
         {automations.map((a) => (
@@ -208,18 +189,6 @@ export default function AutomationStatusWidget({ size }: WidgetProps) {
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {!isCompact && <DashboardSourceBrief
-        metrics={[
-          { metricId: 'count', rawValue: automations == null ? null : items.filter(a => a.enabled).length, label: t('widget.active', 'Active'), description: t('widget.automation.activeDescription', 'Enabled automations in the returned configuration list.') },
-          { metricId: 'count', rawValue: automations == null ? null : items.filter(a => a.consecutive_failures > 0 && a.enabled).length, label: t('widget.failing', 'Failing'), description: t('widget.automation.failingDescription', 'Enabled automations with consecutive failures; successful empty lists retain measured zero.') },
-          { metricId: 'count', rawValue: automations == null ? null : items.filter(a => a.auto_disabled).length, label: t('widget.autoDisabled', 'Auto-disabled'), description: t('widget.automation.disabledDescription', 'Automations explicitly auto-disabled by the source, not all manually disabled automations.') },
-        ]}
-        state={state} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
-        title={t('widget.automation.summaryTitle', 'Automation configuration')}
-        description={t('widget.automation.summaryDescription', 'Current automation configuration and reported failure flags; no execution-success confidence is inferred.')}
-        scope={t('widget.automation.summaryScope', 'Returned automation list; action permissions and per-row recovery remain independent')}
-        loading={isLoading && !automations} testId="automation-operational-brief"
-      />}
       {items.length > 0 ? (
         <FadeIn>
           {isCompact ? (

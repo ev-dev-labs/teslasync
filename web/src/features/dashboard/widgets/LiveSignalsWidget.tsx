@@ -1,234 +1,135 @@
-import type { ReactNode } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Radio, Cog, Thermometer, CircleDot } from 'lucide-react';
-import { Badge, Subhead } from '@/components/ui';
-import { KVList } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import {
-  useVehicles,
-  useMotorLatest,
-  useClimateLatest,
-  useSecurityLatest,
-  useLatestTirePressure,
-} from '@/api/hooks/useVehicles';
+import { Radio } from 'lucide-react';
+import { Text } from '@/components/ui';
+import { Sparkline, NEON_COLORS } from '@/components/charts';
+import { EmptyState } from '@/components/feedback';
+import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSignalHistory, useVehicleLiveSignals, type VehicleLiveSignal } from '@/api/hooks/useTelemetry';
 import { useUnits } from '@/hooks/useUnits';
-import { usePressureFormat } from '@/hooks/usePressureFormat';
-import { resolveHvacActive } from '@/lib/climateState';
-import { isFiniteNumber } from '@/lib/numberFormat';
-import { cleanNil } from '@/lib/cleanNil';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import { convertTempFromSI } from '@/lib/unitConversion';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { useDataState, useCombinedDataState } from '@/hooks/useDataState';
-import { dashboardTokens } from '../lib/dashboardTokens';
-import type { DataStateSource } from '@/api/dataState';
 
-function snapshotSource<T extends object | null>(query: DataStateSource<T>): DataStateSource<T> {
-  return {
-    ...query,
-    data: (query.isError || query.error) && (!query.data || Object.keys(query.data).length === 0)
-      ? undefined : query.data,
-  };
+const LIVE_SIGNAL_NAMES = [
+  'BatteryLevel',
+  'ACChargingPower',
+  'InsideTemp',
+  'OutsideTemp',
+  'RatedRange',
+] as const;
+
+function liveEntryValue(raw: unknown): unknown {
+  if (raw && typeof raw === 'object' && 'value' in (raw as Record<string, unknown>)) {
+    return (raw as VehicleLiveSignal).value;
+  }
+  return raw;
 }
 
-function Row({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <KVList layout="responsive" wrap items={[{ label, value: <span className="tabular-nums">{value}</span> }]} />
-  );
+function finiteNumber(raw: unknown): number | null {
+  return typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
 }
 
 export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const { fmtNumber } = useNumberFormatting();
   const { data: vehicles } = useVehicles();
+  const { formatPower, formatTemperature, formatDistance } = useUnits();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const opts = { enabled: id > 0, refetchInterval: 5_000 } as const;
 
-  const motorQuery = useMotorLatest(id, opts.refetchInterval);
-  const climateQuery = useClimateLatest(id, opts.refetchInterval);
-  const securityQuery = useSecurityLatest(id, opts.refetchInterval);
-  const tiresQuery = useLatestTirePressure(id, opts.refetchInterval);
-  const { data: motor } = motorQuery;
-  const { data: climate } = climateQuery;
-  const { data: security } = securityQuery;
-  const { data: tires } = tiresQuery;
-  const motorState = useDataState(snapshotSource(motorQuery));
-  const climateState = useDataState(snapshotSource(climateQuery));
-  const securityState = useDataState(snapshotSource(securityQuery));
-  const tiresState = useDataState(snapshotSource(tiresQuery));
-  const dataState = useCombinedDataState([motorState, climateState, securityState, tiresState]);
+  const liveQuery = useVehicleLiveSignals(id || undefined, { refetchInterval: 5_000 });
+  const liveData = liveQuery.data;
+  const liveState = useDataState(liveQuery, { provenance: 'live' });
+
+  const batteryHistory = useSignalHistory(id, 'BatteryLevel', 1);
+  const powerHistory = useSignalHistory(id, 'ACChargingPower', 1);
+  const insideHistory = useSignalHistory(id, 'InsideTemp', 1);
+  const outsideHistory = useSignalHistory(id, 'OutsideTemp', 1);
+  const rangeHistory = useSignalHistory(id, 'RatedRange', 1);
+  const historyQueries = [
+    batteryHistory,
+    powerHistory,
+    insideHistory,
+    outsideHistory,
+    rangeHistory,
+  ] as const;
+
+  const signals = (liveData?.signals ?? {}) as Record<string, unknown>;
+  const hasLiveData = LIVE_SIGNAL_NAMES.some((name) => signals[name] != null);
+
+  const rows = useMemo(() => LIVE_SIGNAL_NAMES.map((name, index) => {
+    const raw = finiteNumber(liveEntryValue(signals[name]));
+    let formatted: string;
+    if (raw == null) formatted = '—';
+    else if (name === 'BatteryLevel') formatted = `${fmtNumber(raw, 0)} %`;
+    else if (name === 'ACChargingPower') formatted = formatPower(raw, { precision: 1 });
+    else if (name === 'InsideTemp' || name === 'OutsideTemp') formatted = formatTemperature(raw, { precision: 1 });
+    else formatted = formatDistance(raw, { precision: 1 });
+
+    const history = historyQueries[index].data?.data ?? [];
+    const points = history
+      .map((point) => finiteNumber(point.value))
+      .filter((point): point is number => point != null);
+
+    return { name, formatted, points, color: NEON_COLORS[index % NEON_COLORS.length] };
+  }), [signals, fmtNumber, formatPower, formatTemperature, formatDistance, historyQueries]);
+
   const handleRefresh = () => {
-    void motorQuery.refetch();
-    void climateQuery.refetch();
-    void securityQuery.refetch();
-    void tiresQuery.refetch();
+    void liveQuery.refetch();
+    historyQueries.forEach((query) => { void query.refetch(); });
   };
-  const { unitPrefs } = useUnits();
-  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
-
-  const tempUnit = unitPrefs.temperature;
-  const { pressureUnit, toPressureValue: toPressureDisplay } = usePressureFormat();
-
-  const hasData = [motor, climate, security, tires].some((value) => value != null && Object.keys(value).length > 0);
-  const climateHvacState = climate
-    ? resolveHvacActive(climate.hvac_power, climate.is_ac_on)
-    : null;
 
   return (
     <WidgetShell
       title={t('widget.liveSignals', 'Live signals')}
       icon={<Radio className="h-3.5 w-3.5 text-neon-cyan" />}
       dataState={{
-        ...dataState, retry: handleRefresh, data: motor ?? climate ?? security ?? tires, hasData: Boolean(hasData),
-        fatalError: hasData ? null : motorState.fatalError ?? climateState.fatalError ?? securityState.fatalError ?? tiresState.fatalError,
+        ...liveState,
+        retry: handleRefresh,
+        data: liveData,
+        hasData: hasLiveData,
+        fatalError: hasLiveData ? null : liveState.fatalError,
       }}
-      updatedAt={dataState.updatedAt ?? 0}
-      refreshIntervalMs={opts.refetchInterval}
-      isFetching={dataState.isRefreshing}
-      isStale={dataState.status === 'stale'}
-      isError={Boolean(dataState.refreshError || dataState.fatalError)}
+      updatedAt={liveQuery.dataUpdatedAt}
+      refreshIntervalMs={5_000}
+      isFetching={liveQuery.isFetching}
+      isStale={liveQuery.isStale}
+      isError={liveQuery.isError}
       onRefresh={handleRefresh}
     >
-      {!hasData ? (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+      {!hasLiveData ? (
+        <EmptyState
           icon={<Radio className="h-5 w-5" />}
           message={t('widget.noSignals', 'No live signal data')}
+          description={t(
+            'widget.noSignalsDescription',
+            'Live values appear when the selected vehicle publishes telemetry.',
+          )}
           className="py-4"
         />
       ) : (
-        <div className={`grid ${dashboardTokens.columns[2]} gap-4 h-full overflow-y-auto`}>
-          {/* Drivetrain */}
-          <div className="space-y-1.5">
-            <Subhead as="h4" className="flex items-center gap-1">
-              <Cog className="h-3 w-3 text-purple-300" /> {t('widget.motor', 'Motor')}
-            </Subhead>
-            {motor ? (
-              <>
-                <Row
-                  label={t('widget.torque', 'Torque')}
-                  value={isFiniteNumber(motor.di_torque) ? `${fmtNumber(motor.di_torque)} Nm` : '—'}
-                />
-                <Row
-                  label={t('widget.motorTemp', 'Temp')}
-                  value={
-                    isFiniteNumber(motor.di_stator_temp)
-                      ? `${fmtNumber(toTemperatureDisplay(motor.di_stator_temp))}${tempUnit}`
-                      : '—'
-                  }
-                />
-                <Row label={t('widget.gear', 'Gear')} value={cleanNil(motor.gear) ?? '—'} />
-              </>
-            ) : (
-              motorState.fatalError ? <QueryError error={motorState.fatalError} onRetry={() => { void motorQuery.refetch(); }} /> : motorQuery.isLoading ? <Skeleton className="h-12" /> : <Row label={t('widget.motor', 'Motor')} value="—" />
-            )}
-          </div>
-
-          {/* Climate */}
-          <div className="space-y-1.5">
-            <Subhead as="h4" className="flex items-center gap-1">
-              <Thermometer className="h-3 w-3 text-cyan-300" /> {t('widget.climate', 'Climate')}
-            </Subhead>
-            {climate ? (
-              <>
-                <Row
-                  label={t('widget.cabin', 'Cabin')}
-                  value={
-                    isFiniteNumber(climate.inside_temp)
-                      ? `${fmtNumber(toTemperatureDisplay(climate.inside_temp))}${tempUnit}`
-                      : '—'
-                  }
-                />
-                <Row
-                  label={t('widget.outside', 'Outside')}
-                  value={
-                    isFiniteNumber(climate.outside_temp)
-                      ? `${fmtNumber(toTemperatureDisplay(climate.outside_temp))}${tempUnit}`
-                      : '—'
-                  }
-                />
-                <Row
-                  label={t('widget.hvac', 'HVAC')}
-                  value={climateHvacState == null
-                    ? '—'
-                    : climateHvacState
-                      ? t('widget.hvacOn', 'On')
-                      : t('widget.hvacOff', 'Off')}
-                />
-              </>
-            ) : (
-              climateState.fatalError ? <QueryError error={climateState.fatalError} onRetry={() => { void climateQuery.refetch(); }} /> : climateQuery.isLoading ? <Skeleton className="h-12" /> : <Row label={t('widget.climate', 'Climate')} value="—" />
-            )}
-          </div>
-
-          {/* Tires */}
-          <div className="space-y-1.5">
-            <Subhead as="h4" className="flex items-center gap-1">
-              <CircleDot className="h-3 w-3 text-cyan-300" /> {t('widget.tires', 'Tires')}
-            </Subhead>
-            {tires ? (
-              <>
-                <Row
-                  label="FL"
-                  value={
-                    isFiniteNumber(tires.front_left)
-                      ? `${fmtNumber(toPressureDisplay(tires.front_left))} ${pressureUnit}`
-                      : '—'
-                  }
-                />
-                <Row
-                  label="FR"
-                  value={
-                    isFiniteNumber(tires.front_right)
-                      ? `${fmtNumber(toPressureDisplay(tires.front_right))} ${pressureUnit}`
-                      : '—'
-                  }
-                />
-                <Row
-                  label="RL"
-                  value={
-                    isFiniteNumber(tires.rear_left)
-                      ? `${fmtNumber(toPressureDisplay(tires.rear_left))} ${pressureUnit}`
-                      : '—'
-                  }
-                />
-                <Row
-                  label="RR"
-                  value={
-                    isFiniteNumber(tires.rear_right)
-                      ? `${fmtNumber(toPressureDisplay(tires.rear_right))} ${pressureUnit}`
-                      : '—'
-                  }
-                />
-              </>
-            ) : (
-              tiresState.fatalError ? <QueryError error={tiresState.fatalError} onRetry={() => { void tiresQuery.refetch(); }} /> : tiresQuery.isLoading ? <Skeleton className="h-12" /> : <Row label={t('widget.tires', 'Tires')} value="—" />
-            )}
-          </div>
-
-          {/* Security summary */}
-          <div className="space-y-1.5">
-            <Subhead as="h4" className="flex items-center gap-1">
-              <span aria-hidden="true">🛡️</span> {t('widget.security', 'Security')}
-            </Subhead>
-            {security ? (
-              <>
-                <Row label={t('widget.lock', 'Lock')} value={
-                  <Badge variant={typeof security.locked !== 'boolean' ? 'neutral' : security.locked ? 'success' : 'danger'}>
-                    {typeof security.locked !== 'boolean' ? '—' : security.locked ? t('widget.locked', 'Locked') : t('widget.unlocked', 'Unlocked')}
-                  </Badge>
-                } />
-                <Row label={t('widget.sentry', 'Sentry')} value={
-                  <Badge variant={security.sentry_mode === true ? 'success' : 'neutral'}>
-                    {typeof security.sentry_mode !== 'boolean' ? '—' : security.sentry_mode ? t('widget.active', 'Active') : t('widget.off', 'Off')}
-                  </Badge>
-                } />
-              </>
-            ) : (
-              securityState.fatalError ? <QueryError error={securityState.fatalError} onRetry={() => { void securityQuery.refetch(); }} /> : securityQuery.isLoading ? <Skeleton className="h-12" /> : <Row label={t('widget.security', 'Security')} value="—" />
-            )}
-          </div>
-        </div>
+        <ul className="overflow-y-auto" aria-label={t('widget.liveSignals', 'Live signals')}>
+          {rows.map((row) => (
+            <li
+              key={row.name}
+              className="grid min-h-10 grid-cols-[minmax(6rem,1fr)_minmax(56px,72px)_minmax(72px,max-content)] items-center gap-2 border-b border-[var(--border-subtle)] py-1.5 last:border-b-0"
+            >
+              <Text mono size="sm" color="primary" className="min-w-0 truncate" title={row.name}>
+                {row.name}
+              </Text>
+              {row.points.length >= 2 ? (
+                <Sparkline data={row.points} color={row.color} width={72} height={20} ariaLabel={`${row.name} ${t('widget.trendSparkline', 'trend')}`} />
+              ) : (
+                <span aria-hidden="true" className="h-px w-full bg-[var(--border-subtle)]" />
+              )}
+              <Text mono size="sm" weight="semibold" color="primary" className="text-end tabular-nums whitespace-nowrap">
+                {row.formatted}
+              </Text>
+            </li>
+          ))}
+        </ul>
       )}
     </WidgetShell>
   );

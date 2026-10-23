@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { TimelineItem } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
 
 export interface EventFeedItem {
   id: string | number;
@@ -54,23 +55,29 @@ export function WidgetEventFeed({
   order = 'newest-first',
 }: WidgetEventFeedProps) {
   const { t } = useTranslation('dashboard');
-  const { formatDateTime } = useDateFormat();
+  const { formatDateTime, formatTime } = useDateFormat();
+  const { formatRelativeDays } = useDateLabels();
 
-  const formatRelativeTime = useCallback(
+  const formatFeedTime = useCallback(
     (isoStr: string): string => {
       const ms = new Date(isoStr).getTime();
       if (Number.isNaN(ms)) return TIME_FALLBACK;
       const diffMin = Math.floor((Date.now() - ms) / 60_000);
-      // relative-time: when the feed event happened
+      // feed-time: sub-hour events stay relative ("Just now", "5m ago") so
+      // fresh activity reads as fresh; anything older gets a stable
+      // tz-aware day label ("Today 7:30 AM", "Yesterday 11:02 PM", then the
+      // absolute date). Hourly "Nh ago" labels are deliberately gone: the
+      // feed does not poll, so they would go stale within the hour.
       if (diffMin < 1) return t('widget.eventFeed.justNow', 'Just now');
       if (diffMin < 60)
         return t('widget.eventFeed.minutesAgo', '{{minutes}}m ago', { minutes: diffMin });
-      const diffHrs = Math.floor(diffMin / 60);
-      if (diffHrs < 24)
-        return t('widget.eventFeed.hoursAgo', '{{hours}}h ago', { hours: diffHrs });
+      // 'Today' / 'Yesterday' are the exact day words produced by the shared
+      // formatRelativeDays helper for the same input (same lib, same release).
+      const day = formatRelativeDays(isoStr);
+      if (day === 'Today' || day === 'Yesterday') return `${day} ${formatTime(isoStr)}`;
       return formatDateTime(isoStr);
     },
-    [t, formatDateTime],
+    [t, formatDateTime, formatTime, formatRelativeDays],
   );
 
   const limit = maxItems ?? (compact ? 3 : 10);
@@ -115,7 +122,7 @@ export function WidgetEventFeed({
             icon={item.icon}
             title={item.title}
             subtitle={item.subtitle}
-            time={item.timeLabel ?? formatRelativeTime(item.timestamp)}
+            time={item.timeLabel ?? formatFeedTime(item.timestamp)}
             color={item.color}
             isLast={i === sorted.length - 1}
             href={item.href}

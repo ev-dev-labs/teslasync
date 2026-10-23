@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BookOpen } from 'lucide-react';
-import { Input, Badge, Caption, Subhead, Text } from '@/components/ui';
-import { combineDataStates, deriveDataState } from '@/api/dataState';
+import { Link } from 'react-router-dom';
+import { ArrowRight, BookOpen } from 'lucide-react';
+import { Input } from '@/components/ui';
+import { combineDataStates, deriveDataState, knownNumber } from '@/api/dataState';
 import { EmptyState } from '@/components/feedback';
 import { SourceContent } from '@/components/layout';
 import { useSignalCatalog, useSignalObservations } from '@/api/hooks/useTelemetry';
@@ -52,14 +53,6 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
 
   const entries = useMemo(() => catalog?.signals ?? [], [catalog]);
 
-  const observationCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const obs of observations ?? []) {
-      counts.set(obs.signal_name, (counts.get(obs.signal_name) ?? 0) + 1);
-    }
-    return counts;
-  }, [observations]);
-
   const filtered = useMemo(() => {
     if (!search.trim()) return entries;
     const q = search.toLowerCase();
@@ -71,17 +64,25 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
     );
   }, [entries, search]);
 
-  const grouped = useMemo(() => {
-    const map = new Map<string, typeof filtered>();
-    for (const entry of filtered) {
-      const cat = entry.destination;
-      const list = map.get(cat) ?? [];
-      list.push(entry);
-      map.set(cat, list);
-    }
-    // Sort categories alphabetically
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [filtered]);
+  const observationRows = Array.isArray(observations) ? observations : [];
+  const sampleCounts = new Map<string, number>();
+  const categories = new Map<string, { count: number; sampleCount: number | null }>();
+  observationRows.forEach((row) => {
+    const name = row.signal_name?.trim();
+    if (name) sampleCounts.set(name, (sampleCounts.get(name) ?? 0) + 1);
+  });
+  entries.forEach((signal) => {
+    const destination = signal.destination || 'unknown';
+    const category = categories.get(destination) ?? { count: 0, sampleCount: null as number | null };
+    category.count += 1;
+    const total = knownNumber(signal.sample_count_total);
+    category.sampleCount = total == null
+      ? (category.sampleCount == null ? null : category.sampleCount)
+      : (category.sampleCount ?? 0) + total;
+    categories.set(destination, category);
+  });
+
+  const browseLabel = t('widget.signalCatalog.browse', 'Browse');
 
   return (
     <WidgetShell
@@ -94,6 +95,23 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
       isStale={catalogStale || observationQuery.isStale}
       isError={catalogError || observationQuery.isError}
       onRefresh={() => { void refetchCatalog(); void observationQuery.refetch?.(); }}
+      footer={entries.length > 0 ? (
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <span className="text-xs text-[var(--text-muted)]">
+            {t('widget.signalCatalog.catalogTotal', '{{count}} signals', {
+              count: entries.length,
+              replace: { count: fmtInt(entries.length) },
+            })}
+          </span>
+          <Link
+            to="/signals"
+            className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-[var(--accent-primary)] hover:underline"
+          >
+            {browseLabel}
+            <ArrowRight className="h-3 w-3" aria-hidden="true" />
+          </Link>
+        </div>
+      ) : undefined}
     >
       {entries.length === 0 && isCompact && (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -115,9 +133,6 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
             onChange={(e) => setSearch(e.target.value)}
             className="min-h-[44px]"
           />
-          <Text variant="caption">
-            {t('widget.signalCatalog.metadataUnavailable', 'Unit and description are not provided by this catalog.')}
-          </Text>
           {observations == null || observationState.refreshError || observationState.isRefreshBlocked ? (
             <SourceContent
               state={sourceBoundaryState(observationState, observations != null)}
@@ -142,52 +157,27 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
             />
           ) : (
             <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
-              {grouped.map(([category, signals]) => (
-                <div key={category}>
-                  <Subhead className="mb-1 sticky top-0 bg-[var(--surface-2)] py-1 px-1 rounded-shape-sm">
-                    {t('widget.signalCatalog.destination', 'Destination: {{destination}}', { destination: category })}
-                    <span className="ms-1 text-[var(--text-muted)]">({fmtInt(signals.length)})</span>
-                  </Subhead>
-                  <div className="space-y-0.5">
-                    {signals.map((sig) => {
-                      const name = sig.field;
-                      return (
-                        <div
-                          key={name}
-                          className="flex min-w-0 flex-wrap items-start gap-2 min-h-11 px-1 rounded-shape-sm hover:bg-[var(--surface-2)] transition-colors"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <Text variant="bodySm" mono className="block [overflow-wrap:anywhere]">
-                              {name}
-                            </Text>
-                            <Text as="p" variant="caption" className="[overflow-wrap:anywhere]">
-                              {t('widget.signalCatalog.totalSamples', 'Total observations: {{count}}', {
-                                count: sig.sample_count_total ?? undefined,
-                                replace: { count: sig.sample_count_total == null ? '—' : fmtInt(sig.sample_count_total) },
-                              })}
-                              {' · '}
-                              {t('widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}', {
-                                count: sig.vehicle_count ?? undefined,
-                                replace: { count: sig.vehicle_count == null ? '—' : fmtInt(sig.vehicle_count) },
-                              })}
-                              {' · '}
-                              {t('widget.signalCatalog.lastSeen', 'Last seen: {{timestamp}}', {
-                                timestamp: sig.last_seen_at ?? '—',
-                              })}
-                            </Text>
-                          </div>
-                          <Badge variant="neutral" className="text-2xs shrink-0 [overflow-wrap:anywhere]" title={t('widget.signalCatalog.valueKind', 'Value kind')}>
-                            {sig.value_kind}
-                          </Badge>
-                          <Caption className="tabular-nums shrink-0 min-w-9 text-end" title={t('widget.signalCatalog.sampleCount', 'Observations in fetched sample')}>
-                            {observations == null ? '—' : fmtInt(observationCounts.get(name) ?? 0)}
-                          </Caption>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+              <ul className="m-0 list-none space-y-2 p-0" aria-label={t('widget.signalCatalog.signalsAvailable', 'Signals available')}>
+                {Array.from(categories.entries())
+                  .filter(([destination]) => filtered.some((signal) => (signal.destination || 'unknown') === destination))
+                  .map(([destination, category]) => (
+                    <li key={destination} className="min-w-0 rounded-panel border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2">
+                      <h4 className="break-words text-sm font-medium text-[var(--text-primary)]">{destination}</h4>
+                      {filtered.filter((signal) => (signal.destination || 'unknown') === destination).map((signal) => (
+                        <p key={`${signal.destination}:${signal.field}`} className="mt-1 break-words text-xs text-[var(--text-muted)]">
+                          {signal.field}
+                        </p>
+                      ))}
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        {t('widget.signalCatalog.categorySignals', '{{count}} signals', { count: category.count, replace: { count: fmtInt(category.count) } })}
+                        {' · '}
+                        {category.sampleCount == null
+                          ? t('widget.signalCatalog.observationsUnavailable', 'Observations unavailable')
+                          : t('widget.signalCatalog.categoryObservations', '{{count}} obs', { count: category.sampleCount, replace: { count: fmtInt(category.sampleCount) } })}
+                      </p>
+                    </li>
+                  ))}
+              </ul>
             </div>
           )}
         </div>

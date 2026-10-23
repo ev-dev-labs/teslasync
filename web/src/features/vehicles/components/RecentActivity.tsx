@@ -125,7 +125,16 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   <div className="text-right">
                     <InlineMetric
                       icon={<Clock aria-hidden="true" />}
-                      value={`${Math.floor((s.duration_min ?? 0) / 60)}h ${fmtInt((s.duration_min ?? 0) % 60)}m`}
+                      value={(() => {
+                        const seconds = s.duration_s ?? (
+                          s.started_at && s.ended_at
+                            ? (new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 1000
+                            : null
+                        );
+                        if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return '—';
+                        const mins = Math.floor(seconds / 60);
+                        return `${Math.floor(mins / 60)}h ${fmtInt(mins % 60)}m`;
+                      })()}
                     />
                     {s.end_soc_pct != null && (
                       <span className="text-2xs text-[var(--text-muted)]">

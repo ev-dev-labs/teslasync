@@ -7,11 +7,9 @@ import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { SourceContent } from '@/components/layout';
 import { useFleetTelemetryErrorVINs, useFleetTelemetryErrors } from '@/api/hooks/useTelemetry';
-
-import { severityTokens, typography } from '@/lib/tokens';
+import { severityTokens } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
@@ -110,6 +108,9 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
   // error dot — rather than blanking the widget or (worse) implying "healthy"
   // via the empty state.
   const errorMessage = state.fatalError?.message;
+  const sampleFooter = errors == null
+    ? null
+    : `${fmtInt(errorList.length)} · ${t('widget.telemetryErrors.sample', 'Errors in fetched sample')}`;
 
   // Refresh BOTH sources. The error feed is driven by useFleetTelemetryErrors,
   // so refetching only the VIN summary left the feed stale after a manual
@@ -131,6 +132,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
       isStale={vinsStale || errorsStale}
       isError={isErrored}
       onRefresh={handleRefresh}
+      footer={sampleFooter ? <Caption className="text-[var(--text-muted)] tabular-nums">{sampleFooter}</Caption> : undefined}
     >
       {!hasData && isCompact && (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -150,29 +152,16 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
       ) : (
         /* ── Standard layout (2×4) ── */
         <div className="flex flex-col gap-2 h-full">
-          {/* Header stats */}
-          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-            <Caption>
-              {t('widget.telemetryErrors.activeVINs', '{{count}} VINs with errors', {
-                count: activeVINCount ?? undefined,
-                replace: { count: activeVINCount ?? '—' },
-              })}
-            </Caption>
-            <Badge variant={statusBadge} className="text-2xs">
-              {statusLabel}
-            </Badge>
-          </div>
-          <DashboardSourceBrief
-            metrics={[
-              { metricId: 'count', rawValue: activeVINCount, label: t('widget.telemetryErrors.errorVINs', 'Error VINs'), description: t('widget.telemetryErrors.vinDescription', 'VINs explicitly marked active; incomplete activity flags leave the count unknown.') },
-              { metricId: 'count', rawValue: errors == null ? null : errorList.length, label: t('widget.telemetryErrors.sample', 'Errors in fetched sample'), description: t('widget.telemetryErrors.sampleDescription', 'Returned error rows, not the total error count for a complete time range.') },
-            ]}
-            state={state} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
-            title={t('widget.telemetryErrors.summaryTitle', 'Error source counters')}
-            description={t('widget.telemetryErrors.summaryDescription', 'Active VINs and the fetched error sample remain separate sources; observed and fetched timestamps keep their original distinction.')}
-            scope={t('widget.telemetryErrors.summaryScope', 'Fleet telemetry; returned VIN summary and error sample, exact coverage bounds unknown')}
-            loading={loading && !hasData} testId="telemetry-errors-operational-brief"
-          />
+            {!isCompact && (
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                <Text variant="bodySm" className="font-medium">
+                  {activeVINCount == null
+                    ? t('widget.telemetryErrors.vinsUnknown', '— VINs with errors')
+                    : t('widget.telemetryErrors.vinsCount', '{{count}} VINs with errors', { count: activeVINCount })}
+                </Text>
+                <Badge variant={statusBadge} size="sm">{statusLabel}</Badge>
+              </div>
+            )}
           {(errorVINs == null || sourceStates[0].refreshError || sourceStates[0].isRefreshBlocked) && (
             <SourceContent
               state={sourceBoundaryState(sourceStates[0], errorVINs != null)}
@@ -211,29 +200,30 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
                 return (
                   <div
                     key={`${entry.vin}-${entry.error_code}-${idx}`}
-                    className="flex min-w-0 flex-wrap items-start gap-2 rounded-shape-sm bg-[var(--surface-2)] px-2 py-1.5 min-h-11"
+                    className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-[var(--border-subtle)] py-2 first:pt-0 last:border-b-0 min-h-11"
                   >
+                    <span
+                      aria-hidden="true"
+                      className={`h-2 w-2 shrink-0 rounded-full ${
+                        isRecent ? 'bg-[var(--semantic-warning)]' : 'bg-[var(--text-muted)]'
+                      }`}
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                         <Text variant="bodySm" mono className="min-w-0 [overflow-wrap:anywhere]" title={entry.vin}>
                           {entry.vin}
                         </Text>
-                        {isRecent && (
-                          <Badge variant="danger" size="sm" dot>
-                            {t('widget.telemetryErrors.recent', 'Recent')}
-                          </Badge>
-                        )}
                       </div>
                       <Caption className="block [overflow-wrap:anywhere]" title={entry.error_code}>
                         {entry.error_code}
+                        <span aria-hidden="true"> · </span>
+                        <span>×{fmtInt(entry.count)}</span>
                       </Caption>
                     </div>
                     <div className="flex max-w-full flex-col items-end [overflow-wrap:anywhere]">
-                      <Caption>
-                        ×{fmtInt(entry.count)}
-                      </Caption>
                       <Caption>{entry.observed ? t('widget.telemetryErrors.observed', 'Observed') : t('widget.telemetryErrors.fetched', 'Fetched')}</Caption>
-                      <TimeStamp value={entry.last_seen || null} className={typography.role.caption} />
+                      {isRecent && <Badge variant="warning" size="sm">{t('widget.telemetryErrors.recent', 'Recent')}</Badge>}
+                      <TimeStamp value={entry.last_seen || null} format="relative" className="text-xs text-[var(--text-muted)]" />
                     </div>
                   </div>
                 );

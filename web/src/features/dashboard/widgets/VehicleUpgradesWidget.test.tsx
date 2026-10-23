@@ -300,7 +300,7 @@ describe('VehicleUpgradesWidget — compact tile', () => {
     // Two upgrades, one eligible → count of 1.
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('available')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Upgrades & sharing', level: 3 })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Upgrades & Sharing', level: 3 })).toBeInTheDocument();
   });
 
   it('shows the known zero available count without claiming all upgrades were applied', () => {
@@ -314,20 +314,18 @@ describe('VehicleUpgradesWidget — compact tile', () => {
 
 // ── Standard feed (cols === 2) ───────────────────────────────────────────────
 describe('VehicleUpgradesWidget — standard feed', () => {
-  it('renders the title, each upgrade row with its price + eligibility badge', () => {
+  it('renders the title and each upgrade row with its price and description', () => {
     renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
 
-    expect(screen.getByText('Upgrades & sharing')).toBeInTheDocument();
+    expect(screen.getByText('Upgrades & Sharing')).toBeInTheDocument();
     expect(screen.getByText('Available upgrades')).toBeInTheDocument();
 
     expect(screen.getByText('Full Self-Driving')).toBeInTheDocument();
     expect(screen.getByText('99.00')).toBeInTheDocument();
     expect(screen.getByText('Autopilot suite')).toBeInTheDocument();
-    expect(screen.getByText('Eligible')).toBeInTheDocument();
-
     expect(screen.getByText('Acceleration Boost')).toBeInTheDocument();
     expect(screen.getByText('2,000.00')).toBeInTheDocument();
-    expect(screen.getByText('Not eligible')).toBeInTheDocument();
+    expect(screen.getByText('Faster 0-60')).toBeInTheDocument();
   });
 
   it('renders the empty evidence state without inventing an all-applied conclusion', () => {
@@ -358,17 +356,18 @@ describe('VehicleUpgradesWidget — standard feed', () => {
 
 // ── Wide branch (cols >= 3) ──────────────────────────────────────────────────
 describe('VehicleUpgradesWidget — wide branch', () => {
-  it('adds the per-row eligibility caption in addition to the badge', () => {
+  it('keeps the redesigned detail-row hierarchy in the wide layout', () => {
     renderWidget(<VehicleUpgradesWidget size={SIZE_WIDE} />);
-    // The eligible row shows the label twice (caption + badge); ineligible too.
-    expect(screen.getAllByText('Eligible')).toHaveLength(2);
-    expect(screen.getAllByText('Not eligible')).toHaveLength(2);
+    expect(screen.getByText('Full Self-Driving')).toBeInTheDocument();
+    expect(screen.getByText('Acceleration Boost')).toBeInTheDocument();
+    expect(screen.getByText('99.00')).toBeInTheDocument();
+    expect(screen.getByText('2,000.00')).toBeInTheDocument();
   });
 });
 
 // ── Share-links section ──────────────────────────────────────────────────────
 describe('VehicleUpgradesWidget — share links', () => {
-  it('shows the active-link count and the nearest-expiry date, ignoring expired links', () => {
+  it('shows active share-link rows and ignores expired links', () => {
     const soon = inDays(5);
     const later = inDays(40);
     shareLinksMock.mockReturnValue({
@@ -382,13 +381,9 @@ describe('VehicleUpgradesWidget — share links', () => {
 
     renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
 
-    expect(screen.getByText('Active links')).toBeInTheDocument();
-    // 3 active (later + soon + forever); the expired one is excluded.
-    expect(screen.getByText('3')).toBeInTheDocument();
-    // Nearest expiry is the soonest future link, echoed by the mocked formatter.
-    expect(screen.getByText('Nearest expiry')).toBeInTheDocument();
-    expect(screen.getByText(`D:${soon}`)).toBeInTheDocument();
-    expect(screen.queryByText(`D:${later}`)).not.toBeInTheDocument();
+    expect(screen.getByText('Active share links')).toBeInTheDocument();
+    expect(screen.getAllByText('Untitled share')).toHaveLength(3);
+    expect(screen.getAllByText('Live')).toHaveLength(3);
   });
 
   it('shows the empty state when every share link has expired', () => {
@@ -398,7 +393,7 @@ describe('VehicleUpgradesWidget — share links', () => {
     renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
 
     expect(screen.getByText('No active share links')).toBeInTheDocument();
-    expect(screen.queryByText('Active links')).not.toBeInTheDocument();
+    expect(screen.queryByText('Live')).not.toBeInTheDocument();
   });
 
   it('wires useShareLinks to the most recent drive id, and to "" when there are no drives', () => {
@@ -456,7 +451,7 @@ describe('VehicleUpgradesWidget — states + interaction', () => {
     shareLinksMock.mockReturnValue(query([makeShare()]));
     const { container } = renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
     expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
-    expect(screen.getByText('Active links')).toBeInTheDocument();
+    expect(screen.getByText('Live')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry', exact: true }));
     expect(refetch).toHaveBeenCalledOnce();
   });
@@ -496,7 +491,7 @@ describe('VehicleUpgradesWidget — states + interaction', () => {
     expect(upgradesMock).toHaveBeenCalledWith(undefined);
     expect(shareLinksMock).toHaveBeenCalledWith('');
     expect(screen.getByText('No vehicle')).toBeInTheDocument();
-    expect(screen.queryByText('Active links')).not.toBeInTheDocument();
+    expect(screen.queryByText('Live')).not.toBeInTheDocument();
   });
 
   it('keeps null array responses safe and excludes invalid expiry evidence from known-active links', () => {
@@ -507,7 +502,7 @@ describe('VehicleUpgradesWidget — states + interaction', () => {
     drivesMock.mockReturnValue(query([{ id: 55 }]));
     shareLinksMock.mockReturnValue(query([makeShare({ expires_at: 'invalid' })]));
     view.rerender(<MemoryRouter><VehicleUpgradesWidget size={SIZE_STD} /></MemoryRouter>);
-    expect(screen.queryByText('Active links')).not.toBeInTheDocument();
+    expect(screen.queryByText('Live')).not.toBeInTheDocument();
     expect(view.container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
   });
 
@@ -549,7 +544,7 @@ describe('VehicleUpgradesWidget — states + interaction', () => {
     const { container } = renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
 
     expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
-    expect(screen.queryByText('Upgrades & sharing')).toBeInTheDocument();
+    expect(screen.queryByText('Upgrades & Sharing')).toBeInTheDocument();
     expect(screen.queryByText('Full Self-Driving')).not.toBeInTheDocument();
   });
 
@@ -560,7 +555,7 @@ describe('VehicleUpgradesWidget — states + interaction', () => {
 
     // Error is surfaced by the freshness chip; the feed still renders.
     expect(screen.getByText('Full Self-Driving')).toBeInTheDocument();
-    expect(screen.getByText('Upgrades & sharing')).toBeInTheDocument();
+    expect(screen.getByText('Upgrades & Sharing')).toBeInTheDocument();
   });
 
   it('invokes refetch when the freshness/refresh control is activated', () => {

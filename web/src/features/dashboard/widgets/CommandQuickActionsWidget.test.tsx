@@ -124,23 +124,24 @@ beforeEach(() => {
 
 // ── visibleCommandsForSize + COMMANDS (pure) ─────────────────────────────────
 describe('visibleCommandsForSize', () => {
-  it('selects 4 (compact), 6 (medium) and 8 (wide) commands by size', () => {
-    expect(visibleCommandsForSize(SIZE_COMPACT)).toHaveLength(4);
+  it('keeps the After card command set stable at every size', () => {
+    expect(visibleCommandsForSize(SIZE_COMPACT)).toHaveLength(6);
     expect(visibleCommandsForSize(SIZE_MEDIUM)).toHaveLength(6);
-    expect(visibleCommandsForSize({ cols: 3, rows: 2 })).toHaveLength(8);
-    // The full (wide) set is the entire ordered catalog.
+    expect(visibleCommandsForSize({ cols: 3, rows: 2 })).toHaveLength(6);
     expect(visibleCommandsForSize(SIZE_WIDE)).toEqual(COMMANDS);
-    expect(COMMANDS).toHaveLength(8);
+    expect(COMMANDS).toHaveLength(6);
   });
 
   it('returns the leading slice of COMMANDS so the primary actions stay first', () => {
-    // Compact keeps the four most-used actions, in catalog order.
-    expect(visibleCommandsForSize(SIZE_COMPACT)).toEqual(COMMANDS.slice(0, 4));
+    // The compact and medium layouts use the same After-card command catalog.
+    expect(visibleCommandsForSize(SIZE_COMPACT)).toEqual(COMMANDS);
     expect(visibleCommandsForSize(SIZE_COMPACT).map((c) => c.command)).toEqual([
-      'lock',
       'unlock',
       'climate_on',
-      'climate_off',
+      'actuate_frunk',
+      'actuate_trunk',
+      'flash_lights',
+      'honk_horn',
     ]);
   });
 
@@ -183,41 +184,39 @@ describe('CommandQuickActionsWidget', () => {
     );
   });
 
-  it('renders the title and the 6-command medium set (Flash/Trunk are wide-only)', () => {
+  it('renders the title and the six-action After card at medium size', () => {
     renderWidget(<CommandQuickActionsWidget size={SIZE_MEDIUM} />);
 
     expect(screen.getByText('Quick actions')).toBeInTheDocument();
     // Medium tiles carry a visible text label alongside the icon.
-    expect(screen.getByText('Climate on')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Lock' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Horn' })).toBeInTheDocument();
-    // The 7th/8th commands only appear once the tile is wide.
-    expect(screen.queryByRole('button', { name: 'Flash Lights' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Trunk' })).not.toBeInTheDocument();
+    expect(screen.getByText('Climate')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Unlock' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Honk' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Flash' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Trunk' })).toBeInTheDocument();
   });
 
-  it('renders the full command set at wide size (adds Flash + Trunk)', () => {
+  it('renders the full command set at wide size', () => {
     renderWidget(<CommandQuickActionsWidget size={SIZE_WIDE} />);
 
-    expect(screen.getByRole('button', { name: 'Flash Lights' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Flash' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Trunk' })).toBeInTheDocument();
     for (const cmd of COMMANDS) {
       expect(screen.getByRole('button', { name: cmd.labelFallback })).toBeInTheDocument();
     }
   });
 
-  it('renders the compact icon-only layout: no title, 4 tiles, no text labels', () => {
+  it('renders the compact icon-only layout: no title, six tiles, no text labels', () => {
     renderWidget(<CommandQuickActionsWidget size={SIZE_COMPACT} />);
 
     // 1×1 tile suppresses the title chrome.
     expect(screen.queryByText('Quick actions')).not.toBeInTheDocument();
     // Tiles are still reachable/announced via aria-label...
-    expect(screen.getByRole('button', { name: 'Lock' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Climate off' })).toBeInTheDocument();
-    // ...but the visible text label is dropped (icon-only), and the 5th
-    // command (Frunk) is not part of the compact set.
-    expect(screen.queryByText('Climate off')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Frunk' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Unlock' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Climate' })).toBeInTheDocument();
+    // ...but visible text labels are dropped in compact mode.
+    expect(screen.queryByText('Climate')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Frunk' })).toBeInTheDocument();
   });
 
   it('dispatches the command for the first vehicle and enters the running state', () => {
@@ -226,16 +225,16 @@ describe('CommandQuickActionsWidget', () => {
     });
 
     renderWidget(<CommandQuickActionsWidget size={SIZE_MEDIUM} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Lock' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
 
     expect(mutateMock).toHaveBeenCalledTimes(1);
     expect(mutateMock).toHaveBeenCalledWith(
-      { vehicleId: 42, command: 'lock' },
+      { vehicleId: 42, command: 'unlock' },
       expect.objectContaining({ onSettled: expect.any(Function) }),
     );
 
     // The clicked tile swaps its icon for a spinner and marks itself busy...
-    const lockBtn = screen.getByRole('button', { name: 'Lock' });
+    const lockBtn = screen.getByRole('button', { name: 'Unlock' });
     expect(lockBtn.querySelector('.animate-spin')).toBeTruthy();
     expect(lockBtn).toHaveAttribute('aria-busy', 'true');
     // ...and every sibling tile is disabled to prevent a concurrent command.
@@ -249,7 +248,7 @@ describe('CommandQuickActionsWidget', () => {
     });
 
     renderWidget(<CommandQuickActionsWidget size={SIZE_MEDIUM} />);
-    const lockBtn = screen.getByRole('button', { name: 'Lock' });
+    const lockBtn = screen.getByRole('button', { name: 'Unlock' });
     fireEvent.click(lockBtn);
 
     expect(mutateMock).toHaveBeenCalledTimes(1);
@@ -275,7 +274,7 @@ describe('CommandQuickActionsWidget', () => {
     renderWidget(<CommandQuickActionsWidget size={SIZE_MEDIUM} />);
 
     expect(screen.getByText('No vehicle selected')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Lock' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Unlock' })).not.toBeInTheDocument();
   });
 
   it('shows a loading skeleton (not the empty state) while resolving the vehicle id', () => {
@@ -288,7 +287,7 @@ describe('CommandQuickActionsWidget', () => {
     // The shell renders its skeleton instead of flashing "No vehicle selected".
     expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('No vehicle selected')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Lock' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Unlock' })).not.toBeInTheDocument();
   });
 
   it('keeps the grid actionable during load when an explicit vehicleId is supplied', () => {
@@ -302,7 +301,7 @@ describe('CommandQuickActionsWidget', () => {
 
     // id is known up-front → no skeleton, the command grid is usable.
     expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Lock' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Unlock' })).toBeInTheDocument();
   });
 
   it('invokes refetch when the freshness/refresh control is activated', () => {

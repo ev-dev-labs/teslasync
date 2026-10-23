@@ -458,7 +458,7 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
     expect(within(brief).getByText('Not charging')).toBeInTheDocument();
     assertOperationalBriefDisclosure(brief, 'Vehicle 42 · returned state snapshot', { contains: true });
     expect(screen.getByText('Depart by')).toBeInTheDocument();
-    expect(screen.getByText('Pending')).toBeInTheDocument();
+    expect(screen.getAllByText('Pending')).toHaveLength(1);
 
     const missing = makeState();
     Reflect.deleteProperty(missing, 'battery_level');
@@ -526,8 +526,10 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
     renderWidget({ cols: 2, rows: 1 });
     expect(screen.getByText('Start at')).toBeInTheDocument();
     expect(screen.queryByText('Pending')).toBeNull();
-    // No scheduled times were provided → the timeline placeholder shows.
-    expect(screen.getByText('No scheduled times set')).toBeInTheDocument();
+    // No time readings are provided; the stat grid remains honest rather than
+    // inventing a schedule time.
+    expect(screen.getByText('Starts')).toBeInTheDocument();
+    expect(screen.getByText('Depart')).toBeInTheDocument();
   });
 
   it('shows the pending badge next to the mode when a schedule is pending', () => {
@@ -554,9 +556,9 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
     );
     renderWidget({ cols: 2, rows: 1 });
 
-    expect(screen.getByText('Start charging')).toBeInTheDocument();
-    expect(screen.getByText('Departure')).toBeInTheDocument();
-    expect(screen.getByText('Target limit')).toBeInTheDocument();
+    expect(screen.getByText('Starts')).toBeInTheDocument();
+    expect(screen.getByText('Depart')).toBeInTheDocument();
+    expect(screen.getByText('Limit')).toBeInTheDocument();
 
     // Times pass through the (mocked) formatter; the limit renders as a %.
     expect(screen.getByText('time:08:00')).toBeInTheDocument();
@@ -577,8 +579,7 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
       }),
     );
     renderWidget({ cols: 2, rows: 1 });
-    // Two "Pending" strings now: the mode-area badge AND the timeline subtitle.
-    expect(screen.getAllByText('Pending')).toHaveLength(2);
+    expect(screen.getByText('Pending')).toBeInTheDocument();
   });
 
   it('shows the "no scheduled times" placeholder when a mode exists but no times do', () => {
@@ -587,8 +588,7 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
     );
     renderWidget({ cols: 2, rows: 1 });
     expect(screen.getByText('Off')).toBeInTheDocument();
-    expect(screen.getByText('No scheduled times set')).toBeInTheDocument();
-    expect(screen.queryByText('Target limit')).toBeNull();
+    expect(screen.queryByText('Limit')).toBeInTheDocument();
   });
 
   it('renders the tall detail row with the current level and charging status', () => {
@@ -649,7 +649,7 @@ describe('ChargingScheduleWidget — compact', () => {
       data: { ScheduledDepartureTime: sig('09:30') },
     }));
     const { rerender } = renderWidget({ cols: 2, rows: 1 });
-    expect(screen.getByText('Departure')).toBeInTheDocument();
+    expect(screen.getByText('Depart')).toBeInTheDocument();
     expect(screen.getByText('time:09:30')).toBeInTheDocument();
     useQueryMock.mockReturnValue(makeSignalsResult({
       data: { ChargeLimitSoc: sig(0) }, isError: true,
@@ -702,10 +702,10 @@ describe('ChargingScheduleWidget — accessibility', () => {
     );
     const { container } = renderWidget({ cols: 2, rows: 1 });
 
-    // Header Calendar + the three timeline icons are all aria-hidden.
+    // Header and refresh/status icons are decorative and hidden from the a11y tree.
     expect(
       container.querySelectorAll('svg[aria-hidden="true"]').length,
-    ).toBeGreaterThanOrEqual(4);
+    ).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByRole('button', { name: /refresh/i }),
     ).toHaveAttribute('aria-label', expect.stringMatching(/^Refresh/));

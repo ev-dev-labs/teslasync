@@ -314,7 +314,7 @@ describe('SoftwareUpdateHistoryWidget', () => {
     const titles = screen.getAllByText(/^2024\./).map((el) => el.textContent);
     expect(titles).toEqual(['2024.44.25', '2024.20.1', '2024.8.9']);
     expect(screen.getAllByText('Current')).toHaveLength(1);
-    expect(screen.getAllByText('Installed')).toHaveLength(2);
+    expect(screen.getAllByText(/^Installed /)).toHaveLength(3);
   });
 
   it('falls back to the first vehicle when no vehicleId prop is supplied', () => {

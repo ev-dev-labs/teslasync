@@ -332,9 +332,9 @@ describe('automation-history — lazy component wiring', () => {
 
     expect(screen.getByText('Automation history')).toBeInTheDocument();
     expect(screen.getByText('Morning Precondition')).toBeInTheDocument();
-    // Feed subtitle = `${status} · ${duration}`.
-    expect(screen.getByText(/success ·/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Success rate/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Succeeded')).toBeInTheDocument();
+    expect(screen.getByText('1.2 s')).toBeInTheDocument();
+    expect(screen.queryByText(/Success rate/)).not.toBeInTheDocument();
   });
 
   it('shows the compact empty state when there is no run history', async () => {

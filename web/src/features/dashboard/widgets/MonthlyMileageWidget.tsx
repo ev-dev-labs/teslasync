@@ -7,8 +7,12 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { zonedDateParts } from '@/lib/dateFormat';
+import { formatMonthName } from '@/lib/dateConvert';
+import { EmptyState } from '@/components/feedback';
 
-import { WidgetChartSummary, type ChartSummaryStat } from './shared';
+import { WidgetBigNumber, WidgetChartSummary } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
@@ -30,21 +34,26 @@ export function shortMonth(iso: string): string {
   return names[idx] ?? iso;
 }
 
-/** Current calendar month as a 'YYYY-MM' key, in the host's local time. */
-export function currentMonthKey(): string {
+/** Current calendar month as a YYYY-MM key, resolved in the shared display zone. */
+export function currentMonthKey(timezone?: string): string {
   const now = new Date();
+  if (timezone) {
+    const parts = zonedDateParts(now, timezone);
+    if (!parts) return '';
+    return `${parts.year}-${String(parts.month).padStart(2, '0')}`;
+  }
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, '0');
   return `${y}-${m}`;
 }
 
 export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber: fmt } = useNumberFormatting();
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
+  const { tz, locale } = useDateFormat('vehicle');
   const distanceUnit = unitPrefs.distance;
   // convertDistanceFromSI expects SI meters and maps to the user's unit.
   // Memoised so the chartData derive only recomputes when the source data or
@@ -54,7 +63,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
     [distanceUnit],
   );
 
-  const query = useMonthlyMileage(vid > 0 ? String(vid) : '');
+  const query = useMonthlyMileage(vid > 0 ? String(vid) : '', tz);
   const {
     data,
     isLoading,
@@ -71,14 +80,14 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
     refetch();
   }, [refetch]);
 
-  const curMonth = currentMonthKey();
+  const curMonth = currentMonthKey(tz);
 
   const chartData = useMemo<BarDatum[]>(() => {
     const items = data ?? [];
     return items.slice(-12).map((m) => ({
       // Backend `/mileage/monthly` returns `year_month` ('YYYY-MM') and
       // `total_km`. SI-canonical convertDistanceFromSI expects meters.
-      month: shortMonth(m.year_month ?? ''),
+      month: formatMonthName(m.year_month ?? '', { locale, tz }),
       distance: knownNumber(m.total_km) == null ? null : toDistanceDisplay(m.total_km * 1000),
       isCurrent: (m.year_month ?? '') === curMonth,
     }));
@@ -89,6 +98,12 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
       ? chartData.reduce((sum, d) => sum + (d.distance ?? 0), 0)
       : null,
     [chartData],
+  );
+  const averageDistance = useMemo(
+    () => totalDistance == null || chartData.length === 0
+      ? null
+      : totalDistance / chartData.length,
+    [totalDistance, chartData.length],
   );
 
   const currentMonthDistance = useMemo(() => {
@@ -106,33 +121,21 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
   const axisLabels = useMemo(
     () => [0, ...chartData.map((entry) => entry.distance)]
       .filter((value): value is number => value != null && Number.isFinite(value))
-      .map((value) => fmt(value)),
-    [chartData, fmt],
+      .map((value) => fmtNumber(value)),
+    [chartData, fmtNumber],
   );
   const axisWidth = useMeasuredAxisWidth({
     labels: axisLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
   });
 
-  // Summary stats are identical in the compact and standard layouts, so they
-  // are derived once and reused (single source of truth + stable reference).
-  const summaryStats = useMemo<ChartSummaryStat[]>(
-    () =>
-      hasData
-        ? [
-            {
-              label: t('widget.monthlyMileage.thisMonth', 'This month'),
-              value: currentMonthDistance == null ? null : fmtInt(currentMonthDistance),
-              unit: distanceUnit,
-            },
-            {
-              label: t('widget.monthlyMileage.total12m', '12-month total'),
-              value: totalDistance == null ? null : fmtInt(totalDistance),
-              unit: distanceUnit,
-            },
-          ]
-        : [],
-    [hasData, currentMonthDistance, totalDistance, distanceUnit, t, fmtInt],
-  );
+  const currentMonthLabel = useMemo(() => {
+    if (!curMonth) return null;
+    const parts = curMonth.split('-');
+    const month = Number(parts[1]);
+    return Number.isInteger(month) && month >= 1 && month <= 12
+      ? formatMonthName(month, { locale, tz })
+      : null;
+  }, [curMonth, locale, tz]);
 
   const dataState = data != null || isLoading || isError || error ? trust : undefined;
 
@@ -149,14 +152,20 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
         isError={isError}
         onRefresh={handleRefresh}
       >
-        <WidgetChartSummary
-          compact
-          isEmpty={!hasData}
-          emptyMessage={t('widget.monthlyMileage.noData', 'No mileage data')}
-          emptyIcon={<BarChart3 className="h-5 w-5" />}
-          stats={summaryStats}
-          chart={null}
-        />
+        {hasData ? (
+          <WidgetBigNumber
+            value={currentMonthDistance == null ? null : fmtInt(currentMonthDistance)}
+            unit={distanceUnit}
+            subtitle={currentMonthLabel == null
+              ? t('widget.monthlyMileage.thisMonth', 'This month')
+              : t('widget.monthlyMileage.monthSoFar', '{{month}} so far', { month: currentMonthLabel })}
+          />
+        ) : (
+          <EmptyState
+            icon={<BarChart3 className="h-5 w-5" />}
+            message={t('widget.monthlyMileage.noData', 'No mileage data')}
+          />
+        )}
       </WidgetShell>
     );
   }
@@ -180,8 +189,28 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
         isEmpty={!hasData}
         emptyMessage={t('widget.monthlyMileage.noData', 'No mileage data')}
         emptyIcon={<BarChart3 className="h-5 w-5" />}
-        stats={summaryStats}
+        stats={[]}
         chart={
+          <div className="flex h-full min-w-0 flex-col">
+            <div className="mb-2 flex min-w-0 items-end justify-between gap-3">
+              <WidgetBigNumber
+                size="primary"
+                value={currentMonthDistance == null ? null : fmtInt(currentMonthDistance)}
+                unit={distanceUnit}
+                subtitle={currentMonthLabel == null
+                  ? t('widget.monthlyMileage.thisMonth', 'This month')
+                  : t('widget.monthlyMileage.monthSoFar', '{{month}} so far', { month: currentMonthLabel })}
+                animated={false}
+              />
+              <span className="shrink-0 pb-1 text-sm text-[var(--text-muted)] tabular-nums">
+                {averageDistance == null
+                  ? '—'
+                  : t('widget.monthlyMileage.average12m', '12-mo avg {{value}}', {
+                      value: `${fmtInt(averageDistance)} ${distanceUnit}`,
+                    })}
+              </span>
+            </div>
+            <div className="min-h-0 flex-1">
           <EmbeddedChart
             title={t('widget.monthlyMileage.title', 'Monthly mileage')}
             ariaLabel={t(
@@ -211,7 +240,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
                 tickLine={false}
                 axisLine={false}
                 width={axisWidth}
-                tickFormatter={(v: number) => fmt(v)}
+                tickFormatter={(v: number) => fmtNumber(v)}
               />
               <Tooltip
                 content={<ChartTooltip />}
@@ -237,6 +266,8 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
               </BarChart>
             </ResponsiveContainer>
           </EmbeddedChart>
+            </div>
+          </div>
         }
       />
     </WidgetShell>

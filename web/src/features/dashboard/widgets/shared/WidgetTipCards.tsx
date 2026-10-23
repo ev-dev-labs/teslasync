@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
+import { dashboardTokens } from '../../lib/dashboardTokens';
 
 export interface TipItem {
   id: string | number;
@@ -58,47 +59,57 @@ export function WidgetTipCards({
   }
 
   return (
-    <div role="list" className="h-full min-w-0 space-y-2 overflow-y-auto">
+    <div role="list" className={cn('flex h-full min-w-0 flex-col overflow-y-auto', dashboardTokens.density.gridGap)}>
       {visible.map((tip) => (
         <div
           key={tip.id}
           role="listitem"
-          className="flex min-h-[44px] min-w-0 items-start gap-3 border-b border-[var(--border-subtle)] py-3 last:border-b-0"
-        >
-          {tip.icon && (
-            // Decorative leading glyph — the title conveys the meaning, so hide
-            // the icon from assistive tech to avoid a redundant announcement.
-            <span aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--text-secondary)]">
-              {tip.icon}
-            </span>
+          className={cn(
+            // Spec `.tip` language (widgets-compare.html): a bordered 10px
+            // card on the sub surface with 10px/12px padding, a semibold
+            // title block and a muted body — not a divided row. The leading
+            // icon and impact pill stay opt-in per tip so the four callers
+            // keep their status cues; color never carries meaning alone.
+            'min-w-0 border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2.5',
+            dashboardTokens.radius.inner,
           )}
+        >
+          <div className="flex min-w-0 items-start gap-3">
+            {tip.icon && (
+              // Decorative leading glyph — the title conveys the meaning, so hide
+              // the icon from assistive tech to avoid a redundant announcement.
+              <span aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--text-secondary)]">
+                {tip.icon}
+              </span>
+            )}
 
-          <div className="flex-1 min-w-0">
-            <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-              <Text size="sm" weight="medium" color="primary" className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-                {tip.title}
+            <div className="flex-1 min-w-0">
+              <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+                <Text size="sm" weight="medium" color="primary" className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+                  {tip.title}
+                </Text>
+                {tip.impact && (
+                  <Badge
+                    variant={impactBadgeMap[tip.impact]}
+                    size="sm"
+                    className="max-w-full shrink-0 whitespace-normal [overflow-wrap:anywhere]"
+                  >
+                    {tip.impactLabel ?? impactLabels[tip.impact]}
+                  </Badge>
+                )}
+              </div>
+              <Text
+                as="p"
+                size="xs"
+                color="muted"
+                className={cn(
+                  'mt-0.5 leading-relaxed [overflow-wrap:anywhere]',
+                  compact && 'line-clamp-2',
+                )}
+              >
+                {tip.description}
               </Text>
-              {tip.impact && (
-                <Badge
-                  variant={impactBadgeMap[tip.impact]}
-                  size="sm"
-                  className="max-w-full shrink-0 whitespace-normal [overflow-wrap:anywhere]"
-                >
-                  {tip.impactLabel ?? impactLabels[tip.impact]}
-                </Badge>
-              )}
             </div>
-            <Text
-              as="p"
-              size="xs"
-              color="secondary"
-              className={cn(
-                'mt-0.5 leading-relaxed [overflow-wrap:anywhere]',
-                compact && 'line-clamp-2',
-              )}
-            >
-              {tip.description}
-            </Text>
           </div>
         </div>
       ))}

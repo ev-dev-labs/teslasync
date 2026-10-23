@@ -1,22 +1,19 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, Cell, Legend, useThemeChartPalette, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useCostForecast } from '@/api/hooks/useCharging';
 import { useFormatting } from '@/hooks/useFormatting';
-import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber, knownString } from '@/api/dataState';
-import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { EmptyState, Skeleton } from '@/components/feedback';
-import { DataProvenanceBadge } from '@/components/data-display';
-import { Caption } from '@/components/ui';
-import { WidgetChartSummary, type ChartSummaryStat } from './shared';
+import { WidgetBigNumber } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { CostHistoricalMonth, CostForecastMonth } from '@/types/charging';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useTimezone } from '@/lib/timezone';
+import { useDateLabels } from '@/hooks/useDateLabels';
 
 interface BarDatum extends ChartDataRow {
   month: string;
@@ -50,14 +47,15 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
   const { t } = useTranslation('dashboard');
   const vehiclesQuery = useVehicles();
   const vid = vehicleId ?? config?.vehicleId ?? vehiclesQuery.data?.[0]?.id ?? null;
+  const timezone = useTimezone('vehicle');
+  const { formatMonthName } = useDateLabels('vehicle');
 
   const {
     data, isLoading: forecastLoading, error: forecastError, isFetching, isStale,
     isError: forecastIsError, dataUpdatedAt, refetch,
-  } = useCostForecast(vid != null ? String(vid) : null);
+  } = useCostForecast(vid != null ? String(vid) : null, 6, timezone);
 
   const { formatCurrency, currencySymbol } = useFormatting();
-  const { unitPrefs } = useUnits();
   const palette = useThemeChartPalette();
   const isLoading = forecastLoading || (vid == null && (vehiclesQuery.isLoading ?? false));
   const error = forecastError ?? (vid == null ? vehiclesQuery.error : null);
@@ -75,17 +73,12 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
 
   const rawForecast = data?.forecast;
   const forecastMonths = Array.isArray(rawForecast) ? rawForecast : [];
-  const nextForecast = forecastMonths[0];
-  const nextCost = knownNumber(nextForecast?.cost);
-
   const rawHistorical = data?.historical;
   const hist = Array.isArray(rawHistorical) ? rawHistorical : [];
-  const lastHistorical = hist.length > 0 ? hist[hist.length - 1] : undefined;
-  const lastCost = knownNumber(lastHistorical?.cost);
-  const delta = nextCost != null && lastCost != null ? nextCost - lastCost : null;
-  const trendArrow = delta == null ? null : delta > 0 ? '↑' : delta < 0 ? '↓' : '→';
-  const ratePerKwh = knownNumber(lastHistorical?.cost_per_kwh);
-  const energyRate = ratePerKwh == null ? null : ratePerKwh / convertEnergyFromSI(1000, unitPrefs.energy);
+  const forecastCosts = forecastMonths.map((entry) => knownNumber(entry?.cost));
+  const nextCost = forecastCosts.length > 0 && forecastCosts.every((cost) => cost != null)
+    ? forecastCosts.reduce<number>((sum, cost) => sum + (cost ?? 0), 0)
+    : null;
 
   const isCompact = size.cols <= 1;
   const axisLabels = useMemo(
@@ -106,17 +99,11 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
       !Array.isArray(data.historical) || !Array.isArray(data.forecast)
       || [...hist, ...forecastMonths].some((entry) => entry == null || knownNumber(entry.cost) == null)
       || (forecastMonths.length > 0 && nextCost == null)
-      || (hist.length > 0 && (lastCost == null || ratePerKwh == null))
     ),
   });
 
   const shellProps = {
     title: t('widget.costForecast.title', 'Cost forecast'),
-    icon: delta != null && delta > 0
-      ? <TrendingUp className="h-3.5 w-3.5 text-amber-400" />
-      : delta != null && delta < 0
-        ? <TrendingDown className="h-3.5 w-3.5 text-emerald-400" />
-        : <DollarSign className="h-3.5 w-3.5" />,
   };
 
   // ── Compact (1×2): big predicted cost + trend ──
@@ -132,21 +119,11 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
         isStale={isStale}
         isError={isError}
         onRefresh={handleRefresh}
-        footer={nextCost != null && <DataProvenanceBadge provenance="inferred" status={dataState.status} />}
       >
-        <WidgetChartSummary
-          compact
-          stats={[
-            {
-              label: t('widget.costForecast.nextMonth', 'Next month'),
-              value: nextCost == null ? null : formatCurrency(nextCost),
-            },
-            {
-              label: t('widget.costForecast.trend', 'Trend'),
-              value: trendArrow,
-            },
-          ]}
-          chart={null}
+        <WidgetBigNumber
+          value={nextCost == null ? null : formatCurrency(nextCost)}
+          label={t('widget.costForecast.nextPeriod', 'Next {{count}} months', { count: forecastMonths.length || 6 })}
+          animated={false}
         />
         {data == null && <EmptyState message={t('widget.costForecast.noData', 'No forecast data')}
           action={{ label: t('common.refresh', 'Refresh'), onClick: handleRefresh }} />}
@@ -155,23 +132,12 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
   }
 
   // ── Standard (2×4): stat header + bar chart ──
-  const stats: ChartSummaryStat[] = [
-    {
-      label: t('widget.costForecast.nextMonth', 'Next month'),
-      value: nextCost == null ? null : formatCurrency(nextCost),
-    },
-    {
-      label: t('widget.costForecast.avgEnergyRate', 'Avg {{currency}}/{{unit}}', { currency: currencySymbol, unit: unitPrefs.energy }),
-      value: energyRate == null ? null : formatCurrency(energyRate),
-    },
-    {
-      label: t('widget.costForecast.trend', 'Trend'),
-      value: delta == null ? null : `${trendArrow} ${formatCurrency(Math.abs(delta))}`,
-    },
-  ];
-
   const isWide = size.cols >= 3;
   const tick = isWide ? axisTick : axisTickSm;
+  const chartLabels = chartData.map((entry) => ({
+    ...entry,
+    month: formatMonthName(entry.month),
+  }));
 
   return (
     <WidgetShell
@@ -179,24 +145,26 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
       loading={isLoading}
       dataState={dataState}
       loadingContent={<Skeleton className="h-full min-h-24 rounded-shape-sm" />}
-      status={<DataProvenanceBadge provenance={dataState.provenance} status={dataState.status} />}
-      footer={<Caption>{t('widget.costForecast.estimate', 'Forecast values are estimates.')}</Caption>}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <WidgetChartSummary
-        stats={stats}
-        chart={
+      <div className="flex h-full min-w-0 flex-col gap-2">
+        <WidgetBigNumber
+          value={nextCost == null ? null : formatCurrency(nextCost)}
+          subtitle={t('widget.costForecast.nextPeriod', 'Next {{count}} months', { count: forecastMonths.length || 6 })}
+          animated={false}
+        />
+        <div className="min-h-0 flex-1">
           <EmbeddedChart
             title={t('widget.costForecast.title', 'Cost forecast')}
             ariaLabel={t(
               'widget.costForecast.chartLabel',
               'Monthly charging cost history and forecast',
             )}
-            data={chartData}
+            data={chartLabels}
             dataColumns={[
               { key: 'month', label: t('widget.costForecast.month', 'Month') },
               {
@@ -220,7 +188,7 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
             emptyMessage={t('widget.costForecast.noData', 'No forecast data')}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+              <BarChart data={chartLabels} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
                 {chartGrid}
                 <XAxis dataKey="month" tick={tick} tickLine={false} axisLine={false} />
                 <YAxis
@@ -249,7 +217,7 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
                   fill={palette.primary}
                   name={t('widget.costForecast.costLabel', 'Cost')}
                 >
-                  {chartData.map((entry, index) => (
+                  {chartLabels.map((entry, index) => (
                     <Cell
                       key={`${entry.period}-${entry.month}-${index}`}
                       fill={entry.period === 'forecast' ? palette.neutral : palette.primary}
@@ -261,8 +229,8 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
               </BarChart>
             </ResponsiveContainer>
           </EmbeddedChart>
-        }
-      />
+        </div>
+      </div>
     </WidgetShell>
   );
 }

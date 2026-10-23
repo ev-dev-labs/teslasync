@@ -6,15 +6,11 @@ import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/compone
 import { Circle, Marker, vehicleIcon } from '@/components/maps';
 import { useGeofences } from '@/api/hooks/useLocations';
 import { useVehicleState, useVehicles } from '@/api/hooks/useVehicles';
-import { useUnits } from '@/hooks/useUnits';
-
-import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState, useCombinedDataState } from '@/hooks/useDataState';
-import { GeofenceStatusList } from '../components/continuation-dashboard-2/GeofenceStatusList';
+import { WidgetDetailCard, type DetailEntry } from './shared';
 
 /** Haversine distance in meters between two lat/lon points */
 export function haversineMeters(
@@ -45,9 +41,7 @@ interface FenceStatus {
 }
 
 export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { unitPrefs } = useUnits();
 
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -132,11 +126,6 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
   const isCompact = size.cols <= 1;
   const isEmpty = fences.length === 0;
   const markerIcon = useMemo(() => vehicleIcon(), []);
-
-  /** Convert radius (meters) to user-preferred distance and format */
-  const fmtRadius = (meters: number | null): string => {
-    return meters != null ? `${fmtNumber(convertDistanceFromSI(meters, unitPrefs.distance))} ${unitPrefs.distance}` : '—';
-  };
 
   const shellProps = {
     title: t('widget.geofence.title', 'Geofence status'),
@@ -224,7 +213,33 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
 
           {/* Fence list */}
           <div className="flex-1 min-h-0 overflow-y-auto px-4 py-2">
-            <GeofenceStatusList fences={fences} hasCoords={hasCoords} formatRadius={fmtRadius} />
+            <WidgetDetailCard
+              entries={fences.map((fence): DetailEntry => {
+                const status = !fence.enabled
+                  ? t('widget.geofence.disabled', 'Disabled')
+                  : fence.inside
+                    ? t('widget.geofence.inside', 'Inside')
+                    : hasCoords && fence.validMap
+                      ? t('widget.geofence.outside', 'Outside')
+                      : null;
+                const variant = !fence.enabled
+                  ? 'neutral'
+                  : fence.inside
+                    ? 'success'
+                    : status
+                      ? 'neutral'
+                      : 'neutral';
+                return {
+                  id: fence.id,
+                  label: fence.name,
+                  value: status ? '' : '—',
+                  status: fence.enabled && fence.inside ? 'success' : 'neutral',
+                  badge: status ? { text: status, variant } : undefined,
+                };
+              })}
+              emptyMessage={t('widget.geofence.noFences', 'No geofences configured')}
+              emptyIcon={<Crosshair aria-hidden="true" className="h-5 w-5" />}
+            />
           </div>
         </div>
       )}

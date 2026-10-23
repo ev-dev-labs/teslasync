@@ -1,42 +1,37 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { ComposedChart, Line, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, axisTick, axisTickSm, chartAnimation, useThemeChartPalette, useMeasuredAxisWidth, areaGradient, ChartLegend, EmbeddedChart, type ChartDataRow } from '@/components/charts';
+import { ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartAnimation, useThemeChartPalette, EmbeddedChart, type ChartDataRow } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
-import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { SourceContent } from '@/components/layout';
 import { useDrives, useDriveTelemetry } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { convertDistanceFromSI, convertSpeedFromSI, convertPowerFromSI } from '@/lib/unitConversion';
+import { convertSpeedFromSI, convertPowerFromSI } from '@/lib/unitConversion';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetChartSummary, type ChartSummaryStat } from './shared';
+import { WidgetChartSummary } from './shared';
 import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
 
 interface ChartDatum extends ChartDataRow {
   time: string;
   speed: number | null;
   power: number | null;
-  battery: number | null;
-  elevation: number | null;
 }
 
 export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber: fmt } = useNumberFormatting();
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const { formatTime } = useDateFormat();
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
   const { unitPrefs } = useUnits();
-  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   const {
     data: drives,
@@ -71,7 +66,6 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
 
   const isLoading = !drives && drivesLoading;
   const isCompact = size.cols <= 1;
-  const isWide = size.cols >= 3;
 
   // Surface failures from BOTH data sources. A `/drives` fetch error used to be
   // swallowed (only its loading flag was read) and rendered as the "No recent
@@ -106,163 +100,65 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
       const ts = new Date(p.timestamp);
       const speed = knownNumber(p.speed);
       const power = knownNumber(p.power);
-      const elevation = knownNumber(p.elevation);
+      const convertedSpeed = speed != null ? convertSpeedFromSI(speed, unitPrefs.speed) : null;
+      const convertedPower = power != null
+        ? convertPowerFromSI(power, unitPrefs.power ?? 'kW')
+        : null;
       return {
-        time: Number.isNaN(ts.getTime()) ? '—' : `${String(ts.getHours()).padStart(2, '0')}:${String(ts.getMinutes()).padStart(2, '0')}`,
-        speed: speed != null ? convertSpeedFromSI(speed, unitPrefs.speed) : null,
-        power: power != null ? convertPowerFromSI(power, unitPrefs.power ?? 'kW') : null,
-        battery: knownNumber(p.batteryLevel) ?? knownNumber(p.soc),
-        elevation: elevation != null ? convertDistanceFromSI(elevation, unitPrefs.distance) : null,
+        time: Number.isNaN(ts.getTime()) ? '—' : formatTime(ts),
+        speed: convertedSpeed != null && Number.isFinite(convertedSpeed)
+          ? Math.round(convertedSpeed)
+          : null,
+        power: convertedPower != null && Number.isFinite(convertedPower)
+          ? (unitPrefs.power ?? 'kW') === 'kW'
+            ? Math.round(convertedPower * 10) / 10
+            : Math.round(convertedPower)
+          : null,
       };
     });
-  }, [telemetry, unitPrefs.speed, unitPrefs.power, unitPrefs.distance]);
-
-  const stats = useMemo((): ChartSummaryStat[] => {
-    if (!latestDrive) return [];
-    const items: ChartSummaryStat[] = [
-      {
-        label: t('widget.driveTelemetry.distance', 'Distance'),
-        value: knownNumber(latestDrive.distanceM) == null ? null : fmtNumber(convertDistanceFromSI(latestDrive.distanceM, unitPrefs.distance)),
-        unit: unitPrefs.distance,
-      },
-      {
-        label: t('widget.driveTelemetry.duration', 'Duration'),
-        value: knownNumber(latestDrive.durationS) == null ? null : fmtNumber(latestDrive.durationS / 60),
-        unit: t('widget.driveTelemetry.min', 'min'),
-      },
-    ];
-    const energy = knownNumber(latestDrive.energyUsedWh);
-    const distanceM = knownNumber(latestDrive.distanceM);
-    if (energy != null && distanceM != null && distanceM > 0) {
-      const distance = convertDistanceFromSI(latestDrive.distanceM, unitPrefs.distance);
-      const efficiency = distance > 0 ? energy / distance : null;
-      items.push({
-        label: t('widget.driveTelemetry.efficiency', 'Efficiency'),
-        value: efficiency != null ? fmtNumber(efficiency) : '—',
-        unit: efficiencyUnit,
-      });
-    }
-    return items;
-  }, [latestDrive, unitPrefs.distance, efficiencyUnit, t, fmtNumber, fmtInt]);
-
-  const tick = isWide ? axisTick : axisTickSm;
-  const axisLabels = useMemo(() => {
-    const speed = [0];
-    const power = [0];
-    let maxSpeed = 0;
-    for (const point of chartData) {
-      if (point.speed != null && Number.isFinite(point.speed)) {
-        speed.push(point.speed);
-        maxSpeed = Math.max(maxSpeed, point.speed);
-      }
-      if (point.power != null && Number.isFinite(point.power)) power.push(point.power);
-    }
-    speed.push(maxSpeed + 10);
-    return { speed: speed.map(value => fmt(value)), power: power.map(value => fmt(value)) };
-  }, [chartData, fmt]);
-  const speedAxisWidth = useMeasuredAxisWidth({
-    labels: axisLabels.speed, fontSize: tick.fontSize, enabled: !isCompact, minWidth: 36, padding: 20,
-  });
-  const powerAxisWidth = useMeasuredAxisWidth({
-    labels: axisLabels.power, fontSize: tick.fontSize, enabled: !isCompact, minWidth: 36, padding: 20,
-  });
+  }, [telemetry, unitPrefs.speed, unitPrefs.power, formatTime]);
 
   const chart = useMemo(() => {
     if (chartData.length === 0) return null;
     return (
       <EmbeddedChart
-        height={180}
-        mobileHeight={160}
+        height={80}
+        mobileHeight={80}
         title={t('widget.driveTelemetry.title', 'Drive telemetry')}
         ariaLabel={t(
           'widget.driveTelemetry.chartAria',
-          'Speed, power, battery, and elevation during the latest drive',
+          'Speed and power during the latest drive',
         )}
         data={chartData}
         dataColumns={[
           { key: 'time', label: t('widget.driveTelemetry.time', 'Time') },
           { key: 'speed', label: `${t('widget.driveTelemetry.speed', 'Speed')} (${unitPrefs.speed})` },
           { key: 'power', label: `${t('widget.driveTelemetry.powerLabel', 'Power')} (${unitPrefs.power ?? 'kW'})` },
-          { key: 'battery', label: t('widget.driveTelemetry.battery', 'Battery %') },
-          { key: 'elevation', label: `${t('widget.driveTelemetry.elevation', 'Elevation')} (${unitPrefs.distance})` },
         ]}
         chartKey="dashboard-drive-telemetry"
       >
-        {({ hiddenSeries }) => (
+        {() => (
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-          data={chartData}
-          margin={{ top: 4, right: 4, bottom: 0, left: 4 }}
-          {...chartAnimation}
-        >
-          {areaGradient('power-pos', palette.series[1])}
-          {areaGradient('elevation-grad', palette.series[3])}
+            <ComposedChart data={chartData} margin={{ top: 2, right: 0, bottom: 0, left: 0 }} {...chartAnimation}>
           {chartGrid}
-
           <XAxis
             dataKey="time"
-            tick={isCompact ? false : tick}
+            hide={isCompact}
             tickLine={false}
             axisLine={false}
             interval="preserveStartEnd"
           />
-          <YAxis yAxisId="battery" hide domain={[0, 100]} />
-          <YAxis yAxisId="elevation" hide domain={['dataMin', 'dataMax']} />
-
-          {/* Left axis: speed */}
           <YAxis
             yAxisId="speed"
-            tick={isCompact ? false : tick}
-            tickLine={false}
-            axisLine={false}
-            width={isCompact ? 0 : speedAxisWidth}
+            hide
             domain={[0, 'dataMax + 10']}
-            tickFormatter={(v: number) => fmt(v)}
           />
-
-          {/* Right axis: power */}
           <YAxis
             yAxisId="power"
             orientation="right"
-            tick={isCompact ? false : tick}
-            tickLine={false}
-            axisLine={false}
-            width={isCompact ? 0 : powerAxisWidth}
-            tickFormatter={(v: number) => fmt(v)}
+            hide
           />
-
           <Tooltip content={<ChartTooltip />} />
-          <ChartLegend />
-
-          {/* Wide: elevation as gray area under speed */}
-          {isWide && (
-            <Area
-              yAxisId="elevation"
-              dataKey="elevation"
-              stroke="none"
-              fill="url(#elevation-grad)"
-              fillOpacity={0.15}
-              name={`${t('widget.driveTelemetry.elevation', 'Elevation')} (${unitPrefs.distance})`}
-              isAnimationActive={false}
-              connectNulls={false}
-              hide={hiddenSeries?.isHidden('elevation')}
-            />
-          )}
-
-          {/* Signed power is rendered without inventing an energy total. */}
-          <Area
-            yAxisId="power"
-            dataKey="power"
-            stroke={palette.series[1]}
-            fill="url(#power-pos)"
-            fillOpacity={0.3}
-            strokeWidth={1.5}
-            name={`${t('widget.driveTelemetry.powerLabel', 'Power')} (${unitPrefs.power ?? 'kW'})`}
-            connectNulls={false}
-            hide={hiddenSeries?.isHidden('power')}
-          />
-
-          {/* Speed as cyan line on left axis */}
           <Line
             yAxisId="speed"
             dataKey="speed"
@@ -271,27 +167,22 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             dot={false}
             name={`${t('widget.driveTelemetry.speed', 'Speed')} (${unitPrefs.speed})`}
             connectNulls={false}
-            hide={hiddenSeries?.isHidden('speed')}
           />
-
-          {/* Battery has its own percentage scale, independent of speed. */}
           <Line
-            yAxisId="battery"
-            dataKey="battery"
-            stroke={palette.series[2]}
+            yAxisId="power"
+            dataKey="power"
+            stroke={palette.series[1]}
             strokeWidth={1.5}
-            strokeDasharray="4 3"
             dot={false}
-            name={t('widget.driveTelemetry.battery', 'Battery %')}
+            name={`${t('widget.driveTelemetry.powerLabel', 'Power')} (${unitPrefs.power ?? 'kW'})`}
             connectNulls={false}
-            hide={hiddenSeries?.isHidden('battery')}
           />
             </ComposedChart>
           </ResponsiveContainer>
         )}
       </EmbeddedChart>
     );
-  }, [chartData, isCompact, isWide, tick, speedAxisWidth, powerAxisWidth, unitPrefs.speed, unitPrefs.power, unitPrefs.distance, t, palette, fmt]);
+  }, [chartData, isCompact, unitPrefs.speed, unitPrefs.power, t, palette]);
 
   // Compact layout
   if (isCompact) {
@@ -308,7 +199,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
         onRefresh={handleRefresh}
       >
         <WidgetChartSummary
-          stats={stats}
+          stats={[]}
           chart={null}
           compact
           isEmpty={!latestDrive}
@@ -327,7 +218,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
       loading={isLoading}
       dataState={trust.hasData ? trust : undefined}
       error={trust.fatalError?.message ?? null}
-      description={t('widget.driveTelemetry.sampleScope', 'Latest drive · recorded samples may contain gaps')}
+      description={undefined}
       updatedAt={combinedUpdatedAt}
       isFetching={combinedIsFetching}
       isStale={isStale}
@@ -336,15 +227,11 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
     >
       {latestDrive ? (
         <div className="flex min-h-full flex-col">
-          {/* Header stats + badges */}
-          <div className="flex flex-wrap items-center gap-3 pb-2">
-            <WidgetChartSummary stats={stats} chart={null} compact />
-            {isWide && latestDrive.startAddress && (
-              <Badge variant="neutral" size="sm" className="min-w-0 max-w-full whitespace-normal [overflow-wrap:anywhere]">
-                {latestDrive.startAddress}
-              </Badge>
-            )}
-          </div>
+          <p className="break-words px-0 pb-1 text-[13px] text-[var(--text-secondary)]">
+            {t('widget.driveTelemetry.lastDrive', 'Last drive')}
+            {latestDrive.startAddress && ` · ${latestDrive.startAddress}`}
+            {latestDrive.endAddress && ` → ${latestDrive.endAddress}`}
+          </p>
 
           {/* Chart area */}
           <div className="flex-1 min-h-40">
@@ -362,7 +249,14 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
               retainedMessage={t('widget.driveTelemetry.telemetryRetained', 'Previously loaded drive telemetry remains visible while this source recovers.')}
               errorRecovery={{ onRetry: () => { void refetch(); } }}
             >
-              {chart}
+              <WidgetChartSummary
+                stats={[]}
+                chart={chart}
+                legend={[
+                  { label: `${t('widget.driveTelemetry.speed', 'Speed')} (${unitPrefs.speed})`, color: palette.series[0] },
+                  { label: `${t('widget.driveTelemetry.powerLabel', 'Power')} (${unitPrefs.power ?? 'kW'})`, color: palette.series[1] },
+                ]}
+              />
             </SourceContent>
           </div>
         </div>

@@ -1,200 +1,114 @@
-import { useMemo, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutDashboard } from 'lucide-react';
-import { StatusBadge } from '@/components/data-display';
-import { Badge } from '@/components/ui';
-import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
-import { useDashboardStats } from '@/api/hooks/useDashboard';
+import { EmptyState } from '@/components/feedback';
 import { useVehicleStateMachine } from '@/api/hooks/useAdmin';
-import { useFSMTransitions } from '@/api/hooks/useFSM';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useDateFormat } from '@/hooks/useDateFormat';
-
-import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber } from './shared';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
-import type { WidgetProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDashboardLayouts, type DashboardLayoutsPayload } from '@/api/hooks/useSettings';
+import { combineDataStates } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
-import { combineDataStates, knownNumber, knownString } from '@/api/dataState';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { safeArray } from '@/lib/safeArray';
-import { dashboardTokens } from '../lib/dashboardTokens';
+import { WidgetShell } from './WidgetShell';
+import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
+import type { WidgetProps } from './types';
 
 export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
   const { fmtInt } = useNumberFormatting();
-  const { formatRelative } = useDateFormat();
   const { t } = useTranslation('dashboard');
   const vehiclesQuery = useVehicles();
   const id = vehicleId ?? safeArray(vehiclesQuery.data)[0]?.id;
   const idStr = Number.isSafeInteger(id) && Number(id) > 0 ? String(id) : '';
 
-  const stats = useDashboardStats();
+  const layouts = useDashboardLayouts();
   const fsm = useVehicleStateMachine(idStr);
-  const timeline = useFSMTransitions(idStr, 'vehicle', 168, 1, 5);
-
   const isCompact = size.cols <= 1;
-  const isWide = size.cols >= 3;
 
-  const dashStats = stats.data;
-  // CurrentState returns a state envelope; older hook typings describe only
-  // the inner state. Never pass the wire object into a status badge.
+  const layoutData = layouts.data as DashboardLayoutsPayload | undefined;
+  const dashboards = Array.isArray(layoutData?.dashboards) ? layoutData.dashboards : [];
+  const activeDashboard = dashboards.find((dashboard) => {
+    if (dashboard == null || typeof dashboard !== 'object') return false;
+    return (dashboard as { id?: unknown }).id === layoutData?.active_id;
+  }) as { widgets?: unknown } | undefined;
+  const activeWidgets = Array.isArray(activeDashboard?.widgets) ? activeDashboard.widgets : null;
+  const widgetsPlaced = activeWidgets?.length ?? null;
+  const dashboardCount = dashboards.length > 0 ? dashboards.length : null;
+
   const rawState: unknown = fsm.data?.state;
-  const fsmState = idStr
-    ? knownString(rawState) ?? (
-      rawState != null && typeof rawState === 'object' && 'state' in rawState
-        ? knownString(rawState.state)
-        : null
-    ) ?? '—'
-    : '—';
+  const carState = knownVehicleState(rawState, idStr);
 
-  const statItems = useMemo<StatMetric[]>(() => [
+  const statItems: StatGridItem[] = [
     {
-      metricId: 'count',
-      label: t('widget.dashboardStats.vehicles', 'Vehicles'),
-      rawValue: dashStats?.totalVehicles,
-      description: t('widget.dashboardStats.summary.vehiclesHelp', 'Fleet vehicle total reported by the dashboard stats source.'),
+      label: t('widget.dashboardStats.widgetsPlaced', 'Widgets placed'),
+      value: widgetsPlaced == null ? null : fmtInt(widgetsPlaced),
     },
     {
-      metricId: 'count',
-      label: t('widget.dashboardStats.trips', 'Trips'),
-      rawValue: dashStats?.totalTrips,
-      description: t('widget.dashboardStats.summary.tripsHelp', 'Fleet trip total; not the selected vehicle’s recent transition count.'),
+      label: t('widget.dashboardStats.dashboards', 'Dashboards'),
+      value: dashboardCount == null ? null : fmtInt(dashboardCount),
     },
     {
-      metricId: 'count',
-      label: t('widget.dashboardStats.sessions', 'Charge sessions'),
-      rawValue: dashStats?.totalChargingSessions,
-      description: t('widget.dashboardStats.summary.sessionsHelp', 'Fleet charging-session total reported by dashboard stats.'),
+      label: t('widget.dashboardStats.carState', 'Car state'),
+      value: carState,
     },
-    {
-      metricId: 'status',
-      label: t('widget.dashboardStats.fsmState', 'FSM state'),
-      rawValue: fsmState === '—' ? null : fsmState,
-      description: t('widget.dashboardStats.summary.fsmHelp', 'Current state for the resolved vehicle only, independently loaded from fleet totals.'),
-    },
-  ], [dashStats, fsmState, t]);
-
-  const recentTransitions = useMemo(
-    () => (isWide ? safeArray(timeline.data?.data).slice(0, 5) : []),
-    [timeline.data, isWide],
-  );
-
-  // Historical transitions own their recovery state; an outage must not erase
-  // the independently available fleet counts and current vehicle state.
-  const isFetching = stats.isFetching || fsm.isFetching;
-  const isStale = stats.isStale || fsm.isStale;
-  const isError = stats.isError || fsm.isError;
+  ];
 
   const handleRefresh = useCallback(() => {
-    stats.refetch();
-    if (idStr) {
-      fsm.refetch();
-      timeline.refetch();
-    }
+    void layouts.refetch();
+    if (idStr) void fsm.refetch();
     if (vehicleId == null) void vehiclesQuery.refetch?.();
-  }, [stats.refetch, fsm.refetch, timeline.refetch, idStr, vehicleId, vehiclesQuery.refetch]);
+  }, [fsm, idStr, layouts, vehicleId, vehiclesQuery]);
 
-  const statsState = useDataState(stats);
-  const fsmStateData = useDataState(fsm);
+  const layoutsState = useDataState(layouts);
+  const fsmState = useDataState(fsm);
   const discoveryState = useDataState(vehiclesQuery);
-  const timelineState = useDataState(timeline, { provenance: 'historical' });
   const states = [
-    statsState,
-    ...(idStr ? [fsmStateData] : vehicleId == null && !discoveryState.hasData ? [discoveryState] : []),
+    layoutsState,
+    ...(idStr
+      ? [fsmState]
+      : vehicleId == null && !discoveryState.hasData
+        ? [discoveryState]
+        : []),
   ];
-  if (idStr && vehicleId == null && (statsState.hasData || fsmStateData.hasData)) states.push(discoveryState);
+  if (idStr && vehicleId == null && (layoutsState.hasData || fsmState.hasData)) {
+    states.push(discoveryState);
+  }
+
   const dataState = {
     ...combineDataStates(states),
-    data: { stats: stats.data, fsm: idStr ? fsm.data : undefined },
+    data: { layouts: layouts.data, fsm: idStr ? fsm.data : undefined },
     hasData: states.some((state) => state.hasData),
     retry: handleRefresh,
   };
-  const hasData = dataState.hasData && (stats.data != null || (idStr && fsm.data != null));
+  const hasData = layoutData != null || (idStr && fsm.data != null);
+  const isFetching = layouts.isFetching || fsm.isFetching;
+  const isStale = layouts.isStale || fsm.isStale;
+  const isError = layouts.isError || fsm.isError;
 
   return (
     <WidgetShell
       title={t('widget.dashboardStats.title', 'Dashboard stats')}
       icon={isCompact ? undefined : <LayoutDashboard aria-hidden="true" className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
       dataState={dataState}
-      updatedAt={dataState.updatedAt ?? 0}
+      updatedAt={Math.max(layouts.dataUpdatedAt ?? 0, fsm.dataUpdatedAt ?? 0)}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
       onRefresh={handleRefresh}
     >
       {hasData ? (
-        <div className="flex flex-col gap-3 h-full">
-          {isCompact ? (
-            <WidgetBigNumber
-              value={knownNumber(dashStats?.totalTrips) == null ? null : fmtInt(dashStats?.totalTrips)}
-              label={t('widget.dashboardStats.trips', 'Trips')}
-              align="center"
-            />
-          ) : (
-            <>
-              <DashboardSourceBrief
-                metrics={statItems}
-                state={dataState}
-                eyebrow={t('widget.dashboardStats.summary.eyebrow', 'Dashboard sources')}
-                title={t('widget.dashboardStats.summary.title', 'Fleet counts and vehicle state')}
-                description={t('widget.dashboardStats.summary.description', 'Fleet-wide totals and the resolved vehicle’s current FSM state are independent sources. Aggregate bounds are not supplied; the wide view’s latest five transitions come from a separate 168-hour history query.')}
-                scope={idStr
-                  ? t('widget.dashboardStats.summary.scope', 'Fleet counts · FSM vehicle {{id}}', { id: idStr })
-                  : t('widget.dashboardStats.summary.noScope', 'Fleet counts · no resolved FSM vehicle')}
-                testId="dashboard-stats-operational-brief"
-              />
-
-              {/* FSM badge row */}
-              <div className="flex items-center gap-2 min-h-[44px]">
-                <span className="text-xs text-[var(--text-secondary)]">
-                  {t('widget.dashboardStats.currentState', 'Current state')}
-                </span>
-                <StatusBadge status={fsmState} size="sm" />
-              </div>
-            </>
-          )}
-
-          {/* Wide: recent state transitions */}
-          {isWide && (
-            <div className="space-y-1.5 overflow-y-auto">
-              <span className={dashboardTokens.metricLabel}>
-                {t('widget.dashboardStats.recentTransitions', 'Recent transitions')}
-              </span>
-              {idStr && <StaleRefreshWarning state={timelineState} />}
-              {idStr && timelineState.fatalError ? (
-                <QueryError error={timelineState.fatalError} onRetry={timelineState.retry ?? undefined} />
-              ) : idStr && timelineState.status === 'initial' ? (
-                <Skeleton className="h-16 rounded-lg" />
-              ) : recentTransitions.length === 0 ? (
-                <EmptyState
-                  message={t('common.noData', 'No data available')}
-                  action={idStr ? { label: t('common.refresh', 'Refresh'), onClick: () => { void timeline.refetch(); } } : undefined}
-                  actionTo={!idStr ? { label: t('nav.vehicles', 'Fleet'), to: '/vehicles' } : undefined}
-                />
-              ) : null}
-              <div className="flex flex-col gap-1">
-                {recentTransitions.map((tr, i) => (
-                  <div
-                    key={`${tr.id}-${tr.ts}-${i}`}
-                    className="flex items-center justify-between min-h-[44px]"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Badge variant="neutral" className="text-2xs truncate">
-                        {tr.to_state ?? '—'}
-                      </Badge>
-                    </div>
-                    <span className="text-xs text-[var(--text-secondary)] tabular-nums truncate">
-                      {tr.ts
-                        ? formatRelative(tr.ts)
-                        : '—'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        isCompact ? (
+          <WidgetBigNumber
+            value={widgetsPlaced == null ? null : fmtInt(widgetsPlaced)}
+            label={t('widget.dashboardStats.widgetsPlaced', 'Widgets placed')}
+            align="center"
+          />
+        ) : (
+          <WidgetStatGrid
+            stats={statItems}
+            cols={size.cols >= 3 ? 3 : 2}
+            maxPerRow={3}
+          />
+        )
       ) : (
         <EmptyState
           icon={<LayoutDashboard aria-hidden="true" className="h-5 w-5" />}
@@ -206,4 +120,14 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
       )}
     </WidgetShell>
   );
+}
+
+function knownVehicleState(value: unknown, vehicleId: string): string | null {
+  if (!vehicleId) return null;
+  if (typeof value === 'string') return value.trim() || null;
+  if (value != null && typeof value === 'object' && 'state' in value) {
+    const nested = (value as { state?: unknown }).state;
+    if (typeof nested === 'string') return nested.trim() || null;
+  }
+  return null;
 }

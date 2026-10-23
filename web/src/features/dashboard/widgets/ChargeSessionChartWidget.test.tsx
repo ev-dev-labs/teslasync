@@ -83,7 +83,7 @@ import ChargeSessionChartWidget, { classifyChargerType } from './ChargeSessionCh
 
 it.each([1, 2, 3])('identifies charge session charts at %i columns', (cols) => {
   renderWidget({ cols, rows: 4 });
-  expect(screen.getByRole('heading', { name: 'Charge sessions' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Charge Session Chart' })).toBeInTheDocument();
 });
 import { request } from '@/api/client';
 import type { ChargingSession } from '@/api/types';
@@ -158,7 +158,7 @@ function renderWidget(size: WidgetSize, vehicleId: number | undefined = 1) {
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  expect(view.container.querySelector('h3')).toHaveAccessibleName('Charge sessions');
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Charge Session Chart');
   return view;
 }
 
@@ -246,7 +246,7 @@ describe('ChargeSessionChartWidget states', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
-    expect(screen.queryByText('Charge sessions')).toBeInTheDocument();
+    expect(screen.queryByText('Charge Session Chart')).toBeInTheDocument();
     expect(screen.queryByText('No charge sessions yet')).toBeNull();
   });
 
@@ -291,7 +291,7 @@ describe('ChargeSessionChartWidget states', () => {
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Charge sessions')).toBeInTheDocument();
+    expect(screen.queryByText('Charge Session Chart')).toBeInTheDocument();
   });
 });
 
@@ -301,7 +301,7 @@ describe('ChargeSessionChartWidget standard layout', () => {
   it.each([2, 3])('keeps actual AC session evidence out of the DC bucket at %i columns', async cols => {
     routeCharging([makeSession({ charger_type: 'AC', total_energy_added_wh: 42_000 })]);
     renderWidget({ cols, rows: 4 });
-    await screen.findAllByText('42.00');
+    await waitFor(() => expect(axisCapture.chart.data).toBeDefined());
     expect(axisCapture.chart).toEqual(expect.objectContaining({
       data: [expect.objectContaining({ type: 'home', energy: 42 })],
     }));
@@ -325,17 +325,13 @@ describe('ChargeSessionChartWidget standard layout', () => {
     ]);
     renderWidget(STANDARD);
 
-    expect(await screen.findByText('Charge sessions')).toBeInTheDocument();
+    expect(await screen.findByText('Charge Session Chart')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
-    // Summary stats: total (60 kWh), avg (20 kWh), session count (3).
-    expect(screen.getByText('Total')).toBeInTheDocument();
-    expect(screen.getByText('Avg')).toBeInTheDocument();
-    expect(screen.getByText('Sessions')).toBeInTheDocument();
-    expect(screen.getByText('60.00')).toBeInTheDocument();
-    expect(screen.getByText('20.00')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
-    expect(screen.getAllByText('kWh')).toHaveLength(2);
+    // The After hierarchy keeps the chart as the sole visual; no duplicate metrics.
+    expect(screen.queryByText('Total')).not.toBeInTheDocument();
+    expect(screen.queryByText('Avg')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sessions')).not.toBeInTheDocument();
 
     // The chart carries a single text alternative for assistive tech.
     expect(
@@ -348,32 +344,31 @@ describe('ChargeSessionChartWidget standard layout', () => {
     expect(screen.getByText('DC fast')).toBeInTheDocument();
   });
 
-  it('derives total/avg from SI energy converted to kWh (÷1000)', async () => {
+  it('preserves converted bar values at SI precision', async () => {
     routeCharging([
       makeSession({ total_energy_added_wh: 5_000 }),
       makeSession({ total_energy_added_wh: 15_000 }),
     ]);
     renderWidget(STANDARD);
 
-    expect(await screen.findByText('20.00')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull()); // total 5 + 15 kWh
-    expect(screen.getByText('10.00')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument(); // session count
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    await waitFor(() => expect(axisCapture.chart.data).toBeDefined());
+    expect(axisCapture.chart).toEqual(expect.objectContaining({
+      data: [expect.objectContaining({ energy: 15 }), expect.objectContaining({ energy: 5 })],
+    }));
   });
-
   it('guards a single non-finite energy so the total is not collapsed to 0', async () => {
-    // Without the safe() guard the NaN row poisons the reduce and the whole
-    // total renders "0.0"; with it, the corrupt row counts as 0 and the real
-    // 20 kWh session still surfaces.
     routeCharging([
       makeSession({ total_energy_added_wh: Number.NaN }),
       makeSession({ total_energy_added_wh: 20_000 }),
     ]);
     renderWidget(STANDARD);
 
-    expect(await screen.findAllByText('20.00')).toHaveLength(2);
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull()); // total
-    expect(screen.getAllByText('20.00')).toHaveLength(2);
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    await waitFor(() => expect(axisCapture.chart.data).toBeDefined());
+    expect(axisCapture.chart).toEqual(expect.objectContaining({
+      data: [expect.objectContaining({ energy: 20 }), expect.objectContaining({ energy: null })],
+    }));
     expect(screen.queryByText('NaN')).toBeNull();
     expect(screen.queryByText('0.00')).toBeNull();
   });
@@ -391,12 +386,10 @@ describe('ChargeSessionChartWidget compact layout', () => {
 
     expect(await screen.findByText('Total')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.getByText('Sessions')).toBeInTheDocument();
     expect(screen.getByText('10.00')).toBeInTheDocument(); // total
-    expect(screen.getByText('2')).toBeInTheDocument(); // count
 
     // Compact widgets hide the header title, the chart, and the legend.
-    expect(screen.getByRole('heading', { name: 'Charge sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charge Session Chart' })).toBeInTheDocument();
     expect(screen.queryByRole('img')).toBeNull();
     expect(screen.queryByText('Home / AC')).toBeNull();
   });
@@ -408,14 +401,14 @@ describe('ChargeSessionChartWidget refresh', () => {
   it('retains cached summaries, legend and chart after a refresh error', async () => {
     routeCharging([makeSession({ total_energy_added_wh: 0 })]);
     renderWidget(STANDARD);
-    expect(await screen.findAllByText('0.00')).toHaveLength(2);
+    await screen.findByText('Home / AC');
     mockRequest.mockImplementation((path: string) => String(path).startsWith('/charging')
       ? Promise.reject(new Error('refresh failed')) : Promise.resolve([]));
     fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
     expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Bar chart of energy added per charge session' })).toBeInTheDocument();
     expect(screen.getByText('Supercharger')).toBeInTheDocument();
-    expect(screen.getAllByText('0.00')).toHaveLength(2);
+    expect(screen.getByRole('img', { name: 'Bar chart of energy added per charge session' })).toBeInTheDocument();
   });
   it('refetches the sessions when the freshness refresh control is activated', async () => {
     routeCharging([makeSession()]);

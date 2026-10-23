@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
-import { MetricBar, type StatMetric } from '@/components/data-display';
+import { MetricBar } from '@/components/data-display';
+import { LinearGauge } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useDriveScore } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -9,8 +10,6 @@ import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetGaugeHero, type GaugeHeroConfig } from './shared';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 
 const SCORE_COLORS = {
@@ -42,7 +41,6 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
   const color = useMemo(() => overall == null ? '#94a3b8' : scoreColor(overall), [overall]);
 
   const isCompact = size.cols === 1 && size.rows === 1;
-  const isTall = size.rows >= 2;
   const constrained = size.rows <= 5;
 
   // `/drives/score` answers 200 with an all-zero object (grade "F",
@@ -50,35 +48,15 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
   // returns null. A plain truthiness check would therefore render a misleading
   // "0 / F" gauge for a brand-new vehicle. Gate on the scored-drive count so
   // the empty state surfaces until there is at least one drive to score.
-  const hasScoredDrives = !!score && score.totalDrives !== 0;
-
-  const gauge = useMemo<GaugeHeroConfig>(() => ({
-    value: overall,
-    preserveReadingAndScale: true,
-    max: 100,
-    label: score?.grade ?? '—',
-    unit: t('widget.driveScoreGauge.weekly', 'Weekly score'),
-    color,
-  }), [overall, score?.grade, color, t]);
-
-  const stats = useMemo<StatMetric[]>(() => {
-    if (!score) return [];
-    return [
-      { metricId: 'score', occurrenceId: 'drive-efficiency-score', label: t('widget.driveScoreGauge.efficiency', 'Efficiency'),
-        rawValue: score.efficiency, display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } },
-      { metricId: 'score', occurrenceId: 'drive-smoothness-score', label: t('widget.driveScoreGauge.smoothness', 'Smoothness'),
-        rawValue: score.smoothness, display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } },
-      { metricId: 'score', occurrenceId: 'drive-speed-score', label: t('widget.driveScoreGauge.speed', 'Speed discipline'),
-        rawValue: score.speedDiscipline, display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } },
-    ];
-  }, [score, t, fmtNumber]);
+  const scoredDriveCount = knownNumber(score?.totalDrives);
+  const hasScoredDrives = scoredDriveCount != null && scoredDriveCount > 0;
 
   const subScores = useMemo(() => {
     if (!score) return [];
     return [
       { key: 'efficiency', label: t('widget.driveScoreGauge.efficiency', 'Efficiency'), value: score.efficiency },
       { key: 'smoothness', label: t('widget.driveScoreGauge.smoothness', 'Smoothness'), value: score.smoothness },
-      { key: 'speed', label: t('widget.driveScoreGauge.speed', 'Speed discipline'), value: score.speedDiscipline },
+      { key: 'speed', label: t('widget.driveTelemetry.speed', 'Speed'), value: score.speedDiscipline },
     ];
   }, [score, t]);
 
@@ -96,18 +74,27 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
     >
       {hasScoredDrives ? (
         <div className={constrained ? 'flex min-w-0 flex-col gap-1' : 'flex min-w-0 flex-col gap-3'}>
-          {overall != null ? <WidgetGaugeHero gauge={gauge} compact={isCompact} /> : (
-            <WidgetBigNumber value={null} label={t('widget.driveScoreGauge.weekly', 'Weekly score')} />
+          {overall != null ? (
+            <LinearGauge
+              value={overall}
+              preserveReadingAndScale
+              max={100}
+              label={t('widget.weeklySummary.thisWeek', 'this week')}
+              ariaLabel={t('widget.driveScoreGauge.title', 'Drive score')}
+              unit=""
+              color={color}
+              size={isCompact ? 70 : 100}
+              decimals={0}
+              kind="count"
+              hideScale
+            />
+          ) : (
+            <div className="flex min-w-0 flex-col items-center gap-1 text-[var(--text-muted)]">
+              <span className="text-lg font-semibold tabular-nums">—</span>
+              <span className="text-xs">{t('widget.weeklySummary.thisWeek', 'this week')}</span>
+            </div>
           )}
-          {!isCompact && <DashboardSourceBrief metrics={stats} state={trust}
-            eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
-            title={t('widget.driveScoreGauge.summaryTitle', 'Returned driving score factors')}
-            description={t('widget.driveScoreGauge.summaryDescription', 'Each factor retains its returned score independently of the overall gauge, grade and detailed factor bars.')}
-            scope={t('widget.driveScoreGauge.summaryScope', 'Vehicle {{id}} · weekly scoring response for {{count}} drives; recording completeness is not established.', {
-              replace: { id: vid ?? '—', count: knownNumber(score?.totalDrives) ?? '—' },
-            })}
-            testId="dashboard-drive-score-factors-brief" />}
-          {isTall && (
+          {!isCompact && (
             <div className={constrained ? 'flex flex-col gap-0.5 w-full' : 'flex flex-col gap-2 w-full'}>
               {subScores.map((s) => knownNumber(s.value) != null ? (
                 <MetricBar
@@ -117,9 +104,19 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
                   color={scoreColor(s.value)}
                   label={s.label}
                   sublabel={fmtNumber(s.value)}
+                  size="slim"
+                  fill="solid"
                 />
               ) : (
-                <WidgetBigNumber key={s.key} value={null} label={s.label} size="secondary" />
+                <MetricBar
+                  key={s.key}
+                  value={null}
+                  max={100}
+                  color="#94a3b8"
+                  label={s.label}
+                  sublabel="—"
+                  size="slim"
+                />
               ))}
             </div>
           )}

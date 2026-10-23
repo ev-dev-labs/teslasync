@@ -20,10 +20,9 @@
  *   - deriveSignalRate: camelCase-over-snake_case precedence, `safeNumber`
  *     coercion of junk/missing rates (no NaN poisoning), and null-safety for
  *     undefined/null/empty fleets.
- *   - standard (2×N): title, list semantics, per-source badge labels
- *     (MQTT/API/Cache), formatted values, most-recent-first ordering, the
- *     i18n'd source labels + the null-source "Cache" default + unknown-source
- *     passthrough.
+ *   - standard (2×N): title, list semantics, formatted values,
+ *     most-recent-first ordering, timezone-aware absolute time labels, and no
+ *     fabricated old/new transitions or unsupported source badges.
  *   - pause/resume: activating Pause freezes the feed against fresh data and
  *     flips the control's accessible name to Resume; resuming re-attaches the
  *     live stream (a11y — icon-only control exposed by aria-label).
@@ -242,7 +241,7 @@ describe('deriveSignalRate', () => {
 });
 
 describe('SignalLogWidget — standard layout (2×2)', () => {
-  it('renders the title and one labelled row per observation with its value + source badge', () => {
+  it('renders the title and one labelled row per observation with its value', () => {
     setup({
       obs: makeQuery({
         data: [
@@ -267,10 +266,10 @@ describe('SignalLogWidget — standard layout (2×2)', () => {
     expect(screen.getByText('sentry_mode')).toBeInTheDocument();
     expect(screen.getByText('true')).toBeInTheDocument();
 
-    // Source → badge label mapping.
-    expect(screen.getByText('MQTT')).toBeInTheDocument();
-    expect(screen.getByText('API')).toBeInTheDocument();
-    expect(screen.getByText('Cache')).toBeInTheDocument();
+    // The After card has time, signal, and value only; no source/synthetic delta is added.
+    expect(screen.queryByText('MQTT')).not.toBeInTheDocument();
+    expect(screen.queryByText('API')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cache')).not.toBeInTheDocument();
   });
 
   it('orders rows most-recent first regardless of input order', () => {
@@ -291,7 +290,7 @@ describe('SignalLogWidget — standard layout (2×2)', () => {
     expect(rows[2]).toHaveTextContent('older');
   });
 
-  it('labels a missing source as unknown and passes an unrecognized source through', () => {
+  it('does not fabricate source labels for missing or unrecognized provenance', () => {
     setup({
       obs: makeQuery({
         data: [
@@ -302,10 +301,10 @@ describe('SignalLogWidget — standard layout (2×2)', () => {
     });
     renderWidget(STANDARD);
 
-    // Missing provenance is unknown, never falsely classified as backfill.
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
-    // Unknown source label passes through verbatim (no crash, no blank badge).
-    expect(screen.getByText('satellite')).toBeInTheDocument();
+    expect(screen.getByText('no_source')).toBeInTheDocument();
+    expect(screen.getByText('weird_source')).toBeInTheDocument();
+    expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
+    expect(screen.queryByText('satellite')).not.toBeInTheDocument();
   });
 
   it('shows the empty state (role="status") when there are no observations', () => {

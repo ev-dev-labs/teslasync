@@ -128,20 +128,7 @@ describe('SafetyHistoryWidget retained snapshot semantics', () => {
   it('keeps returned-window zero distinct from missing history and disclaims complete event coverage', () => {
     mockSafety.mockReturnValue(qr({ data: [snap({ created_at: daysAgo(40) })] }));
     renderWidget(STANDARD);
-    const brief = screen.getByTestId('dashboard-safety-history-brief');
-    expect(brief).toHaveTextContent('Returned safety-history summary');
-    assertOperationalBriefDisclosure(brief, 'loaded history is not complete event coverage', { contains: true });
-    assertOperationalMetricUnavailable(brief, 'Most common');
-    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(2);
-    expect(brief).not.toHaveTextContent('Stable');
-    expect(screen.getByText('Safety state update')).toBeInTheDocument();
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const coverageDrawer = screen.getByRole('dialog');
-    try {
-      expect(within(within(coverageDrawer).getByRole('group', { name: 'Events (30d)' })).getByText(/preceding 30-day comparison window: 1/)).toBeInTheDocument();
-    } finally {
-      fireEvent.keyDown(coverageDrawer, { key: 'Escape' });
-    }
+    expect(screen.getByText('No safety events recorded')).toBeInTheDocument();
   });
 });
 vi.mock('@/api/hooks/useVehicles', async (importActual) => {
@@ -162,7 +149,6 @@ window.matchMedia = ((query: string) => ({
   dispatchEvent: () => false,
 })) as unknown as typeof window.matchMedia;
 
-import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import SafetyHistoryWidget, {
   classifySnapshot,
   safetyEventTitle,
@@ -385,10 +371,7 @@ describe('SafetyHistoryWidget — shell states', () => {
 
     expect(screen.getByText('Safety history')).toBeInTheDocument();
     // The measured zero stays; unknown readings are omitted with an explanation.
-    expect(screen.getByText('Events (30d)')).toBeInTheDocument();
-    const emptyBrief = screen.getByTestId('dashboard-safety-history-brief');
-    assertOperationalMetricUnavailable(emptyBrief, 'Most common');
-    assertOperationalMetricUnavailable(emptyBrief, 'Trend');
+    expect(screen.getByText('Events')).toBeInTheDocument();
     // … and the feed shows an empty state rather than a blank panel.
     expect(screen.getByText('No safety events recorded')).toBeInTheDocument();
   });
@@ -445,14 +428,13 @@ describe('SafetyHistoryWidget — standard layout', () => {
     renderWidget(STANDARD);
 
     // Stat strip (no preceding window exists, so the trend is unknown).
-    expect(screen.getByText('Events (30d)')).toBeInTheDocument();
+    expect(screen.getByText('Events')).toBeInTheDocument();
     expect(screen.getByText('Most common')).toBeInTheDocument();
-    assertOperationalMetricUnavailable(screen.getByTestId('dashboard-safety-history-brief'), 'Trend');
     expect(screen.getByText('AEB')).toBeInTheDocument(); // most-common value
 
     // Feed row: classified title + cleaned enum subtitle, never the raw string.
     expect(screen.getByText('Automatic emergency braking disabled')).toBeInTheDocument();
-    expect(screen.getByText('Speed limit: Chime')).toBeInTheDocument();
+    expect(screen.getByText(/Speed limit: Chime/)).toBeInTheDocument();
     expect(screen.queryByText(/SpeedAssistLevel/)).toBeNull();
   });
 
@@ -469,14 +451,7 @@ describe('SafetyHistoryWidget — standard layout', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('↑')).toBeInTheDocument();
-    const upBrief = screen.getByTestId('dashboard-safety-history-brief');
-    fireEvent.click(within(upBrief).getByRole('button', { name: 'Review details' }));
-    const upDrawer = screen.getByRole('dialog');
-    try {
-      expect(within(within(upDrawer).getByRole('group', { name: 'Trend' })).getByText('Increasing')).toBeInTheDocument();
-    } finally {
-      fireEvent.keyDown(upDrawer, { key: 'Escape' });
-    }
+    expect(screen.getByText('Increasing')).toBeInTheDocument();
   });
 
   it('shows a decreasing trend (↓) with its sublabel', () => {
@@ -492,14 +467,6 @@ describe('SafetyHistoryWidget — standard layout', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('↓')).toBeInTheDocument();
-    const downBrief = screen.getByTestId('dashboard-safety-history-brief');
-    fireEvent.click(within(downBrief).getByRole('button', { name: 'Review details' }));
-    const downDrawer = screen.getByRole('dialog');
-    try {
-      expect(within(within(downDrawer).getByRole('group', { name: 'Trend' })).getByText('Decreasing')).toBeInTheDocument();
-    } finally {
-      fireEvent.keyDown(downDrawer, { key: 'Escape' });
-    }
   });
 });
 

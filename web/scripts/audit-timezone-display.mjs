@@ -35,6 +35,15 @@
 //       `supportedValuesOf('currency')` and other keys are out of scope.
 //       Per-window schedule zones (quiet hours) enumerate via the shared
 //       `supportedTimeZones()` helper, not directly.
+//   R6. Offset-rendering shared helpers (`formatGmtOffset`,
+//       `formatChartInstant`) called in a `.tsx` render scope. GMT offsets
+//       render only on DST-disambiguating timeline/axis ticks, and tick
+//       formatting lives in `.ts` labels helpers (e.g. departure
+//       labels, day-log timeline helpers) — never inline in page
+//       captions. A `.tsx` call site is a caption until proven a tick:
+//       hoist it to a `.ts` helper. Residual scope (documented): a `.ts`
+//       helper whose output reaches a page caption instead of a tick is
+//       review-enforced; the audit cannot see render intent.
 //
 // Exempt files (the shared layer itself): `src/lib/dateFormat.ts`,
 // `src/lib/dateConvert.ts`, `src/lib/timezone.ts`, `src/lib/dateRange.ts`,
@@ -66,6 +75,14 @@ const EXEMPT_FILES = new Set([
   join('src', 'hooks', 'useDateFormat.ts'),
 ])
 const SHARED_DATE_MODULES = new Set(['@/lib/dateFormat', '@/lib/dateConvert', '@/hooks/useDateFormat', '@/hooks/useDateLabels'])
+
+/**
+ * Shared helpers whose output carries a numeric GMT offset (`GMT-7`).
+ * Offsets render only on DST-disambiguating timeline/axis ticks; R6
+ * restricts their call sites to `.ts` helper modules (plus the shared
+ * layer), never inline `.tsx` render scope (captions).
+ */
+const OFFSET_RENDERING_HELPERS = new Set(['formatGmtOffset', 'formatChartInstant'])
 // Known shared formatter names. Import-aware recognition (below) covers
 // direct imports; this static set additionally covers the same functions
 // destructured from useDateFormat() at call sites.
@@ -265,6 +282,16 @@ function scanSource(text, rel) {
           'R5', node,
           "supportedValuesOf('timeZone') outside the shared layer (time-zone picker seed)",
           'use supportedTimeZones() from @/lib/dateConvert, or link to Settings > Units',
+        )
+      } else if (
+        ts.isIdentifier(node.expression) &&
+        OFFSET_RENDERING_HELPERS.has(node.expression.text) &&
+        scriptKind === ts.ScriptKind.TSX
+      ) {
+        report(
+          'R6', node,
+          `GMT-offset helper ${node.expression.text}() called in .tsx render scope (offsets render only on DST-disambiguating timeline/axis ticks)`,
+          'hoist tick formatting to a .ts labels helper; page captions must not render GMT offsets',
         )
       }
     }

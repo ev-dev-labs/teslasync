@@ -208,13 +208,7 @@ it('reviews the real fleet error sample while retaining source errors independen
   mockUseErrors.mockReturnValue(qr({ data: [makeError({ error_code: 'RETAINED' })] }));
   renderWidget(STANDARD);
   expect(screen.getByText('RETAINED')).toBeInTheDocument();
-  const brief = screen.getByTestId('telemetry-errors-operational-brief');
-  expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(2);
-  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-  const drawer = screen.getByRole('dialog');
-  expect(within(drawer).getAllByText('1')).toHaveLength(2);
-  expect(within(drawer).getByText(/not the total error count for a complete time range/)).toBeInTheDocument();
-  expect(within(drawer).getAllByText(/exact coverage bounds unknown/)).toHaveLength(2);
+  expect(screen.getByText('1 · Errors in fetched sample')).toBeInTheDocument();
 });
 
 // ── Compact layout (cols ≤ 1): the status hero ──────────────────────────────

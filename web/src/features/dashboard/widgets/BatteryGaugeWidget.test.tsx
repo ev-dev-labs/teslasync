@@ -14,8 +14,11 @@
  *   - the populated gauge — the level / label / unit content, that the arc
  *     colour is wired through from `batteryColor`, and the regression fix that a
  *     raw state MISSING `battery_level` remains unknown instead of rendering 0;
- *   - the charging indicator — shown only while charging, hidden otherwise and
- *     with the decorative bolt hidden from a11y, including compact variants;
+ *   - the charging line — "Charging · +N% to limit" while charging with a
+ *     known limit, plain "Charging" without one, hidden otherwise, including
+ *     compact variants;
+ *   - the After-spec meter — thick bar, charge-limit marker with its "80%"
+ *     label, and the "172 mi range" line from the SI rated range;
  *   - the freshness "Refresh" control wiring back to `refetch`.
  *
  * Strategy: the two data hooks (`useVehicles`, `useVehicleState`) live in the
@@ -60,6 +63,12 @@ vi.mock('@/api/hooks/useVehicles', () => ({
     useVehicleStateMock(id, options),
 }));
 
+// Distance preference pinned to miles so the SI (metres) rated range renders
+// deterministically as "172 mi range".
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => ({ unitPrefs: { distance: 'mi' } }),
+}));
+
 import BatteryGaugeWidget, { batteryColor } from './BatteryGaugeWidget';
 import { hasGaugeColor } from '@/test/gaugeTestUtils';
 
@@ -95,6 +104,14 @@ function makeState(over: Partial<VehicleState> = {}): VehicleState {
 function makeStateMissingLevel(): VehicleState {
   return { ...makeState(), battery_level: undefined } as unknown as VehicleState;
 }
+
+/** A state object with an extra (untyped) `charge_limit_soc` field attached. */
+function makeStateWithLimit(limit: unknown, over: Partial<VehicleState> = {}): VehicleState {
+  return { ...makeState(over), charge_limit_soc: limit } as unknown as VehicleState;
+}
+
+/** Metres in one mile, for building SI rated-range fixtures. */
+const MI_M = 1609.344;
 
 interface VehicleStateResult {
   data: { state?: VehicleState; live: boolean } | undefined;
@@ -218,7 +235,7 @@ describe('BatteryGaugeWidget — states', () => {
     useVehicleStateMock.mockReturnValue(makeResult({ data: { state: makeState({ battery_level: 0 }), live: true } }));
     renderWidget();
     expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '0');
-    expect(screen.getByText('0.00')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
   });
 
   it('renders a loading skeleton while the state query is pending', () => {
@@ -269,11 +286,60 @@ describe('BatteryGaugeWidget — populated', () => {
       makeResult({ data: { state: makeState({ battery_level: 72 }), live: true } }),
     );
     renderWidget();
-    expect(screen.getByText('72.00')).toBeInTheDocument();
+    expect(screen.getByText('72')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Battery', level: 3 })).toBeVisible();
     expect(screen.getAllByText('Battery', { exact: true })).toHaveLength(1);
     expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '72');
     expect(screen.getByText('%')).toBeInTheDocument();
+  });
+
+  it('renders the After-spec limit marker, charging headroom and range lines', () => {
+    useVehicleStateMock.mockReturnValue(
+      makeResult({
+        data: {
+          state: makeStateWithLimit(80, { battery_level: 64, is_charging: true, rated_range: 172 * MI_M }),
+          live: true,
+        },
+      }),
+    );
+    const { container } = renderWidget();
+    expect(screen.getByText('64')).toBeInTheDocument();
+    expect(screen.getByText('Charging · +16% to limit')).toBeInTheDocument();
+    expect(screen.getByText('172 mi range')).toBeInTheDocument();
+    expect(screen.getByText('80%')).toBeInTheDocument();
+    const marker = container.querySelector('[data-testid="gauge-marker"]');
+    expect(marker).not.toBeNull();
+    expect(marker).toHaveStyle({ left: '80%' });
+  });
+
+  it('omits the limit marker and headroom when charge_limit_soc is absent or invalid', () => {
+    useVehicleStateMock.mockReturnValue(
+      makeResult({ data: { state: makeStateWithLimit('high', { battery_level: 64, is_charging: true }), live: true } }),
+    );
+    const { container } = renderWidget();
+    expect(container.querySelector('[data-testid="gauge-marker"]')).toBeNull();
+    expect(screen.getByText('Charging')).toBeInTheDocument();
+    expect(screen.queryByText(/to limit/)).toBeNull();
+  });
+
+  it('retains an out-of-scale reading as the headline without a clipped meter', () => {
+    useVehicleStateMock.mockReturnValue(
+      makeResult({ data: { state: makeState({ battery_level: 125 }), live: true } }),
+    );
+    renderWidget();
+    expect(screen.getByText('125')).toBeInTheDocument();
+    expect(screen.queryByRole('meter')).toBeNull();
+  });
+
+  it('shows the range line without a charging line when not charging', () => {
+    useVehicleStateMock.mockReturnValue(
+      makeResult({
+        data: { state: makeState({ battery_level: 64, is_charging: false, rated_range: 172 * MI_M }), live: true },
+      }),
+    );
+    renderWidget();
+    expect(screen.getByText('172 mi range')).toBeInTheDocument();
+    expect(screen.queryByText(/Charging/)).toBeNull();
   });
 
   it('wires a high-charge green arc through from batteryColor', () => {
@@ -290,23 +356,18 @@ describe('BatteryGaugeWidget — populated', () => {
     );
     const { container } = renderWidget();
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.queryByText('0.00')).toBeNull();
+    expect(screen.queryByText('0')).toBeNull();
     expect(screen.queryByText('NaN')).toBeNull();
     expect(hasGaugeColor(container, 'var(--semantic-danger)')).toBe(false);
     expect(screen.queryByRole('meter')).toBeNull();
   });
 
-  it('shows the charging indicator with an a11y-hidden bolt while charging', () => {
+  it('shows the charging line while charging', () => {
     useVehicleStateMock.mockReturnValue(
       makeResult({ data: { state: makeState({ battery_level: 60, is_charging: true }), live: true } }),
     );
     renderWidget();
     expect(screen.getByText('Charging')).toBeInTheDocument();
-    const badge = screen.getByText('Charging');
-    const bolt = badge.querySelector('span[aria-hidden="true"]');
-    expect(bolt).not.toBeNull();
-    expect(bolt?.textContent).toContain('⚡');
-    expect(bolt).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('hides the charging indicator when the vehicle is not charging', () => {
@@ -336,7 +397,7 @@ describe('BatteryGaugeWidget — compact', () => {
       makeResult({ data: { state: makeState({ battery_level: 88, is_charging: true }), live: true } }),
     );
     renderWidget({ cols: 1, rows: 1 });
-    expect(screen.getByText('88.00')).toBeInTheDocument();
+    expect(screen.getByText('88')).toBeInTheDocument();
     expect(screen.getByText('Charging')).toBeInTheDocument();
   });
 });

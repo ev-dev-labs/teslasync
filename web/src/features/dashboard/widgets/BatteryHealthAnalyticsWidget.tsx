@@ -1,21 +1,19 @@
 import { useTranslation } from 'react-i18next';
 import { HeartPulse } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
-import { LinearGauge } from '@/components/charts';
+import { Badge } from '@/components/ui';
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
 
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
-import type { StatMetric } from '@/components/data-display';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber } from './shared';
+import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
@@ -31,23 +29,31 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
 
   const isCompact = size.cols <= 1;
   const healthScore = knownNumber(data?.current_soh);
-  const sourceMetrics: StatMetric[] = [
-    { metricId: 'number', occurrenceId: 'battery-health-cycles', rawValue: data?.total_cycles,
-      label: t('widget.batteryHealthAnalytics.totalCycles', 'Cycles'),
-      description: t('widget.batteryHealthAnalytics.cyclesSource', 'Returned cycle measurement; the existing whole-number display is retained.'),
-      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
-    { metricId: 'percent', occurrenceId: 'battery-health-charge-depth', rawValue: data?.full_charge_pct, label: t('widget.batteryHealthAnalytics.avgChargeDepth', 'Charge depth') },
-    { metricId: 'percent', occurrenceId: 'battery-health-discharge-depth', rawValue: data?.avg_depth_of_discharge_pct, label: t('widget.batteryHealthAnalytics.avgDischargeDepth', 'Discharge') },
-    { metricId: 'percent', occurrenceId: 'battery-health-fast-charge', rawValue: data?.fast_charge_pct, label: t('widget.batteryHealthAnalytics.dcFastRatio', 'DC fast') },
-    { metricId: 'score', occurrenceId: 'battery-health-temperature-score', rawValue: data?.temp_exposure_score, label: t('widget.batteryHealthAnalytics.tempExposure', 'Temp score') },
-    { metricId: 'score', occurrenceId: 'battery-health-habits-score', rawValue: data?.charge_habits_score, label: t('widget.batteryHealthAnalytics.chargeHabits', 'Habits') },
+
+  // After card: pill('Good','ok') beside the hero. Thresholds keep the
+  // previous gauge tones (>=80 good, 50-79 fair, <50 poor) as dot+word.
+  // Dedicated batteryHealthAnalytics status keys do not exist yet, so the
+  // existing Good/Fair/Poor catalog keys are reused (see unresolved report).
+  const healthPill = healthScore == null
+    ? null
+    : healthScore >= 80
+      ? { text: t('widget.projectedRange.good', 'Good'), variant: 'success' as const }
+      : healthScore >= 50
+        ? { text: t('widget.projectedRange.fair', 'Fair'), variant: 'warning' as const }
+        : { text: t('widget.projectedRange.poor', 'Poor'), variant: 'danger' as const };
+
+  // After card stats (4): Full cycles / Avg depth / DC fast share /
+  // Time > 35 °C. No field measures time above 35 °C, so the fourth tile
+  // keeps the honest existing temperature-exposure score instead of
+  // fabricating a percentage (data gap reported to the orchestrator).
+  // Whole numbers per spec rule 2; measured 0 stays 0, missing stays null.
+  const fmtStat = (raw: number | null) => (raw == null ? null : fmtInt(raw));
+  const stats: StatGridItem[] = [
+    { label: t('widget.batteryHealthAnalytics.totalCycles', 'Cycles'), value: fmtStat(knownNumber(data?.total_cycles)) },
+    { label: t('widget.batteryHealthAnalytics.avgDischargeDepth', 'Discharge'), value: fmtStat(knownNumber(data?.avg_depth_of_discharge_pct)), unit: '%' },
+    { label: t('widget.batteryHealthAnalytics.dcFastRatio', 'DC fast'), value: fmtStat(knownNumber(data?.fast_charge_pct)), unit: '%' },
+    { label: t('widget.batteryHealthAnalytics.tempExposure', 'Temp score'), value: fmtStat(knownNumber(data?.temp_exposure_score)), unit: '/ 100' },
   ];
-  const metrics = sourceMetrics.map(metric => metric.display ? metric : ({
-    ...metric,
-    display: { formatter: (raw: number) => ({
-      value: fmtNumber(raw), unit: metric.metricId === 'score' ? '/ 100' : '%',
-    }) },
-  }));
 
   const shellProps = {
     loading: isLoading,
@@ -67,15 +73,18 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
     >
       <div className="flex min-w-0 flex-col gap-3">
         {healthScore != null ? (
-          <LinearGauge
-            preserveReadingAndScale
-            value={healthScore}
-            max={100}
-            label={t('widget.batteryHealthAnalytics.score', 'health')}
-            unit="%"
-            tone={healthScore >= 80 ? 'success' : healthScore >= 50 ? 'warning' : 'danger'}
-            size={isCompact ? 70 : 110}
-          />
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <WidgetBigNumber
+              value={healthScore}
+              unit="%"
+              label={t('widget.batteryHealthAnalytics.score', 'health')}
+              decimals={0}
+              animated={false}
+            />
+            {healthPill && (
+              <Badge variant={healthPill.variant} size="sm">{healthPill.text}</Badge>
+            )}
+          </div>
         ) : data ? (
           <WidgetBigNumber value={null} label={t('widget.batteryHealthAnalytics.score', 'health')} />
         ) : (
@@ -85,12 +94,7 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
             className="py-4"
           />
         )}
-        {!isCompact && <DashboardSourceBrief metrics={metrics} state={trust}
-          eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
-          title={t('widget.batteryHealthAnalytics.summaryTitle', 'Returned battery-health factors')}
-          description={t('widget.batteryHealthAnalytics.summaryDescription', 'Source cycle, charge-depth, fast-charge and habit measurements retain their independent meanings; the health gauge remains separate.')}
-          scope={t('widget.batteryHealthAnalytics.summaryScope', 'Vehicle {{id}} · returned inferred battery analytics; continuous coverage is unknown.', { id: vid ?? '—' })}
-          loading={isLoading && !data} testId="dashboard-battery-health-brief" />}
+        {!isCompact && data && <WidgetStatGrid stats={stats} cols={4} />}
       </div>
     </WidgetShell>
   );

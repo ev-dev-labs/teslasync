@@ -4,7 +4,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { formatAnomalyExplanation, formatAnomalyReading } from '@/lib/anomalyExplanation';
 import { useTicker } from '@/hooks/useTicker';
 import type { TFunction } from 'i18next';
-import { AlertTriangle, AlertOctagon, Info } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useAnomalies } from '@/api/hooks/useAnomalies';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -12,34 +12,17 @@ import { useDataState } from '@/hooks/useDataState';
 import { safeArray } from '@/lib/safeArray';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetTipCards, type TipItem } from './shared';
+import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const SEVERITY_ORDER: Record<string, number> = { critical: 0, warning: 1, info: 2 };
-
-const SEVERITY_IMPACT: Record<string, 'high' | 'medium' | 'low'> = {
-  critical: 'high',
-  warning: 'medium',
-  info: 'low',
-};
 
 const SEVERITY_BADGE: Record<string, 'error' | 'warning' | 'neutral'> = {
   critical: 'error',
   warning: 'warning',
   info: 'neutral',
 };
-
-function severityIcon(severity: string) {
-  switch (severity) {
-    case 'critical':
-      return <AlertOctagon className="h-4 w-4 text-red-400" aria-hidden="true" />;
-    case 'warning':
-      return <AlertTriangle className="h-4 w-4 text-amber-400" aria-hidden="true" />;
-    default:
-      return <Info className="h-4 w-4 text-blue-400" aria-hidden="true" />;
-  }
-}
 
 /**
  * i18n-aware "time ago" label for an anomaly's `detected_at` timestamp.
@@ -111,20 +94,23 @@ export default memo(function AnomalyDetectorWidget({ vehicleId, size }: WidgetPr
   const isCompact = size.cols <= 1;
   const anomalies = safeArray(data?.anomalies).filter(entry => entry != null);
 
-  const tips: TipItem[] = useMemo(
+  const entries: DetailEntry[] = useMemo(
     () =>
       [...anomalies]
         .sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 2) - (SEVERITY_ORDER[b.severity] ?? 2))
         .map((entry, index) => ({
           id: `${entry.signal ?? 'signal'}-${entry.detected_at ?? index}`,
-          icon: severityIcon(entry.severity),
-          title: `${entry.signal ?? '—'} · z=${entry.z_score != null && Number.isFinite(entry.z_score) ? fmtNumber(entry.z_score) : '—'} · ${formatRelativeTime(entry.detected_at ?? '', t)}`,
-          description: formatAnomalyExplanation(entry, t, value => formatAnomalyReading(value, entry.unit, units, fmtNumber), fmtNumber) ?? '—',
-          impact: SEVERITY_IMPACT[entry.severity] ?? ('low' as const),
-          impactLabel: t(
+          label: `${entry.signal ?? '—'} · z=${entry.z_score != null && Number.isFinite(entry.z_score) ? fmtNumber(entry.z_score) : '—'} · ${formatRelativeTime(entry.detected_at ?? '', t)}`,
+          sublabel: formatAnomalyExplanation(entry, t, value => formatAnomalyReading(value, entry.unit, units, fmtNumber), fmtNumber) ?? '—',
+          value: '',
+          status: entry.severity === 'critical' ? 'error' : entry.severity === 'warning' ? 'warning' : 'info',
+          badge: {
+            text: t(
             `widget.anomalyDetector.severity.${entry.severity}`,
             entry.severity ?? '—',
-          ),
+            ),
+            variant: entry.severity === 'critical' ? 'error' : entry.severity === 'warning' ? 'warning' : 'info',
+          },
         })),
     [anomalies, t, fmtNumber, units],
   );
@@ -183,8 +169,8 @@ export default memo(function AnomalyDetectorWidget({ vehicleId, size }: WidgetPr
     >
       <div className="flex flex-col h-full">
         <div className="flex-1 min-h-0">
-          {hasAnomalyEvidence ? <WidgetTipCards
-            tips={tips}
+          {hasAnomalyEvidence ? <WidgetDetailCard
+            entries={entries.slice(0, 3)}
             compact={false}
             emptyMessage={t('widget.anomalyDetector.noAnomalies', 'No anomalies')}
             emptyIcon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}

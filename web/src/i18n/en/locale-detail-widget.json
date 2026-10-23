@@ -3,6 +3,9 @@
     "reported": "Reported",
     "digitalTwinWindows": "Windows",
     "unknownVehicle": "Unknown vehicle",
+    "comparison": {
+      "previousLabel": "Last week"
+    },
     "statusGrid": {
       "noData": "No status data available"
     },
@@ -215,7 +218,8 @@
       "savingsDescription": "Estimated gasoline cost minus charge cost; distance uses the existing 3.5 miles per kWh assumption.",
       "summaryTitle": "Charge cost sources",
       "summaryDescription": "Recorded and inferred charging costs remain distinct from measured drive costs; configured gas and electricity assumptions are retained.",
-      "summaryScope": "Vehicle {{vehicleId}}; rolling 30-day start {{start}}, at most 100 returned sessions, no explicit end bound"
+      "summaryScope": "Vehicle {{vehicleId}}; rolling 30-day start {{start}}, at most 100 returned sessions, no explicit end bound",
+      "avgRate": "Avg rate"
     },
     "chargeHistory": {
       "title": "Charge history",
@@ -1715,6 +1719,17 @@
     "exportQueued": "Queued",
     "exportRunning": "Running",
     "exportDone": "Done",
-    "overview": "Widget overview"
+    "overview": "Widget overview",
+    "recentDrivesWeekSummary": "{{count}} drives this week · {{total}}",
+    "verifiedFields": "{{count}} verified fields",
+    "batteryGauge": {
+      "limitMarker": "Charge limit {{pct}}%",
+      "chargingToLimit": "Charging · +{{pct}}% to limit",
+      "range": "{{range}} range"
+    },
+    "batteryDegradationTrend": {
+      "maxRange": "Max range at 100%",
+      "sinceNew": "since new ({{range}})"
+    }
   }
 }

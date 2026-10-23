@@ -1,26 +1,30 @@
 /**
  * ClimateStatusWidget — behaviour + hardening coverage.
  *
- * The widget renders the latest climate/HVAC reading for the first (or
- * explicitly selected) vehicle inside a WidgetShell: cabin + outside
- * temperature (converted to the user's unit at the render boundary), the HVAC
- * state, and two status chips (defrost active / battery heater on). Every
+ * After redesign (Phase 2, widget-id climate-status): the widget renders the
+ * latest climate/HVAC reading for the first (or explicitly selected) vehicle
+ * inside a WidgetShell as one headline metric — the inside (cabin) temperature
+ * via WidgetBigNumber (label "Inside") — plus a quieter "Outside <temp>" line
+ * and a single HVAC status pill ("HVAC on" / "HVAC off" / "HVAC unknown").
+ * The former OperationalBrief summary and the defrost / battery-heater status
+ * grid are dropped per the After card; those fields no longer drive any UI.
+ * Temperatures are converted to the user's unit at the render boundary. Every
  * data hook is mocked so the network is never touched, and `useUnits` is
  * stubbed with a deterministic temperature preference so the real
  * `convertTempFromSI` + `fmtInt` display math is exercised end-to-end.
  *
  * Facets covered:
- *   - populated render: both temperatures (°C), HVAC state, and both chips.
+ *   - populated render: Inside headline, Outside line, HVAC pill.
  *   - unit conversion: the same SI Celsius values render in °F when the
- *     preference flips, and the label follows the preference (not the source).
- *   - battery-heater regression (R1): the chip is driven by the `battery_heater`
- *     field the `/climate/latest` handler actually emits (BatteryHeaterOn →
- *     battery_heater), NOT the legacy `battery_heater_on` alias which is always
- *     undefined on this endpoint — so the chip used to be dead code.
- *   - hvac-power regression (R2): canonical boolean state renders as On/Off;
- *     malformed non-boolean payloads collapse to the placeholder.
- *   - chip branches: defrost "Off" and inactive/null heater hide their chips.
- *   - null-safety: missing temps + power collapse to "—" without crashing.
+ *     preference flips, and the unit follows the preference (not the source).
+ *   - designer drop: defrost / battery-heater chips never render, whatever the
+ *     `defrost_mode` / `battery_heater` (or legacy `battery_heater_on`) fields
+ *     say — the After card has no such elements.
+ *   - hvac-power regression (R2): canonical boolean state renders as
+ *     "HVAC on"/"HVAC off"; malformed non-boolean payloads collapse to
+ *     "HVAC unknown".
+ *   - null-safety: missing temps collapse to "—" without crashing or
+ *     fabricating a zero.
  *   - empty state: the "No climate data" EmptyState (role="status") with the
  *     data rows withheld.
  *   - loading: WidgetShell skeleton with all content (header + body) withheld.
@@ -60,7 +64,7 @@ const mockVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 const mockClimate = useClimateLatest as unknown as ReturnType<typeof vi.fn>;
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 
- 
+
 function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
@@ -93,9 +97,7 @@ const STANDARD = { cols: 2, rows: 3 };
 
 function setup(
   opts: {
-     
     vehicles?: ReturnType<typeof makeQuery>;
-     
     climate?: ReturnType<typeof makeQuery>;
     tempPref?: '°C' | '°F';
   } = {},
@@ -110,107 +112,87 @@ beforeEach(() => {
 });
 
 describe('ClimateStatusWidget — rendering', () => {
-  it('keeps two raw temperature operands, measured zero and negative temperature with the independent HVAC status', () => {
+  it('renders the Inside headline, measured zero and negative Outside temp with the HVAC pill', () => {
     setup({ climate: makeQuery({ data: makeClimate({ inside_temp: 0, outside_temp: -10 }) }) });
-    render(<ClimateStatusWidget size={STANDARD} />);
-    const brief = screen.getByTestId('dashboard-climate-temperatures-brief');
-    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(2);
-    expect(brief).toHaveTextContent('0°C');
-    expect(brief).toHaveTextContent('-10°C');
-    expect(brief).not.toHaveTextContent('continuous recording coverage is not established');
-    expect(brief.querySelector('h4')).toBeNull();
-    expect(screen.getByText('HVAC')).toBeInTheDocument();
-    expect(screen.getByText('Defrost')).toBeInTheDocument();
+    const { container } = render(<ClimateStatusWidget size={STANDARD} />);
+    expect(screen.getByText('Inside')).toBeInTheDocument();
+    expect(container).toHaveTextContent('0°C');
+    expect(container).toHaveTextContent('Outside -10°C');
+    expect(screen.getByText('HVAC on')).toBeInTheDocument();
+    // The former OperationalBrief summary is gone in the After design.
+    expect(screen.queryByTestId('dashboard-climate-temperatures-brief')).toBeNull();
   });
 
   it('retains temperatures and HVAC during a failed cached refresh', () => {
     setup({ climate: makeQuery({ data: makeClimate(), isError: true, error: new Error('refresh failed') }) });
-    render(<ClimateStatusWidget size={STANDARD} />);
-    expect(screen.getByText('20°C')).toBeInTheDocument();
-    expect(screen.getByText('HVAC')).toBeInTheDocument();
+    const { container } = render(<ClimateStatusWidget size={STANDARD} />);
+    expect(container).toHaveTextContent('20°C');
+    expect(screen.getByText('HVAC on')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
-  it('renders both temperatures (°C), HVAC state, and both status chips', () => {
+
+  it('renders the Inside headline, Outside line and HVAC pill (°C)', () => {
     setup({ climate: makeQuery({ data: makeClimate() }) });
-    render(<ClimateStatusWidget size={STANDARD} />);
+    const { container } = render(<ClimateStatusWidget size={STANDARD} />);
 
     expect(screen.getByText('Climate')).toBeInTheDocument();
-    expect(screen.getByText('20°C')).toBeInTheDocument();
-    expect(screen.getByText('10°C')).toBeInTheDocument();
-    expect(screen.getAllByText('On')).toHaveLength(2);
-    expect(screen.getByText('Defrost')).toBeInTheDocument();
-    expect(screen.getByText('Heater')).toBeInTheDocument();
+    expect(screen.getByText('Inside')).toBeInTheDocument();
+    expect(container).toHaveTextContent('20°C');
+    expect(container).toHaveTextContent('Outside 10°C');
+    expect(screen.getByText('HVAC on')).toBeInTheDocument();
+  });
+
+  it('renders "HVAC off" when the HVAC state is inactive', () => {
+    setup({ climate: makeQuery({ data: makeClimate({ hvac_power: false }) }) });
+    render(<ClimateStatusWidget size={STANDARD} />);
+
+    expect(screen.getByText('HVAC off')).toBeInTheDocument();
+    expect(screen.queryByText('HVAC on')).not.toBeInTheDocument();
   });
 
   it('converts the SI Celsius readings to °F and labels them with the user preference', () => {
-    // 20°C → 68°F, 0°C → 32°F. The label follows the preference, never the
+    // 20°C → 68°F, 10°C → 50°F. The unit follows the preference, never the
     // source unit, so no °C string survives.
     setup({
-      climate: makeQuery({ data: makeClimate({ inside_temp: 20, outside_temp: 0 }) }),
+      climate: makeQuery({ data: makeClimate({ inside_temp: 20, outside_temp: 10 }) }),
       tempPref: '°F',
     });
-    render(<ClimateStatusWidget size={STANDARD} />);
+    const { container } = render(<ClimateStatusWidget size={STANDARD} />);
 
-    expect(screen.getByText('68°F')).toBeInTheDocument();
-    expect(screen.getByText('32°F')).toBeInTheDocument();
-    expect(screen.queryByText('20°C')).not.toBeInTheDocument();
+    expect(container).toHaveTextContent('68°F');
+    expect(container).toHaveTextContent('Outside 50°F');
+    expect(container.textContent).not.toContain('°C');
   });
 
-  it('drives the heater chip from `battery_heater`, ignoring the legacy `battery_heater_on` alias', () => {
-    // Regression (R1): the /climate/latest handler maps BatteryHeaterOn →
-    // "battery_heater". The widget used to read "battery_heater_on", which is
-    // undefined on this endpoint, so the chip never rendered. Here the two
-    // fields DISAGREE to prove the widget reads the correct one.
+  it('never renders defrost or heater chips, whatever the legacy fields say', () => {
+    // Designer drop: the After card has no defrost/heater elements, so neither
+    // the canonical `battery_heater` field nor the legacy `battery_heater_on`
+    // alias (nor an active defrost mode) may resurrect them.
     setup({
       climate: makeQuery({
-        data: makeClimate({ battery_heater: true, battery_heater_on: false, defrost_mode: 'Off' }),
+        data: makeClimate({ battery_heater: true, battery_heater_on: true, defrost_mode: 'Normal' }),
       }),
     });
     render(<ClimateStatusWidget size={STANDARD} />);
 
-    expect(screen.getByText('Heater')).toBeInTheDocument();
     expect(screen.queryByText('Defrost')).not.toBeInTheDocument();
-  });
-
-  it('does not render the heater chip when only the legacy `battery_heater_on` is set', () => {
-    // The inverse of the R1 guard: a truthy legacy alias must NOT resurrect the
-    // chip once the canonical field is false.
-    setup({
-      climate: makeQuery({
-        data: makeClimate({ battery_heater: false, battery_heater_on: true, defrost_mode: 'Off' }),
-      }),
-    });
-    render(<ClimateStatusWidget size={STANDARD} />);
-
     expect(screen.queryByText('Heater')).not.toBeInTheDocument();
-    expect(screen.queryByText('Defrost')).not.toBeInTheDocument();
+    expect(screen.queryByText('Bat heater')).not.toBeInTheDocument();
   });
 
-  it('collapses a non-boolean HVAC payload to a placeholder', () => {
+  it('collapses a non-boolean HVAC payload to "HVAC unknown"', () => {
     setup({
       climate: makeQuery({
         data: makeClimate({ inside_temp: 21, outside_temp: 11, hvac_power: 'On' }),
       }),
     });
-    render(<ClimateStatusWidget size={STANDARD} />);
+    const { container } = render(<ClimateStatusWidget size={STANDARD} />);
 
-    // Only the HVAC row is missing a value; both temps still render.
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
-  });
-
-  it('hides both status chips when defrost is "Off" and the heater is inactive', () => {
-    setup({
-      climate: makeQuery({
-        data: makeClimate({ defrost_mode: 'Off', battery_heater: false }),
-      }),
-    });
-    render(<ClimateStatusWidget size={STANDARD} />);
-
-    expect(screen.queryByText('Defrost')).not.toBeInTheDocument();
-    expect(screen.queryByText('Heater')).not.toBeInTheDocument();
-    // Temperature rows still render — only the chips are gated.
-    expect(screen.getByText('20°C')).toBeInTheDocument();
+    // Only the HVAC pill loses its state; both temps still render.
+    expect(screen.getByText('HVAC unknown')).toBeInTheDocument();
+    expect(container).toHaveTextContent('21°C');
+    expect(container).toHaveTextContent('Outside 11°C');
   });
 
   it('renders null-safe placeholders for missing temps and power without crashing', () => {
@@ -225,10 +207,12 @@ describe('ClimateStatusWidget — rendering', () => {
         }),
       }),
     });
-    render(<ClimateStatusWidget size={STANDARD} />);
+    const { container } = render(<ClimateStatusWidget size={STANDARD} />);
 
-    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    // Missing readings stay unknown ("—"), never a fabricated zero.
+    expect(container).toHaveTextContent('—');
+    expect(container.textContent).not.toContain('0°C');
+    expect(screen.getByText('HVAC unknown')).toBeInTheDocument();
     expect(screen.queryByText('Defrost')).not.toBeInTheDocument();
     expect(screen.queryByText('Heater')).not.toBeInTheDocument();
   });
@@ -241,7 +225,8 @@ describe('ClimateStatusWidget — rendering', () => {
     // EmptyState is a semantic status region for screen readers.
     expect(screen.getByRole('status')).toBeInTheDocument();
     // The data rows are withheld entirely.
-    expect(screen.queryByText('Cabin')).not.toBeInTheDocument();
+    expect(screen.queryByText('Inside')).not.toBeInTheDocument();
+    expect(screen.queryByText('HVAC on')).not.toBeInTheDocument();
   });
 
   it('shows a loading skeleton and withholds header + content while data loads', () => {
@@ -267,11 +252,11 @@ describe('ClimateStatusWidget — rendering', () => {
 describe('ClimateStatusWidget — vehicle resolution', () => {
   it('passes the explicit vehicleId prop to the climate query with the 5s poll', () => {
     setup({ vehicles: makeQuery({ data: [{ id: 42 }] }) });
-    render(<ClimateStatusWidget vehicleId={7} size={STANDARD} />);
+    const { container } = render(<ClimateStatusWidget vehicleId={7} size={STANDARD} />);
 
     expect(mockClimate).toHaveBeenCalledWith(7, 5000);
     // The resolved data is what gets rendered.
-    expect(screen.getByText('20°C')).toBeInTheDocument();
+    expect(container).toHaveTextContent('20°C');
   });
 
   it('falls back to the first vehicle id when no vehicleId prop is supplied', () => {

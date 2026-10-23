@@ -11,9 +11,8 @@ import { request } from '@/api/client';
 
 import { convertDistanceToSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber } from './shared';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
+import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import type { StatGridItem } from './shared';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import type { ChargingSession } from '@/api/types';
@@ -132,34 +131,23 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
       || (costPerKwh == null && knownNumber(session.cost_decimal) == null && knownNumber(session.cost) == null)),
   }) : undefined;
   const currency = (value: number | null, decimals?: number) => value == null ? null : formatCurrency(value, decimals);
-  const summary: readonly StatMetric[] = [
+  // After spec: one headline (30-day cost, saved-vs-gas delta) + 3 stats.
+  // Missing operands stay null so tiles show '—'; a measured 0 stays 0.
+  const stats: StatGridItem[] = [
     {
-      metricId: 'energy', rawValue: sessions == null ? null : energyWh,
       label: t('widget.chargeCost.totalEnergy', 'Total energy'),
-      description: t('widget.chargeCost.energyDescription', 'Known energy in returned sessions; missing session energy keeps coverage partial.'),
-      display: { formatter: raw => ({ value: fmtNumber(convertEnergyFromSI(Number(raw), unitPrefs.energy)), unit: unitPrefs.energy }) },
+      value: sessions == null || energyWh == null ? null : fmtNumber(convertEnergyFromSI(energyWh, unitPrefs.energy)),
+      unit: unitPrefs.energy,
     },
     {
-      metricId: 'currency', rawValue: sessions == null ? null : metrics.totalCost,
-      label: t('widget.chargeCost.totalCost', 'Total cost'),
-      description: t('widget.chargeCost.costDescription', 'Recorded session cost or the configured electricity-rate estimate; missing required operands remain unknown.'),
-      display: { formatter: raw => ({ value: formatCurrency(Number(raw)), unit: '' }) },
+      label: t('widget.chargeCost.costPerDistance', 'Cost / {{unit}}', { unit: distanceUnit }),
+      value: currency(metrics.costPerDistance),
     },
-    ...(isTall ? [
-      {
-        metricId: 'rate' as const,
-        rawValue: metrics.costPerDistance == null ? null : metrics.costPerDistance / convertDistanceToSI(1, distanceUnit),
-        label: t('widget.chargeCost.costPerDistance', 'Cost / {{unit}}', { unit: distanceUnit }),
-        description: t('widget.chargeCost.rateDescription', 'Configured electricity cost per estimated distance; canonical raw rate is currency per metre, not a measured trip rate.'),
-        display: { formatter: (raw: number | string) => ({ value: formatCurrency(Number(raw) * convertDistanceToSI(1, distanceUnit)), unit: '' }) },
-      },
-      {
-        metricId: 'currency' as const, rawValue: metrics.gasSavings,
-        label: t('widget.chargeCost.gasSavings', 'vs gas savings'),
-        description: t('widget.chargeCost.savingsDescription', 'Estimated gasoline cost minus charge cost; distance uses the existing 3.5 miles per kWh assumption.'),
-        display: { formatter: (raw: number | string) => ({ value: formatCurrency(Number(raw)), unit: '' }) },
-      },
-    ] : []),
+    {
+      label: t('widget.chargeCost.avgRate', 'Avg rate'),
+      value: currency(costPerKwh),
+      unit: `/${unitPrefs.energy}`,
+    },
   ];
 
   const handleRefresh = useCallback(() => {
@@ -215,45 +203,23 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <DashboardSourceBrief
-        metrics={summary} state={dataState ?? deriveDataState(query, { provenance: 'inferred' })}
-        eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
-        title={t('widget.chargeCost.summaryTitle', 'Charge cost sources')}
-        description={t('widget.chargeCost.summaryDescription', 'Recorded and inferred charging costs remain distinct from measured drive costs; configured gas and electricity assumptions are retained.')}
-        scope={t('widget.chargeCost.summaryScope', 'Vehicle {{vehicleId}}; rolling 30-day start {{start}}, at most 100 returned sessions, no explicit end bound', { vehicleId: id, start: thirtyDaysAgo })}
-        loading={isLoading && !sessions} testId="charge-cost-operational-brief"
-      />
       {hasData ? (
-        <div className="space-y-2">
-          <div className={`flex min-w-0 flex-wrap justify-between gap-2 ${dashboardTokens.metricLabel}`}>
+        <div className="flex min-w-0 flex-col gap-3">
+          <WidgetBigNumber
+            value={currency(metrics.totalCost)}
+            label={t('widget.chargeCost.monthly', '30-day cost')}
+            delta={metrics.gasSavings != null ? {
+              text: t('widget.chargeCost.saved', 'Saved {{amount}} vs gas', { amount: formatCurrency(metrics.gasSavings) }),
+              tone: metrics.gasSavings >= 0 ? 'good' : 'neutral',
+            } : undefined}
+            subtitle={metrics.gasSavings == null ? t('widget.chargeCost.configureGas', 'Set gas price in settings') : undefined}
+            animated={false}
+          />
+          <WidgetStatGrid stats={stats} cols={3} />
+          <p className={`flex min-w-0 flex-wrap gap-x-2 ${dashboardTokens.metricLabel}`}>
             <span>{t('widget.chargeCost.sessions', '{{count}} sessions', { count: metrics.sessionCount })}</span>
-            <span>{costPerKwh != null ? formatCurrency(costPerKwh) : '—'}/{t('widget.chargeCost.kwh', 'kWh')}</span>
-          </div>
-
-          {isTall && (
-            <div className="space-y-2">
-              <p className={dashboardTokens.metricLabel}>
-                {metrics.gasSavings != null ? t('widget.chargeCost.savingsNote', '30-day estimate') : t('widget.chargeCost.configureGas', 'Set gas price in settings')}
-              </p>
-            </div>
-          )}
-
-          {!isTall && (
-            <div className={`flex min-w-0 flex-wrap items-center justify-between gap-2 ${dashboardTokens.metricLabel}`}>
-              <span>
-                {metrics.costPerDistance != null
-                  ? `${formatCurrency(metrics.costPerDistance)}/${distanceUnit}`
-                  : '—'}
-              </span>
-              <span>
-                {metrics.gasSavings != null
-                  ? t('widget.chargeCost.saved', 'Saved {{amount}} vs gas', {
-                      amount: formatCurrency(metrics.gasSavings),
-                    })
-                  : ''}
-              </span>
-            </div>
-          )}
+            {isTall && metrics.gasSavings != null ? <span>{t('widget.chargeCost.savingsNote', '30-day estimate')}</span> : null}
+          </p>
         </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

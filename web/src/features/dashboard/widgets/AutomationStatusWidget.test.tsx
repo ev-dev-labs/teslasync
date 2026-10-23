@@ -274,21 +274,8 @@ describe('AutomationStatusWidget — full view', () => {
       isError: true, error: new Error('refresh failed'),
     }));
     expect(screen.getByRole('switch', { name: 'Toggle Retained enabled' })).toBeInTheDocument();
-    const brief = screen.getByTestId('automation-operational-brief');
-    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText('Retained readings')).toBeInTheDocument();
-    expect(within(drawer).getByText('2')).toBeInTheDocument();
-    expect(within(drawer).getByText('1')).toBeInTheDocument();
-    expect(within(drawer).getByText('0')).toBeInTheDocument();
-    expect(within(drawer).getByText(/not all manually disabled automations/)).toBeInTheDocument();
-    const scope = within(drawer).getByText('Returned automation list; action permissions and per-row recovery remain independent');
-    expect(scope).toBeInTheDocument();
-    expect(scope.closest('[data-drawer-header]')).toContainElement(within(drawer).getByRole('heading', { name: 'Automation configuration details' }));
-    const provenance = within(drawer).getByRole('region', { name: 'How this was calculated' });
-    expect(within(provenance).getByText('Data sources')).toBeInTheDocument();
-    expect(within(provenance).getByText('Current automation configuration and reported failure flags; no execution-success confidence is inferred. Returned automation list; action permissions and per-row recovery remain independent')).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.getByText('1 Failing')).toBeInTheDocument();
   });
   it('shows a titled summary header and one row per automation', () => {
     renderWidget(
@@ -304,8 +291,6 @@ describe('AutomationStatusWidget — full view', () => {
     expect(screen.getByText('Automation status')).toBeInTheDocument();
     // 2 enabled → "2 Active"; 1 enabled+failing → "1 Failing" summary.
     expect(screen.getByText('Active')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('Preheat')).toBeInTheDocument();
     expect(screen.getByText('Charge cap')).toBeInTheDocument();
     expect(screen.getByText('Sentry sync')).toBeInTheDocument();

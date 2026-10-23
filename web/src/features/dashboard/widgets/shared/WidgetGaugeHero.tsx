@@ -1,5 +1,7 @@
 import { type ComponentProps, type ReactNode } from 'react';
 import { LinearGauge } from '@/components/charts';
+import { cn } from '@/lib/cn';
+import { dashboardTokens } from '../../lib/dashboardTokens';
 
 export interface GaugeHeroConfig extends Pick<
   ComponentProps<typeof LinearGauge>,
@@ -50,7 +52,17 @@ export function WidgetGaugeHero({ gauge, stats, compact, children }: WidgetGauge
   const items = stats ?? [];
 
   return (
-    <div className="flex flex-col items-center justify-center gap-2">
+    // Spec hero chrome: the LinearGauge bar is the single headline; this
+    // wrapper only centers it full-width (a bar takes its width from the
+    // parent — see the gauge-width audit) and spaces the quiet secondary
+    // stats with the shared section rhythm. No gradients, no glass, no
+    // motion of its own (reduced-motion safe by construction).
+    <div
+      className={cn(
+        'flex h-full w-full min-w-0 flex-col items-center justify-center',
+        dashboardTokens.density.sectionGap,
+      )}
+    >
       <LinearGauge
         value={value}
         preserveReadingAndScale={gauge?.preserveReadingAndScale}
@@ -71,17 +83,27 @@ export function WidgetGaugeHero({ gauge, stats, compact, children }: WidgetGauge
       />
 
       {!compact && items.length > 0 && (
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+        <div
+          className={cn(
+            'flex w-full min-w-0 flex-wrap items-center justify-center',
+            dashboardTokens.density.statGap,
+          )}
+        >
           {items.map((stat, index) => (
             <div
               key={`${stat.label ?? 'stat'}-${index}`}
               className="flex min-w-0 flex-col items-center text-center"
             >
-              <span className="truncate text-xs text-[var(--text-secondary)]">{stat.label ?? '—'}</span>
-              <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
+              <span
+                title={typeof stat.label === 'string' && stat.label !== '' ? stat.label : undefined}
+                className={cn('truncate text-center', dashboardTokens.metricLabel)}
+              >
+                {stat.label ?? '—'}
+              </span>
+              <span className="truncate text-center text-sm font-semibold tabular-nums text-[var(--text-primary)]">
                 {stat.value ?? '—'}
                 {stat.unit && (
-                  <span className="ml-0.5 text-xs font-normal text-[var(--text-secondary)]">{stat.unit}</span>
+                  <span className={cn('ms-0.5 text-center', dashboardTokens.unit)}>{stat.unit}</span>
                 )}
               </span>
             </div>

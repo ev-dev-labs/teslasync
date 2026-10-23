@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CloudSun, Sun, CloudSnow, Thermometer } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
-import { Caption } from '@/components/ui';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { isFiniteNumber } from '@/lib/numberFormat';
@@ -37,7 +36,7 @@ function WeatherIcon({ tempC, className }: { tempC: number; className?: string }
 }
 
 export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const vehiclesQuery = useVehicles();
   const candidate = vehicleId ?? safeArray(vehiclesQuery.data)[0]?.id;
@@ -70,9 +69,6 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
   const dataState = !id && vehicleId == null && discoveryState.status !== 'ok'
     ? discoveryState : sourceState;
 
-  const lat = state?.latitude;
-  const lon = state?.longitude;
-
   const isCompact = size.cols === 1 && size.rows === 1;
 
   const handleRefresh = useCallback(() => {
@@ -99,16 +95,9 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
             <WidgetBigNumber value={`${fmtInt(toTemperatureDisplay(outsideTemp))}${tempUnit}`} align="center" />
           </div>
         ) : (
-          <div className="h-full flex flex-wrap items-center gap-4 py-2">
+          <div className="h-full flex items-center justify-center gap-3 py-2">
+            <WidgetBigNumber value={`${fmtInt(toTemperatureDisplay(outsideTemp))}${tempUnit}`} align="center" />
             <WeatherIcon tempC={outsideTemp} className="h-10 w-10 text-[var(--text-secondary)] flex-shrink-0" />
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <WidgetBigNumber value={`${fmtInt(toTemperatureDisplay(outsideTemp))}${tempUnit}`} label={t('widget.outsideTemp', 'Outside temperature')} />
-              {isFiniteNumber(lat) && isFiniteNumber(lon) && (
-                <Caption className="break-words">
-                  {fmtNumber(lat)}°, {fmtNumber(lon)}°
-                </Caption>
-              )}
-            </div>
           </div>
         )
       ) : (

@@ -2,19 +2,21 @@
  * QuickNavWidget — behaviour + hardening coverage.
  *
  * QuickNavWidget is the dashboard-registry wrapper (its single default export)
- * that mounts the prop-less <QuickNav> shortcut grid inside a <WidgetShell>
- * with `noPadding`. It ignores every WidgetProps field (vehicleId / size /
- * config) by contract — the shortcut grid is static and vehicle-agnostic — so
- * this suite locks that contract plus the whole rendered navigation surface:
+ * that mounts the static shortcut grid inside a <WidgetShell>. It ignores
+ * every WidgetProps field (vehicleId / size / config) by contract — the
+ * shortcut grid is static and vehicle-agnostic — so this suite locks that
+ * contract plus the whole rendered navigation surface:
  *   - the four shortcut links and their real app routes (/drives, /charging,
  *     /analytics, /battery), asserted against App.tsx so a typo becomes a dead
  *     link the test catches;
+ *   - the After `.lk` tile structure: bordered 10px label-only tiles (icon +
+ *     label, no descriptions, no chevrons) on the shared 8px grid;
  *   - real navigation via clicking a shortcut (MemoryRouter + Routes);
  *   - the single labelled <nav> landmark, decorative (aria-hidden) icons, and
  *     keyboard-focusable links;
  *   - the i18n key wiring (guards against the "hardcoded English" prohibition);
- *   - the `noPadding` shell contract (vertical-only scroll boundary, clipped
- *     horizontally) and the deliberate absence of a title header.
+ *   - the shell contract (vertical-only scroll boundary, clipped horizontally,
+ *     exactly one FreshnessDot pinned in the header).
  *
  * Network is never touched — the widget has no data hooks. react-i18next is
  * stubbed (repo convention) so fallbacks render deterministically and the
@@ -49,11 +51,14 @@ vi.mock('react-i18next', () => ({
 
 /** The four shortcuts, in DOM order — mirrors NAV_ITEMS in QuickNav.tsx. */
 const SHORTCUTS = [
-  { name: /drives/i, href: '/drives', label: 'Drives', desc: 'Trip history' },
-  { name: /charging/i, href: '/charging', label: 'Charging', desc: 'Sessions & costs' },
-  { name: /analytics/i, href: '/analytics', label: 'Analytics', desc: 'Fleet insights' },
-  { name: /battery/i, href: '/battery', label: 'Battery', desc: 'Health & degradation' },
+  { name: /drives/i, href: '/drives', label: 'Drives' },
+  { name: /charging/i, href: '/charging', label: 'Charging' },
+  { name: /analytics/i, href: '/analytics', label: 'Analytics' },
+  { name: /battery/i, href: '/battery', label: 'Battery health' },
 ] as const;
+
+/** Descriptions the pre-redesign tiles showed; the After `.lk` tiles drop them. */
+const FORMER_DESCRIPTIONS = ['Trip history', 'Sessions & costs', 'Fleet insights', 'Health & degradation'] as const;
 
 function newClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -103,11 +108,14 @@ describe('QuickNavWidget — navigation surface', () => {
     }
   });
 
-  it('shows every shortcut label alongside its description', () => {
+  it('shows every shortcut label (After tiles are label-only)', () => {
     renderWidget();
     for (const s of SHORTCUTS) {
       expect(screen.getByText(s.label)).toBeInTheDocument();
-      expect(screen.getByText(s.desc)).toBeInTheDocument();
+    }
+    // After `.lk` tiles carry icon + label only — descriptions are dropped.
+    for (const desc of FORMER_DESCRIPTIONS) {
+      expect(screen.queryByText(desc)).toBeNull();
     }
   });
 });
@@ -141,8 +149,8 @@ describe('QuickNavWidget — accessibility', () => {
 
   it('marks every shortcut icon decorative (aria-hidden), keeping the AT tree clean', () => {
     const { container } = renderWidget();
-    // 4 leading category icons + 4 trailing chevrons, all aria-hidden.
-    expect(container.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(8);
+    // One leading category icon per tile (After tiles have no chevrons).
+    expect(container.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(4);
     // No icon should leak into the accessible tree as an img.
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
@@ -162,15 +170,15 @@ describe('QuickNavWidget — i18n wiring (no hardcoded English)', () => {
     expect(tSpy).toHaveBeenCalledWith('nav.drives', 'Drives');
     expect(tSpy).toHaveBeenCalledWith('nav.charging', 'Charging');
     expect(tSpy).toHaveBeenCalledWith('nav.analytics', 'Analytics');
-    expect(tSpy).toHaveBeenCalledWith('nav.battery', 'Battery');
+    expect(tSpy).toHaveBeenCalledWith('nav.battery', 'Battery health');
   });
 
-  it('wires a translation key for every shortcut description', () => {
+  it('does not resolve description keys (After tiles are label-only)', () => {
     renderWidget();
-    expect(tSpy).toHaveBeenCalledWith('nav.drivesDesc', 'Trip history');
-    expect(tSpy).toHaveBeenCalledWith('nav.chargingDesc', 'Sessions & costs');
-    expect(tSpy).toHaveBeenCalledWith('nav.analyticsDesc', 'Fleet insights');
-    expect(tSpy).toHaveBeenCalledWith('nav.batteryDesc', 'Health & degradation');
+    expect(tSpy).not.toHaveBeenCalledWith('nav.drivesDesc', expect.anything());
+    expect(tSpy).not.toHaveBeenCalledWith('nav.chargingDesc', expect.anything());
+    expect(tSpy).not.toHaveBeenCalledWith('nav.analyticsDesc', expect.anything());
+    expect(tSpy).not.toHaveBeenCalledWith('nav.batteryDesc', expect.anything());
   });
 });
 
@@ -211,8 +219,23 @@ describe('QuickNavWidget — shell + prop-agnostic contract', () => {
     const { container } = renderWidget({ size: { cols, rows: 2 } });
     expect(screen.getAllByRole('link')).toHaveLength(4);
     expect(screen.getByRole('navigation').className).toContain('@xs:grid-cols-2');
+    expect(screen.getByRole('navigation').className).toContain('@sm:grid-cols-4');
     expect(container.querySelector('[data-testid="widget-body"] [style]')).toBeNull();
     expect(container.querySelectorAll('[data-role="freshness-dot"]')).toHaveLength(1);
     expect(screen.getByRole('link', { name: /drives/i }).className).toContain('focus-visible:ring-2');
+  });
+
+  it('renders After bordered link tiles on the shared 8px grid', () => {
+    renderWidget();
+    const nav = screen.getByRole('navigation');
+    // After `.links`: 8px grid gap (dashboardTokens.density.gridGap).
+    expect(nav.className).toContain('gap-2');
+    for (const link of screen.getAllByRole('link')) {
+      // After `.lk`: bordered 10px tile (radius.inner), 44px target, hover fill.
+      expect(link.className).toContain('border');
+      expect(link.className).toContain('rounded-shape-lg');
+      expect(link.className).toContain('min-h-11');
+      expect(link.className).toContain('hover:bg-[var(--surface-2)]');
+    }
   });
 });

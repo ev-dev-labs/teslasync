@@ -16,6 +16,11 @@
  *   5. The badge variant MAP: success→success, warning→warning, error→danger,
  *      neutral→neutral, always at size "sm".
  *   6. `valueColor` is forwarded to both the animated and non-animated value.
+ *   7. The spec delta line (`delta.text` + `tone` + optional `trend` glyph):
+ *      small semibold tone-colored text under the value; tone is
+ *      caller-declared status only (good→success, bad→danger, default
+ *      neutral→muted) and never inferred from the sign; the delta is hidden
+ *      when there is no value or the text is blank.
  *
  * AnimatedNumber is stubbed to a synchronous span (no requestAnimationFrame
  * tween) so numeric output is deterministic and the animated-vs-plain branch is
@@ -188,6 +193,73 @@ describe('WidgetBigNumber — badge variant map', () => {
     expect(badge).toHaveTextContent('Status');
     expect(badge).toHaveAttribute('data-variant', expected);
     expect(badge).toHaveAttribute('data-size', 'sm');
+  });
+});
+
+describe('WidgetBigNumber — delta line', () => {
+  it('renders the delta text under the value with the good (success) tone', () => {
+    render(<WidgetBigNumber value={86} unit="/100" delta={{ text: '+4 vs last week', tone: 'good' }} />);
+
+    const delta = screen.getByText('+4 vs last week');
+    expect(delta).toBeInTheDocument();
+    expect(delta).toHaveClass('text-xs', 'font-semibold');
+    expect(delta).toHaveClass('text-[var(--semantic-success)]');
+  });
+
+  it('renders the bad tone for a negative delta and the neutral default without inferring from the sign', () => {
+    const { unmount } = render(<WidgetBigNumber value={5} delta={{ text: '−4%', tone: 'bad' }} />);
+    expect(screen.getByText('−4%')).toHaveClass('text-[var(--semantic-danger)]');
+    unmount();
+
+    // No tone given and a negative sign: still muted, never red-by-inference.
+    render(<WidgetBigNumber value={254} unit="mi" delta={{ text: '−6.6%' }} />);
+    const neutral = screen.getByText('−6.6%');
+    expect(neutral).toHaveClass('text-[var(--text-muted)]');
+    expect(neutral.className).not.toContain('semantic-danger');
+  });
+
+  it('renders the caller text verbatim, including a saved-vs phrasing', () => {
+    render(<WidgetBigNumber value="$38.20" delta={{ text: 'Saved $96 vs gas', tone: 'good' }} />);
+
+    expect(screen.getByText('Saved $96 vs gas')).toBeInTheDocument();
+  });
+
+  it('renders a decorative trend glyph when requested, hidden from assistive tech', () => {
+    const { container } = render(
+      <WidgetBigNumber value={86} delta={{ text: '+4 vs last week', tone: 'good', trend: 'up' }} />,
+    );
+
+    const delta = screen.getByText('+4 vs last week');
+    const glyph = delta.querySelector('svg');
+    expect(glyph).toBeInTheDocument();
+    expect(glyph).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelector('svg')).toBe(glyph);
+  });
+
+  it('renders no glyph when trend is omitted', () => {
+    const { container } = render(<WidgetBigNumber value={86} delta={{ text: '+4 vs last week' }} />);
+
+    expect(screen.getByText('+4 vs last week')).toBeInTheDocument();
+    expect(container.querySelector('svg')).toBeNull();
+  });
+
+  it('hides the delta when there is no value, like the unit', () => {
+    render(<WidgetBigNumber value={null} delta={{ text: '+4 vs last week', tone: 'good' }} />);
+
+    expect(screen.getByText(DASH)).toBeInTheDocument();
+    expect(screen.queryByText('+4 vs last week')).toBeNull();
+  });
+
+  it('hides a blank delta', () => {
+    const { container } = render(<WidgetBigNumber value={5} delta={{ text: '   ' }} />);
+
+    expect(container.textContent).not.toContain('+');
+  });
+
+  it('omits the delta row when no delta is provided', () => {
+    render(<WidgetBigNumber value={5} />);
+
+    expect(screen.getByTestId('animated-number')).toHaveTextContent('5');
   });
 });
 

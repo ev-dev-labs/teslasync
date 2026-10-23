@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Music, Radio, Volume2 } from 'lucide-react';
+import { Music } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { MetricBar } from '@/components/data-display';
 import { useVehicles, useMediaLatest } from '@/api/hooks/useVehicles';
@@ -8,7 +8,6 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { dashboardTokens } from '../lib/dashboardTokens';
 
 /**
@@ -32,7 +31,6 @@ export function volumePercent(volume: number, max: number): number {
 
 export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { fmtNumber } = useNumberFormatting();
   const vehicleQuery = useVehicles();
   const { data: vehicles } = vehicleQuery;
   const vehicleState = useDataState(vehicleQuery);
@@ -47,19 +45,17 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
   };
 
   const isCompact = size.cols === 1 && size.rows === 1;
-  const isTall = size.rows >= 2;
-
-  const title = media?.now_playing_title ?? '—';
-  const artist = media?.now_playing_artist ?? '—';
-  const album = media?.now_playing_album;
+  const title = typeof media?.now_playing_title === 'string' && media.now_playing_title.trim()
+    ? media.now_playing_title
+    : '—';
+  const artist = typeof media?.now_playing_artist === 'string' && media.now_playing_artist.trim()
+    ? media.now_playing_artist
+    : null;
   const source = media?.playback_source ?? media?.now_playing_station;
-  const status = media?.playback_status;
+  const sourceText = typeof source === 'string' && source.trim() ? source : null;
+  const subtitle = [artist, sourceText].filter((value): value is string => Boolean(value)).join(' · ');
   const elapsed = knownNumber(media?.now_playing_elapsed);
   const duration = knownNumber(media?.now_playing_duration);
-  const volume = knownNumber(media?.audio_volume);
-  const volumeMax = knownNumber(media?.audio_volume_max);
-
-  const isPlaying = status === 'Playing';
 
   return (
     <WidgetShell
@@ -79,27 +75,21 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
           <div className="flex flex-col items-center justify-center h-full gap-1 text-center px-1">
             <Music className="h-5 w-5 text-neon-cyan shrink-0" aria-hidden="true" />
             <p className={`${dashboardTokens.metricLabel} w-full`} title={title}>{title}</p>
-            <p className={`${dashboardTokens.metricLabel} w-full`} title={artist}>{artist}</p>
+            {artist && <p className={`${dashboardTokens.metricLabel} w-full`} title={artist}>{artist}</p>}
           </div>
         ) : (
           /* ── Standard / Tall ── */
-          <div className="flex flex-col gap-2 h-full">
+          <div className="flex flex-col gap-3 h-full">
             <div className="flex items-start gap-3 min-w-0">
-              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-neon-cyan/10 shrink-0">
-                <Music className="h-5 w-5 text-neon-cyan" aria-hidden="true" />
+              <div className="flex items-center justify-center h-14 w-14 rounded-shape-lg bg-gradient-to-br from-[var(--theme-primary)]/70 to-[var(--text-secondary)]/30 shrink-0" aria-hidden="true">
+                <Music className="h-6 w-6 text-white/90" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className={`${dashboardTokens.secondaryMetric} break-words [overflow-wrap:anywhere]`} title={title}>{title}</p>
-                <p className={dashboardTokens.metricLabel} title={artist}>{artist}</p>
-                {isTall && album && (
-                  <p className={dashboardTokens.metricLabel} title={album}>{album}</p>
+                {subtitle && (
+                  <p className={dashboardTokens.metricLabel} title={subtitle}>{subtitle}</p>
                 )}
               </div>
-              {isPlaying && (
-                <span className="text-2xs px-1.5 py-0.5 rounded-full bg-green-500/10 text-green-400 shrink-0">
-                  {t('widget.playing', 'Playing')}
-                </span>
-              )}
             </div>
 
             {duration != null && duration > 0 && elapsed != null && (
@@ -120,42 +110,6 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
               </div>
             )}
 
-            {isTall && (
-              <div className="space-y-1.5 mt-auto">
-                {source && (
-                  <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-                    <Radio className="h-3 w-3 shrink-0" aria-hidden="true" />
-                    <span className="min-w-0 break-words [overflow-wrap:anywhere]">{source}</span>
-                  </div>
-                )}
-                {volume != null && (
-                  <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-                    <Volume2 className="h-3 w-3 shrink-0" aria-hidden="true" />
-                    {volumeMax != null && volumeMax > 0 && (
-                      <div className="min-w-0 flex-1">
-                        <MetricBar
-                          value={volume}
-                          max={volumeMax}
-                          color="var(--text-secondary)"
-                          ariaLabel={t('widget.volume', 'Volume')}
-                          showHeader={false}
-                          size="slim"
-                          fill="solid"
-                        />
-                      </div>
-                    )}
-                    <span className={dashboardTokens.metricLabel}>{fmtNumber(volume)}</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {!isTall && source && (
-              <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] mt-auto">
-                <Radio className="h-3 w-3 shrink-0" aria-hidden="true" />
-                <span className="min-w-0 break-words [overflow-wrap:anywhere]">{source}</span>
-              </div>
-            )}
           </div>
         )
       ) : (

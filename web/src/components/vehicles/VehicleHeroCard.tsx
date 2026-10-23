@@ -1,22 +1,18 @@
 import { forwardRef, useEffect, useState, type HTMLAttributes } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Gauge } from 'lucide-react';
+import { Gauge, Lock, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { isFiniteNumber } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui/Button';
+import { BUTTON_BASE } from '@/components/ui/Button';
 import { LinearGauge } from '@/components/charts/LinearGauge';
-import { ambientTemperatureGaugeRange } from '@/components/charts/temperatureGaugeRange';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
-import { StatCard } from '@/components/data-display/StatCard';
-import { Badge } from '@/components/ui/Badge';
 import { Heading, Text } from '@/components/ui/Typography';
-import { MetricGrid } from '@/components/layout';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FSM_REGISTRY } from '@/types/fsm';
 import { useUnits } from '@/hooks/useUnits';
-import { convertDistanceFromSI, convertPowerFromSI, convertTempFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import type { VehicleStatus } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { typography } from '@/lib/tokens';
@@ -59,6 +55,7 @@ export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
     observedAt: number | null;
     freshness: VehicleStateFreshness;
   } | null;
+  verifiedFields?: readonly string[];
   className?: string;
 }
 
@@ -81,8 +78,8 @@ function toStatus(state: string): VehicleStatus {
 }
 
 export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
-  ({ vehicle, vehicleState, photoUrl, dataState, observation, className, ...props }, ref) => {
-    const { fmtInt, fmtNumber } = useNumberFormatting();
+  ({ vehicle, vehicleState, photoUrl, dataState, observation, verifiedFields, className, ...props }, ref) => {
+    const { fmtNumber } = useNumberFormatting();
     const { t } = useTranslation();
     const { unitPrefs } = useUnits();
     const { formatRelative, formatDateTime } = useDateFormat();
@@ -124,9 +121,6 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
     const temperatureLabel = unitPrefs.temperature;  // '°F' | '°C'
 
     const batteryReading = isFiniteNumber(vs?.battery_level) ? vs.battery_level : null;
-    const odometerDisplay = isFiniteNumber(vs?.odometer)
-      ? fmtInt(Math.round(convertDistanceFromSI(vs.odometer, distanceLabel)))
-      : '—';
     const rangeDisplay = isFiniteNumber(vs?.rated_range)
       ? Math.round(convertDistanceFromSI(vs.rated_range, distanceLabel))
       : null;
@@ -137,17 +131,6 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
       ? Math.round(convertTempFromSI(vs.outside_temp, temperatureLabel))
       : null;
 
-    /* Range gauge max scales with display unit so the arc fills meaningfully
-     * — Tesla long-range packs cap around 400 mi ≈ 644 km. */
-    const rangeMax = distanceLabel === 'km' ? 644 : 400;
-    /* Both ends are converted together: a degree scale has a non-zero origin,
-     * so converting only the ceiling makes the same temperature sweep a
-     * different arc in °F. The floor also sits below freezing so sub-zero
-     * outside readings render instead of clamping to an empty ring. */
-    const tempRange = ambientTemperatureGaugeRange((c) =>
-      convertTempFromSI(c, temperatureLabel),
-    );
-
     return (
       <GlassPanel
         ref={ref}
@@ -157,7 +140,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
         className={cn('min-w-0 p-4 sm:p-6 space-y-6', className)}
         {...props}
       >
-        {/* User-uploaded hero photo; absent photo preserves the gauges-only layout. */}
+        {/* User-uploaded hero photo; absent photo preserves the compact layout. */}
         {photoUrl ? (
           <div className="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)]">
             <img
@@ -180,12 +163,9 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
               <StatusBadge status={toStatus(vehicleState?.state ?? vehicle.state ?? 'offline')} />
             </div>
             <Text as="p" size="xs" color="muted" className="break-all font-mono">
-              {vehicle.vin}
+              {[vehicle.model, vehicle.vin].filter(Boolean).join(' · ')}
             </Text>
           </div>
-          <Badge variant="neutral" size="sm">
-            {vehicle.model}
-          </Badge>
         </div>
 
         {hasTrustMetadata ? (
@@ -241,74 +221,54 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
             of collapsing the section, so the panel is never a blank shell. */}
         {vs ? (
           <>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
-              <LinearGauge
-                preserveReadingAndScale
-                value={batteryReading}
-                max={100}
-                label={t('vehicleHero.gauge.battery', 'Battery')}
-                unit="%"
-                tone={batteryReading == null ? undefined : batteryReading > 20 ? 'info' : 'danger'}
-                size={100}
-              />
-              <LinearGauge
-                preserveReadingAndScale
-                value={rangeDisplay}
-                max={rangeMax}
-                label={t('vehicleHero.gauge.range', 'Range')}
-                unit={distanceLabel}
-                tone="neutral"
-                size={100}
-              />
-              <LinearGauge
-                preserveReadingAndScale
-                value={insideTempDisplay}
-                {...tempRange}
-                label={t('vehicleHero.gauge.inside', 'Inside')}
-                unit={temperatureLabel}
-                tone="neutral"
-                size={100}
-              />
-              <LinearGauge
-                preserveReadingAndScale
-                value={outsideTempDisplay}
-                {...tempRange}
-                label={t('vehicleHero.gauge.outside', 'Outside')}
-                unit={temperatureLabel}
-                tone="neutral"
-                size={100}
-              />
+            <div className="flex items-end justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <LinearGauge
+                  preserveReadingAndScale
+                  value={batteryReading}
+                  max={100}
+                  label={t('vehicleHero.gauge.battery', 'Battery')}
+                  unit="%"
+                  tone={batteryReading == null ? undefined : batteryReading > 20 ? 'info' : 'danger'}
+                  size={110}
+                />
+              </div>
+              <div className="mb-0 shrink-0 text-right">
+                <Text as="p" size="sm" color="secondary">
+                  {t('vehicleHero.gauge.range', 'Range')}
+                </Text>
+                <Text as="p" size="2xl" weight="bold" color="primary" mono className="tabular-nums">
+                  {rangeDisplay ?? '—'}
+                  {rangeDisplay != null && (
+                    <Text as="span" size="sm" color="muted" className="ml-1">{distanceLabel}</Text>
+                  )}
+                </Text>
+              </div>
             </div>
 
-            {/* Detail cards mirror the same display-unit conversions as the gauges */}
-            <MetricGrid>
-              <StatCard label={t('vehicleHero.stat.insideTemp', 'Inside temp')} value={insideTempDisplay ?? '—'} unit={temperatureLabel} />
-              <StatCard label={t('vehicleHero.stat.outsideTemp', 'Outside temp')} value={outsideTempDisplay ?? '—'} unit={temperatureLabel} />
-              <StatCard
-                label={t('vehicleHero.stat.odometer', 'Odometer')}
-                value={odometerDisplay}
-                unit={distanceLabel}
-              />
-              <StatCard
-                label={t('vehicleHero.stat.range', 'Range')}
-                value={rangeDisplay ?? '—'}
-                unit={distanceLabel}
-              />
-              <StatCard
-                label={t('vehicleHero.stat.status', 'Status')}
-                value={vs.is_locked == null ? '—' : vs.is_locked ? t('vehicleHero.locked', 'Locked') : t('vehicleHero.unlocked', 'Unlocked')}
-              />
-              <StatCard
-                label={t('vehicleHero.stat.sentry', 'Sentry')}
-                value={vs.sentry_mode == null ? '—' : vs.sentry_mode ? t('common.on', 'On') : t('common.off', 'Off')}
-              />
-              <StatCard label={t('vehicleHero.stat.firmware', 'Firmware')} value={vs.software_version?.trim() || '—'} />
-              <StatCard
-                label={t('vehicleHero.stat.power', 'Power')}
-                value={isFiniteNumber(vs.power) ? fmtNumber(convertPowerFromSI(vs.power, unitPrefs.power)) : '—'}
-                unit={unitPrefs.power}
-              />
-            </MetricGrid>
+            <div className="flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3">
+              {vs.is_locked == null ? (
+                <span className="inline-flex min-h-9 items-center gap-2 rounded-shape-sm border border-[var(--border-default)] px-3 text-sm text-[var(--text-secondary)]">
+                  {t('vehicleHero.stat.status', 'Status')} <span aria-hidden="true">—</span>
+                </span>
+              ) : (
+                <span className="inline-flex min-h-9 items-center gap-2 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
+                  {vs.is_locked ? <Lock className="h-4 w-4" aria-hidden="true" /> : <ShieldCheck className="h-4 w-4" aria-hidden="true" />}
+                  {vs.is_locked ? t('vehicleHero.locked', 'Locked') : t('vehicleHero.unlocked', 'Unlocked')}
+                </span>
+              )}
+              {vs.sentry_mode != null && (
+                <span className="inline-flex min-h-9 items-center rounded-shape-sm border border-[var(--semantic-info-border)] bg-[var(--semantic-info-bg)] px-3 text-sm text-[var(--semantic-info)]">
+                  {t('vehicleHero.stat.sentry', 'Sentry')} {vs.sentry_mode ? t('common.on', 'On') : t('common.off', 'Off')}
+                </span>
+              )}
+              <span className="inline-flex min-h-9 items-center rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
+                {t('vehicleHero.gauge.inside', 'Inside')} {insideTempDisplay != null ? `${fmtNumber(insideTempDisplay, 0)}${temperatureLabel}` : '—'}
+              </span>
+              <span className="inline-flex min-h-9 items-center rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
+                {t('vehicleHero.gauge.outside', 'Outside')} {outsideTempDisplay != null ? `${fmtNumber(outsideTempDisplay, 0)}${temperatureLabel}` : '—'}
+              </span>
+            </div>
           </>
         ) : (
           <EmptyState
@@ -318,28 +278,21 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
         )}
         </SourceContent>
 
-        {/* Navigation actions for the vehicle */}
-        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-[var(--border-subtle)]">
+        {/* Footer evidence and navigation */}
+        <div className="flex min-w-0 items-end justify-between gap-3 border-t border-[var(--border-subtle)] pt-2">
+          <Text as="span" size="sm" color="secondary">
+            {verifiedFields
+              ? t('widget.verifiedFields', '{{count}} verified fields', { count: verifiedFields.length })
+              : null}
+          </Text>
           <Link
             to={`/vehicles/${vehicle.id}`}
             className={cn(
               NAV_LINK_CLASS,
-              'border border-[var(--semantic-info-border)] bg-[var(--semantic-info-bg)] text-[var(--semantic-info)] hover:bg-[var(--control-bg-hover)] forced-colors:border-[ButtonBorder]',
+              'shrink-0 border-0 bg-transparent px-0 text-[var(--text-primary)] hover:bg-transparent',
             )}
           >
-            {t('vehicleHero.action.details', 'Details')}
-          </Link>
-          <Link
-            to={`/vehicles/${vehicle.id}/commands`}
-            className={cn(NAV_LINK_CLASS, BUTTON_VARIANTS.secondary)}
-          >
-            {t('vehicleHero.action.commands', 'Commands')}
-          </Link>
-          <Link
-            to={`/vehicles/${vehicle.id}/map`}
-            className={cn(NAV_LINK_CLASS, BUTTON_VARIANTS.secondary)}
-          >
-            {t('vehicleHero.action.liveMap', 'Live map')}
+            {t('vehicleHero.action.details', 'Details')} <span aria-hidden="true">→</span>
           </Link>
         </div>
       </GlassPanel>
