@@ -15,7 +15,7 @@ untouched as possible user tooling.
 | Part | Name | Status | Last commit / note | Next step |
 |---|---|---|---|---|
 | 1 | Time zone: follow setting everywhere, remove duplicates — TRACK A (`fix/post-merge-followups`) | in progress | TZ-5c done; wip fixed by a09dc6ec15; freshness correction b7c55d6ab2+b3f0ba6272+658e6563fc; startup-budget fix (this change, unpushed) | TZ-5 277-route sweep, TZ-6 re-run, TZ-7 replica + push + PR #202 green. Only Track A commits here until done |
-| 2 | Dashboard widget redesign (119 widgets) — TRACK B (`feat/widget-redesign` in `~/repos/teslasync-widgets`) | in progress | Phase 3 recovered/reconciled: 119/119 widget coverage; Track B pushed to origin; Phase 4 started. Latest run reported 58 failed suites / 71 failed tests, TypeScript green. | Resume Phase 4 sequential widget repair; push fixes; rerun dashboard/full replica; merge tracks only after gate evidence |
+| 2 | Dashboard widget redesign (119 widgets) — TRACK B merged into the one active branch | done | Track B merged into `fix/post-merge-followups` at `248c9d13d5`; widget worktree removed; Phase 4 continues on the one track. | Collect and group all remaining widget, PR, and timezone failures; fix by root cause |
 | 3 | Shared-pattern consolidation (whole codebase) | not started | — | `docs/shared-patterns.md` catalog first |
 | 4 | Remaining: product items (A) + security re-check (B) | in progress (verify) | branch commits `e0196914cd..f84aad0ce7` cover A1-A7 + security; A8 owner-decision recorded | Audit plan-vs-branch after Part 3; B re-run audits |
 | 5 | CI green on PR #202 | not started | PR green at takeover (199 pass / 1 skipping) | Loop `gh pr checks --watch` after each push |
