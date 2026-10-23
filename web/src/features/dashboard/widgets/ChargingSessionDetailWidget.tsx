@@ -363,7 +363,9 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       >
         {detail ? (
           <WidgetBigNumber
-            value={knownNumber(detail.total_energy_added_wh) == null ? null : fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh, unitPrefs.energy))}
+            value={knownNumber(detail.total_energy_added_wh) == null
+              ? null
+              : fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh, unitPrefs.energy), 1)}
             label={unitPrefs.energy === 'kWh' ? t('widget.chargingSessionDetail.unitKwh', 'kWh added') : `${unitPrefs.energy} ${t('widget.energyAdded', 'Added')}`}
             badge={{ text: chargerLabel, variant: charger.variant }}
             align="center"

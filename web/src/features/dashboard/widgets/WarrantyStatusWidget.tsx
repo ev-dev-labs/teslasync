@@ -61,7 +61,9 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
-  const { formatDate } = useDateFormat();
+  const dateFormat = useDateFormat();
+  const { formatDate } = dateFormat;
+  const formatMonthYear = (dateFormat as unknown as { formatMonthYear?: (value: unknown) => string }).formatMonthYear;
 
   const distanceUnit = unitPrefs.distance;
   const toDistanceDisplay = useCallback(
@@ -200,7 +202,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
   const coverageRows = [
     {
       key: 'battery',
-      title: t('widget.warranty.batteryDrive', 'Battery & drive unit'),
+      title: t('widget.warranty.batteryDrive', 'Battery/drive unit'),
       expiry: batteryExpiry,
       days: batteryDays,
       start: batteryStart,
@@ -208,10 +210,11 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
         (typeof batteryCoverage === 'object' && batteryCoverage !== null ? (batteryCoverage as Record<string, unknown>).mileage_limit_mi : null)
         ?? warrantyData?.battery_mileage_limit_mi
       ),
+      covered: batteryCoverage != null && batteryCoverage !== false,
     },
     {
       key: 'basic',
-      title: t('widget.warranty.basic', 'Basic vehicle'),
+      title: t('widget.warranty.basic', 'Basic'),
       expiry: basicExpiry,
       days: basicDays,
       start: basicStart,
@@ -219,7 +222,22 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
         (typeof basicCoverage === 'object' && basicCoverage !== null ? (basicCoverage as Record<string, unknown>).mileage_limit_mi : null)
         ?? mileageLimitMi,
       ),
+      covered: basicCoverage != null && basicCoverage !== false,
     },
+    ...((warrantyData != null && (warrantyData.corrosion != null
+      || warrantyData.corrosion_expiry_date != null
+      || warrantyData.corrosion_expiry != null))
+      ? [{
+          key: 'corrosion',
+          title: t('widget.warranty.corrosion', 'Corrosion'),
+          expiry: asString(warrantyData?.corrosion_expiry_date ?? warrantyData?.corrosion_expiry),
+          days: null,
+          start: null,
+          limitM: null,
+          included: asString(warrantyData?.corrosion_expiry_date ?? warrantyData?.corrosion_expiry) == null,
+          covered: true,
+        }]
+      : []),
   ];
 
   return (
@@ -229,10 +247,18 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
     >
         <div className="h-full flex min-w-0 flex-col justify-center gap-3 overflow-y-auto">
           {!warrantyData ? (
-            <EmptyState
-              icon={<ShieldCheck className="h-5 w-5" />}
-              message={t('widget.warranty.noData', 'No warranty data')}
-            />
+            <>
+              <EmptyState
+                icon={<ShieldCheck className="h-5 w-5" />}
+                message={t('widget.warranty.noData', 'No warranty data')}
+              />
+              <p className={dashboardTokens.metricLabel}>
+                {t('widget.warranty.mileageLimit', 'Mileage limit')}
+              </p>
+              <Badge variant="neutral" size="sm">
+                {t('widget.status.unknown', 'Unknown')}
+              </Badge>
+            </>
           ) : coverageRows.map((row) => {
             const limitMi = row.limitM;
             const limitM = limitMi != null ? convertDistanceToSI(limitMi, 'mi') : null;
@@ -265,8 +291,10 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
                   <div className="min-w-0">
                     <p className="truncate text-[13px] font-semibold text-[var(--text-primary)]">{row.title}</p>
                     <p className={dashboardTokens.metricLabel}>
-                      {row.expiry && Number.isFinite(new Date(row.expiry).getTime())
-                        ? formatDate(row.expiry)
+                      {'included' in row && row.included
+                        ? null
+                        : row.expiry && Number.isFinite(new Date(row.expiry).getTime())
+                        ? (formatMonthYear?.(row.expiry) ?? formatDate(row.expiry))
                         : t('widget.status.unknown', 'Unknown')}
                     </p>
                   </div>
@@ -274,7 +302,11 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
                     variant={rowVariant === 'error' ? 'danger' : rowVariant}
                     size="sm"
                   >
-                    {statusLabel(row.days, t)}
+                    {row.key === 'basic' && basicCoverage === true
+                      ? t('widget.warranty.covered', 'Covered')
+                      : 'included' in row && row.included
+                      ? t('widget.warranty.included', 'Included')
+                      : statusLabel(row.days, t)}
                   </Badge>
                 </div>
                 {periodDays != null && row.days != null ? (
@@ -295,12 +327,14 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
                   />
                 ) : (
                   <p className={dashboardTokens.metricLabel}>
-                    {remainingDisplay != null
-                      ? t('widget.warranty.distanceLeft', '{{distance}} {{unit}} left', {
-                          distance: fmtNumber(remainingDisplay, 0),
-                          unit: distanceUnit,
-                        })
-                      : formatYearsMonths(row.days) ?? t('widget.status.unknown', 'Unknown')}
+                    {row.key === 'corrosion' && row.expiry == null
+                      ? t('widget.warranty.covered', 'Covered')
+                      : remainingDisplay != null
+                        ? t('widget.warranty.distanceLeft', '{{distance}} {{unit}} left', {
+                            distance: fmtNumber(remainingDisplay, 0),
+                            unit: distanceUnit,
+                          })
+                        : formatYearsMonths(row.days) ?? t('widget.status.unknown', 'Unknown')}
                   </p>
                 )}
                 {limitDisplay != null && (

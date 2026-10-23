@@ -7,7 +7,7 @@ import { Caption } from '@/components/ui';
 import { useMaintenance, useServiceRecords, useMaintenanceForecast } from '@/api/hooks/useVehicleSystems';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
-import { combineDataStates } from '@/api/dataState';
+import { combineDataStates, knownNumber } from '@/api/dataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useDateLabels } from '@/hooks/useDateLabels';
 import { WidgetShell } from './WidgetShell';
@@ -35,6 +35,11 @@ export function urgencyLabel(urgency: Urgency, t: (k: string, f: string) => stri
   if (urgency === 'overdue') return t('widget.maintenance.overdue', 'Overdue');
   if (urgency === 'soon') return t('widget.maintenance.soon', 'Soon');
   return t('widget.maintenance.good', 'Good');
+}
+
+function knownForecastCount(value: unknown): number | null {
+  const count = knownNumber(value);
+  return count != null && Number.isInteger(count) && count >= 0 ? count : null;
 }
 
 export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
@@ -80,6 +85,15 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
   const isCompact = size.cols <= 1;
   const items = maintenanceItems ?? [];
   const records = serviceRecords ?? [];
+  const forecastEvidenceItems = forecast?.items ?? [];
+  const forecastOverdue = knownForecastCount(forecast?.overdue_count)
+    ?? (forecastEvidenceItems.length > 0
+      ? knownForecastCount(forecastEvidenceItems.filter((item) => item.status === 'overdue').length)
+      : null);
+  const forecastDueSoon = knownForecastCount(forecast?.due_soon_count)
+    ?? (forecastEvidenceItems.length > 0
+      ? knownForecastCount(forecastEvidenceItems.filter((item) => item.status === 'due_soon').length)
+      : null);
 
   // Sort maintenance items by interval (soonest first)
   const sortedItems = useMemo(
@@ -251,6 +265,24 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
       {...shellProps}
     >
       <div className="h-full flex min-h-0 flex-col overflow-y-auto">
+        {(forecastOverdue != null || forecastDueSoon != null) && (
+          <div
+            role="status"
+            aria-label={t('widget.maintenance.forecastStatus', 'Maintenance forecast status')}
+            className="mb-2 flex min-w-0 flex-wrap items-center gap-2 rounded-panel border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2"
+          >
+            {forecastOverdue != null && (
+              <span className="text-xs text-[var(--text-primary)]">
+                {t('widget.maintenance.overdue', 'Overdue')}: <strong>{fmtInt(forecastOverdue)}</strong>
+              </span>
+            )}
+            {forecastDueSoon != null && (
+              <span className="text-xs text-[var(--text-primary)]">
+                {t('widget.maintenance.soon', 'Soon')}: <strong>{fmtInt(forecastDueSoon)}</strong>
+              </span>
+            )}
+          </div>
+        )}
         <Caption className="mb-1 block">{t('widget.maintenance.upcoming', 'Upcoming')}</Caption>
         <SourceContent
           state={maintenanceTrust.fatalError ? 'error' : !maintenanceTrust.hasData && maintLoading ? 'loading' : maintenanceTrust.refreshError ? 'retained' : 'ready'}

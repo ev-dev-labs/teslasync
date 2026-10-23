@@ -224,13 +224,13 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
       <SourceContent
           state={statsState.fatalError ? 'error' : !statsState.hasData && statsLoading ? 'loading' : !hasData ? 'empty' : statsState.refreshError ? 'retained' : 'ready'}
           label={t('widget.fsmDistribution.title', 'State distribution')}
-          emptyMessage={t('widget.fsmDistribution.noData', 'No state data available')}
+          emptyMessage={t('widget.fsmDistribution.noData', 'No state data')}
           errorMessage={t('widget.fsmDistribution.statsError', 'State distribution could not be loaded.')}
           error={statsState.fatalError}
           errorRecovery={{ onRetry: () => { void refetchStats(); } }}
           retainedMessage={t('widget.fsmDistribution.statsRetained', 'Previously loaded state distribution remains visible while it refreshes.')}
           emptyContent={<EmptyState /* no-action: the widget header already exposes refresh for this source */
-            icon={<GitBranch className="h-5 w-5" />} message={t('widget.fsmDistribution.noData', 'No state data available')} className="py-4" />}
+            icon={<GitBranch className="h-5 w-5" />} message={t('widget.fsmDistribution.noData', 'No state data')} className="py-4" />}
         >
         <div className="grid h-full min-h-0 grid-cols-[minmax(120px,0.9fr)_minmax(150px,1.1fr)] items-center gap-4">
           <EmbeddedChart
