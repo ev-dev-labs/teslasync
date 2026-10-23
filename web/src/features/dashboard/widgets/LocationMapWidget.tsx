@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Navigation } from 'lucide-react';
+import { Navigation } from 'lucide-react';
 import { AnimatedMarker } from '@/components/maps';
 import { Text } from '@/components/ui';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
@@ -72,7 +72,6 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.locationMap.title', 'Vehicle location map')}
-      icon={isCompact ? undefined : <MapPin className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />}
       loading={isLoading}
       dataState={dataState}
       noPadding
@@ -96,28 +95,29 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
           />
         </WidgetMapView>
 
-        {/* Status overlay */}
+        {/* The map remains the primary surface; source status is a quiet footer,
+            so only information present in the vehicle payload is exposed. */}
         {hasCoords && !isCompact && (
           <div
-            className="absolute bottom-2 start-2 end-2 z-[1000] flex min-w-0 flex-col items-start gap-1"
+            className="flex min-w-0 items-center justify-between gap-2 border-t border-[var(--border-subtle)] px-4 py-2"
             role="group"
             aria-label={t('widget.locationMap.status', 'Vehicle location status')}
           >
             {!isLive && (
-              <Text variant="caption" className="inline-flex max-w-full items-start gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-amber-300 backdrop-blur-sm [overflow-wrap:anywhere]">
-                <MapPin className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+              <Text variant="caption" className="min-w-0 truncate text-amber-300">
                 {t('widget.locationMap.lastKnown', 'Last known position')}
               </Text>
             )}
+            {isLive && <span aria-hidden="true" className="min-w-0 flex-1" />}
             {isExpanded && heading != null && (
-              <Text variant="caption" className="inline-flex max-w-full items-start gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] backdrop-blur-sm [overflow-wrap:anywhere]">
-                <Navigation className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
-                {t('widget.locationMap.heading', 'Heading')}: {fmtNumber(heading)}°
+              <Text variant="caption" className="flex shrink-0 items-center gap-1">
+                <Navigation className="h-3 w-3 shrink-0" aria-hidden="true" />
+                {fmtNumber(heading, 0)}°
               </Text>
             )}
             {isExpanded && (
-              <Text variant="caption" className="inline-flex max-w-full items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] backdrop-blur-sm [overflow-wrap:anywhere]">
-                {fmtNumber(lat)}, {fmtNumber(lng)}
+              <Text variant="caption" className="shrink-0 tabular-nums">
+                {fmtNumber(lat, 2)}, {fmtNumber(lng, 2)}
               </Text>
             )}
           </div>
