@@ -8,10 +8,9 @@
  *        - standard (cols ≥ 2) → a titled shell + a WidgetEventFeed of tracks
  *          (each row: "🎵 {title} — {artist}" + a source subtitle),
  *        - compact  (cols ≤ 1) → a single-line "last track" summary.
- *   2. The `sourceLabel` mapping it owns: `usb` → the "USB" acronym, everything
- *      else Capitalised (`bluetooth` → "Bluetooth", `spotify` → "Spotify").
- *   3. The playing/paused colour branch: a `playing` row is green (#22c55e),
- *      every other status is neutral grey (#6b7280).
+ *   2. Source identities remain unchanged (`usb`, `bluetooth`, `spotify`).
+ *   3. The redesign uses the shared divider-row primitive with no status-color
+ *      fabrication from media playback status.
  *   4. The compact "last track" label branches: title + artist, title only
  *      (artist missing — no dangling em dash), and the "No tracks played"
  *      fallback when the newest entry has no title.
@@ -118,7 +117,7 @@ import type { MediaSnapshot } from '@/api/types';
 
 /* ── Fixtures ─────────────────────────────────────────────────────── */
 
-const MUSIC = '\uD83C\uDFB5'; // 🎵 — the feed-title prefix
+const MUSIC = '\uD83C\uDFB5'; // retained for legacy assertions only
 const EM = '\u2014'; // — the title/artist separator + em-dash placeholder
 
 type Item = Partial<MediaSnapshot> & { id: number };
@@ -191,14 +190,6 @@ function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: numbe
   );
 }
 
-/** True when some rendered element paints the given CSS colour (jsdom may keep
- *  the hex or normalise it to rgb()). Used to assert the playing/paused branch. */
-function hasColour(container: HTMLElement, hex: string, rgb: string): boolean {
-  return Array.from(container.querySelectorAll<HTMLElement>('[style]')).some(
-    (el) => el.style.color === hex || el.style.color === rgb,
-  );
-}
-
 beforeEach(() => {
   mediaMock.mockReset();
   vehiclesMock.mockReset();
@@ -210,25 +201,24 @@ beforeEach(() => {
 
 describe('MediaHistoryWidget', () => {
   it('renders the titled feed with every track and its unchanged source identity', () => {
-    const { container } = renderWidget();
+    renderWidget();
 
     // Titled shell — no gutted panel.
     expect(screen.getByText('Media history')).toBeInTheDocument();
 
-    // Each history row renders "🎵 {title} — {artist}".
-    expect(screen.getByText(`${MUSIC} Bohemian Rhapsody ${EM} Queen`)).toBeInTheDocument();
-    expect(screen.getByText(`${MUSIC} Yesterday ${EM} The Beatles`)).toBeInTheDocument();
-    expect(screen.getByText(`${MUSIC} Clocks ${EM} Coldplay`)).toBeInTheDocument();
-
-    expect(screen.getByText('usb')).toBeInTheDocument();
-    expect(screen.getByText('bluetooth')).toBeInTheDocument();
-    expect(screen.getByText('spotify')).toBeInTheDocument();
+    // After design: title rows with artist/source sublabels.
+    expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
+    expect(screen.getByText('Yesterday')).toBeInTheDocument();
+    expect(screen.getByText('Clocks')).toBeInTheDocument();
+    expect(screen.getByText('Queen · usb')).toBeInTheDocument();
+    expect(screen.getByText('The Beatles · bluetooth')).toBeInTheDocument();
+    expect(screen.getByText('Coldplay · spotify')).toBeInTheDocument();
 
     // The compact single-line summary is NOT used at 2 cols.
     expect(screen.queryByText(`Bohemian Rhapsody ${EM} Queen`)).not.toBeInTheDocument();
 
-    // All three rows reached the feed.
-    expect(container.querySelectorAll('[style]').length).toBeGreaterThanOrEqual(3);
+    // All three rows reached the shared detail-card primitive.
+    expect(screen.getAllByText(/usb|bluetooth|spotify/i).length).toBeGreaterThanOrEqual(3);
   });
 
   describe('MediaHistoryWidget — retained history and recovery', () => {
@@ -236,8 +226,8 @@ describe('MediaHistoryWidget', () => {
       const q = makeQuery({ data: ITEMS, isError: true, error: new Error('refresh failed') });
       mediaMock.mockReturnValue(q);
       renderWidget();
-      expect(screen.getByText(`${MUSIC} Bohemian Rhapsody ${EM} Queen`)).toBeInTheDocument();
-      expect(screen.getByText('usb')).toBeInTheDocument();
+      expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
+      expect(screen.getByText('Queen · usb')).toBeInTheDocument();
             expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
       // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
       fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
@@ -263,12 +253,11 @@ describe('MediaHistoryWidget', () => {
     });
   });
 
-  it('colours the playing row green and non-playing rows neutral grey', () => {
-    const { container } = renderWidget();
-
-    // Playing → #22c55e; Paused/stopped → #6b7280.
-    expect(hasColour(container, '#22c55e', 'rgb(34, 197, 94)')).toBe(true);
-    expect(hasColour(container, '#6b7280', 'rgb(107, 114, 128)')).toBe(true);
+  it('uses the plain After-card divider-row presentation without fabricated status colors', () => {
+    renderWidget();
+    expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
+    expect(screen.getByText('Yesterday')).toBeInTheDocument();
+    expect(screen.getByText('Clocks')).toBeInTheDocument();
   });
 
   it('compact layout summarises the newest track and drops the feed', () => {
@@ -386,11 +375,13 @@ describe('MediaHistoryWidget', () => {
       }),
     );
 
-    expect(() => renderWidget()).not.toThrow();
+    const { container } = renderWidget();
+    expect(container).toBeInTheDocument();
 
-    // Both rows reached the feed (each row title starts with the 🎵 prefix).
-    expect(screen.getAllByText(new RegExp(MUSIC))).toHaveLength(2);
-    expect(screen.getByText(`${MUSIC} Valid Song ${EM} Real Artist`)).toBeInTheDocument();
+    // Both rows reached the shared divider list.
+    expect(screen.getByText('Valid Song')).toBeInTheDocument();
+    expect(screen.getByText('Real Artist · usb')).toBeInTheDocument();
+    expect(screen.getAllByText(/usb|Artist/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('scopes the query to the first vehicle when no vehicleId prop is supplied', () => {

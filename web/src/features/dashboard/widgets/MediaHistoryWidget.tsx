@@ -5,11 +5,14 @@ import { EmptyState } from '@/components/feedback';
 import { useMediaHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
-import { WidgetEventFeed } from './shared';
-import type { EventFeedItem } from './shared';
+import { WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 import { useDataState } from '@/hooks/useDataState';
 import { dashboardTokens } from '../lib/dashboardTokens';
+import { cleanNil } from '@/lib/cleanNil';
+import { safeArray } from '@/lib/safeArray';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
 
 // ── Compact layout (1×2) ─────────────────────────────────────────────
 
@@ -42,6 +45,8 @@ function CompactView({
 
 export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { formatTime, formatDateTime } = useDateFormat();
+  const { formatRelativeDays } = useDateLabels();
   const vehicleQuery = useVehicles();
   const { data: vehicles } = vehicleQuery;
   const vehicleState = useDataState(vehicleQuery);
@@ -66,29 +71,49 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
   };
 
   const isCompact = size.cols <= 1;
-  const list = useMemo(() => history ?? [], [history]);
+  const list = useMemo(() => safeArray(history), [history]);
 
-  const feedItems = useMemo<EventFeedItem[]>(
-    () =>
-      list.map((item) => {
-        const trackTitle = item.now_playing_title ?? '—';
-        const artist = item.now_playing_artist ?? '—';
-        const source = item.playback_source ?? '';
-        const isPlaying = (item.playback_status ?? '').toLowerCase() === 'playing';
+  const entries = useMemo<DetailEntry[]>(() => {
+    const rows = list.map((item) => {
+      const trackTitle = cleanNil(item.now_playing_title) ?? '—';
+      const artist = cleanNil(item.now_playing_artist);
+      const source = cleanNil(item.playback_source);
+      const subtitle = [artist, source].filter(Boolean).join(' · ') || undefined;
+      const timestamp = cleanNil(item.created_at) ?? '';
+      return {
+        id: item.id ?? `${timestamp}-${trackTitle}-${artist ?? ''}-${source ?? ''}`,
+        label: trackTitle,
+        sublabel: subtitle,
+        value: timestamp,
+      };
+    });
 
-        return {
-          id: item.id ?? `${item.created_at ?? 'unknown'}-${trackTitle}-${artist}`,
-          icon: <Music className="h-3.5 w-3.5" />,
-          title: `🎵 ${trackTitle} — ${artist}`,
-          subtitle: source || undefined,
-          timestamp: item.created_at ?? '',
-          color: isPlaying ? '#22c55e' : '#6b7280',
-          severity: 'info' as const,
-          wrap: true,
-        };
-      }),
-    [list],
-  );
+    return rows.sort((a, b) => {
+      const timestampA = typeof a.value === 'string' ? new Date(a.value).getTime() : Number.NaN;
+      const timestampB = typeof b.value === 'string' ? new Date(b.value).getTime() : Number.NaN;
+      const epochA = Number.isNaN(timestampA) ? Number.NEGATIVE_INFINITY : timestampA;
+      const epochB = Number.isNaN(timestampB) ? Number.NEGATIVE_INFINITY : timestampB;
+      return epochA === epochB ? 0 : epochA > epochB ? -1 : 1;
+    }).map((entry) => {
+      const timestamp = typeof entry.value === 'string' ? entry.value : '';
+      const ms = new Date(timestamp).getTime();
+      let value = '—';
+      if (!Number.isNaN(ms)) {
+        const diffMin = Math.floor((Date.now() - ms) / 60_000);
+        if (diffMin < 1) {
+          value = t('widget.eventFeed.justNow', 'Just now');
+        } else if (diffMin < 60) {
+          value = t('widget.eventFeed.minutesAgo', '{{minutes}}m ago', { minutes: diffMin });
+        } else {
+          const day = formatRelativeDays(timestamp);
+          value = day === 'Today' || day === 'Yesterday'
+            ? `${day} ${formatTime(timestamp)}`
+            : formatDateTime(timestamp);
+        }
+      }
+      return { ...entry, value };
+    });
+  }, [list, t, formatRelativeDays, formatTime, formatDateTime]);
 
   const lastTrack = list.length > 0 ? list[0] : null;
 
@@ -107,8 +132,8 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
       {isCompact ? (
         lastTrack ? (
           <CompactView
-            title={lastTrack.now_playing_title ?? '—'}
-            artist={lastTrack.now_playing_artist ?? '—'}
+            title={cleanNil(lastTrack.now_playing_title) ?? '—'}
+            artist={cleanNil(lastTrack.now_playing_artist) ?? '—'}
             t={t}
           />
         ) : (
@@ -120,9 +145,8 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
         )
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <WidgetEventFeed
-            items={feedItems}
-            maxItems={10}
+          <WidgetDetailCard
+            entries={entries.slice(0, 10)}
             compact={false}
             emptyMessage={t('widget.noMediaPlayed', 'No tracks played')}
             emptyIcon={<ListMusic className="h-5 w-5" />}
