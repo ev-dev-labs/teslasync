@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DoorOpen } from 'lucide-react';
-import { Badge, Subhead } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { useVehicles, useSecurityLatest } from '@/api/hooks/useVehicles';
 import { asNonEmptyString } from '@/lib/typeGuards';
@@ -66,6 +66,11 @@ export function parseDoorStates(doorState: unknown): Record<string, DoorWindowSt
     return { fl: 'closed', fr: 'closed', rl: 'closed', rr: 'closed' };
   }
 
+  const hasAllOpen = parts.some((p) => p === 'all_open' || p === 'allopen');
+  if (hasAllOpen) {
+    return { fl: 'open', fr: 'open', rl: 'open', rr: 'open' };
+  }
+
   // A list of open doors is exhaustive; an unknown enum is not such a list.
   if (parts.some((part) => part.includes('open'))) {
     result.fl = 'closed';
@@ -83,6 +88,14 @@ export function parseDoorStates(doorState: unknown): Record<string, DoorWindowSt
     else if (part.includes('front') && part.includes('right') && part.includes('open')) result.fr = 'open';
     else if (part.includes('rear') && part.includes('left') && part.includes('open')) result.rl = 'open';
     else if (part.includes('rear') && part.includes('right') && part.includes('open')) result.rr = 'open';
+    else if (part.includes('driver') && part.includes('front') && part.includes('closed')) result.fl = 'closed';
+    else if (part.includes('passenger') && part.includes('front') && part.includes('closed')) result.fr = 'closed';
+    else if (part.includes('driver') && part.includes('rear') && part.includes('closed')) result.rl = 'closed';
+    else if (part.includes('passenger') && part.includes('rear') && part.includes('closed')) result.rr = 'closed';
+    else if (part.includes('front') && part.includes('left') && part.includes('closed')) result.fl = 'closed';
+    else if (part.includes('front') && part.includes('right') && part.includes('closed')) result.fr = 'closed';
+    else if (part.includes('rear') && part.includes('left') && part.includes('closed')) result.rl = 'closed';
+    else if (part.includes('rear') && part.includes('right') && part.includes('closed')) result.rr = 'closed';
     else if (part === 'open') {
       result.fl = 'open';
       result.fr = 'open';
@@ -106,7 +119,6 @@ export default function DoorWindowStatusWidget({ vehicleId, size }: WidgetProps)
   const displayState = id === 0 && (vehicleState.fatalError || vehicleQuery.isLoading) ? vehicleState : state;
 
   const isCompact = size.cols === 1 && size.rows === 1;
-  const isTall = size.rows >= 2;
 
   const doors = useMemo(() => parseDoorStates(securityData?.door_state), [securityData?.door_state]);
 
@@ -130,11 +142,12 @@ export default function DoorWindowStatusWidget({ vehicleId, size }: WidgetProps)
       rl: t('widget.doorWindow.rl', 'Rear left'),
       rr: t('widget.doorWindow.rr', 'Rear right'),
     };
+    const doorLabel = t('widget.doorWindow.door', 'door');
     return positions.map((pos) => ({
       id: `door-${pos}`,
-      label: labels[pos],
+      label: `${labels[pos]} ${doorLabel}`,
       status: toGridStatus(doors[pos]),
-      value: toValueLabel(doors[pos], t),
+      statusLabel: toValueLabel(doors[pos], t),
     }));
   }, [doors, t]);
 
@@ -146,13 +159,16 @@ export default function DoorWindowStatusWidget({ vehicleId, size }: WidgetProps)
       rl: t('widget.doorWindow.rl', 'Rear left'),
       rr: t('widget.doorWindow.rr', 'Rear right'),
     };
+    const windowLabel = t('widget.doorWindow.window', 'window');
     return positions.map((pos) => ({
       id: `window-${pos}`,
-      label: labels[pos],
+      label: `${labels[pos]} ${windowLabel}`,
       status: toGridStatus(windows[pos]),
-      value: toValueLabel(windows[pos], t),
+      statusLabel: toValueLabel(windows[pos], t),
     }));
   }, [windows, t]);
+
+  const cells: StatusCell[] = [...doorCells, ...windowCells];
 
   return (
     <WidgetShell
@@ -164,6 +180,7 @@ export default function DoorWindowStatusWidget({ vehicleId, size }: WidgetProps)
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
+      refreshIntervalMs={5_000}
       onRefresh={() => { if (id > 0) void refetch(); else void vehicleQuery.refetch(); }}
     >
       {securityData ? (
@@ -185,20 +202,11 @@ export default function DoorWindowStatusWidget({ vehicleId, size }: WidgetProps)
             </Badge>
           </div>
         ) : (
-          <div className={isTall ? 'space-y-4' : 'space-y-2'}>
-            <div>
-              <Subhead className="mb-1.5 break-words">
-                {t('widget.doorWindow.doors', 'Doors')}
-              </Subhead>
-              <WidgetStatusGrid cells={doorCells} cols={2} />
-            </div>
-            <div>
-              <Subhead className="mb-1.5 break-words">
-                {t('widget.doorWindow.windows', 'Windows')}
-              </Subhead>
-              <WidgetStatusGrid cells={windowCells} cols={2} />
-            </div>
-          </div>
+          <WidgetStatusGrid
+            cells={cells}
+            cols={2}
+            compact={size.cols === 2 && size.rows === 2}
+          />
         )
       ) : (
         <WidgetStatusGrid

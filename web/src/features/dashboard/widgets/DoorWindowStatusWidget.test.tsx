@@ -33,7 +33,7 @@
  * two hooks the widget reads are overridden) so no network is ever touched.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -144,13 +144,6 @@ function renderWidget(size: WidgetSize, opts: RenderOpts = {}) {
       </MemoryRouter>
     </QueryClientProvider>,
   );
-}
-
-/** The section wrapper `<div>` that groups a heading (`Doors`/`Windows`) + grid. */
-function sectionOf(heading: string): HTMLElement {
-  const el = screen.getByText(heading).closest('div');
-  if (!el) throw new Error(`section "${heading}" not found`);
-  return el as HTMLElement;
 }
 
 beforeEach(() => {
@@ -317,19 +310,14 @@ describe('DoorWindowStatusWidget — full view', () => {
     });
 
     expect(screen.getByText('Door & window status')).toBeInTheDocument();
-    expect(screen.getByText('Doors')).toBeInTheDocument();
-    expect(screen.getByText('Windows')).toBeInTheDocument();
 
-    // Doors: front-left + rear-right open, the other two closed.
-    const doors = within(sectionOf('Doors'));
-    expect(doors.getAllByText('Open')).toHaveLength(2);
-    expect(doors.getAllByText('Closed')).toHaveLength(2);
-
-    // Windows: closed / partial / closed / opened.
-    const windows = within(sectionOf('Windows'));
-    expect(windows.getAllByText('Closed')).toHaveLength(2);
-    expect(windows.getByText('Partial')).toBeInTheDocument();
-    expect(windows.getByText('Open')).toBeInTheDocument();
+    expect(screen.getByText('Front left door')).toBeInTheDocument();
+    expect(screen.getByText('Rear right door')).toBeInTheDocument();
+    expect(screen.getByText('Front left window')).toBeInTheDocument();
+    expect(screen.getByText('Front right window')).toBeInTheDocument();
+    expect(screen.getAllByText('Open')).toHaveLength(3);
+    expect(screen.getAllByText('Closed')).toHaveLength(4);
+    expect(screen.getByText('Partial')).toBeInTheDocument();
   });
 
   it('regression: "Unknown" windows render an em dash, never an "Open" warning', () => {
@@ -345,9 +333,8 @@ describe('DoorWindowStatusWidget — full view', () => {
       }),
     });
 
-    const windows = within(sectionOf('Windows'));
-    expect(windows.getAllByText('—')).toHaveLength(4);
-    expect(windows.queryByText('Open')).toBeNull();
+    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.queryByText('Open')).toBeNull();
   });
 });
 
