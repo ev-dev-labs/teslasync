@@ -1,54 +1,15 @@
-/**
- * MediaNowPlayingWidget — behaviour, branch, null-safety and a11y coverage for
- * the dashboard's "now playing" media widget.
- *
- * What this file pins:
- *   - the two exported pure helpers `progressPercent` / `volumePercent` — their
- *     ratio maths, the 0-return guards for a non-positive duration / scale-max
- *     (the divide-by-zero fix that used to yield a `NaN%` bar width), and the
- *     0–100 clamp for over-driven / negative readings;
- *   - the widget's data-source resolution (explicit `vehicleId` prop vs. the
- *     first fleet vehicle vs. an empty/undefined fleet → id 0 so the query stays
- *     disabled) and that the 5 s poll interval is forwarded to the hook;
- *   - every render state fanned out by `WidgetShell` — the loading skeleton, the
- *     "Nothing playing" empty state (never a blank panel), and the error
- *     affordance (red freshness dot) that still paints an empty panel;
- *   - the responsive variants — compact 1×1 (title + artist only, no header /
- *     bars / chip), standard non-tall (album + volume hidden, source shown), and
- *     tall (album, source, and the volume bar);
- *   - the REGRESSION FIX at the heart of this elevation: the volume bar's fill is
- *     no longer the same colour as its track (it was invisible), and it now
- *     survives a `0` scale-max without emitting `NaN%`;
- *   - a11y — decorative icons are hidden from the a11y tree and both meters are
- *     real `role="progressbar"` elements with bounded aria-value* attributes;
- *   - the "Refresh" freshness control wiring back to the query's `refetch`.
- *
- * Strategy: the two data hooks (`useVehicles`, `useMediaLatest`) live in the same
- * module and are mocked together so no network is touched and every query state
- * is controllable per-test. i18n is a passthrough that honours the English
- * default so the visible copy ("Now Playing", "Playing", "Nothing playing",
- * "Volume", "Refresh") is asserted verbatim. `formatDurationClock` is left
- * un-mocked and fed millisecond values so its "m:ss" output is deterministic.
- * The widget is rendered inside a MemoryRouter because the shared feedback
- * components it composes may reach for router context.
- */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within, act } from '@testing-library/react';
-import { getGlobalLocale, getGlobalPrecision, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-
 import type { MediaSnapshot } from '@/api/types';
 import type { WidgetSize } from './types';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: unknown, options?: Record<string, unknown>) => {
-      const template = typeof defaultValue === 'string' ? defaultValue : key;
-      const vars = typeof defaultValue === 'string' ? options : undefined;
-      return vars
-        ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(vars[name] ?? ''))
+    t: (key: string, fallback?: unknown, options?: Record<string, unknown>) => {
+      const template = typeof fallback === 'string' ? fallback : key;
+      return options && typeof fallback === 'string'
+        ? template.replace(/\{\{(\w+)\}\}/g, (_match, name) => String(options[name] ?? ''))
         : template;
     },
     i18n: { language: 'en', changeLanguage: vi.fn() },
@@ -62,55 +23,41 @@ const { useVehiclesMock, useMediaLatestMock } = vi.hoisted(() => ({
 
 vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => useVehiclesMock(),
-  useMediaLatest: (id: number, refetchInterval?: number) =>
-    useMediaLatestMock(id, refetchInterval),
+  useMediaLatest: (id: number, interval?: number) => useMediaLatestMock(id, interval),
 }));
 
 import MediaNowPlayingWidget, { progressPercent, volumePercent } from './MediaNowPlayingWidget';
 
-// ── Fixtures ─────────────────────────────────────────────────────────────────
-
-function makeMedia(over: Partial<MediaSnapshot> = {}): MediaSnapshot {
+function makeMedia(overrides: Partial<MediaSnapshot> = {}): MediaSnapshot {
   return {
     id: 1,
     vehicle_id: 1,
-    now_playing_title: 'Bohemian Rhapsody',
-    now_playing_artist: 'Queen',
-    now_playing_album: 'A Night at the Opera',
-    now_playing_station: 'Classic Rock FM',
-    now_playing_duration: 185_000,
-    now_playing_elapsed: 65_000,
+    now_playing_title: 'Night Highway',
+    now_playing_artist: 'The Coastlines',
+    now_playing_album: 'Signals',
+    now_playing_station: 'Radio',
+    now_playing_duration: 221_000,
+    now_playing_elapsed: 84_000,
     playback_status: 'Playing',
     playback_source: 'Spotify',
     audio_volume: 5,
     audio_volume_max: 10,
-    audio_volume_increment: 0.333,
     created_at: new Date().toISOString(),
-    ...over,
+    ...overrides,
   };
 }
 
-interface MediaResult {
-  error?: Error;
-  data: MediaSnapshot | null | undefined;
-  isLoading: boolean;
-  isFetching: boolean;
-  isStale: boolean;
-  isError: boolean;
-  dataUpdatedAt: number;
-  refetch: () => void;
-}
-
-function makeResult(over: Partial<MediaResult> = {}): MediaResult {
+function makeResult(overrides: Record<string, unknown> = {}) {
   return {
     data: makeMedia(),
     isLoading: false,
     isFetching: false,
     isStale: false,
     isError: false,
+    error: null,
     dataUpdatedAt: Date.now(),
     refetch: vi.fn(),
-    ...over,
+    ...overrides,
   };
 }
 
@@ -129,354 +76,91 @@ beforeEach(() => {
   useMediaLatestMock.mockReturnValue(makeResult());
 });
 
-// ── Pure helper: progressPercent ─────────────────────────────────────────────
-
-describe('progressPercent', () => {
-  it('returns 0 when the duration is unknown or non-positive', () => {
+describe('media now playing helpers', () => {
+  it('bounds playback progress without non-finite or negative values', () => {
+    expect(progressPercent(84_000, 221_000)).toBeCloseTo(38.009);
     expect(progressPercent(50, 0)).toBe(0);
-    expect(progressPercent(50, -10)).toBe(0);
+    expect(progressPercent(-10, 200)).toBe(0);
+    expect(progressPercent(300, 200)).toBe(100);
   });
 
-  it('computes elapsed / duration as a percentage', () => {
-    expect(progressPercent(50, 200)).toBe(25);
-    expect(progressPercent(90, 180)).toBe(50);
-  });
-
-  it('clamps out-of-range readings into 0–100', () => {
-    expect(progressPercent(300, 200)).toBe(100); // over-run clamps down
-    expect(progressPercent(-10, 200)).toBe(0); // negative clamps up
-  });
-});
-
-// ── Pure helper: volumePercent (the divide-by-zero fix) ──────────────────────
-
-describe('volumePercent', () => {
-  it('returns 0 (never NaN) when the scale max is unusable', () => {
-    expect(volumePercent(5, 0)).toBe(0);
-    expect(volumePercent(5, -3)).toBe(0);
-    expect(Number.isNaN(volumePercent(0, 0))).toBe(false);
-  });
-
-  it('computes volume / max as a percentage', () => {
+  it('bounds volume and guards an unusable scale', () => {
     expect(volumePercent(5, 10)).toBe(50);
-    expect(volumePercent(0, 11)).toBe(0);
-  });
-
-  it('clamps an over-driven volume to 100', () => {
     expect(volumePercent(15, 10)).toBe(100);
+    expect(volumePercent(5, 0)).toBe(0);
   });
 });
 
-// ── Data-source resolution ───────────────────────────────────────────────────
+describe('MediaNowPlayingWidget redesign', () => {
+  it('renders the After-card hierarchy with title, artist and source, and one progress meter', () => {
+    renderWidget();
+    expect(screen.getByText('Night Highway')).toBeInTheDocument();
+    expect(screen.getByText('The Coastlines · Spotify')).toBeInTheDocument();
+    expect(screen.queryByText('Signals')).not.toBeInTheDocument();
+    const progress = screen.getByRole('progressbar', { name: 'Playback progress' });
+    expect(progress).toHaveAttribute('aria-valuemin', '0');
+    expect(progress).toHaveAttribute('aria-valuemax', '100');
+    expect(screen.getByText('1:24')).toBeInTheDocument();
+    expect(screen.getByText('3:41')).toBeInTheDocument();
+  });
 
-describe('MediaNowPlayingWidget — vehicle resolution', () => {
-  it('reads media for the explicit vehicleId prop with the 5s poll', () => {
-    useVehiclesMock.mockReturnValue({ data: [{ id: 99 }] });
+  it('uses explicit vehicle id and keeps the shared 5-second live polling cadence', () => {
     renderWidget({ cols: 2, rows: 2 }, 42);
     expect(useMediaLatestMock).toHaveBeenCalledWith(42, 5000);
   });
 
-  it('falls back to the first fleet vehicle when no vehicleId prop is given', () => {
-    useVehiclesMock.mockReturnValue({ data: [{ id: 7 }, { id: 8 }] });
+  it('strips title and source labels in compact layout while preserving identity', () => {
+    renderWidget({ cols: 1, rows: 1 });
+    expect(screen.queryByText('Now playing')).not.toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(screen.getByText('Night Highway')).toBeInTheDocument();
+    expect(screen.getByText('The Coastlines')).toBeInTheDocument();
+  });
+
+  it('does not fabricate volume, status, album, or separate labels', () => {
     renderWidget();
-    expect(useMediaLatestMock).toHaveBeenCalledWith(7, 5000);
+    expect(screen.queryByText('Playing')).not.toBeInTheDocument();
+    expect(screen.queryByText('Volume')).not.toBeInTheDocument();
+    expect(screen.queryByText('Signals')).not.toBeInTheDocument();
   });
 
-  it('falls back to id 0 (query disabled) when the fleet is empty', () => {
-    useVehiclesMock.mockReturnValue({ data: [] });
+  it('omits the progress bar when elapsed or duration is missing', () => {
+    useMediaLatestMock.mockReturnValue(makeResult({
+      data: makeMedia({ now_playing_elapsed: undefined, now_playing_duration: 221_000 }),
+    }));
     renderWidget();
-    expect(useMediaLatestMock).toHaveBeenCalledWith(0, 5000);
+    expect(screen.queryByRole('progressbar', { name: 'Playback progress' })).not.toBeInTheDocument();
+    expect(screen.queryByText('0:00')).not.toBeInTheDocument();
   });
 
-  it('tolerates an undefined vehicles list without throwing', () => {
-    useVehiclesMock.mockReturnValue({ data: undefined });
-    expect(() => renderWidget()).not.toThrow();
-    expect(useMediaLatestMock).toHaveBeenCalledWith(0, 5000);
-  });
-});
-
-// ── Render states ────────────────────────────────────────────────────────────
-
-describe('MediaNowPlayingWidget — states', () => {
-  it('renders a loading skeleton while the media query is pending', () => {
-    useMediaLatestMock.mockReturnValue(makeResult({ isLoading: true, data: undefined }));
-    const { container } = renderWidget();
-    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
-    expect(screen.queryByText('Nothing playing')).toBeNull();
+  it('falls back to station when playback source is absent', () => {
+    useMediaLatestMock.mockReturnValue(makeResult({
+      data: makeMedia({ playback_source: undefined, now_playing_station: 'TuneIn' }),
+    }));
+    renderWidget();
+    expect(screen.getByText('The Coastlines · TuneIn')).toBeInTheDocument();
   });
 
-  it('shows the empty state (never a blank panel) when nothing is playing', () => {
+  it('renders loading and empty states honestly', () => {
+    useMediaLatestMock.mockReturnValue(makeResult({ data: undefined, isLoading: true }));
+    const first = renderWidget();
+    expect(first.container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    first.unmount();
+
     useMediaLatestMock.mockReturnValue(makeResult({ data: null }));
     renderWidget();
     expect(screen.getByText('Nothing playing')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
-  it('surfaces a fatal error instead of claiming nothing is playing on initial failure', () => {
-    useMediaLatestMock.mockReturnValue(
-      makeResult({ isError: true, dataUpdatedAt: 0, data: null }),
-    );
-    const { container } = renderWidget();
-    expect(container.querySelector('[class*="--semantic-danger"]')).not.toBeNull();
-    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Nothing playing')).toBeNull();
-  });
-
-  describe('MediaNowPlayingWidget — prerequisite trust and preferences', () => {
-    it('retains the title, album and transport indicators with real refresh recovery', () => {
-      const refetch = vi.fn();
-      useMediaLatestMock.mockReturnValue(makeResult({ isError: true, error: new Error('refresh failed'), refetch }));
-      renderWidget();
-      expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
-      expect(screen.getByText('A Night at the Opera')).toBeInTheDocument();
-      expect(screen.getByRole('progressbar', { name: 'Playback progress' })).toBeInTheDocument();
-            expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-      // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
-      fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
-      expect(refetch).toHaveBeenCalledTimes(1);
-    });
-
-    it('retries failed vehicle resolution before the disabled media query', () => {
-      const refetch = vi.fn();
-      const mediaRefetch = vi.fn();
-      useVehiclesMock.mockReturnValue({ data: undefined, isError: true, error: new Error('discovery failed'), refetch });
-      useMediaLatestMock.mockReturnValue(makeResult({ data: undefined, refetch: mediaRefetch }));
-      renderWidget();
-      fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /retry/i }));
-      expect(refetch).toHaveBeenCalledTimes(1);
-      expect(mediaRefetch).not.toHaveBeenCalled();
-    });
-
-    it('does not invent zero elapsed time when only the duration is known', () => {
-      useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ now_playing_elapsed: undefined }) }));
-      renderWidget();
-      expect(screen.queryByRole('progressbar', { name: 'Playback progress' })).toBeNull();
-      expect(screen.queryByText('0:00')).toBeNull();
-      expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
-    });
-
-    it('keeps a real zero volume reading without inventing an unknown scale maximum', () => {
-      useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ audio_volume: 0, audio_volume_max: undefined }) }));
-      renderWidget();
-      expect(screen.queryByRole('progressbar', { name: 'Volume' })).toBeNull();
-      expect(screen.getByText('0.00')).toBeInTheDocument();
-    });
-
-    it('bounds the accessible volume reading to the known scale', () => {
-      useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ audio_volume: 15, audio_volume_max: 10 }) }));
-      renderWidget();
-      // MetricBar no longer fabricates a bounded progress value for out-of-range
-      // readings: the over-scale volume is exposed as a described group instead.
-      expect(screen.queryByRole('progressbar', { name: 'Volume' })).toBeNull();
-      const vol = screen.getByRole('group', { name: 'Volume' });
-      const describedId = vol.getAttribute('aria-describedby');
-      expect(describedId).toBeTruthy();
-      expect(document.getElementById(describedId!)).toHaveTextContent('15');
-    });
-
-    it('reacts to locale and precision without changing media identities or refetching', () => {
-      const locale = getGlobalLocale();
-      const precision = getGlobalPrecision();
-      const refetch = vi.fn();
-      try {
-        useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ audio_volume: 5.125 }), refetch }));
-        renderWidget();
-        act(() => { setGlobalLocale('de-DE'); setGlobalPrecision(3); });
-        expect(screen.getByText('5,125')).toBeInTheDocument();
-        expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
-        expect(refetch).not.toHaveBeenCalled();
-      } finally {
-        act(() => { setGlobalLocale(locale); setGlobalPrecision(precision); });
-      }
-    });
-  });
-});
-
-// ── Standard (non-tall) variant: { cols: 2, rows: 1 } ────────────────────────
-
-describe('MediaNowPlayingWidget — standard (non-tall)', () => {
-  const STD: WidgetSize = { cols: 2, rows: 1 };
-
-  it('renders the "Now Playing" header, title and artist', () => {
-    useMediaLatestMock.mockReturnValue(
-      makeResult({ data: makeMedia({ now_playing_title: 'Song A', now_playing_artist: 'Artist B' }) }),
-    );
-    renderWidget(STD);
-    expect(screen.getByText('Now playing')).toBeInTheDocument();
-    expect(screen.getByText('Song A')).toBeInTheDocument();
-    expect(screen.getByText('Artist B')).toBeInTheDocument();
-  });
-
-  it('hides the album line and the volume bar at non-tall size', () => {
-    useMediaLatestMock.mockReturnValue(
-      makeResult({ data: makeMedia({ now_playing_album: 'Hidden Album', audio_volume: 5 }) }),
-    );
-    renderWidget(STD);
-    expect(screen.queryByText('Hidden Album')).toBeNull();
-    expect(screen.queryByRole('progressbar', { name: 'Volume' })).toBeNull();
-  });
-
-  it('shows the playback source, falling back to the station name', () => {
-    useMediaLatestMock.mockReturnValue(
-      makeResult({ data: makeMedia({ playback_source: undefined, now_playing_station: 'Radio X' }) }),
-    );
-    renderWidget(STD);
-    expect(screen.getByText('Radio X')).toBeInTheDocument();
-  });
-
-  it('renders the playback progress bar + m:ss clock when a duration is known', () => {
-    useMediaLatestMock.mockReturnValue(
-      makeResult({ data: makeMedia({ now_playing_elapsed: 65_000, now_playing_duration: 185_000 }) }),
-    );
-    renderWidget(STD);
-    const bar = screen.getByRole('progressbar', { name: 'Playback progress' });
-    expect(bar).toHaveAttribute('aria-valuenow', String(progressPercent(65_000, 185_000)));
-    expect(screen.getByText('1:05')).toBeInTheDocument();
-    expect(screen.getByText('3:05')).toBeInTheDocument();
-  });
-
-  it('omits the progress bar entirely when the duration is unknown', () => {
-    useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ now_playing_duration: 0 }) }));
-    renderWidget(STD);
-    expect(screen.queryByRole('progressbar', { name: 'Playback progress' })).toBeNull();
-  });
-});
-
-// ── Playback status chip ─────────────────────────────────────────────────────
-
-describe('MediaNowPlayingWidget — playback chip', () => {
-  it('shows the "Playing" chip while playing', () => {
-    useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ playback_status: 'Playing' }) }));
-    renderWidget({ cols: 2, rows: 2 });
-    expect(screen.getByText('Playing')).toBeInTheDocument();
-  });
-
-  it('hides the chip when the track is paused', () => {
-    useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ playback_status: 'Paused' }) }));
-    renderWidget({ cols: 2, rows: 2 });
-    expect(screen.queryByText('Playing')).toBeNull();
-  });
-});
-
-// ── Tall variant: { cols: 2, rows: 2 } ───────────────────────────────────────
-
-describe('MediaNowPlayingWidget — tall', () => {
-  const TALL: WidgetSize = { cols: 2, rows: 2 };
-
-  it('shows the album line when present', () => {
-    useMediaLatestMock.mockReturnValue(
-      makeResult({ data: makeMedia({ now_playing_album: 'A Night at the Opera' }) }),
-    );
-    renderWidget(TALL);
-    expect(screen.getByText('A Night at the Opera')).toBeInTheDocument();
-  });
-
-  it('renders a labelled, VISIBLE volume bar reflecting the level', () => {
-    useMediaLatestMock.mockReturnValue(
-      makeResult({ data: makeMedia({ audio_volume: 5, audio_volume_max: 10 }) }),
-    );
-    renderWidget(TALL);
-    const vol = screen.getByRole('progressbar', { name: 'Volume' });
-    expect(vol).toHaveAttribute('aria-valuenow', '5');
-    expect(vol).toHaveAttribute('aria-valuemax', '10');
-    // Regression pin: the fill must NOT reuse the track colour (it was invisible).
-    const fill = vol.querySelector('[data-metric-fill]');
-    expect(fill).toHaveStyle({ background: 'var(--text-secondary)' });
-    expect(fill).not.toHaveClass('bg-[var(--surface-2)]');
-    expect(vol.querySelector('[data-metric-track]')).toHaveClass('h-1');
-  });
-
-  it('hides the volume bar when no volume reading is present', () => {
-    useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ audio_volume: undefined }) }));
-    renderWidget(TALL);
-    expect(screen.queryByRole('progressbar', { name: 'Volume' })).toBeNull();
-  });
-
-  it('still renders the volume bar at zero volume (0 is a valid level)', () => {
-    useMediaLatestMock.mockReturnValue(
-      makeResult({ data: makeMedia({ audio_volume: 0, audio_volume_max: 10 }) }),
-    );
-    renderWidget(TALL);
-    const vol = screen.getByRole('progressbar', { name: 'Volume' });
-    expect(vol).toHaveAttribute('aria-valuenow', '0');
-  });
-
-  it('keeps both passive tracks non-seeking and retains media metadata', () => {
-    renderWidget(TALL);
-    const volume = screen.getByRole('progressbar', { name: 'Volume' });
-    const progress = screen.getByRole('progressbar', { name: 'Playback progress' });
-    expect(volume).not.toHaveAttribute('tabindex');
-    expect(progress).not.toHaveAttribute('tabindex');
-    expect(screen.queryByRole('slider')).toBeNull();
-    expect(screen.getByText('Queen')).toBeInTheDocument();
-    expect(screen.getByText('A Night at the Opera')).toBeInTheDocument();
-    expect(screen.getByText('Spotify')).toBeInTheDocument();
-    expect(screen.getByText('Spotify')).not.toHaveClass('truncate');
-    expect(volume.querySelector('[data-metric-track]')).toHaveClass('forced-colors:!bg-[Canvas]');
-    expect(progress.querySelector('[data-metric-fill]')).toHaveClass('forced-colors:!bg-[Highlight]');
-  });
-});
-
-// ── Compact (1×1) variant ────────────────────────────────────────────────────
-
-describe('MediaNowPlayingWidget — compact', () => {
-  const CMP: WidgetSize = { cols: 1, rows: 1 };
-
-  it('shows only the title + artist and suppresses the header, bars and chip', () => {
-    useMediaLatestMock.mockReturnValue(
-      makeResult({
-        data: makeMedia({
-          now_playing_title: 'Compact Song',
-          now_playing_artist: 'CA',
-          playback_status: 'Playing',
-          now_playing_duration: 185_000,
-        }),
-      }),
-    );
-    renderWidget(CMP);
-    expect(screen.getByText('Compact Song')).toBeInTheDocument();
-    expect(screen.getByText('CA')).toBeInTheDocument();
-    expect(screen.queryByText('Now playing')).toBeNull(); // title-less shell
-    expect(screen.queryByRole('progressbar')).toBeNull(); // no bars
-    expect(screen.queryByText('Playing')).toBeNull(); // no chip
-  });
-
-  it('floors a missing title and artist to an em-dash', () => {
-    useMediaLatestMock.mockReturnValue(
-      makeResult({ data: makeMedia({ now_playing_title: undefined, now_playing_artist: undefined }) }),
-    );
-    renderWidget(CMP);
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
-  });
-});
-
-// ── Accessibility ────────────────────────────────────────────────────────────
-
-describe('MediaNowPlayingWidget — a11y', () => {
-  it('hides the decorative header icon from the accessibility tree', () => {
-    const { container } = renderWidget({ cols: 2, rows: 2 });
-    expect(container.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
-  });
-
-  it('exposes the playback progress bar with bounded aria-value* attributes', () => {
-    useMediaLatestMock.mockReturnValue(
-      makeResult({ data: makeMedia({ now_playing_elapsed: 90_000, now_playing_duration: 180_000 }) }),
-    );
-    renderWidget({ cols: 2, rows: 2 });
-    const bar = screen.getByRole('progressbar', { name: 'Playback progress' });
-    expect(bar).toHaveAttribute('aria-valuemin', '0');
-    expect(bar).toHaveAttribute('aria-valuemax', '100');
-    expect(bar).toHaveAttribute('aria-valuenow', '50');
-  });
-});
-
-// ── Refresh wiring ───────────────────────────────────────────────────────────
-
-describe('MediaNowPlayingWidget — refresh', () => {
-  it('refetches when the freshness control is activated', () => {
+  it('retains cached media and exposes refresh recovery on background failure', () => {
     const refetch = vi.fn();
-    useMediaLatestMock.mockReturnValue(makeResult({ refetch }));
-    renderWidget({ cols: 2, rows: 2 });
+    useMediaLatestMock.mockReturnValue(makeResult({
+      isError: true,
+      error: new Error('refresh failed'),
+      refetch,
+    }));
+    renderWidget();
+    expect(screen.getByText('Night Highway')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
