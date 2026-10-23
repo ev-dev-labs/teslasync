@@ -261,11 +261,11 @@ describe('RangeBarWidget — actual source comparison brief', () => {
     const brief = screen.getByTestId('dashboard-range-comparison-brief');
     expect(brief).toHaveAttribute('data-operational-brief');
     assertOperationalBriefDisclosure(brief, 'Source available');
-    expect(within(brief).getByText('0.00 mi')).toBeInTheDocument();
+    expect(within(brief).getByText('0 mi')).toBeInTheDocument();
     expect(capturedBrief.metrics).toEqual([
       expect.objectContaining({ key: 'range-secondary-distance', rawValue: 0, valueState: 'value' }),
     ]);
-    expect(screen.getByText('300.00')).toBeInTheDocument();
+    expect(screen.getByText('300')).toBeInTheDocument();
     expect(within(brief).queryByText('EPA variance')).toBeNull();
     first.unmount();
 
@@ -278,7 +278,7 @@ describe('RangeBarWidget — actual source comparison brief', () => {
     expect(within(missing).getByText('Ideal range')).toBeInTheDocument();
     assertOperationalMetricUnavailable(missing, 'Ideal range');
     expect(capturedBrief.metrics[0]).toMatchObject({ rawValue: undefined, valueState: 'missing' });
-    expect(screen.getByText('300.00')).toBeInTheDocument();
+    expect(screen.getByText('300')).toBeInTheDocument();
     expect(within(missing).queryByText('EPA variance')).toBeNull();
   });
 
@@ -288,7 +288,7 @@ describe('RangeBarWidget — actual source comparison brief', () => {
     setState({ state: makeState({ rated_range: rated, ideal_range: ideal }) });
     renderWidget(FULL);
     const brief = screen.getByTestId('dashboard-range-comparison-brief');
-    expect(within(brief).getByText('76.71 mi')).toBeInTheDocument();
+    expect(within(brief).getByText('77 mi')).toBeInTheDocument();
     expect(capturedBrief.metrics[0]).toMatchObject({ rawValue: ideal, valueState: 'value' });
     expect(capturedBrief.metrics[1]).toMatchObject({ rawValue: ((ideal - rated) / rated) * 100 });
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
@@ -298,9 +298,9 @@ describe('RangeBarWidget — actual source comparison brief', () => {
   });
 
   it.each([
-    { ideal: 110_000, raw: 10, display: '+10.00%' },
-    { ideal: 90_000, raw: -10, display: '-10.00%' },
-    { ideal: 100_000, raw: 0, display: '+0.00%' },
+    { ideal: 110_000, raw: 10, display: '+10%' },
+    { ideal: 90_000, raw: -10, display: '-10%' },
+    { ideal: 100_000, raw: 0, display: '+0%' },
   ])('retains the signed $display variance and its independent percent operand', ({ ideal, raw, display }) => {
     setState({ state: makeState({ rated_range: 100_000, ideal_range: ideal }) });
     renderWidget(FULL);
@@ -314,10 +314,10 @@ describe('RangeBarWidget — actual source comparison brief', () => {
   it('preserves the full-layout ideal primary fallback while the brief retains the original rated zero', () => {
     setState({ state: makeState({ rated_range: 0, ideal_range: mi(280) }) });
     renderWidget(FULL);
-    expect(screen.getByText('280.00')).toBeInTheDocument();
+    expect(screen.getByText('280')).toBeInTheDocument();
     const brief = screen.getByTestId('dashboard-range-comparison-brief');
     expect(within(brief).getByText('Rated range')).toBeInTheDocument();
-    expect(within(brief).getByText('0.00 mi')).toBeInTheDocument();
+    expect(within(brief).getByText('0 mi')).toBeInTheDocument();
     expect(capturedBrief.metrics).toEqual([
       expect.objectContaining({ rawValue: 0, valueState: 'value' }),
     ]);
@@ -328,7 +328,7 @@ describe('RangeBarWidget — actual source comparison brief', () => {
     setState({ state: makeState({ rated_range: null as unknown as number, ideal_range: km(400) }) });
     setUnits('km');
     renderWidget(FULL);
-    expect(screen.getByText('400.00')).toBeInTheDocument();
+    expect(screen.getByText('400')).toBeInTheDocument();
     const brief = screen.getByTestId('dashboard-range-comparison-brief');
     expect(within(brief).getByText('Rated range')).toBeInTheDocument();
     assertOperationalMetricUnavailable(brief, 'Rated range');
@@ -340,7 +340,7 @@ describe('RangeBarWidget — actual source comparison brief', () => {
     const q = setState({ state: makeState(), isError: true, error: new Error('refresh failed') });
     renderWidget(FULL);
     const brief = screen.getByTestId('dashboard-range-comparison-brief');
-    expect(within(brief).getByText('350.00 mi')).toBeInTheDocument();
+    expect(within(brief).getByText('350 mi')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     assertOperationalBriefDisclosure(brief, 'Retained readings');
     fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
@@ -350,7 +350,7 @@ describe('RangeBarWidget — actual source comparison brief', () => {
   it('keeps compact primary fallback and suppresses only the originally noncompact comparison band', () => {
     setState({ state: makeState({ rated_range: 0, ideal_range: mi(280) }) });
     renderWidget(COMPACT);
-    expect(screen.getByText('280.00')).toBeInTheDocument();
+    expect(screen.getByText('280')).toBeInTheDocument();
     expect(screen.getByText('Ideal range')).toBeInTheDocument();
     expect(screen.queryByTestId('dashboard-range-comparison-brief')).toBeNull();
     expect(capturedBrief.metrics).toHaveLength(0);
@@ -371,9 +371,9 @@ describe('RangeBarWidget — loading & empty states', () => {
   it('retains both range readings and variance on a cached refresh failure', () => {
     setState({ state: makeState(), isError: true, error: new Error('transient') });
     renderWidget();
-    expect(screen.getByText('300.00')).toBeInTheDocument();
-    expect(screen.getByText('350.00 mi')).toBeInTheDocument();
-    expect(screen.getByText('+16.67%')).toBeInTheDocument();
+    expect(screen.getByText('300')).toBeInTheDocument();
+    expect(screen.getByText('350 mi')).toBeInTheDocument();
+    expect(screen.getByText('+17%')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -411,8 +411,8 @@ describe('RangeBarWidget — loading & empty states', () => {
     renderWidget(FULL);
 
     expect(screen.queryByText('No range data')).toBeNull();
-    expect(screen.getByText('0.00')).toBeInTheDocument();
-    expect(screen.getByText('0.00 mi')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('0 mi')).toBeInTheDocument();
     expect(metricBarSpy).not.toHaveBeenCalled();
   });
 
@@ -425,6 +425,18 @@ describe('RangeBarWidget — loading & empty states', () => {
     expect(metricBarSpy).not.toHaveBeenCalled();
     expect(screen.queryByRole('meter')).toBeNull();
   });
+
+  it('matches the After hero: one whole-number headline, no fabricated EPA-full meter or estimated series', () => {
+    setState({ state: makeState({ rated_range: mi(172), ideal_range: mi(181) }) });
+    renderWidget(FULL);
+
+    expect(screen.getByText('172')).toBeInTheDocument();
+    expect(screen.getByText('181 mi')).toBeInTheDocument();
+    expect(screen.queryByText(/EPA full/)).toBeNull();
+    expect(screen.queryByText(/Estimated/)).toBeNull();
+    expect(screen.queryByRole('meter')).toBeNull();
+    expect(metricBarSpy).not.toHaveBeenCalled();
+  });
 });
 
 // ── Full layout: SI→display conversion ────────────────────────────────────────
@@ -435,9 +447,9 @@ describe('RangeBarWidget — full layout unit conversion', () => {
     setState({ state: makeState({ rated_range: mi(300), ideal_range: mi(350) }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('300.00')).toBeInTheDocument();
+    expect(screen.getByText('300')).toBeInTheDocument();
     expect(screen.getByText('mi')).toBeInTheDocument();
-    expect(screen.getByText('350.00 mi')).toBeInTheDocument();
+    expect(screen.getByText('350 mi')).toBeInTheDocument();
     expect(screen.queryByRole('meter')).toBeNull();
   });
 
@@ -446,9 +458,9 @@ describe('RangeBarWidget — full layout unit conversion', () => {
     setState({ state: makeState({ rated_range: km(400), ideal_range: km(360) }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('400.00')).toBeInTheDocument();
+    expect(screen.getByText('400')).toBeInTheDocument();
     expect(screen.getByText('km')).toBeInTheDocument();
-    expect(screen.getByText('360.00 km')).toBeInTheDocument();
+    expect(screen.getByText('360 km')).toBeInTheDocument();
   });
 });
 
@@ -459,9 +471,9 @@ describe('RangeBarWidget — EPA variance', () => {
     setState({ state: makeState({ rated_range: mi(300), ideal_range: mi(350) }) });
     renderWidget(FULL);
 
-    // (350 - 300) / 300 = +16.66…% → "+16.7%"
+    // (350 - 300) / 300 = +16.66…% → "+17%"
     expect(screen.getByText('EPA variance')).toBeInTheDocument();
-    expect(screen.getByText('+16.67%')).toBeInTheDocument();
+    expect(screen.getByText('+17%')).toBeInTheDocument();
   });
 
   it('shows a negative (unsigned "-") variance when ideal is below rated', () => {
@@ -469,8 +481,8 @@ describe('RangeBarWidget — EPA variance', () => {
     setState({ state: makeState({ rated_range: km(400), ideal_range: km(360) }) });
     renderWidget(FULL);
 
-    // (360 - 400) / 400 = -10% → "-10.0%"
-    expect(screen.getByText('-10.00%')).toBeInTheDocument();
+    // (360 - 400) / 400 = -10% → "-10%"
+    expect(screen.getByText('-10%')).toBeInTheDocument();
   });
 
   it('hides the variance readout when the ideal range is unknown (no divide-by-zero)', () => {
@@ -497,7 +509,7 @@ describe('RangeBarWidget — compact layout', () => {
     setState({ state: makeState({ rated_range: mi(300), ideal_range: mi(350) }) });
     renderWidget(COMPACT);
 
-    expect(screen.getByText('300.00')).toBeInTheDocument();
+    expect(screen.getByText('300')).toBeInTheDocument();
     expect(screen.getByText('mi')).toBeInTheDocument();
     expect(screen.getByText('Rated range')).toBeInTheDocument();
     expect(screen.getAllByRole('heading')).toHaveLength(1);
@@ -512,7 +524,7 @@ describe('RangeBarWidget — compact layout', () => {
     setState({ state: makeState({ rated_range: 0, ideal_range: mi(280) }) });
     renderWidget(COMPACT);
 
-    expect(screen.getByText('280.00')).toBeInTheDocument();
+    expect(screen.getByText('280')).toBeInTheDocument();
     expect(screen.getByText('mi')).toBeInTheDocument();
     expect(screen.getByText('Ideal range')).toBeInTheDocument();
     expect(screen.queryByText('Rated range')).toBeNull();

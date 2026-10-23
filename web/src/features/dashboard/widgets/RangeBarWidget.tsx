@@ -16,7 +16,7 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -62,7 +62,7 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
       rawValue: range.comparisonRaw,
       label: range.usesRated ? t('widget.idealRange', 'Ideal range') : t('widget.ratedRange', 'Rated range'),
       description: t('widget.rangeBarBrief.distanceSource', 'Secondary vehicle range reading in source meters, distinct from the preferred primary range.'),
-      display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
+      display: { formatter: raw => ({ value: fmtInt(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
     },
     ...(range.variancePct != null ? [{
       metricId: 'percent' as const,
@@ -70,7 +70,7 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
       rawValue: range.variancePct,
       label: t('widget.epaComparison', 'EPA variance'),
       description: t('widget.rangeBarBrief.varianceSource', 'Ideal minus rated range, divided by rated range; shown only when both source readings are positive.'),
-      display: { formatter: (raw: number) => ({ value: `${raw >= 0 ? '+' : ''}${fmtNumber(raw)}`, unit: '%' }) },
+      display: { formatter: (raw: number) => ({ value: `${raw >= 0 ? '+' : ''}${fmtNumber(raw, 0)}`, unit: '%' }) },
     }] : []),
   ], [range, distanceUnit, fmtNumber, t]);
 
@@ -87,8 +87,11 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
       onRefresh={handleRefresh}
     >
       <div className="flex min-w-0 flex-col gap-3">
+        {/* After card's EPA-full meter/estimated series have no hook source
+            (VehicleState carries only rated/ideal), so no meter is drawn:
+            a largest-relative ceiling would be meaningless. */}
         <WidgetBigNumber
-          value={range.primaryConverted != null ? fmtNumber(range.primaryConverted) : null}
+          value={range.primaryConverted != null ? fmtInt(range.primaryConverted) : null}
           unit={distanceUnit}
           label={range.usesRated || !range.hasData ? t('widget.ratedRange', 'Rated range') : t('widget.idealRange', 'Ideal range')}
           animated={false}
