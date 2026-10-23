@@ -1,13 +1,12 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldAlert } from 'lucide-react';
-import { EmptyState } from '@/components/feedback';
 import { useSafety } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDataState } from '@/hooks/useDataState';
 import { cleanSafetyEnum, isSafetyEnumActive, type SafetyEnumField } from '@/lib/safetyEnum';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatusGrid } from './shared';
+import { WidgetDetailCard, type DetailEntry } from './shared';
 import type { StatusCell } from './shared';
 import type { WidgetProps } from './types';
 import type { SafetySnapshot } from '@/types/vehicle-systems';
@@ -36,18 +35,26 @@ export function buildCells(
   data: SafetySnapshot,
   t: (key: string, defaultValue: string) => string,
 ): StatusCell[] {
+  const enumValue = (value: unknown, field: SafetyEnumField) =>
+  {
+    const cleaned = cleanSafetyEnum(value, field);
+    if (cleaned === '—' || /unknown$/i.test(cleaned)) return '—';
+    if (cleaned === 'On') return t('widget.safety.enabled', 'Enabled');
+    if (cleaned === 'Off' || cleaned === 'None') return t('widget.safety.disabled', 'Disabled');
+    return cleaned;
+  };
   return [
     {
       id: 'fcw',
       label: t('widget.safety.fcw', 'Forward collision warning'),
       status: safetyEnumStatus(data.forward_collision_warning, 'forward_collision_warning'),
-      value: cleanSafetyEnum(data.forward_collision_warning, 'forward_collision_warning'),
+      statusLabel: enumValue(data.forward_collision_warning, 'forward_collision_warning'),
     },
     {
       id: 'aeb',
       label: t('widget.safety.aeb', 'Auto emergency braking'),
       status: invertedBoolStatus(data.automatic_emergency_braking_off),
-      value: data.automatic_emergency_braking_off == null
+      statusLabel: data.automatic_emergency_braking_off == null
         ? '—'
         : data.automatic_emergency_braking_off
           ? t('widget.safety.disabled', 'Disabled')
@@ -55,35 +62,15 @@ export function buildCells(
     },
     {
       id: 'lda',
-      label: t('widget.safety.lda', 'Lane departure avoidance'),
+      label: t('widget.safety.ldaShort', 'Lane departure'),
       status: safetyEnumStatus(data.lane_departure_avoidance, 'lane_departure_avoidance'),
-      value: cleanSafetyEnum(data.lane_departure_avoidance, 'lane_departure_avoidance'),
-    },
-    {
-      id: 'elda',
-      label: t('widget.safety.elda', 'Emergency lane departure'),
-      status: boolStatus(data.emergency_lane_departure_avoidance),
-      value: data.emergency_lane_departure_avoidance == null
-        ? '—'
-        : data.emergency_lane_departure_avoidance
-          ? t('widget.safety.enabled', 'Enabled')
-          : t('widget.safety.disabled', 'Disabled'),
-    },
-    {
-      id: 'bsc',
-      label: t('widget.safety.bsc', 'Blind spot camera'),
-      status: boolStatus(data.automatic_blind_spot_camera),
-      value: data.automatic_blind_spot_camera == null
-        ? '—'
-        : data.automatic_blind_spot_camera
-          ? t('widget.safety.enabled', 'Enabled')
-          : t('widget.safety.disabled', 'Disabled'),
+      statusLabel: enumValue(data.lane_departure_avoidance, 'lane_departure_avoidance'),
     },
     {
       id: 'bscw',
-      label: t('widget.safety.bscw', 'Blind spot collision warning'),
+      label: t('widget.safety.bswShort', 'Blind spot'),
       status: boolStatus(data.blind_spot_collision_warning),
-      value: data.blind_spot_collision_warning == null
+      statusLabel: data.blind_spot_collision_warning == null
         ? '—'
         : data.blind_spot_collision_warning
           ? t('widget.safety.enabled', 'Enabled')
@@ -93,15 +80,26 @@ export function buildCells(
       id: 'slw',
       label: t('widget.safety.slw', 'Speed limit warning'),
       status: safetyEnumStatus(data.speed_limit_warning, 'speed_limit_warning'),
-      value: cleanSafetyEnum(data.speed_limit_warning, 'speed_limit_warning'),
-    },
-    {
-      id: 'cfd',
-      label: t('widget.safety.cfd', 'Cruise follow distance'),
-      status: safetyEnumStatus(data.cruise_follow_distance, 'cruise_follow_distance'),
-      value: cleanSafetyEnum(data.cruise_follow_distance, 'cruise_follow_distance'),
+      statusLabel: enumValue(data.speed_limit_warning, 'speed_limit_warning'),
     },
   ];
+}
+
+export function buildEntries(
+  data: SafetySnapshot,
+  t: (key: string, defaultValue: string) => string,
+): DetailEntry[] {
+  return buildCells(data, t).map((cell) => {
+    let detailStatus: DetailEntry['status'] = 'neutral';
+    if (cell.status === 'ok') detailStatus = 'success';
+    else if (cell.status === 'warning' || cell.status === 'error') detailStatus = 'warning';
+    return {
+      id: cell.id,
+      label: cell.label,
+      value: cell.statusLabel ?? '—',
+      status: detailStatus,
+    };
+  });
 }
 
 export default function SafetyFeaturesWidget({ vehicleId, size }: WidgetProps) {
@@ -120,16 +118,9 @@ export default function SafetyFeaturesWidget({ vehicleId, size }: WidgetProps) {
   const state = useDataState(query, { provenance: 'live' });
   const displayState = vid === 0 && (vehicleState.fatalError || vehicleQuery.isLoading) ? vehicleState : state;
 
-  const isCompact = size.cols <= 1;
-
-  const cells = useMemo<StatusCell[]>(
-    () => (data ? buildCells(data, t) : []),
+  const entries = useMemo<DetailEntry[]>(
+    () => (data ? buildEntries(data, t) : []),
     [data, t],
-  );
-
-  const activeCount = useMemo(
-    () => cells.filter((c) => c.status === 'ok').length,
-    [cells],
   );
 
   const handleRefresh = useCallback(() => {
@@ -150,29 +141,17 @@ export default function SafetyFeaturesWidget({ vehicleId, size }: WidgetProps) {
       onRefresh={handleRefresh}
     >
       {data ? (
-        isCompact ? (
-          <WidgetBigNumber
-            value={cells.some((cell) => cell.status !== 'unknown') ? activeCount : null}
-            label={t('widget.safety.activeFeatures', 'Active features')}
-            subtitle={cells.some((cell) => cell.status === 'unknown')
-              ? t('widget.safety.partialReadings', 'Some feature states are unknown')
-              : undefined}
-            animated={false}
-          />
-        ) : (
-          <WidgetStatusGrid
-            cells={cells}
-            cols={size.cols >= 3 ? 4 : 2}
-            compact={false}
-            emptyMessage={t('widget.safety.noData', 'No safety data')}
-            emptyIcon={<ShieldAlert className="h-5 w-5" />}
-          />
-        )
+        <WidgetDetailCard
+          entries={entries}
+          compact={false}
+          emptyMessage={t('widget.safety.noData', 'No safety data')}
+          emptyIcon={<ShieldAlert className="h-5 w-5" />}
+        />
       ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<ShieldAlert className="h-5 w-5" />}
-          message={t('widget.safety.noData', 'No safety data')}
-          className="py-4"
+        <WidgetDetailCard
+          entries={[]}
+          emptyMessage={t('widget.safety.noData', 'No safety data')}
+          emptyIcon={<ShieldAlert className="h-5 w-5" />}
         />
       )}
     </WidgetShell>
