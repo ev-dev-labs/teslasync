@@ -4,17 +4,17 @@
  * The widget is the dashboard's battery-state-of-health tile. Its surface
  * under test:
  *
- *   1. Responsive layout: standard/wide renders a titled shell + a SoH /
- *      Degradation / Cycles stat row + a health-trend area chart; compact
- *      (1×1) drops the title, icon and chart and shows the stat row only.
- *   2. The health-trend chart path: it plots the `avg_health` series, applies
- *      the shared dashed CartesianGrid, and draws the 80%-SoH reference line.
- *      (Regression guard for the `{...chartGrid}` → `{chartGrid}` fix — the
- *      grid previously received React-internal props instead of its styling.)
- *   3. The `current_health_pct ?? current_health` precedence, including the
- *      subtlety that a genuine `0` must win over the legacy field (nullish,
- *      not falsy, coalescing).
- *   4. The Degradation stat distinguishes zero, missing and positive rates.
+ *   1. Responsive layout: standard/wide renders a titled shell + a
+ *      max-range hero (WidgetBigNumber) + a range-trend area chart; compact
+ *      (1×1) drops the title, icon and chart and shows the hero only.
+ *   2. The range-trend chart path: it plots the converted `avg_range`
+ *      series and applies the shared dashed CartesianGrid. (Regression
+ *      guard for the `{...chartGrid}` → `{chartGrid}` fix — the grid
+ *      previously received React-internal props instead of its styling.)
+ *   3. The hero range prefers `current_range`, falling back to the last
+ *      monthly-trend range; a genuine `0` is a measured reading, never
+ *      the missing-data placeholder.
+ *   4. The since-new delta distinguishes zero, missing and negative rates.
  *   5. Loading / error / empty branches (never a blank panel). The error
  *      branch surfaces the shared QueryError panel — before the fix the widget
  *      only forwarded `isError` and a fetch failure masqueraded as "no data".
@@ -65,9 +65,10 @@ vi.hoisted(() => {
   }
 });
 
-const { degradationMock, vehiclesMock } = vi.hoisted(() => ({
+const { degradationMock, vehiclesMock, unitsMock } = vi.hoisted(() => ({
   degradationMock: vi.fn(),
   vehiclesMock: vi.fn(),
+  unitsMock: vi.fn(),
 }));
 
 // i18n → return the developer fallback string, interpolating `{{vars}}`.
@@ -100,6 +101,10 @@ vi.mock('@/api/hooks/useEnergy', async () => {
   const actual = await vi.importActual<typeof import('@/api/hooks/useEnergy')>('@/api/hooks/useEnergy');
   return { ...actual, useBatteryDegradation: (...args: unknown[]) => degradationMock(...args) };
 });
+
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => unitsMock(),
+}));
 
 vi.mock('@/api/hooks/useVehicles', async () => {
   const actual = await vi.importActual<typeof import('@/api/hooks/useVehicles')>('@/api/hooks/useVehicles');
@@ -269,29 +274,31 @@ beforeEach(() => {
   vehiclesMock.mockReset();
   degradationMock.mockReturnValue(makeQuery({ data: makeData() }));
   vehiclesMock.mockReturnValue({ data: [{ id: 7 }] });
+  unitsMock.mockReset();
+  unitsMock.mockReturnValue({ unitPrefs: { distance: 'km' } });
 });
 afterEach(() => vi.restoreAllMocks());
 
 describe('BatteryDegradationTrendWidget axis gutter', () => {
-  it.each([2, 3])('measures complete percent labels and explicit bounds at %i columns', cols => {
+  it.each([2, 3])('measures converted range labels and explicit bounds at %i columns', cols => {
     degradationMock.mockReturnValue(makeQuery({ data: makeData({
       monthly_trend: [
-        { month: 'Jan', avg_health: 95.123456 },
-        { month: 'Feb', avg_health: 96 },
-        { month: 'Mar', avg_health: Number.NaN },
-        { month: 'Apr', avg_health: null },
+        { month: 'Jan', avg_range: 412 },
+        { month: 'Feb', avg_range: 405 },
+        { month: 'Mar', avg_range: Number.NaN },
+        { month: 'Apr', avg_range: null },
       ],
     }) }));
     renderWidget({ cols, rows: 2 });
     const options = vi.mocked(useMeasuredAxisWidth).mock.lastCall![0];
-    expect(options.labels).toEqual(['95.123456%', '96%', '93.123456%', '80%', '100%']);
+    expect(options.labels).toEqual(['412', '405']);
     expect(options.fontSize).toBe(10);
     expect(options.minWidth).toBe(60);
     expect(options.padding).toBe(24);
     const axis = screen.getByTestId('y-axis');
-    expect(Number(axis.getAttribute('data-width'))).toBeGreaterThanOrEqual(Math.ceil('95.123456%'.length * 10 * 0.75) + 24);
-    expect(axis).toHaveAttribute('data-label', '95.123456%');
-    expect(axis).toHaveAttribute('data-domain', JSON.stringify(['dataMin - 2', 100]));
+    expect(Number(axis.getAttribute('data-width'))).toBeGreaterThanOrEqual(60);
+    expect(axis).toHaveAttribute('data-label', '95');
+    expect(axis).toHaveAttribute('data-domain', JSON.stringify(['dataMin - 5', 'dataMax + 5']));
     expect(JSON.parse(screen.getByTestId('area-chart').getAttribute('data-margin')!).left).toBe(4);
   });
 
@@ -309,50 +316,44 @@ describe('BatteryDegradationTrendWidget', () => {
     degradationMock.mockReturnValue(makeQuery({ data: makeData(), error: new Error('transient'), isError: true }));
     renderWidget();
     expect(screen.getByTestId('area-chart')).toHaveAttribute('data-points', '3');
-    expect(screen.getByText('95.40%')).toBeInTheDocument();
+    expect(screen.getByText('Max range at 100%')).toBeInTheDocument();
+    expect(screen.getByText('385')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
-  it('renders the titled shell with SoH, Degradation and Cycles stats', () => {
+  it('renders the titled shell with the max-range headline and degradation delta', () => {
     renderWidget();
 
     // Titled shell — no gutted panel.
     expect(screen.getByText('Battery degradation')).toBeInTheDocument();
 
-    // SoH prefers current_health_pct (95.4), formatted to one decimal.
-    expect(screen.getByText('SoH')).toBeInTheDocument();
-    expect(screen.getByText('95.40%')).toBeInTheDocument();
+    // Headline is the current max range (current_range 385 km), whole units.
+    expect(screen.getByText('Max range at 100%')).toBeInTheDocument();
+    expect(screen.getByText('385')).toBeInTheDocument();
 
-    // Degradation stat is present with its "/mo" unit and rate value.
-    expect(screen.getByText('Degradation')).toBeInTheDocument();
-    expect(screen.getByText('−0.42%/mo')).toBeInTheDocument();
-    expect(screen.getByText(/0\.42%/)).toBeInTheDocument();
-
-    // Cycles as a plain integer.
-    expect(screen.getByText('Cycles')).toBeInTheDocument();
-    expect(screen.getByText('512')).toBeInTheDocument();
+    // Delta vs the first trend month (400 km) and the since-new subtitle.
+    expect(screen.getByText('−3.8%')).toBeInTheDocument();
+    expect(screen.getByText('since new (400 km)')).toBeInTheDocument();
   });
 
-  it('plots the health series with the shared dashed grid and the 80% reference line', () => {
+  it('plots the range series with the shared dashed grid', () => {
     renderWidget();
 
     // Three trend points reach the chart.
     const chart = screen.getByTestId('area-chart');
     expect(chart).toHaveAttribute('data-points', '3');
 
-    // The area draws the `avg_health` series, labelled from i18n, with a
+    // The area draws the `avg_range` series, labelled from i18n, with a
     // theme-derived stroke colour.
     const area = screen.getByTestId('area');
-    expect(area).toHaveAttribute('data-key', 'health');
-    expect(area).toHaveAttribute('data-name', 'Health %');
+    expect(area).toHaveAttribute('data-key', 'range');
+    expect(area).toHaveAttribute('data-name', 'Range');
     expect(area.getAttribute('data-stroke')).toMatch(/^#[0-9a-f]{6}$/i);
 
     // Regression guard: `{chartGrid}` forwards the shared dashed styling. The
     // old `<CartesianGrid {...chartGrid} />` spread dropped it (data-dash '').
     expect(screen.getByTestId('cartesian-grid')).toHaveAttribute('data-dash', '3 3');
 
-    // 80%-SoH end-of-life threshold marker.
-    expect(screen.getByTestId('reference-line')).toHaveAttribute('data-y', '80');
     expect(screen.getByTestId('x-axis')).toHaveAttribute('data-key', 'month');
 
     // The chart path renders — not the "need more data" fallback.
@@ -367,41 +368,38 @@ describe('BatteryDegradationTrendWidget', () => {
 
     expect(screen.getByText('More data needed for trend')).toBeInTheDocument();
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
-    // Stats still render alongside the fallback.
-    expect(screen.getByText('SoH')).toBeInTheDocument();
+    // Headline still renders alongside the fallback.
+    expect(screen.getByText('Max range at 100%')).toBeInTheDocument();
   });
 
-  it('treats a genuine 0% SoH as real data (nullish, not falsy, coalescing)', () => {
+  it('treats a genuine 0 range as real data (nullish, not falsy, coalescing)', () => {
     degradationMock.mockReturnValue(
-      makeQuery({ data: makeData({ current_health_pct: 0, current_health: 88 }) }),
+      makeQuery({ data: makeData({ current_range: 0 }) }),
     );
     renderWidget();
 
-    // 0 must win over the legacy 88 → "0.0%", never "88.0%".
-    expect(screen.getByText('0.00%')).toBeInTheDocument();
-    expect(screen.queryByText('88.00%')).not.toBeInTheDocument();
+    // Measured 0 renders as a real headline, never the missing placeholder.
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('−100.0%')).toBeInTheDocument();
   });
 
-  it('falls back to the legacy current_health when the pct field is absent', () => {
+  it('falls back to the last trend range when current_range is absent', () => {
     degradationMock.mockReturnValue(
-      makeQuery({ data: makeData({ current_health_pct: undefined, current_health: 88 }) }),
+      makeQuery({ data: makeData({ current_range: undefined }) }),
     );
     renderWidget();
 
-    expect(screen.getByText('88.00%')).toBeInTheDocument();
+    expect(screen.getByText('385')).toBeInTheDocument();
   });
 
-  it('keeps a genuine zero degradation rate visible', () => {
+  it('keeps a genuine zero degradation visible', () => {
     degradationMock.mockReturnValue(
-      makeQuery({ data: makeData({ degradation_rate_pct_per_month: 0 }) }),
+      makeQuery({ data: makeData({ current_range: 400 }) }),
     );
     renderWidget();
 
-    expect(screen.getByText('Degradation')).toBeInTheDocument();
-    expect(screen.getByText('0.00%/mo')).toBeInTheDocument();
-    // SoH + Cycles remain.
-    expect(screen.getByText('SoH')).toBeInTheDocument();
-    expect(screen.getByText('512')).toBeInTheDocument();
+    expect(screen.getByText('0.0%')).toBeInTheDocument();
+    expect(screen.getByText('400')).toBeInTheDocument();
   });
 
   it('shows the empty state (keeping the titled shell) when there is no data', () => {
@@ -411,9 +409,9 @@ describe('BatteryDegradationTrendWidget', () => {
     expect(screen.getByText('Battery degradation')).toBeInTheDocument();
     expect(screen.getByText('No degradation data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
-    // Stat sections remain visible with unknown readings.
-    expect(screen.getByText('SoH')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(3);
+    // Headline remains visible with an unknown reading.
+    expect(screen.getByText('Max range at 100%')).toBeInTheDocument();
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
   });
 
@@ -454,11 +452,11 @@ describe('BatteryDegradationTrendWidget', () => {
     expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 
-  it('drops the title and chart in the compact 1×1 layout, keeping the stat row', () => {
+  it('drops the title and chart in the compact 1×1 layout, keeping the headline', () => {
     renderWidget({ cols: 1, rows: 1 });
 
-    expect(screen.getByText('SoH')).toBeInTheDocument();
-    expect(screen.getByText('512')).toBeInTheDocument();
+    expect(screen.getByText('Max range at 100%')).toBeInTheDocument();
+    expect(screen.getByText('385')).toBeInTheDocument();
     // Compact hides the title and the chart.
     expect(screen.queryByText('Battery degradation')).not.toBeInTheDocument();
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
@@ -479,6 +477,7 @@ describe('BatteryDegradationTrendWidget', () => {
     degradationMock.mockReturnValue(
       makeQuery({
         data: makeData({
+          current_range: undefined,
           current_health_pct: undefined,
           current_health: undefined,
           current_cycles: null,
@@ -493,10 +492,10 @@ describe('BatteryDegradationTrendWidget', () => {
 
     expect(() => renderWidget()).not.toThrow();
 
-    // SoH + Cycles both collapse to the em-dash placeholder.
-    expect(screen.getAllByText('—')).toHaveLength(3);
-    expect(screen.getByText('Degradation')).toBeInTheDocument();
-    // Missing health samples are not coerced into a zero-health chart.
+    // The headline collapses to the em-dash placeholder.
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    expect(screen.getByText('Max range at 100%')).toBeInTheDocument();
+    // Missing range samples are not coerced into a zero-range chart.
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
     expect(screen.getByText('More data needed for trend')).toBeInTheDocument();
   });

@@ -75,7 +75,7 @@ describe.each([
   // the other gauges keep their existing precision. The preservation contract
   // is unchanged: out-of-scale stays unclipped, zero stays a real reading,
   // missing stays unknown.
-  const wholePercent = _name === 'battery';
+  const wholePercent = _name === 'battery' || _name === 'battery health';
 
   it('retains an out-of-scale source reading rather than displaying the clipped ceiling', () => {
     source.reading = 125;
@@ -91,7 +91,11 @@ describe.each([
   it('preserves a measured zero as an actual meter reading', () => {
     source.reading = 0;
     renderWidget();
-    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '0');
+    // The redesigned battery-health hero has no meter element; its measured
+    // zero is the headline value itself.
+    if (_name !== 'battery health') {
+      expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '0');
+    }
     expect(screen.getByText(wholePercent ? '0' : '0.00')).toBeInTheDocument();
   });
 

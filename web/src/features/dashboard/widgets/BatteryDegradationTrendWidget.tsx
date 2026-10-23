@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { TrendingDown } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer,
-  Tooltip, ReferenceLine,
+  Tooltip,
   chartGrid, axisTickSm, useThemeChartPalette,
   AREA_DEFAULTS, areaGradient,
   EmbeddedChart,
@@ -17,10 +17,10 @@ import { useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
-import { gaugeTone } from '@/lib/tokens';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
-import { WidgetChartSummary } from './shared';
-import type { ChartSummaryStat } from './shared';
+import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -28,6 +28,8 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
   const idStr = id != null ? String(id) : null;
 
@@ -37,49 +39,42 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
   const gradientId = `degradation-${useId().replace(/:/g, '')}`;
   const { reduce } = useMotionPreference();
 
+  // Range fields arrive in kilometres; lift to SI metres once, then convert
+  // to the user's distance preference for display (never fabricate: a
+  // missing reading stays missing, a measured 0 stays 0).
+  const toDisplayRange = useCallback(
+    (km: number | null) => (km != null ? convertDistanceFromSI(km * 1000, distanceUnit) : null),
+    [distanceUnit],
+  );
+
   const chartData = useMemo(() => {
     const trend = data?.monthly_trend ?? [];
-    if (trend.length === 0) return [];
-    const originalRange = knownNumber(trend[0]?.avg_range);
     return trend.map((entry) => ({
       month: entry.month ?? '',
-      range: knownNumber(entry.avg_range),
-      health: knownNumber(entry.avg_health),
-      original: originalRange,
+      range: toDisplayRange(knownNumber(entry.avg_range)),
     }));
-  }, [data]);
+  }, [data, toDisplayRange]);
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
-  const healthAxisLabels = useMemo(() => {
-    const values = chartData.map(point => point.health).filter((value): value is number => value != null && Number.isFinite(value));
-    return [...values, ...(values.length ? [Math.min(...values) - 2] : []), 80, 100].map(value => `${value}%`);
-  }, [chartData]);
-  const healthAxisWidth = useMeasuredAxisWidth({
-    labels: healthAxisLabels, fontSize: axisTickSm.fontSize, minWidth: 60, padding: 24, enabled: !isCompact,
+  const rangeAxisLabels = useMemo(() => {
+    const values = chartData.map(point => point.range).filter((value): value is number => value != null && Number.isFinite(value));
+    return values.map(value => fmtInt(value));
+  }, [chartData, fmtInt]);
+  const rangeAxisWidth = useMeasuredAxisWidth({
+    labels: rangeAxisLabels, fontSize: axisTickSm.fontSize, minWidth: 60, padding: 24, enabled: !isCompact,
   });
-  const currentHealth = knownNumber(data?.current_health_pct) ?? knownNumber(data?.current_health);
-  const degradationRate = knownNumber(data?.degradation_rate_pct_per_month);
-  const totalCycles = knownNumber(data?.current_cycles);
+
+  const originalRangeKm = knownNumber(data?.monthly_trend?.[0]?.avg_range);
+  const currentRangeKm = knownNumber(data?.current_range)
+    ?? knownNumber(data?.monthly_trend?.[data.monthly_trend.length - 1]?.avg_range);
+  const currentRange = toDisplayRange(currentRangeKm);
+  const originalRange = toDisplayRange(originalRangeKm);
+  const degradationPct = currentRangeKm != null && originalRangeKm != null && originalRangeKm > 0
+    ? ((currentRangeKm - originalRangeKm) / originalRangeKm) * 100
+    : null;
 
   // Series colour follows the active theme.
   const palette = useThemeChartPalette();
-
-  const stats = useMemo<ChartSummaryStat[]>(() => {
-    const items: ChartSummaryStat[] = [];
-    items.push({
-      label: t('widget.soh', 'SoH'),
-      value: currentHealth != null ? `${fmtNumber(currentHealth)}%` : '—',
-    });
-      items.push({
-        label: t('widget.degradation', 'Degradation'),
-        value: degradationRate != null ? `${degradationRate > 0 ? '−' : ''}${fmtNumber(degradationRate)}%/${t('widget.mo', 'mo')}` : '—',
-      });
-    items.push({
-      label: t('widget.cycles', 'Cycles'),
-      value: totalCycles != null ? fmtInt(totalCycles) : '—',
-    });
-    return items;
-  }, [currentHealth, degradationRate, totalCycles, t, fmtNumber, fmtInt]);
 
   const handleRefresh = useCallback(() => {
     void refetch();
@@ -90,14 +85,14 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
       title={t('widget.batteryDegradation', 'Battery degradation')}
       ariaLabel={t(
         'widget.batteryDegradationChart.aria',
-        'Monthly battery health trend',
+        'Monthly max range trend',
       )}
-      empty={chartData.filter((point) => point.health != null).length <= 1}
+      empty={chartData.filter((point) => point.range != null).length <= 1}
       emptyMessage={data ? t('widget.needMoreData', 'More data needed for trend') : t('widget.noDegradation', 'No degradation data')}
       data={chartData}
       dataColumns={[
         { key: 'month', label: t('widget.batteryDegradationChart.month', 'Month') },
-        { key: 'health', label: t('widget.healthPct', 'Health %') },
+        { key: 'range', label: t('widget.range', 'Range') },
       ]}
     >
       <ResponsiveContainer width="100%" height="100%">
@@ -106,21 +101,20 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
           {chartGrid}
           <XAxis dataKey="month" {...axisTickSm} />
           <YAxis
-            domain={['dataMin - 2', 100]}
-            tickFormatter={(v: number) => `${v}%`}
+            domain={['dataMin - 5', 'dataMax + 5']}
+            tickFormatter={(v: number) => fmtInt(v)}
             {...axisTickSm}
             tick={axisTickSm}
-            width={healthAxisWidth}
+            width={rangeAxisWidth}
           />
           <Tooltip content={<ChartTooltip />} />
-          <ReferenceLine y={80} stroke={gaugeTone.danger} strokeDasharray="4 4" strokeOpacity={0.4} />
           <Area
             {...AREA_DEFAULTS}
-            dataKey="health"
+            dataKey="range"
             stroke={palette.series[1]}
             fill={`url(#${gradientId})`}
             isAnimationActive={!reduce}
-            name={t('widget.healthPct', 'Health %')}
+            name={t('widget.range', 'Range')}
           />
         </AreaChart>
       </ResponsiveContainer>
@@ -139,13 +133,22 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <WidgetChartSummary
-        stats={stats}
-        chart={chart}
-        compact={isCompact}
-        emptyMessage={t('widget.noDegradation', 'No degradation data')}
-        emptyIcon={<TrendingDown className="h-5 w-5" />}
-      />
+      <div className="flex h-full min-w-0 flex-col">
+        <WidgetBigNumber
+          value={currentRange != null ? Math.round(currentRange) : null}
+          unit={distanceUnit}
+          label={t('widget.batteryDegradationTrend.maxRange', 'Max range at 100%')}
+          delta={degradationPct != null ? {
+            text: `${degradationPct > 0 ? '+' : degradationPct < 0 ? '−' : ''}${fmtNumber(Math.abs(degradationPct), 1)}%`,
+            tone: 'neutral',
+          } : undefined}
+          subtitle={originalRange != null && degradationPct != null
+            ? t('widget.batteryDegradationTrend.sinceNew', 'since new ({{range}})', { range: `${fmtInt(originalRange)} ${distanceUnit}` })
+            : undefined}
+          animated={false}
+        />
+        {!isCompact && <div className="mt-2 min-h-0 flex-1">{chart}</div>}
+      </div>
       {isCompact && !data && (
         <EmptyState message={t('widget.noDegradation', 'No degradation data')} icon={<TrendingDown className="h-5 w-5" />}
           action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }} />
