@@ -224,9 +224,10 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
       ),
       covered: basicCoverage != null && basicCoverage !== false,
     },
-    ...((warrantyData != null && (warrantyData.corrosion != null
-      || warrantyData.corrosion_expiry_date != null
-      || warrantyData.corrosion_expiry != null))
+    ...((warrantyData != null && (
+      (warrantyData.corrosion === true && warrantyData.corrosion_expiry_date == null && warrantyData.corrosion_expiry == null)
+      || asString(warrantyData.corrosion_expiry_date ?? warrantyData.corrosion_expiry) != null
+    ))
       ? [{
           key: 'corrosion',
           title: t('widget.warranty.corrosion', 'Corrosion'),
@@ -291,7 +292,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
                   <div className="min-w-0">
                     <p className="truncate text-[13px] font-semibold text-[var(--text-primary)]">{row.title}</p>
                     <p className={dashboardTokens.metricLabel}>
-                      {'included' in row && row.included
+                      {'included' in row && row.included && !row.expiry
                         ? null
                         : row.expiry && Number.isFinite(new Date(row.expiry).getTime())
                         ? (formatMonthYear?.(row.expiry) ?? formatDate(row.expiry))
@@ -328,7 +329,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
                 ) : (
                   <p className={dashboardTokens.metricLabel}>
                     {row.key === 'corrosion' && row.expiry == null
-                      ? t('widget.warranty.covered', 'Covered')
+                        ? null
                       : remainingDisplay != null
                         ? t('widget.warranty.distanceLeft', '{{distance}} {{unit}} left', {
                             distance: fmtNumber(remainingDisplay, 0),

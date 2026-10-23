@@ -5,7 +5,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, EmbeddedChart, type 
 import { Caption, MetricValue, Text } from '@/components/ui';
 import { SourceContent } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
-import { useFSMStats } from '@/api/hooks/useFSM';
+import { useFSMStats, useFSMTransitions } from '@/api/hooks/useFSM';
 import { useVehicles } from '@/api/hooks/useVehicles';
 
 import { WidgetShell } from './WidgetShell';
@@ -15,6 +15,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
 import { WidgetBigNumber } from './shared';
 import { fmtNumber as formatDurationNumber } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 /* ── State colors for donut chart ──────────────────────────────── */
 const STATE_COLORS: Record<string, string> = {
@@ -94,6 +95,7 @@ function DonutTooltip({
 /* ── Main widget ───────────────────────────────────────────────── */
 export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
+  const { formatTime, formatDateTime } = useDateFormat();
   const { t } = useTranslation('dashboard');
   const vehiclesQuery = useVehicles();
   const { data: vehicles, isLoading: vehiclesLoading } = vehiclesQuery;
@@ -101,6 +103,9 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
   const idStr = typeof id === 'number' && Number.isSafeInteger(id) && id > 0 ? String(id) : '';
 
   const statsQuery = useFSMStats(idStr);
+  const transitionsQuery = useFSMTransitions(idStr, 'vehicle', 24, 1, 5);
+  const transitionsData = transitionsQuery.data?.data ?? [];
+  const transitionState = useDataState(transitionsQuery);
   const {
     data: statsData,
     isLoading: statsLoading,
@@ -275,17 +280,35 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
               )}
             </div>
           </EmbeddedChart>
-          <ol className="min-w-0 divide-y divide-[var(--border-subtle)]">
-            {segments.map((seg) => (
-              <li key={seg.state} className="grid min-h-11 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-1.5">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: stateColor(seg.state) }} />
-                  <Text variant="bodySm" className="min-w-0 break-words">{t(`widget.fsmDistribution.state.${seg.state}`, seg.state)}</Text>
-                </div>
-                <Text variant="bodySm" className="text-right tabular-nums text-[var(--text-primary)]">{fmtNumber(seg.pct, 0)}%</Text>
-              </li>
-            ))}
-          </ol>
+          <div className="min-w-0">
+            <ol aria-label={t('widget.fsmDistribution.rankedStates', 'State shares')} className="min-w-0 divide-y divide-[var(--border-subtle)]">
+              {segments.map((seg) => (
+                <li key={seg.state} className="grid min-h-11 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-1.5">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: stateColor(seg.state) }} />
+                    <Text variant="bodySm" className="min-w-0 break-words">{t(`widget.fsmDistribution.state.${seg.state}`, seg.state)}</Text>
+                  </div>
+                  <Text variant="bodySm" className="text-right tabular-nums text-[var(--text-primary)]">{fmtNumber(seg.pct, 0)}%</Text>
+                </li>
+              ))}
+            </ol>
+            <h4 className="mt-2 text-sm font-medium text-[var(--text-primary)]">{t('widget.fsmDistribution.recentTransitions', 'Recent transitions')}</h4>
+            {transitionState.fatalError ? (
+              <Text variant="bodySm" className="text-[var(--text-danger)]">{t('widget.fsmDistribution.transitionsError', 'Recent transitions could not be loaded.')}</Text>
+            ) : transitionsData.length === 0 ? (
+              <Text variant="bodySm" className="text-[var(--text-muted)]">{t('widget.fsmDistribution.noTransitions', 'No recent transitions')}</Text>
+            ) : (
+              <ol aria-label={t('widget.fsmDistribution.recentTransitions', 'Recent transitions')} className="m-0 mt-1 list-none p-0">
+                {transitionsData.slice(0, 5).map((row: { id?: number|string; from_state?: string; to_state?: string; ts?: string }, index: number) => (
+                  <li key={row.id ?? index} className="min-w-0 py-1 text-xs text-[var(--text-secondary)]">
+                    <span className="block break-words">{row.from_state}</span>
+                    <span className="block break-words">{row.to_state}</span>
+                    <time>{formatDateTime?.(row.ts ?? '') ?? formatTime(row.ts ?? '')}</time>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
         </div>
       </SourceContent>
     </WidgetShell>

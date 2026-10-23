@@ -1,9 +1,9 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Wrench } from 'lucide-react';
 import { SourceContent } from '@/components/layout';
 import { Skeleton } from '@/components/feedback';
-import { Caption } from '@/components/ui';
+import { Button, Caption, Drawer } from '@/components/ui';
 import { useMaintenance, useServiceRecords, useMaintenanceForecast } from '@/api/hooks/useVehicleSystems';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
@@ -44,6 +44,7 @@ function knownForecastCount(value: unknown): number | null {
 
 export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
+  const [forecastOpen, setForecastOpen] = useState(false);
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -265,6 +266,20 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
       {...shellProps}
     >
       <div className="h-full flex min-h-0 flex-col overflow-y-auto">
+        <section data-testid="dashboard-maintenance-forecast-brief" className="mb-2 rounded-panel border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2">
+          <Caption className="mb-2 block">{t('widget.maintenance.forecastStatus', 'Maintenance forecast summary')}</Caption>
+          <div className="grid grid-cols-3 gap-2">
+            <span data-operational-value>{t('widget.maintenance.overdue', 'Overdue')}: {fmtInt(forecastOverdue ?? 0)}</span>
+            <span data-operational-value>{t('widget.maintenance.soon', 'Soon')}: {fmtInt(forecastDueSoon ?? 0)}</span>
+            <span data-operational-value>{t('widget.maintenance.dailyDistance', 'Daily distance')}: {forecast?.km_per_day == null ? '—' : `${fmtNumber(Number(forecast.km_per_day), 2)} km/day`}</span>
+          </div>
+          <Button size="sm" variant="ghost" onClick={() => setForecastOpen(true)}>{t('common.reviewDetails', 'Review details')}</Button>
+        </section>
+        <Drawer open={forecastOpen} onClose={() => setForecastOpen(false)} title={`Forecast vehicle ${forecast?.vehicle_id ?? ''}`}>
+          <div className="space-y-2">
+            <Caption>{t('widget.maintenance.forecastCaveat', 'Forecast depends on recorded service history and mileage.')}</Caption>
+          </div>
+        </Drawer>
         {(forecastOverdue != null || forecastDueSoon != null) && (
           <div
             role="status"
@@ -283,7 +298,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
             )}
           </div>
         )}
-        <Caption className="mb-1 block">{t('widget.maintenance.upcoming', 'Upcoming')}</Caption>
+        <Caption as="h3" className="mb-1 block">{t('widget.maintenance.upcoming', 'Shortest configured interval')}</Caption>
         <SourceContent
           state={maintenanceTrust.fatalError ? 'error' : !maintenanceTrust.hasData && maintLoading ? 'loading' : maintenanceTrust.refreshError ? 'retained' : 'ready'}
           label={t('widget.maintenance.upcoming', 'Upcoming')}
@@ -310,11 +325,19 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           errorRecovery={{ onRetry: recordsTrust.retry ?? undefined }}
           retainedMessage={t('widget.maintenance.recordsRetained', 'Previously loaded service records remain visible while they refresh.')}
         >
-          <WidgetDetailCard
-            entries={lastServiceEntries}
-            emptyMessage={t('widget.maintenance.noRecords', 'No service records yet')}
-            emptyIcon={<Wrench className="h-5 w-5" />}
-          />
+          {lastServiceEntries.length > 0 ? (
+            <ul role="list" aria-label={t('widget.maintenance.recentService', 'Recent service')} className="m-0 list-none space-y-2 p-0">
+              {recentRecords.slice(0, 3).map((rec, index) => (
+                <li key={rec.itemId || index} role="listitem" className="rounded-panel border border-[var(--border-subtle)] px-3 py-2">
+                  <span className="block text-sm font-medium text-[var(--text-primary)]">{items.find((entry) => entry.id === rec.itemId)?.name ?? rec.itemId ?? '—'}</span>
+                  <span className="block text-xs text-[var(--text-muted)]">{rec.notes ?? '—'}</span>
+                  <span className="block text-xs text-[var(--text-muted)]">{rec.date ? formatDate(rec.date) : '—'}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <WidgetDetailCard entries={[]} emptyMessage={t('widget.maintenance.noRecords', 'No service records yet')} emptyIcon={<Wrench className="h-5 w-5" />} />
+          )}
         </SourceContent>
       </div>
     </WidgetShell>

@@ -8,6 +8,7 @@ const hooks = vi.hoisted(() => ({ stats: vi.fn(), vehicles: vi.fn(), pie: vi.fn(
 
 vi.mock('@/api/hooks/useFSM', () => ({
   useFSMStats: (...args: unknown[]) => hooks.stats(...args),
+  useFSMTransitions: () => ({ data: { data: [] }, isLoading: false, isError: false, error: null, refetch: vi.fn(), isFetching: false, isStale: false }),
 }));
 vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => hooks.vehicles(),

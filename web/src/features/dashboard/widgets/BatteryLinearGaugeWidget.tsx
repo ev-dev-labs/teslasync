@@ -69,7 +69,7 @@ export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProp
               marker: chargeLimitSoc,
               markerLabel: chargeLimitSoc != null ? `${t('widget.chargeLimit', 'Limit')} ${chargeLimitSoc}%` : undefined,
               hideScale: true,
-              decimals: 0,
+              decimals: 2,
               kind: 'measurement',
             }}
           >

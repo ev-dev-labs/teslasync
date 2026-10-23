@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import { Input } from '@/components/ui';
-import { combineDataStates, deriveDataState } from '@/api/dataState';
+import { combineDataStates, deriveDataState, knownNumber } from '@/api/dataState';
 import { EmptyState } from '@/components/feedback';
 import { SourceContent } from '@/components/layout';
 import { useSignalCatalog, useSignalObservations } from '@/api/hooks/useTelemetry';
 import { useVehicles } from '@/api/hooks/useVehicles';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
+import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
@@ -64,39 +64,11 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
     );
   }, [entries, search]);
 
-  const grouped = useMemo(() => {
-    const map = new Map<string, typeof filtered>();
-    for (const entry of filtered) {
-      const cat = entry.destination;
-      const list = map.get(cat) ?? [];
-      list.push(entry);
-      map.set(cat, list);
-    }
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [filtered]);
-
-  const categoryEntries: DetailEntry[] = grouped.map(([category, signals]) => {
-    const totals = signals.map((signal) => signal.sample_count_total);
-    const allTotalsKnown = totals.length > 0 && totals.every((count) => count != null);
-    const observationTotal = allTotalsKnown
-      ? totals.reduce<number>((sum, count) => sum + (count ?? 0), 0)
-      : null;
-    const countLabel = t('widget.signalCatalog.categorySignals', '{{count}} signals', {
-      count: signals.length,
-      replace: { count: fmtInt(signals.length) },
-    });
-    const observationLabel = observationTotal == null
-      ? t('widget.signalCatalog.observationsUnknown', 'Observations unavailable')
-      : t('widget.signalCatalog.categoryObservations', '{{count}} obs', {
-          count: observationTotal,
-          replace: { count: fmtInt(observationTotal) },
-        });
-    return {
-      id: category,
-      label: category,
-      value: countLabel,
-      hint: observationLabel,
-    };
+  const observationRows = Array.isArray(observations) ? observations : [];
+  const sampleCounts = new Map<string, number>();
+  observationRows.forEach((row) => {
+    const name = row.signal_name?.trim();
+    if (name) sampleCounts.set(name, (sampleCounts.get(name) ?? 0) + 1);
   });
 
   const browseLabel = t('widget.signalCatalog.browse', 'Browse');
@@ -174,14 +146,36 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
             />
           ) : (
             <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
-              <WidgetDetailCard
-                entries={categoryEntries}
-                compact={isCompact}
-                emptyMessage={filtered.length === 0
-                  ? t('widget.signalCatalog.noResults', 'No matching signals')
-                  : t('widget.signalCatalog.noData', 'No signals in catalog')}
-                emptyIcon={<BookOpen className="h-5 w-5" />}
-              />
+              <ul className="m-0 list-none space-y-2 p-0" aria-label={t('widget.signalCatalog.signalsAvailable', 'Signals available')}>
+                {filtered.map((signal) => {
+                  const sampleCount = sampleCounts.get(signal.field);
+                  const total = knownNumber(signal.sample_count_total);
+                  const vehicles = knownNumber(signal.vehicle_count);
+                  return (
+                    <li key={`${signal.destination}:${signal.field}`} className="min-w-0 rounded-panel border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2">
+                      <h4 className="break-words text-sm font-medium text-[var(--text-primary)]">{signal.field}</h4>
+                      <p className="mt-1 break-words text-xs text-[var(--text-muted)]">
+                        <span role="heading" aria-level={5}>{t('widget.signalCatalog.destination', 'Destination')}: {signal.destination}</span>
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
+                        <span>{signal.value_kind}</span>
+                        <span title={t('widget.signalCatalog.sampleCount', 'Observations in fetched sample')}>
+                          {sampleCount == null ? '—' : fmtInt(sampleCount)}
+                        </span>
+                        <span>{t('widget.signalCatalog.totalSamples', 'Total observations: {{count}}', {
+                          count: total ?? -1,
+                          replace: { count: total == null ? '—' : fmtInt(total) },
+                        })}</span>
+                        <span>{t('widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}', {
+                          count: vehicles ?? -1,
+                          replace: { count: vehicles == null ? '—' : fmtInt(vehicles) },
+                        })}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">{t('widget.signalCatalog.unitDescriptionUnavailable', 'Unit and description are not provided by this catalog.')}</p>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           )}
         </div>
