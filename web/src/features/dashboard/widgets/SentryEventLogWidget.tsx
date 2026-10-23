@@ -10,6 +10,8 @@ import { useDataState } from '@/hooks/useDataState';
 import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed, type EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
+import { Caption } from '@/components/ui';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface DerivedEvent {
   icon: ReactNode;
@@ -107,6 +109,7 @@ export function deriveEvent(ev: SecurityEvent, t: TFunction): DerivedEvent {
 
 export default function SentryEventLogWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { fmtInt } = useNumberFormatting();
   const vehicleQuery = useVehicles();
   const { data: vehicles } = vehicleQuery;
   const vehicleState = useDataState(vehicleQuery);
@@ -140,6 +143,11 @@ export default function SentryEventLogWidget({ vehicleId, size }: WidgetProps) {
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
+  const footer = events === undefined ? undefined : (
+    <Caption className="block text-[var(--text-muted)] tabular-nums">
+      {fmtInt(feedItems.length)} {t('widget.guardEvents', 'events')}
+    </Caption>
+  );
 
   return (
     <WidgetShell
@@ -152,6 +160,7 @@ export default function SentryEventLogWidget({ vehicleId, size }: WidgetProps) {
       isStale={isStale}
       isError={isError}
       onRefresh={handleRefresh}
+      footer={footer}
     >
       <WidgetEventFeed
         items={feedItems}
