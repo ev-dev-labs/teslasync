@@ -307,6 +307,8 @@ describe('RouteEfficiencyWidget populated list', () => {
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     // Best route (180 → Excellent) carries the badge pill; the rest render plain.
     expect(screen.getByText('Excellent')).toBeInTheDocument();
+    const bestRow = screen.getByText('Best → Trip').closest('[role="listitem"]');
+    expect(bestRow?.querySelector('[aria-hidden="true"].rounded-full')).not.toBeNull();
     expect(view.container.querySelector('.bg-emerald-400')).toBeNull();
     expect(view.container.querySelector('.bg-blue-400')).toBeNull();
   });

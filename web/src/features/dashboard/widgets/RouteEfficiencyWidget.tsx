@@ -79,8 +79,8 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
         // Invert: lower Wh/unit (better) → higher value → ranks first
         value: eff == null ? null : 10000 / (Math.max(0, eff) + 1),
         formattedValue: `${eff == null ? '—' : `${fmtNumber(eff)} ${efficiencyUnit}`} · ${trips == null ? '—' : fmtInt(trips)}×`,
+        status: isBest ? 'success' : undefined,
         badge: rawEff == null ? undefined : efficiencyBadge(rawEff, t),
-        barColor: isBest ? 'bg-emerald-400' : 'bg-blue-400',
       };
     }).sort((a, b) => {
       if (a.value == null) return b.value == null ? 0 : 1;
