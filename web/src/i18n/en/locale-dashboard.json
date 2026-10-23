@@ -2931,6 +2931,7 @@
     "automationHistory": "Automation history",
     "automationStatus": "Automation status",
     "backupHistory": {
+      "duration": "Duration",
       "noEvents": "No backup events in the last 30 days",
       "noSite": "No Tesla energy site linked",
       "outages30d": "Outages (30d)",
@@ -3506,7 +3507,8 @@
       "noData": "No motor history",
       "statorTemp": "Stator",
       "time": "Time",
-      "title": "Motor history"
+      "title": "Motor history",
+      "torque": "Torque"
     },
     "motorPerformance": {
       "gearState": "Gear state",
@@ -3724,7 +3726,15 @@
     "sentryOff": "Off",
     "sentryOn": "Sentry",
     "signalCatalog": {
+      "browse": "Browse",
+      "catalogTotal": "{{count}} signals",
+      "categoryObservations": "{{count}} obs",
+      "categorySignals": "{{count}} signals",
+      "destination": "Destination: {{destination}}",
+      "lastSeen": "Last seen: {{timestamp}}",
+      "metadataUnavailable": "Unit and description are not provided by this catalog.",
       "noData": "No signals in catalog",
+      "noObservations": "No signal observations",
       "noResults": "No matching signals",
       "observationsRetained": "Previously loaded signal observations remain visible while this source recovers.",
       "observationsUnavailable": "Signal observations unavailable",
@@ -3732,7 +3742,10 @@
       "searchLabel": "Search signals",
       "searchPlaceholder": "Search signals…",
       "signalsAvailable": "signals available",
-      "title": "Signal catalog"
+      "title": "Signal catalog",
+      "totalSamples": "Total observations: {{count}}",
+      "valueKind": "Value kind",
+      "vehicleCount": "Vehicles observed: {{count}}"
     },
     "signalHealth": {
       "critical": "Critical",
@@ -3983,11 +3996,14 @@
     "verifiedFields": "{{count}} verified fields",
     "versionInfo": {
       "avgLatency": "Avg latency",
+      "buildDate": "Build date",
       "bytesProcessed": "Bytes processed",
+      "goVersion": "Go version",
       "messagesToday": "Messages today",
       "noData": "No version data available",
       "signalsPerSec": "Signals/sec",
       "title": "Version info",
+      "version": "Version",
       "versionError": "Version information could not be loaded.",
       "versionRetained": "Previously loaded version information remains visible while it refreshes."
     },

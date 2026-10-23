@@ -90,6 +90,10 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
     ?? null;
   const forecastDueSoon = knownForecastCount(forecast?.due_soon_count)
     ?? null;
+  const forecastDailyDistance = forecast?.km_per_day != null
+    && Number.isFinite(Number(forecast.km_per_day))
+    ? toDistanceDisplay(Number(forecast.km_per_day))
+    : null;
 
   // Sort maintenance items by interval (soonest first)
   const sortedItems = useMemo(
@@ -267,7 +271,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           <div className="grid grid-cols-3 gap-2">
             <span data-operational-value>{t('widget.maintenance.overdue', 'Overdue')}: {fmtInt(forecastOverdue ?? 0)}</span>
             <span data-operational-value>{t('widget.maintenance.soon', 'Soon')}: {fmtInt(forecastDueSoon ?? 0)}</span>
-            <span data-operational-value>{t('widget.maintenance.dailyDistance', 'Daily distance')}: {forecast?.km_per_day == null ? '—' : `${fmtNumber(Number(forecast.km_per_day), 2)} km/day`}</span>
+            <span data-operational-value>{t('widget.maintenance.dailyDistance', 'Daily distance')}: {forecastDailyDistance == null ? '—' : `${fmtNumber(forecastDailyDistance, 2)} ${distanceUnit}/day`}</span>
           </div>
           <Button size="sm" variant="ghost" onClick={() => setForecastOpen(true)}>{t('common.reviewDetails', 'Review details')}</Button>
           <Caption className="mt-2 block break-words">{t('widget.maintenance.forecastCaveat', 'Forecast depends on recorded service history and mileage.')}</Caption>
@@ -337,6 +341,11 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
                   <span className="block text-sm font-medium text-[var(--text-primary)]">{items.find((entry) => entry.id === rec.itemId)?.name ?? rec.itemId ?? '—'}</span>
                   <span className="block text-xs text-[var(--text-muted)]">{rec.notes ?? '—'}</span>
                   <span className="block text-xs text-[var(--text-muted)]">{rec.date ? formatDate(rec.date) : '—'}</span>
+                  {rec.odometerKm != null && (
+                    <span className="block text-xs tabular-nums text-[var(--text-muted)]">
+                      {fmtNumber(toDistanceDisplay(rec.odometerKm))} {distanceUnit}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>

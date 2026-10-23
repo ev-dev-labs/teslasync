@@ -135,6 +135,7 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
             <SourceContent
               state={sourceBoundaryState(observationState, observations != null)}
               label={t('widget.signalCatalog.sampleCount', 'Observations in fetched sample')}
+              emptyMessage={t('widget.signalCatalog.noObservations', 'No signal observations')}
               errorMessage={t('widget.signalCatalog.observationsUnavailable', 'Signal observations unavailable')}
               error={observationState.fatalError}
               retainedMessage={t('widget.signalCatalog.observationsRetained', 'Previously loaded signal observations remain visible while this source recovers.')}
@@ -213,7 +214,7 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
                               const totals = signals.map((signal) => knownNumber(signal.sample_count_total));
                               const categoryTotal = totals.some((total) => total == null)
                                 ? null
-                                : totals.reduce((sum, total) => sum + (total ?? 0), 0);
+                                : totals.reduce<number>((sum, total) => sum + (total ?? 0), 0);
                               return categoryTotal == null
                                 ? t('widget.signalCatalog.categoryObservationsUnavailable', 'Observations unavailable')
                                 : t('widget.signalCatalog.categoryObservations', '{{count}} obs', {

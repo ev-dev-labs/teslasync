@@ -470,7 +470,7 @@ describe('MaintenanceTrackerWidget — forecast banner', () => {
       overdue_count: 1, due_soon_count: 0, km_per_day: 0, vehicle_id: 7,
     } }));
     renderWidget(STANDARD);
-    expect(screen.getAllByText('Overdue')).toHaveLength(2);
+    expect(screen.getByRole('status', { name: 'Maintenance forecast status' })).toHaveTextContent('Overdue: 1');
     expect(screen.queryByText('Good')).not.toBeInTheDocument();
   });
 
