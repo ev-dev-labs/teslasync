@@ -182,15 +182,15 @@ it('keeps four real wide range-model operands without replacing the projected he
   // Four operands, but the unknown capacity is omitted from the face (counted as hidden in the drawer below).
   expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(3);
   expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
-  expect(brief).toHaveTextContent('0.00%');
-  expect(brief).toHaveTextContent('0.00 km');
+  expect(brief).toHaveTextContent('0%');
+  expect(brief).toHaveTextContent('0 km');
   fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
   const factorsDrawer = screen.getByRole('dialog');
   expect(factorsDrawer.querySelector('[data-drawer-header]')).toHaveTextContent('inferred range analysis');
   expect(within(factorsDrawer).getByText('1 empty fields are hidden.')).toBeInTheDocument();
   fireEvent.keyDown(factorsDrawer, { key: 'Escape' });
-  expect(screen.getByText('350.00')).toBeInTheDocument();
-  expect(screen.getByText('70.00% of EPA rated')).toBeInTheDocument();
+  expect(screen.getByText('350')).toBeInTheDocument();
+  expect(screen.getByText('70% of EPA rated')).toBeInTheDocument();
 });
 
 it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
@@ -218,13 +218,13 @@ describe('ProjectedRangeWidget — standard layout (km)', () => {
 
     // Titled shell + the current range converted straight through in km.
     expect(screen.getByText('Projected range')).toBeInTheDocument();
-    expect(screen.getByText('350.00')).toBeInTheDocument();
+    expect(screen.getByText('350')).toBeInTheDocument();
     expect(screen.getAllByText('km').length).toBeGreaterThan(0);
 
     // Health 95 → "Excellent" chip carrying the score.
     const badge = screen.getByText(/Excellent/);
     expect(badge).toHaveTextContent('Excellent');
-    expect(badge).toHaveTextContent('95.00%');
+    expect(badge).toHaveTextContent('95%');
 
     // Comparison bar: 350 / 500 = 70% → amber, indeterminate off.
     const bar = screen.getByRole('progressbar', {
@@ -232,9 +232,20 @@ describe('ProjectedRangeWidget — standard layout (km)', () => {
     });
     expect(bar).toHaveAttribute('aria-valuenow', '70');
     expect(barFill(container).style.width).toBe('70%');
-    expect(screen.getByText('70.00% of EPA rated')).toBeInTheDocument();
+    expect(screen.getByText('70% of EPA rated')).toBeInTheDocument();
     // EPA readout on the right of the bar.
-    expect(screen.getByText('EPA: 500.00 km')).toBeInTheDocument();
+    expect(screen.getByText('EPA: 500 km')).toBeInTheDocument();
+  });
+});
+
+describe('ProjectedRangeWidget — After hero', () => {
+  it('shows projected once as headline with rated EPA on the right and no fabricated Helix factors', () => {
+    useProjectedRangeMock.mockReturnValue(makeQuery({ data: makeData({ current_range_km: 350, new_range_km: 500, health_score: 95 }) }));
+    renderWidget({ cols: 2, rows: 2 });
+    expect(screen.getByText('350')).toBeInTheDocument();
+    expect(screen.getAllByText(/EPA: 500 km/)).toHaveLength(1);
+    expect(screen.getByText('70% of EPA rated')).toBeInTheDocument();
+    expect(screen.queryByText(/Helix|Highway share|Overnight|Elevation/)).toBeNull();
   });
 });
 
@@ -259,7 +270,7 @@ describe('ProjectedRangeWidget — health badge thresholds', () => {
 
       const badge = screen.getByText(new RegExp(text));
       expect(badge).toHaveTextContent(text);
-      expect(badge).toHaveTextContent(`${score}.00%`);
+      expect(badge).toHaveTextContent(`${score}%`);
       expect(badge.className).toContain(klass);
     },
   );
@@ -342,13 +353,13 @@ describe('ProjectedRangeWidget — wide layout (range factors)', () => {
     expect(screen.getByText('Battery cycles')).toBeInTheDocument();
 
     // … and their formatted values (avg daily = 40 km converted straight through).
-    expect(screen.getByText('8.50%')).toBeInTheDocument();
-    expect(screen.getByText('40.00 km')).toBeInTheDocument();
-    expect(screen.getByText('91.20%')).toBeInTheDocument();
+    expect(screen.getByText('9%')).toBeInTheDocument();
+    expect(screen.getByText('40 km')).toBeInTheDocument();
+    expect(screen.getByText('91%')).toBeInTheDocument();
     expect(screen.getByText('512')).toBeInTheDocument();
 
     // The primary range + comparison bar still render in wide mode.
-    expect(screen.getByText('350.00')).toBeInTheDocument();
+    expect(screen.getByText('350')).toBeInTheDocument();
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '70');
   });
 });
@@ -364,7 +375,7 @@ describe('ProjectedRangeWidget — compact layout', () => {
     renderWidget({ cols: 1, rows: 2 });
 
     // Reduced motion → AnimatedNumber lands on 350 (0 dp) immediately.
-    expect(screen.getByText('350.00')).toBeInTheDocument();
+    expect(screen.getByText('350')).toBeInTheDocument();
     expect(screen.getByText('Projected')).toBeInTheDocument();
     expect(screen.getByText('km')).toBeInTheDocument();
     expect(screen.getByText('Excellent')).toBeInTheDocument();
@@ -396,12 +407,12 @@ describe('ProjectedRangeWidget — unit conversion', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // 350 km = 350 000 m / 1609.344 ≈ 217 mi (rounded by AnimatedNumber, 0 dp).
-    expect(screen.getByText('217.48')).toBeInTheDocument();
+    expect(screen.getByText('217')).toBeInTheDocument();
     expect(screen.getAllByText('mi').length).toBeGreaterThan(0);
     // EPA 500 km ≈ 311 mi — proves the EPA readout converted too.
-    expect(screen.getByText('EPA: 310.69 mi')).toBeInTheDocument();
+    expect(screen.getByText('EPA: 311 mi')).toBeInTheDocument();
     // The km value must NOT leak through — proves the conversion ran.
-    expect(screen.queryByText('350.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('350')).not.toBeInTheDocument();
     // The ratio is unit-independent, so the bar percentage is unchanged.
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '70');
   });
@@ -464,7 +475,7 @@ describe('ProjectedRangeWidget — query states', () => {
 
     // Data is still on screen …
     expect(screen.getByText('Projected range')).toBeInTheDocument();
-    expect(screen.getByText('350.00')).toBeInTheDocument();
+    expect(screen.getByText('350')).toBeInTheDocument();
     expect(screen.getByText(/Excellent/)).toBeInTheDocument();
     // … and the freshness indicator is in its error state (red dot).
     const freshness = screen.getByRole('button', { name: /^Refresh data\b/i });

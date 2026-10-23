@@ -76,19 +76,19 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
       {
         label: t('widget.projectedRange.degradation', 'Battery degradation'),
         metricId: 'percent', occurrenceId: 'projected-range-degradation', rawValue: data?.degradation_pct,
-        display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) },
+        display: { formatter: raw => ({ value: fmtNumber(raw, 0), unit: '%' }) },
       },
       {
         label: t('widget.projectedRange.avgDaily', 'Avg daily usage'),
         metricId: 'rate', occurrenceId: 'projected-range-daily-distance',
         rawValue: data?.avg_daily_km == null ? data?.avg_daily_km : data.avg_daily_km * 1000,
         description: t('widget.projectedRange.dailySource', 'Returned daily distance rate normalized from kilometers/day to meters/day, not a vehicle speed.'),
-        display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
+        display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit), 0), unit: distanceUnit }) },
       },
       {
         label: t('widget.projectedRange.capacity', 'Current capacity'),
         metricId: 'percent', occurrenceId: 'projected-range-capacity', rawValue: data?.current_capacity_pct,
-        display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) },
+        display: { formatter: raw => ({ value: fmtNumber(raw, 0), unit: '%' }) },
       },
       {
         label: t('widget.projectedRange.cycles', 'Battery cycles'),
@@ -112,18 +112,26 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
       onRefresh={() => refetch()}
     >
       <div className="flex min-w-0 flex-col gap-3">
-        <WidgetBigNumber
-          value={projectedRange != null ? fmtNumber(projectedRange) : null}
-          unit={distanceUnit}
-          label={t('widget.projectedRange.projected', 'Projected')}
-          badge={badge && {
-            ...badge,
-            text: isCompact ? badge.text : `${badge.text} · ${fmtNumber(healthScore)}%`,
-          }}
-          animated={false}
-        />
+        {/* After hero: one headline projection, rated range quiet on the right. */}
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <WidgetBigNumber
+            value={projectedRange != null ? fmtNumber(projectedRange, 0) : null}
+            unit={distanceUnit}
+            label={t('widget.projectedRange.projected', 'Projected')}
+            badge={badge && {
+              ...badge,
+              text: isCompact ? badge.text : `${badge.text} · ${fmtNumber(healthScore, 0)}%`,
+            }}
+            animated={false}
+          />
+          {!isCompact && epaRange != null && (
+            <span className={`${dashboardTokens.metricLabel} mt-1 shrink-0 text-end`}>
+              {t('widget.projectedRange.epa', 'EPA')}: {fmtNumber(epaRange, 0)} {distanceUnit}
+            </span>
+          )}
+        </div>
         {!isCompact && (
-          <ComparisonBar rangePct={rangePct} epaRange={epaRange} distanceUnit={distanceUnit} t={t} />
+          <ComparisonBar rangePct={rangePct} t={t} />
         )}
         {isWide && (
           <section className="flex min-w-0 flex-col gap-2">
@@ -150,23 +158,14 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
 
 function ComparisonBar({
   rangePct,
-  epaRange,
-  distanceUnit,
   t,
 }: {
   rangePct: number | null;
-  epaRange: number | null;
-  distanceUnit: string;
   t: (k: string, d: string) => string;
 }) {
   const { fmtNumber } = useNumberFormatting();
   return (
     <div className="flex-shrink-0">
-      <div className={`${dashboardTokens.metricLabel} mb-1 flex flex-wrap items-center justify-between gap-2`}>
-        <span>
-          {t('widget.projectedRange.epa', 'EPA')}: {epaRange != null ? `${fmtNumber(epaRange)} ${distanceUnit}` : '—'}
-        </span>
-      </div>
       <MetricBar
         value={rangePct}
         max={100}
@@ -177,7 +176,7 @@ function ComparisonBar({
       />
       {rangePct != null && (
         <p className={`${dashboardTokens.metricLabel} mt-1`}>
-          {fmtNumber(rangePct)}% {t('widget.projectedRange.ofEpa', 'of EPA rated')}
+          {fmtNumber(rangePct, 0)}% {t('widget.projectedRange.ofEpa', 'of EPA rated')}
         </p>
       )}
     </div>
