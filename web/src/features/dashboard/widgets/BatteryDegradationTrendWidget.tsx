@@ -23,12 +23,14 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateLabels } from '@/hooks/useDateLabels';
 
 export default function BatteryDegradationTrendWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const { unitPrefs } = useUnits();
+  const { formatMonthYear } = useDateLabels('vehicle');
   const distanceUnit = unitPrefs.distance;
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
   const idStr = id != null ? String(id) : null;
@@ -50,10 +52,14 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
   const chartData = useMemo(() => {
     const trend = data?.monthly_trend ?? [];
     return trend.map((entry) => ({
-      month: entry.month ?? '',
+      month: (() => {
+        const raw = entry.month ?? '';
+        if (!raw || /^[A-Za-z]{3}(?:\s+\d{4})?$/.test(raw)) return raw;
+        return formatMonthYear(raw);
+      })(),
       range: toDisplayRange(knownNumber(entry.avg_range)),
     }));
-  }, [data, toDisplayRange]);
+  }, [data, formatMonthYear, toDisplayRange]);
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
   const rangeAxisLabels = useMemo(() => {

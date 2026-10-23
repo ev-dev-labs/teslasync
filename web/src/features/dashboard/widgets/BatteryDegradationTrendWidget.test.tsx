@@ -106,6 +106,18 @@ vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => unitsMock(),
 }));
 
+vi.mock('@/hooks/useDateLabels', () => ({
+  useDateLabels: () => ({
+    formatMonthYear: (value: unknown) => {
+      if (typeof value !== 'string') return '—';
+      const match = /^(\d{4})-(\d{2})(?:-.*)?$/.exec(value);
+      if (!match) return value;
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${months[Number(match[2]) - 1] ?? match[2]} ${match[1]}`;
+    },
+  }),
+}));
+
 vi.mock('@/api/hooks/useVehicles', async () => {
   const actual = await vi.importActual<typeof import('@/api/hooks/useVehicles')>('@/api/hooks/useVehicles');
   return { ...actual, useVehicles: () => vehiclesMock() };
@@ -165,6 +177,11 @@ vi.mock('recharts', async () => {
         'data-testid': 'area-chart',
         'data-points': String(Array.isArray(props.data) ? props.data.length : 0),
         'data-margin': JSON.stringify(props.margin),
+        'data-months': JSON.stringify(
+          Array.isArray(props.data)
+            ? props.data.map((point) => (point as Record<string, unknown>).month)
+            : [],
+        ),
       },
       React.createElement('svg', null, props.children as ReactNode),
     );
@@ -312,6 +329,23 @@ describe('BatteryDegradationTrendWidget axis gutter', () => {
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('BatteryDegradationTrendWidget', () => {
+  it('formats ISO trend months through the shared date layer before chart rendering', () => {
+    degradationMock.mockReturnValue(makeQuery({
+      data: makeData({
+        monthly_trend: [
+          { month: '2023-01-01', avg_range: 400 },
+          { month: '2024-10-01', avg_range: 385 },
+        ],
+      }),
+    }));
+    renderWidget();
+    const axis = screen.getAllByTestId('x-axis');
+    expect(axis).toHaveLength(1);
+    expect(screen.getByTestId('area-chart')).toHaveAttribute('data-points', '2');
+    expect(JSON.parse(screen.getByTestId('area-chart').getAttribute('data-months') ?? '[]'))
+      .toEqual(['Jan 2023', 'Oct 2024']);
+  });
+
   it('preserves the chart and all summaries when its cached refresh fails', () => {
     degradationMock.mockReturnValue(makeQuery({ data: makeData(), error: new Error('transient'), isError: true }));
     renderWidget();
