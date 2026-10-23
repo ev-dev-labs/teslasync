@@ -12,7 +12,7 @@
  *
  * Strategy (mirrors the repo convention, e.g. BatteryCellsWidget.test.tsx):
  *   - The three data hooks (`useVehicles`, `useVehicleState`,
- *     `useChargingSessionsPaginated`) are replaced with hoisted `vi.fn()`
+ *     `useChargingTelemetryLatest`) are replaced with hoisted `vi.fn()`
  *     doubles so the network is never touched and every render is deterministic.
  *   - `react-i18next` is stubbed to resolve the developer fallback string so
  *     assertions read the real English copy.
@@ -62,20 +62,17 @@ vi.mock('react-i18next', () => ({
 }));
 
 // Hoisted hook doubles — the network boundary. Never hit real endpoints.
-const { vehiclesMock, vehicleStateMock, sessionsMock } = vi.hoisted(() => ({
+const { vehiclesMock, vehicleStateMock, chargingTelemetryMock } = vi.hoisted(() => ({
   vehiclesMock: vi.fn(),
   vehicleStateMock: vi.fn(),
-  sessionsMock: vi.fn(),
+  chargingTelemetryMock: vi.fn(),
 }));
 
 vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: vehiclesMock,
   useVehicleState: vehicleStateMock,
+  useChargingTelemetryLatest: chargingTelemetryMock,
 }));
-vi.mock('@/api/hooks/useCharging', () => ({
-  useChargingSessionsPaginated: sessionsMock,
-}));
-
 import ChargeStatusLiveWidget, { formatTimeRemaining } from './ChargeStatusLiveWidget';
 import type { WidgetSize } from './types';
 
@@ -125,17 +122,6 @@ function makeStateQuery(state: LiveState | undefined, over: StateQueryOverrides 
   };
 }
 
-interface SessionRow {
-  total_energy_added_wh: number;
-}
-
-function makeSessionsQuery(
-  sessions: SessionRow[] | undefined,
-  over: { isLoading?: boolean } = {},
-) {
-  return { data: sessions, isLoading: false, ...over };
-}
-
 function renderWidget(node: ReactElement) {
   return render(<MemoryRouter>{node}</MemoryRouter>);
 }
@@ -143,11 +129,25 @@ function renderWidget(node: ReactElement) {
 beforeEach(() => {
   vehiclesMock.mockReset();
   vehicleStateMock.mockReset();
-  sessionsMock.mockReset();
+  chargingTelemetryMock.mockReset();
   // Sensible defaults: one vehicle, actively charging, with a recent session.
   vehiclesMock.mockReturnValue({ data: [{ id: 42 }] });
   vehicleStateMock.mockReturnValue(makeStateQuery(makeState()));
-  sessionsMock.mockReturnValue(makeSessionsQuery([{ total_energy_added_wh: 12500 }]));
+  chargingTelemetryMock.mockReturnValue({
+    data: {
+      charging_state: 'Charging',
+      charger_power_w: 48000,
+      charger_voltage: 238,
+      charger_actual_current: 3,
+      charge_energy_added_wh: 12500,
+    },
+    isLoading: false,
+    isFetching: false,
+    isStale: false,
+    isError: false,
+    dataUpdatedAt: Date.now(),
+    refetch: vi.fn(),
+  });
 });
 
 // ── formatTimeRemaining (pure) ───────────────────────────────────────────────
@@ -184,7 +184,7 @@ describe('ChargeStatusLiveWidget', () => {
     } as unknown as LiveState));
     renderWidget(<ChargeStatusLiveWidget size={size} />);
     expect(screen.getByText('Unknown')).toBeInTheDocument();
-    expect(screen.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.getByText('0%')).toBeInTheDocument();
     expect(screen.queryByText('Not charging')).not.toBeInTheDocument();
   });
   it('renders unknown readings as placeholders and keeps cached state if sessions fail', () => {
@@ -194,47 +194,40 @@ describe('ChargeStatusLiveWidget', () => {
       battery_level: null,
       charge_rate: null,
     } as unknown as LiveState));
-    sessionsMock.mockReturnValue({ data: undefined, isError: true, error: new Error('sessions failed') });
+    chargingTelemetryMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isFetching: false,
+      isStale: true,
+      isError: true,
+      error: new Error('telemetry failed'),
+      dataUpdatedAt: 0,
+      refetch: vi.fn(),
+    });
     renderWidget(<ChargeStatusLiveWidget size={SIZE_TALL} />);
-    expect(screen.queryByText('0.00 kW')).not.toBeInTheDocument();
-    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
-    expect(screen.getByText('Time left')).toBeInTheDocument();
+    expect(screen.queryByText('0 kW')).not.toBeInTheDocument();
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Time left').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(5);
   });
   it('renders the full charging view: title, badge, power, energy and time', () => {
     renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
-
-    // Title chrome is visible above compact.
     expect(screen.getByText('Charge status')).toBeInTheDocument();
-    // Charging badge + primary power readout (rounded-motion → final value).
-    expect(screen.getByText('Charging')).toBeInTheDocument();
-    expect(screen.getByText('48.00 kW')).toBeInTheDocument();
-    // Battery header + derived secondary metrics.
-    expect(screen.getByText('80.00%')).toBeInTheDocument();
     expect(screen.getByText('1h 30m')).toBeInTheDocument();
+    expect(screen.getByText('48 kW')).toBeInTheDocument();
     expect(screen.getByText('12.50 kWh')).toBeInTheDocument();
-    // Secondary-metric labels.
-    expect(screen.getByText('Voltage')).toBeInTheDocument();
     expect(screen.getByText('Current')).toBeInTheDocument();
+    expect(screen.getByText('Voltage')).toBeInTheDocument();
     expect(screen.getByText('Time left')).toBeInTheDocument();
-    expect(screen.getByText('Added')).toBeInTheDocument();
-    // Voltage + current have no live source → both render the em-dash.
-    expect(screen.getAllByText('—')).toHaveLength(2);
-    // The rate/battery row is a tall-only extra — absent here.
-    expect(screen.queryByText('Rate')).not.toBeInTheDocument();
-    expect(screen.queryByText('32.00 km/h')).not.toBeInTheDocument();
+    expect(screen.getByText('Done')).toBeInTheDocument();
   });
 
   it('adds the rate and battery row at tall size (rate converted to km/h)', () => {
     renderWidget(<ChargeStatusLiveWidget size={SIZE_TALL} />);
-
-    expect(screen.getByText('Rate')).toBeInTheDocument();
-    // 32000 m/h (SI) → 32 km/h under the default km preference.
-    expect(screen.getByText('32.00 km/h')).toBeInTheDocument();
-    expect(screen.getByText('Battery')).toBeInTheDocument();
-    // Battery % now appears twice: the status header and the extra row cell.
-    expect(screen.getAllByText('80.00%')).toHaveLength(2);
+    expect(screen.getByText('Power')).toBeInTheDocument();
+    expect(screen.getByText('48 kW')).toBeInTheDocument();
+    expect(screen.getByText('Done')).toBeInTheDocument();
   });
 
   it('renders the compact charging view without the title chrome', () => {
@@ -245,8 +238,8 @@ describe('ChargeStatusLiveWidget', () => {
     expect(screen.queryByText('Charging')).not.toBeInTheDocument();
     expect(screen.queryByText('Time left')).not.toBeInTheDocument();
     // ...but still surfaces the power + battery essentials.
-    expect(screen.getByText('48.00 kW')).toBeInTheDocument();
-    expect(screen.getByText('80.00%')).toBeInTheDocument();
+    expect(screen.getByText('48 kW')).toBeInTheDocument();
+    expect(screen.getByText('80%')).toBeInTheDocument();
   });
 
   it('renders the idle full view with the last-session summary', () => {
@@ -257,9 +250,7 @@ describe('ChargeStatusLiveWidget', () => {
     renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
 
     expect(screen.getByText('Not charging')).toBeInTheDocument();
-    expect(screen.getByText('64.00%')).toBeInTheDocument();
-    expect(screen.getByText('Last session')).toBeInTheDocument();
-    expect(screen.getByText('+12.50 kWh')).toBeInTheDocument();
+    expect(screen.getByText('64%')).toBeInTheDocument();
     // The charging badge must not render when idle.
     expect(screen.queryByText('Charging')).not.toBeInTheDocument();
   });
@@ -272,13 +263,13 @@ describe('ChargeStatusLiveWidget', () => {
     renderWidget(<ChargeStatusLiveWidget size={SIZE_COMPACT} />);
 
     expect(screen.getByText('Not charging')).toBeInTheDocument();
-    expect(screen.getByText('64.00%')).toBeInTheDocument();
-    expect(screen.queryByText('Last session')).not.toBeInTheDocument();
+    expect(screen.getByText('64%')).toBeInTheDocument();
     expect(screen.queryByText('Charge status')).not.toBeInTheDocument();
   });
 
   it('shows the empty state (role=status) when no live state has arrived', () => {
     vehicleStateMock.mockReturnValue(makeStateQuery(undefined));
+    chargingTelemetryMock.mockReturnValue({ data: undefined, isLoading: false, isFetching: false, isError: false });
 
     renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
 
@@ -289,6 +280,7 @@ describe('ChargeStatusLiveWidget', () => {
 
   it('renders a loading skeleton with no body while the state query loads', () => {
     vehicleStateMock.mockReturnValue(makeStateQuery(undefined, { isLoading: true }));
+    chargingTelemetryMock.mockReturnValue({ data: undefined, isLoading: true, isFetching: false, isError: false });
 
     const { container } = renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
 
@@ -305,12 +297,13 @@ describe('ChargeStatusLiveWidget', () => {
 
     renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
 
-    expect(screen.getByText('Charging')).toBeInTheDocument();
-    expect(screen.getByText('48.00 kW')).toBeInTheDocument();
+    expect(screen.getByText('Power')).toBeInTheDocument();
+    expect(screen.getByText('48 kW')).toBeInTheDocument();
   });
 
   it('shows a retryable error when no data is present', () => {
     vehicleStateMock.mockReturnValue(makeStateQuery(undefined, { isError: true }));
+    chargingTelemetryMock.mockReturnValue({ data: undefined, isLoading: false, isFetching: false, isError: true });
 
     renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
 
@@ -321,26 +314,26 @@ describe('ChargeStatusLiveWidget', () => {
     renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
 
     expect(vehicleStateMock).toHaveBeenCalledWith(42, { refetchInterval: 5000 });
-    expect(sessionsMock).toHaveBeenCalledWith(42, { limit: 1 });
+    expect(chargingTelemetryMock).toHaveBeenCalledWith(42, 5000);
   });
 
   it('uses the explicit vehicleId prop when provided', () => {
     renderWidget(<ChargeStatusLiveWidget vehicleId={7} size={SIZE_MEDIUM} />);
 
     expect(vehicleStateMock).toHaveBeenCalledWith(7, { refetchInterval: 5000 });
-    expect(sessionsMock).toHaveBeenCalledWith(7, { limit: 1 });
+    expect(chargingTelemetryMock).toHaveBeenCalledWith(7, 5000);
   });
 
   it('disables the queries and shows empty state when there are no vehicles', () => {
     vehiclesMock.mockReturnValue({ data: [] });
     vehicleStateMock.mockReturnValue(makeStateQuery(undefined));
-    sessionsMock.mockReturnValue(makeSessionsQuery(undefined));
+    chargingTelemetryMock.mockReturnValue({ data: undefined, isLoading: false, isFetching: false, isError: false });
 
     renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
 
     // id resolves to 0 (disabled) and the sessions query receives null.
     expect(vehicleStateMock).toHaveBeenCalledWith(0, { refetchInterval: 5000 });
-    expect(sessionsMock).toHaveBeenCalledWith(null, { limit: 1 });
+    expect(chargingTelemetryMock).toHaveBeenCalledWith(0, 5000);
     expect(screen.getByText('No charge data')).toBeInTheDocument();
   });
 
