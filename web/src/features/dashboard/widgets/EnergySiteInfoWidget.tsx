@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next';
 import { Home } from 'lucide-react';
 import { useTeslaEnergySites, useTeslaEnergySiteInfo } from '@/api/hooks/useEnergy';
 import { knownNumber, knownString } from '@/api/dataState';
-import { DataProvenanceBadge } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
@@ -12,11 +11,10 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
-export default function EnergySiteInfoWidget({ size }: WidgetProps) {
+export default function EnergySiteInfoWidget(_props: WidgetProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatPower, formatEnergy } = useUnits();
-  const isCompact = size.cols <= 1;
 
   const {
     data: sites,
@@ -75,6 +73,18 @@ export default function EnergySiteInfoWidget({ size }: WidgetProps) {
   const batteryEnergy = formatEnergy(batteryCapacity);
 
   const gatewayFirmware = knownString(info?.version);
+  const backupReserve = knownNumber(info?.backup_reserve_percent);
+  const operationMode = knownString(info?.default_real_mode);
+
+  const operationModeLabel = operationMode == null
+    ? null
+    : operationMode === 'self_consumption'
+      ? t('energy.siteInfo.mode.selfConsumption', 'Self-Powered')
+      : operationMode === 'autonomous'
+        ? t('energy.siteInfo.mode.autonomous', 'Time-Based Control')
+        : operationMode === 'backup'
+          ? t('energy.siteInfo.mode.backup', 'Backup Only')
+          : operationMode;
 
   // Build entries for WidgetDetailCard
   const entries: DetailEntry[] = [];
@@ -100,8 +110,17 @@ export default function EnergySiteInfoWidget({ size }: WidgetProps) {
       value: gatewayFirmware,
       mono: true,
     });
-    // The installation timezone stays out of the widget: zone names are not
-    // shown on pages (the value remains in the API payload and exports).
+    entries.push({
+      id: 'backup-reserve',
+      label: t('widget.energySiteInfo.backupReserve', 'Backup reserve'),
+      value: backupReserve == null ? '—' : `${fmtInt(backupReserve)}%`,
+    });
+    entries.push({
+      id: 'operation-mode',
+      label: t('widget.energySiteInfo.operationMode', 'Operating mode'),
+      value: operationModeLabel,
+    });
+    // Installation timezone and calendar labels stay out of this card.
   }
 
   return (
@@ -111,7 +130,6 @@ export default function EnergySiteInfoWidget({ size }: WidgetProps) {
       loading={isLoading}
       dataState={dataState}
       loadingContent={<Skeleton className="h-full min-h-16 rounded-shape-sm" />}
-      status={!isCompact && <DataProvenanceBadge provenance={dataState.provenance} status={dataState.status} />}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -121,7 +139,6 @@ export default function EnergySiteInfoWidget({ size }: WidgetProps) {
       <div className="h-full min-w-0">
         <WidgetDetailCard
           entries={entries}
-          compact={isCompact}
           emptyMessage={
             !hasSites
               ? t('widget.energySiteInfo.noSite', 'No Tesla energy site linked')
