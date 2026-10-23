@@ -11,11 +11,13 @@ import { useChargingSessions, useChargingSessionDetail, useChargeTelemetry } fro
 import { useVehicles } from '@/api/hooks/useVehicles';
 
 import { convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetChartSummary, type ChartSummaryStat } from './shared';
+import { WidgetBigNumber, WidgetStatGrid, type ChartSummaryStat } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { classifyChargingSource, type ChargerKind } from '@/lib/chargerKind';
+import { dashboardTokens } from '../lib/dashboardTokens';
 
 interface ChartDatum extends ChartDataRow {
   time: string;
@@ -44,9 +46,9 @@ export function chargingAxisWidth(labels: string[], measure: (label: string) => 
 }
 
 export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber: fmt } = useNumberFormatting();
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber: fmt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const { formatDateShort, formatTime } = useDateFormat();
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
@@ -58,10 +60,18 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
     const list = sessions ?? [];
     if (list.length === 0) return null;
     const latest = list.reduce((a, b) =>
-      new Date(a.startedAt) > new Date(b.startedAt) ? a : b,
+      new Date(a.startedAt ?? a.started_at) > new Date(b.startedAt ?? b.started_at) ? a : b,
     );
     const id = Number(latest.id);
     return Number.isFinite(id) ? id : null;
+  }, [sessions]);
+
+  const latestSession = useMemo(() => {
+    const list = sessions ?? [];
+    if (list.length === 0) return null;
+    return list.reduce((a, b) =>
+      new Date(a.startedAt ?? a.started_at) > new Date(b.startedAt ?? b.started_at) ? a : b,
+    );
   }, [sessions]);
 
   const detailQuery = useChargingSessionDetail(latestSessionId);
@@ -110,28 +120,48 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       const ts = new Date(p.created_at);
       const power = knownNumber(p.power_w);
       return {
-        time: `${String(ts.getHours()).padStart(2, '0')}:${String(ts.getMinutes()).padStart(2, '0')}`,
+        time: Number.isNaN(ts.getTime()) ? '—' : formatTime(ts),
         power: power != null ? convertPowerFromSI(power, unitPrefs.power) : null,
         soc: knownNumber(p.battery_level) ?? knownNumber(p.soc),
       };
     });
-  }, [telemetry, unitPrefs.power]);
+  }, [telemetry, unitPrefs.power, formatTime]);
 
   const durationStr = useMemo(() => {
+    const startedAt = detail?.started_at ?? latestSession?.startedAt ?? latestSession?.started_at;
+    const endedAt = detail?.ended_at;
+    if (startedAt && endedAt) {
+      const seconds = (new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 1000;
+      if (Number.isFinite(seconds) && seconds >= 0) {
+        const mins = seconds / 60;
+        if (mins < 60) return t('widget.chargingSessionDetail.durationMinutes', '{{minutes}}m', { minutes: fmtNumber(mins, 0) });
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return m > 0
+          ? t('widget.chargingSessionDetail.durationHoursMinutes', '{{hours}}h {{minutes}}m', { hours: fmtNumber(h, 0), minutes: fmtNumber(m, 0) })
+          : t('widget.chargingSessionDetail.durationHours', '{{hours}}h', { hours: fmtNumber(h, 0) });
+      }
+    }
     if (!detail) return '—';
     const mins = knownNumber(detail.duration_min);
     if (mins == null || mins < 0) return '—';
-    if (mins < 60) return `${mins}m`;
+    if (mins < 60) return t('widget.chargingSessionDetail.durationMinutes', '{{minutes}}m', { minutes: fmtNumber(mins) });
     const h = Math.floor(mins / 60);
     const m = mins % 60;
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
-  }, [detail]);
+    return m > 0
+      ? t('widget.chargingSessionDetail.durationHoursMinutes', '{{hours}}h {{minutes}}m', { hours: fmtNumber(h), minutes: fmtNumber(m) })
+      : t('widget.chargingSessionDetail.durationHours', '{{hours}}h', { hours: fmtNumber(h) });
+  }, [detail, t, fmtNumber]);
 
   const peakPower = useMemo(() => {
     const points = telemetry ?? [];
     const powers = points.map(p => knownNumber(p.power_w)).filter((value): value is number => value != null);
-    return powers.length > 0 ? convertPowerFromSI(Math.max(...powers), unitPrefs.power) : null;
-  }, [telemetry, unitPrefs.power]);
+    if (powers.length > 0) {
+      return convertPowerFromSI(Math.max(...powers), unitPrefs.power);
+    }
+    const detailPeakW = knownNumber(detail?.peak_power_w);
+    return detailPeakW == null ? null : convertPowerFromSI(detailPeakW, unitPrefs.power);
+  }, [telemetry, detail?.peak_power_w, unitPrefs.power]);
 
   const charger = useMemo(
     () => classifyCharger(detail?.charger_type ?? null),
@@ -151,29 +181,43 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
     }
   }, [charger, t]);
 
+  const sessionContext = useMemo(() => {
+    const start = latestSession?.startedAt ?? latestSession?.started_at;
+    const dateLabel = start ? formatDateShort(start) : null;
+    const location = latestSession?.start_place?.trim() || null;
+    const locationWithCharger =
+      location && charger.kind === 'supercharger'
+        ? `${location} Supercharger`
+        : location;
+    const parts = [locationWithCharger, dateLabel].filter((part): part is string => Boolean(part));
+    return parts.join(' · ');
+  }, [latestSession, formatDateShort, charger.kind]);
+
   const stats = useMemo((): ChartSummaryStat[] => {
     if (!detail) return [];
+    const startSoc = knownNumber(detail.start_soc_pct);
+    const endSoc = knownNumber(detail.end_soc_pct);
+    const socValue = startSoc != null && endSoc != null
+      ? `${fmtNumber(startSoc)} → ${fmtNumber(endSoc)}`
+      : null;
     return [
       {
         label: t('widget.chargingSessionDetail.energy', 'Energy added'),
-        value: knownNumber(detail.total_energy_added_wh) == null ? null : fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh, unitPrefs.energy)),
+        value: knownNumber(detail.total_energy_added_wh) == null ? null : fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh, unitPrefs.energy), 1),
         unit: unitPrefs.energy,
       },
       {
-        label: t('widget.chargingSessionDetail.duration', 'Duration'),
-        value: durationStr,
-      },
-      {
         label: t('widget.chargingSessionDetail.peakPower', 'Peak power'),
-        value: peakPower == null ? null : fmtNumber(peakPower),
+        value: peakPower == null ? null : fmtNumber(peakPower, 1),
         unit: unitPrefs.power,
       },
       {
-        label: t('widget.chargingSessionDetail.charger', 'Charger'),
-        value: chargerLabel,
+        label: t('widget.chargingSessionDetail.socRange', 'SoC'),
+        value: socValue == null ? null : socValue.replace(/\b\d+(?:\.\d+)?\b/g, (value) => fmtNumber(Number(value), 0)),
+        unit: socValue == null ? undefined : '%',
       },
     ];
-  }, [detail, durationStr, peakPower, chargerLabel, t, unitPrefs.energy, unitPrefs.power, fmtNumber]);
+  }, [detail, peakPower, t, unitPrefs.energy, unitPrefs.power, fmtNumber]);
 
   const tick = isWide ? axisTick : axisTickSm;
   const axisLabels = useMemo(() => {
@@ -184,8 +228,8 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       return Math.sign(value) * Math.ceil(Math.abs(value) / magnitude) * magnitude;
     });
     return {
-      power: [0, ...powers, ...bounds].map(value => fmt(value)),
-      soc: [0, 25, 50, 75, 100].map(value => `${fmt(value)}%`),
+      power: [0, ...powers, ...bounds].map(value => fmt(value, 1)),
+      soc: [0, 25, 50, 75, 100].map(value => `${fmt(value, 0)}%`),
     };
   }, [chartData, fmt]);
   const powerAxisWidth = useMeasuredAxisWidth({
@@ -367,13 +411,38 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
           {null}
         </SourceContent>
       )}
-      <WidgetChartSummary
-        stats={stats}
-        chart={chart}
-        isEmpty={!detail && latestSessionId == null && chartData.length === 0}
-        emptyMessage={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
-        emptyIcon={<Zap className="h-5 w-5" />}
-      />
+      {!detail && latestSessionId == null && chartData.length === 0 ? (
+        <EmptyState
+          icon={<Zap className="h-5 w-5" />}
+          message={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
+          className="py-4"
+        />
+      ) : (
+        <div className="flex h-full min-w-0 flex-col">
+          {(sessionContext || durationStr !== '—') && (
+            <div className="flex items-start justify-between gap-3">
+              <span className={dashboardTokens.metricLabel}>
+                {sessionContext || t('widget.chargingSessionDetail.session', 'Charging session')}
+              </span>
+              {durationStr !== '—' && (
+                <span className={dashboardTokens.metricLabel}>{durationStr}</span>
+              )}
+            </div>
+          )}
+          <div className="mt-2 min-h-0 flex-1">{chart}</div>
+          <div className="mt-2">
+            <WidgetStatGrid
+              stats={stats.map((stat) => ({
+                label: stat.label,
+                value: stat.value,
+                unit: stat.unit,
+              }))}
+              cols={3}
+              maxPerRow={3}
+            />
+          </div>
+        </div>
+      )}
     </WidgetShell>
   );
 }

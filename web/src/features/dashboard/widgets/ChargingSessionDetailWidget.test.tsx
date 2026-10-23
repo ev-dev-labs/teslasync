@@ -9,8 +9,8 @@
  *   1. Two responsive layouts driven by `size.cols`:
  *        - compact (cols <= 1): a large kWh number + "kWh added" label + charger
  *          Badge and section title; no stat grid.
- *        - standard/wide (cols >= 2): a titled shell + a four-stat summary
- *          (Energy Added, Duration, Peak Power, Charger) + the chart.
+ *        - standard/wide (cols >= 2): a titled shell + a three-stat summary
+ *          (Energy Added, Peak Power, SoC) + the chart.
  *   2. The derivations:
  *        - energy: `convertEnergyFromSI(total_energy_added_wh, 'kWh')`
  *        - duration: minutes → "45m" / "1h 30m" / "2h" (no dangling "0m")
