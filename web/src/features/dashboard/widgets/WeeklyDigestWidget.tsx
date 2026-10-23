@@ -52,10 +52,8 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
     const eff = (data.efficiency ?? 0) * kmPerDisplayUnit;
     const prevEff = (data.prevEfficiency ?? 0) * kmPerDisplayUnit;
 
-    const energy = isFiniteNumber(data.energyWh) ? data.energyWh / 1000
-      : isFiniteNumber(data.energyKwh) ? data.energyKwh : null;
-    const prevEnergy = isFiniteNumber(data.prevEnergyWh) ? data.prevEnergyWh / 1000
-      : isFiniteNumber(data.prevEnergyKwh) ? data.prevEnergyKwh : null;
+    const energy = isFiniteNumber(data.energyWh) ? data.energyWh / 1000 : null;
+    const prevEnergy = isFiniteNumber(data.prevEnergyWh) ? data.prevEnergyWh / 1000 : null;
 
     const drives = data.drives ?? 0;
     const prevDrives = data.prevDrives ?? 0;

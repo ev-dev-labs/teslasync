@@ -33,12 +33,10 @@ const NOW = Date.parse('2026-07-05T12:00:00.000Z');
 const digest = {
   drives: 8,
   distanceKm: 200,
-  energyKwh: 40,
   cost: 5.6,
   efficiency: 200,
   prevDrives: 4,
   prevDistanceKm: 100,
-  prevEnergyKwh: 50,
   prevCost: 7,
   prevEfficiency: 250,
   energyWh: 40000,

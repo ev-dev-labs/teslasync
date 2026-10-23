@@ -59,8 +59,8 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
   const telemetryPower = knownNumber(telemetry?.charger_power_w);
-  const statePowerKw = knownNumber(state?.charger_power);
-  const powerWatts = telemetryPower ?? (statePowerKw == null ? null : statePowerKw * 1000);
+  const statePowerKilowatts = knownNumber(state?.charger_power);
+  const powerWatts = telemetryPower ?? (statePowerKilowatts == null ? null : statePowerKilowatts * 1000);
   const metrics = {
     power: powerWatts,
     voltage: knownNumber(telemetry?.charger_voltage),

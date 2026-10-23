@@ -191,12 +191,10 @@ export interface StateSummary {
 export interface WeeklyDigestData {
   drives: number;
   distanceKm: number;
-  energyKwh: number;
   cost: number;
   efficiency: number;
   prevDrives: number;
   prevDistanceKm: number;
-  prevEnergyKwh: number;
   prevCost: number;
   prevEfficiency: number;
   /** Weekly energy in watt-hours (Wh, SI). Mapped from the wire's kWh. */

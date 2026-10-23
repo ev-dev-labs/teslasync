@@ -53,10 +53,8 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
       ? convertDistanceFromSI(convertDistanceToSI(data.distanceKm, 'km'), distanceUnit) : null;
     const prevDistance = isFiniteNumber(data.prevDistanceKm)
       ? convertDistanceFromSI(convertDistanceToSI(data.prevDistanceKm, 'km'), distanceUnit) : null;
-    const energy = isFiniteNumber(data.energyWh) ? data.energyWh / 1000
-      : isFiniteNumber(data.energyKwh) ? data.energyKwh : null;
-    const prevEnergy = isFiniteNumber(data.prevEnergyWh) ? data.prevEnergyWh / 1000
-      : isFiniteNumber(data.prevEnergyKwh) ? data.prevEnergyKwh : null;
+    const energy = isFiniteNumber(data.energyWh) ? data.energyWh / 1000 : null;
+    const prevEnergy = isFiniteNumber(data.prevEnergyWh) ? data.prevEnergyWh / 1000 : null;
     const kmPerDisplayUnit = convertDistanceFromSI(convertDistanceToSI(1, distanceUnit), 'km');
     const efficiency = isFiniteNumber(data.efficiency) ? data.efficiency * kmPerDisplayUnit : null;
     const prevEfficiency = isFiniteNumber(data.prevEfficiency) ? data.prevEfficiency * kmPerDisplayUnit : null;

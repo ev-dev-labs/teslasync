@@ -42,12 +42,10 @@ function makeDigest(overrides: Record<string, unknown> = {}) {
   return {
     drives: 8,
     distanceKm: 100,
-    energyKwh: 25,
     cost: 3.5,
     efficiency: 250,
     prevDrives: 5,
     prevDistanceKm: 80,
-    prevEnergyKwh: 20,
     prevCost: 2.8,
     prevEfficiency: 300,
     energyWh: 25000,
