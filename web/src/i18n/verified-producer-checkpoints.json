@@ -608,9 +608,19 @@
     "sha256": "a7306c8d6a13d8d4f50a47993831adabd8d79076675dfb2057414351acc100ef"
   },
   {
+    "file": "web/src/features/dashboard/widgets/ChargeCostTrackerWidget.tsx",
+    "calls": 14,
+    "sha256": "8af29a65ccaa4add819e44114fc4285be04ef88a5e8063058d7cf911bda5f9cb"
+  },
+  {
     "file": "web/src/features/dashboard/widgets/DestinationETAWidget.tsx",
     "calls": 14,
     "sha256": "6565c005699ffce7e15a69dc2cb017da014c719b79bc4a43287dcfcc49e9847b"
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/EnergyFlowWidget.tsx",
+    "calls": 10,
+    "sha256": "a61a8c6163b86bcbe0c23cb79b75077fc09c2daf645ef3ccfdcae3a4398a70e8"
   },
   {
     "file": "web/src/features/dashboard/widgets/FsdWeeklyWidget.tsx",
@@ -628,9 +638,24 @@
     "sha256": "61237693fbae45ddeecd0859f9fd81ec50bdd700686fb36ea9d365c50cc80291"
   },
   {
+    "file": "web/src/features/dashboard/widgets/ProjectedRangeWidget.tsx",
+    "calls": 21,
+    "sha256": "a4b1990141819f2a8110bd855d9eb377c33af8500deea98088572ecaf80a8cd3"
+  },
+  {
     "file": "web/src/features/dashboard/widgets/QuickNavWidget.tsx",
     "calls": 6,
     "sha256": "798b6e322a672ebfde97376d6db6c940a8066729b9b157c22d152b63537c0d21"
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/RangeBarWidget.tsx",
+    "calls": 13,
+    "sha256": "0693c004a769e8dcf6e512d3da5b38ba1ffeadabc013daf5176686f8b36cde79"
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/RangeEstimateWidget.tsx",
+    "calls": 10,
+    "sha256": "2e6f086ccabc1fde21b88e394b016e37bb40d0a617283bdd81fb960215c9ac6a"
   },
   {
     "file": "web/src/features/dashboard/widgets/RecentDrivesWidget.tsx",

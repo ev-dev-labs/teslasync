@@ -18526,7 +18526,8 @@
       "savingsDescription": "Estimated gasoline cost minus charge cost; distance uses the existing 3.5 miles per kWh assumption.",
       "summaryTitle": "Charge cost sources",
       "summaryDescription": "Recorded and inferred charging costs remain distinct from measured drive costs; configured gas and electricity assumptions are retained.",
-      "summaryScope": "Vehicle {{vehicleId}}; rolling 30-day start {{start}}, at most 100 returned sessions, no explicit end bound"
+      "summaryScope": "Vehicle {{vehicleId}}; rolling 30-day start {{start}}, at most 100 returned sessions, no explicit end bound",
+      "avgRate": "Avg rate"
     },
     "chargeHistory": {
       "title": "Charge history",
