@@ -70,7 +70,7 @@ vi.mock('./shared', () => ({
     return (
       <div data-testid="flow-diagram" data-empty={props.emptyMessage}>
         {props.nodes.map((n) => (
-          <div key={n.id} data-testid={`node-${n.id}`} data-value={String(n.value)}>
+          <div key={n.id} data-testid={`node-${n.id}`} data-value={String(n.value)} data-position={n.position}>
             <span data-testid={`node-${n.id}-label`}>{n.label}</span>
             <span data-testid={`node-${n.id}-value`}>{n.formattedValue}</span>
           </div>
@@ -81,6 +81,7 @@ vi.mock('./shared', () => ({
             data-testid={`arrow-${a.from}-${a.to}`}
             data-active={String(a.active)}
             data-value={String(a.value)}
+            data-label={a.label ?? ''}
           />
         ))}
       </div>
@@ -294,7 +295,8 @@ describe('EnergyFlowWidget — node derivation', () => {
 
     const battery = nodeById('battery');
     expect(battery?.value).toBe(72);
-    expect(battery?.formattedValue).toBe('72.00%');
+    expect(battery?.formattedValue).toBe('72%');
+    expect(battery?.position).toBe('center');
     expect(screen.getByTestId('node-battery-label')).toHaveTextContent('Battery');
   });
 
@@ -305,7 +307,10 @@ describe('EnergyFlowWidget — node derivation', () => {
     const motor = nodeById('motor');
     expect(motor?.label).toBe('Consuming');
     expect(motor?.value).toBe(12_300);
-    expect(motor?.formattedValue).toBe('12.30 kW');
+    expect(motor?.position).toBe('right');
+    // Power appears once, on the flowing link, not repeated on the node.
+    expect(motor?.formattedValue).toBe('');
+    expect(arrowByEnds('battery', 'motor')?.label).toBe('12.30 kW');
   });
 
   it('labels the motor "Regenerating" and uses the magnitude of a negative power', () => {
@@ -315,7 +320,7 @@ describe('EnergyFlowWidget — node derivation', () => {
     const motor = nodeById('motor');
     expect(motor?.label).toBe('Regenerating');
     expect(motor?.value).toBe(8_500);
-    expect(screen.getByTestId('node-motor-value')).toHaveTextContent('8.50 kW');
+    expect(arrowByEnds('motor', 'battery')?.label).toBe('8.50 kW');
   });
 
   it('labels the motor "Standby" and preserves a measured zero power', () => {
@@ -324,7 +329,8 @@ describe('EnergyFlowWidget — node derivation', () => {
 
     const motor = nodeById('motor');
     expect(motor?.label).toBe('Standby');
-    expect(motor?.formattedValue).toBe('0.00 kW');
+    expect(motor?.formattedValue).toBe('');
+    expect(arrowByEnds('battery', 'motor')?.label).toBeUndefined();
   });
 
   it('adds a charger node with "N.N kW" only while charging', () => {
@@ -333,7 +339,10 @@ describe('EnergyFlowWidget — node derivation', () => {
 
     const charger = nodeById('charger');
     expect(charger?.value).toBe(48);
-    expect(charger?.formattedValue).toBe('48.00 kW');
+    expect(charger?.label).toBe('Wall connector');
+    expect(charger?.position).toBe('left');
+    expect(charger?.formattedValue).toBe('');
+    expect(arrowByEnds('charger', 'battery')?.label).toBe('48.00 kW');
     expect(screen.getByTestId('node-charger')).toBeInTheDocument();
   });
 
@@ -400,8 +409,9 @@ describe('EnergyFlowWidget — null safety', () => {
     stateMock.mockReturnValue({ ...q, data: { state: makeState({ power: 0, battery_level: 0 }), live: false, verifiedFields: [] } });
     renderWidget();
     expect(nodeById('battery')?.formattedValue).toBe('—');
-    expect(nodeById('motor')?.formattedValue).toBe('—');
+    expect(nodeById('motor')?.formattedValue).toBe('');
     expect(nodeById('motor')?.label).toBe('Unknown');
+    expect(arrowByEnds('battery', 'motor')?.label).toBeUndefined();
   });
 
   it('retains the diagram during a background refresh and marks the shell busy', () => {
@@ -422,14 +432,15 @@ describe('EnergyFlowWidget — null safety', () => {
   it('does not activate a charger arrow for an unmeasured charging power', () => {
     setState({ state: makeState({ is_charging: true, charger_power: undefined as unknown as number }) });
     renderWidget();
-    expect(nodeById('charger')?.formattedValue).toBe('—');
+    expect(nodeById('charger')?.formattedValue).toBe('');
     expect(arrowByEnds('charger', 'battery')?.active).toBe(false);
+    expect(arrowByEnds('charger', 'battery')?.label).toBeUndefined();
   });
   it('retains measured SoC and power on a failed cached refresh', () => {
     setState({ state: makeState({ battery_level: 72, power: 12_300 }), isError: true });
     renderWidget();
-    expect(nodeById('battery')?.formattedValue).toBe('72.00%');
-    expect(nodeById('motor')?.formattedValue).toBe('12.30 kW');
+    expect(nodeById('battery')?.formattedValue).toBe('72%');
+    expect(arrowByEnds('battery', 'motor')?.label).toBe('12.30 kW');
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -446,7 +457,7 @@ describe('EnergyFlowWidget — null safety', () => {
 
     expect(nodeById('battery')?.formattedValue).toBe('—');
     expect(nodeById('motor')?.label).toBe('Unknown');
-    expect(nodeById('motor')?.formattedValue).toBe('—');
+    expect(nodeById('motor')?.formattedValue).toBe('');
     expect(nodeById('charger')).toBeUndefined();
     expect(arrowByEnds('battery', 'motor')?.active).toBe(false);
     expect(arrowByEnds('motor', 'battery')?.active).toBe(false);
