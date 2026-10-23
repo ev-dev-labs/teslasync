@@ -52,22 +52,15 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
   });
 
   const nodes = useMemo<FlowNode[]>(() => {
-    // After layout: Wall Connector (left) -> Battery (centre) -> Car (right).
-    // Power appears once, on the flowing link (see arrows); only the battery
-    // node carries a reading (its SoC). Charger/car readings stay blank so
-    // the value is never repeated (spec rule 3).
     const result: FlowNode[] = [];
-
-    if (isCharging) {
-      result.push({
-        id: 'charger',
-        label: t('widget.wallConnector.title', 'Wall connector'),
-        value: chargerPower ?? 0,
-        formattedValue: '',
-        icon: <Plug className="h-2.5 w-2.5" />,
-        position: 'left',
-      });
-    }
+    result.push({
+      id: 'charger',
+      label: t('widget.wallConnector.title', 'Wall connector'),
+      value: chargerPower ?? 0,
+      formattedValue: '',
+      icon: <Plug className="h-2.5 w-2.5" />,
+      position: 'left',
+    });
 
     result.push(
       {
@@ -84,7 +77,9 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
           ? t('widget.consuming', 'Consuming')
           : isRegen
             ? t('widget.regenerating', 'Regenerating')
-            : power == null ? t('hero.unknownStatus', 'Unknown') : t('widget.standby', 'Standby'),
+            : power == null
+              ? t('hero.unknownStatus', 'Unknown')
+                : `${t('widget.car', 'Car')} (${t('widget.energyFlowAnimated.idle', 'Idle')})`,
         value: absPower ?? 0,
         formattedValue: '',
         icon: <Car className="h-2.5 w-2.5" />,
@@ -102,14 +97,14 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
         to: 'motor',
         value: isConsuming ? absPower ?? 0 : 0,
         active: isConsuming,
-        label: isConsuming ? formatPower(absPower) : undefined,
+        label: isConsuming ? formatPower(absPower, { precision: 1 }) : undefined,
       },
       {
         from: 'motor',
         to: 'battery',
         value: isRegen ? absPower ?? 0 : 0,
         active: isRegen,
-        label: isRegen ? formatPower(absPower) : undefined,
+        label: isRegen ? formatPower(absPower, { precision: 1 }) : undefined,
       },
     ];
 
@@ -119,7 +114,8 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
         to: 'battery',
         value: chargerPower ?? 0,
         active: chargerPower != null && chargerPower > 0,
-        label: chargerPower != null && chargerPower > 0 ? formatPower(chargerPower * 1000) : undefined,
+        label: chargerPower != null && chargerPower > 0 ? formatPower(chargerPower * 1000, { precision: 1 }) : undefined,
+        color: 'text-emerald-400',
       });
     }
 

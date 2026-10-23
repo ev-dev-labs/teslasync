@@ -6,7 +6,7 @@
  * vehicle, else id `0`), subscribes to `useVehicleState` on a 5s poll, and folds
  * the live power/charging snapshot into a `WidgetFlowDiagram` of nodes + arrows:
  *   • a `battery` node (SoC %) — always present;
- *   • a `motor` node whose label flips Consuming / Regenerating / Standby with the
+ *   • a `motor` node whose label flips Consuming / Regenerating / Car (idle) with the
  *     sign of `power`, formatted as "N.N kW" (or "—" at standby);
  *   • an optional `charger` node + `charger → battery` arrow while charging;
  *   • directional `battery → motor` (discharge) and `motor → battery` (regen)
@@ -310,7 +310,7 @@ describe('EnergyFlowWidget — node derivation', () => {
     expect(motor?.position).toBe('right');
     // Power appears once, on the flowing link, not repeated on the node.
     expect(motor?.formattedValue).toBe('');
-    expect(arrowByEnds('battery', 'motor')?.label).toBe('12.30 kW');
+    expect(arrowByEnds('battery', 'motor')?.label).toBe('12.3 kW');
   });
 
   it('labels the motor "Regenerating" and uses the magnitude of a negative power', () => {
@@ -320,15 +320,15 @@ describe('EnergyFlowWidget — node derivation', () => {
     const motor = nodeById('motor');
     expect(motor?.label).toBe('Regenerating');
     expect(motor?.value).toBe(8_500);
-    expect(arrowByEnds('motor', 'battery')?.label).toBe('8.50 kW');
+    expect(arrowByEnds('motor', 'battery')?.label).toBe('8.5 kW');
   });
 
-  it('labels the motor "Standby" and preserves a measured zero power', () => {
+  it('labels the car idle and preserves a measured zero power', () => {
     setState({ state: makeState({ power: 0 }) });
     renderWidget();
 
     const motor = nodeById('motor');
-    expect(motor?.label).toBe('Standby');
+    expect(motor?.label).toBe('Car (Idle)');
     expect(motor?.formattedValue).toBe('');
     expect(arrowByEnds('battery', 'motor')?.label).toBeUndefined();
   });
@@ -342,16 +342,16 @@ describe('EnergyFlowWidget — node derivation', () => {
     expect(charger?.label).toBe('Wall connector');
     expect(charger?.position).toBe('left');
     expect(charger?.formattedValue).toBe('');
-    expect(arrowByEnds('charger', 'battery')?.label).toBe('48.00 kW');
+    expect(arrowByEnds('charger', 'battery')?.label).toBe('48.0 kW');
     expect(screen.getByTestId('node-charger')).toBeInTheDocument();
   });
 
-  it('omits the charger node when the vehicle is not charging', () => {
+  it('keeps the wall connector node idle when the vehicle is not charging', () => {
     setState({ state: makeState({ is_charging: false }) });
     renderWidget();
 
-    expect(nodeById('charger')).toBeUndefined();
-    expect(screen.queryByTestId('node-charger')).toBeNull();
+    expect(nodeById('charger')).toBeDefined();
+    expect(screen.getByTestId('node-charger')).toBeInTheDocument();
   });
 });
 
@@ -440,7 +440,7 @@ describe('EnergyFlowWidget — null safety', () => {
     setState({ state: makeState({ battery_level: 72, power: 12_300 }), isError: true });
     renderWidget();
     expect(nodeById('battery')?.formattedValue).toBe('72%');
-    expect(arrowByEnds('battery', 'motor')?.label).toBe('12.30 kW');
+    expect(arrowByEnds('battery', 'motor')?.label).toBe('12.3 kW');
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -458,7 +458,7 @@ describe('EnergyFlowWidget — null safety', () => {
     expect(nodeById('battery')?.formattedValue).toBe('—');
     expect(nodeById('motor')?.label).toBe('Unknown');
     expect(nodeById('motor')?.formattedValue).toBe('');
-    expect(nodeById('charger')).toBeUndefined();
+    expect(nodeById('charger')).toBeDefined();
     expect(arrowByEnds('battery', 'motor')?.active).toBe(false);
     expect(arrowByEnds('motor', 'battery')?.active).toBe(false);
   });
