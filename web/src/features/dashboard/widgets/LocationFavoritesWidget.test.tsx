@@ -187,12 +187,12 @@ describe('LocationFavoritesWidget states', () => {
     }));
     renderWidget(STANDARD);
     expect(screen.getByText('Cached home')).toBeInTheDocument();
-    expect(screen.getByText(/0×/)).toBeInTheDocument();
+    expect(screen.getByText('0 visits')).toBeInTheDocument();
   });
-  it('does not call an absent presence snapshot Other', () => {
+  it('shows an empty state when no presence or location data exists', () => {
     renderWidget(COMPACT);
     expect(screen.queryByText('Other')).not.toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('No favorite locations')).toBeInTheDocument();
   });
   it('retains its heading above a loading skeleton without empty copy', () => {
     mockUseLocations.mockReturnValue(qr({ isLoading: true, data: undefined }));
@@ -222,7 +222,7 @@ describe('LocationFavoritesWidget states', () => {
 // ── Component: standard layout ──────────────────────────────────────────────
 
 describe('LocationFavoritesWidget standard layout', () => {
-  it('renders the title, presence badge, destination chip and ranked locations', () => {
+  it('renders the title, Current pill and ranked locations without extra badge rows', () => {
     mockUseSnapshot.mockReturnValue(
       qr({ data: { located_at_home: true, destination_name: 'Supercharger' } }),
     );
@@ -237,40 +237,38 @@ describe('LocationFavoritesWidget standard layout', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('Favorite locations')).toBeInTheDocument();
-    // Presence badge is driven by the snapshot (home → "Home").
-    expect(screen.getByText('Home')).toBeInTheDocument();
-    // Active-navigation destination chip.
-    expect(screen.getByText(/Supercharger/)).toBeInTheDocument();
-    // Ranked list rows + the "<count>× · <relative>" formatted value.
     expect(screen.getByText('Home Base')).toBeInTheDocument();
     expect(screen.getByText('Office')).toBeInTheDocument();
-    expect(screen.getByText('12× · —')).toBeInTheDocument();
+    expect(screen.getByText('12 visits')).toBeInTheDocument();
+    expect(screen.queryByText('Supercharger')).not.toBeInTheDocument();
   });
 
-  it('exposes the presence emoji with an accessible name and hides the destination chip when idle', () => {
+  it('marks the source-backed current row and hides extra destination UI when idle', () => {
     mockUseSnapshot.mockReturnValue(qr({ data: { located_at_favorite: true } }));
     mockUseLocations.mockReturnValue(
       qr({ data: [{ id: 'l1', addressName: 'Cafe', visitCount: 3, lastVisited: null }] }),
     );
     renderWidget(STANDARD);
 
-    // aria-label carries meaning for the icon-only emoji.
-    expect(screen.getByRole('img', { name: 'Favorite' })).toHaveTextContent('⭐');
-    // No destination_name → no "→ …" chip rendered.
-    expect(screen.queryByText(/→/)).toBeNull();
+    expect(screen.getByText('Cafe')).toBeInTheDocument();
+    expect(screen.getByText('3 visits')).toBeInTheDocument();
+    expect(screen.queryByText('Current')).not.toBeInTheDocument();
   });
 });
 
 // ── Component: compact layout ───────────────────────────────────────────────
 
 describe('LocationFavoritesWidget compact layout', () => {
-  it('identifies the presence badge and its accessible emoji', () => {
+  it('renders favorite locations in the compact layout instead of a detached badge', () => {
     mockUseSnapshot.mockReturnValue(qr({ data: { located_at_work: true } }));
+    mockUseLocations.mockReturnValue(qr({
+      data: [{ id: 'work', addressName: 'Work', visitCount: 4 }],
+    }));
     renderWidget(COMPACT);
 
     expect(screen.getByRole('heading', { name: 'Favorite locations' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Work' })).toHaveTextContent('🏢');
     expect(screen.getByText('Work')).toBeInTheDocument();
+    expect(screen.getByText(/4 visits/)).toBeInTheDocument();
   });
 
   it('refetches BOTH the snapshot and the locations on refresh — the compact badge is snapshot-derived', () => {
@@ -306,7 +304,7 @@ describe('LocationFavoritesWidget vehicle selection', () => {
     expect(rows[0]).toHaveTextContent('First tied favorite');
     expect(rows[1]).toHaveTextContent('Second tied favorite');
     expect(rows[2]).toHaveTextContent('Measured zero');
-    expect(rows[2]).toHaveTextContent('0×');
+    expect(rows[2]).toHaveTextContent('0 visits');
     expect(rows[3]).toHaveTextContent('Unknown count');
     expect(rows[3].querySelector('[aria-hidden="true"]')).toBeNull();
     expect(screen.getByText('Unknown count')).toHaveClass('whitespace-normal');
