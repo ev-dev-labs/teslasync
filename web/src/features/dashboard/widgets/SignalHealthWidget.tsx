@@ -1,20 +1,16 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { Badge, Caption, PanelTitle } from '@/components/ui';
+import { Badge, Caption, PanelTitle, Text } from '@/components/ui';
 import { combineDataStates, deriveDataState } from '@/api/dataState';
 import { EmptyState, QueryError } from '@/components/feedback';
-import { KVList } from '@/components/data-display';
 import { useSignalStats, useSignalGaps, useSignals } from '@/api/hooks/useTelemetry';
 import { useVehicles } from '@/api/hooks/useVehicles';
 
-import { formatRelative } from '@/lib/dateFormat';
 import { severityTokens } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -25,7 +21,6 @@ interface GapSignal {
 }
 
 export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -161,6 +156,17 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
   }
 
   const hasData = stats || signals || gapData;
+  const observedTotal = analysis.activeCount + analysis.staleCount;
+  const coveragePercent = observedTotal > 0
+    ? Math.round((analysis.activeCount / observedTotal) * 100)
+    : null;
+  const meterColor = healthLevel === 'green'
+    ? 'bg-[var(--semantic-success)]'
+    : healthLevel === 'amber'
+      ? 'bg-[var(--semantic-warning)]'
+      : healthLevel === 'red'
+        ? 'bg-[var(--semantic-danger)]'
+        : 'bg-[var(--text-muted)]';
 
   return (
     <WidgetShell
@@ -184,65 +190,68 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
         /* ── Compact layout (1-col) ── */
         <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
           <Badge variant={healthBadgeVariant} className="text-xs">
-            {gapData == null ? '—' : `${analysis.activeCount}/${analysis.activeCount + analysis.staleCount}`}
+            {coveragePercent == null ? '—' : `${coveragePercent}%`}
           </Badge>
           <Caption>{healthLabel}</Caption>
-          <WidgetBigNumber value={analysis.totalSignals == null ? null : fmtInt(analysis.totalSignals)} label={t('widget.signalHealth.signals', 'Signals')} />
-          {analysis.freshnessAge != null && (
-            <Caption className={healthColor}>
-              {formatAge(analysis.freshnessAge)}
-            </Caption>
-          )}
+          <WidgetBigNumber
+            value={observedTotal > 0 ? `${analysis.activeCount}/${observedTotal}` : null}
+            label={t('widget.signalHealth.signalsReporting', 'Signals reporting')}
+            animated={false}
+          />
         </div>
       ) : (
         /* ── Standard / Wide layout ── */
         <div className="flex flex-col gap-3 h-full">
-          {/* Stats grid */}
-          <DashboardSourceBrief
-            metrics={[
-              { metricId: 'count', rawValue: analysis.totalSignals, label: t('widget.signalHealth.totalSignals', 'Total signals'), description: t('widget.signalHealth.catalogDescription', 'Returned signal catalog size; an absent catalog is unknown.') },
-              { metricId: 'count', rawValue: gapData == null ? null : analysis.activeCount, label: t('widget.signalHealth.active', 'Active'), description: t('widget.signalHealth.activeDescription', 'Observed entries with a parseable timestamp within this widget’s five-minute threshold.') },
-              { metricId: 'count', rawValue: gapData == null ? null : analysis.staleCount, label: t('widget.signalHealth.withGaps', 'With gaps'), description: t('widget.signalHealth.gapsDescription', 'Older observations and missing or unparseable timestamps remain signal gaps.') },
-              { metricId: 'duration', rawValue: analysis.freshnessAge, label: t('widget.signalHealth.freshness', 'Freshness'), description: t('widget.signalHealth.freshnessDescription', 'Age in seconds of the newest valid observation; absent observations remain unknown.'), display: { formatter: raw => ({ value: formatAge(Number(raw)), unit: '' }) } },
-            ]}
-            state={state} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
-            title={t('widget.signalHealth.title', 'Signal health')}
-            description={t('widget.signalHealth.summaryDescription', 'Catalog, statistics and observations recover independently. The five-minute widget threshold does not certify distributed live-state freshness.')}
-            scope={t('widget.signalHealth.summaryScope', 'Vehicle {{vehicleId}}; current catalog and returned observations only', { vehicleId: id })}
-            loading={statsLoading && !hasData} testId="signal-health-operational-brief"
-          />
-
-          {/* Health badge */}
-          <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-            <Caption>
-              {t('widget.signalHealth.status', 'Status')}
-            </Caption>
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <WidgetBigNumber
+              value={observedTotal > 0 ? `${analysis.activeCount}/${observedTotal}` : null}
+              label={t('widget.signalHealth.signalsReporting', 'Signals reporting')}
+              animated={false}
+              size="primary"
+            />
             <Badge variant={healthBadgeVariant} className="text-2xs">
               {healthLabel}
             </Badge>
           </div>
 
-          {/* Wide view: stale signal list */}
+          <div
+            role="progressbar"
+            aria-label={t('widget.signalHealth.reportingCoverage', 'Reporting coverage')}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={coveragePercent ?? undefined}
+            className="h-1.5 overflow-hidden rounded-shape-sm bg-[var(--track)]"
+          >
+            {coveragePercent != null && (
+              <div className={`h-full rounded-shape-sm ${meterColor}`} style={{ width: `${coveragePercent}%` }} />
+            )}
+          </div>
+
           {isWide && (
             <div className="mt-auto pt-2 border-t border-[var(--border-subtle)] flex-1 min-h-0 overflow-y-auto">
               <PanelTitle className="mb-1.5">
                 {t('widget.signalHealth.staleSignals', 'Stale / gap signals')}
               </PanelTitle>
               <div className="space-y-1">
-                <KVList
-                  layout="responsive"
-                  wrap
-                  items={analysis.gapSignals.slice(0, isCompact ? 3 : 15).map((sig) => ({
-                    id: sig.name,
-                    label: sig.name,
-                    value: sig.lastSeen ? formatRelative(sig.lastSeen) : '—',
-                  }))}
-                />
                 {analysis.gapSignals.length === 0 && <EmptyState message={gapData == null
                   ? t('widget.signalHealth.noData', 'No signal health data')
                   : t('widget.signalHealth.noGaps', 'No observed signal gaps')}
                   // no-action: A successful observation without gaps needs no corrective action.
                   action={gapData == null ? { label: t('common.refresh', 'Refresh'), onClick: refresh } : undefined} />}
+                {analysis.gapSignals.map((sig) => {
+                  const ageSeconds = sig.lastSeen
+                    ? Math.max(0, Math.floor((Date.now() - new Date(sig.lastSeen).getTime()) / 1000))
+                    : null;
+                  const detail = ageSeconds == null
+                    ? t('widget.signalHealth.gap', 'Gap')
+                    : `${t('widget.signalHealth.stale', 'Stale')} · ${formatAge(ageSeconds)}`;
+                  return (
+                    <div key={sig.name} className="flex min-w-0 items-baseline justify-between gap-3 min-h-8 py-1.5">
+                      <Text variant="bodySm" mono className="min-w-0 truncate">{sig.name}</Text>
+                      <Caption className="shrink-0">{detail}</Caption>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
