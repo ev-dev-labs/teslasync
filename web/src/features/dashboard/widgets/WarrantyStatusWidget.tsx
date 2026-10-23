@@ -20,8 +20,11 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 /** Safely extract a string from an unknown value */
 export function asString(val: unknown): string | null {
   if (val == null) return null;
-  if (typeof val === 'string' && val.length > 0) return val;
-  if (typeof val === 'number') return String(val);
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof val === 'number' && Number.isFinite(val)) return String(val);
   return null;
 }
 
@@ -61,6 +64,11 @@ export function daysUntil(dateStr: string | null): number | null {
   const expiryUtc = Date.UTC(expiry.getUTCFullYear(), expiry.getUTCMonth(), expiry.getUTCDate());
   const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   return Math.floor((expiryUtc - todayUtc) / (1000 * 60 * 60 * 24));
+}
+
+/** Keep coverage date strings tied to a real calendar date. */
+function validWarrantyDate(value: string | null): string | null {
+  return value != null && daysUntil(value) != null ? value : null;
 }
 
 /** Badge variant based on days remaining */
@@ -112,11 +120,11 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
   const isCompact = size.cols <= 1;
 
   // Extract key warranty fields from the untyped data
-  const expiryDate = asString(
+  const expiryDate = validWarrantyDate(asString(
     warrantyData?.warranty_expiry_date
     ?? warrantyData?.expiry_date
     ?? warrantyData?.basic_expiry_date,
-  );
+  ));
   const daysRemaining = daysUntil(expiryDate);
 
   const mileageLimitM = asNumber(
@@ -154,11 +162,11 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
   const effectiveDays = mileageExceeded ? 0 : mileageUnknown ? null : daysRemaining;
   const variant = statusVariant(effectiveDays);
 
-  const startDate = asString(
+  const startDate = validWarrantyDate(asString(
     warrantyData?.warranty_start_date
     ?? warrantyData?.start_date
     ?? warrantyData?.in_service_date,
-  );
+  ));
 
   const formatYearsMonths = useCallback((days: number | null): string | null => {
     if (days == null) return null;
@@ -215,60 +223,78 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
   // ── Standard layout (2×2): progress bars + coverage badges ──
   const basicCoverage = warrantyData?.basic;
   const batteryCoverage = warrantyData?.battery_drive_unit;
-  const basicExpiry = asString(
+  const basicExpiry = validWarrantyDate(asString(
     (typeof basicCoverage === 'object' && basicCoverage !== null ? (basicCoverage as Record<string, unknown>).expiry_date : null)
     ?? warrantyData?.basic_expiry_date
     ?? expiryDate,
-  );
-  const batteryExpiry = asString(
+  ));
+  const batteryExpiry = validWarrantyDate(asString(
     (typeof batteryCoverage === 'object' && batteryCoverage !== null ? (batteryCoverage as Record<string, unknown>).expiry_date : null)
     ?? warrantyData?.battery_drive_unit_expiry_date
     ?? (expiryDate !== basicExpiry ? expiryDate : null),
-  );
+  ));
   const basicDays = daysUntil(basicExpiry);
   const batteryDays = daysUntil(batteryExpiry);
-  const basicStart = asString(
+  const basicDaysEffective = mileageExceeded ? 0 : basicDays;
+  const batteryDaysEffective = mileageExceeded ? 0 : batteryDays;
+  const basicStart = validWarrantyDate(asString(
     (typeof basicCoverage === 'object' && basicCoverage !== null ? (basicCoverage as Record<string, unknown>).start_date : null)
     ?? startDate,
-  );
-  const batteryStart = asString(
+  ));
+  const batteryStart = validWarrantyDate(asString(
     (typeof batteryCoverage === 'object' && batteryCoverage !== null ? (batteryCoverage as Record<string, unknown>).start_date : null)
     ?? startDate,
-  );
+  ));
+  const batteryLimitM = (() => {
+    const coverage = typeof batteryCoverage === 'object' && batteryCoverage !== null
+      ? batteryCoverage as Record<string, unknown>
+      : null;
+    const siLimit = asNumber(coverage?.mileage_limit_m ?? warrantyData?.battery_mileage_limit_m);
+    if (siLimit != null) return siLimit;
+    const legacyLimit = asNumber(coverage?.mileage_limit_mi ?? warrantyData?.battery_mileage_limit_mi);
+    return legacyLimit != null ? convertDistanceToSI(legacyLimit, 'mi') : null;
+  })();
+  const basicLimitM = (() => {
+    const coverage = typeof basicCoverage === 'object' && basicCoverage !== null
+      ? basicCoverage as Record<string, unknown>
+      : null;
+    const siLimit = asNumber(coverage?.mileage_limit_m ?? warrantyData?.basic_mileage_limit_m ?? mileageLimitM);
+    if (siLimit != null) return siLimit;
+    const legacyLimit = asNumber(coverage?.mileage_limit_mi ?? warrantyData?.basic_mileage_limit_mi);
+    return legacyLimit != null ? convertDistanceToSI(legacyLimit, 'mi') : null;
+  })();
+  const corrosionExpiryRaw = asString(warrantyData?.corrosion_expiry_date ?? warrantyData?.corrosion_expiry);
+  const corrosionExpiry = validWarrantyDate(corrosionExpiryRaw);
   const coverageRows = [
     {
       key: 'battery',
       title: t('widget.warranty.batteryDrive', 'Battery/drive unit'),
       expiry: batteryExpiry,
-      days: batteryDays,
+      days: batteryDaysEffective,
       start: batteryStart,
-      limitM: asNumber(
-        (typeof batteryCoverage === 'object' && batteryCoverage !== null ? (batteryCoverage as Record<string, unknown>).mileage_limit_mi : null)
-        ?? warrantyData?.battery_mileage_limit_mi
-      ),
+      limitM: batteryLimitM,
       covered: batteryCoverage != null && batteryCoverage !== false,
+      useMonthYear: batteryCoverage != null || warrantyData?.battery_drive_unit_expiry_date != null,
     },
     {
       key: 'basic',
       title: t('widget.warranty.basic', 'Basic'),
       expiry: basicExpiry,
-      days: basicDays,
+      days: basicDaysEffective,
       start: basicStart,
-      limitM: asNumber(
-        (typeof basicCoverage === 'object' && basicCoverage !== null ? (basicCoverage as Record<string, unknown>).mileage_limit_mi : null)
-        ?? mileageLimitM,
-      ),
+      limitM: basicLimitM,
       covered: basicCoverage != null && basicCoverage !== false,
+      useMonthYear: basicCoverage != null || warrantyData?.basic_expiry_date != null,
     },
     ...((warrantyData != null && (
-      (warrantyData.corrosion === true && warrantyData.corrosion_expiry_date == null && warrantyData.corrosion_expiry == null)
-      || asString(warrantyData.corrosion_expiry_date ?? warrantyData.corrosion_expiry) != null
+      (warrantyData.corrosion === true && corrosionExpiryRaw == null)
+      || corrosionExpiry != null
     ))
       ? [{
           key: 'corrosion',
           title: t('widget.warranty.corrosion', 'Corrosion'),
-          expiry: asString(warrantyData?.corrosion_expiry_date ?? warrantyData?.corrosion_expiry),
-          days: null,
+          expiry: corrosionExpiry,
+          days: daysUntil(corrosionExpiry),
           start: null,
           limitM: null,
           included: asString(warrantyData?.corrosion_expiry_date ?? warrantyData?.corrosion_expiry) == null,
@@ -279,7 +305,8 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
     const source = row.key === 'battery' ? batteryCoverage
       : row.key === 'basic' ? basicCoverage : null;
     if (row.key === 'corrosion') return row.expiry != null || 'included' in row && row.included;
-    return source != null || row.expiry != null || row.limitM != null || mileageLimitM != null;
+    if (row.key === 'basic') return warrantyData != null;
+    return source != null || row.expiry != null || row.limitM != null;
   });
 
   return (
@@ -302,8 +329,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
               </Badge>
             </>
           ) : coverageRows.map((row) => {
-            const limitMi = row.limitM;
-            const limitM = limitMi != null ? convertDistanceToSI(limitMi, 'mi') : null;
+            const limitM = row.limitM;
             const remainingM = limitM != null && currentMileageM != null
               ? Math.max(limitM - currentMileageM, 0)
               : null;
@@ -335,11 +361,16 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
                     <p className="truncate text-[13px] font-semibold text-[var(--text-primary)]">{row.title}</p>
                     <p className={dashboardTokens.metricLabel}>
                       {'included' in row && row.included && !row.expiry
-                        ? null
+                        ? t('widget.status.unknown', 'Unknown')
                         : row.expiry && Number.isFinite(new Date(row.expiry).getTime())
-                        ? (formatMonthYear?.(row.expiry) ?? formatDate(row.expiry))
+                        ? ('useMonthYear' in row && row.useMonthYear
+                            ? (formatMonthYear?.(row.expiry) ?? formatDate(row.expiry))
+                            : formatDate(row.expiry))
                         : t('widget.status.unknown', 'Unknown')}
                     </p>
+                    {row.days != null && (
+                      <p className={dashboardTokens.metricLabel}>{fmtInt(Math.max(row.days, 0))}</p>
+                    )}
                   </div>
                   <Badge
                     variant={rowVariant === 'error' ? 'danger' : rowVariant}
@@ -357,7 +388,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
                     value={Math.max(row.days, 0)}
                     max={periodDays}
                     color={barColor}
-                    label={formatYearsMonths(row.days) ?? t('widget.status.unknown', 'Unknown')}
+                    label={`${fmtInt(Math.max(row.days, 0))}`}
                     sublabel={
                       remainingDisplay != null
                         ? t('widget.warranty.distanceLeft', '{{distance}} {{unit}} left', {
@@ -377,20 +408,26 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
                             distance: fmtNumber(remainingDisplay, 2),
                             unit: distanceUnit,
                           })
-                        : formatYearsMonths(row.days) ?? t('widget.status.unknown', 'Unknown')}
+                        : row.days != null
+                          ? formatYearsMonths(row.days)
+                          : null}
                   </p>
                 )}
                 {limitDisplay != null && (
-                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                    {t('widget.warranty.distanceLimit', '{{distance}} {{unit}} limit', {
-                      distance: fmtNumber(limitDisplay, 2),
-                      unit: distanceUnit,
-                    })}
-                  </p>
+                  <>
+                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                      <span>{fmtNumber(limitDisplay, 2)} {distanceUnit}</span>
+                    </p>
+                  </>
                 )}
                 {currentDisplay != null && (
                   <p className="mt-1 text-xs text-[var(--text-secondary)]">
                     {fmtNumber(currentDisplay, 2)} {distanceUnit}
+                  </p>
+                )}
+                {remainingDisplay != null && (
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                    {fmtNumber(remainingDisplay, 2)} {distanceUnit}
                   </p>
                 )}
               </section>

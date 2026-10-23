@@ -206,6 +206,7 @@ beforeEach(() => {
   mockUseSystemHealth.mockReturnValue(makeQuery());
   mockUseDBStats.mockReturnValue(makeQuery());
   mockUseConnectionPool.mockReturnValue(makeQuery());
+  mockUseDBStats.mockReturnValue(makeQuery());
   mockUseMQTTStatus.mockReturnValue(makeQuery());
   mockUseVersionInfo.mockReturnValue(makeQuery());
   mockUseCaptureStats.mockReturnValue(makeQuery());

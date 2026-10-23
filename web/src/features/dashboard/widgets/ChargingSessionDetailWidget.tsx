@@ -90,7 +90,8 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
-  const isLoading = !detail && (sessionsQuery.isLoading || detailLoading || telemetryLoading);
+  const hasPayload = detail != null || (Array.isArray(telemetry) && telemetry.length > 0);
+  const isLoading = !hasPayload && (sessionsQuery.isLoading || detailLoading || telemetryLoading);
   const sessionsState = deriveDataState(sessionsQuery, { provenance: 'historical' });
   const detailState = deriveDataState(detailQuery, { provenance: 'historical' });
   const telemetryState = deriveDataState(telemetryQuery, { provenance: 'historical' });
@@ -99,7 +100,6 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
     detailState,
     telemetryState,
   ]);
-  const hasPayload = detail != null || telemetry != null || sessions != null;
   const dataState = isCompact
     ? latestSessionId == null ? sessionsState : detailState
     : {
@@ -129,23 +129,8 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
   }, [telemetry, unitPrefs.power, formatTime]);
 
   const durationStr = useMemo(() => {
-    const startedAt = detail?.started_at ?? latestSession?.startedAt ?? latestSession?.started_at;
-    const endedAt = detail?.ended_at;
-    if (startedAt && endedAt) {
-      const seconds = (new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 1000;
-      if (Number.isFinite(seconds) && seconds >= 0) {
-        const mins = Math.round(seconds / 60);
-        if (mins < 60) return t('widget.chargingSessionDetail.durationMinutes', '{{minutes}}m', { minutes: fmtNumber(mins, 0) });
-        const h = Math.floor(mins / 60);
-        const m = mins % 60;
-        return m > 0
-          ? t('widget.chargingSessionDetail.durationHoursMinutes', '{{hours}}h {{minutes}}m', { hours: fmtNumber(h, 0), minutes: fmtNumber(m, 0) })
-          : t('widget.chargingSessionDetail.durationHours', '{{hours}}h', { hours: fmtNumber(h, 0) });
-      }
-    }
-    if (!detail) return '—';
-    let durationSeconds = knownNumber(detail.duration_s);
-    if (durationSeconds == null && detail.started_at && detail.ended_at) {
+    let durationSeconds = knownNumber(detail?.duration_s);
+    if (durationSeconds == null && detail?.started_at && detail?.ended_at) {
       const started = new Date(detail.started_at).getTime();
       const ended = new Date(detail.ended_at).getTime();
       if (Number.isFinite(started) && Number.isFinite(ended)) {
@@ -199,13 +184,8 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
   }, [latestSession, formatDateShort]);
 
   const stats = useMemo((): ChartSummaryStat[] => {
-    const startSoc = knownNumber(detail?.start_soc_pct);
-    const endSoc = knownNumber(detail?.end_soc_pct);
-    const socValue = startSoc != null && endSoc != null
-      ? `${fmtNumber(startSoc)} → ${fmtNumber(endSoc)}`
-      : null;
     const durationValue = durationStr === '—' ? null : durationStr;
-    return [
+    const values: ChartSummaryStat[] = [
       {
         label: t('widget.chargingSessionDetail.energy', 'Energy added'),
         value: knownNumber(detail?.total_energy_added_wh) == null ? null : fmtNumber(convertEnergyFromSI(detail!.total_energy_added_wh!, unitPrefs.energy), 1),
@@ -220,12 +200,8 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
         value: peakPower == null ? null : fmtNumber(peakPower, 1),
         unit: unitPrefs.power,
       },
-      {
-        label: t('widget.chargingSessionDetail.socRange', 'SoC'),
-        value: socValue == null ? null : socValue.replace(/\b\d+(?:\.\d+)?\b/g, (value) => fmtNumber(Number(value), 0)),
-        unit: socValue == null ? undefined : '%',
-      },
     ];
+    return values;
   }, [detail, peakPower, durationStr, t, unitPrefs.energy, unitPrefs.power, fmtNumber]);
 
   const tick = isWide ? axisTick : axisTickSm;
@@ -367,6 +343,18 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       <WidgetShell
         title={t('widget.chargingSessionDetail.title', 'Charge session detail')}
         loading={isLoading}
+        loadingContent={
+          latestSessionId != null ? (
+            <SourceContent
+              state="loading"
+              label={t('widget.chargingSessionDetail.title', 'Charge session detail')}
+              emptyMessage={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
+              errorMessage={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
+            >
+              {null}
+            </SourceContent>
+          ) : undefined
+        }
         dataState={dataState}
         updatedAt={dataUpdatedAt}
         isFetching={isFetching || telemetryQuery.isFetching || sessionsQuery.isFetching}
@@ -402,6 +390,18 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       title={t('widget.chargingSessionDetail.title', 'Charge session detail')}
       icon={<Zap className="h-3.5 w-3.5 text-emerald-400" />}
       loading={isLoading}
+      loadingContent={
+        latestSessionId != null ? (
+          <SourceContent
+            state="loading"
+            label={t('widget.chargingSessionDetail.title', 'Charge session detail')}
+            emptyMessage={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
+            errorMessage={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
+          >
+            {null}
+          </SourceContent>
+        ) : undefined
+      }
       dataState={dataState}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching || telemetryQuery.isFetching || sessionsQuery.isFetching}
@@ -439,7 +439,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
                 {detail && (
                   <>
                     <span className={dashboardTokens.metricLabel}>
-                      {t('widget.chargingSessionDetail.charger', 'Charger')}:
+                      {t('widget.chargingSessionDetail.charger', 'Charger')}
                     </span>
                     <Badge variant={charger.variant} size="sm">{chargerLabel}</Badge>
                   </>
@@ -453,17 +453,19 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             </div>
           )}
           <div className="mt-2 min-h-0 flex-1">{chart}</div>
-          <div className="mt-2">
-            <WidgetStatGrid
-              stats={stats.map((stat) => ({
-                label: stat.label,
-                value: stat.value,
-                unit: stat.unit,
-              }))}
-              cols={3}
-              maxPerRow={3}
-            />
-          </div>
+          {detail && (
+            <div className="mt-2">
+              <WidgetStatGrid
+                stats={stats.map((stat) => ({
+                  label: stat.label,
+                  value: stat.value,
+                  unit: stat.unit,
+                }))}
+                cols={3}
+                maxPerRow={3}
+              />
+            </div>
+          )}
         </div>
       )}
     </WidgetShell>

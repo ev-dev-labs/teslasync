@@ -88,7 +88,7 @@ export function WidgetDetailCard({
       className="h-full overflow-y-auto"
       items={visible.map((entry) => ({
         id: entry.id,
-        label: (
+        label: entry.status || entry.sublabel ? (
           <span className="flex min-w-0 items-center gap-2">
             {entry.status && (
               <span
@@ -107,7 +107,7 @@ export function WidgetDetailCard({
               )}
             </span>
           </span>
-        ),
+        ) : entry.label,
         value: (
           <span className="inline-flex max-w-full flex-wrap items-center gap-2">
             <span className={cn('min-w-0 whitespace-normal [overflow-wrap:anywhere]', entry.mono && 'font-mono')}>

@@ -707,7 +707,7 @@ describe('ChargingSessionDetailWidget — graceful degradation on transient erro
 
     // Data is still on screen …
     expect(screen.getByText('Charge session detail')).toBeInTheDocument();
-    expect(screen.getByText('30.00')).toBeInTheDocument();
+    expect(screen.getByText('30.0')).toBeInTheDocument();
     expect(screen.getByText('DC fast')).toBeInTheDocument();
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();

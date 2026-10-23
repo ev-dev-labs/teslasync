@@ -12,18 +12,21 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/api/hooks/useAdmin', () => ({
   useSystemHealth: vi.fn(),
   useConnectionPool: vi.fn(),
+  useDBStats: vi.fn(),
 }));
 vi.mock('@/api/hooks/useSettings', () => ({
   useVersionInfo: vi.fn(),
 }));
 
 import { useSystemHealth, useConnectionPool } from '@/api/hooks/useAdmin';
+import { useDBStats } from '@/api/hooks/useAdmin';
 import { useVersionInfo } from '@/api/hooks/useSettings';
 import SystemHealthWidget, { formatUptime, overallBadgeStatus, statusTier } from './SystemHealthWidget';
 
 const mockHealth = useSystemHealth as ReturnType<typeof vi.fn>;
 const mockPool = useConnectionPool as ReturnType<typeof vi.fn>;
 const mockVersion = useVersionInfo as ReturnType<typeof vi.fn>;
+const mockDB = useDBStats as ReturnType<typeof vi.fn>;
 
 const query = (data?: unknown, over: Record<string, unknown> = {}) => ({
   data,
@@ -51,6 +54,7 @@ const health = (status = 'healthy') => ({
 function setup() {
   mockHealth.mockReturnValue(query(health()));
   mockPool.mockReturnValue(query({ inUse: 18, maxOpen: 100, memoryMB: 512 }));
+  mockDB.mockReturnValue(query({ databaseSize: '2.4 GB' }));
   mockVersion.mockReturnValue(query({ uptime_seconds: 1_036_800 }));
 }
 
