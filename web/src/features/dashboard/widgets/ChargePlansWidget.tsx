@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, Skeleton } from '@/components/feedback';
+import { Badge, Subhead } from '@/components/ui';
+import { SourceContent } from '@/components/layout';
 import { useChargePlans, useRatePlans } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -14,8 +16,8 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates, knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
-import { WidgetBigNumber } from './shared';
-import { ChargePlansBody } from '../components/continuation-dashboard-3/ChargePlansBody';
+import { WidgetBigNumber, WidgetDetailCard, WidgetStatGrid } from './shared';
+import { sourcePresentation } from '../components/continuation-dashboard-3/sourcePresentation';
 
 /**
  * Maps a charge-plan status to a semantic <Badge> variant. Exported for direct
@@ -145,7 +147,6 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
     items.push({
       label: t('widget.chargePlans.targetSoc', 'Target SOC'),
       value: knownNumber(activePlan.target_soc) == null ? '—' : `${fmtNumber(activePlan.target_soc)}%`,
-      badge: { text: activePlan.status ?? '—', variant: detailBadgeVariant(activePlan.status) },
     });
 
     items.push({
@@ -180,11 +181,6 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
         badge: { text: t('widget.chargePlans.saved', 'saved'), variant: 'success' },
       });
     }
-
-    items.push({
-      label: t('widget.chargePlans.ratePlan', 'Rate plan'),
-      value: activePlan.rate_plan ?? '—',
-    });
 
     return items;
   }, [activePlan, t, formatCurrency, formatTime, formatDate, fmtNumber]);
@@ -247,17 +243,63 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <ChargePlansBody
-        activePlan={activePlan}
-        statusVariant={badgeVariant(activePlan?.status)}
-        summaryStats={planEntries.slice(0, 2).map(({ label, value }) => ({ label, value }))}
-        planEntries={planEntries}
-        rateEntries={rateEntries}
-        compactDetails={size.rows <= 3}
-        hasData={hasData}
-        plansState={plansState}
-        ratesState={ratesState}
-      />
+      {/* After: hero is the active rate-plan name + status pill. The TOU
+          strip/legend from the preview is omitted: RatePlanInfo carries no
+          period/rate data, so drawing it would fabricate prices/hours. */}
+      <div className="flex h-full min-w-0 flex-col gap-3 overflow-y-auto">
+        <SourceContent
+          state={sourcePresentation(plansState, activePlan != null)}
+          label={t('widget.chargePlans.title', 'Charge plans')}
+          emptyMessage={t('widget.chargePlans.noPlans', 'No charge plans')}
+          errorMessage={t('widget.chargePlans.plansError', 'Unable to load charge plans')}
+          error={plansState.fatalError}
+          errorRecovery={{ onRetry: plansState.retry ?? undefined }}
+          loadingContent={<Skeleton className="h-24" />}
+        >
+          {activePlan && (
+            <div>
+              <div className="mb-1 flex min-w-0 flex-wrap items-center justify-between gap-2">
+                <span className="min-w-0 text-base font-semibold text-[var(--text-primary)] [overflow-wrap:anywhere]">
+                  {activePlan.rate_plan ?? '—'}
+                </span>
+                <Badge variant={badgeVariant(activePlan.status)} size="sm" dot>{activePlan.status ?? '—'}</Badge>
+              </div>
+              <WidgetStatGrid stats={planEntries.slice(0, 2).map(({ label, value }) => ({ label, value }))} />
+              <WidgetDetailCard
+                entries={planEntries.slice(2)}
+                compact={size.rows <= 3}
+                emptyMessage={t('widget.chargePlans.noDetails', 'No plan details')}
+                emptyIcon={<Clock className="h-5 w-5" />}
+              />
+            </div>
+          )}
+        </SourceContent>
+        <div className="border-t border-[var(--border-subtle)] pt-2">
+          <Subhead>{t('widget.chargePlans.ratePlans', 'Rate plans')}</Subhead>
+          <SourceContent
+            state={sourcePresentation(ratesState, rateEntries.length > 0)}
+            label={t('widget.chargePlans.ratePlans', 'Rate plans')}
+            emptyMessage={t('widget.chargePlans.noRates', 'No rate plans')}
+            errorMessage={t('widget.chargePlans.ratesError', 'Unable to load rate plans')}
+            error={ratesState.fatalError}
+            errorRecovery={{ onRetry: ratesState.retry ?? undefined }}
+          >
+            <WidgetDetailCard
+              entries={rateEntries}
+              compact={size.rows <= 3}
+              emptyMessage={t('widget.chargePlans.noRates', 'No rate plans')}
+              emptyIcon={<Clock className="h-5 w-5" />}
+            />
+          </SourceContent>
+        </div>
+        {!hasData && !plansState.fatalError && !ratesState.fatalError && (
+          <EmptyState /* no-action: read-only plan and rate summaries retain shell refresh */
+            icon={<Clock className="h-5 w-5" />}
+            message={t('widget.chargePlans.noData', 'No charge plans or rate data')}
+            className="py-4"
+          />
+        )}
+      </div>
     </WidgetShell>
   );
 }

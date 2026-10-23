@@ -14,7 +14,6 @@ import type { WidgetProps } from './types';
 import type { ChargingSession } from '@/api/types';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { classifyChargingSource } from '@/lib/chargerKind';
 import { chartTokens } from '@/lib/tokens';
@@ -49,8 +48,8 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
   const { unitPrefs } = useUnits();
 
   const query = useQuery({
-    queryKey: ['charging', id, 'session-chart-10'],
-    queryFn: () => request<ChargingSession[]>(`/charging?vehicle_id=${id}&limit=10`),
+    queryKey: ['charging', id, 'session-chart-20'],
+    queryFn: () => request<ChargingSession[]>(`/charging?vehicle_id=${id}&limit=20`),
     enabled: id > 0,
     staleTime: 60_000,
   });
@@ -134,7 +133,14 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
         isEmpty={!hasData}
         emptyMessage={t('widget.chargeSessionChart.empty', 'No charge sessions yet')}
         emptyIcon={<Zap className="h-5 w-5" />}
-        stats={stats}
+        stats={[]}
+        yAxisLabel={t('widget.chargeSessionChart.energyPerSession', 'Energy per session · last {{count}}', { count: 20 })}
+        legend={(['home', 'supercharger', 'dc', 'unknown'] as const)
+          .filter(type => type !== 'unknown' || chartData.some(point => point.type === 'unknown'))
+          .map(type => ({
+            label: t(`widget.chargeSessionChart.type.${type}`, CHARGER_TYPE_LABEL[type]),
+            color: CHARGER_COLORS[type] ?? CHARGER_COLORS.Other,
+          }))}
         chart={
           <div className="flex h-full w-full flex-col px-2 pb-1">
             <EmbeddedChart
@@ -179,24 +185,6 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
                 </BarChart>
               </ResponsiveContainer>
             </EmbeddedChart>
-
-            {/* Legend */}
-            <div className="flex min-w-0 flex-wrap items-center justify-center gap-x-3 gap-y-1 pb-1">
-              {(['home', 'supercharger', 'dc', 'unknown'] as const)
-                .filter(type => type !== 'unknown' || chartData.some(point => point.type === 'unknown'))
-                .map((type) => (
-                <div key={type} className="flex items-center gap-1">
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-2 w-2 rounded-full"
-                    style={{ background: CHARGER_COLORS[type] ?? CHARGER_COLORS.Other }}
-                  />
-                  <span className={dashboardTokens.metricLabel}>
-                    {t(`widget.chargeSessionChart.type.${type}`, CHARGER_TYPE_LABEL[type])}
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
         }
       />
