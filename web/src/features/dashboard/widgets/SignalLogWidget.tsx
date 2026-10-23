@@ -71,7 +71,7 @@ function CompactView({
 
 export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { opts: dateOpts } = useDateFormat();
+  const { formatTime } = useDateFormat();
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
@@ -171,13 +171,7 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
                   const parsed = new Date(item.timestamp);
                   const timeLabel = Number.isNaN(parsed.getTime())
                     ? '—'
-                    : new Intl.DateTimeFormat(dateOpts.locale, {
-                        timeZone: dateOpts.tz,
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                        hour12: false,
-                      }).format(parsed);
+                    : formatTime(parsed);
                   return (
                     <li role="listitem" key={item.id} className="grid min-h-9 grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-2 py-1.5 text-xs">
                       <span className="tabular-nums text-[var(--text-muted)]">{timeLabel}</span>

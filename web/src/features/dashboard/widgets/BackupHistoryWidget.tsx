@@ -119,11 +119,14 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
     id: event.id,
     icon: <Zap aria-hidden className="h-3.5 w-3.5" />,
     title: fmtDuration(event.duration_seconds),
+    subtitle: isFiniteNumber(event.duration_seconds)
+      ? `${t('widget.backupHistory.duration', 'Duration')}: ${fmtDuration(event.duration_seconds)}`
+      : `${t('widget.backupHistory.duration', 'Duration')}: —`,
     timestamp: event.timestamp ?? '',
     timeLabel: event.timestamp?.trim() ? fmtEventTime(event.timestamp) : '—',
     color: '#fbbf24',
     wrap: true,
-  })), [sortedItems, fmtEventTime]);
+  })), [sortedItems, fmtEventTime, t]);
 
   // ── No energy sites linked ──
   if (!siteId && !isLoading) {

@@ -17,6 +17,8 @@ import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
 import type { Drive } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { zonedDateParts } from '@/lib/dateFormat';
+import { formatHourName, formatWeekdayName } from '@/lib/dateConvert';
 
 /** 7 rows (Mon–Sun) × 24 cols (0h–23h) */
 const ROWS = 7;
@@ -55,25 +57,10 @@ export function buildHeatmap(
     let day: number;
     let hour: number;
     if (timezone) {
-      try {
-        const parts = new Intl.DateTimeFormat('en-US', {
-          timeZone: timezone,
-          weekday: 'short',
-          hour: 'numeric',
-          hourCycle: 'h23',
-        }).formatToParts(dt);
-        const weekday = parts.find((part) => part.type === 'weekday')?.value;
-        const hourPart = parts.find((part) => part.type === 'hour')?.value;
-        const jsDay = weekday === 'Sun' ? 0 : weekday === 'Mon' ? 1 : weekday === 'Tue' ? 2
-          : weekday === 'Wed' ? 3 : weekday === 'Thu' ? 4 : weekday === 'Fri' ? 5
-            : weekday === 'Sat' ? 6 : -1;
-        const parsedHour = Number(hourPart);
-        if (jsDay < 0 || !Number.isInteger(parsedHour) || parsedHour < 0 || parsedHour > 23) continue;
-        day = jsDay === 0 ? 6 : jsDay - 1;
-        hour = parsedHour;
-      } catch {
-        continue;
-      }
+      const parts = zonedDateParts(dt, timezone);
+      if (!parts) continue;
+      day = parts.weekday === 0 ? 6 : parts.weekday - 1;
+      hour = parts.hour;
     } else {
       // Local wall-clock fallback for direct helper callers/tests.
       const jsDay = dt.getDay();
@@ -181,8 +168,10 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
   }
 
   const dayLabelsFull = Array.from({ length: 7 }, (_, day) =>
-    new Intl.DateTimeFormat(i18n?.language ?? 'en-US', { weekday: 'short', timeZone: timezone })
-      .format(new Date(Date.UTC(2024, 0, 1 + day, 12))),
+    formatWeekdayName(
+      new Date(Date.UTC(2024, 0, 1 + day, 12)),
+      { locale: i18n?.language ?? 'en-US', tz: timezone ?? 'UTC', weekdayStyle: 'short' },
+    ),
   );
   const dayLabels = isWide
     ? dayLabelsFull
@@ -256,10 +245,10 @@ function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t, locale }
   const { fmtNumber } = useNumberFormatting();
   const leftMargin = isWide ? 30 : 14;
   const topMargin = 14;
-  const hourLabel = (hour: number) => new Intl.DateTimeFormat(locale, {
-    hour: 'numeric',
-    hour12: true,
-  }).format(new Date(Date.UTC(2024, 0, 1, hour)));
+  const hourLabel = (hour: number) => formatHourName(hour, {
+    locale,
+    showMinutes: true,
+  });
   const hourLabels = isWide
     ? [
         { hour: 0, label: hourLabel(0) },

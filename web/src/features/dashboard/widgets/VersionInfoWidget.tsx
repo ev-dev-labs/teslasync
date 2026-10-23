@@ -26,7 +26,7 @@ function formatUptime(seconds: unknown): string {
 }
 
 export default function VersionInfoWidget({ size }: WidgetProps) {
-  const { locale: displayLocale } = useNumberFormatting();
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
 
   const version = useVersionInfo();
@@ -80,14 +80,14 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
           ? t('widget.versionInfo.captureEnabled', 'Enabled')
           : t('widget.versionInfo.captureDisabled', 'Disabled'),
       badge: totalDocuments == null ? undefined : {
-        text: `${totalDocuments.toLocaleString(displayLocale)} ${t('widget.versionInfo.documents', 'documents')}`,
+        text: `${fmtInt(totalDocuments)} ${t('widget.versionInfo.documents', 'documents')}`,
         variant: 'neutral',
       },
       hint: Array.isArray(distinctVins)
         ? t('widget.versionInfo.distinctVins', '{{count}} VINs', { count: distinctVins.length })
         : undefined,
     },
-  ], [t, chartVersion, buildDate, truncatedSha, uptime, captureEnabled, totalDocuments, distinctVins, displayLocale]);
+  ], [t, chartVersion, buildDate, truncatedSha, uptime, captureEnabled, totalDocuments, distinctVins, fmtInt]);
 
   const versionState = useDataState(version, { unavailable: version.data == null });
   const captureState = useDataState(capture, { unavailable: capture.data == null });
@@ -147,10 +147,10 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
               <WidgetStatusGrid
                 cols={4}
                 cells={[
-                  ...(signalsPerSec == null ? [] : [{ id: 'signals-sec', label: t('widget.versionInfo.signalsPerSec', 'Signals/sec'), value: signalsPerSec.toLocaleString(displayLocale), status: 'inactive' as const }]),
-                  ...(messagesToday == null ? [] : [{ id: 'messages-today', label: t('widget.versionInfo.messagesToday', 'Messages today'), value: messagesToday.toLocaleString(displayLocale), status: 'inactive' as const }]),
-                  ...(bytesProcessed == null ? [] : [{ id: 'bytes-processed', label: t('widget.versionInfo.bytesProcessed', 'Bytes processed'), value: bytesProcessed.toLocaleString(displayLocale), status: 'inactive' as const }]),
-                  ...(avgLatency == null ? [] : [{ id: 'avg-latency', label: t('widget.versionInfo.avgLatency', 'Avg latency'), value: `${avgLatency.toLocaleString(displayLocale)} ms`, status: 'inactive' as const }]),
+                  ...(signalsPerSec == null ? [] : [{ id: 'signals-sec', label: t('widget.versionInfo.signalsPerSec', 'Signals/sec'), value: fmtNumber(signalsPerSec), status: 'inactive' as const }]),
+                  ...(messagesToday == null ? [] : [{ id: 'messages-today', label: t('widget.versionInfo.messagesToday', 'Messages today'), value: fmtInt(messagesToday), status: 'inactive' as const }]),
+                  ...(bytesProcessed == null ? [] : [{ id: 'bytes-processed', label: t('widget.versionInfo.bytesProcessed', 'Bytes processed'), value: fmtInt(bytesProcessed), status: 'inactive' as const }]),
+                  ...(avgLatency == null ? [] : [{ id: 'avg-latency', label: t('widget.versionInfo.avgLatency', 'Avg latency'), value: `${fmtNumber(avgLatency)} ms`, status: 'inactive' as const }]),
                 ]}
               />
             )}

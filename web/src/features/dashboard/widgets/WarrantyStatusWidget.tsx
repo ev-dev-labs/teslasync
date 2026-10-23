@@ -33,7 +33,29 @@ export function asNumber(val: unknown): number | null {
 /** Compute days remaining from an expiry date string (ISO or date) */
 export function daysUntil(dateStr: string | null): number | null {
   if (!dateStr) return null;
-  const expiry = new Date(dateStr);
+  const trimmed = dateStr.trim();
+  if (!trimmed) return null;
+
+  const datePrefix = /^(\d{4})-(\d{2})-(\d{2})(?:$|T|\s)/.exec(trimmed);
+  if (datePrefix) {
+    const year = Number(datePrefix[1]);
+    const month = Number(datePrefix[2]);
+    const day = Number(datePrefix[3]);
+    const check = new Date(Date.UTC(year, month - 1, day));
+    if (
+      check.getUTCFullYear() !== year
+      || check.getUTCMonth() !== month - 1
+      || check.getUTCDate() !== day
+    ) return null;
+  } else if (!/^\d{4}$/.test(trimmed)) {
+    // Keep accepting RFC-style ISO strings, but reject arbitrary strings.
+    const parsedFallback = new Date(trimmed);
+    if (Number.isNaN(parsedFallback.getTime())) return null;
+  } else {
+    return null;
+  }
+
+  const expiry = new Date(trimmed);
   if (isNaN(expiry.getTime())) return null;
   const now = new Date();
   const expiryUtc = Date.UTC(expiry.getUTCFullYear(), expiry.getUTCMonth(), expiry.getUTCDate());
@@ -97,22 +119,36 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
   );
   const daysRemaining = daysUntil(expiryDate);
 
-  const mileageLimitMi = asNumber(
-    warrantyData?.mileage_limit_mi
-    ?? warrantyData?.basic_mileage_limit_mi,
-  );
-  const currentMileageMi = asNumber(
-    warrantyData?.current_mileage_mi
-    ?? warrantyData?.odometer_mi
-    ?? warrantyData?.current_odometer_mi,
-  );
-
-  // The warranty API delivers mileage in MILES (`*_mi` fields), but
-  // `convertDistanceFromSI` (and thus `toDistanceDisplay`) expects SI meters.
-  // Convert miles→meters up front so a 50,000 mi limit renders as "50,000 mi"
-  // (or "80,467 km"), not the ~31 mi / ~50 km the raw-value path produced.
-  const mileageLimitM = mileageLimitMi != null ? convertDistanceToSI(mileageLimitMi, 'mi') : null;
-  const currentMileageM = currentMileageMi != null ? convertDistanceToSI(currentMileageMi, 'mi') : null;
+  const mileageLimitM = asNumber(
+    warrantyData?.mileage_limit_m
+    ?? warrantyData?.basic_mileage_limit_m
+    ?? null,
+  )
+    ?? (asNumber(warrantyData?.mileage_limit_mi ?? warrantyData?.basic_mileage_limit_mi) != null
+      ? convertDistanceToSI(
+          asNumber(warrantyData?.mileage_limit_mi ?? warrantyData?.basic_mileage_limit_mi)!,
+          'mi',
+        )
+      : null);
+  const currentMileageM = asNumber(
+    warrantyData?.current_mileage_m
+    ?? warrantyData?.odometer_m
+    ?? null,
+  )
+    ?? (asNumber(
+      warrantyData?.current_mileage_mi
+      ?? warrantyData?.odometer_mi
+      ?? warrantyData?.current_odometer_mi,
+    ) != null
+      ? convertDistanceToSI(
+          asNumber(
+            warrantyData?.current_mileage_mi
+            ?? warrantyData?.odometer_mi
+            ?? warrantyData?.current_odometer_mi,
+          )!,
+          'mi',
+        )
+      : null);
   const mileageExceeded = mileageLimitM != null && currentMileageM != null && currentMileageM >= mileageLimitM;
   const mileageUnknown = mileageLimitM != null && currentMileageM == null;
   const effectiveDays = mileageExceeded ? 0 : mileageUnknown ? null : daysRemaining;
@@ -220,7 +256,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
       start: basicStart,
       limitM: asNumber(
         (typeof basicCoverage === 'object' && basicCoverage !== null ? (basicCoverage as Record<string, unknown>).mileage_limit_mi : null)
-        ?? mileageLimitMi,
+        ?? mileageLimitM,
       ),
       covered: basicCoverage != null && basicCoverage !== false,
     },
