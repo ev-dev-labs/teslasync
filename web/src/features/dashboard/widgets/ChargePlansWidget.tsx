@@ -13,6 +13,7 @@ import { WidgetShell } from './WidgetShell';
 import type { DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates, knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
@@ -68,8 +69,29 @@ export function joinDateTime(datePart: string, timePart: string): string {
   return `${datePart} ${timePart}`;
 }
 
+export function chargePlanStatusLabel(
+  status: string | null | undefined,
+  t: (key: string, fallback: string) => string,
+): string {
+  switch (status) {
+    case 'active':
+      return t('widget.chargePlans.statusActive', 'Active');
+    case 'scheduled':
+      return t('widget.chargePlans.statusScheduled', 'Scheduled');
+    case 'completed':
+      return t('widget.chargePlans.statusCompleted', 'Completed');
+    case 'failed':
+      return t('widget.chargePlans.statusFailed', 'Failed');
+    case 'cancelled':
+      return t('widget.chargePlans.statusCancelled', 'Cancelled');
+    default:
+      return status?.trim() || t('widget.chargePlans.statusUnknown', 'Unknown');
+  }
+}
+
 export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
+  const { formatEnergy } = useUnits();
   const { t } = useTranslation('dashboard');
   const vehiclesQuery = useVehicles();
   const candidate = vehicleId ?? safeArray(vehiclesQuery.data)[0]?.id;
@@ -166,7 +188,9 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
 
     items.push({
       label: t('widget.chargePlans.estEnergy', 'Est. energy'),
-      value: knownNumber(activePlan.estimated_kwh) != null ? `${fmtNumber(activePlan.estimated_kwh)} kWh` : '—',
+      value: knownNumber(activePlan.estimated_kwh) != null
+        ? formatEnergy((activePlan.estimated_kwh ?? 0) * 1000)
+        : '—',
     });
 
     items.push({
@@ -183,7 +207,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
     }
 
     return items;
-  }, [activePlan, t, formatCurrency, formatTime, formatDate, fmtNumber]);
+  }, [activePlan, t, formatCurrency, formatTime, formatDate, fmtNumber, formatEnergy]);
 
   const rateEntries: DetailEntry[] = useMemo(() => {
     return safeRates.map((rp) => ({
@@ -243,9 +267,6 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      {/* After: hero is the active rate-plan name + status pill. The TOU
-          strip/legend from the preview is omitted: RatePlanInfo carries no
-          period/rate data, so drawing it would fabricate prices/hours. */}
       <div className="flex h-full min-w-0 flex-col gap-3 overflow-y-auto">
         <SourceContent
           state={sourcePresentation(plansState, activePlan != null)}
@@ -262,7 +283,9 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
                 <span className="min-w-0 text-base font-semibold text-[var(--text-primary)] [overflow-wrap:anywhere]">
                   {activePlan.rate_plan ?? '—'}
                 </span>
-                <Badge variant={badgeVariant(activePlan.status)} size="sm" dot>{activePlan.status ?? '—'}</Badge>
+                <Badge variant={badgeVariant(activePlan.status)} size="sm">
+                  {chargePlanStatusLabel(activePlan.status, (key, fallback) => t(key, fallback))}
+                </Badge>
               </div>
               <WidgetStatGrid stats={planEntries.slice(0, 2).map(({ label, value }) => ({ label, value }))} />
               <WidgetDetailCard
