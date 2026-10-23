@@ -18,22 +18,21 @@ beforeEach(() => {
 });
 
 describe('quick action label and command preservation', () => {
-  it('retains all eight wide commands, wraps their labels and disables every command while one is running', () => {
+  it('retains all six actions and disables every command while one is running', () => {
     render(<MemoryRouter><CommandQuickActionsWidget vehicleId={42} size={{ cols: 3, rows: 2 }} /></MemoryRouter>);
-    const buttons = ['Lock', 'Unlock', 'Climate on', 'Climate off', 'Frunk', 'Horn', 'Flash Lights', 'Trunk']
+    const buttons = ['Unlock', 'Climate', 'Frunk', 'Trunk', 'Flash', 'Honk']
       .map(name => screen.getByRole('button', { name }));
-    fireEvent.click(buttons[1]);
+    fireEvent.click(buttons[0]);
     expect(mocks.send).toHaveBeenCalledWith({ vehicleId: 42, command: 'unlock' }, expect.objectContaining({ onSettled: expect.any(Function) }));
-    buttons.forEach(button => { expect(button).toBeDisabled(); expect(button).toHaveClass('flex-row', 'gap-2'); expect(button).not.toHaveClass('flex-col'); });
-    expect(buttons[1]).toHaveAttribute('aria-busy', 'true');
+    buttons.forEach(button => { expect(button).toBeDisabled(); expect(button).toHaveClass('flex-col', 'gap-1'); expect(button).not.toHaveClass('flex-row'); });
+    expect(buttons[0]).toHaveAttribute('aria-busy', 'true');
     act(() => { mocks.send.mock.calls[0][1].onSettled(); });
     buttons.forEach(button => expect(button).not.toBeDisabled());
   });
 
   it('preserves compact command availability without relying on visible text', () => {
     render(<MemoryRouter><CommandQuickActionsWidget vehicleId={42} size={{ cols: 1, rows: 1 }} /></MemoryRouter>);
-    ['Lock', 'Unlock', 'Climate on', 'Climate off'].forEach(name => expect(screen.getByRole('button', { name })).toBeInTheDocument());
-    expect(screen.queryByRole('button', { name: 'Frunk' })).not.toBeInTheDocument();
+    ['Unlock', 'Climate', 'Frunk', 'Trunk', 'Flash', 'Honk'].forEach(name => expect(screen.getByRole('button', { name })).toBeInTheDocument());
   });
 
   it('keeps the write guard and its explanation without sending a real command', () => {
