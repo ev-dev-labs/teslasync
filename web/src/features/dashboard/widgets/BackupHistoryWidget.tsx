@@ -118,9 +118,7 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
   const feedItems = useMemo(() => sortedItems.map((event) => ({
     id: event.id,
     icon: <Zap aria-hidden className="h-3.5 w-3.5" />,
-    title: isFiniteNumber(event.duration_seconds)
-      ? `${fmtDuration(event.duration_seconds)}`
-      : `${t('widget.backupHistory.duration', 'Duration')}: —`,
+    title: fmtDuration(event.duration_seconds),
     timestamp: event.timestamp ?? '',
     timeLabel: event.timestamp?.trim() ? fmtEventTime(event.timestamp) : '—',
     color: '#fbbf24',
