@@ -1,5 +1,5 @@
-import { useTranslation } from 'react-i18next';
 import { Zap, BatteryCharging, Plug } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
 import { deriveDataState, knownNumber } from '@/api/dataState';
 import { useChargingTelemetryLatest, useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
@@ -120,7 +120,6 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
           <IdleView
             metrics={metrics}
             statusLabel={idleLabel}
-            t={t}
           />
         )
       ) : (
@@ -227,7 +226,7 @@ interface IdleViewProps {
   t: (k: string, f: string) => string;
 }
 
-function IdleView({ metrics, statusLabel, t }: IdleViewProps) {
+function IdleView({ metrics, statusLabel }: Omit<IdleViewProps, 't'>) {
   const { fmtNumber } = useNumberFormatting();
   return (
     <div className="h-full flex flex-col items-center justify-center gap-3">

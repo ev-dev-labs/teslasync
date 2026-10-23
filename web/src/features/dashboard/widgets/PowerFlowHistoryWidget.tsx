@@ -118,12 +118,6 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
   );
   const axisWidth = useMeasuredAxisWidth({
     labels: axisLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
-  }).sort((a, b) => {
-    const ta = Date.parse(a.time);
-    const tb = Date.parse(b.time);
-    if (!Number.isFinite(ta)) return 1;
-    if (!Number.isFinite(tb)) return -1;
-    return ta - tb;
   });
 
   const handleRefresh = () => {

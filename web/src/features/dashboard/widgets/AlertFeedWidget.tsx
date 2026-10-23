@@ -9,7 +9,6 @@ import type { WidgetProps } from './types';
 import { normalizeSeverity, type Severity } from '@/lib/tokens';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import { useDataState } from '@/hooks/useDataState';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { Caption } from '@/components/ui';
 
 const SEVERITY_HEX: Record<Severity, string> = {
@@ -28,7 +27,6 @@ const SEVERITY_ICONS: Record<Severity, React.ReactNode> = {
 
 export default function AlertFeedWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { fmtInt } = useNumberFormatting();
   const query = useAlerts();
   const { data: alerts, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
   const state = useDataState({ ...query, data: alerts ?? undefined }, { provenance: 'historical' });
@@ -72,10 +70,10 @@ export default function AlertFeedWidget({ size }: WidgetProps) {
           ? 'widget.alertFeedNeedsAttention_one'
           : 'widget.alertFeedNeedsAttention_other',
         attentionCount === 1 ? '{{count}} needs attention' : '{{count}} need attention',
-        { count: fmtInt(attentionCount) },
+        { count: attentionCount },
       )
     : unreadCount > 0
-      ? t('widget.alertFeedUnread', '{{count}} unread', { count: fmtInt(unreadCount) })
+      ? t('widget.alertFeedUnread', '{{count}} unread', { count: unreadCount })
       : t('widget.alertFeedNoUnread', 'No unread alerts');
 
   return (

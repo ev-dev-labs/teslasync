@@ -248,7 +248,7 @@ interface HeatmapGridProps {
   dayLabels: string[];
   isWide: boolean;
   speedUnit: string;
-  t: (key: string, fallback: string) => string;
+  t: (key: string, fallback: string, options?: Record<string, unknown>) => string;
   locale: string;
 }
 
@@ -325,7 +325,11 @@ function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t, locale }
           >
             <title>
               {dayLabels[day]} {cell.hour}:00 – {cell.count > 0
-                ? `${fmtNumber(cell.avgSpeed)} ${speedUnit} (${t('widget.speedHeatmap.drives', '{{count}} drives', { count: cell.count })})`
+                ? `${fmtNumber(cell.avgSpeed)} ${speedUnit} (${t(
+                    cell.count === 1 ? 'widget.speedHeatmap.drive_one' : 'widget.speedHeatmap.drive_other',
+                    cell.count === 1 ? '{{count}} drive' : '{{count}} drives',
+                    { count: cell.count },
+                  )})`
                 : t('widget.speedHeatmap.noData', 'No data')}
             </title>
           </rect>

@@ -147,7 +147,7 @@ export default function SoftwareUpdateHistoryWidget({ vehicleId, size }: WidgetP
   );
 
   const updatesThisYear = useMemo(() => {
-    const year = formatDayKey(new Date()).slice(0, 4);
+    const year = formatDayKey(new Date().toISOString()).slice(0, 4);
     return sorted.filter((upd) =>
       isInstalledStatus(upd.status)
       && typeof upd.installedAt === 'string'

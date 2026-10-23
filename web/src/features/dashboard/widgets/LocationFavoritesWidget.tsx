@@ -85,7 +85,7 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
       );
       const visitsText = visits == null
         ? t('widget.locationFavorites.unknownVisits', 'Visit count unavailable')
-        : t('widget.locationFavorites.visits', '{{count}} visits', { count: fmtInt(visits) });
+        : t('widget.locationFavorites.visits', '{{count}} visits', { count: visits });
 
       return {
         id: loc.id,

@@ -38,7 +38,7 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
     refetch,
   } = query;
   const dataState = useDataState(query, { provenance: 'historical' });
-  const distanceUnit = unitPrefs.distance;
+  const distanceUnit = unitPrefs.distance === 'mi' ? 'mi' : 'km';
 
   const distance =
     isFiniteNumber(data?.total_distance_km) ? toAnalyticsDistanceDisplay(data.total_distance_km, distanceUnit) : null;

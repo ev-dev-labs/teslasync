@@ -103,6 +103,7 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
     return list.map((obs, i) => {
       return {
         id: `${obs.ts}-${obs.signal_name}-${i}`,
+        icon: null,
         title: obs.signal_name ?? '—',
         subtitle: formatSignalValue(obs),
         timestamp: obs.ts ?? '',

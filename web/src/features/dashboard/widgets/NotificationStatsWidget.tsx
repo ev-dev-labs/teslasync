@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Bell } from 'lucide-react';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { Badge } from '@/components/ui';
-import { Badge } from '@/components/ui';
 import { useNotificationStats, useNotificationLogs } from '@/api/hooks/useNotifications';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';

@@ -29,7 +29,6 @@ export default function APIUsageWidget({ size }: WidgetProps) {
   const totalCalls = knownNumber(data?.last24h);
   const avgResponseMs = knownNumber(data?.avgDurationMs);
   const errorRate = knownNumber(data?.errorRate);
-  const errorCount = knownNumber(data?.errorCount);
 
   const blockingError = state.fatalError?.message;
   const stats: StatGridItem[] = [

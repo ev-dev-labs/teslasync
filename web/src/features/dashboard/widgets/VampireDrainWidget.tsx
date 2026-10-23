@@ -43,7 +43,7 @@ export interface DrainBarPoint extends ChartDataRow {
 }
 
 export function buildDrainBarData(
-  events: readonly {
+  events: {
     drain_pct_per_day?: number | null;
   }[],
 ): DrainBarPoint[] {

@@ -102,7 +102,7 @@ export function buildEntries(
   });
 }
 
-export default function SafetyFeaturesWidget({ vehicleId, size }: WidgetProps) {
+export default function SafetyFeaturesWidget({ vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const vehicleQuery = useVehicles();
   const { data: vehicles } = vehicleQuery;

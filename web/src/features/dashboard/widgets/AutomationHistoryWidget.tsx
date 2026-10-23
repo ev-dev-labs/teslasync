@@ -37,7 +37,10 @@ export function automationStatusLabel(status: AutomationHistoryStatus | null | u
     case 'cancelled': return t('automations:historyPage.status.cancelled', 'Cancelled');
     case 'test': return t('automations:historyPage.status.test', 'Test');
     case 'undo': return t('automations:historyPage.status.undo', 'Undone');
-    default: return typeof status === 'string' && status.trim() ? status.trim() : '—';
+      default: {
+        const value: unknown = status;
+        return typeof value === 'string' && value.trim() ? value.trim() : '—';
+      }
   }
 }
 

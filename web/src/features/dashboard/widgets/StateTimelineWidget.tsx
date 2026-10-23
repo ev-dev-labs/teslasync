@@ -160,7 +160,7 @@ function TimelineStripe({
         })}
       </div>
       <ul className="m-0 flex list-none flex-wrap gap-x-3 gap-y-1 p-0">
-        {legend.map((item, index) => (
+        {legend.map((item) => (
           <li key={item.state} className="flex min-w-0 items-center gap-1.5">
             <span
               aria-hidden="true"
