@@ -129,27 +129,25 @@ vi.mock('@/components/charts', async () => {
   chartGrid: null,
   chartMargin: {},
   chartAnimation: {},
-  axisTick: { size: 'lg' },
   axisTickSm: { size: 'sm' },
   fmt: (v: unknown, decimals = 1) =>
     Number((v as number) ?? 0).toFixed(Math.max(0, Math.min(20, decimals))),
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
     <div data-testid="responsive-container">{children}</div>
   ),
-  AreaChart: ({ data, children }: { data?: unknown[]; children?: ReactNode }) => (
-    <div data-testid="area-chart" data-json={JSON.stringify(data ?? [])}>
+  BarChart: ({ data, children }: { data?: unknown[]; children?: ReactNode }) => (
+    <div data-testid="bar-chart" data-json={JSON.stringify(data ?? [])}>
       {children}
     </div>
   ),
-  Area: ({ dataKey, name, stroke, fill }: Record<string, unknown>) => (
+  Bar: ({ dataKey, name, children }: Record<string, unknown>) => (
     <div
-      data-testid="area"
+      data-testid="bar"
       data-key={String(dataKey ?? '')}
       data-name={String(name ?? '')}
-      data-stroke={String(stroke ?? '')}
-      data-fill={String(fill ?? '')}
-    />
+    >{children as ReactNode}</div>
   ),
+  Cell: ({ fill }: { fill?: unknown }) => <div data-testid="bar-cell" data-fill={String(fill ?? '')} />,
   XAxis: ({ dataKey, tick }: { dataKey?: unknown; tick?: { size?: string } }) => (
     <div
       data-testid="x-axis"
@@ -283,7 +281,8 @@ interface Row {
 }
 
 function chartRows(): Row[] {
-  return JSON.parse(screen.getByTestId('area-chart').getAttribute('data-json') ?? '[]');
+  return JSON.parse(screen.getByTestId('bar-chart').getAttribute('data-json') ?? '[]')
+    .map((row: Row & { isToday?: boolean }) => ({ date: row.date, solar_kwh: row.solar_kwh }));
 }
 
 beforeEach(() => {
@@ -296,40 +295,28 @@ beforeEach(() => {
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('SolarProductionWidget', () => {
-  it('standard layout renders the titled shell, 3 stats and the solar area chart', () => {
+  it('standard layout renders the titled shell, headline and solar bar chart', () => {
     renderWidget();
 
     // Titled shell — no gutted panel.
     expect(screen.getByText('Solar production')).toBeInTheDocument();
 
-    for (const label of ['Today', '30-day total', 'Daily avg']) {
-      expect(screen.getByText(label)).toBeInTheDocument();
-    }
-
-    // No bucket for today means unknown, not zero. Total 6, daily average 2.0.
+    expect(screen.getByText('Today')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByText('6.00')).toBeInTheDocument();
-    expect(screen.getByText('2.00')).toBeInTheDocument();
-    // Only measured stats carry a unit.
-    expect(screen.getAllByText('kWh')).toHaveLength(2);
-
-    // The area is wired to the solar series with the amber stroke.
-    const area = screen.getByTestId('area');
-    expect(area).toHaveAttribute('data-key', 'solar_kwh');
-    expect(area).toHaveAttribute('data-name', 'Solar');
-    expect(area).toHaveAttribute('data-stroke', chartTokens.series[2]);
-
-    // Standard layout uses the small axis ticks.
-    expect(screen.getByTestId('x-axis')).toHaveAttribute('data-ticksize', 'sm');
+    expect(screen.getByText(/Daily avg.*2.*kWh/)).toBeInTheDocument();
+    expect(screen.getByText(/Daily avg/)).toBeInTheDocument();
+    const bar = screen.getByTestId('bar');
+    expect(bar).toHaveAttribute('data-key', 'solar_kwh');
+    expect(bar).toHaveAttribute('data-name', 'Solar');
   });
 
   it('scales Wh→kWh and derives the chart series from the history payload', () => {
     renderWidget();
 
     expect(chartRows()).toEqual([
-      { date: '3/1', solar_kwh: 1 },
-      { date: '3/2', solar_kwh: 3 },
-      { date: '3/3', solar_kwh: 2 },
+      { date: 'Mar 1', solar_kwh: 1 },
+      { date: 'Mar 2', solar_kwh: 3 },
+      { date: 'Mar 3', solar_kwh: 2 },
     ]);
   });
 
@@ -343,7 +330,7 @@ describe('SolarProductionWidget', () => {
     );
     renderWidget();
 
-    expect(chartRows().map((r) => r.date)).toEqual(['12/31', '1/5']);
+    expect(chartRows().map((r) => r.date)).toEqual(['Dec 31', 'Jan 5']);
   });
 
   it("surfaces the current day's production in the Today stat", () => {
@@ -360,19 +347,14 @@ describe('SolarProductionWidget', () => {
 
     // Today matches by date prefix → 5.0; total 6, avg 3.0.
     expect(screen.getByText('Today')).toBeInTheDocument();
-    expect(screen.getByText('5.00')).toBeInTheDocument();
-    expect(screen.getByText('3.00')).toBeInTheDocument();
+    expect(screen.getByText('5.0')).toBeInTheDocument();
+    expect(screen.getByText(/Daily avg.*3.*kWh/)).toBeInTheDocument();
   });
 
-  it('labels the Y axis and tooltip through the shared fmt / fmtNumber helpers', () => {
+  it('labels the tooltip through the shared fmtNumber unit formatting', () => {
     renderWidget();
-
-    // Y-axis tickFormatter(1234) → fmt(1234, 0) → "1234".
-    expect(screen.getByTestId('y-axis')).toHaveAttribute('data-tick', '1,234.00');
-
-    // Tooltip formatter(2.5) → ["2.5 kWh", "Solar"].
     const fmtAttr = screen.getByTestId('tooltip').getAttribute('data-fmt') ?? '';
-    expect(fmtAttr).toContain('2.50 kWh');
+    expect(fmtAttr).toContain('2.5 kWh');
     expect(fmtAttr).toContain('Solar');
   });
 
@@ -384,29 +366,28 @@ describe('SolarProductionWidget', () => {
     });
     expect(chart).toBeInTheDocument();
     // The recharts subtree lives inside the labelled image.
-    expect(chart.querySelector('[data-testid="area-chart"]')).toBeInTheDocument();
+    expect(chart.querySelector('[data-testid="bar-chart"]')).toBeInTheDocument();
   });
 
-  it('uses the large axis ticks in the wide layout', () => {
+  it('uses the bar chart in the wide layout', () => {
     renderWidget({ cols: 4, rows: 2 });
-    expect(screen.getByTestId('x-axis')).toHaveAttribute('data-ticksize', 'lg');
+    expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
   });
 
   it('compact layout retains its title and icon with Today + Daily-Avg stats, no chart', () => {
     renderWidget({ cols: 1, rows: 2 });
 
     expect(screen.getByText('Today')).toBeInTheDocument();
-    expect(screen.getByText('Daily avg')).toBeInTheDocument();
+    expect(screen.getByText(/Daily avg/)).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByText('2.00')).toBeInTheDocument();
-    expect(screen.getAllByText('kWh')).toHaveLength(1);
+    expect(screen.getByText(/Daily avg.*2.*kWh/)).toBeInTheDocument();
+    expect(screen.getByText(/2.*kWh/)).toBeInTheDocument();
 
     const heading = screen.getByRole('heading', { name: 'Solar production', level: 3 });
     expect(heading).toBeVisible();
     expect(heading.parentElement?.querySelector('svg.lucide-sun')).toBeInTheDocument();
     // Compact never mounts the chart and drops the 30-day stat.
-    expect(screen.queryByText('30-day total')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 
   it('compact layout shows the empty state when there is no solar data', () => {
@@ -456,8 +437,7 @@ describe('SolarProductionWidget', () => {
     expect(screen.getByText('No solar data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // Stats + chart are not rendered while empty.
-    expect(screen.queryByText('30-day total')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 
   it('renders a skeleton placeholder while the sites query is loading', () => {
@@ -526,7 +506,7 @@ describe('SolarProductionWidget', () => {
 
     const rows = chartRows();
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toEqual({ date: '3/1', solar_kwh: 1 });
+    expect(rows[0]).toEqual({ date: 'Mar 1', solar_kwh: 1 });
   });
 
   it('is null-safe: a non-array history payload renders the empty state', () => {
@@ -534,7 +514,7 @@ describe('SolarProductionWidget', () => {
 
     expect(() => renderWidget()).not.toThrow();
     expect(screen.getByText('No solar data')).toBeInTheDocument();
-    expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 
   it('passes the first energy site id to the history hook', () => {
@@ -547,7 +527,7 @@ describe('SolarProductionWidget', () => {
   it.each([{ cols: 1, rows: 2 }, { cols: 2, rows: 4 }, { cols: 3, rows: 4 }])('retains solar history on cached refresh failure in %j', (size) => {
     historyMock.mockReturnValue(makeQuery({ data: HISTORY, error: new Error('refresh failed'), isError: true }));
     renderWidget(size);
-    expect(screen.getByText('2.00')).toBeInTheDocument();
+    expect(screen.getByText(/Daily avg.*2.*kWh/)).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
@@ -560,10 +540,9 @@ describe('SolarProductionWidget', () => {
     renderWidget();
     expect(screen.queryByText('No solar data')).not.toBeInTheDocument();
     expect(chartRows()).toEqual([
-      { date: `${Number(today.slice(5, 7))}/${Number(today.slice(8, 10))}`, solar_kwh: 0 },
-      { date: '3/1', solar_kwh: null },
+      { date: expect.stringMatching(/^[A-Z][a-z]{2} \d{1,2}$/), solar_kwh: 0 },
+      { date: 'Mar 1', solar_kwh: null },
     ]);
-    expect(screen.getAllByText('0.00')).toHaveLength(2);
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('0.0')).toBeInTheDocument();
   });
 });
