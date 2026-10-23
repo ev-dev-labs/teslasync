@@ -158,7 +158,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
             <>
               <ShieldCheck className="h-4 w-4 text-emerald-400" />
               <WidgetBigNumber
-                value={daysRemaining != null ? fmtInt(Math.max(daysRemaining, 0)) : null}
+                value={effectiveDays != null ? fmtInt(Math.max(effectiveDays, 0)) : null}
                 label={t('widget.warranty.daysLeft', 'days left')}
                 align="center"
               />
@@ -273,6 +273,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
               : null;
             const limitDisplay = limitM == null ? null : toDistanceDisplay(limitM);
             const remainingDisplay = remainingM == null ? null : toDistanceDisplay(remainingM);
+            const currentDisplay = currentMileageM == null ? null : toDistanceDisplay(currentMileageM);
 
             let periodDays: number | null = null;
             if (row.start && row.expiry) {
@@ -324,7 +325,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
                     sublabel={
                       remainingDisplay != null
                         ? t('widget.warranty.distanceLeft', '{{distance}} {{unit}} left', {
-                            distance: fmtNumber(remainingDisplay, 0),
+                            distance: fmtNumber(remainingDisplay, 2),
                             unit: distanceUnit,
                           })
                         : ''
@@ -337,7 +338,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
                         ? null
                       : remainingDisplay != null
                         ? t('widget.warranty.distanceLeft', '{{distance}} {{unit}} left', {
-                            distance: fmtNumber(remainingDisplay, 0),
+                            distance: fmtNumber(remainingDisplay, 2),
                             unit: distanceUnit,
                           })
                         : formatYearsMonths(row.days) ?? t('widget.status.unknown', 'Unknown')}
@@ -346,9 +347,14 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
                 {limitDisplay != null && (
                   <p className="mt-1 text-xs text-[var(--text-secondary)]">
                     {t('widget.warranty.distanceLimit', '{{distance}} {{unit}} limit', {
-                      distance: fmtNumber(limitDisplay, 0),
+                      distance: fmtNumber(limitDisplay, 2),
                       unit: distanceUnit,
                     })}
+                  </p>
+                )}
+                {currentDisplay != null && (
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                    {fmtNumber(currentDisplay, 2)} {distanceUnit}
                   </p>
                 )}
               </section>
