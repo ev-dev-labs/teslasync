@@ -277,9 +277,9 @@ describe('LiveSignalSparklinesWidget — full view', () => {
 
     // Live values go through fmtNumber; the numeric string is coerced; the two
     // signals absent from the /live snapshot dash out.
-    expect(screen.getByText('82.00')).toBeInTheDocument();
-    expect(screen.getByText('55.40')).toBeInTheDocument();
-    expect(screen.getByText('-3.20')).toBeInTheDocument();
+    expect(screen.getByText('82.0%')).toBeInTheDocument();
+    expect(screen.getByText(/199[.,]4 km\/h/)).toBeInTheDocument();
+    expect(screen.getByText('-3.2 A')).toBeInTheDocument();
     expect(screen.getAllByText('—')).toHaveLength(2);
 
     // Sparklines render only where there are >=2 history points; the rest fall
@@ -433,7 +433,7 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
     const sparkline = await screen.findByRole('img', { name: 'Battery Level trend' });
     const row = signalRow('Battery Level');
     const coordinates = sparkline.querySelector('polyline')?.getAttribute('points');
-    expect(within(row).getByText('0.00')).toBeInTheDocument();
+    expect(within(row).getByText('0.0%' )).toBeInTheDocument();
     expect(within(row).queryByText('—')).not.toBeInTheDocument();
     expect(within(row).getByRole('img', { name: 'Trending up' })).toBeInTheDocument();
     expect(coordinates?.split(' ')).toHaveLength(4);
@@ -474,7 +474,7 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
     expect(sourceCallCount('history')).toBe(0);
     failures.clear();
     fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }));
-    await screen.findByText('82.00');
+    await screen.findByText('82.0%' );
     await screen.findByRole('img', { name: 'Battery Level trend' });
     expectHistory();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -495,7 +495,7 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
 
       if (source === 'history') {
         await within(row).findByRole('alert');
-        expect(within(row).getByText('82.00')).toBeInTheDocument();
+        expect(within(row).getByText('82.0%' )).toBeInTheDocument();
         expect(within(row).queryByRole('img', { name: 'Battery Level trend' })).not.toBeInTheDocument();
         expect(within(row).queryByText('no data')).not.toBeInTheDocument();
         expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
@@ -505,7 +505,7 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
         expect(warning).toHaveAttribute('role', 'status');
         expect(warning).toHaveAttribute('aria-live', 'polite');
         expect(warning).toHaveAttribute('data-data-state', 'partial');
-        expect(within(row).getByText(source === 'live' ? '—' : '82.00')).toBeInTheDocument();
+        expect(within(row).getByText(source === 'live' ? '—' : '82.0%' )).toBeInTheDocument();
         await within(row).findByRole('img', { name: 'Battery Level trend' });
         expectHistory();
         expect(screen.getByRole('alert')).toHaveTextContent("Can't reach server");
@@ -527,7 +527,7 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
       }
       await waitFor(() => {
         expect(sourceCallCount(source)).toBe(counts[source] + 1);
-        expect(within(signalRow('Battery Level')).getByText('82.00')).toBeInTheDocument();
+        expect(within(signalRow('Battery Level')).getByText('82.0%' )).toBeInTheDocument();
         expectHistory();
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
         expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
@@ -550,7 +550,7 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
       const failures = new Set<SignalSource>();
       wire(failures);
       const { queryClient } = renderWidget(FULL, 1, { signals: ['BatteryLevel'] });
-      await screen.findByText('82.00');
+      await screen.findByText('82.0%' );
       await screen.findByRole('img', { name: 'Battery Level trend' });
       const retainedCoordinates = expectHistory();
       expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
@@ -561,7 +561,7 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
       });
 
       const warning = await screen.findByTestId('stale-refresh-warning');
-      expect(within(signalRow('Battery Level')).getByText('82.00')).toBeInTheDocument();
+      expect(within(signalRow('Battery Level')).getByText('82.0%' )).toBeInTheDocument();
       expect(expectHistory()).toBe(retainedCoordinates);
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       expect(warning).toHaveAttribute('role', 'status');
@@ -584,7 +584,7 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
         expect(sourceCallCount(source)).toBe(counts[source] + 1);
         expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
       });
-      expect(within(signalRow('Battery Level')).getByText('82.00')).toBeInTheDocument();
+      expect(within(signalRow('Battery Level')).getByText('82.0%' )).toBeInTheDocument();
       expect(expectHistory()).toBe(retainedCoordinates);
       if (source === 'history') {
         expect(sourceCallCount('catalogue')).toBe(counts.catalogue);
@@ -611,7 +611,7 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
     );
     const { container, queryClient } = renderWidget(FULL, 1, { signals: ['BatteryLevel', 'VehicleSpeed'] });
 
-    await screen.findByText('0.00');
+    await screen.findByText('0.0%' );
     await screen.findByRole('img', { name: 'Vehicle Speed trend' });
     await waitFor(() => expect(
       queryClient.getQueryCache().getAll()
@@ -620,10 +620,10 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
     ).toContainEqual({ data }));
     const battery = signalRow('Battery Level');
     const speed = signalRow('Vehicle Speed');
-    expect(within(battery).getByText('0.00')).toBeInTheDocument();
+    expect(within(battery).getByText('0.0%' )).toBeInTheDocument();
     expect(within(battery).queryByText('—')).not.toBeInTheDocument();
     expect(within(speed).getByText('—')).toBeInTheDocument();
-    expect(within(speed).queryByText('0.00')).not.toBeInTheDocument();
+    expect(within(speed).queryByText('0.0%' )).not.toBeInTheDocument();
     expect(within(speed).getByRole('img', { name: 'Trending down' })).toBeInTheDocument();
     if (hasHistory) {
       await within(battery).findByRole('img', { name: 'Battery Level trend' });
@@ -647,7 +647,7 @@ describe('LiveSignalSparklinesWidget — refresh', () => {
 
     // Wait for the first load to settle — a visible value implies /live is no
     // longer fetching, so the refresh control is armed.
-    expect(await screen.findByText('60.00')).toBeInTheDocument();
+    expect(await screen.findByText('60.0%' )).toBeInTheDocument();
     await waitFor(() => expect(liveCallCount()).toBe(1));
 
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
