@@ -169,8 +169,8 @@ beforeEach(() => {
 it.each([1, 2, 3])('keeps an accessible heading and both readings at %s columns', cols => {
   renderWidget({ size: { cols, rows: 2 } });
   expect(screen.getByRole('heading', { name: 'Range', level: 3 })).toBeVisible();
-  expect(screen.getByText('500.00 km')).toBeInTheDocument();
-  expect(screen.getByText('480.00 km')).toBeInTheDocument();
+  expect(screen.getByText('500 km')).toBeInTheDocument();
+  expect(screen.getAllByText('480 km').length).toBeGreaterThanOrEqual(2);
 });
 
 afterEach(() => {
@@ -181,16 +181,16 @@ afterEach(() => {
 
 describe('formatRange', () => {
   it('converts SI metres to the display unit, rounds to whole units, and appends it', () => {
-    expect(formatRange(500_000, 'km')).toBe('500.00 km');
+    expect(formatRange(500_000, 'km')).toBe('500 km');
     // 123_456 m → 123.456 km, rounded to the nearest whole unit.
-    expect(formatRange(123_456, 'km')).toBe('123.46 km');
+    expect(formatRange(123_456, 'km')).toBe('123 km');
     // 1 mile = 1609.344 m → 482803.2 m is exactly 300 mi.
-    expect(formatRange(482_803.2, 'mi')).toBe('300.00 mi');
+    expect(formatRange(482_803.2, 'mi')).toBe('300 mi');
   });
 
   it('keeps a real zero but renders an em-dash for absent / non-finite input', () => {
     // A finite zero is a legitimate reading (empty battery), not "no data".
-    expect(formatRange(0, 'km')).toBe('0.00 km');
+    expect(formatRange(0, 'km')).toBe('0 km');
     // Null / undefined / NaN / Infinity are "no data" → placeholder, never "0 km".
     expect(formatRange(null, 'km')).toBe('—');
     expect(formatRange(undefined, 'km')).toBe('—');
@@ -218,7 +218,7 @@ describe('RangeEstimateWidget — populated', () => {
         expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
         expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(1);
         expect(brief.querySelector('[data-operational-metric]')).toHaveAttribute('data-value-state', 'value');
-        expect(within(brief).getByText('0.00 km')).toBeInTheDocument();
+        expect(within(brief).getByText('0 km')).toBeInTheDocument();
         expect(within(brief).getByText('Ideal range')).toBeInTheDocument();
       } else {
         expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
@@ -236,7 +236,7 @@ describe('RangeEstimateWidget — populated', () => {
       }
       fireEvent.keyDown(estimateDrawer, { key: 'Escape' });
       expect(screen.getByText('Rated range')).toBeInTheDocument();
-      expect(screen.getByText('500.00 km')).toBeInTheDocument();
+      expect(screen.getByText('500 km')).toBeInTheDocument();
       expect(screen.queryByText('No range data')).toBeNull();
       cleanup();
     }
@@ -258,8 +258,8 @@ describe('RangeEstimateWidget — populated', () => {
       expect(within(brief).queryByText('—')).not.toBeInTheDocument();
       fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
       expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
-      expect(within(brief).queryByText('0.00 mi')).toBeNull();
-      expect(screen.getByText('300.00 mi')).toBeInTheDocument();
+      expect(within(brief).queryByText('0 mi')).toBeNull();
+      expect(screen.getByText('300 mi')).toBeInTheDocument();
       expect(screen.getByText('Rated range')).toBeInTheDocument();
       expect(screen.queryByText('No range data')).toBeNull();
       cleanup();
@@ -275,11 +275,29 @@ describe('RangeEstimateWidget — populated', () => {
     });
 
     expect(screen.getByText('Rated range')).toBeInTheDocument();
-    expect(screen.getByText('Ideal range')).toBeInTheDocument();
-    expect(screen.getByText('500.00 km')).toBeInTheDocument();
-    expect(screen.getByText('480.00 km')).toBeInTheDocument();
+    expect(screen.getAllByText('Ideal range').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('500 km')).toBeInTheDocument();
+    expect(screen.getAllByText('480 km').length).toBeGreaterThanOrEqual(2);
+    // After: one hero (rated) + ideal row; no fabricated realistic estimate or Wh/mi footnote.
+    expect(screen.queryByText('Realistic estimate')).toBeNull();
+    expect(screen.queryByText(/last 30 days/)).toBeNull();
+    expect(screen.getAllByText('Rated range')).toHaveLength(1);
     // A present snapshot never shows the empty state.
     expect(screen.queryByText('No range data')).toBeNull();
+  });
+
+
+  it('omits the ideal row when ideal is absent, without fabricating a row or realistic estimate', () => {
+    renderWidget({
+      vehicleId: 7,
+      query: makeQuery({
+        data: { state: makeState({ rated_range: 500_000, ideal_range: null }), live: true },
+      }),
+    });
+    expect(screen.getByText('500 km')).toBeInTheDocument();
+    expect(screen.queryByText('Realistic estimate')).toBeNull();
+    // Only the brief label remains; no ranked-list row value is invented.
+    expect(screen.getAllByText('Ideal range')).toHaveLength(1);
   });
 
   it('converts the SI ranges to miles when that is the distance preference', () => {
@@ -295,8 +313,8 @@ describe('RangeEstimateWidget — populated', () => {
     });
 
     // 482803.2 m → 300 mi, 321868.8 m → 200 mi; the km unit never appears.
-    expect(screen.getByText('300.00 mi')).toBeInTheDocument();
-    expect(screen.getByText('200.00 mi')).toBeInTheDocument();
+    expect(screen.getByText('300 mi')).toBeInTheDocument();
+    expect(screen.getAllByText('200 mi').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText(/km/)).toBeNull();
   });
 
@@ -310,10 +328,10 @@ describe('RangeEstimateWidget — populated', () => {
 
     // Rated is absent → placeholder; ideal is a real 0 → "0 km" (not a dash).
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByText('0.00 km')).toBeInTheDocument();
+    expect(screen.getAllByText('0 km').length).toBeGreaterThanOrEqual(2);
     // The section chrome still renders (never a blank panel).
     expect(screen.getByText('Rated range')).toBeInTheDocument();
-    expect(screen.getByText('Ideal range')).toBeInTheDocument();
+    expect(screen.getAllByText('Ideal range').length).toBeGreaterThanOrEqual(2);
   });
 });
 
@@ -337,8 +355,8 @@ describe('RangeEstimateWidget — vehicle resolution', () => {
 describe('RangeEstimateWidget — lifecycle + empty states', () => {
   it('keeps both range readings on cached refresh failure with a retry warning', () => {
     renderWidget({ query: makeQuery({ error: new Error('transient'), isError: true }) });
-    expect(screen.getByText('500.00 km')).toBeInTheDocument();
-    expect(screen.getByText('480.00 km')).toBeInTheDocument();
+    expect(screen.getByText('500 km')).toBeInTheDocument();
+    expect(screen.getAllByText('480 km').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });

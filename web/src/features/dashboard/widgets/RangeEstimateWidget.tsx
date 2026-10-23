@@ -7,7 +7,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
 import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber } from './shared';
+import { WidgetBigNumber, WidgetRankedList } from './shared';
 import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
@@ -25,7 +25,7 @@ export function formatRange(
   distanceUnit: DistanceUnitPref,
 ): string {
   if (!isFiniteNumber(meters)) return '—';
-  return `${fmtNumber(convertDistanceFromSI(meters, distanceUnit))} ${distanceUnit}`;
+  return `${fmtNumber(convertDistanceFromSI(meters, distanceUnit), 0)} ${distanceUnit}`;
 }
 
 export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
@@ -74,6 +74,17 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
           value={isFiniteNumber(state?.rated_range) ? formatRange(state.rated_range, distanceUnit) : null}
           animated={false}
         />
+        {isFiniteNumber(state?.ideal_range) && (
+          <WidgetRankedList
+            order="source"
+            items={[{
+              id: 'ideal-range',
+              label: t('widget.idealRange', 'Ideal range'),
+              value: state?.ideal_range,
+              formattedValue: formatRange(state?.ideal_range, distanceUnit),
+            }]}
+          />
+        )}
         <DashboardSourceBrief
           metrics={metrics}
           state={trust}
