@@ -30,7 +30,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   hooks.vehicles.mockReturnValue(queryResult([{ id: 7 }]));
   hooks.sessions.mockReturnValue(queryResult(sessions));
-  hooks.detail.mockReturnValue(queryResult({ total_energy_added_wh: 0, duration_min: 45, charger_type: 'AC' }));
+  hooks.detail.mockReturnValue(queryResult({ total_energy_added_wh: 0, duration_s: 2700, charger_type: 'AC' }));
   hooks.telemetry.mockReturnValue(queryResult(telemetry));
 });
 

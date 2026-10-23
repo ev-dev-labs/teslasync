@@ -119,8 +119,16 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
 
   const durationStr = useMemo(() => {
     if (!detail) return '—';
-    const mins = knownNumber(detail.duration_min);
-    if (mins == null || mins < 0) return '—';
+    let durationSeconds = knownNumber(detail.duration_s);
+    if (durationSeconds == null && detail.started_at && detail.ended_at) {
+      const started = new Date(detail.started_at).getTime();
+      const ended = new Date(detail.ended_at).getTime();
+      if (Number.isFinite(started) && Number.isFinite(ended)) {
+        durationSeconds = (ended - started) / 1000;
+      }
+    }
+    if (durationSeconds == null || durationSeconds < 0) return '—';
+    const mins = Math.floor(durationSeconds / 60);
     if (mins < 60) return `${mins}m`;
     const h = Math.floor(mins / 60);
     const m = mins % 60;

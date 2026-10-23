@@ -222,6 +222,12 @@ func chargingSessionResponse(s *chargingmodel.ChargingSession, live bool, bill *
 		"cable_type":            s.CableType,
 		"live":                  live,
 	}
+	if s.EndedAt != nil {
+		durationS := s.EndedAt.Sub(s.StartedAt).Seconds()
+		if durationS >= 0 {
+			resp["duration_s"] = durationS
+		}
+	}
 	if bill == nil {
 		return resp
 	}
