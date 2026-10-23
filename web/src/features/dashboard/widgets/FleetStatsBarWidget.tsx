@@ -5,15 +5,15 @@ import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { useUnits } from '@/hooks/useUnits';
-
 import { WidgetShell } from './WidgetShell';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
+import { isFiniteNumber } from '@/lib/numberFormat';
+import { useRangeState } from '@/hooks/useRangeState';
+import { WidgetStatGrid, type StatGridItem } from './shared';
 
 /**
  * Convert a fleet-analytics `total_distance_km` value to the user's display
@@ -29,13 +29,23 @@ export function toDistanceDisplay(totalDistanceKm: number, to: DistanceUnitPref)
   return convertDistanceFromSI(totalDistanceKm * 1000, to);
 }
 
-export default function FleetStatsBarWidget(_props: WidgetProps) {
+export default function FleetStatsBarWidget({ size }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const { startInstant, endInstantExclusive } = useRangeState({ defaultPresetId: '30d' });
   const vehiclesQuery = useVehicles();
-  const analyticsQuery = useFleetAnalytics(30);
+  const analyticsQuery = useFleetAnalytics({ start: startInstant, end: endInstantExclusive });
   const { data: vehicles, isLoading: vehiclesLoading } = vehiclesQuery;
-  const { data: analytics, isLoading: analyticsLoading, error, isFetching: analyticsFetching, isStale: analyticsStale, isError: analyticsIsError, dataUpdatedAt: analyticsUpdatedAt, refetch: refetchAnalytics } = analyticsQuery;
+  const {
+    data: analytics,
+    isLoading: analyticsLoading,
+    error,
+    isFetching: analyticsFetching,
+    isStale: analyticsStale,
+    isError: analyticsIsError,
+    dataUpdatedAt: analyticsUpdatedAt,
+    refetch: refetchAnalytics,
+  } = analyticsQuery;
   const vehiclesState = useDataState(vehiclesQuery);
   const analyticsState = useDataState(analyticsQuery, { provenance: 'historical' });
   const combined = combineDataStates([vehiclesState, analyticsState]);
@@ -53,63 +63,52 @@ export default function FleetStatsBarWidget(_props: WidgetProps) {
   };
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
-
   const isLoading = vehiclesLoading || analyticsLoading;
-
-  const stats = useMemo(() => {
+  const hasData = (vehicles != null && vehicles.length > 0) || analytics != null;
+  const stats = useMemo<StatGridItem[]>(() => {
     const vehicleList = vehicles ?? [];
-    const vehicleCount = vehicleList.length;
-    const onlineCount = vehicleList.filter((v) => v.state === 'online').length;
-    const totalDistance = toDistanceDisplay(analytics?.total_distance_km ?? 0, distanceUnit);
-    const totalEnergy = analytics?.total_energy_kwh ?? 0;
-    return { vehicleCount, onlineCount, totalDistance, totalEnergy };
-  }, [vehicles, analytics, distanceUnit]);
-
-  const hasData = (vehicles && vehicles.length > 0) || analytics;
-
-  const items = useMemo<StatMetric[]>(() => {
-    const onlinePct =
-      stats.vehicleCount > 0
-        ? `${fmtNumber((stats.onlineCount / stats.vehicleCount) * 100)}%`
-        : undefined;
+    const vehicleCount = vehicles == null ? null : vehicleList.length;
+    const onlineCount = vehicles == null
+      ? null
+      : vehicleList.filter((vehicle) => vehicle.state === 'online').length;
+    const asleepCount = vehicles == null
+      ? null
+      : vehicleList.filter((vehicle) => vehicle.state === 'asleep' || vehicle.state === 'offline').length;
 
     return [
       {
         label: t('widget.fleetStatsBar.vehicles', 'Vehicles'),
-        metricId: 'count',
-        rawValue: vehicles == null ? null : stats.vehicleCount,
-        description: t('widget.fleetStatsBar.summary.vehiclesHelp', 'Count from the returned vehicle registry, not the 30-day analytics rollup.'),
-        context: vehicles == null ? undefined : `${fmtInt(stats.onlineCount)} ${t('widget.fleetStatsBar.online', 'online')}`,
+        value: vehicleCount == null ? null : fmtInt(vehicleCount),
       },
       {
-        label: t('widget.fleetStatsBar.onlineNow', 'Online now'),
-        metricId: 'count',
-        rawValue: vehicles == null ? null : stats.onlineCount,
-        description: t('widget.fleetStatsBar.summary.onlineHelp', 'Registry entries whose state is online; not verified live-state coverage.'),
-        context: onlinePct,
+        label: t('widget.fleetStatsBar.online', 'Online'),
+        value: onlineCount == null ? null : fmtInt(onlineCount),
+        sublabel: asleepCount != null && asleepCount > 0
+          ? t('widget.fleetStatsBar.asleepCount', '{{count}} asleep/offline', { count: fmtInt(asleepCount) })
+          : undefined,
       },
       {
         label: t('widget.fleetStatsBar.distance30d', 'Distance (30d)'),
-        metricId: 'distance',
-        rawValue: analytics?.total_distance_km == null ? null : analytics.total_distance_km * 1000,
-        description: t('widget.fleetStatsBar.summary.distanceHelp', 'Fleet-wide trailing 30-day distance; source kilometres normalized to metres.'),
-        display: { formatter: raw => ({ value: fmtNumber(toDistanceDisplay(raw / 1000, distanceUnit)), unit: distanceUnit }) },
+        value: isFiniteNumber(analytics?.total_distance_km)
+          ? fmtNumber(toDistanceDisplay(analytics.total_distance_km, distanceUnit), 0)
+          : null,
+        unit: distanceUnit,
       },
       {
         label: t('widget.fleetStatsBar.energy30d', 'Energy (30d)'),
-        metricId: 'energy',
-        rawValue: analytics?.total_energy_kwh == null ? null : analytics.total_energy_kwh * 1000,
-        description: t('widget.fleetStatsBar.summary.energyHelp', 'Fleet-wide trailing 30-day energy; source kilowatt-hours normalized to watt-hours, retaining the source kWh display.'),
-        display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kWh' }) },
+        value: isFiniteNumber(analytics?.total_energy_kwh)
+          ? fmtNumber(analytics.total_energy_kwh, 1)
+          : null,
+        unit: 'kWh',
       },
     ];
-  }, [stats, vehicles, analytics, t, distanceUnit, fmtNumber, fmtInt]);
+  }, [vehicles, analytics, distanceUnit, t, fmtNumber, fmtInt]);
 
   return (
     <WidgetShell
       dataState={retained || isLoading || dataState.fatalError ? dataState : undefined}
       title={t('widget.fleetStatsBar.title', 'Fleet stats')}
-      icon={<Car className="h-3.5 w-3.5 text-cyan-400" />}
+      icon={<Car className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
       loading={isLoading}
       error={error ? String(error) : null}
       updatedAt={analyticsUpdatedAt}
@@ -119,17 +118,15 @@ export default function FleetStatsBarWidget(_props: WidgetProps) {
       onRefresh={refresh}
     >
       {hasData ? (
-        <DashboardSourceBrief
-          metrics={items}
-          state={dataState}
-          eyebrow={t('widget.fleetStatsBar.summary.eyebrow', 'Fleet sources')}
-          title={t('widget.fleetStatsBar.summary.title', 'Fleet summary')}
-          description={t('widget.fleetStatsBar.summary.description', 'Current registry counts and trailing 30-day analytics have independent sources and windows. Exact analytics bounds and coverage are not supplied.')}
-          scope={t('widget.fleetStatsBar.summary.scope', 'Fleet-wide · registry snapshot / 30-day analytics')}
-          testId="fleet-stats-bar-operational-brief"
-        />
+        <section aria-label={t('widget.fleetStats.summary.title', 'Fleet operating totals')} data-testid="fleet-stats-bar">
+          <WidgetStatGrid
+            stats={stats}
+            cols={size.cols >= 4 ? 4 : 2}
+            maxPerRow={size.cols >= 4 ? 4 : 2}
+          />
+        </section>
       ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+        <EmptyState
           icon={<Car className="h-5 w-5" />}
           message={t('widget.fleetStatsBar.noData', 'No fleet data available')}
           className="py-4"
