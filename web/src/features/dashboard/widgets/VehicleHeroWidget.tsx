@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Car, HelpCircle, Lock, Unlock, Zap } from 'lucide-react';
+import { Car, HelpCircle, Lock, Unlock } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { Heading, Text } from '@/components/ui';
 import { StatusBadge } from '@/components/data-display';
@@ -23,8 +23,8 @@ import {
   convertDistanceFromSI,
   convertTempFromSI,
 } from '@/lib/unitConversion';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateConvert';
 import { VEHICLE_STATE_LABELS, type VehicleState } from '@/types/fsm';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import { WidgetBigNumber } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -184,6 +184,14 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
   const etaHours = state?.time_to_full_charge;
   const hasEta = etaHours != null && Number.isFinite(etaHours) && etaHours > 0;
   const isCharging = status === 'charging';
+  const batteryTone =
+    batteryLevel == null ? 'ok' : batteryLevel <= 20 ? 'bad' : batteryLevel <= 40 ? 'warn' : 'ok';
+  const batteryFillClass =
+    batteryTone === 'bad'
+      ? 'bg-[var(--semantic-danger)]'
+      : batteryTone === 'warn'
+        ? 'bg-[var(--semantic-warning)]'
+        : 'bg-[var(--semantic-success)]';
   const remainingPct =
     isCharging && chargeLimit != null && batteryLevel != null
       ? Math.max(0, Math.round(chargeLimit - batteryLevel))
@@ -203,8 +211,8 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
   const sinceMs = state?.since ? Date.parse(state.since) : Number.NaN;
   const sinceDuration = Number.isFinite(sinceMs)
     ? (() => {
-        const minutes = Math.max(0, Math.floor((Date.now() - sinceMs) / 60_000));
-        return minutes >= 60 ? `${Math.floor(minutes / 60)}h` : `${minutes}m`;
+        const elapsedSeconds = Math.max(0, Math.floor((Date.now() - sinceMs) / 1000));
+        return formatDurationSecondsAsMinutes(elapsedSeconds);
       })()
     : null;
   const subtitle = state
@@ -278,10 +286,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
                 {t('hero.unknownStatus', 'Unknown')}
               </span>
             ) : (
-              <span className="inline-flex shrink-0 items-center gap-1.5">
-                {isCharging && <Zap className="h-3.5 w-3.5" aria-hidden="true" />}
-                <StatusBadge status={status} size="sm" showDot={false} />
-              </span>
+              <StatusBadge status={status} size="sm" showDot />
             )}
           </div>
 
@@ -326,16 +331,12 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuetext={batteryLevel != null ? `${fmtNumber(batteryLevel, 0)}%` : undefined}
-              className="relative h-3 w-full overflow-visible rounded-shape-sm"
-              style={{ backgroundColor: dashboardTokens.chart.track }}
+              className="relative h-3 w-full overflow-visible rounded-shape-sm bg-[var(--surface-2)]"
             >
               {batteryLevel != null && (
                 <div
-                  className="h-full rounded-shape-sm transition-[width] duration-slow ease-out motion-reduce:transition-none"
-                  style={{
-                    width: `${Math.min(100, Math.max(0, batteryLevel))}%`,
-                    backgroundColor: dashboardTokens.chart.status.ok.foreground,
-                  }}
+                  className={`${batteryFillClass} h-full rounded-shape-sm transition-[width] duration-slow ease-out motion-reduce:transition-none`}
+                  style={{ width: `${Math.min(100, Math.max(0, batteryLevel))}%` }}
                 />
               )}
               {chargeLimit != null && (
