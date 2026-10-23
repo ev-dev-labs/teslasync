@@ -71,6 +71,7 @@ export function WidgetStatusGrid({
 
   return (
     <div
+      role="list"
       className={cn(
         'grid min-w-0',
         dashboardTokens.density.gridGap,
@@ -87,6 +88,7 @@ export function WidgetStatusGrid({
         return (
           <div
             key={cell.id}
+            role="listitem"
             className={cn(
               // After `.sgi`: bordered 10px box, 8px dot/body gap, no ambient motion.
               // `relative` is a positioning hook only (no absolute descendants):
