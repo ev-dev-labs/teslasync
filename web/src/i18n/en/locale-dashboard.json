@@ -2977,27 +2977,22 @@
     },
     "battery": "Battery",
     "batteryCells": {
-      "avgTemp": "Avg temp",
-      "avgV": "Avg V",
       "cell": "Cell",
-      "maxTemp": "Max temp",
       "maxV": "Max V",
-      "minTemp": "Min temp",
       "minV": "Min V",
       "noCells": "No cell data",
       "noData": "No battery cell data",
       "spread": "Spread",
-      "spreadSource": "Returned voltage spread in volts, displayed in millivolts.",
-      "summaryDescription": "Voltage extremes, average and spread summarize the returned cells; wide layouts also retain the temperature summary.",
-      "summaryScope": "Vehicle {{id}} · returned cell snapshot; recording coverage is unknown.",
-      "summaryTitle": "Returned cell measurements",
-      "title": "Battery cells",
-      "voltageSource": "Returned cell voltage in volts; no conversion is applied to the source measurement."
+      "title": "Battery cells"
     },
     "batteryDegradation": "Battery degradation",
     "batteryDegradationChart": {
       "aria": "Monthly battery health trend",
       "month": "Month"
+    },
+    "batteryDegradationTrend": {
+      "maxRange": "Max range at 100%",
+      "sinceNew": "since new ({{range}})"
     },
     "batteryGauge": {
       "chargingToLimit": "Charging · +{{pct}}% to limit",
@@ -3005,16 +3000,10 @@
       "range": "{{range}} range"
     },
     "batteryHealthAnalytics": {
-      "avgChargeDepth": "Charge depth",
       "avgDischargeDepth": "Discharge",
-      "chargeHabits": "Habits",
-      "cyclesSource": "Returned cycle measurement; the existing whole-number display is retained.",
       "dcFastRatio": "DC fast",
       "noData": "No battery health data",
       "score": "health",
-      "summaryDescription": "Source cycle, charge-depth, fast-charge and habit measurements retain their independent meanings; the health gauge remains separate.",
-      "summaryScope": "Vehicle {{id}} · returned inferred battery analytics; continuous coverage is unknown.",
-      "summaryTitle": "Returned battery-health factors",
       "tempExposure": "Temp score",
       "title": "Battery analytics",
       "totalCycles": "Cycles"
@@ -3260,7 +3249,6 @@
       "trend": "Trend"
     },
     "currentVersion": "Current version",
-    "cycles": "Cycles",
     "dashboardStats": {
       "currentState": "Current state",
       "fsmState": "FSM state",
@@ -4140,7 +4128,6 @@
     },
     "softwareUpdate": "Software update",
     "softwareUpdateHistory": "Update history",
-    "soh": "SoH",
     "solarProduction": {
       "avg": "Daily avg",
       "chartLabel": "Daily solar production over the last 30 days",
@@ -4208,6 +4195,7 @@
     },
     "status": {
       "inactive": "Inactive",
+      "ok": "Healthy",
       "unknown": "Unknown"
     },
     "statusAvailable": "Available",

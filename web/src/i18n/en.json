@@ -20033,6 +20033,10 @@
       "limitMarker": "Charge limit {{pct}}%",
       "chargingToLimit": "Charging · +{{pct}}% to limit",
       "range": "{{range}} range"
+    },
+    "batteryDegradationTrend": {
+      "maxRange": "Max range at 100%",
+      "sinceNew": "since new ({{range}})"
     }
   },
   "operationalSummary": {
