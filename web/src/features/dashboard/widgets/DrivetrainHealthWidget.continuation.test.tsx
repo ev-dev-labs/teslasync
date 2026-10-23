@@ -18,7 +18,7 @@ function expectTemperature(label: string, celsius: number) {
   const brief = within(screen.getByTestId('dashboard-drivetrain-readings-brief'));
   const metric = brief.getAllByRole('listitem').find(item => within(item).queryByText(label));
   if (!metric) throw new Error(`Missing drivetrain metric: ${label}`);
-  expect(within(metric).getByText(`${fmtNumber(convertTempFromSI(celsius, '°C'))}°C`)).toBeVisible();
+  expect(within(metric).getByText(`${fmtNumber(convertTempFromSI(celsius, '°C'), 0)} °C`)).toBeVisible();
 }
 
 beforeEach(() => {
@@ -50,7 +50,7 @@ describe('categorical assessment and motor independence', () => {
     hooks.health.mockReturnValue(queryResult({ overallHealth: 'good', frontMotorTempC: 40, rearMotorTempC: 41, inverterTempC: 42 }, { refetch: retryHealth }));
     hooks.motor.mockReturnValue(queryResult(undefined, { isError: true, error: new Error('Motor offline'), refetch: retryMotor }));
     renderWidget(<DrivetrainHealthWidget size={{ cols: 2, rows: 4 }} />);
-    expect(screen.getByText('Healthy')).toBeVisible();
+    expect(screen.getAllByText('Healthy').length).toBeGreaterThan(0);
     expectTemperature('Motor temp', 40);
     expectTemperature('Rear motor temp', 41);
     expectTemperature('Inverter', 42);

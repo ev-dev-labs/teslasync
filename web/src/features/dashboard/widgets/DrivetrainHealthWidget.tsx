@@ -95,7 +95,7 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
   const detailCells = [
     {
       id: 'front-motor',
-      label: t('widget.drivetrainHealth.motorTemp', 'Front motor'),
+      label: t('widget.drivetrainHealth.motorTemp', 'Motor temp'),
       value: reading(motorTemp),
       status: motorTemp == null ? 'unknown' as const : assessmentStatus,
       statusLabel: motorTemp == null
@@ -104,7 +104,7 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
     },
     {
       id: 'rear-motor',
-      label: t('widget.drivetrainHealth.rearMotorTemp', 'Rear motor'),
+      label: t('widget.drivetrainHealth.rearMotorTemp', 'Rear motor temp'),
       value: reading(rearMotorTemp),
       status: rearMotorTemp == null ? 'unknown' as const : assessmentStatus,
       statusLabel: rearMotorTemp == null
@@ -195,7 +195,9 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
             align="start"
           />
         </SourceContent>
-        <WidgetStatusGrid cells={detailCells} cols={2} emptyMessage={t('widget.drivetrainHealth.noData', 'No drivetrain data')} />
+        <div data-testid="dashboard-drivetrain-readings-brief">
+          <WidgetStatusGrid cells={detailCells} cols={2} emptyMessage={t('widget.drivetrainHealth.noData', 'No drivetrain data')} />
+        </div>
         <StaleRefreshWarning state={motorTrust} />
         {motorTrust.fatalError && <QueryError error={motorTrust.fatalError} onRetry={motorTrust.retry ?? undefined} />}
         <Caption className="block break-words">
