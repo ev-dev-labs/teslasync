@@ -270,7 +270,7 @@ describe('TelemetryErrorsWidget — standard layout', () => {
     mockUseErrors.mockReturnValue(qr({ data: [makeError()] }));
     renderWidget(STANDARD);
     expect(screen.getByText('Telemetry errors')).toBeInTheDocument();
-    expect(screen.getByText('2 VINs with errors')).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.textContent === '2 VINs with errors')).toBeInTheDocument();
     expect(screen.getByText('Errors')).toBeInTheDocument();
   });
 
@@ -333,7 +333,7 @@ describe('TelemetryErrorsWidget — standard layout', () => {
     renderWidget(STANDARD);
     expect(screen.getByText('No errors recorded')).toBeInTheDocument();
     expect(screen.getByText('Healthy')).toBeInTheDocument();
-    expect(screen.getByText('0 VINs with errors')).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.textContent === '0 VINs with errors')).toBeInTheDocument();
   });
 });
 
@@ -346,7 +346,7 @@ describe('TelemetryErrorsWidget — loading, error & refresh hardening', () => {
     const { container } = renderWidget(STANDARD);
     expect(screen.getByRole('status', { name: 'Loading Errors in fetched sample' })).toBeInTheDocument();
     expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
-    expect(screen.getByText('1 VINs with errors')).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.textContent === '1 VINs with errors')).toBeInTheDocument();
     expect(screen.queryByText('Telemetry errors')).toBeInTheDocument();
   });
 

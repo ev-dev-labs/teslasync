@@ -129,6 +129,7 @@ vi.mock('@/components/charts', async () => {
   chartGrid: null,
   chartMargin: {},
   chartAnimation: {},
+  axisTick: { size: 'lg' },
   axisTickSm: { size: 'sm' },
   fmt: (v: unknown, decimals = 1) =>
     Number((v as number) ?? 0).toFixed(Math.max(0, Math.min(20, decimals))),

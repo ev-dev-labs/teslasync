@@ -53,10 +53,16 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/components/charts', () => {
   const Box = ({ children, ...props }: { children?: ReactNode; [key: string]: unknown }) => <div {...props}>{children}</div>;
   return {
+    useMeasuredAxisWidth: () => 40,
     ComposedChart: ({ data, children }: { data?: unknown[]; children?: ReactNode }) => (
       <div data-testid="motor-chart" data-rows={JSON.stringify(data ?? [])}>{children}</div>
     ),
-    Line: (props: Record<string, unknown>) => <div data-testid="motor-line" data-key={String(props.dataKey)} />,
+    Line: (props: Record<string, unknown>) => (
+      <div
+        data-testid={props.dataKey === 'temperature' ? 'motor-line' : 'motor-torque-line'}
+        data-key={String(props.dataKey)}
+      />
+    ),
     XAxis: () => <div />,
     YAxis: () => <div />,
     Tooltip: () => <div />,

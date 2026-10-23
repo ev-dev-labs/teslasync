@@ -75,7 +75,7 @@ describe.each([
   // the other gauges keep their existing precision. The preservation contract
   // is unchanged: out-of-scale stays unclipped, zero stays a real reading,
   // missing stays unknown.
-  const wholePercent = _name === 'battery' || _name === 'battery health';
+  const wholePercent = _name === 'battery' || _name === 'battery with charge limit' || _name === 'battery health';
 
   it('retains an out-of-scale source reading rather than displaying the clipped ceiling', () => {
     source.reading = 125;

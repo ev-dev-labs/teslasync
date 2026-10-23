@@ -238,7 +238,7 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
                   : t('widget.signalHealth.noGaps', 'No observed signal gaps')}
                   // no-action: A successful observation without gaps needs no corrective action.
                   action={gapData == null ? { label: t('common.refresh', 'Refresh'), onClick: refresh } : undefined} />}
-                {analysis.gapSignals.map((sig) => {
+                {analysis.gapSignals.slice(0, 15).map((sig) => {
                   const ageSeconds = sig.lastSeen
                     ? Math.max(0, Math.floor((Date.now() - new Date(sig.lastSeen).getTime()) / 1000))
                     : null;
@@ -247,7 +247,7 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
                     : `${t('widget.signalHealth.stale', 'Stale')} · ${formatAge(ageSeconds)}`;
                   return (
                     <div key={sig.name} className="flex min-w-0 items-baseline justify-between gap-3 min-h-8 py-1.5">
-                      <Text variant="bodySm" mono className="min-w-0 truncate">{sig.name}</Text>
+                      <Text variant="bodySm" mono className="min-w-0 [overflow-wrap:anywhere]">{sig.name}</Text>
                       <Caption className="shrink-0">{detail}</Caption>
                     </div>
                   );

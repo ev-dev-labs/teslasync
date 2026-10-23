@@ -12,7 +12,7 @@ import { Heading, Text } from '@/components/ui/Typography';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FSM_REGISTRY } from '@/types/fsm';
 import { useUnits } from '@/hooks/useUnits';
-import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertTempFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import type { VehicleStatus } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { typography } from '@/lib/tokens';
@@ -129,6 +129,9 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
       : null;
     const outsideTempDisplay = isFiniteNumber(vs?.outside_temp)
       ? Math.round(convertTempFromSI(vs.outside_temp, temperatureLabel))
+      : null;
+    const powerDisplay = isFiniteNumber(vs?.power)
+      ? convertPowerFromSI(vs.power, unitPrefs.power ?? 'kW')
       : null;
 
     return (
@@ -260,6 +263,11 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
               {vs.sentry_mode != null && (
                 <span className="inline-flex min-h-9 items-center rounded-shape-sm border border-[var(--semantic-info-border)] bg-[var(--semantic-info-bg)] px-3 text-sm text-[var(--semantic-info)]">
                   {t('vehicleHero.stat.sentry', 'Sentry')} {vs.sentry_mode ? t('common.on', 'On') : t('common.off', 'Off')}
+                </span>
+              )}
+              {powerDisplay != null && (
+                <span className="inline-flex min-h-9 items-center rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
+                  {t('vehicleHero.stat.power', 'Power')} {fmtNumber(powerDisplay, 2)} kW
                 </span>
               )}
               <span className="inline-flex min-h-9 items-center rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
