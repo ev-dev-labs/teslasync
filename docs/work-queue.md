@@ -4,18 +4,19 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
-Last updated: 2026-10-22 by Muse (Track A budget+i18n fix pushed; Track B
-Phase 1 reviewed; two full-suite runs reconciled).
-Branch HEAD: `94b2f4a62a` (pushed). Next: TZ-5 277-route sweep, TZ-6 re-run,
-TZ-7 full local replica + PR green. Codex CLIs and vite :3000 were left
-untouched as possible user tooling.
+Last updated: 2026-10-23 by Copilot recovery session.
+Branch HEAD: reconcile at handoff; two widget-track recovery commits were
+pushed, followed by the dashboard Phase 4 repair batch. The Track B
+worktree is absent and origin/feat/widget-redesign is already merged in
+HEAD. Next: fix remaining PR #202 SI guard findings, finish TZ validation,
+then run the full replica and retain single-track work.
 
 ## Parts overview
 
 | Part | Name | Status | Last commit / note | Next step |
 |---|---|---|---|---|
 | 1 | Time zone: follow setting everywhere, remove duplicates — TRACK A (`fix/post-merge-followups`) | in progress | TZ-5c done; wip fixed by a09dc6ec15; freshness correction b7c55d6ab2+b3f0ba6272+658e6563fc; startup-budget fix (this change, unpushed) | TZ-5 277-route sweep, TZ-6 re-run, TZ-7 replica + push + PR #202 green. Only Track A commits here until done |
-| 2 | Dashboard widget redesign (119 widgets) — TRACK B merged into the one active branch | done | Track B merged into `fix/post-merge-followups` at `248c9d13d5`; widget worktree removed; Phase 4 continues on the one track. | Collect and group all remaining widget, PR, and timezone failures; fix by root cause |
+| 2 | Dashboard widget redesign (119 widgets) — one active branch | done | Widget redesign merged at `248c9d13d5`; Track B worktree removed; Phase 4 dashboard scope repaired and verified. Recovery commits `823c8802c8`, `16bf49ebd1`, and `7b3fabbe7a` pushed. | Dashboard suite green; collect remaining PR/TZ failures and continue the one-track fix list |
 | 3 | Shared-pattern consolidation (whole codebase) | not started | — | `docs/shared-patterns.md` catalog first |
 | 4 | Remaining: product items (A) + security re-check (B) | in progress (verify) | branch commits `e0196914cd..f84aad0ce7` cover A1-A7 + security; A8 owner-decision recorded | Audit plan-vs-branch after Part 3; B re-run audits |
 | 5 | CI green on PR #202 | not started | PR green at takeover (199 pass / 1 skipping) | Loop `gh pr checks --watch` after each push |
@@ -191,9 +192,10 @@ exceptions / bugs-fixed: —.
 
 ## Exact next step
 
-Startup-budget fix + i18n re-pin pushed (`94b2f4a62a`); Lighthouse green path
-verified (startup 399.6KB). Track B Gate 1 corrections fixed. Next: (1)
-confirm re-run of both full unit suites is green, (2) commit/push any
-remaining review fixes, (3) dispatch Phase 2 pilots in rolling waves of 5
-(every task carries the TZ rule line), (4) TZ-5 full 277-route sweep,
-(5) TZ-6 e2e re-run, (6) TZ-7 full local replica + push + PR green.
+Track A and Track B are reconciled into one tree and the widget redesign is
+ancestor-merged. Dashboard recovery verification: 222 test files / 3828 tests
+passed; TypeScript passed; focused maintenance/catalog repairs passed.
+Next: (1) fix the SI canonical guard findings in the three widget files, (2)
+re-run affected tests and the guard, (3) push, (4) collect remaining PR #202
+failures, (5) finish TZ-5/TZ-6/TZ-7 and the full replica, (6) proceed to
+Parts 3-6 only after CI is green.

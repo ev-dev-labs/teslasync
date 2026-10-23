@@ -2828,6 +2828,7 @@
       "alt": "{{name}} photo"
     },
     "stat": {
+      "power": "Power",
       "sentry": "Sentry",
       "status": "Status"
     },
