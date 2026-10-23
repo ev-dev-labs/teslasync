@@ -1,93 +1,101 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow, useThemeChartPalette, useMeasuredAxisWidth, measureAxisLabelWidth } from '@/components/charts';
+import {
+  BarChart,
+  Bar,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  chartGrid,
+  chartMargin,
+  axisTick,
+  axisTickSm,
+  chartAnimation,
+  ChartTooltip,
+  EmbeddedChart,
+  type ChartDataRow,
+  useThemeChartPalette,
+  useMeasuredAxisWidth,
+  measureAxisLabelWidth,
+} from '@/components/charts';
 import { useSpeedProfile } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
-import { WidgetChartSummary, type ChartSummaryStat } from './shared';
-import { WidgetShell } from './WidgetShell';
-import type { WidgetProps } from './types';
-import { convertSpeedFromSI, convertPowerFromSI, type PowerUnitPref } from '@/lib/unitConversion';
+import { convertSpeedFromSI } from '@/lib/unitConversion';
 import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { useDataState } from '@/hooks/useDataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useRangeState } from '@/hooks/useRangeState';
+import { WidgetChartSummary, type ChartSummaryStat } from './shared';
+import { WidgetShell } from './WidgetShell';
+import type { WidgetProps } from './types';
 
 interface ChartDatum extends ChartDataRow {
   bucket: string;
   frequency: number | null;
-  efficiency: number | null;
+  sourceIndex: number;
 }
 
 export function frequencyAxisWidth(labels: string[], measure: (label: string) => number): number {
   return measureAxisLabelWidth(labels, measure, 35, 12);
 }
 
-function buildChartData(
-  data: ReturnType<typeof useSpeedProfile>['data'],
-  toSpeedDisplay: (mps: number) => number,
-  powerUnit: PowerUnitPref,
-): ChartDatum[] {
-  const distribution = safeArray(data?.distribution);
-  const completeCounts = distribution.every((b) => knownNumber(b.readings) != null && b.readings >= 0);
-  const totalReadings = distribution.reduce((sum, b) => sum + Math.max(knownNumber(b.readings) ?? 0, 0), 0);
-
-  return distribution.map((b) => {
-    const label = formatBucketLabel(b.speed_bucket ?? b.speedBucket ?? '', toSpeedDisplay);
-    const freq = completeCounts && totalReadings > 0 ? (b.readings / totalReadings) * 100 : null;
-    const watts = knownNumber(b.avg_power_w ?? b.avgPowerW);
-    const eff = watts == null ? null : convertPowerFromSI(watts, powerUnit);
-    return { bucket: label, frequency: freq, efficiency: eff };
-  });
+function mphBucketToMetersPerSecond(value: number): number {
+  // Speed bucket labels are emitted by the existing analytics API as mph.
+  return value * 0.44704;
 }
 
-/** Convert bucket label to user's speed unit, e.g. "20-40" → "32-64" */
-function formatBucketLabel(
+export function formatBucketLabel(
   bucket: string,
   toSpeedDisplay: (mps: number) => number,
+  fmtInteger: (value: number) => string = (value) => String(Math.round(value)),
 ): string {
-  const parts = bucket.split('-');
-  if (parts.length === 2) {
-    const lo = parseFloat(parts[0]);
-    const hi = parseFloat(parts[1]);
-    if (!isNaN(lo) && !isNaN(hi)) {
-      return `${fmtNumber(toSpeedDisplay(lo))}-${fmtNumber(toSpeedDisplay(hi))}`;
+  const range = bucket.split('-');
+  if (range.length === 2) {
+    const lo = Number.parseFloat(range[0]);
+    const hi = Number.parseFloat(range[1]);
+    if (Number.isFinite(lo) && Number.isFinite(hi)) {
+      return `${fmtInteger(toSpeedDisplay(mphBucketToMetersPerSecond(lo)))}–${fmtInteger(toSpeedDisplay(mphBucketToMetersPerSecond(hi)))}`;
     }
   }
-  // "80+" style bucket
-  const num = parseFloat(bucket);
-  if (!isNaN(num)) {
-    return `${fmtNumber(toSpeedDisplay(num))}+`;
+
+  const num = Number.parseFloat(bucket);
+  if (Number.isFinite(num)) {
+    return `${fmtInteger(toSpeedDisplay(mphBucketToMetersPerSecond(num)))}+`;
   }
   return bucket;
 }
 
-/** Find the bucket with the best (lowest avg_power_w) efficiency */
-function findSweetSpot(chartData: ChartDatum[]): string {
-  const withEff = chartData.filter((d): d is ChartDatum & { efficiency: number } => d.efficiency != null && d.frequency != null && d.frequency > 0);
-  if (withEff.length === 0) return '—';
-  let best = withEff[0];
-  for (const d of withEff) {
-    if (d.efficiency < best.efficiency) best = d;
-  }
-  return best.bucket;
+function parseBucketRange(bucket: string): [number, number] | null {
+  const range = bucket.split('-');
+  if (range.length !== 2) return null;
+  const lo = Number.parseFloat(range[0]);
+  const hi = Number.parseFloat(range[1]);
+  return Number.isFinite(lo) && Number.isFinite(hi) ? [lo, hi] : null;
 }
 
 export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber: fmt } = useNumberFormatting();
-  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
-  const toSpeedDisplay = useCallback((value: number) => convertSpeedFromSI(value, unitPrefs.speed), [unitPrefs.speed]);
-  const powerUnit = unitPrefs.power ?? 'kW';
+  const { start, end } = useRangeState({ defaultPresetId: '30d' });
+  const toSpeedDisplay = useCallback(
+    (mps: number) => convertSpeedFromSI(mps, unitPrefs.speed),
+    [unitPrefs.speed],
+  );
   const palette = useThemeChartPalette();
 
-  const speedUnit = unitPrefs.speed;
-
+  const query = useSpeedProfile(
+    vid > 0 ? String(vid) : undefined,
+    start,
+    end,
+  );
   const {
     data,
     isLoading,
@@ -97,71 +105,113 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
     isError,
     dataUpdatedAt,
     refetch,
-  } = useSpeedProfile(vid > 0 ? String(vid) : undefined);
+  } = query;
   const trust = useDataState({
     data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch,
   }, { provenance: 'historical' });
 
-  const chartData = useMemo(
-    () => buildChartData(data, toSpeedDisplay, powerUnit),
-    [data, toSpeedDisplay, powerUnit, displayPrecision, displayLocale],
+  const chartData = useMemo<ChartDatum[]>(() => {
+    const distribution = safeArray(data?.distribution);
+    const completeCounts = distribution.every(
+      (bucket) => knownNumber(bucket.readings) != null && bucket.readings >= 0,
+    );
+    const totalReadings = distribution.reduce(
+      (sum, bucket) => sum + Math.max(knownNumber(bucket.readings) ?? 0, 0),
+      0,
+    );
+
+    return distribution.map((bucket, index) => {
+      const label = formatBucketLabel(
+        bucket.speed_bucket ?? bucket.speedBucket ?? '',
+        toSpeedDisplay,
+        fmtInt,
+      );
+      const readings = knownNumber(bucket.readings);
+      const frequency = completeCounts && totalReadings > 0 && readings != null
+        ? (readings / totalReadings) * 100
+        : null;
+      return {
+        bucket: label,
+        frequency,
+        sourceIndex: index,
+      };
+    });
+  }, [data, toSpeedDisplay, fmtInt]);
+
+  const sweetSpotSourceIndex = useMemo(() => {
+    const distribution = safeArray(data?.distribution);
+    const optimalMps = knownNumber(data?.optimalSpeedMps);
+    if (optimalMps != null && optimalMps > 0) {
+      let nearestIndex = -1;
+      let nearestDistance = Number.POSITIVE_INFINITY;
+      distribution.forEach((bucket, index) => {
+        const range = parseBucketRange(bucket.speed_bucket ?? bucket.speedBucket ?? '');
+        if (!range) return;
+        const midMps = mphBucketToMetersPerSecond((range[0] + range[1]) / 2);
+        const distance = Math.abs(midMps - optimalMps);
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestIndex = index;
+        }
+      });
+      return nearestIndex;
+    }
+
+    let lowestIndex = -1;
+    let lowestPower = Number.POSITIVE_INFINITY;
+    distribution.forEach((bucket, index) => {
+      const power = knownNumber(bucket.avg_power_w ?? bucket.avgPowerW);
+      const readings = knownNumber(bucket.readings);
+      if (power != null && readings != null && readings > 0 && power < lowestPower) {
+        lowestPower = power;
+        lowestIndex = index;
+      }
+    });
+    return lowestIndex;
+  }, [data]);
+
+  const hasData = chartData.some(
+    (datum) => datum.frequency != null && datum.frequency > 0,
   );
-
-  const sweetSpot = useMemo(() => {
-    // API provides optimal speed as SI m/s — toSpeedDisplay = convertSpeedFromSI
-    // already expects m/s so it can be passed straight through.
-    const optimal = knownNumber(data?.optimalSpeedMps);
-    if (optimal != null && optimal > 0) {
-      return fmtNumber(toSpeedDisplay(optimal));
-    }
-    return findSweetSpot(chartData);
-  }, [data, chartData, toSpeedDisplay, fmtNumber]);
-
-  const peakFreq = useMemo(() => {
-    let max = 0;
-    for (const d of chartData) {
-      if (d.frequency != null && d.frequency > max) max = d.frequency;
-    }
-    return max;
-  }, [chartData]);
-
-  const peakBucket = useMemo(() => {
-    const peak = chartData.find((d) => d.frequency === peakFreq);
-    return peak?.bucket ?? '—';
-  }, [chartData, peakFreq]);
-
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
-  const tick = isWide ? axisTick : axisTickSm;
+
+  const sweetSpot = useMemo(() => {
+    const optimal = knownNumber(data?.optimalSpeedMps);
+    if (optimal != null && optimal > 0) {
+      return `${fmtInt(toSpeedDisplay(optimal))} ${unitPrefs.speed}`;
+    }
+    const bucket = chartData.find((datum) => datum.sourceIndex === sweetSpotSourceIndex);
+    return bucket ? `${bucket.bucket} ${unitPrefs.speed}` : null;
+  }, [data, chartData, fmtInt, toSpeedDisplay, unitPrefs.speed, sweetSpotSourceIndex]);
+
   const frequencyLabels = useMemo(
-    () => [0, 25, 50, 75, 100, ...chartData.flatMap(d => d.frequency == null ? [] : [d.frequency])]
-      .map(value => `${fmt(value)}%`),
-    [chartData, fmt],
+    () => [0, 25, 50, 75, 100, ...chartData.flatMap((datum) =>
+      datum.frequency == null ? [] : [datum.frequency],
+    )].map((value) => `${fmtInt(value)}%`),
+    [chartData, fmtInt],
   );
-  const percentAxisWidth = useMeasuredAxisWidth({
+  const frequencyAxisWidthPx = useMeasuredAxisWidth({
     labels: frequencyLabels,
-    fontSize: tick.fontSize,
+    fontSize: isWide ? axisTick.fontSize : axisTickSm.fontSize,
     enabled: !isCompact,
     minWidth: 35,
     padding: 12,
     fallbackCharacterRatio: 0.75,
   });
-  const powerLabels = useMemo(
-    () => [0, ...chartData.flatMap(d => d.efficiency != null && Number.isFinite(d.efficiency) ? [d.efficiency] : [])]
-      .map(value => fmt(value)),
-    [chartData, fmt],
-  );
-  const powerAxisWidth = useMeasuredAxisWidth({
-    labels: powerLabels, fontSize: tick.fontSize, enabled: !isCompact, minWidth: 40, padding: 20,
-  });
 
-  const hasData = chartData.some((d) => (d.frequency != null && d.frequency > 0) || d.efficiency != null);
-  const optimalSpeed = knownNumber(data?.optimalSpeedMps);
-  const sweetSpotLabel = optimalSpeed != null && optimalSpeed > 0
-    ? t('widget.speedProfile.sweetSpot', 'Sweet spot')
-    : t('widget.speedProfile.lowestPowerRange', 'Lowest power range');
+  const stats: ChartSummaryStat[] = hasData && sweetSpot
+    ? [{
+        label: t('widget.speedProfile.sweetSpot', 'Sweet spot'),
+        value: sweetSpot,
+        unit: undefined,
+      }]
+    : [];
 
-  // ── Compact (1-col): summary stats only ──
+  const handleRefresh = useCallback(() => {
+    if (!isFetching) void refetch();
+  }, [isFetching, refetch]);
+
   if (isCompact) {
     return (
       <WidgetShell
@@ -173,50 +223,19 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
         isFetching={isFetching}
         isStale={isStale}
         isError={isError}
-        onRefresh={() => refetch()}
+        onRefresh={handleRefresh}
       >
         <WidgetChartSummary
           compact
           isEmpty={!hasData}
           emptyMessage={t('widget.speedProfile.noData', 'No speed data')}
           emptyIcon={<Activity className="h-5 w-5" />}
-          stats={hasData ? [
-            {
-              label: t('widget.speedProfile.mostCommon', 'Most common'),
-              value: peakBucket,
-              unit: speedUnit,
-            },
-            {
-              label: sweetSpotLabel,
-              value: sweetSpot,
-              unit: speedUnit,
-            },
-          ] : []}
+          stats={stats}
           chart={null}
         />
       </WidgetShell>
     );
   }
-
-  // ── Standard (2×4+): stat header + composed chart ──
-  const stats: ChartSummaryStat[] = hasData
-    ? [
-        {
-          label: t('widget.speedProfile.mostCommon', 'Most common'),
-          value: peakBucket,
-          unit: speedUnit,
-        },
-        {
-          label: t('widget.speedProfile.peakFreq', 'Peak freq'),
-          value: chartData.some((d) => d.frequency != null) ? `${fmtNumber(peakFreq)}%` : null,
-        },
-        {
-          label: sweetSpotLabel,
-          value: sweetSpot,
-          unit: speedUnit,
-        },
-      ]
-    : [];
 
   return (
     <WidgetShell
@@ -225,96 +244,75 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
       loading={isLoading}
       dataState={trust.hasData ? trust : undefined}
       error={trust.fatalError?.message ?? null}
-      description={t('widget.speedProfile.sampleScope', 'Observed speed samples · average power is not energy efficiency')}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={handleRefresh}
     >
       <WidgetChartSummary
         isEmpty={!hasData}
         emptyMessage={t('widget.speedProfile.noData', 'No speed data')}
         emptyIcon={<Activity className="h-5 w-5" />}
-        stats={stats}
+        stats={hasData ? [
+          {
+            label: t('widget.speedProfile.sweetSpot', 'Sweet spot'),
+            value: sweetSpot?.replace(` ${unitPrefs.speed}`, '') ?? '—',
+            unit: sweetSpot ? unitPrefs.speed : undefined,
+          },
+        ] : []}
         chart={
           <EmbeddedChart
             height={180}
             mobileHeight={160}
             title={t('widget.speedProfile.title', 'Speed profile')}
-            ariaLabel={t(
-              'widget.speedProfile.chartAria',
-              'Speed frequency and average power by speed range',
-            )}
+            ariaLabel={t('widget.speedProfile.chartAria', 'Time at speed by speed range')}
             data={chartData}
             dataColumns={[
-              { key: 'bucket', label: `${t('widget.speedProfile.speedRange', 'Speed range')} (${speedUnit})` },
-              { key: 'frequency', label: t('widget.speedProfile.frequency', 'Frequency') },
-              { key: 'efficiency', label: `${t('widget.speedProfile.averagePower', 'Average power')} (${powerUnit})` },
+              { key: 'bucket', label: `${t('widget.speedProfile.speedRange', 'Speed range')} (${unitPrefs.speed})` },
+              { key: 'frequency', label: t('widget.speedProfile.frequency', 'Frequency'), format: (value) => value == null ? '—' : `${fmtInt(Number(value))}%` },
             ]}
             chartKey="dashboard-speed-profile"
           >
-            {({ hiddenSeries }) => (
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={chartData} margin={chartMargin} {...chartAnimation}>
-              {chartGrid}
-              <XAxis
-                dataKey="bucket"
-                tick={tick}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                yAxisId="freq"
-                tick={tick}
-                tickLine={false}
-                axisLine={false}
-                width={percentAxisWidth}
-                tickFormatter={(v: number) => `${fmt(v)}%`}
-              />
-              <YAxis
-                yAxisId="eff"
-                orientation="right"
-                tick={tick}
-                tickLine={false}
-                axisLine={false}
-                width={powerAxisWidth}
-                tickFormatter={(v: number) => fmt(v)}
-              />
-              <Tooltip
-                content={<ChartTooltip />}
-                formatter={(value: number, name: string) => {
-                  if (name === t('widget.speedProfile.frequency', 'Frequency')) {
-                    return [`${fmtNumber(value)}%`, t('widget.speedProfile.frequency', 'Frequency')];
-                  }
-                  return [`${fmtNumber(value)} ${powerUnit}`, t('widget.speedProfile.averagePower', 'Average power')];
-                }}
-                cursor={{ fill: 'var(--surface-hover)' }}
-              />
-              <ChartLegend />
-              <Bar
-                yAxisId="freq"
-                dataKey="frequency"
-                radius={[4, 4, 0, 0]}
-                maxBarSize={32}
-                fill={palette.series[0]}
-                name={t('widget.speedProfile.frequency', 'Frequency')}
-                hide={hiddenSeries?.isHidden('frequency')}
-              />
-              <Line
-                yAxisId="eff"
-                type="monotone"
-                dataKey="efficiency"
-                stroke={palette.series[2]}
-                strokeWidth={2}
-                dot={{ r: 3, fill: palette.series[2] }}
-                name={`${t('widget.speedProfile.averagePower', 'Average power')} (${powerUnit})`}
-                connectNulls={false}
-                hide={hiddenSeries?.isHidden('efficiency')}
-              />
-                </ComposedChart>
-              </ResponsiveContainer>
-            )}
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
+                {chartGrid}
+                <XAxis
+                  dataKey="bucket"
+                  tick={isWide ? axisTick : axisTickSm}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tick={isWide ? axisTick : axisTickSm}
+                  tickLine={false}
+                  axisLine={false}
+                  width={frequencyAxisWidthPx}
+                  tickFormatter={(value: number) => `${fmtInt(value)}%`}
+                />
+                <Tooltip
+                  content={<ChartTooltip />}
+                  formatter={(value: number) => [
+                    `${fmtInt(value)}%`,
+                    t('widget.speedProfile.frequency', 'Frequency'),
+                  ]}
+                  cursor={{ fill: 'var(--surface-hover)' }}
+                />
+                <Bar
+                  dataKey="frequency"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={32}
+                  name={t('widget.speedProfile.frequency', 'Frequency')}
+                >
+                  {chartData.map((datum) => (
+                    <Cell
+                      key={`speed-${datum.sourceIndex}`}
+                      fill={datum.sourceIndex === sweetSpotSourceIndex ? palette.series[2] : palette.series[0]}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </EmbeddedChart>
         }
       />
