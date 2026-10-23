@@ -140,7 +140,13 @@ function CompactChargingView({ power, batteryLevel }: { power: number | null; ba
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1">
       <BatteryCharging className="h-5 w-5 text-emerald-300 animate-pulse" />
-      <WidgetBigNumber value={power == null ? null : `${fmtNumber(convertPowerFromSI(power, unitPrefs.power), 0)} ${unitPrefs.power}`} animated={false} align="center" size="secondary" />
+      <WidgetBigNumber
+        value={power == null ? null : fmtNumber(convertPowerFromSI(power, unitPrefs.power), 0)}
+        unit={unitPrefs.power}
+        animated={false}
+        align="center"
+        size="secondary"
+      />
       <span className={dashboardTokens.metricLabel}>{batteryLevel == null ? '—' : `${fmtNumber(batteryLevel, 0)}%`}</span>
     </div>
   );

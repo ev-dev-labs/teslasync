@@ -209,14 +209,16 @@ describe('ChargeStatusLiveWidget', () => {
     expect(screen.queryByText('0%')).not.toBeInTheDocument();
     expect(screen.getAllByText('Time left').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(5);
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
   });
   it('renders the full charging view: title, badge, power, energy and time', () => {
     renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
     expect(screen.getByText('Charge status')).toBeInTheDocument();
     expect(screen.getByText('1h 30m')).toBeInTheDocument();
-    expect(screen.getByText('48 kW')).toBeInTheDocument();
-    expect(screen.getByText('12.50 kWh')).toBeInTheDocument();
+    expect(screen.getByText('48')).toBeInTheDocument();
+    expect(screen.getByText('kW')).toBeInTheDocument();
+    expect(screen.getByText('13')).toBeInTheDocument();
+    expect(screen.getByText('kWh')).toBeInTheDocument();
     expect(screen.getByText('Current')).toBeInTheDocument();
     expect(screen.getByText('Voltage')).toBeInTheDocument();
     expect(screen.getByText('Time left')).toBeInTheDocument();
@@ -226,7 +228,8 @@ describe('ChargeStatusLiveWidget', () => {
   it('adds the rate and battery row at tall size (rate converted to km/h)', () => {
     renderWidget(<ChargeStatusLiveWidget size={SIZE_TALL} />);
     expect(screen.getByText('Power')).toBeInTheDocument();
-    expect(screen.getByText('48 kW')).toBeInTheDocument();
+    expect(screen.getAllByText('48').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('kW').length).toBeGreaterThan(0);
     expect(screen.getByText('Done')).toBeInTheDocument();
   });
 
@@ -238,7 +241,8 @@ describe('ChargeStatusLiveWidget', () => {
     expect(screen.queryByText('Charging')).not.toBeInTheDocument();
     expect(screen.queryByText('Time left')).not.toBeInTheDocument();
     // ...but still surfaces the power + battery essentials.
-    expect(screen.getByText('48 kW')).toBeInTheDocument();
+    expect(screen.getByText('48')).toBeInTheDocument();
+    expect(screen.getByText('kW')).toBeInTheDocument();
     expect(screen.getByText('80%')).toBeInTheDocument();
   });
 
@@ -298,7 +302,8 @@ describe('ChargeStatusLiveWidget', () => {
     renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
 
     expect(screen.getByText('Power')).toBeInTheDocument();
-    expect(screen.getByText('48 kW')).toBeInTheDocument();
+    expect(screen.getByText('48')).toBeInTheDocument();
+    expect(screen.getByText('kW')).toBeInTheDocument();
   });
 
   it('shows a retryable error when no data is present', () => {

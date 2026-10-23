@@ -13,6 +13,7 @@ import type { WidgetProps } from './types';
 import type { SignalObservation } from '@/types/signals';
 import type { VehicleTelemetry } from '@/types/telemetry';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { EmptyState } from '@/components/feedback';
 
 /**
  * Render a single observation's value for the feed subtitle.
@@ -157,9 +158,10 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto">
           {displayItems.length === 0 ? (
-            <div role="status" className="flex h-full items-center justify-center px-4 py-6 text-sm text-[var(--text-muted)]">
-              {t('widget.signalLog.noSignals', 'No signal updates yet')}
-            </div>
+            <EmptyState
+              message={t('widget.signalLog.noSignals', 'No signal updates yet')}
+              className="py-4"
+            />
           ) : (
             <ul role="list" aria-label={t('widget.eventFeed.label', 'Event feed')} className="divide-y divide-[var(--border-subtle)] font-mono">
               {[...displayItems]

@@ -87,7 +87,7 @@ export default function AlertFeedWidget({ size }: WidgetProps) {
       isStale={isStale}
       isError={isError}
       onRefresh={() => refetch()}
-      footer={alerts !== undefined ? (
+      footer={alerts !== undefined && alerts.length > 0 && isWide ? (
         <div className="flex min-w-0 items-center justify-between gap-2">
           <Caption className="min-w-0 text-[var(--text-muted)] tabular-nums">
             {footerSummary}

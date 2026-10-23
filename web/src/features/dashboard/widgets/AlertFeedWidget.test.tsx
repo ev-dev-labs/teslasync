@@ -312,7 +312,7 @@ describe('AlertFeedWidget — null-safety & sizing', () => {
     mockAlerts.mockReturnValue(qr({ data: makeMany(15) }));
     renderWidget(WIDE);
 
-    expect(screen.getAllByRole('link')).toHaveLength(12);
+    expect(screen.getAllByRole('listitem')).toHaveLength(12);
   });
 });
 

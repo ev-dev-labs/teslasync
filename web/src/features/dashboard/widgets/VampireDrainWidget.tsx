@@ -49,11 +49,13 @@ export function buildDrainBarData(
 ): DrainBarPoint[] {
   return safeArray(events)
     .slice(-14)
-    .map((event, index) => {
+    .reduce<DrainBarPoint[]>((points, event) => {
       const rate = knownNumber(event.drain_pct_per_day);
-      return rate == null ? null : { index: String(index + 1), rate };
-    })
-    .filter((point): point is DrainBarPoint => point != null);
+      if (rate != null) {
+        points.push({ index: String(points.length + 1), rate });
+      }
+      return points;
+    }, []);
 }
 
 export function drainColor(rate: number): string {
@@ -111,8 +113,14 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
   }, [events]);
 
   const discoveryState = useDataState(vehiclesQuery);
-  const statsState = useDataState(statsQuery, { provenance: 'historical', unavailable: !stats });
-  const eventsState = useDataState(eventsQuery, { provenance: 'historical', unavailable: events.length === 0 });
+  const statsState = useDataState(
+    { ...statsQuery, data: stats ?? null },
+    { provenance: 'historical', unavailable: stats == null },
+  );
+  const eventsState = useDataState(
+    { ...eventsQuery, data: events.length > 0 ? events : [] },
+    { provenance: 'historical', unavailable: events.length === 0 },
+  );
   const watchState = useDataState(watchQuery, { provenance: 'inferred', unavailable: !watch });
   const sourceStates =
     !id && vehicleId == null && discoveryState.status !== 'ok'
@@ -120,7 +128,7 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
       : [statsState, eventsState, watchState];
 
   const hasData =
-    measuredAverage != null || events.length > 0 || watch != null;
+    stats != null || measuredAverage != null || events.length > 0 || watch != null;
   const refresh = () => {
     if (vehicleId == null) void vehiclesQuery.refetch?.();
     if (id != null) {
