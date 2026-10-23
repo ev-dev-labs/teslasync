@@ -154,11 +154,19 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
         <div className="flex flex-col gap-2 h-full">
             {!isCompact && (
               <div className="flex min-w-0 items-center justify-between gap-2">
-                <Text variant="bodySm" className="font-medium">
-                  {activeVINCount == null
-                    ? t('widget.telemetryErrors.vinsUnknown', '— VINs with errors')
-                    : t('widget.telemetryErrors.vinsCount', '{{count}} VINs with errors', { count: activeVINCount })}
-                </Text>
+                <div className="flex min-w-0 items-baseline gap-2">
+                  <Caption>{t('widget.telemetryErrors.errorVINs', 'Error VINs')}</Caption>
+                  <Text variant="bodySm" className="font-medium">
+                    {activeVINCount == null
+                      ? t('widget.telemetryErrors.vinsUnknown', '— VINs with errors')
+                      : (
+                        <>
+                          <span>{fmtInt(activeVINCount)}</span>{' '}
+                          {t('widget.telemetryErrors.vinsWithErrors', 'VINs with errors')}
+                        </>
+                      )}
+                  </Text>
+                </div>
                 <Badge variant={statusBadge} size="sm">{statusLabel}</Badge>
               </div>
             )}

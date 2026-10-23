@@ -116,7 +116,7 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
   );
   const axisWidth = useMeasuredAxisWidth({
     labels: axisLabels,
-    fontSize: 10,
+    fontSize: size.cols >= 3 ? 11 : 10,
     minWidth: 40,
     padding: 20,
     enabled: !isCompact,
@@ -221,7 +221,7 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
                       axisLine={false}
                       width={axisWidth}
                       tickFormatter={(value: number) => fmtNumber(value)}
-                      tick={{ fontSize: 10 }}
+                      tick={{ fontSize: size.cols >= 3 ? 11 : 10 }}
                     />
                     <Tooltip
                       content={<ChartTooltip />}

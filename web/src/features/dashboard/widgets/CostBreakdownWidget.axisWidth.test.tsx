@@ -82,6 +82,9 @@ vi.mock('@/api/hooks/useVehicleSystems', () => ({
   useTirePressureHistory: () => query([
     { created_at: timestamp, frontLeft: 123456789.123, frontRight: null, rearLeft: 0, rearRight: 240000 },
   ]),
+  useTirePressureAnalysisHistory: () => query([
+    { created_at: timestamp, frontLeft: 123456789.123, frontRight: null, rearLeft: 0, rearRight: 240000 },
+  ]),
 }));
 
 function fmt(value: number, precision = state.precision) {

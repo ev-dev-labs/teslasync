@@ -42,6 +42,9 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
   const gitSha = (versionData as { git_commit?: string }).git_commit;
   const uptimeSeconds = (versionData as { uptime_seconds?: unknown }).uptime_seconds;
   const uptime = formatUptime(uptimeSeconds);
+  const goVersion = (versionData as { go_version?: string }).go_version ?? '—';
+  const operatingSystem = (versionData as { os?: string }).os ?? '—';
+  const architecture = (versionData as { arch?: string }).arch ?? '—';
 
   const captureEnabled = (captureData as { capture_enabled?: boolean }).capture_enabled;
   const totalDocuments = knownNumber((captureData as { total_documents?: number }).total_documents);
@@ -56,15 +59,19 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
   const detailEntries = useMemo<DetailEntry[]>(() => [
     {
       id: 'version',
-      label: t('widget.versionInfo.teslaSync', 'TeslaSync'),
+      label: t('widget.versionInfo.version', 'Version'),
       value: chartVersion,
     },
     {
       id: 'build-date',
-      label: t('widget.versionInfo.build', 'Build'),
+      label: t('widget.versionInfo.buildDate', 'Build date'),
+      value: buildDate,
+    },
+    {
+      id: 'git-commit',
+      label: t('widget.versionInfo.gitCommit', 'Git commit'),
       value: truncatedSha,
       mono: true,
-      hint: buildDate === '—' ? undefined : buildDate,
     },
     {
       id: 'uptime',
@@ -87,7 +94,19 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
         ? t('widget.versionInfo.distinctVins', '{{count}} VINs', { count: distinctVins.length })
         : undefined,
     },
-  ], [t, chartVersion, buildDate, truncatedSha, uptime, captureEnabled, totalDocuments, distinctVins, fmtInt]);
+    {
+      id: 'go-version',
+      label: t('widget.versionInfo.goVersion', 'Go version'),
+      value: goVersion,
+      mono: true,
+    },
+    {
+      id: 'platform',
+      label: t('widget.versionInfo.platform', 'Platform'),
+      value: `${operatingSystem}/${architecture}`,
+      mono: true,
+    },
+  ], [t, chartVersion, buildDate, truncatedSha, uptime, captureEnabled, totalDocuments, distinctVins, fmtInt, goVersion, operatingSystem, architecture]);
 
   const versionState = useDataState(version, { unavailable: version.data == null });
   const captureState = useDataState(capture, { unavailable: capture.data == null });
@@ -143,14 +162,14 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
                 emptyIcon={<Info className="h-5 w-5" />}
               />
             </SourceContent>
-            {capture.data != null && (signalsPerSec != null || messagesToday != null || bytesProcessed != null || avgLatency != null) && (
+            {(captureState.fatalError || (capture.data != null && (signalsPerSec != null || messagesToday != null || bytesProcessed != null || avgLatency != null))) && (
               <WidgetStatusGrid
                 cols={4}
                 cells={[
-                  ...(signalsPerSec == null ? [] : [{ id: 'signals-sec', label: t('widget.versionInfo.signalsPerSec', 'Signals/sec'), value: fmtNumber(signalsPerSec), status: 'inactive' as const }]),
-                  ...(messagesToday == null ? [] : [{ id: 'messages-today', label: t('widget.versionInfo.messagesToday', 'Messages today'), value: fmtInt(messagesToday), status: 'inactive' as const }]),
-                  ...(bytesProcessed == null ? [] : [{ id: 'bytes-processed', label: t('widget.versionInfo.bytesProcessed', 'Bytes processed'), value: fmtInt(bytesProcessed), status: 'inactive' as const }]),
-                  ...(avgLatency == null ? [] : [{ id: 'avg-latency', label: t('widget.versionInfo.avgLatency', 'Avg latency'), value: `${fmtNumber(avgLatency)} ms`, status: 'inactive' as const }]),
+                  { id: 'signals-sec', label: t('widget.versionInfo.signalsPerSec', 'Signals/sec'), value: signalsPerSec == null ? '—' : fmtNumber(signalsPerSec), status: 'inactive' as const },
+                  { id: 'messages-today', label: t('widget.versionInfo.messagesToday', 'Messages today'), value: messagesToday == null ? '—' : fmtInt(messagesToday), status: 'inactive' as const },
+                  { id: 'bytes-processed', label: t('widget.versionInfo.bytesProcessed', 'Bytes processed'), value: bytesProcessed == null ? '—' : fmtInt(bytesProcessed), status: 'inactive' as const },
+                  { id: 'avg-latency', label: t('widget.versionInfo.avgLatency', 'Avg latency'), value: avgLatency == null ? '—' : `${fmtNumber(avgLatency)} ms`, status: 'inactive' as const },
                 ]}
               />
             )}

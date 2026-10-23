@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sun } from 'lucide-react';
-import { BarChart, Bar, Cell, XAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, chartAnimation, ChartTooltip, EmbeddedChart, type ChartDataRow } from '@/components/charts';
+import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, chartAnimation, axisTick, axisTickSm, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { useTeslaEnergyHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
 import { averageKnown, knownNumber } from '@/api/dataState';
 import { Skeleton } from '@/components/feedback';
@@ -108,6 +108,20 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
 
   const isCompact = size.cols <= 1;
   const hasData = chartData.length > 0;
+  const isWide = size.cols >= 3;
+  const axisLabels = useMemo(
+    () => [0, ...chartData.map((entry) => entry.solar_kwh)]
+      .filter((value): value is number => value != null && Number.isFinite(value))
+      .map((value) => fmtNumber(value)),
+    [chartData, fmtNumber],
+  );
+  const axisWidth = useMeasuredAxisWidth({
+    labels: axisLabels,
+    fontSize: isWide ? 11 : 10,
+    minWidth: 40,
+    padding: 20,
+    enabled: !isCompact,
+  });
 
   const handleRefresh = useCallback(() => {
     refetchSites();
@@ -223,9 +237,16 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
               ]}
             >
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
+                <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
                   {chartGrid}
-                  <XAxis dataKey="date" tick={false} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="date" tick={isWide ? axisTick : axisTickSm} tickLine={false} axisLine={false} />
+                  <YAxis
+                    tick={isWide ? axisTick : axisTickSm}
+                    tickLine={false}
+                    axisLine={false}
+                    width={axisWidth}
+                    tickFormatter={(value: number) => fmtNumber(value)}
+                  />
                   <Tooltip
                     content={<ChartTooltip />}
                     formatter={(value: number) => [

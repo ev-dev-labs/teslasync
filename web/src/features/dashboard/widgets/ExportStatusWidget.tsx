@@ -180,6 +180,7 @@ function StandardView({
   t: (key: string, fallback: string) => string;
 }) {
   const { formatDateTime } = useDateFormat();
+  useNumberFormatting();
 
   if (jobs.length === 0) {
     return (

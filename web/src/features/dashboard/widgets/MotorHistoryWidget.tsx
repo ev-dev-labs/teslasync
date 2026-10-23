@@ -4,7 +4,7 @@ import { Cog } from 'lucide-react';
 import {
   ComposedChart, Line, XAxis, YAxis, Tooltip, ReferenceArea,
   ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm,
-  chartAnimation, EmbeddedChart, ChartTooltip, type ChartDataRow,
+  chartAnimation, EmbeddedChart, ChartTooltip, useMeasuredAxisWidth, type ChartDataRow,
 } from '@/components/charts';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { useMotorHistory, useVehicles } from '@/api/hooks/useVehicles';
@@ -21,6 +21,8 @@ import type { WidgetProps } from './types';
 interface MotorHistoryDatum extends ChartDataRow {
   time: string;
   temperature: number | null;
+  torque: number | null;
+  statorTemp: number | null;
 }
 
 function buildChartData(
@@ -31,9 +33,13 @@ function buildChartData(
     .map((sample) => {
       const ts = sample.ts || sample.created_at || '';
       const raw = sample.di_stator_temp ?? sample.motor_temp_c_rear ?? sample.motor_temp_c_front ?? null;
+      const torque = sample.di_torque ?? null;
+      const temperature = raw != null && Number.isFinite(raw) ? toDisplay(raw) : null;
       return {
         time: ts,
-        temperature: raw != null && Number.isFinite(raw) ? toDisplay(raw) : null,
+        temperature,
+        torque: torque != null && Number.isFinite(torque) ? torque : null,
+        statorTemp: temperature,
       };
     })
     .filter((row) => row.time !== '')
@@ -97,6 +103,29 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
     .map((row) => row.temperature)
     .filter((value): value is number => value != null && Number.isFinite(value))
     .map((value) => `${fmt(value)}°`), [chartData, fmt]);
+  const torqueLabels = useMemo(() => [0, ...chartData.map((row) => row.torque)]
+    .filter((value): value is number => value != null && Number.isFinite(value))
+    .map((value) => fmt(value)), [chartData, fmt]);
+  const torqueWidth = useMeasuredAxisWidth({
+    labels: torqueLabels,
+    fontSize: size.cols >= 3 ? 11 : 10,
+    minWidth: 40,
+    padding: 20,
+    enabled: !isCompact,
+  });
+  const statorLabels = useMemo(
+    () => [0, dangerThreshold, tempMax, ...chartData.map((row) => row.temperature)]
+      .filter((value): value is number => value != null && Number.isFinite(value))
+      .map((value) => `${fmt(value)}°`),
+    [chartData, dangerThreshold, tempMax, fmt],
+  );
+  const statorWidth = useMeasuredAxisWidth({
+    labels: statorLabels,
+    fontSize: size.cols >= 3 ? 11 : 10,
+    minWidth: 40,
+    padding: 20,
+    enabled: !isCompact,
+  });
 
   const shellProps = {
     loading: isLoading,
@@ -184,12 +213,27 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                       tickFormatter={(value: string) => formatTime(value)}
                     />
                     <YAxis
-                      yAxisId="temperature"
+                      yAxisId="torque"
                       tick={size.cols >= 3 ? axisTick : axisTickSm}
                       tickLine={false}
                       axisLine={false}
+                      width={torqueWidth}
+                      tickFormatter={(value: number) => fmt(value)}
+                    />
+                    <YAxis
+                      yAxisId="temp"
+                      orientation="right"
+                      tick={size.cols >= 3 ? axisTick : axisTickSm}
+                      tickLine={false}
+                      axisLine={false}
+                      width={statorWidth}
                       domain={[Math.min(...temperatureLabels.map((value) => Number(value.replace('°', ''))).filter(Number.isFinite), dangerThreshold), tempMax]}
-                      tickFormatter={(value: number) => `${fmt(value, 0)}°`}
+                      tickFormatter={(value: number) => `${fmt(value)}°`}
+                    />
+                    <YAxis
+                      yAxisId="acceleration"
+                      hide={true}
+                      tick={size.cols >= 3 ? axisTick : axisTickSm}
                     />
                     <Tooltip
                       content={<ChartTooltip />}
@@ -200,14 +244,24 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                       ]}
                     />
                     <ReferenceArea
-                      yAxisId="temperature"
+                      yAxisId="temp"
                       y1={dangerThreshold}
                       y2={tempMax}
                       fill="#ef4444"
                       fillOpacity={0.1}
                     />
                     <Line
-                      yAxisId="temperature"
+                      yAxisId="torque"
+                      type="monotone"
+                      dataKey="torque"
+                      stroke="#f59e0b"
+                      strokeWidth={2}
+                      dot={false}
+                      connectNulls={false}
+                      name={t('widget.motorHistory.torque', 'Torque')}
+                    />
+                    <Line
+                      yAxisId="temp"
                       type="monotone"
                       dataKey="temperature"
                       stroke="#06b6d4"

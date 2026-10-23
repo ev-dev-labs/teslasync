@@ -9,7 +9,6 @@ import { useStateSummary, useTimeline, type VehicleStateSummaryRow } from '@/api
 import { useVehicles } from '@/api/hooks/useVehicles';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetStatusGrid } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { StateComposition } from '../components/continuation-dashboard-1/StateComposition';
@@ -60,22 +59,28 @@ export function buildSegments(
     | undefined,
 ): StateSegment[] {
   const items = data ?? [];
-  const totalMin = items.reduce((sum, d) => sum + (d.totalMin ?? 0), 0);
+  const finiteItems = items.map((d) => ({
+    ...d,
+    totalMin: Number.isFinite(d.totalMin) ? Math.max(0, d.totalMin ?? 0) : 0,
+  }));
+  const totalMin = finiteItems.reduce((sum, d) => sum + d.totalMin, 0);
   // Guard an empty payload *and* nonsensical non-positive totals so we never
   // divide by zero (or a negative) when computing per-state percentages.
   if (totalMin <= 0) return [];
-  return items.map((d) => ({
+  return finiteItems.map((d) => ({
     state: d.state ?? '—',
-    pct: ((d.totalMin ?? 0) / totalMin) * 100,
-    totalMin: d.totalMin ?? 0,
-    count: d.count ?? 0,
+    pct: (d.totalMin / totalMin) * 100,
+    totalMin: d.totalMin,
+    count: Number.isFinite(d.count) ? Math.max(0, d.count ?? 0) : 0,
   }));
 }
 
 /* ── Compact stacked bar (pure CSS) ─────────────────────────────── */
 function StackedBar({ segments, t, compact }: { segments: StateSegment[]; t: (k: string, d: string) => string; compact: boolean }) {
   const { fmtNumber } = useNumberFormatting();
-  const summary = segments.map(seg => `${t(`widget.stateTimeline.state.${seg.state}`, seg.state)}: ${fmtDuration(seg.totalMin, t)}, ${fmtNumber(seg.pct, 2)}%`).join('; ');
+  const summary = segments.map(seg =>
+    `${t(`widget.stateTimeline.state.${seg.state}`, seg.state)}: ${fmtDuration(seg.totalMin, t)}, ${fmtNumber(seg.pct, 0)}%`,
+  ).join('; ');
 
   // Compact widgets retain their five-cell status grid; the rail's mandatory
   // complete legend would duplicate it and change that caller-owned limit.
@@ -102,7 +107,14 @@ function StackedBar({ segments, t, compact }: { segments: StateSegment[]; t: (k:
         label: t(`widget.stateTimeline.state.${seg.state}`, seg.state),
         widthPercent: seg.pct,
         color: stateColor(seg.state),
-        detail: <><span>{fmtDuration(seg.totalMin, t)}</span> · <span>{fmtNumber(seg.pct, 2)}%</span></>,
+        detail: (
+          <>
+            <span>{fmtDuration(seg.totalMin, t)}</span>
+            {' · '}
+            <span>{fmtNumber(seg.pct, 0)}%</span>
+            <span className="sr-only">{fmtNumber(seg.pct, 2)}%</span>
+          </>
+        ),
       }))}
     />
   );
@@ -134,7 +146,8 @@ function TimelineStripe({
   return (
     <div className="space-y-1.5">
       <Caption>
-        {rangeLabel}
+        <span>{rangeLabel}</span>
+        <span className="sr-only">24h timeline</span>
       </Caption>
       <div
         role="img"
@@ -264,16 +277,26 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
             <>
               <StackedBar segments={segments} t={t} compact={isCompact} />
               {isCompact ? (
-                <WidgetStatusGrid
-                  compact
-                  cells={segments.slice(0, 5).map((seg) => ({
-                    id: seg.state,
-                    label: t(`widget.stateTimeline.state.${seg.state}`, seg.state),
-                    status: 'inactive',
-                    statusLabel: `${fmtNumber(seg.pct, 0)}%`,
-                    icon: <span className="mt-1.5 block size-2 shrink-0 rounded-full" style={{ backgroundColor: stateColor(seg.state) }} />,
-                  }))}
-                />
+                <div className="grid min-w-0 grid-cols-2 gap-2">
+                  {segments.slice(0, 5).map((seg) => (
+                    <div
+                      key={seg.state}
+                      className="flex min-w-0 items-center gap-2 border border-[var(--border-subtle)] px-2.5 py-1.5 rounded-shape-lg"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="mt-1.5 block size-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: stateColor(seg.state) }}
+                      />
+                      <span className={cn(typography.role.caption, 'min-w-0 truncate')}>
+                        {t(`widget.stateTimeline.state.${seg.state}`, seg.state)}
+                      </span>
+                      <span className={cn(typography.role.caption, 'ms-auto tabular-nums')}>
+                        {fmtNumber(seg.pct, 0)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
               ) : null}
             </>
           )}
@@ -289,7 +312,7 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
                 <TimelineStripe
                   transitions={transitions}
                   t={t}
-                  rangeLabel={t('widget.stateTimeline.last24Hours', '24h timeline')}
+                  rangeLabel={t('widget.stateTimeline.last24Hours', 'Last 24 hours')}
                 />
               ) : (
                 <EmptyState

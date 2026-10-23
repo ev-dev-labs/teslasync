@@ -66,21 +66,19 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
 
   const observationRows = Array.isArray(observations) ? observations : [];
   const sampleCounts = new Map<string, number>();
-  const categories = new Map<string, { count: number; sampleCount: number | null }>();
   observationRows.forEach((row) => {
     const name = row.signal_name?.trim();
     if (name) sampleCounts.set(name, (sampleCounts.get(name) ?? 0) + 1);
   });
-  entries.forEach((signal) => {
-    const destination = signal.destination || 'unknown';
-    const category = categories.get(destination) ?? { count: 0, sampleCount: null as number | null };
-    category.count += 1;
-    const total = knownNumber(signal.sample_count_total);
-    category.sampleCount = total == null
-      ? (category.sampleCount == null ? null : category.sampleCount)
-      : (category.sampleCount ?? 0) + total;
-    categories.set(destination, category);
-  });
+  const categoryEntries = Array.from(
+    filtered.reduce((groups, signal) => {
+      const destination = signal.destination || 'unknown';
+      const rows = groups.get(destination) ?? [];
+      rows.push(signal);
+      groups.set(destination, rows);
+      return groups;
+    }, new Map<string, typeof entries>()),
+  );
 
   const browseLabel = t('widget.signalCatalog.browse', 'Browse');
 
@@ -133,11 +131,10 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
             onChange={(e) => setSearch(e.target.value)}
             className="min-h-[44px]"
           />
-          {observations == null || observationState.refreshError || observationState.isRefreshBlocked ? (
+          {(observations == null || observationState.refreshError || observationState.isRefreshBlocked) && (
             <SourceContent
               state={sourceBoundaryState(observationState, observations != null)}
               label={t('widget.signalCatalog.sampleCount', 'Observations in fetched sample')}
-              emptyMessage={t('widget.signalCatalog.observationsUnavailable', 'Signal observations unavailable')}
               errorMessage={t('widget.signalCatalog.observationsUnavailable', 'Signal observations unavailable')}
               error={observationState.fatalError}
               retainedMessage={t('widget.signalCatalog.observationsRetained', 'Previously loaded signal observations remain visible while this source recovers.')}
@@ -145,7 +142,7 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
             >
               {null}
             </SourceContent>
-          ) : null}
+          )}
 
           {filtered.length === 0 ? (
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -158,26 +155,83 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
           ) : (
             <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
               <ul className="m-0 list-none space-y-2 p-0" aria-label={t('widget.signalCatalog.signalsAvailable', 'Signals available')}>
-                {Array.from(categories.entries())
-                  .filter(([destination]) => filtered.some((signal) => (signal.destination || 'unknown') === destination))
-                  .map(([destination, category]) => (
+                {categoryEntries.map(([destination, signals]) => (
                     <li key={destination} className="min-w-0 rounded-panel border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2">
-                      <h4 className="break-words text-sm font-medium text-[var(--text-primary)]">{destination}</h4>
-                      {filtered.filter((signal) => (signal.destination || 'unknown') === destination).map((signal) => (
-                        <p key={`${signal.destination}:${signal.field}`} className="mt-1 break-words text-xs text-[var(--text-muted)]">
-                          {signal.field}
-                        </p>
-                      ))}
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">
-                        {t('widget.signalCatalog.categorySignals', '{{count}} signals', { count: category.count, replace: { count: fmtInt(category.count) } })}
-                        {' · '}
-                        {category.sampleCount == null
-                          ? t('widget.signalCatalog.observationsUnavailable', 'Observations unavailable')
-                          : t('widget.signalCatalog.categoryObservations', '{{count}} obs', { count: category.sampleCount, replace: { count: fmtInt(category.sampleCount) } })}
+                      <h4
+                        aria-label={t('widget.signalCatalog.destination', 'Destination: {{destination}}', { destination })}
+                        className="break-words text-sm font-medium text-[var(--text-primary)]"
+                      >
+                        {destination}
+                      </h4>
+                      {signals.map((signal) => {
+                        const total = knownNumber(signal.sample_count_total);
+                        const vehicles = knownNumber(signal.vehicle_count);
+                        const fetchedCount = observations == null
+                          ? null
+                          : sampleCounts.get(signal.field) ?? 0;
+                        const lastSeen = signal.last_seen_at ?? null;
+                        return (
+                          <div key={`${signal.destination}:${signal.field}`} className="mt-3 min-w-0 border-t border-[var(--border-subtle)] pt-2 first:border-t-0 first:pt-0">
+                            <p className="break-words text-sm font-medium text-[var(--text-primary)]">{signal.field}</p>
+                            <p className="mt-1 break-words text-xs text-[var(--text-muted)]">
+                              {t('widget.signalCatalog.valueKind', 'Value kind')}: <span>{signal.value_kind}</span>
+                            </p>
+                            <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-[var(--text-muted)]">
+                              <span
+                                title={t('widget.signalCatalog.sampleCount', 'Observations in fetched sample')}
+                                className="tabular-nums"
+                              >
+                                {fetchedCount == null ? '—' : fmtInt(fetchedCount)}
+                              </span>
+                              <span className="flex flex-wrap gap-x-3">
+                                {t('widget.signalCatalog.totalSamples', 'Total observations: {{count}}', {
+                                  count: total ?? undefined,
+                                  replace: { count: total == null ? '—' : fmtInt(total) },
+                                })}
+                                {t('widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}', {
+                                  count: vehicles ?? undefined,
+                                  replace: { count: vehicles == null ? '—' : fmtInt(vehicles) },
+                                })}
+                              </span>
+                              <span>
+                                {t('widget.signalCatalog.lastSeen', 'Last seen: {{timestamp}}', {
+                                  timestamp: lastSeen ?? '—',
+                                })}
+                              </span>
+                            </p>
+                          </div>
+                        );
+                      })}
+                      <p className="mt-2 text-xs text-[var(--text-muted)]">
+                        <span>
+                          {t('widget.signalCatalog.categorySignals', '{{count}} signals', { count: signals.length, replace: { count: fmtInt(signals.length) } })}
+                        </span>
+                        {!observationState.fatalError && !observationState.refreshError && !observationState.isRefreshBlocked && (
+                          <>
+                            {' · '}
+                            <span>{(() => {
+                              const totals = signals.map((signal) => knownNumber(signal.sample_count_total));
+                              const categoryTotal = totals.some((total) => total == null)
+                                ? null
+                                : totals.reduce((sum, total) => sum + (total ?? 0), 0);
+                              return categoryTotal == null
+                                ? t('widget.signalCatalog.categoryObservationsUnavailable', 'Observations unavailable')
+                                : t('widget.signalCatalog.categoryObservations', '{{count}} obs', {
+                                    count: categoryTotal,
+                                    replace: { count: fmtInt(categoryTotal) },
+                                  });
+                            })()}</span>
+                          </>
+                        )}
                       </p>
                     </li>
                   ))}
               </ul>
+              {'status' in catalogQuery && catalogQuery.status === 'success' && (
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t('widget.signalCatalog.metadataUnavailable', 'Unit and description are not provided by this catalog.')}
+                </p>
+              )}
             </div>
           )}
         </div>

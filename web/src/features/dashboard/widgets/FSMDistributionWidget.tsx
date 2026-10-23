@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitBranch } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, EmbeddedChart, type ChartDataRow } from '@/components/charts';
-import { Caption, MetricValue, Text } from '@/components/ui';
+import { Button, Caption, MetricValue, Text } from '@/components/ui';
 import { SourceContent } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import { useFSMStats, useFSMTransitions } from '@/api/hooks/useFSM';
@@ -146,16 +146,16 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
     }
     void refetchStats();
   }, [idStr, vehiclesQuery.refetch, refetchStats]);
-  const hasPayload = statsState.hasData;
+  const hasPayload = statsState.hasData || transitionState.hasData;
   const sourceError = statsState.fatalError;
-  const combined = combineDataStates([statsState]);
+  const combined = combineDataStates([statsState, transitionState]);
   const mergedState = {
     ...combined,
     data: statsData,
     hasData: hasPayload,
     fatalError: hasPayload ? null : sourceError,
     refreshError: hasPayload ? combined.refreshError ?? sourceError : null,
-    status: !hasPayload && sourceError ? 'initialFailure' as const : combined.status,
+    status: !statsState.hasData && !transitionState.hasData && sourceError ? 'initialFailure' as const : combined.status,
     retry: handleRefresh,
   };
   const resolvingVehicle = !idStr && !hasPayload;
@@ -192,6 +192,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
               className="inline-block h-3 w-3 rounded-full"
               style={{ backgroundColor: stateColor(currentState) }}
             />
+            <MetricValue className="leading-none tabular-nums">{`${fmtNumber(segments[0]?.pct ?? 0, 0)}%`}</MetricValue>
             <WidgetBigNumber
               value={t(`widget.fsmDistribution.state.${currentState}`, currentState)}
               subtitle={fmtDuration(currentMs, t)}
@@ -226,18 +227,18 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <SourceContent
-          state={statsState.fatalError ? 'error' : !statsState.hasData && statsLoading ? 'loading' : !hasData ? 'empty' : statsState.refreshError ? 'retained' : 'ready'}
-          label={t('widget.fsmDistribution.title', 'State distribution')}
-          emptyMessage={t('widget.fsmDistribution.noData', 'No state data')}
-          errorMessage={t('widget.fsmDistribution.statsError', 'State distribution could not be loaded.')}
-          error={statsState.fatalError}
-          errorRecovery={{ onRetry: () => { void refetchStats(); } }}
-          retainedMessage={t('widget.fsmDistribution.statsRetained', 'Previously loaded state distribution remains visible while it refreshes.')}
-          emptyContent={<EmptyState /* no-action: the widget header already exposes refresh for this source */
-            icon={<GitBranch className="h-5 w-5" />} message={t('widget.fsmDistribution.noData', 'No state data')} className="py-4" />}
-        >
-        <div className="grid h-full min-h-0 grid-cols-[minmax(120px,0.9fr)_minmax(150px,1.1fr)] items-center gap-4">
+      <div className="grid h-full min-h-0 grid-cols-[minmax(120px,0.9fr)_minmax(150px,1.1fr)] items-center gap-4">
+        <SourceContent
+            state={statsState.fatalError ? 'error' : !statsState.hasData && statsLoading ? 'loading' : !hasData ? 'empty' : statsState.refreshError ? 'retained' : 'ready'}
+            label={t('widget.fsmDistribution.title', 'State distribution')}
+            emptyMessage={t('widget.fsmDistribution.noData', 'No state data')}
+            errorMessage={t('widget.fsmDistribution.statsError', 'State distribution could not be loaded.')}
+            error={statsState.fatalError}
+            errorRecovery={{ onRetry: () => { void refetchStats(); } }}
+            retainedMessage={t('widget.fsmDistribution.statsRetained', 'Previously loaded state distribution remains visible while it refreshes.')}
+            emptyContent={<EmptyState /* no-action: the widget header already exposes refresh for this source */
+              icon={<GitBranch className="h-5 w-5" />} message={t('widget.fsmDistribution.noData', 'No state data')} className="py-4" />}
+          >
           <EmbeddedChart
             title={t('widget.fsmDistribution.title', 'State distribution')}
             ariaLabel={t('widget.fsmDistribution.chartAria', 'Time spent in each vehicle state')}
@@ -280,7 +281,8 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
               )}
             </div>
           </EmbeddedChart>
-          <div className="min-w-0">
+        </SourceContent>
+        <div className="min-w-0">
             <ol aria-label={t('widget.fsmDistribution.rankedStates', 'State shares')} className="min-w-0 divide-y divide-[var(--border-subtle)]">
               {segments.map((seg) => (
                 <li key={seg.state} className="grid min-h-11 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-1.5">
@@ -294,7 +296,12 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
             </ol>
             <h4 className="mt-2 text-sm font-medium text-[var(--text-primary)]">{t('widget.fsmDistribution.recentTransitions', 'Recent transitions')}</h4>
             {transitionState.fatalError ? (
-              <Text variant="bodySm" className="text-[var(--text-danger)]">{t('widget.fsmDistribution.transitionsError', 'Recent transitions could not be loaded.')}</Text>
+              <div>
+                <Text variant="bodySm" className="text-[var(--text-danger)]">{t('widget.fsmDistribution.transitionsError', 'Recent transitions could not be loaded.')}</Text>
+                <Button size="sm" variant="ghost" className="mt-2" onClick={() => { void transitionsQuery.refetch(); }}>
+                  {t('common.retry', 'Retry')}
+                </Button>
+              </div>
             ) : transitionsData.length === 0 ? (
               <Text variant="bodySm" className="text-[var(--text-muted)]">{t('widget.fsmDistribution.noTransitions', 'No recent transitions')}</Text>
             ) : (
@@ -308,9 +315,8 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
                 ))}
               </ol>
             )}
-          </div>
         </div>
-      </SourceContent>
+      </div>
     </WidgetShell>
   );
 }
