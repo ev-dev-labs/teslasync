@@ -18,6 +18,7 @@ import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { classifyChargingSource, type ChargerKind } from '@/lib/chargerKind';
 import { dashboardTokens } from '../lib/dashboardTokens';
+import { Badge } from '@/components/ui';
 
 interface ChartDatum extends ChartDataRow {
   time: string;
@@ -133,7 +134,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
     if (startedAt && endedAt) {
       const seconds = (new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 1000;
       if (Number.isFinite(seconds) && seconds >= 0) {
-        const mins = seconds / 60;
+        const mins = Math.round(seconds / 60);
         if (mins < 60) return t('widget.chargingSessionDetail.durationMinutes', '{{minutes}}m', { minutes: fmtNumber(mins, 0) });
         const h = Math.floor(mins / 60);
         const m = mins % 60;
@@ -145,12 +146,12 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
     if (!detail) return '—';
     const mins = knownNumber(detail.duration_min);
     if (mins == null || mins < 0) return '—';
-    if (mins < 60) return t('widget.chargingSessionDetail.durationMinutes', '{{minutes}}m', { minutes: fmtNumber(mins) });
+    if (mins < 60) return t('widget.chargingSessionDetail.durationMinutes', '{{minutes}}m', { minutes: fmtNumber(mins, 0) });
     const h = Math.floor(mins / 60);
     const m = mins % 60;
     return m > 0
-      ? t('widget.chargingSessionDetail.durationHoursMinutes', '{{hours}}h {{minutes}}m', { hours: fmtNumber(h), minutes: fmtNumber(m) })
-      : t('widget.chargingSessionDetail.durationHours', '{{hours}}h', { hours: fmtNumber(h) });
+      ? t('widget.chargingSessionDetail.durationHoursMinutes', '{{hours}}h {{minutes}}m', { hours: fmtNumber(h, 0), minutes: fmtNumber(m, 0) })
+      : t('widget.chargingSessionDetail.durationHours', '{{hours}}h', { hours: fmtNumber(h, 0) });
   }, [detail, t, fmtNumber]);
 
   const peakPower = useMemo(() => {
@@ -185,13 +186,9 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
     const start = latestSession?.startedAt ?? latestSession?.started_at;
     const dateLabel = start ? formatDateShort(start) : null;
     const location = latestSession?.start_place?.trim() || null;
-    const locationWithCharger =
-      location && charger.kind === 'supercharger'
-        ? `${location} Supercharger`
-        : location;
-    const parts = [locationWithCharger, dateLabel].filter((part): part is string => Boolean(part));
+    const parts = [location, dateLabel].filter((part): part is string => Boolean(part));
     return parts.join(' · ');
-  }, [latestSession, formatDateShort, charger.kind]);
+  }, [latestSession, formatDateShort]);
 
   const stats = useMemo((): ChartSummaryStat[] => {
     if (!detail) return [];
@@ -228,8 +225,8 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       return Math.sign(value) * Math.ceil(Math.abs(value) / magnitude) * magnitude;
     });
     return {
-      power: [0, ...powers, ...bounds].map(value => fmt(value, 1)),
-      soc: [0, 25, 50, 75, 100].map(value => `${fmt(value, 0)}%`),
+      power: [0, ...powers, ...bounds].map(value => fmt(value)),
+      soc: [0, 25, 50, 75, 100].map(value => `${fmt(value)}%`),
     };
   }, [chartData, fmt]);
   const powerAxisWidth = useMeasuredAxisWidth({
@@ -315,7 +312,6 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             axisLine={false}
             width={socAxisWidth}
             domain={[0, 100]}
-            tickFormatter={(v: number) => `${fmt(v)}%`}
           />
 
           <Tooltip content={<ChartTooltip />} />
@@ -421,9 +417,14 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
         <div className="flex h-full min-w-0 flex-col">
           {(sessionContext || durationStr !== '—') && (
             <div className="flex items-start justify-between gap-3">
-              <span className={dashboardTokens.metricLabel}>
-                {sessionContext || t('widget.chargingSessionDetail.session', 'Charging session')}
-              </span>
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <span className={dashboardTokens.metricLabel}>
+                  {sessionContext || t('widget.chargingSessionDetail.session', 'Charging session')}
+                </span>
+                {detail && (
+                  <Badge variant={charger.variant} size="sm">{chargerLabel}</Badge>
+                )}
+              </div>
               {durationStr !== '—' && (
                 <span className={dashboardTokens.metricLabel}>{durationStr}</span>
               )}
