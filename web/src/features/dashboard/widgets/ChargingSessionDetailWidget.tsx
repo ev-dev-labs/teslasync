@@ -429,7 +429,12 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
                   {sessionContext || t('widget.chargingSessionDetail.session', 'Charging session')}
                 </span>
                 {detail && (
-                  <Badge variant={charger.variant} size="sm">{chargerLabel}</Badge>
+                  <>
+                    <span className={dashboardTokens.metricLabel}>
+                      {t('widget.chargingSessionDetail.charger', 'Charger')}:
+                    </span>
+                    <Badge variant={charger.variant} size="sm">{chargerLabel}</Badge>
+                  </>
                 )}
               </div>
               {durationStr !== '—' && (

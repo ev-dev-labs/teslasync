@@ -116,6 +116,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
       return rank(fa?.status) - rank(fb?.status)
         || (a.intervalMonths ?? Infinity) - (b.intervalMonths ?? Infinity);
       })
+      .filter((item) => !recentRecords.some((record) => record.itemId === item.id))
       .slice(0, 3)
       .map((item, index) => {
       const evidence = (forecast?.items ?? []).find((f) => f.name === item.name && f.category === item.category);
@@ -269,6 +270,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
             <span data-operational-value>{t('widget.maintenance.dailyDistance', 'Daily distance')}: {forecast?.km_per_day == null ? '—' : `${fmtNumber(Number(forecast.km_per_day), 2)} km/day`}</span>
           </div>
           <Button size="sm" variant="ghost" onClick={() => setForecastOpen(true)}>{t('common.reviewDetails', 'Review details')}</Button>
+          <Caption className="mt-2 block break-words">{t('widget.maintenance.forecastCaveat', 'Forecast depends on recorded service history and mileage.')}</Caption>
         </section>
         <Drawer open={forecastOpen} onClose={() => setForecastOpen(false)} title={`Forecast vehicle ${forecast?.vehicle_id ?? ''}`}>
           <div className="space-y-2">
@@ -293,6 +295,12 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
             )}
           </div>
         )}
+        <Caption as="h3" className="mb-1 block">
+          {t('widget.maintenance.shortestInterval', 'Shortest configured interval')}
+        </Caption>
+        <Caption className="mb-2 block break-words">
+          {t('widget.maintenance.intervalCaveat', 'Intervals are recommendations, not time remaining.')}
+        </Caption>
         <Caption as="h3" className="mb-1 block">
           {t('widget.maintenance.upcoming', 'Upcoming')}
         </Caption>
