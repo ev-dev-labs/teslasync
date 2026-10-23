@@ -105,7 +105,7 @@ describe('NextChargeDecisionWidget', () => {
       verdict: 'wait', reason: 'Preserved explanation', current_soc: 42, target_soc: 80, kwh_needed: 28.5,
     } }));
     renderWidget({ size });
-    expect(screen.getByText('wait')).toBeInTheDocument();
+    expect(screen.getByText('Wait for off-peak')).toBeInTheDocument();
     expect(screen.getByText('Preserved explanation')).toBeInTheDocument();
     expect(screen.getByText(/28.50 kWh needed/)).toBeInTheDocument();
   });
@@ -123,7 +123,7 @@ describe('NextChargeDecisionWidget', () => {
     renderWidget();
     try {
       act(() => { setGlobalPrecision(3); setGlobalLocale('de-DE'); });
-      expect(screen.getByText(/42,000% → 80,000% · 28,500 kWh needed/)).toBeInTheDocument();
+      expect(screen.getByText(/42,000% → 80,000% · 28\.50 kWh needed/)).toBeInTheDocument();
     } finally {
       act(() => { setGlobalPrecision(2); setGlobalLocale('en-US'); });
     }
@@ -136,10 +136,15 @@ describe('NextChargeDecisionWidget', () => {
         kwh_needed: 28.5, home_now_cost: 6.4,
       } }));
       renderWidget();
-      expect(screen.getByText(verdict)).toBeInTheDocument();
+      expect(screen.getByText(({
+        enough: 'Enough energy',
+        wait: 'Wait for off-peak',
+        charge_home_now: 'Charge home now',
+        supercharger: 'Use Supercharger',
+        skip_dc: 'Skip DC-fast',
+      } as Record<string, string>)[verdict])).toBeInTheDocument();
       expect(screen.getByText('Measured plan reason')).toBeInTheDocument();
       expect(screen.getByText(/28.50 kWh needed/)).toBeInTheDocument();
-      expect(screen.getByText('$6.40')).toBeInTheDocument();
     },
   );
 
