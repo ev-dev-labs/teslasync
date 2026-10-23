@@ -21,11 +21,10 @@
  *     `useAchievementCelebrationPrefs`) are replaced with hoisted `vi.fn()`
  *     doubles so the network / localStorage are never touched and every render
  *     is deterministic.
- *   - Only `useNavigate` is replaced on `react-router-dom`; `MemoryRouter`
- *     stays real (the badge buttons and <QueryError> need router context).
+ *   - The router stays real in `MemoryRouter`; only timezone/date formatting
+ *     is stubbed to keep assertions deterministic.
  *   - `react-i18next` is stubbed to resolve the developer fallback string (and
  *     interpolate `{{vars}}`) so assertions read the shipped English copy.
- *   - The real <AchievementBadge> renders so the strip is covered end-to-end.
  *   - `matchMedia` is stubbed before any import because <FreshnessDot>'s
  *     `useMotionPreference` (rendered transitively by <WidgetShell>) reads it on
  *     first paint and jsdom does not provide it.
@@ -75,11 +74,10 @@ vi.mock('react-i18next', () => ({
 }));
 
 // Hoisted doubles — the data + navigation boundary. Never hit real endpoints.
-const { lifetimeMock, vehiclesMock, prefsMock, navigateSpy } = vi.hoisted(() => ({
+const { lifetimeMock, vehiclesMock, prefsMock } = vi.hoisted(() => ({
   lifetimeMock: vi.fn(),
   vehiclesMock: vi.fn(),
   prefsMock: vi.fn(),
-  navigateSpy: vi.fn(),
 }));
 
 vi.mock('@/api/hooks/useAnalytics', () => ({ useLifetimeStats: lifetimeMock }));
@@ -88,12 +86,23 @@ vi.mock('@/hooks/useAchievementCelebrationPrefs', () => ({
   useAchievementCelebrationPrefs: prefsMock,
 }));
 
-// Keep MemoryRouter / real router internals; spy only on the navigate fn so the
-// deep-link contract is assertable.
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
-  return { ...actual, useNavigate: () => navigateSpy };
-});
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({
+    formatDate: (value: string | null) => {
+      if (!value || Number.isNaN(Date.parse(value))) return 'Unlock date unavailable';
+      return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
+        .format(new Date(value));
+    },
+    formatTime: (value: string | null) => {
+      if (!value || Number.isNaN(Date.parse(value))) return '—';
+      return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' })
+        .format(new Date(value));
+    },
+    formatDateTime: (value: string | null) => value ? String(value) : '—',
+    formatRelative: (value: string | null) => value ? 'recently' : '—',
+    formatRelativeTime: (value: string | null) => value ? 'recently' : '—',
+  }),
+}));
 
 import RecentlyUnlockedAchievementsWidget, {
   unlockedTs,
@@ -178,16 +187,14 @@ const JANUARY = makeAchievement({ id: 'j', name: 'January', unlocked_at: '2026-0
 const DECEMBER = makeAchievement({ id: 'd', name: 'December', unlocked_at: '2025-12-20T00:00:00.000Z' });
 const LOCKED = makeAchievement({ id: 'l', name: 'Locked One', unlocked: false, unlocked_at: null });
 
-function badgeButtons() {
-  return screen.getAllByRole('button', { name: /^View achievement:/ });
+function achievementLinks() {
+  return screen.getAllByRole('link', { name: /^View achievement:/ });
 }
 
 beforeEach(() => {
   lifetimeMock.mockReset();
   vehiclesMock.mockReset();
   prefsMock.mockReset();
-  navigateSpy.mockReset();
-
   // Sensible defaults: one vehicle, prefs on, a populated lifetime payload.
   vehiclesMock.mockReturnValue({ data: [{ id: 7 }] });
   prefsMock.mockReturnValue(DEFAULT_PREFS);
@@ -259,12 +266,12 @@ describe('RecentlyUnlockedAchievementsWidget', () => {
   it('renders unlocked badges newest-first, capped at 3 in the narrow layout, excluding locked/undated', () => {
     renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} />);
 
-    const buttons = badgeButtons();
+    const links = achievementLinks();
     // 5 supplied → 1 locked excluded → top 3 by unlocked_at desc.
-    expect(buttons).toHaveLength(3);
-    expect(buttons[0]).toHaveAttribute('aria-label', 'View achievement: March');
-    expect(buttons[1]).toHaveAttribute('aria-label', 'View achievement: February');
-    expect(buttons[2]).toHaveAttribute('aria-label', 'View achievement: January');
+    expect(links).toHaveLength(3);
+    expect(links[0]).toHaveAttribute('aria-label', 'View achievement: March');
+    expect(links[1]).toHaveAttribute('aria-label', 'View achievement: February');
+    expect(links[2]).toHaveAttribute('aria-label', 'View achievement: January');
     // December (4th newest) is dropped by the narrow limit; Locked is filtered out.
     expect(screen.queryByText('December')).not.toBeInTheDocument();
     expect(screen.queryByText('Locked One')).not.toBeInTheDocument();
@@ -280,7 +287,7 @@ describe('RecentlyUnlockedAchievementsWidget', () => {
     renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_WIDE} />);
 
     // 6 unlocked → capped at 5; the oldest (Oct) is dropped.
-    expect(badgeButtons()).toHaveLength(5);
+    expect(achievementLinks()).toHaveLength(5);
     expect(screen.queryByText('Oct')).not.toBeInTheDocument();
     expect(screen.getByText('Nov')).toBeInTheDocument();
   });
@@ -291,12 +298,12 @@ describe('RecentlyUnlockedAchievementsWidget', () => {
 
     renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} />);
 
-    const buttons = badgeButtons();
-    expect(buttons).toHaveLength(3);
+    const links = achievementLinks();
+    expect(links).toHaveLength(3);
     // Valid dates keep their order; the NaN-guarded (⇒ 0) entry sinks to the end.
-    expect(buttons[0]).toHaveAttribute('aria-label', 'View achievement: March');
-    expect(buttons[1]).toHaveAttribute('aria-label', 'View achievement: January');
-    expect(buttons[2]).toHaveAttribute('aria-label', 'View achievement: BadDate');
+    expect(links[0]).toHaveAttribute('aria-label', 'View achievement: March');
+    expect(links[1]).toHaveAttribute('aria-label', 'View achievement: January');
+    expect(links[2]).toHaveAttribute('aria-label', 'View achievement: BadDate');
   });
 
   it('deep-links to the lifetime page with a URL-encoded achievement id on click', () => {
@@ -306,10 +313,9 @@ describe('RecentlyUnlockedAchievementsWidget', () => {
 
     renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'View achievement: Road Warrior' }));
-
-    expect(navigateSpy).toHaveBeenCalledTimes(1);
-    expect(navigateSpy).toHaveBeenCalledWith('/lifetime?achievement=road%20warrior');
+    expect(
+      screen.getByRole('link', { name: 'View achievement: Road Warrior' }),
+    ).toHaveAttribute('href', '/lifetime?achievement=road%20warrior');
   });
 
   it('resolves the vehicle id (prop override → first vehicle → none) for the lifetime query', () => {
@@ -375,7 +381,7 @@ describe('RecentlyUnlockedAchievementsWidget', () => {
     renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} />);
 
     expect(screen.getByTestId('recently-unlocked-list')).toBeInTheDocument();
-    expect(badgeButtons()).toHaveLength(2);
+    expect(achievementLinks()).toHaveLength(2);
     expect(screen.getByText('March')).toBeInTheDocument();
   });
 
