@@ -1,77 +1,53 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PlayCircle, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { PlayCircle } from 'lucide-react';
 import { Badge } from '@/components/ui';
-import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useAutomationHistory } from '@/api/hooks/useAutomations';
-
-
 import { WidgetShell } from './WidgetShell';
-import { WidgetEventFeed } from './shared';
-import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 import type { AutomationHistoryStatus } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
-import { knownNumber } from '@/api/dataState';
-import { dashboardTokens } from '../lib/dashboardTokens';
-import { WidgetBigNumber } from './shared';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
+import { cn } from '@/lib/cn';
 
-// ── Status → visual mapping ──────────────────────────────────────────
+type TranslateFn = (key: string, fallback: string) => string;
 
-const STATUS_MAP: Record<
-  AutomationHistoryStatus,
-  { icon: React.ReactNode; color: string; severity: EventFeedItem['severity'] }
-> = {
-  success:   { icon: <CheckCircle className="h-3.5 w-3.5" />, color: '#22c55e', severity: 'info' },
-  failed:    { icon: <XCircle className="h-3.5 w-3.5" />,     color: '#ef4444', severity: 'critical' },
-  partial:   { icon: <Clock className="h-3.5 w-3.5" />,       color: '#f59e0b', severity: 'warning' },
-  running:   { icon: <Clock className="h-3.5 w-3.5" />,       color: '#3b82f6', severity: 'info' },
-  skipped:   { icon: <Clock className="h-3.5 w-3.5" />,       color: '#6b7280', severity: 'info' },
-  cancelled: { icon: <XCircle className="h-3.5 w-3.5" />,     color: '#6b7280', severity: 'info' },
-  test:      { icon: <PlayCircle className="h-3.5 w-3.5" />,  color: '#8b5cf6', severity: 'info' },
-  undo:      { icon: <Clock className="h-3.5 w-3.5" />,       color: '#6b7280', severity: 'info' },
-};
+export type AutomationStatusVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
-const DEFAULT_STATUS = {
-  icon: <PlayCircle className="h-3.5 w-3.5" />,
-  color: '#6b7280',
-  severity: 'info' as const,
-};
+export function automationStatusVariant(status: AutomationHistoryStatus | null | undefined): AutomationStatusVariant {
+  switch (status) {
+    case 'success': return 'success';
+    case 'failed': return 'danger';
+    case 'partial': return 'warning';
+    case 'running': return 'info';
+    default: return 'neutral';
+  }
+}
 
-// ── Compact layout (1×2) ─────────────────────────────────────────────
-
-function CompactView({
-  successRate,
-  lastRunTime,
-  t,
-}: {
-  successRate: number | null;
-  lastRunTime: string | null;
-  t: (key: string, fallback: string) => string;
-}) {
-  const { fmtNumber } = useNumberFormatting();
-  return (
-    <div className="h-full flex flex-col items-center justify-center gap-1">
-      <WidgetBigNumber
-        value={successRate == null ? null : fmtNumber(successRate)}
-        unit="%"
-        label={t('widget.successRate', 'Success rate')}
-        align="center"
-      />
-      {lastRunTime && (
-        <TimeStamp value={lastRunTime} className="text-xs text-[var(--text-secondary)]" />
-      )}
-    </div>
-  );
+export function automationStatusLabel(status: AutomationHistoryStatus | null | undefined, t: TranslateFn): string {
+  switch (status) {
+    case 'success': return t('automations:historyPage.status.success', 'Succeeded');
+    case 'failed': return t('automations:historyPage.status.failed', 'Failed');
+    case 'partial': return t('automations:historyPage.status.partial', 'Partial');
+    case 'running': return t('automations:historyPage.status.running', 'Running');
+    case 'skipped': return t('automations:historyPage.status.skipped', 'Skipped');
+    case 'cancelled': return t('automations:historyPage.status.cancelled', 'Cancelled');
+    case 'test': return t('automations:historyPage.status.test', 'Test');
+    case 'undo': return t('automations:historyPage.status.undo', 'Undone');
+    default: return typeof status === 'string' && status.trim() ? status.trim() : '—';
+  }
 }
 
 // ── Main widget ──────────────────────────────────────────────────────
 
 export default function AutomationHistoryWidget({ size }: WidgetProps) {
-  const { formatDurationMs, fmtNumber, fmtInt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const { formatDateTime, formatTime } = useDateFormat();
+  const { formatRelativeDays } = useDateLabels();
   const query = useAutomationHistory();
   const {
     data,
@@ -83,49 +59,33 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
     refetch,
   } = query;
   const state = useDataState({ ...query, data: data ?? undefined }, { provenance: 'historical' });
-
   const isCompact = size.cols <= 1;
   const items = data?.items ?? [];
-  const summary = data?.summary;
-  const successRate = knownNumber(summary?.success_rate);
-  const totalRuns = knownNumber(summary?.total_executions);
-  const hasRuns = (totalRuns != null && totalRuns > 0) || items.length > 0;
+  const rows = useMemo(() => {
+    const sorted = [...items].sort((a, b) => {
+      const at = new Date(a.triggered_at ?? '').getTime();
+      const bt = new Date(b.triggered_at ?? '').getTime();
+      const ae = Number.isFinite(at) ? at : Number.NEGATIVE_INFINITY;
+      const be = Number.isFinite(bt) ? bt : Number.NEGATIVE_INFINITY;
+      return ae === be ? 0 : ae > be ? -1 : 1;
+    });
+    return sorted.slice(0, isCompact ? 4 : 10);
+  }, [items, isCompact]);
 
-  // A red "danger" chip for a 0% success rate must mean "runs are failing",
-  // not "nothing has run yet" — otherwise a fresh install with zero executions
-  // looks like a broken one. Fall back to a neutral chip until there is at
-  // least one run to grade.
-  const rateVariant = !hasRuns || successRate == null
-    ? 'neutral'
-    : successRate >= 90
-      ? 'success'
-      : successRate >= 50
-        ? 'warning'
-        : 'danger';
+  const formatExecutionTime = (timestamp: string | null | undefined): string => {
+    if (!timestamp) return '—';
+    const ms = new Date(timestamp).getTime();
+    if (!Number.isFinite(ms)) return '—';
+    const day = formatRelativeDays(timestamp);
+    if (day === 'Today' || day === 'Yesterday') return `${day} ${formatTime(timestamp)}`;
+    return formatDateTime(timestamp);
+  };
 
-  const feedItems = useMemo<EventFeedItem[]>(
-    () =>
-      items.map((entry) => {
-        const mapped = Object.prototype.hasOwnProperty.call(STATUS_MAP, entry.status)
-          ? STATUS_MAP[entry.status]
-          : DEFAULT_STATUS;
-        const durationStr = formatDurationMs(entry.duration_ms ?? null);
-        const statusLabel = entry.status ?? '—';
-        return {
-          id: entry.id,
-          icon: mapped.icon,
-          title: entry.automation_name ?? '—',
-          subtitle: `${statusLabel} · ${durationStr}`,
-          timestamp: entry.triggered_at ?? '',
-          color: mapped.color,
-          severity: mapped.severity,
-          wrap: true,
-        };
-      }),
-    [items, formatDurationMs],
-  );
-
-  const lastEntry = items.length > 0 ? items[0] : null;
+  const formatExecutionDuration = (durationMs: number | null | undefined): string => {
+    if (typeof durationMs !== 'number' || !Number.isFinite(durationMs) || durationMs < 0) return '—';
+    if (durationMs < 1000) return `${fmtNumber(durationMs, 0)} ms`;
+    return `${fmtNumber(durationMs / 1000, 1)} s`;
+  };
 
   return (
     <WidgetShell
@@ -139,44 +99,39 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {isCompact ? (
-        items.length > 0 ? (
-          <CompactView
-            successRate={successRate}
-            lastRunTime={lastEntry?.triggered_at ?? null}
-            t={t}
-          />
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<PlayCircle className="h-5 w-5" />}
-            message={t('widget.noAutomationRuns', 'No automation runs yet')}
-            className="py-4"
-          />
-        )
+      {rows.length === 0 ? (
+        <EmptyState
+          icon={<PlayCircle className="h-5 w-5" aria-hidden="true" />}
+          message={t('widget.noAutomationRuns', 'No automation runs yet')}
+          className="py-4"
+        />
       ) : (
-        <div className="flex-1 min-h-0 flex flex-col gap-2">
-          {/* Success rate header */}
-          <div className="flex min-w-0 flex-wrap items-center gap-2 pb-1.5 border-b border-[var(--border-subtle)]">
-            <Badge variant={rateVariant}>
-              {successRate == null ? '—' : `${fmtNumber(successRate)}%`}{' '}{t('widget.successRate', 'Success rate')}
-            </Badge>
-            {summary && (
-              <span className={dashboardTokens.metricLabel}>
-                {totalRuns == null ? '—' : fmtInt(totalRuns)} {t('widget.totalRuns', 'runs')}
+        <div className="flex-1 min-h-0 overflow-y-auto" role="list" aria-label={t('widget.automationHistory', 'Automation history')}>
+          {rows.map((entry, index) => (
+            <div
+              key={entry.id ?? `${entry.triggered_at ?? 'unknown'}-${index}`}
+              role="listitem"
+              className={cn(
+                'grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 border-b border-[var(--border-subtle)] py-2 first:pt-0 last:border-b-0',
+                'md:grid-cols-[minmax(0,1fr)_auto_auto]',
+              )}
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-[var(--text-primary)]" title={entry.automation_name ?? '—'}>
+                  {entry.automation_name?.trim() || '—'}
+                </p>
+                <p className="truncate text-xs text-[var(--text-muted)]">
+                  {formatExecutionTime(entry.triggered_at)}
+                </p>
+              </div>
+              <Badge variant={automationStatusVariant(entry.status)} size="sm">
+                {automationStatusLabel(entry.status, (key, fallback) => t(key, fallback))}
+              </Badge>
+              <span className="col-start-2 mt-1 text-right text-xs tabular-nums text-[var(--text-secondary)] md:col-start-auto md:mt-0">
+                {formatExecutionDuration(entry.duration_ms)}
               </span>
-            )}
-          </div>
-
-          {/* Event feed */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <WidgetEventFeed
-              items={feedItems}
-              maxItems={10}
-              compact={false}
-              emptyMessage={t('widget.noAutomationRuns', 'No automation runs yet')}
-              emptyIcon={<PlayCircle className="h-5 w-5" />}
-            />
-          </div>
+            </div>
+          ))}
         </div>
       )}
     </WidgetShell>
