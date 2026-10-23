@@ -239,7 +239,7 @@ const HISTORY: TeslaWCChargingEntry[] = [
 // compact specs. Built from `now` so it is timezone- and calendar-stable.
 function currentMonthPrefix(): string {
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
 interface FakeQuery {
@@ -301,15 +301,8 @@ describe('WallConnectorWidget', () => {
 
     // Titled shell — no gutted panel.
     expect(screen.getByText('Wall connector')).toBeInTheDocument();
-
-    for (const label of ['This month (loaded)', 'Sessions', 'Avg / session']) {
-      expect(screen.getByText(label)).toBeInTheDocument();
-    }
-
-    // Two of the three stats carry the kWh unit (Sessions is a bare count).
-    expect(screen.queryAllByText('kWh')).toHaveLength(0);
-    expect(screen.getAllByText('—')).toHaveLength(2);
-    expect(screen.getByText('Totals cover loaded records from the last 14 days.')).toBeInTheDocument();
+    expect(screen.getByText('Today')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(1);
 
     // The bar is wired to the energy series with the emerald fill.
     const bar = screen.getByTestId('bar');
@@ -345,25 +338,22 @@ describe('WallConnectorWidget', () => {
     expect(chartRows().map((r) => r.date)).toEqual(['1/5', '12/31']);
   });
 
-  it('computes This-Month total / Sessions / Avg, excluding prior-month entries', () => {
+  it('shows today total in the shared timezone without inventing a lifetime total', () => {
     const ym = currentMonthPrefix();
+    const today = `${ym}-${String(new Date().getUTCDate()).padStart(2, '0')}`;
     historyMock.mockReturnValue(
       makeQuery({
         data: [
-          makeEntry(`${ym}-10T12:00:00Z`, 2000), // 2 kWh this month
-          makeEntry(`${ym}-20T12:00:00Z`, 4000), // 4 kWh this month
+          makeEntry(`${today}T12:00:00Z`, 2000),
+          makeEntry(`${today}T18:00:00Z`, 4000),
           makeEntry('2020-01-01T12:00:00Z', 9000), // long past — must be excluded
         ],
       }),
     );
     renderWidget();
-
-    // Total 2 + 4 = 6.0 kWh (the 9 kWh past entry is excluded), 2 sessions,
-    // average 3.0 kWh/session.
-    expect(screen.getByText('This month (loaded)')).toBeInTheDocument();
+    expect(screen.getByText('Today')).toBeInTheDocument();
     expect(screen.getByText('6.00')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('3.00')).toBeInTheDocument();
+    expect(screen.queryByText('Lifetime')).not.toBeInTheDocument();
   });
 
   it('labels the Y axis and tooltip through the shared fmt / fmtNumber helpers', () => {
@@ -394,25 +384,22 @@ describe('WallConnectorWidget', () => {
     expect(screen.getByTestId('x-axis')).toHaveAttribute('data-ticksize', 'lg');
   });
 
-  it('compact layout retains its title and icon with This-Month + Sessions, no chart or average', () => {
+  it('compact layout retains the Today headline and never adds lifetime content', () => {
     const ym = currentMonthPrefix();
+    const today = `${ym}-${String(new Date().getUTCDate()).padStart(2, '0')}`;
     historyMock.mockReturnValue(
-      makeQuery({ data: [makeEntry(`${ym}-10T12:00:00Z`, 3000)] }), // 3 kWh, 1 session
+      makeQuery({ data: [makeEntry(`${today}T12:00:00Z`, 3000)] }),
     );
     renderWidget({ cols: 1, rows: 2 });
 
-    expect(screen.getByText('This month (loaded)')).toBeInTheDocument();
+    expect(screen.getByText('Today')).toBeInTheDocument();
     expect(screen.getByText('3.00')).toBeInTheDocument();
-    expect(screen.getByText('Sessions')).toBeInTheDocument();
-    expect(screen.getByText('1')).toBeInTheDocument();
-    // Only the This-Month stat carries a unit in compact.
     expect(screen.getAllByText('kWh')).toHaveLength(1);
 
     const heading = screen.getByRole('heading', { name: 'Wall connector', level: 3 });
     expect(heading).toBeVisible();
     expect(heading.parentElement?.querySelector('svg.lucide-plug')).toBeInTheDocument();
-    // Compact drops the per-session average and never mounts the chart.
-    expect(screen.queryByText('Avg / session')).not.toBeInTheDocument();
+    expect(screen.queryByText('Lifetime')).not.toBeInTheDocument();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 
@@ -463,7 +450,6 @@ describe('WallConnectorWidget', () => {
     expect(screen.getByText('No wall connector data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // Stats + chart are not rendered while empty.
-    expect(screen.queryByText('Avg / session')).not.toBeInTheDocument();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 
@@ -552,10 +538,10 @@ describe('WallConnectorWidget', () => {
   });
 
   it.each([{ cols: 1, rows: 2 }, { cols: 2, rows: 4 }, { cols: 3, rows: 4 }])('retains loaded session stats and charts after cached refresh failure in %j', (size) => {
-    const month = currentMonthPrefix();
+    const today = `${currentMonthPrefix()}-${String(new Date().getUTCDate()).padStart(2, '0')}`;
     const refetch = vi.fn();
     historyMock.mockReturnValue(makeQuery({
-      data: [makeEntry(`${month}-01T12:00:00Z`, 2000)],
+      data: [makeEntry(`${today}T12:00:00Z`, 2000)],
       isError: true, error: new Error('refresh failed'), refetch,
     }));
     renderWidget(size);
@@ -567,11 +553,11 @@ describe('WallConnectorWidget', () => {
   });
 
   it('preserves zero energy sessions without treating them as empty history', () => {
-    const month = currentMonthPrefix();
-    historyMock.mockReturnValue(makeQuery({ data: [makeEntry(`${month}-01T12:00:00Z`, 0)] }));
+    const today = `${currentMonthPrefix()}-${String(new Date().getUTCDate()).padStart(2, '0')}`;
+    historyMock.mockReturnValue(makeQuery({ data: [makeEntry(`${today}T12:00:00Z`, 0)] }));
     renderWidget();
-    expect(screen.getByText('1')).toBeInTheDocument();
-    expect(screen.getAllByText('0.00')).toHaveLength(2);
+    expect(screen.getByText('Today')).toBeInTheDocument();
+    expect(screen.getAllByText('0.00')).toHaveLength(1);
     expect(chartRows()[0].energy_kwh).toBe(0);
     expect(screen.queryByText('No wall connector data')).not.toBeInTheDocument();
   });
@@ -583,8 +569,8 @@ describe('WallConnectorWidget', () => {
       makeEntry(`${month}-01T12:00:00Z`, null),
     ] }));
     renderWidget();
-    expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.getByText('Today')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(1);
     expect(chartRows()[0].energy_kwh).toBeNull();
     expect(screen.queryByText('2.00')).not.toBeInTheDocument();
   });
