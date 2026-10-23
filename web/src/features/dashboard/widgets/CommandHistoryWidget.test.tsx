@@ -378,7 +378,10 @@ describe('CommandHistoryWidget vehicle resolution', () => {
       // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
       fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
       expect(refetch).toHaveBeenCalledTimes(1);
-      if (size.cols > 1) expect(screen.getByText('Failed · Vehicle unavailable')).toBeInTheDocument();
+      if (size.cols > 1) {
+        expect(screen.getByText('Failed')).toBeInTheDocument();
+        expect(screen.getByText('Vehicle unavailable')).toBeInTheDocument();
+      }
     });
 
     it('treats prototype-colliding statuses as neutral and missing time as unknown', () => {
