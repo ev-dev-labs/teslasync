@@ -1,7 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { Navigation2 } from 'lucide-react';
-import { Badge } from '@/components/ui';
-import { MetricBar } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useLocationSnapshotLatest, useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
@@ -13,20 +11,12 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { dashboardTokens } from '../lib/dashboardTokens';
-
-function locationBadge(
-  snapshot: { located_at_home?: boolean; located_at_work?: boolean; located_at_favorite?: boolean } | null | undefined,
-  t: (key: string, fallback: string) => string,
-): { emoji: string; label: string; variant: 'success' | 'warning' | 'neutral' } {
-  if (snapshot?.located_at_home) return { emoji: '🏠', label: t('widget.destinationETA.home', 'Home'), variant: 'success' };
-  if (snapshot?.located_at_work) return { emoji: '🏢', label: t('widget.destinationETA.work', 'Work'), variant: 'neutral' };
-  if (snapshot?.located_at_favorite) return { emoji: '⭐', label: t('widget.destinationETA.favorite', 'Favorite'), variant: 'neutral' };
-  return { emoji: '📍', label: t('widget.destinationETA.other', 'Other'), variant: 'warning' };
-}
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const { formatTime } = useDateFormat();
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const { unitPrefs } = useUnits();
@@ -58,12 +48,6 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
   const destinationName = snapshot?.destination_name ?? '—';
 
   const displayDistance = milesToArrival != null ? toDistanceDisplay(milesToArrival) : null;
-  const progressPercent = isNavigating && milesToArrival != null && milesToArrival > 0
-    ? Math.max(0, Math.min(100, 100 - (milesToArrival / (milesToArrival + 1)) * 100))
-    : 0;
-
-  const locBadge = locationBadge(snapshot, t);
-
   // Only blank the whole widget on an INITIAL load failure — i.e. when there is
   // no cached snapshot to fall back on. This widget refetches on an interval, so
   // once a snapshot is on screen a transient background-refetch error must not
@@ -102,7 +86,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
       return (
         <WidgetShell {...shellProps}>
           <WidgetBigNumber
-            value={minutesToArrival != null ? fmtNumber(minutesToArrival) : null}
+            value={minutesToArrival != null ? fmtNumber(minutesToArrival, 0) : null}
             unit={t('widget.destinationETA.min', 'min')}
             label={t('widget.destinationETA.eta', 'ETA')}
           />
@@ -112,14 +96,13 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
 
     return (
       <WidgetShell {...shellProps}>
-        <div className="flex h-full flex-col items-center justify-center gap-1 min-h-[44px]">
-          <span className="text-2xl" role="img" aria-label={locBadge.label}>
-            {locBadge.emoji}
-          </span>
-          <Badge variant={locBadge.variant === 'success' ? 'success' : locBadge.variant === 'warning' ? 'warning' : 'neutral'} size="sm">
-            {locBadge.label}
-          </Badge>
-        </div>
+        <EmptyState
+          variant="informational"
+          icon={<Navigation2 className="h-5 w-5" />}
+          message={t('widget.destinationETA.noNav', 'No active navigation')}
+          description={t('widget.destinationETA.noNavDescription', 'Start a route in the car to see distance and arrival time here.')}
+          className="py-4"
+        />
       </WidgetShell>
     );
   }
@@ -146,78 +129,53 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
         icon={<Navigation2 className="h-3.5 w-3.5 text-cyan-400" />}
         {...shellProps}
       >
-        <div className="flex h-full flex-col items-center justify-center gap-2">
-          <span className="text-3xl" role="img" aria-label={locBadge.label}>
-            {locBadge.emoji}
-          </span>
-          <Badge variant={locBadge.variant === 'success' ? 'success' : locBadge.variant === 'warning' ? 'warning' : 'neutral'} size="sm">
-            {locBadge.label}
-          </Badge>
-          <span className="text-xs text-[var(--text-muted)]">
-            {t('widget.destinationETA.noNav', 'No active navigation')}
-          </span>
-        </div>
+        <EmptyState
+          variant="informational"
+          icon={<Navigation2 className="h-5 w-5" />}
+          message={t('widget.destinationETA.noNav', 'No active navigation')}
+          description={t('widget.destinationETA.noNavDescription', 'Start a route in the car to see distance and arrival time here.')}
+          className="py-4"
+        />
       </WidgetShell>
     );
   }
 
   // Navigating — full layout
-  const roundedMinutes = minutesToArrival != null ? Math.round(minutesToArrival) : 0;
-  const etaHours = Math.floor(roundedMinutes / 60);
-  const etaMins = roundedMinutes % 60;
-  const etaDisplay = minutesToArrival == null ? '—' : etaHours > 0
-    ? `${fmtInt(etaHours)}h ${fmtInt(etaMins)}m`
-    : `${fmtInt(etaMins)}m`;
+  const arrivalTime = minutesToArrival != null
+    ? formatTime(Date.now() + minutesToArrival * 60_000)
+    : null;
 
   return (
     <WidgetShell
       icon={<Navigation2 className="h-3.5 w-3.5 text-cyan-400" />}
       {...shellProps}
     >
-      <div className="flex h-full flex-col justify-between gap-2">
-        {/* Destination name */}
-        <div className="flex items-center gap-2 min-h-[44px]">
-          <Navigation2 className="h-4 w-4 shrink-0 text-cyan-400" />
-          <span className={`${dashboardTokens.title} min-w-0 break-words`}>
-            {destinationName}
+      <div className="flex h-full min-h-0 flex-col justify-center gap-3 px-1">
+        <div className={`${dashboardTokens.metricLabel} truncate`} title={destinationName}>
+          {destinationName}
+        </div>
+
+        <div className="flex min-w-0 items-end justify-between gap-3">
+          <WidgetBigNumber
+            value={minutesToArrival != null ? fmtNumber(minutesToArrival, 0) : null}
+            label={t('widget.destinationETA.eta', 'ETA')}
+            unit={t('widget.destinationETA.min', 'min')}
+            animated={false}
+          />
+          <div className="min-w-0 text-right">
+            {arrivalTime && (
+              <div className={dashboardTokens.secondaryMetric}>{arrivalTime}</div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex min-w-0 items-baseline justify-between gap-3 border-t border-[var(--border-subtle)] pt-3">
+          <span className={dashboardTokens.metricLabel}>{t('widget.destinationETA.remaining', 'Remaining')}</span>
+          <span className={dashboardTokens.secondaryMetric}>
+            {displayDistance != null ? `${fmtNumber(displayDistance, 0)} ${distanceUnit}` : '—'}
           </span>
         </div>
 
-        {/* ETA countdown + distance */}
-        <div className="grid min-w-0 grid-cols-1 @xs:grid-cols-2 gap-3">
-          <div className="flex flex-col items-center gap-0.5">
-            <WidgetBigNumber
-              value={minutesToArrival != null ? fmtNumber(minutesToArrival) : null}
-              label={t('widget.destinationETA.eta', 'ETA')}
-              unit={t('widget.destinationETA.min', 'min')}
-              align="center"
-            />
-            <span className={dashboardTokens.unit}>
-              {etaDisplay}
-            </span>
-          </div>
-
-          <div className="flex flex-col items-center gap-0.5">
-            <WidgetBigNumber value={displayDistance != null ? fmtNumber(displayDistance) : null} unit={distanceUnit} size="secondary" align="center" />
-          </div>
-        </div>
-
-        {/* Progress bar */}
-        <div className="flex flex-col gap-1">
-          <MetricBar
-            value={milesToArrival != null ? progressPercent : null}
-            max={100}
-            color="var(--theme-primary)"
-            ariaLabel={t('widget.destinationETA.progress', 'Trip progress')}
-            showHeader={false}
-            size="slim"
-            fill="solid"
-          />
-          <div className={`${dashboardTokens.unit} flex flex-wrap justify-between gap-1`}>
-            <span>{t('widget.destinationETA.remaining', 'Remaining')}</span>
-            <span>{displayDistance != null ? `${fmtNumber(displayDistance)} ${distanceUnit}` : '—'}</span>
-          </div>
-        </div>
       </div>
     </WidgetShell>
   );
