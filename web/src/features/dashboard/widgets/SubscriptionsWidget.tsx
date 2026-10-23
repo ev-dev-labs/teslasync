@@ -170,20 +170,13 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
   const entries: DetailEntry[] = useMemo(() => {
     return parsed.map((sub) => {
       const renewalDate = sub.expiryDate ? formatDateShort(sub.expiryDate) : null;
-      const sublabel = sub.active
-        ? renewalDate
-          ? t('widget.subscriptions.renews', 'Renews {{date}}', { date: renewalDate })
-          : sub.renewalType
-            ? t('widget.subscriptions.renewalType', 'Renewal: {{type}}', { type: sub.renewalType })
-            : t('widget.subscriptions.active', 'Active')
-        : t('widget.subscriptions.expired', 'Expired');
       const period = sub.billingPeriod?.toLowerCase() === 'month' || sub.billingPeriod?.toLowerCase() === 'monthly'
         ? t('widget.subscriptions.perMonth', '/mo')
         : sub.billingPeriod ? `/${sub.billingPeriod}` : null;
 
       return {
         label: sub.name,
-        sublabel,
+        sublabel: renewalDate ?? sub.renewalType ?? undefined,
         value: sub.price != null ? formatCurrency(sub.price, 2) : sub.active ? '—' : '—',
         hint: period ?? undefined,
         status: sub.active ? 'success' as const : 'neutral' as const,

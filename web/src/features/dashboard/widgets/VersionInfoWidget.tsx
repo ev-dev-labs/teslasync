@@ -7,6 +7,7 @@ import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/compone
 import { useVersionInfo, useCaptureStats } from '@/api/hooks/useSettings';
 import { WidgetShell } from './WidgetShell';
 import { WidgetDetailCard, type DetailEntry } from './shared';
+import { WidgetStatusGrid } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
@@ -45,6 +46,10 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
   const captureEnabled = (captureData as { capture_enabled?: boolean }).capture_enabled;
   const totalDocuments = knownNumber((captureData as { total_documents?: number }).total_documents);
   const distinctVins = (captureData as { distinct_vins?: string[] | null }).distinct_vins;
+  const signalsPerSec = knownNumber((captureData as { signals_per_sec?: number }).signals_per_sec);
+  const messagesToday = knownNumber((captureData as { messages_today?: number }).messages_today);
+  const bytesProcessed = knownNumber((captureData as { bytes_processed?: number }).bytes_processed);
+  const avgLatency = knownNumber((captureData as { avg_processing_latency_ms?: number }).avg_processing_latency_ms);
 
   const truncatedSha = gitSha?.slice(0, 7) ?? '—';
 
@@ -138,6 +143,17 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
                 emptyIcon={<Info className="h-5 w-5" />}
               />
             </SourceContent>
+            {capture.data != null && (signalsPerSec != null || messagesToday != null || bytesProcessed != null || avgLatency != null) && (
+              <WidgetStatusGrid
+                cols={4}
+                cells={[
+                  ...(signalsPerSec == null ? [] : [{ id: 'signals-sec', label: t('widget.versionInfo.signalsPerSec', 'Signals/sec'), value: signalsPerSec.toLocaleString(displayLocale), status: 'inactive' as const }]),
+                  ...(messagesToday == null ? [] : [{ id: 'messages-today', label: t('widget.versionInfo.messagesToday', 'Messages today'), value: messagesToday.toLocaleString(displayLocale), status: 'inactive' as const }]),
+                  ...(bytesProcessed == null ? [] : [{ id: 'bytes-processed', label: t('widget.versionInfo.bytesProcessed', 'Bytes processed'), value: bytesProcessed.toLocaleString(displayLocale), status: 'inactive' as const }]),
+                  ...(avgLatency == null ? [] : [{ id: 'avg-latency', label: t('widget.versionInfo.avgLatency', 'Avg latency'), value: `${avgLatency.toLocaleString(displayLocale)} ms`, status: 'inactive' as const }]),
+                ]}
+              />
+            )}
             <div className="mt-auto">
               <StaleRefreshWarning state={captureState} />
               {captureState.fatalError && <QueryError error={captureState.fatalError} onRetry={captureState.retry ?? undefined} />}

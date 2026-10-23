@@ -222,6 +222,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
                     </div>
                     <div className="flex max-w-full flex-col items-end [overflow-wrap:anywhere]">
                       <Caption>{entry.observed ? t('widget.telemetryErrors.observed', 'Observed') : t('widget.telemetryErrors.fetched', 'Fetched')}</Caption>
+                      {isRecent && <Badge variant="warning" size="sm">{t('widget.telemetryErrors.recent', 'Recent')}</Badge>}
                       <TimeStamp value={entry.last_seen || null} format="relative" className="text-xs text-[var(--text-muted)]" />
                     </div>
                   </div>

@@ -191,17 +191,21 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
   }, [latestSession, formatDateShort]);
 
   const stats = useMemo((): ChartSummaryStat[] => {
-    if (!detail) return [];
-    const startSoc = knownNumber(detail.start_soc_pct);
-    const endSoc = knownNumber(detail.end_soc_pct);
+    const startSoc = knownNumber(detail?.start_soc_pct);
+    const endSoc = knownNumber(detail?.end_soc_pct);
     const socValue = startSoc != null && endSoc != null
       ? `${fmtNumber(startSoc)} → ${fmtNumber(endSoc)}`
       : null;
+    const durationValue = durationStr === '—' ? null : durationStr;
     return [
       {
         label: t('widget.chargingSessionDetail.energy', 'Energy added'),
-        value: knownNumber(detail.total_energy_added_wh) == null ? null : fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh, unitPrefs.energy), 1),
+        value: knownNumber(detail?.total_energy_added_wh) == null ? null : fmtNumber(convertEnergyFromSI(detail!.total_energy_added_wh!, unitPrefs.energy), 1),
         unit: unitPrefs.energy,
+      },
+      {
+        label: t('widget.chargingSessionDetail.duration', 'Duration'),
+        value: durationValue == null ? null : durationValue,
       },
       {
         label: t('widget.chargingSessionDetail.peakPower', 'Peak power'),
@@ -214,7 +218,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
         unit: socValue == null ? undefined : '%',
       },
     ];
-  }, [detail, peakPower, t, unitPrefs.energy, unitPrefs.power, fmtNumber]);
+  }, [detail, peakPower, durationStr, t, unitPrefs.energy, unitPrefs.power, fmtNumber]);
 
   const tick = isWide ? axisTick : axisTickSm;
   const axisLabels = useMemo(() => {
@@ -312,6 +316,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             axisLine={false}
             width={socAxisWidth}
             domain={[0, 100]}
+            tickFormatter={(v: number) => `${fmt(v)}%`}
           />
 
           <Tooltip content={<ChartTooltip />} />
@@ -428,7 +433,9 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
                 )}
               </div>
               {durationStr !== '—' && (
-                <span className={dashboardTokens.metricLabel}>{durationStr}</span>
+                <span className={dashboardTokens.metricLabel}>
+                  {t('widget.chargingSessionDetail.duration', 'Duration')}: {durationStr}
+                </span>
               )}
             </div>
           )}

@@ -86,15 +86,10 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
   const isCompact = size.cols <= 1;
   const items = maintenanceItems ?? [];
   const records = serviceRecords ?? [];
-  const forecastEvidenceItems = forecast?.items ?? [];
   const forecastOverdue = knownForecastCount(forecast?.overdue_count)
-    ?? (forecastEvidenceItems.length > 0
-      ? knownForecastCount(forecastEvidenceItems.filter((item) => item.status === 'overdue').length)
-      : null);
+    ?? null;
   const forecastDueSoon = knownForecastCount(forecast?.due_soon_count)
-    ?? (forecastEvidenceItems.length > 0
-      ? knownForecastCount(forecastEvidenceItems.filter((item) => item.status === 'due_soon').length)
-      : null);
+    ?? null;
 
   // Sort maintenance items by interval (soonest first)
   const sortedItems = useMemo(
@@ -298,7 +293,9 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
             )}
           </div>
         )}
-        <Caption as="h3" className="mb-1 block">{t('widget.maintenance.upcoming', 'Shortest configured interval')}</Caption>
+        <Caption as="h3" className="mb-1 block">
+          {t('widget.maintenance.upcoming', 'Upcoming')}
+        </Caption>
         <SourceContent
           state={maintenanceTrust.fatalError ? 'error' : !maintenanceTrust.hasData && maintLoading ? 'loading' : maintenanceTrust.refreshError ? 'retained' : 'ready'}
           label={t('widget.maintenance.upcoming', 'Upcoming')}

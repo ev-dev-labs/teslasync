@@ -27,7 +27,9 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
-  const { tz, formatDayKey } = useDateFormat();
+  const dateFormat = useDateFormat();
+  const { tz } = dateFormat;
+  const formatDayKey = dateFormat.formatDayKey ?? ((value: string | null | undefined) => String(value ?? ''));
 
   const {
     data: sites,

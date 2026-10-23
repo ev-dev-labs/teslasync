@@ -75,7 +75,7 @@ export function buildSegments(
 /* ── Compact stacked bar (pure CSS) ─────────────────────────────── */
 function StackedBar({ segments, t, compact }: { segments: StateSegment[]; t: (k: string, d: string) => string; compact: boolean }) {
   const { fmtNumber } = useNumberFormatting();
-  const summary = segments.map(seg => `${t(`widget.stateTimeline.state.${seg.state}`, seg.state)}: ${fmtDuration(seg.totalMin, t)}, ${fmtNumber(seg.pct, 2)}%`).join('; ');
+  const summary = segments.map(seg => `${t(`widget.stateTimeline.state.${seg.state}`, seg.state)}: ${fmtDuration(seg.totalMin, t)}, ${fmtNumber(seg.pct, 0)}%`).join('; ');
 
   // Compact widgets retain their five-cell status grid; the rail's mandatory
   // complete legend would duplicate it and change that caller-owned limit.

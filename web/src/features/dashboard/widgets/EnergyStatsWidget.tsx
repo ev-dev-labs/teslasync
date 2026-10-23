@@ -59,7 +59,8 @@ export function buildEnergyChartData(
 export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { fmtNumber } = useNumberFormatting();
-  const { formatDayKey } = useDateFormat();
+  const dateFormat = useDateFormat();
+  const formatDayKey = dateFormat.formatDayKey ?? ((value: string | null | undefined) => String(value ?? ''));
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
   const id = vehicleId ?? config?.vehicleId ?? vehicles?.[0]?.id ?? 0;
 
