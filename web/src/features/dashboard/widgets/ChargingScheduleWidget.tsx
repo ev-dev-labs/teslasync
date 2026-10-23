@@ -1,20 +1,18 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, Clock, BatteryFull, Zap } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui';
-import { Timeline } from '@/components/data-display';
-import type { StatMetric } from '@/components/data-display';
 import { SourceContent } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { request } from '@/api/client';
 import { combineDataStates, deriveDataState, knownNumber } from '@/api/dataState';
+import type { StatMetric } from '@/components/data-display';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber } from './shared';
+import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
 
@@ -146,41 +144,20 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
     />
   );
 
-  const timelineItems = useMemo(() => {
-    const items: { icon?: React.ReactNode; title: string; subtitle?: string; time: string; color?: string }[] = [];
-
-    if (schedule.startTime) {
-      items.push({
-        icon: <Zap className="h-3 w-3" aria-hidden="true" />,
-        title: t('widget.chargingSchedule.startCharging', 'Start charging'),
-        subtitle: schedule.pending
-          ? t('widget.chargingSchedule.pending', 'Pending')
-          : undefined,
-        time: formatScheduleTime(schedule.startTime),
-        color: '#22c55e',
-      });
-    }
-
-    if (schedule.departureTime) {
-      items.push({
-        icon: <Clock className="h-3 w-3" aria-hidden="true" />,
-        title: t('widget.chargingSchedule.departure', 'Departure'),
-        time: formatScheduleTime(schedule.departureTime),
-        color: '#3b82f6',
-      });
-    }
-
-    if (schedule.chargeLimit != null) {
-      items.push({
-        icon: <BatteryFull className="h-3 w-3" aria-hidden="true" />,
-        title: t('widget.chargingSchedule.targetLimit', 'Target limit'),
-        time: `${schedule.chargeLimit}%`,
-        color: '#f59e0b',
-      });
-    }
-
-    return items;
-  }, [schedule, t, formatScheduleTime]);
+  const scheduleStats = [
+    {
+      label: t('widget.chargingSchedule.starts', 'Starts'),
+      value: schedule.startTime ? formatScheduleTime(schedule.startTime) : null,
+    },
+    {
+      label: t('widget.chargingSchedule.departure', 'Depart'),
+      value: schedule.departureTime ? formatScheduleTime(schedule.departureTime) : null,
+    },
+    {
+      label: t('widget.chargingSchedule.limit', 'Limit'),
+      value: schedule.chargeLimit != null ? `${schedule.chargeLimit}%` : null,
+    },
+  ];
 
   const vehicleMetrics: StatMetric[] = [
     {
@@ -264,7 +241,6 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
             retainedMessage={t('widget.chargingSchedule.scheduleRetained', 'Previously loaded charging schedule remains visible while this source recovers.')}
             errorRecovery={{ onRetry: () => { void refetchSignals(); } }}
           >
-          {/* Mode badge */}
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Badge variant={modeBadgeVariant(schedule.mode)} size="sm" dot>
               {modeLabel(schedule.mode, t)}
@@ -275,15 +251,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
               </Badge>
             )}
           </div>
-
-          {/* Visual timeline */}
-          {timelineItems.length > 0 ? (
-            <Timeline items={timelineItems} className="text-sm" />
-          ) : (
-            <div className={dashboardTokens.metricLabel}>
-              {t('widget.chargingSchedule.noTimes', 'No scheduled times set')}
-            </div>
-          )}
+          <WidgetStatGrid stats={scheduleStats} cols={3} />
           </SourceContent>
 
           {/* Extra detail row when tall */}
