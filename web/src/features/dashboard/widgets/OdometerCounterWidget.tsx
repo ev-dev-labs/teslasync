@@ -1,154 +1,171 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
-import type { StatMetric } from '@/components/data-display';
-import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
-import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
-import { useDrivingStats } from '@/api/hooks/useDriving';
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { resolveVehicleStateFreshness, useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
+import { useDailyMileage } from '@/api/hooks/useAnalytics';
 import { knownNumber } from '@/api/dataState';
-import { useCombinedDataState, useDataState } from '@/hooks/useDataState';
+import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { civilDateInTimeZone } from '@/lib/dateRange';
+import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber } from './shared';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
+import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
-import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
-/**
- * Convert the live odometer to the user's display unit. `VehicleState.odometer`
- * is SI **metres** (the `/vehicles/{id}/state` contract — see VehicleHeroCard),
- * so it feeds the shared metre-floor `convertDistanceFromSI` directly. A
- * non-finite payload collapses to 0 so the counter never renders "NaN".
- */
+/** SI metres to the user's display distance unit. */
 export function toOdometerDisplay(odometerMeters: number, to: DistanceUnitPref): number {
   if (!Number.isFinite(odometerMeters)) return 0;
   return convertDistanceFromSI(odometerMeters, to);
 }
 
-/**
- * Convert a `DrivingStats.totalDistanceKm` value to the user's display unit.
- * That field is a legacy display scalar in **kilometres**, NOT SI — but the
- * shared `convertDistanceFromSI` expects **metres**, so the value is scaled to
- * metres first (the same bridge `EfficiencyPage`, `FleetComparePage`, and
- * `FleetStatsBarWidget` apply). Passing kilometres straight through previously
- * under-reported total-driven distance by 1000× (5,000 km surfaced as 5 km). A
- * non-finite payload collapses to 0 so the tile never renders "NaN".
- */
+/** Compatibility bridge for callers of the former total-driven helper. */
 export function toTotalDrivenDisplay(totalDistanceKm: number, to: DistanceUnitPref): number {
   if (!Number.isFinite(totalDistanceKm)) return 0;
   return convertDistanceFromSI(totalDistanceKm * 1000, to);
 }
 
+export interface DailyDistanceBucket {
+  date: string;
+  total_km: number;
+}
+
+/** Sum measured daily buckets within an inclusive civil-date window. */
+export function sumDistanceBuckets(
+  buckets: DailyDistanceBucket[],
+  startDate: string,
+  endDate: string,
+): number | null {
+  let total: number | null = null;
+  for (const bucket of buckets) {
+    if (!bucket.date || bucket.date < startDate || bucket.date > endDate) continue;
+    const km = Number(bucket.total_km);
+    if (!Number.isFinite(km) || km < 0) continue;
+    total = (total ?? 0) + km;
+  }
+  return total;
+}
+
+function weekStartCivil(today: string): string {
+  const day = new Date(`${today}T12:00:00Z`).getUTCDay();
+  const daysSinceMonday = day === 0 ? 6 : day - 1;
+  const start = new Date(`${today}T12:00:00Z`);
+  start.setUTCDate(start.getUTCDate() - daysSinceMonday);
+  return start.toISOString().slice(0, 10);
+}
+
 export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber, precision: displayPrecision } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const { tz } = useDateFormat();
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const idStr = id > 0 ? String(id) : undefined;
+  const idStr = id > 0 ? String(id) : '';
 
   const stateQuery = useVehicleState(id);
-  const statsQuery = useDrivingStats(idStr);
-  const { data: stateData, isLoading: stateLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = stateQuery;
-  const { data: stats, isLoading: statsLoading } = statsQuery;
-  const trust = useDataState({ ...stateQuery, data: stateData ?? undefined }, { provenance: stateData?.live ? 'live' : 'cached' });
-  const statsTrust = useDataState({ ...statsQuery, data: stats ?? undefined }, { provenance: 'historical' });
+  const dailyQuery = useDailyMileage(idStr, 366);
+  const {
+    data: stateData,
+    isLoading,
+    error,
+    isFetching,
+    isStale,
+    isError,
+    refetch,
+  } = stateQuery;
+
+  const observedAt = stateData?.observedAt ?? null;
+  const freshness = resolveVehicleStateFreshness(stateData?.freshness, observedAt);
+  const odometer = knownNumber(stateData?.state?.odometer);
+  const hasVerifiedOdometer =
+    stateData?.verifiedFields?.includes('odometer') === true ||
+    stateData?.freshness === 'fresh';
+  const odometerMeters = odometer != null && hasVerifiedOdometer ? odometer : null;
+
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
+  const odometerDisplay = odometerMeters == null
+    ? null
+    : toOdometerDisplay(odometerMeters, distanceUnit);
+
+  const trust = useDataState(
+    { ...stateQuery, data: stateData ?? undefined, dataUpdatedAt: observedAt ?? undefined },
+    { provenance: freshness === 'fresh' ? 'live' : 'cached', maxAgeMs: 120_000, unavailable: odometerMeters == null },
+  );
+
+  const stats = useMemo((): StatGridItem[] => {
+    const buckets = dailyQuery.data ?? [];
+    const today = civilDateInTimeZone(new Date(), tz);
+    const weekStart = weekStartCivil(today);
+    const monthStart = `${today.slice(0, 7)}-01`;
+    const yearStart = `${today.slice(0, 4)}-01-01`;
+
+    const weekKm = sumDistanceBuckets(buckets, weekStart, today);
+    const monthKm = sumDistanceBuckets(buckets, monthStart, today);
+    const yearKm = sumDistanceBuckets(buckets, yearStart, today);
+    const elapsedMonthDays = Number(today.slice(8, 10));
+    const perDayKm = monthKm != null && elapsedMonthDays > 0
+      ? monthKm / elapsedMonthDays
+      : null;
+
+    const displayKm = (km: number | null) =>
+      km == null ? null : convertDistanceFromSI(km * 1000, distanceUnit);
+
+    return [
+      { label: t('widget.odometer.thisWeek', 'This week'), value: weekKm == null ? null : fmtNumber(displayKm(weekKm), 0), unit: distanceUnit },
+      { label: t('widget.odometer.thisMonth', 'This month'), value: monthKm == null ? null : fmtNumber(displayKm(monthKm), 0), unit: distanceUnit },
+      { label: t('widget.odometer.thisYear', 'This year'), value: yearKm == null ? null : fmtNumber(displayKm(yearKm), 0), unit: distanceUnit },
+      { label: t('widget.odometer.perDay', 'Per day'), value: perDayKm == null ? null : fmtNumber(displayKm(perDayKm), 0), unit: distanceUnit },
+    ];
+  }, [dailyQuery.data, distanceUnit, fmtNumber, t, tz]);
 
   const isCompact = size.cols === 1 && size.rows === 1;
-  const isWide = size.cols >= 2;
-  const combined = useCombinedDataState(isWide ? [trust, statsTrust] : [trust]);
-  const shellTrust = trust.hasData || !isWide ? trust : {
-    ...trust,
-    ...combined,
-    hasData: trust.hasData || (isWide && statsTrust.hasData),
-  };
-
-  const odometer = knownNumber(stateData?.state?.odometer);
-  const convertedOdometer = useMemo(
-    () => (odometer != null ? toOdometerDisplay(odometer, distanceUnit) : null),
-    [odometer, distanceUnit],
-  );
-  const statsMetrics: StatMetric[] = [
-    { metricId: 'distance', occurrenceId: 'odometer-recorded-distance',
-      rawValue: stats?.totalDistanceKm == null ? stats?.totalDistanceKm : stats.totalDistanceKm * 1000,
-      label: t('widget.odometer.totalDriven', 'Total driven'),
-      description: t('widget.odometer.distanceSource', 'Returned driving-history distance, normalized from kilometers to meters; not the live lifetime odometer.'),
-      display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) } },
-    { metricId: 'text', occurrenceId: 'odometer-display-unit', rawValue: distanceUnit,
-      label: t('widget.odometer.unit', 'Unit') },
-  ];
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.odometer.title', 'Odometer')}
+      title={t('widget.odometer.title', 'Odometer')}
       icon={isCompact ? undefined : <Gauge className="h-3.5 w-3.5 text-neon-cyan" />}
-      loading={stateLoading}
-      dataState={stateData != null || stateLoading || isError || error ? shellTrust : undefined}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={() => { void refetch(); void statsQuery.refetch?.(); }}
+      loading={isLoading}
+      dataState={stateData != null || isLoading || isError || error ? trust : undefined}
+      updatedAt={observedAt ?? 0}
+      isFetching={isFetching || dailyQuery.isFetching}
+      isStale={isStale || dailyQuery.isStale || freshness === 'stale'}
+      isError={isError || dailyQuery.isError}
+      onRefresh={() => {
+        void refetch();
+        void dailyQuery.refetch();
+      }}
     >
       {trust.fatalError ? (
         <QueryError error={trust.fatalError} onRetry={trust.retry ?? undefined} />
-      ) : stateLoading && !stateData ? (
+      ) : isLoading && !stateData ? (
         <Skeleton className="h-24 rounded-xl" />
-      ) : convertedOdometer != null ? (
-        isCompact ? (
+      ) : odometerDisplay != null ? (
+        <div className="flex h-full min-w-0 flex-col gap-3">
           <WidgetBigNumber
-            value={convertedOdometer}
+            value={fmtNumber(odometerDisplay, 0)}
             unit={distanceUnit}
-            decimals={displayPrecision}
+            animated
+            decimals={0}
           />
-        ) : (
-          <ExpandedView
-            odometer={convertedOdometer}
-            unit={distanceUnit}
-          />
-        )
+          {!isCompact && (
+            <WidgetStatGrid
+              stats={stats}
+              cols={2}
+              maxPerRow={2}
+            />
+          )}
+        </div>
       ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+        <EmptyState
           icon={<Gauge className="h-6 w-6" />}
           message={t('widget.odometer.noData', 'No odometer data')}
           className="py-4"
         />
       )}
-      {!isCompact && isWide && (
-        <div className="mt-3 min-w-0">
-          <StaleRefreshWarning state={statsTrust} />
-          {statsTrust.fatalError ? (
-            <QueryError error={statsTrust.fatalError} onRetry={statsTrust.retry ?? undefined} />
-          ) : statsLoading && !stats ? (
-            <Skeleton className="h-16 rounded-xl" />
-          ) : (
-            <DashboardSourceBrief metrics={statsMetrics} state={statsTrust}
-              eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
-              title={t('widget.odometer.summaryTitle', 'Recorded driving distance')}
-              description={t('widget.odometer.summaryDescription', 'Historical recorded distance uses its own source state and is not presented as equivalent to the independent live odometer.')}
-              scope={t('widget.odometer.summaryScope', 'Vehicle {{id}} · returned driving statistics; exact history bounds and completeness are not supplied.', { id })}
-              testId="dashboard-odometer-history-brief" />
-          )}
-        </div>
-      )}
     </WidgetShell>
-  );
-}
-
-function ExpandedView({
-  odometer,
-  unit,
-}: {
-  odometer: number;
-  unit: string;
-}) {
-  const { fmtNumber } = useNumberFormatting();
-  const { t } = useTranslation('dashboard');
-
-  return (
-    <WidgetBigNumber value={`${fmtNumber(odometer)} ${unit}`} label={t('widget.odometer.total', 'Total odometer')} />
   );
 }
