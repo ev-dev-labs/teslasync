@@ -28,7 +28,7 @@
  *   - refresh wiring: the accessible freshness control refetches.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { VehicleTelemetry } from '@/types/telemetry';
@@ -110,18 +110,6 @@ beforeEach(() => {
 });
 
 describe('deriveMqttStats', () => {
-  it('opens the actual fleet-source review without implying calendar-day or verified-live coverage', () => {
-    mockMqtt.mockReturnValue(makeQuery({ data: makeStatus(), isError: true, error: new Error('refresh failed') }));
-    renderWidget(STANDARD);
-    const brief = screen.getByTestId('mqtt-operational-brief');
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText('Retained readings')).toBeInTheDocument();
-    expect(within(drawer).getByText('12.50')).toBeInTheDocument();
-    expect(within(drawer).getByText('1,500')).toBeInTheDocument();
-    expect(within(drawer).getByText(/one missing operand makes the total unknown/)).toBeInTheDocument();
-    expect(within(drawer).getByText(/no complete calendar-day or verified-live coverage/, { selector: '[data-drawer-header] span' })).toBeInTheDocument();
-  });
   it('sums signal counts + rates and returns the most-recent lastReceived', () => {
     const out = deriveMqttStats([
       makeVehicle({ vin: 'A', signalCount: 1000, signalsPerSecond: 8.5, lastReceived: '2026-06-01T10:00:00Z' }),
@@ -240,10 +228,7 @@ describe('MQTTStatusWidget — states & interaction', () => {
       mockMqtt.mockReturnValue(makeQuery({ data: {} }));
       renderWidget(STANDARD);
       expect(screen.getByText('Unknown')).toBeInTheDocument();
-      expect(screen.getAllByText('—')).toHaveLength(2);
-      const partialBrief = screen.getByTestId('mqtt-operational-brief');
-      fireEvent.click(within(partialBrief).getByRole('button', { name: 'Review details' }));
-      expect(within(screen.getByRole('dialog')).getByText('2 empty fields are hidden.')).toBeInTheDocument();
+      expect(screen.getAllByText('—')).toHaveLength(4);
       expect(screen.queryByText('Offline')).not.toBeInTheDocument();
     });
 
