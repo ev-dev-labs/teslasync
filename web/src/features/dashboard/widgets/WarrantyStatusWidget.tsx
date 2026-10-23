@@ -239,7 +239,12 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
           covered: true,
         }]
       : []),
-  ];
+  ].filter((row) => {
+    const source = row.key === 'battery' ? batteryCoverage
+      : row.key === 'basic' ? basicCoverage : null;
+    if (row.key === 'corrosion') return row.expiry != null || 'included' in row && row.included;
+    return source != null || row.expiry != null || row.limitM != null || mileageLimitM != null;
+  });
 
   return (
     <WidgetShell

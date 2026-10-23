@@ -75,7 +75,7 @@ export function buildSegments(
 /* ── Compact stacked bar (pure CSS) ─────────────────────────────── */
 function StackedBar({ segments, t, compact }: { segments: StateSegment[]; t: (k: string, d: string) => string; compact: boolean }) {
   const { fmtNumber } = useNumberFormatting();
-  const summary = segments.map(seg => `${t(`widget.stateTimeline.state.${seg.state}`, seg.state)}: ${fmtDuration(seg.totalMin, t)}, ${fmtNumber(seg.pct, 0)}%`).join('; ');
+  const summary = segments.map(seg => `${t(`widget.stateTimeline.state.${seg.state}`, seg.state)}: ${fmtDuration(seg.totalMin, t)}, ${fmtNumber(seg.pct, 2)}%`).join('; ');
 
   // Compact widgets retain their five-cell status grid; the rail's mandatory
   // complete legend would duplicate it and change that caller-owned limit.
@@ -102,7 +102,7 @@ function StackedBar({ segments, t, compact }: { segments: StateSegment[]; t: (k:
         label: t(`widget.stateTimeline.state.${seg.state}`, seg.state),
         widthPercent: seg.pct,
         color: stateColor(seg.state),
-        detail: <><span>{fmtDuration(seg.totalMin, t)}</span> · <span>{fmtNumber(seg.pct, 0)}%</span></>,
+        detail: <><span>{fmtDuration(seg.totalMin, t)}</span> · <span>{fmtNumber(seg.pct, 2)}%</span></>,
       }))}
     />
   );
@@ -169,7 +169,7 @@ function TimelineStripe({
               style={{ backgroundColor: stateColor(item.state) }}
             />
             <span className={cn(typography.role.caption, 'break-words')}>
-              {t(`widget.stateTimeline.state.${item.state}`, item.state)} {fmtNumber(item.pct, 0)}%
+              {t(`widget.stateTimeline.state.${item.state}`, item.state)} {fmtNumber(totals.get(item.state) ?? 0, 1)} {t('widget.driveTelemetry.min', 'min')} · {fmtNumber(item.pct, 2)}%
             </span>
           </li>
         ))}
@@ -289,7 +289,7 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
                 <TimelineStripe
                   transitions={transitions}
                   t={t}
-                  rangeLabel={t('widget.stateTimeline.last24Hours', 'Last 24 hours')}
+                  rangeLabel={t('widget.stateTimeline.last24Hours', '24h timeline')}
                 />
               ) : (
                 <EmptyState
