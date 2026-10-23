@@ -109,10 +109,11 @@ describe('GuardModeWidget independent source trust', () => {
   });
 });
 
-const { useVehiclesMock, useGuardConfigMock, useGuardEventsMock } = vi.hoisted(() => ({
+const { useVehiclesMock, useGuardConfigMock, useGuardEventsMock, useGuardPanicMock } = vi.hoisted(() => ({
   useVehiclesMock: vi.fn(),
   useGuardConfigMock: vi.fn(),
   useGuardEventsMock: vi.fn(),
+  useGuardPanicMock: vi.fn(),
 }));
 
 vi.mock('@/api/hooks/useVehicles', () => ({
@@ -127,6 +128,7 @@ vi.mock('@/api/hooks/useGuard', async (importOriginal) => {
     ...actual,
     useGuardConfig: (vehicleId: number) => useGuardConfigMock(vehicleId),
     useGuardEvents: (vehicleId: number) => useGuardEventsMock(vehicleId),
+    useGuardPanic: () => useGuardPanicMock(),
   };
 });
 
@@ -225,6 +227,7 @@ beforeEach(() => {
   useVehiclesMock.mockReturnValue({ data: [{ id: 1 }] });
   useGuardConfigMock.mockReturnValue(makeConfigQuery());
   useGuardEventsMock.mockReturnValue(makeEventsQuery());
+  useGuardPanicMock.mockReturnValue({ mutate: vi.fn(), isPending: false });
 });
 
 afterEach(() => {
@@ -232,7 +235,18 @@ afterEach(() => {
 });
 
 describe('GuardModeWidget — standard layout', () => {
-  it('renders the armed status line, the ON badge, and the sensitivity + auto-panic caption', () => {
+  it('sends panic with the resolved vehicle id', () => {
+    const mutate = vi.fn();
+    useGuardPanicMock.mockReturnValue({ mutate, isPending: false });
+    useGuardConfigMock.mockReturnValue(makeConfigQuery({ data: makeConfig({ enabled: true }) }));
+
+    renderWidget({ cols: 2, rows: 2 }, 7);
+    fireEvent.click(screen.getByRole('button', { name: 'Panic alarm' }));
+
+    expect(mutate).toHaveBeenCalledWith(7);
+  });
+
+  it('renders the armed headline, Protected badge, auto-panic caption, and panic action', () => {
     useGuardConfigMock.mockReturnValue(
       makeConfigQuery({ data: makeConfig({ enabled: true, sensitivity: 'high', auto_panic: true }) }),
     );
@@ -241,10 +255,9 @@ describe('GuardModeWidget — standard layout', () => {
 
     expect(screen.getByText('Guard mode')).toBeInTheDocument();
     expect(screen.getByText('Armed')).toBeInTheDocument();
-    expect(screen.getAllByText('On')).toHaveLength(2);
-    expect(screen.getByText('Sensitivity')).toBeInTheDocument();
-    expect(screen.getByText('high')).toBeInTheDocument();
-    expect(screen.getByText(/Auto-panic/)).toBeInTheDocument();
+    expect(screen.getByText('Protected')).toBeInTheDocument();
+    expect(screen.getByText('Auto-panic: On')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Panic alarm' })).toBeEnabled();
   });
 
   it('renders the disarmed status and the measured auto-panic off state', () => {
@@ -255,10 +268,7 @@ describe('GuardModeWidget — standard layout', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('Disarmed')).toBeInTheDocument();
-    expect(screen.getAllByText('Off')).toHaveLength(2);
-    expect(screen.getByText('Sensitivity')).toBeInTheDocument();
-    expect(screen.getByText('low')).toBeInTheDocument();
-    expect(screen.getByText('Auto-panic')).toBeInTheDocument();
+    expect(screen.getByText('Auto-panic: Off')).toBeInTheDocument();
   });
 });
 
