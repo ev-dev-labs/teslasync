@@ -6,7 +6,7 @@
  *   - the three exported pure helpers:
  *       · `buildHeatmap` — the 7×24 accumulator: correct Mon-indexed day / hour
  *         placement, SI→display-unit conversion, cell averaging, the
- *         avg→max_speed fallback, and every skip guard (no start_ts, null /
+ *         and every skip guard (no start_ts, null /
  *         non-positive / NaN speed);
  *       · the REGRESSION FIX at the heart of this elevation: a malformed
  *         `start_ts` produces an Invalid Date whose getDay()/getHours() are NaN
@@ -19,14 +19,14 @@
  *         the midpoint;
  *   - the widget's data-source resolution (explicit `vehicleId` prop vs. the
  *     first fleet vehicle vs. an empty fleet → id 0 so the query stays
- *     disabled), and the snake_case `/drives?vehicle_id=…&limit=200` request URL
- *     with NO `/api/v1` prefix;
+ *     disabled), and the snake_case `/drives?vehicle_id=…` request URL
+ *     with NO `/api/v1` prefix and no artificial result limit;
  *   - every render state fanned out by `WidgetShell` — loading skeleton, the
  *     QueryError panel on failure, the empty state (never a blank panel), and
  *     the working freshness Refresh control;
  *   - the populated full-size widget — the drive-count + peak-speed summary, the
  *     168-cell labelled SVG (role="img"), both title branches (a real cell vs.
- *     "No data"), and the Slow/Fast legend;
+ *     "No data");
  *   - the wide variant's full weekday labels and the compact (1×1) peak metric
  *     with its own no-data em-dash;
  *   - a11y — the decorative grid icons are hidden from the a11y tree and the
@@ -280,18 +280,17 @@ describe('speedToColor', () => {
   });
 
   it('maps the low end to teal and the top of the range to red', () => {
-    // t→0 lands on the first stop (teal-500), t=1 on the last stop (red-500).
-    expect(speedToColor(1e-9, 10)).toBe('rgb(20,184,166)');
-    expect(speedToColor(10, 10)).toBe('rgb(239,68,68)');
+    expect(speedToColor(1e-9, 10)).toMatch(/^color-mix\(/);
+    expect(speedToColor(10, 10)).toMatch(/^color-mix\(in srgb, var\(--accent\) 100%, var\(--surface-2\)\)$/);
   });
 
   it('clamps a speed above the max to the hottest colour (never past 1)', () => {
-    expect(speedToColor(100, 10)).toBe('rgb(239,68,68)');
+    expect(speedToColor(100, 10)).toBe('color-mix(in srgb, var(--accent) 100%, var(--surface-2))');
   });
 
   it('produces an interpolated rgb() colour in between the stops', () => {
     const mid = speedToColor(5, 10);
-    expect(mid).toMatch(/^rgb\(\d+,\d+,\d+\)$/);
+    expect(mid).toMatch(/^color-mix\(in srgb, var\(--accent\) \d+%, var\(--surface-2\)\)$/);
     expect(mid).not.toBe(EMPTY);
   });
 
@@ -347,7 +346,7 @@ describe('SpeedHeatmapWidget — query wiring', () => {
   it('fetches the snake_case drives endpoint with NO /api/v1 prefix', async () => {
     renderWidget({ cols: 2, rows: 2 }, 42);
     await lastQueryOptions().queryFn();
-    expect(requestMock).toHaveBeenCalledWith('/drives?vehicle_id=42&limit=200');
+    expect(requestMock).toHaveBeenCalledWith('/drives?vehicle_id=42');
   });
 });
 
@@ -399,19 +398,14 @@ describe('SpeedHeatmapWidget — states', () => {
 // ── Populated (full size) ────────────────────────────────────────────────────
 
 describe('SpeedHeatmapWidget — populated (full size)', () => {
-  it.each([
-    { cols: 2, count: 1, label: '1 drive' },
-    { cols: 2, count: 2, label: '2 drives' },
-    { cols: 3, count: 1, label: '1 drive' },
-    { cols: 3, count: 2, label: '2 drives' },
-  ])('renders catalog drive grammar for $count drives at $cols columns', ({ cols, count, label }) => {
+  it.each([1, 2])('renders the heatmap with %s recorded drive(s)', (count) => {
     useQueryMock.mockReturnValue(makeResult({
       data: Array.from({ length: count }, (_, index) => makeDrive({ id: index + 1 })),
     }));
-    renderWidget({ cols, rows: 2 });
-    expect(screen.getByText(label, { exact: true })).toBeInTheDocument();
+    renderWidget({ cols: 2, rows: 2 });
+    expect(screen.getByRole('img', { name: /average speed by day of week/i })).toBeInTheDocument();
   });
-  it('retains the sampled heatmap after a background error and discloses its bounded scope', () => {
+  it('retains the sampled heatmap after a background error', () => {
     useQueryMock.mockReturnValue(makeResult({
       data: [makeDrive()],
       error: new Error('background outage'),
@@ -419,11 +413,10 @@ describe('SpeedHeatmapWidget — populated (full size)', () => {
     }));
     renderWidget();
     expect(screen.getByRole('img', { name: /average speed by day of week/i })).toBeInTheDocument();
-    expect(screen.getByText(/up to 200 drives/)).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
   });
 
-  it('renders the drive-count + peak-speed summary and the Slow/Fast legend', () => {
+  it('renders the 168-cell heatmap without fabricated summary values', () => {
     useQueryMock.mockReturnValue(
       makeResult({
         data: [
@@ -435,11 +428,9 @@ describe('SpeedHeatmapWidget — populated (full size)', () => {
     );
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('3 drives')).toBeInTheDocument();
-    const peak = '44.74';
-    expect(screen.getByText(`Peak avg ${peak} mph`)).toBeInTheDocument();
-    expect(screen.getByText('Slow')).toBeInTheDocument();
-    expect(screen.getByText('Fast')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /average speed by day of week/i })).toBeInTheDocument();
+    expect(screen.queryByText('3 drives')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Peak avg/)).not.toBeInTheDocument();
   });
 
   it('draws a 168-cell labelled SVG whose tooltips cover the data + no-data branches', () => {
@@ -452,7 +443,7 @@ describe('SpeedHeatmapWidget — populated (full size)', () => {
     const titles = Array.from(svg.querySelectorAll('title')).map((el) => el.textContent ?? '');
     expect(titles).toHaveLength(7 * 24);
     // The one populated cell carries a speed tooltip; the rest read "No data".
-    expect(titles.some((x) => /mph/.test(x) && /1 drives/.test(x))).toBe(true);
+    expect(titles.some((x) => /mph/.test(x) && /1 drive/.test(x))).toBe(true);
     expect(titles.some((x) => /No data/.test(x))).toBe(true);
   });
 
