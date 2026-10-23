@@ -228,7 +228,7 @@ describe('BatteryLinearGaugeWidget — charge-limit overlay + stat', () => {
     // The tick sits at the limit's position on the same 0–100 scale.
     expect(limitMarker(container)?.style.left).toBe('90%');
     expect(limitMarker(container)?.getAttribute('title')).toContain('Limit 90%');
-    expect(screen.getByText('Level')).toBeInTheDocument();
+    expect(screen.queryByText('Level')).not.toBeInTheDocument();
   });
 
   it('shows the rated range and charging-to-limit lines under the gauge (After)', () => {
@@ -236,7 +236,7 @@ describe('BatteryLinearGaugeWidget — charge-limit overlay + stat', () => {
       stateQuery(stateWithLimit(80, { battery_level: 64, is_charging: true, rated_range: 172 * 1609.344 })),
     );
     renderWidget({ size: { cols: 2, rows: 2 } });
-    expect(screen.getByText('172 mi')).toBeInTheDocument();
+    expect(screen.getByText('172 mi range')).toBeInTheDocument();
     expect(screen.getByText('Charging · Limit 80%')).toBeInTheDocument();
   });
 
@@ -255,8 +255,7 @@ describe('BatteryLinearGaugeWidget — charge-limit overlay + stat', () => {
 
     expect(limitMarker(container)).toBeNull();
     expect(screen.queryByText('Limit')).not.toBeInTheDocument();
-    // The Level stat is always present in the large variant.
-    expect(screen.getByText('Level')).toBeInTheDocument();
+    expect(screen.queryByText('Level')).not.toBeInTheDocument();
   });
 
   it('ignores a non-numeric charge_limit_soc so no NaN leaks into the marker/stat', () => {
@@ -311,7 +310,7 @@ describe('BatteryLinearGaugeWidget — layout variants', () => {
 
     // Compact: no header title or duplicate stat row; the gauge keeps its label.
     expect(screen.queryByText('Battery')).not.toBeInTheDocument();
-    expect(screen.getByText('Level')).toBeInTheDocument();
+    expect(screen.queryByText('Level')).not.toBeInTheDocument();
     expect(screen.queryByText('Limit')).not.toBeInTheDocument();
     // The gauge fill itself is still drawn.
     expect(circleStrokes(container)).toContain('var(--semantic-success)');
@@ -321,15 +320,15 @@ describe('BatteryLinearGaugeWidget — layout variants', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 80 })));
 
     const large = renderWidget({ size: { cols: 2, rows: 2 } });
-    expect(screen.getByText('Level')).toBeInTheDocument();
+    expect(screen.queryByText('Level')).not.toBeInTheDocument();
     large.unmount();
 
     // A 2×1 slot is neither compact nor large → title shows, stats do not.
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 80 })));
     renderWidget({ size: { cols: 2, rows: 1 } });
     expect(screen.getByRole('heading', { name: 'Battery' })).toBeInTheDocument();
-    expect(screen.getByText('Level')).toBeInTheDocument();
-    expect(screen.getAllByText('80.00')).toHaveLength(1);
+    expect(screen.queryByText('Level')).not.toBeInTheDocument();
+    expect(screen.getAllByText('80')).toHaveLength(1);
   });
 });
 

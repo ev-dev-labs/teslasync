@@ -62,18 +62,23 @@ export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProp
               preserveReadingAndScale: true,
               value: batteryLevel,
               max: 100,
-              label: t('widget.level', 'Level'),
+              label: '',
               ariaLabel: t('widget.batteryLevel', 'Battery'),
               unit: '%',
               color: batteryColor(batteryLevel),
               marker: chargeLimitSoc,
               markerLabel: chargeLimitSoc != null ? `${t('widget.chargeLimit', 'Limit')} ${chargeLimitSoc}%` : undefined,
+              hideScale: true,
+              decimals: 0,
+              kind: 'measurement',
             }}
           >
             {(rangeText != null || state?.is_charging) && (
               <div className="flex min-w-0 flex-col items-center gap-1 text-center">
                 {rangeText != null && (
-                  <p className="text-xs leading-snug text-[var(--text-muted)]">{rangeText}</p>
+                  <p className="text-xs leading-snug text-[var(--text-muted)]">
+                    {t('widget.batteryGauge.range', '{{range}} range', { range: rangeText })}
+                  </p>
                 )}
                 {state?.is_charging && (
                   <p className="text-xs leading-snug text-[var(--text-muted)]">
@@ -87,7 +92,7 @@ export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProp
           </WidgetGaugeHero>
         ) : state ? (
           <>
-            <WidgetBigNumber value={null} label={t('widget.level', 'Level')} />
+            <WidgetBigNumber value={null} label={t('widget.batteryLevel', 'Battery')} />
             {!isCompact && chargeLimitSoc != null && (
               <WidgetStatGrid stats={[{ label: t('widget.chargeLimit', 'Limit'), value: chargeLimitSoc, unit: '%' }]} />
             )}
