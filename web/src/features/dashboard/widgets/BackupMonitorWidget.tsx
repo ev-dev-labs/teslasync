@@ -2,11 +2,10 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HardDrive } from 'lucide-react';
 import { Badge, Caption, Subhead, Text } from '@/components/ui';
-import { KVList } from '@/components/data-display';
+import { KVList, TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useBackupRuns } from '@/api/hooks/useAdmin';
 import { cn } from '@/lib/cn';
-import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -91,7 +90,6 @@ export function fmtRelativeTime(iso: string | null, t: TranslateFn): string {
 export default function BackupMonitorWidget({ size }: WidgetProps) {
   const { formatDurationMs } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { formatDateTime: fmtShortTime } = useDateFormat();
   const query = useBackupRuns();
   const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
   const dataState = useDataState(query, { provenance: 'historical' });
@@ -145,7 +143,10 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
             />
             <div className="min-w-0">
               <Text as="p" variant="metricValue" className="min-w-0 [overflow-wrap:anywhere]">
-                {fmtRelativeTime(latestRun?.completedAt ?? latestRun?.createdAt ?? null, t)}
+                <TimeStamp
+                  value={latestRun?.completedAt ?? latestRun?.createdAt ?? null}
+                  format="relative"
+                />
               </Text>
               <Caption className="block [overflow-wrap:anywhere]">
                 {t('widget.backupMonitor.lastBackup', 'Last backup')}
@@ -171,20 +172,26 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
         />
       ) : (
         <div className="flex flex-col gap-3 h-full">
-          {/* Stat card grid */}
+          {/* One sourced headline, then the quiet metrics from the same run. */}
+          <div className="flex min-w-0 flex-wrap items-end justify-between gap-2">
+            <div className="min-w-0">
+              <Caption className="block">{t('widget.backupMonitor.lastBackup', 'Last backup')}</Caption>
+              <Text variant="metricValue" className="block min-w-0 [overflow-wrap:anywhere]">
+                <TimeStamp
+                  value={latestRun?.completedAt ?? latestRun?.createdAt ?? null}
+                  format="absolute"
+                />
+              </Text>
+            </div>
+            <Badge variant={statusVariant(latestStatus)}>
+              {statusLabel(latestStatus, t)}
+            </Badge>
+          </div>
+
           <WidgetStatGrid cols={2} stats={[
-            { label: t('widget.backupMonitor.lastBackup', 'Last backup'), value: fmtRelativeTime(latestRun?.completedAt ?? latestRun?.createdAt ?? null, t) },
             { label: t('widget.backupMonitor.size', 'Backup size'), value: fmtBytes(latestRun?.fileSize) },
             { label: t('widget.backupMonitor.type', 'Type'), value: latestRun?.backupType ?? '—' },
           ]} />
-            <div className="min-w-0">
-              <Caption className="block">
-                {t('widget.backupMonitor.status', 'Status')}
-              </Caption>
-              <Badge variant={statusVariant(latestStatus)}>
-                {statusLabel(latestStatus, t)}
-              </Badge>
-          </div>
 
           {/* Wide layout: last 5 backup runs */}
           {isWide && (
@@ -199,7 +206,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
                 ),
                 label: (
                   <span className="flex min-w-0 flex-col gap-1">
-                    <Text variant="bodySm">{fmtShortTime(run.completedAt ?? run.createdAt)}</Text>
+                    <TimeStamp value={run.completedAt ?? run.createdAt} format="absolute" />
                     <Caption>
                       {fmtBytes(run.fileSize)}
                       {knownNumber(run.durationMs) != null ? ` · ${formatDurationMs(run.durationMs)}` : ''}
