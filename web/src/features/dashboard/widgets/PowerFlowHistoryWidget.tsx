@@ -15,6 +15,8 @@ import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useRangeState } from '@/hooks/useRangeState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 interface ChartDatum extends ChartDataRow {
   time: string;
@@ -24,10 +26,12 @@ interface ChartDatum extends ChartDataRow {
   home: number | null;
 }
 
-export function shortTime(iso: string): string {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+export function shortTime(
+  iso: string,
+  formatTime?: (value: string | number | Date | null | undefined) => string,
+): string {
+  if (!Number.isFinite(Date.parse(iso))) return iso;
+  return formatTime ? formatTime(iso) : `${new Date(iso).getHours().toString().padStart(2, '0')}:${new Date(iso).getMinutes().toString().padStart(2, '0')}`;
 }
 
 export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
@@ -35,6 +39,8 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
+  const { formatTime } = useDateFormat();
+  const { startInstant, endInstantExclusive } = useRangeState({ defaultPresetId: '24h' });
   const widgetId = useId();
 
   const {
@@ -50,12 +56,6 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
 
   const siteId = (sites ?? [])[0]?.energy_site_id;
 
-  const since = useMemo(() => {
-    const d = new Date();
-    d.setHours(d.getHours() - 24);
-    return d.toISOString();
-  }, []);
-
   const {
     data: history,
     isLoading: historyLoading,
@@ -65,7 +65,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
     isError: historyIsError,
     dataUpdatedAt: historyUpdatedAt,
     refetch: refetchHistory,
-  } = useTeslaEnergyLiveStatusHistory(siteId, since);
+  } = useTeslaEnergyLiveStatusHistory(siteId, startInstant, endInstantExclusive, 1000);
 
   const isLoading = sitesLoading || (!!siteId && historyLoading);
   const error = sitesError ?? historyError;
@@ -84,13 +84,13 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
       const grid = knownNumber(entry.grid_power);
       const home = knownNumber(entry.load_power);
       return {
-        time: shortTime(entry.timestamp ?? ''),
+        time: entry.timestamp ?? '',
         solar: solar == null ? null : convertPowerFromSI(solar, unitPrefs.power),
         battery: battery == null ? null : convertPowerFromSI(battery, unitPrefs.power),
         grid: grid == null ? null : convertPowerFromSI(grid, unitPrefs.power),
         home: home == null ? null : convertPowerFromSI(home, unitPrefs.power),
       };
-    });
+    }).sort((a, b) => a.time.localeCompare(b.time));
   }, [history, unitPrefs.power]);
 
   const avgSolarKw = useMemo(() => averageKnown(chartData.map((d) => d.solar)), [chartData]);
@@ -118,6 +118,12 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
   );
   const axisWidth = useMeasuredAxisWidth({
     labels: axisLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
+  }).sort((a, b) => {
+    const ta = Date.parse(a.time);
+    const tb = Date.parse(b.time);
+    if (!Number.isFinite(ta)) return 1;
+    if (!Number.isFinite(tb)) return -1;
+    return ta - tb;
   });
 
   const handleRefresh = () => {
@@ -270,6 +276,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
                 tick={tick}
                 tickLine={false}
                 axisLine={false}
+                tickFormatter={(value: string) => formatTime(value)}
               />
               <YAxis
                 tick={tick}
@@ -284,6 +291,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
                   `${fmtNumber(value)} ${unitPrefs.power}`,
                   name,
                 ]}
+                labelFormatter={(value: string) => formatTime(value)}
                 cursor={{ fill: chartTokens.gridStroke }}
               />
               <ChartLegend />
