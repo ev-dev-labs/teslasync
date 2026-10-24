@@ -39,7 +39,7 @@ describe('telemetry errors preserve independent sources and full feed evidence',
   it('keeps the VIN summary while retrying only the failed error sample', () => {
     mocks.errors.mockReturnValue(query(undefined, mocks.retryErrors, new Error('sample failed')));
     mount();
-    expect(screen.getByText('Error VINs')).toBeInTheDocument();
+    expect(screen.getByText('error VINs')).toBeInTheDocument();
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('Telemetry error sample unavailable')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));

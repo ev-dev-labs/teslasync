@@ -246,7 +246,7 @@ describe('TelemetryErrorsWidget — compact layout', () => {
     mockUseVINs.mockReturnValue(qr({ data: [makeVIN(), makeVIN()] }));
     renderWidget(COMPACT);
     expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('Error VINs')).toBeInTheDocument();
+    expect(screen.getByText('error VINs')).toBeInTheDocument();
     expect(screen.getByText('Errors')).toBeInTheDocument();
     expect(screen.queryByText('Healthy')).toBeNull();
   });
@@ -318,7 +318,7 @@ describe('TelemetryErrorsWidget — standard layout', () => {
     const { container } = renderWidget(STANDARD);
 
     // Exactly one "recent" badge (the 5-minute-old entry).
-    expect(screen.getAllByText('Recent')).toHaveLength(1);
+    expect(screen.getAllByText('recent')).toHaveLength(1);
     // Each row threads its resolved last_seen into <TimeStamp>.
     expect(screen.getByText(recentTs)).toBeInTheDocument();
     expect(screen.getByText(oldTs)).toBeInTheDocument();

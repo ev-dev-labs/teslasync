@@ -146,7 +146,7 @@ function makeSession(overrides: Partial<ChargingSession> = {}): ChargingSession 
     charger_type: 'Home',
     cable_type: 'Type2',
     startedAt: '2026-03-01T12:00:00Z',
-    duration_min: 90, // 1h 30m
+    duration_s: 5400, // 1h 30m
     ...overrides,
   };
 }
@@ -239,8 +239,8 @@ describe('RecentActivity — Recent Charges panel', () => {
     expect(container.querySelector('a[href="/charging/9"]')).not.toBeNull();
   });
 
-  it('formats the charge duration as "Hh Mm" from duration_min (minutes)', () => {
-    renderActivity({ drives: [], sessions: [makeSession({ duration_min: 90 })] });
+  it('formats the charge duration as "Hh Mm" from duration_s (seconds)', () => {
+    renderActivity({ drives: [], sessions: [makeSession({ duration_s: 5400 })] });
     expect(screen.getByText('1h 30m')).toBeInTheDocument();
   });
 
@@ -300,12 +300,12 @@ describe('RecentActivity — null-safety', () => {
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 
-  it('renders "0h 0m" (never NaN) for a charge with a missing duration', () => {
+  it('renders an unknown duration marker for a charge with a missing duration', () => {
     renderActivity({
       drives: [],
-      sessions: [makeSession({ duration_min: undefined as unknown as number })],
+      sessions: [makeSession({ duration_s: undefined as unknown as number, started_at: '', ended_at: null })],
     });
-    expect(screen.getByText('0h 0m')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 

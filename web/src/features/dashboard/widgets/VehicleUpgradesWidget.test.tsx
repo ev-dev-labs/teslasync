@@ -381,7 +381,7 @@ describe('VehicleUpgradesWidget — share links', () => {
 
     renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
 
-    expect(screen.getByText('Active share links')).toBeInTheDocument();
+    expect(screen.getByText('Share links')).toBeInTheDocument();
     expect(screen.getAllByText('Untitled share')).toHaveLength(3);
     expect(screen.getAllByText('Live')).toHaveLength(3);
   });
@@ -428,7 +428,7 @@ describe('VehicleUpgradesWidget — vehicle selection', () => {
     renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
 
     expect(upgradesMock).toHaveBeenCalledWith(undefined);
-    expect(screen.getByText('No vehicle')).toBeInTheDocument();
+    expect(screen.getByText('No vehicle data')).toBeInTheDocument();
     expect(screen.queryByText('All upgrades applied')).not.toBeInTheDocument();
     expect(screen.queryByText('No active share links')).not.toBeInTheDocument();
     expect(shareLinksMock).toHaveBeenCalledWith('');
@@ -490,7 +490,7 @@ describe('VehicleUpgradesWidget — states + interaction', () => {
     renderWidget(<VehicleUpgradesWidget vehicleId={vehicleId} size={SIZE_STD} />);
     expect(upgradesMock).toHaveBeenCalledWith(undefined);
     expect(shareLinksMock).toHaveBeenCalledWith('');
-    expect(screen.getByText('No vehicle')).toBeInTheDocument();
+    expect(screen.getByText('No vehicle data')).toBeInTheDocument();
     expect(screen.queryByText('Live')).not.toBeInTheDocument();
   });
 

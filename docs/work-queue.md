@@ -224,3 +224,5 @@ proceed to Parts 3-6.
   catalog checks pass; dashboard code-guardian audit reports 200 files/0
   violations. Next: commit/push this batch, then collect and fix PR #202
   remaining failures by root cause.
+  First PR unit batch: stale widget copy assertions and canonical
+  RecentActivity duration fixtures updated; 125/125 focused tests pass.

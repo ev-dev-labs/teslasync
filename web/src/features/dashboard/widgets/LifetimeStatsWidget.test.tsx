@@ -152,7 +152,7 @@ describe('LifetimeStatsWidget redesign', () => {
     expect(screen.getByText('CO₂ saved')).toBeInTheDocument();
     expect(screen.getByText('9.8')).toBeInTheDocument();
     expect(screen.getByText('t')).toBeInTheDocument();
-    expect(screen.getByText('Owned')).toBeInTheDocument();
+    expect(screen.getByText('Ownership days')).toBeInTheDocument();
     expect(screen.getByText('1,021')).toBeInTheDocument();
     expect(screen.getByText('days')).toBeInTheDocument();
     expect(screen.queryByText(/workspace date range/i)).not.toBeInTheDocument();
@@ -169,7 +169,7 @@ describe('LifetimeStatsWidget redesign', () => {
   it('renders one distance headline in compact mode', () => {
     renderWidget({ size: { cols: 1, rows: 1 } });
     expect(screen.getByText('50,000')).toBeInTheDocument();
-    expect(screen.getByText('Lifetime')).toBeInTheDocument();
+    expect(screen.getByText('lifetime')).toBeInTheDocument();
     expect(screen.queryByText('Total drives')).not.toBeInTheDocument();
   });
 

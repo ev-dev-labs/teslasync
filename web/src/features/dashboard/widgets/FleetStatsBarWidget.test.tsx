@@ -104,7 +104,7 @@ describe('FleetStatsBarWidget — After card', () => {
     const strip = within(screen.getByTestId('fleet-stats-bar'));
     expect(strip.getByText('Vehicles')).toBeInTheDocument();
     expect(strip.getByText('4')).toBeInTheDocument();
-    expect(strip.getByText('Online')).toBeInTheDocument();
+    expect(strip.getByText('online')).toBeInTheDocument();
     expect(strip.getByText('2')).toBeInTheDocument();
     expect(strip.getByText('2 asleep/offline')).toBeInTheDocument();
     expect(strip.getByText('Distance (30d)')).toBeInTheDocument();
