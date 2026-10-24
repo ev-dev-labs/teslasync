@@ -199,3 +199,20 @@ Next: commit and push the verified dashboard lint repair batch, then collect
 the remaining PR #202 failures and fix them by root cause.
 Only after CI is green: finish TZ-5/TZ-6/TZ-7, run the full replica, and
 proceed to Parts 3-6.
+
+## Recovery handoff (2026-10-23)
+
+- Dashboard lint/typography/freshness repair commits: `47cec22796`,
+  `d31e666484`, and `ab52bd2631` pushed. Worktree clean.
+- Verified locally: dashboard 174 files / 3079 tests, focused chart tests
+  111/111, freshness 71/71, TypeScript, chart-frame, chart-safety,
+  chart-legend, typography, freshness, SI FE gate, and split i18n check.
+- Production build passes with startup JS 399.6 KB.
+- PR #202 fresh run `40060471218` failed first at generated split-i18n
+  artifacts, then at dashboard source modernization tests and aggregates.
+- The sanctioned split generator is now clean locally. Its two generated
+  removals of obsolete Just-now keys remain to commit.
+- Remaining blocker: 31 frozen i18n producer/checkpoint expectations now
+  mismatch intentional source removals and shared absolute-time formatting.
+  Re-pinned only through the repository trio generators/checkpoints; do not
+  hand-edit hashes or catalog fingerprint counts.

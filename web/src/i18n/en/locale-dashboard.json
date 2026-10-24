@@ -3317,7 +3317,6 @@
     },
     "estimatedTime": "Est. time",
     "eventFeed": {
-      "justNow": "Just now",
       "label": "Event feed",
       "minutesAgo": "{{minutes}}m ago"
     },
@@ -3414,7 +3413,6 @@
     "idealRange": "Ideal range",
     "idle": "Idle",
     "installing": "Installing",
-    "justNow": "Just now",
     "lastSeen": "Last seen",
     "lifetimeStats": {
       "co2Saved": "CO₂ saved",

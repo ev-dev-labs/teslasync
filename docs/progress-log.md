@@ -529,3 +529,6 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - Removed 21 lint violations across dashboard widgets/tests, used informational EmptyState variants, routed visually-hidden text through VisuallyHidden, and framed the vampire-drain chart with EmbeddedChart. Added missing i18n keys, regenerated split catalogs, set sparse battery degradation lines to connectNulls=false, and verified 174 dashboard files/3079 tests, 31 focused tests, TypeScript, chart-frame, chart-safety, SI FE gate, and code-guardian. Remaining lint root: chart-legend adoption across six existing dashboard widgets; this batch is committed separately before continuing.
 ## 2026-10-23 20:42Z - Copilot: chart legend repair
 - Chart legend adoption now passes for the six dashboard widgets named by CI. Verified 111/111 focused tests and TypeScript. Next commit/push, watch PR #202, then continue the full lint chain and new failure group.
+## 2026-10-23 21:14Z - Copilot: recovery handoff
+- Split i18n regeneration now passes locally; only usage-manifest and locale-dashboard obsolete-key removals changed generated artifacts.
+- PR run 40060471218 revealed 31 frozen producer/checkpoint mismatches from the intentional removal of visible Just-now strings and absolute-time migration. Update via sanctioned i18n trio generators/checkpoints; do not hand-edit hashes.
