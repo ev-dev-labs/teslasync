@@ -137,10 +137,10 @@ describe('AI fixture helpers', () => {
     const reader = stream.getReader()
     const decoder = new TextDecoder()
     let assembled = ''
-    while (true) {
-      const { value, done } = await reader.read()
-      if (done) break
-      assembled += decoder.decode(value, { stream: true })
+    let result = await reader.read()
+    while (!result.done) {
+      assembled += decoder.decode(result.value, { stream: true })
+      result = await reader.read()
     }
     expect(assembled).toBe(body)
   })
