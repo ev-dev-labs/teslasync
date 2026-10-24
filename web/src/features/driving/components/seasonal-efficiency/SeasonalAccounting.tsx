@@ -5,7 +5,7 @@ import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
-import { formatLocalDate } from './formatters';
+import { formatDate } from '@/lib/dateFormat';
 
 export function SeasonalAccounting({
   analysis,
@@ -54,10 +54,10 @@ export function SeasonalAccounting({
               })}</Text>
               <Text variant="caption" as="p">{t('seasonalEfficiency.accounting.window', 'History window limit: {{limit}} rows', { limit: analysis.accounting.historyLimit })}</Text>
               <Text variant="caption" as="p">{t('seasonalEfficiency.accounting.first', 'First included local date: {{date}}', {
-                date: formatLocalDate(analysis.firstIncludedTimestampMs, locale, timeZone),
+                date: formatDate(analysis.firstIncludedTimestampMs == null ? null : new Date(analysis.firstIncludedTimestampMs), { locale, tz: timeZone }),
               })}</Text>
               <Text variant="caption" as="p">{t('seasonalEfficiency.accounting.last', 'Last included local date: {{date}}', {
-                date: formatLocalDate(analysis.lastIncludedTimestampMs, locale, timeZone),
+                date: formatDate(analysis.lastIncludedTimestampMs == null ? null : new Date(analysis.lastIncludedTimestampMs), { locale, tz: timeZone }),
               })}</Text>
               <Text variant="caption" as="p">{t('seasonalEfficiency.accounting.energy', '{{energy}} total energy · {{distance}} total distance', {
                 energy: units.formatEnergy(analysis.totalEnergyWh),

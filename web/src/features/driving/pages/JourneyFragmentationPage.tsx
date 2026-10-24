@@ -9,7 +9,7 @@ import { Select, Text } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import {
   AccountingPanel,
@@ -37,7 +37,7 @@ export default function JourneyFragmentationPage() {
   const { t } = useTranslation();
   usePageTitle(t('journeyFragmentation.title', 'Journey Fragmentation'));
   const { vehicleId } = useSelectedVehicle();
-  const timeZone = useTimezone('vehicle');
+  const { tz: timeZone } = useDateFormat();
   const [maxGapMin, setMaxGapMin] = useState(120);
   const [analysisNowMs] = useState(() => Date.now());
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;

@@ -421,7 +421,7 @@ describe('DestinationTransitionsPage', () => {
         'An edge share is its accepted count divided by all accepted outgoing transitions from that origin. Empirical information content is −log₂(share), an in-sample rarity description.',
         'For each origin, concentration = 1 − entropy ÷ log₂(distinct observed successors); a one-successor row equals 1. The global 0–100 index weights row concentration by outgoing count, while support remains separate.',
         'An origin needs at least 3 outgoing transitions. Volume, day, and week ingredients reach 1 at 12, 8, and 6; recurrence = max(0, outgoing − distinct successors) ÷ max(1, outgoing − 1). Thin is below the gate or below index 35; developing is 35–69; strong is 70–100.',
-        'Hour, weekday, date, week, and month use UTC. Multiple drives on one local day remain separate visits. Only the latest 1,000 returned rows are requested.',
+        'Hour, weekday, date, week, and month use your selected time zone. Multiple drives on one local day remain separate visits. Only the latest 1,000 returned rows are requested.',
         'Addresses are normalized before rounded GPS fallback. Address edits, missing coordinates, and GPS tolerance can split one real place or merge nearby places.',
         'No driver identity, calendar, traffic, intent, or current live location is used. The latest insight requires the actual latest row to qualify. Results are not a calibrated future likelihood, personal forecast, recommendation, or guarantee.',
       ]);
@@ -1153,8 +1153,8 @@ describe('DestinationTransitionsPage', () => {
     );
     expect(weekday.getAllByText('Monday').length).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(/America\/Los_Angeles/).length,
-    ).toBeGreaterThan(0);
+      screen.queryAllByText(/America\/Los_Angeles/).length,
+    ).toBe(0);
   });
 
   it('avoids overclaiming terminology', () => {

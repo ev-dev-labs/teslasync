@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { AutomationHistory, AutomationHistoryListResponse } from '@/api/types';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import '../../../i18n';
-import { formatDurationMs } from '@/lib/dateFormat';
+import { formatDurationMs } from '@/lib/dateConvert';
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import AutomationHistoryPage from './AutomationHistoryPage';
 

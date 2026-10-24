@@ -124,7 +124,6 @@ export function NotificationRow({
           <DateTime
             value={log.created_at}
             in="user"
-            showTz
             className={cn('whitespace-nowrap', typography.role.caption)}
           />
           {vehicle && (

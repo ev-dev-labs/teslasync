@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { queryPolicy } from '../queryPolicy';
 import { scopedPath } from '../scope';
 import { safeArray } from '@/lib/safeArray';
@@ -175,10 +176,16 @@ export function useChargingSessionsPaginated(
   });
 }
 
-export function useCostForecast(vehicleId: string | null, months = 6) {
+export function useCostForecast(vehicleId: string | null, months = 6, timezone?: string) {
+  const { tz } = useDateFormat();
+  const zone = timezone ?? tz;
   return useQuery({
-    queryKey: ['cost-forecast', vehicleId, months],
-    queryFn: ({ signal }) => request<CostForecastData>(`/analytics/cost-forecast?vehicle_id=${vehicleId}&months=${months}`, { signal }),
+    queryKey: ['cost-forecast', vehicleId, months, zone],
+    queryFn: ({ signal }) =>
+      request<CostForecastData>(
+        `/analytics/cost-forecast?vehicle_id=${vehicleId}&months=${months}&timezone=${encodeURIComponent(zone)}`,
+        { signal },
+      ),
     enabled: vehicleId !== null,
     staleTime: STALE_TIMES.SLOW,
   });
@@ -403,7 +410,7 @@ export interface WaitOracleForecast {
   verdict: 'quiet' | 'steady' | 'busy' | 'packed';
   confidence: 'high' | 'medium' | 'low';
   stalls_estimated: number;
-  best_hour_utc: number;
+  best_hour: number;
   best_wait_s: number;
   save_s: number;
   hours: WaitOracleHour[];
@@ -413,8 +420,8 @@ export interface WaitOracleForecast {
 export const waitOracleKeys = {
   all: ['wait-oracle'] as const,
   sites: (q: string) => ['wait-oracle', 'sites', q] as const,
-  forecast: (site: string, arriveAt: string | null) =>
-    ['wait-oracle', 'forecast', site, arriveAt] as const,
+  forecast: (site: string, arriveAt: string | null, zone: string) =>
+    ['wait-oracle', 'forecast', site, arriveAt, zone] as const,
 };
 
 /** Lists named charging sites from fleet history, most-visited first. */
@@ -431,18 +438,20 @@ export function useWaitOracleSites(q = '', options?: { enabled?: boolean }) {
   });
 }
 
-/** Forecasts the queue wait for arriving at a site at an instant (RFC3339; null = now). */
+/** Forecasts the queue wait for arriving at a site at an instant (RFC3339; null = now). Curve hours are wall hours in the request zone (effective display zone when omitted). */
 export function useWaitOracleForecast(
   site: string | null,
   arriveAt: string | null,
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean; timezone?: string },
 ) {
+  const { tz } = useDateFormat();
+  const zone = options?.timezone ?? tz;
   return useQuery({
-    queryKey: waitOracleKeys.forecast(site ?? '', arriveAt),
+    queryKey: waitOracleKeys.forecast(site ?? '', arriveAt, zone),
     queryFn: ({ signal }) =>
       request<WaitOracleForecast>(
         scopedPath('/waitoracle/forecast', {
-          filters: { site: site ?? '', arrive_at: arriveAt },
+          filters: { site: site ?? '', arrive_at: arriveAt, timezone: zone },
         }),
         { signal },
       ),

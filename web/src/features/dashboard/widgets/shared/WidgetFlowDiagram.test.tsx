@@ -1,30 +1,33 @@
 /**
  * WidgetFlowDiagram — behaviour, hardening & a11y contract.
  *
- * A purely presentational SVG that renders `FlowNode`s at five fixed positions
- * and `FlowArrow`s between them. It has no data hooks and no interactive
- * controls, so this suite drives every branch of its render surface directly:
+ * A purely presentational SVG following the After `flow` language in
+ * `docs/widget-redesign/widgets-compare.html`: a wide viewBox, node discs
+ * (icon only) with a stacked name + reading caption below, and curved S-links
+ * between them. It has no data hooks and no interactive controls, so this
+ * suite drives every branch of its render surface directly:
  *
  *   - the empty state (no nodes → an `EmptyState` with the default / custom
  *     message, role="status", and crucially NO `<svg>` — never a blank panel);
  *   - accessibility: the diagram is exposed as `role="img"` with a localisable
- *     accessible name (default + the new `ariaLabel` override);
- *   - node rendering: one circle per node, an optional icon, the label, and —
- *     the key hardening — the node's caller-formatted `formattedValue` string
- *     (units like `%` / `kW` and the `—` placeholder) INSTEAD of the raw numeric
- *     `value`. The previous implementation piped `value` through `<AnimatedNumber>`
- *     and silently dropped every unit; the sibling `WidgetRankedList` already
- *     renders `formattedValue`, so this aligns the two and restores the units the
- *     callers (EnergyFlowWidget / LivePowerFlowWidget / EnergyFlowAnimatedWidget)
- *     go to the trouble of computing;
- *   - null-safety: a missing `formattedValue` renders `—` (not `undefined`), and
- *     a missing `label` renders empty instead of throwing on `.length`;
- *   - compact mode: labels collapse to a 3-char uppercase code (short labels are
- *     left alone) and only the three largest-magnitude arrows survive;
- *   - arrow semantics: active arrows carry the `flow-active` animation class + a
- *     dash pattern (inactive ones carry neither), colour is derived from the sign
- *     of the value unless an explicit override is supplied, endpoints missing
- *     from the node set are skipped, and stroke width scales with magnitude.
+ *     accessible name (default + the `ariaLabel` override);
+ *   - node rendering: one circle per node, an optional icon, and the key
+ *     hardening — the caption renders the caller-formatted `formattedValue`
+ *     string (units like `%` / `kW` and the `—` placeholder) as its own
+ *     element next to the standalone label, INSTEAD of the raw numeric
+ *     `value` (which must never leak through);
+ *   - null-safety: a missing `formattedValue` renders `—` (not `undefined`),
+ *     a missing `label` renders the reading alone instead of throwing, and an
+ *     explicitly blank reading stays blank;
+ *   - compact mode: the name collapses to a 3-char uppercase code while the
+ *     reading keeps its units, and only the three largest-magnitude arrows
+ *     survive;
+ *   - arrow semantics: a link animates (the `flow-active` class + a `6 5` dash)
+ *     only when it is both `active` and non-zero; idle links are thin neutral
+ *     lines with neither. Colour defaults are status-neutral (spec rule 4 —
+ *     never sign-derived red/green) unless an explicit override is supplied.
+ *     Endpoints missing from the node set are skipped. An optional
+ *     caller-formatted `label` is annotated once at the link midpoint.
  *
  * The component pulls in no network, no QueryClient and no Router (the empty
  * state passes no action), so a bare `render()` is sufficient — matching the
@@ -52,8 +55,8 @@ function arrow(over: Partial<FlowArrow> = {}): FlowArrow {
   return { from: 'a', to: 'b', value: 1, active: false, ...over };
 }
 
-function lines(container: HTMLElement): SVGLineElement[] {
-  return Array.from(container.querySelectorAll('line'));
+function paths(container: HTMLElement): SVGPathElement[] {
+  return Array.from(container.querySelectorAll('path'));
 }
 
 function classOf(el: Element | null): string {
@@ -113,18 +116,19 @@ describe('WidgetFlowDiagram nodes', () => {
     expect(container.querySelectorAll('circle')).toHaveLength(3);
   });
 
-  it('displays each node formattedValue (units preserved) and not the raw numeric value', () => {
+  it('renders the label and formattedValue as separate caption elements (units preserved, raw value hidden)', () => {
     const nodes = [
       node({ id: 'battery', position: 'left', value: 82, formattedValue: '82%' }),
-      node({ id: 'motor', position: 'right', value: 999, formattedValue: '12.5 kW' }),
+      node({ id: 'motor', label: 'Motor', position: 'right', value: 999, formattedValue: '12.5 kW' }),
     ];
     const { container } = render(<WidgetFlowDiagram nodes={nodes} arrows={[]} />);
 
-    expect(container).toHaveTextContent('82%');
-    expect(container).toHaveTextContent('12.5 kW');
-    // Regression guard: the old build rendered `value` via <AnimatedNumber> (→ "82.0")
-    // and dropped the unit — the raw number must never leak through.
-    expect(container).not.toHaveTextContent('82.0');
+    // Standalone elements: callers and assistive tech can address each alone.
+    expect(screen.getByText('Battery')).toBeInTheDocument();
+    expect(screen.getByText('82%')).toBeInTheDocument();
+    expect(screen.getByText('Motor')).toBeInTheDocument();
+    expect(screen.getByText('12.5 kW')).toBeInTheDocument();
+    // Regression guard: the raw number must never leak through.
     expect(container).not.toHaveTextContent('999');
   });
 
@@ -138,6 +142,15 @@ describe('WidgetFlowDiagram nodes', () => {
     expect(container).not.toHaveTextContent('undefined');
   });
 
+  it('keeps an explicitly blank reading blank (no em dash injected)', () => {
+    const { container } = render(
+      <WidgetFlowDiagram nodes={[node({ label: 'Site', formattedValue: '' })]} arrows={[]} />,
+    );
+
+    expect(container).toHaveTextContent('Site');
+    expect(container).not.toHaveTextContent(EM_DASH);
+  });
+
   it('renders a provided node icon', () => {
     const nodes = [
       node({ id: 'battery', icon: <span data-testid="node-icon">B</span> }),
@@ -147,13 +160,13 @@ describe('WidgetFlowDiagram nodes', () => {
     expect(screen.getByTestId('node-icon')).toBeInTheDocument();
   });
 
-  it('is null-safe when a node label is missing (renders without throwing)', () => {
+  it('is null-safe when a node label is missing (renders the reading without throwing)', () => {
     const nodes = [
       node({ id: 'nolabel', label: undefined as unknown as string, formattedValue: '5 kW' }),
     ];
     const { container } = render(<WidgetFlowDiagram nodes={nodes} arrows={[]} />);
 
-    // The node still renders (circle + value) and no "undefined" text leaks in.
+    // The node still renders (circle + reading) and no "undefined" text leaks in.
     expect(container.querySelectorAll('circle')).toHaveLength(1);
     expect(container).toHaveTextContent('5 kW');
     expect(container).not.toHaveTextContent('undefined');
@@ -169,15 +182,16 @@ describe('WidgetFlowDiagram nodes', () => {
 // ── Compact mode ─────────────────────────────────────────────────────────────
 
 describe('WidgetFlowDiagram compact mode', () => {
-  it('truncates long labels to a 3-char uppercase code', () => {
-    render(<WidgetFlowDiagram nodes={[node({ label: 'Battery' })]} arrows={[]} compact />);
+  it('truncates a long name to a 3-char uppercase code but keeps the reading', () => {
+    render(<WidgetFlowDiagram nodes={[node({ label: 'Battery', formattedValue: '82%' })]} arrows={[]} compact />);
 
     expect(screen.getByText('BAT')).toBeInTheDocument();
+    expect(screen.getByText('82%')).toBeInTheDocument();
     expect(screen.queryByText('Battery')).toBeNull();
   });
 
   it('leaves short labels (<= 3 chars) untouched', () => {
-    render(<WidgetFlowDiagram nodes={[node({ label: 'Hi' })]} arrows={[]} compact />);
+    render(<WidgetFlowDiagram nodes={[node({ label: 'Hi', formattedValue: '1 kW' })]} arrows={[]} compact />);
 
     expect(screen.getByText('Hi')).toBeInTheDocument();
   });
@@ -191,19 +205,19 @@ describe('WidgetFlowDiagram compact mode', () => {
       node({ id: 'r', position: 'right' }),
     ];
     const arrows: FlowArrow[] = [
-      arrow({ from: 'c', to: 't', value: 50 }),
-      arrow({ from: 'c', to: 'b', value: 40 }),
-      arrow({ from: 'c', to: 'l', value: 30 }),
-      arrow({ from: 'c', to: 'r', value: 20 }),
-      arrow({ from: 't', to: 'b', value: 10 }),
+      arrow({ from: 'c', to: 't', value: 50, active: true }),
+      arrow({ from: 'c', to: 'b', value: 40, active: true }),
+      arrow({ from: 'c', to: 'l', value: 30, active: true }),
+      arrow({ from: 'c', to: 'r', value: 20, active: true }),
+      arrow({ from: 't', to: 'b', value: 10, active: true }),
     ];
 
     const compact = render(<WidgetFlowDiagram nodes={nodes} arrows={arrows} compact />);
-    expect(lines(compact.container)).toHaveLength(3);
+    expect(paths(compact.container)).toHaveLength(3);
 
     // Same data, standard mode → every arrow is drawn.
     const full = render(<WidgetFlowDiagram nodes={nodes} arrows={arrows} />);
-    expect(lines(full.container)).toHaveLength(5);
+    expect(paths(full.container)).toHaveLength(5);
   });
 });
 
@@ -212,24 +226,37 @@ describe('WidgetFlowDiagram compact mode', () => {
 describe('WidgetFlowDiagram arrows', () => {
   const ab: FlowNode[] = [node({ id: 'a', position: 'left' }), node({ id: 'b', position: 'right' })];
 
-  it('marks active arrows with the flow-active animation class and a dash pattern', () => {
+  it('animates flowing arrows (active + non-zero) with the flow-active class and a dash pattern', () => {
     const { container } = render(
       <WidgetFlowDiagram nodes={ab} arrows={[arrow({ from: 'a', to: 'b', value: 5, active: true })]} />,
     );
 
-    const line = container.querySelector('line');
-    expect(classOf(line)).toContain('flow-active');
-    expect(line?.getAttribute('stroke-dasharray')).toBe('4 8');
+    const path = container.querySelector('path');
+    expect(classOf(path)).toContain('flow-active');
+    expect(path?.getAttribute('stroke-dasharray')).toBe('6 5');
+    expect(path?.getAttribute('stroke-width')).toBe('3');
   });
 
-  it('leaves inactive arrows static (no animation class, no dash pattern)', () => {
+  it('leaves idle arrows static (no animation class, no dash pattern, thin neutral line)', () => {
     const { container } = render(
       <WidgetFlowDiagram nodes={ab} arrows={[arrow({ from: 'a', to: 'b', value: 5, active: false })]} />,
     );
 
-    const line = container.querySelector('line');
-    expect(classOf(line)).not.toContain('flow-active');
-    expect(line?.getAttribute('stroke-dasharray')).toBeNull();
+    const path = container.querySelector('path');
+    expect(classOf(path)).not.toContain('flow-active');
+    expect(path?.getAttribute('stroke-dasharray')).toBeNull();
+    expect(path?.getAttribute('stroke-width')).toBe('1.5');
+  });
+
+  it('does not animate an active arrow with zero flow (honest idle)', () => {
+    const { container } = render(
+      <WidgetFlowDiagram nodes={ab} arrows={[arrow({ from: 'a', to: 'b', value: 0, active: true })]} />,
+    );
+
+    const path = container.querySelector('path');
+    expect(classOf(path)).not.toContain('flow-active');
+    expect(path?.getAttribute('stroke-dasharray')).toBeNull();
+    expect(path?.getAttribute('stroke-width')).toBe('1.5');
   });
 
   it('skips arrows whose endpoints are not present in the node set', () => {
@@ -237,16 +264,16 @@ describe('WidgetFlowDiagram arrows', () => {
       <WidgetFlowDiagram
         nodes={ab}
         arrows={[
-          arrow({ from: 'a', to: 'b', value: 5 }),
-          arrow({ from: 'a', to: 'ghost', value: 9 }),
+          arrow({ from: 'a', to: 'b', value: 5, active: true }),
+          arrow({ from: 'a', to: 'ghost', value: 9, active: true }),
         ]}
       />,
     );
 
-    expect(lines(container)).toHaveLength(1);
+    expect(paths(container)).toHaveLength(1);
   });
 
-  it('colours arrows by the sign of their value', () => {
+  it('uses status-neutral defaults for both flowing and idle links (never sign-derived red/green)', () => {
     const nodes: FlowNode[] = [
       node({ id: 'a', position: 'left' }),
       node({ id: 'b', position: 'right' }),
@@ -256,60 +283,53 @@ describe('WidgetFlowDiagram arrows', () => {
       <WidgetFlowDiagram
         nodes={nodes}
         arrows={[
-          arrow({ from: 'a', to: 'b', value: 5 }), // positive → emerald
-          arrow({ from: 'b', to: 'c', value: -5 }), // negative → red
-          arrow({ from: 'c', to: 'a', value: 0 }), // zero → muted var
+          arrow({ from: 'a', to: 'b', value: 5, active: true }),
+          arrow({ from: 'b', to: 'c', value: -5, active: true }),
+          arrow({ from: 'c', to: 'a', value: 0, active: false }),
         ]}
       />,
     );
 
-    const [pos, neg, zero] = lines(container);
-    expect(classOf(pos)).toContain('text-emerald-400');
-    expect(classOf(neg)).toContain('text-red-400');
-    expect(classOf(zero)).toContain('text-[var(--text-muted)]');
+    const [pos, neg, zero] = paths(container);
+    // Flowing links share one restrained accent default regardless of sign.
+    expect(classOf(pos)).toContain('text-[var(--semantic-info)]');
+    expect(classOf(neg)).toContain('text-[var(--semantic-info)]');
+    expect(classOf(pos)).not.toContain('text-emerald-400');
+    expect(classOf(neg)).not.toContain('text-red-400');
+    // Idle links are neutral.
+    expect(classOf(zero)).toContain('text-[var(--border-default)]');
   });
 
-  it('prefers an explicit arrow colour override over the sign-derived colour', () => {
+  it('prefers an explicit arrow colour override over the default', () => {
     const { container } = render(
       <WidgetFlowDiagram
         nodes={ab}
-        arrows={[arrow({ from: 'a', to: 'b', value: 5, color: 'text-amber-400' })]}
+        arrows={[arrow({ from: 'a', to: 'b', value: 5, active: true, color: 'text-amber-400' })]}
       />,
     );
 
-    const line = container.querySelector('line');
-    expect(classOf(line)).toContain('text-amber-400');
-    expect(classOf(line)).not.toContain('text-emerald-400');
+    const path = container.querySelector('path');
+    expect(classOf(path)).toContain('text-amber-400');
+    expect(classOf(path)).not.toContain('text-[var(--semantic-info)]');
   });
 
-  it('scales stroke width with the arrow magnitude (relative to the max)', () => {
-    const nodes: FlowNode[] = [
-      node({ id: 'a', position: 'center' }),
-      node({ id: 'b', position: 'top' }),
-      node({ id: 'c', position: 'bottom' }),
-    ];
+  it('annotates a flowing link with its caller-formatted label at the midpoint', () => {
     const { container } = render(
       <WidgetFlowDiagram
-        nodes={nodes}
-        arrows={[
-          arrow({ from: 'a', to: 'b', value: 10 }), // max → widest (4)
-          arrow({ from: 'a', to: 'c', value: 5 }), // half → 2.5
-        ]}
+        nodes={ab}
+        arrows={[arrow({ from: 'a', to: 'b', value: 4.2, active: true, label: '4.2 kW' })]}
       />,
     );
 
-    const [widest, half] = lines(container);
-    expect(widest.getAttribute('stroke-width')).toBe('4');
-    expect(half.getAttribute('stroke-width')).toBe('2.5');
+    expect(container).toHaveTextContent('4.2 kW');
   });
 
-  it('floors stroke width at the minimum for a lone zero-value arrow', () => {
+  it('renders no link annotation when the caller supplies no label', () => {
     const { container } = render(
-      <WidgetFlowDiagram nodes={ab} arrows={[arrow({ from: 'a', to: 'b', value: 0 })]} />,
+      <WidgetFlowDiagram nodes={ab} arrows={[arrow({ from: 'a', to: 'b', value: 4.2, active: true })]} />,
     );
 
-    const line = container.querySelector('line');
-    expect(line?.getAttribute('stroke-width')).toBe('1');
-    expect(classOf(line)).toContain('text-[var(--text-muted)]');
+    // Only the two stacked node captions exist — the link adds no extra text.
+    expect(container.querySelectorAll('text')).toHaveLength(4);
   });
 });

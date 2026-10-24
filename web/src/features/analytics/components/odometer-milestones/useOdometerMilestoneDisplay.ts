@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 
 import { useUnits } from '@/hooks/useUnits';
-import { formatDate } from '@/lib/dateFormat';
+import {formatDate} from '@/lib/dateFormat'
+import {formatMonthYear} from '@/lib/dateConvert';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { getGlobalPrecision } from '@/lib/numberFormat';
@@ -26,20 +27,8 @@ export function useOdometerMilestoneDisplay() {
     [locale],
   );
   const formatMonth = useCallback(
-    (monthStartMs: number) => {
-      try {
-        return new Intl.DateTimeFormat(locale, {
-          month: 'short',
-          year: 'numeric',
-          timeZone: 'UTC',
-        }).format(new Date(monthStartMs));
-      } catch {
-        return formatDate(new Date(monthStartMs), {
-          locale: 'en-US',
-          tz: 'UTC',
-        });
-      }
-    },
+    // Month-start markers are UTC-anchored, not display-zone instants.
+    (monthStartMs: number) => formatMonthYear(new Date(monthStartMs), { locale, tz: 'UTC' }),
     [locale],
   );
 

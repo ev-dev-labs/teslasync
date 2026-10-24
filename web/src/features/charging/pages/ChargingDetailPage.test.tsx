@@ -227,6 +227,20 @@ vi.mock('@/api/hooks/useAnnotations', () => ({
   useDeleteAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
+  const settingsHooks = await import('@/hooks/useSettings');
+  return {
+    ...actual,
+    // Like the global stub (no vehicle, UTC host stand-in) but reads the
+    // per-test useSettings spy lazily so display-zone overrides apply.
+    useTimezone: (mode: Parameters<typeof actual.useTimezone>[0] = 'vehicle') => {
+      const settings = settingsHooks.useSettings().settings;
+      const userTz = settings?.timezone_user?.trim() ? settings.timezone_user : 'UTC';
+      return actual.resolveTimezone(mode, undefined, userTz);
+    },
+  };
+});
 vi.mock('@/hooks/useFormatting', () => ({ useFormatting: vi.fn() }));
 vi.mock('@/hooks/useChartPalette', () => ({
   useChartPalette: () => ['var(--series-a)', 'var(--series-b)', 'var(--series-c)', 'var(--series-d)', 'var(--series-e)'],
@@ -453,10 +467,10 @@ beforeEach(() => {
   mockLive.mockReturnValue(makeQuery({ data: makeLive() }));
 });
 
-describe('ChargingDetailPage — record-owned dates', () => {
-  it('keeps dates and chart times in the record vehicle zone despite saved user preferences', () => {
+describe('ChargingDetailPage — display-zone dates', () => {
+  it('follows the saved display zone for record dates and chart times, not the vehicle zone', () => {
     const locale = 'de-DE';
-    const tz = 'America/Los_Angeles';
+    const tz = 'Asia/Tokyo';
     const started_at = '2024-03-10T07:55:00Z';
     const ended_at = '2024-03-10T10:05:00Z';
     mockSettings.mockReturnValue({
@@ -466,26 +480,26 @@ describe('ChargingDetailPage — record-owned dates', () => {
         ...defaultSettingsResult.settings,
         locale,
         tz_display_default: 'user',
-        timezone_user: 'Asia/Tokyo',
+        timezone_user: tz,
       },
     });
-    mockVehicle.mockReturnValue(makeQuery({ data: { ...VEHICLE, timezone: tz } }));
+    mockVehicle.mockReturnValue(makeQuery({ data: { ...VEHICLE, timezone: 'America/Los_Angeles' } }));
     mockSession.mockReturnValue(makeQuery({ data: makeSession({ started_at, ended_at }) }));
     mockTelemetry.mockReturnValue(makeQuery({
       data: [makeReading({ created_at: started_at })],
     }));
     renderPage();
 
-    const started = screen.getByTitle(new Date(started_at).toISOString());
-    const ended = screen.getByTitle(new Date(ended_at).toISOString());
-    expect(started).toHaveTextContent(`${formatDateTime(started_at, { locale, tz })} (${tz})`);
-    expect(ended).toHaveTextContent(`${formatDateTime(ended_at, { locale, tz })} (${tz})`);
+    expect(screen.getByText(formatDateTime(started_at, { locale, tz }))).toBeInTheDocument();
+    expect(screen.getByText(formatDateTime(ended_at, { locale, tz }))).toBeInTheDocument();
+    expect(screen.queryByTitle(new Date(started_at).toISOString())).not.toBeInTheDocument();
+    expect(screen.queryByText(/America\/Los_Angeles/)).not.toBeInTheDocument();
     expect(screen.getAllByText((_, node) =>
       node?.textContent === formatTime(started_at, { locale, tz }),
     ).length).toBeGreaterThan(0);
-    expect(screen.getByText((_, node) =>
+    expect(screen.getAllByText((_, node) =>
       node?.tagName === 'P' && !!node.textContent?.startsWith(formatDate(started_at, { locale, tz })),
-    )).toBeInTheDocument();
+    ).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Source timezone unresolved/)).not.toBeInTheDocument();
     expect(mockVehicle).toHaveBeenCalledWith('7');
   });
@@ -494,24 +508,29 @@ describe('ChargingDetailPage — record-owned dates', () => {
     ['missing', { ...VEHICLE }],
     ['invalid', { ...VEHICLE, timezone: 'Invalid/Zone' }],
     ['another vehicle', { ...VEHICLE, id: 8, timezone: 'Asia/Tokyo' }],
+    ['explicit UTC', { ...VEHICLE, timezone: 'UTC' }],
     ['unavailable', undefined],
-  ])('discloses %s source timezone and retains UTC instants', (_, vehicle) => {
+  ])('ignores a %s vehicle timezone and follows the display setting', (_, vehicle) => {
+    const locale = 'en-US';
+    const tz = 'Asia/Tokyo';
+    mockSettings.mockReturnValue({
+      ...defaultSettingsResult,
+      locale,
+      settings: {
+        ...defaultSettingsResult.settings,
+        locale,
+        tz_display_default: 'user',
+        timezone_user: tz,
+      },
+    });
     mockVehicle.mockReturnValue(makeQuery({ data: vehicle }));
     renderPage();
-    expect(screen.getByText('Source timezone unresolved; timestamps are shown in UTC.')).toBeInTheDocument();
-    expect(screen.getByTitle('2024-03-10T08:00:00.000Z')).toHaveTextContent(
-      `${formatDateTime('2024-03-10T08:00:00Z', { locale: 'en-US', tz: 'UTC' })} (UTC)`,
-    );
-  });
-
-  it('treats an explicitly reported UTC vehicle timezone as resolved', () => {
-    mockVehicle.mockReturnValue(makeQuery({ data: { ...VEHICLE, timezone: 'UTC' } }));
-    renderPage();
     expect(screen.queryByText(/Source timezone unresolved/)).not.toBeInTheDocument();
-    expect(screen.getByTitle('2024-03-10T08:00:00.000Z')).toHaveTextContent('(UTC)');
+    expect(screen.getByText(formatDateTime('2024-03-10T08:00:00Z', { locale, tz }))).toBeInTheDocument();
+    expect(screen.queryByText(/\(UTC\)/)).not.toBeInTheDocument();
   });
 
-  it.each(['not-a-date', ''])('renders placeholders without UTC hover values for %s dates', (started_at) => {
+  it.each(['not-a-date', ''])('renders placeholders without hover values for %s dates', (started_at) => {
     mockVehicle.mockReturnValue(makeQuery({ data: { ...VEHICLE, timezone: 'Europe/Berlin' } }));
     mockSession.mockReturnValue(makeQuery({ data: makeSession({ started_at, ended_at: null }) }));
     renderPage();

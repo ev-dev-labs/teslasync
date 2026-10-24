@@ -35,7 +35,7 @@ type SignalStore interface {
 
 // WaitStore is the demand-history port. *waitoracle.Store satisfies it.
 type WaitStore interface {
-	History(ctx context.Context, site string) (waitoracle.SiteHistory, error)
+	History(ctx context.Context, site, timezone string) (waitoracle.SiteHistory, error)
 }
 
 // Handler serves journey sessions + plan versions. Stateless beyond
@@ -416,12 +416,12 @@ func (h *Handler) ScoreStops(w http.ResponseWriter, r *http.Request) {
 // replans so both rank on identical inputs.
 func gatherSiteSignals(ctx context.Context, signals SignalStore, waits WaitStore, site string, arrival time.Time) (Signals, error) {
 	var sig Signals
-	history, err := waits.History(ctx, site)
+	history, err := waits.History(ctx, site, "UTC")
 	if err != nil && !errors.Is(err, waitoracle.ErrNoHistory) {
 		return sig, err
 	}
 	if err == nil {
-		if f, err := waitoracle.Predict(history, arrival); err == nil {
+		if f, err := waitoracle.Predict(history, arrival, time.UTC); err == nil {
 			sig.WaitS = &f.ExpectedS
 		} else if !errors.Is(err, waitoracle.ErrNoHistory) {
 			return sig, err

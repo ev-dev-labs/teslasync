@@ -2,6 +2,13 @@
  * WidgetStatGrid — behaviour, branch, null-safety and a11y coverage for the
  * dashboard's shared stat-grid primitive.
  *
+ * The grid speaks the spec `stats` / `st` language (widgets-compare.html):
+ * a CSS grid with 2/3/4 columns collapsing on narrow containers, 12px row /
+ * 14px column gaps, a muted label, an 18px semibold tabular value and a quiet
+ * unit. Cells reuse the shared StatCard with its chrome stripped; the spec
+ * type scale is applied through parent-scoped selectors so StatCard itself is
+ * untouched.
+ *
  * What this file pins:
  *   - null-safety: an `undefined` or empty `stats` prop degrades to the shared
  *     EmptyState (never a blank panel, never a crash on `.length` / `.map`) —
@@ -12,8 +19,11 @@
  *     and `trendValue` are present, an `up` trend paints positive (green), a
  *     `down` trend negative (red), and neither half alone renders anything;
  *   - the `valueColor` → StatCard `className` pass-through;
- *   - wrapping layout: explicit/automatic maximums per row and a compact
- *     single-row override; each tile grows from a 200px basis;
+ *   - spec layout: a real grid (not flex-wrap) with the staged stat-gap and
+ *     column tokens, explicit/automatic column counts and a compact
+ *     single-column override;
+ *   - spec type scale: the 18px value override and the muted 12px label
+ *     override are present on each tile;
  *   - metric tiles omit decorative icons and remain flat inside the widget;
  *   - keys: two stats sharing a label both render without React's duplicate-key
  *     warning (the composite-key fix).
@@ -29,8 +39,6 @@ import { render, screen } from '@testing-library/react';
 
 import { WidgetStatGrid, type StatGridItem } from './WidgetStatGrid';
 
-// i18n passthrough: returns the English default so the empty-state copy is
-// asserted verbatim. StatCard's own `t(...)` calls resolve the same way.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, defaultValue?: unknown) =>
@@ -60,7 +68,8 @@ describe('WidgetStatGrid — empty & null-safety', () => {
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByText('No stats available')).toBeInTheDocument();
     // No grid is rendered — the empty-state branch replaces it entirely.
-    expect(container.querySelector('.grid')).toBeNull();
+    expect(container.querySelector('[data-max-per-row]')).toBeNull();
+    expect(container.querySelector('.text-2xl')).toBeNull();
   });
 
   it('does not throw and still shows the empty state when stats is undefined', () => {
@@ -77,11 +86,11 @@ describe('WidgetStatGrid — mapping', () => {
     const { container } = render(<WidgetStatGrid stats={[makeStat()]} />);
     expect(container.querySelector('.\\!bg-transparent')).toBeInTheDocument();
     expect(container.querySelector('.\\!border-0')).toBeInTheDocument();
-    expect(container.firstElementChild).toHaveClass('flex', 'flex-wrap');
-    expect(container.firstElementChild?.firstElementChild).toHaveStyle({
-      flex: '1 1 200px',
-      minWidth: 'min(100%, 200px)',
-    });
+    // Spec `stats`: a real CSS grid, not the old flex-wrap + 200px-basis tiles.
+    expect(container.firstElementChild).toHaveClass('grid', 'min-w-0');
+    expect(container.firstElementChild?.className).not.toContain('flex-wrap');
+    // No per-tile inline flex styles — the grid track sizes the cells.
+    expect(container.firstElementChild?.firstElementChild).not.toHaveAttribute('style');
   });
 
   it('renders one StatCard per item with label, value and optional unit', () => {
@@ -114,6 +123,20 @@ describe('WidgetStatGrid — mapping', () => {
     expect(screen.getByText('3 online')).toBeInTheDocument();
     expect(screen.queryByText('no change')).toBeNull();
     expect(screen.queryByText('—')).toBeNull();
+  });
+});
+
+// ── Spec type scale ──────────────────────────────────────────────────────────
+
+describe('WidgetStatGrid — spec type scale', () => {
+  it('re-voices each tile to the After 18px value / muted 12px label', () => {
+    const root = gridRoot(<WidgetStatGrid stats={[makeStat()]} />);
+    const tileClass = root.firstElementChild?.className ?? '';
+    // 18px semibold value (beats StatCard's text-2xl / sm:text-3xl metric).
+    expect(tileClass).toContain('text-lg');
+    // 12px muted label (the After `.k` at the closest standard step).
+    expect(tileClass).toContain('text-xs');
+    expect(tileClass).toContain('text-[var(--text-muted)]');
   });
 });
 
@@ -183,28 +206,41 @@ describe('WidgetStatGrid — valueColor & icon', () => {
 
 // ── Column resolution ────────────────────────────────────────────────────────
 
-describe('WidgetStatGrid — wrapping layout', () => {
-  it('uses the explicit or compatibility maximum per row', () => {
+describe('WidgetStatGrid — spec grid layout', () => {
+  it('uses the explicit or compatibility column count per row', () => {
     expect(gridRoot(<WidgetStatGrid stats={makeStats(4)} maxPerRow={2} />)).toHaveAttribute('data-max-per-row', '2');
     expect(gridRoot(<WidgetStatGrid stats={makeStats(4)} cols={3} />)).toHaveAttribute('data-max-per-row', '3');
   });
 
-  it('auto-selects a maximum row count from the item count when none is supplied', () => {
+  it('auto-selects a column count from the item count when none is supplied', () => {
     expect(gridRoot(<WidgetStatGrid stats={makeStats(3)} />)).toHaveAttribute('data-max-per-row', '3');
     expect(gridRoot(<WidgetStatGrid stats={makeStats(4)} />)).toHaveAttribute('data-max-per-row', '4');
     // 5 items resolve to 3-up (rows of 3+2); the old grid's 2-up match was the @xs intermediate breakpoint.
     expect(gridRoot(<WidgetStatGrid stats={makeStats(5)} />)).toHaveAttribute('data-max-per-row', '3');
   });
 
-  it('uses full-width metric rows with a tighter gap when compact', () => {
-    const root = gridRoot(<WidgetStatGrid stats={makeStats(4)} cols={4} compact />);
-    expect(root).toHaveAttribute('data-max-per-row', '1');
-    expect(root.className).toContain('gap-2');
-    expect(root.firstElementChild).toHaveStyle({ flex: '1 1 100%' });
+  it('lays out on the staged column token with the spec 12px / 14px gaps', () => {
+    const root = gridRoot(<WidgetStatGrid stats={makeStats(4)} />);
+    expect(root.className).toContain('grid-cols-1');
+    expect(root.className).toContain('@xs:grid-cols-2');
+    expect(root.className).toContain('@sm:grid-cols-4');
+    // Spec `.stats { gap: 12px 14px }` → staged density.statGap.
+    expect(root.className).toContain('gap-x-3.5');
+    expect(root.className).toContain('gap-y-3');
   });
 
-  it('uses the roomier gap when not compact', () => {
-    expect(gridRoot(<WidgetStatGrid stats={makeStats(2)} />).className).toContain('gap-3');
+  it('uses a single full-width column with a tighter gap when compact', () => {
+    const root = gridRoot(<WidgetStatGrid stats={makeStats(4)} cols={4} compact />);
+    expect(root).toHaveAttribute('data-max-per-row', '1');
+    expect(root.className).toContain('grid-cols-1');
+    expect(root.className).toContain('gap-2');
+    expect(root.firstElementChild).not.toHaveAttribute('style');
+  });
+
+  it('uses the roomier spec gaps when not compact', () => {
+    const root = gridRoot(<WidgetStatGrid stats={makeStats(2)} />);
+    expect(root.className).toContain('gap-x-3.5');
+    expect(root.className).toContain('gap-y-3');
   });
 });
 

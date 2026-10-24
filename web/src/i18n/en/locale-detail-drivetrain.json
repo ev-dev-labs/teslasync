@@ -53,7 +53,7 @@
         "warning": "warning",
         "critical": "critical"
       },
-      "selectedStatisticsBounds": "Drive start: {{start}} (inclusive) to {{end}} (exclusive) · {{timezone}}",
+      "selectedStatisticsBounds": "Drive start in {{range}} (start inclusive, end exclusive)",
       "completedStatisticsPopulation": "Server statistics cover all completed drives for the selected vehicle whose start falls within the selected bounds, not just the returned drive subset.",
       "separateHistoryPolicies": "Motor history uses the existing unbounded 200-snapshot request in source order, independent of the selected range. Drive charts and power use the last 30 returned drives within the selected range; this subset is separate from the full completed-drive statistics."
     },

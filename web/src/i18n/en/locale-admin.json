@@ -4,7 +4,7 @@
       "detailId": "Entry ID",
       "detailPreviousHash": "Previous row hash",
       "detailsHint": "Use “{{action}}” to view complete entry details.",
-      "rangeZone": "Filter timezone: {{timezone}}",
+      "rangeZone": "Filters use your selected time zone.",
       "boundedProof": "Bounded row-hash proof only: not adjacency proof, full-ledger verification, or the current entry filters.",
       "retainedVerification": "Verification is running; the previous receipt remains visible.",
       "verificationPaused": "Verification was requested but is paused. No verification receipt has been received.",
@@ -137,7 +137,8 @@
       "window1d": "Last 1 day",
       "window7d": "Last 7 days",
       "window30d": "Last 30 days",
-      "window90d": "Last 90 days"
+      "window90d": "Last 90 days",
+      "rangeLimit": "Choose a workspace range of at most 90 days to view vehicle ingest cost."
     },
     "systemStatus": {
       "clientPerformance": {
@@ -2959,7 +2960,6 @@
     "subtitle": "Record of all API calls with request/response details",
     "summary": {
       "last24hScope": "Independent rolling 24-hour count, not the View settings range. The response does not record its exact bounds.",
-      "rangeBounds": "{{start}} – {{end}} ({{timezone}}, exclusive end)",
       "rangeScope": "Totals, error rate, and average duration use the View settings range; request-list filters do not change these metrics.",
       "selectedRange": "View settings range",
       "title": "Request activity"
@@ -4902,9 +4902,7 @@
   },
   "vehicleHero": {
     "action": {
-      "commands": "Commands",
-      "details": "Details",
-      "liveMap": "Live map"
+      "details": "Details"
     },
     "gauge": {
       "battery": "Battery",
@@ -4919,12 +4917,7 @@
       "alt": "{{name}} photo"
     },
     "stat": {
-      "firmware": "Firmware",
-      "insideTemp": "Inside temp",
-      "odometer": "Odometer",
-      "outsideTemp": "Outside temp",
       "power": "Power",
-      "range": "Range",
       "sentry": "Sentry",
       "status": "Status"
     },
@@ -4976,7 +4969,8 @@
   "widget": {
     "motorPerformance": {
       "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
-    }
+    },
+    "verifiedFields": "{{count}} verified fields"
   },
   "yearReview": {
     "aiNarration": {

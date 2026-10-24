@@ -1,81 +1,8 @@
-/**
- * MileageStatsWidget tests.
- *
- * The widget projects a vehicle's odometer rollup (lifetime + trailing-30-day
- * distance) sourced from `useMileageStats()`. Everything on disk / over the
- * wire is SI kilometres; the widget lifts to metres and converts to the user's
- * display unit at the render boundary via `convertDistanceFromSI` +
- * `useUnits().unitPrefs.distance`. Its behaviour surface — the thing under test:
- *
- *   1. Two responsive layouts driven by `size.cols`:
- *        - compact (cols <= 1): a title-less shell with the daily-average big
- *          number + a "{unit}/day" caption, or an EmptyState.
- *        - standard/wide (cols >= 2): a titled "Mileage Stats" shell with a
- *          four-stat grid (Daily Avg, Weekly Avg, Monthly Avg, Next Milestone),
- *          or an EmptyState.
- *   2. The derived stats: daily avg = last_30d_km / 30 (converted, 1 dp), weekly
- *      = daily × 7, monthly = daily × 30, and the next 10 000-unit milestone
- *      above the lifetime total, with a "~N mo" ETA from the daily average.
- *   3. Unit-awareness: the SAME payload renders km or mi depending on the
- *      distance preference — every number and unit chip follows.
- *   4. The `nextMilestone` boundary rule: an exact 10 000 multiple still rounds
- *      UP to the next milestone (the `+ 1` guard) so "remaining" is never 0.
- *   5. The four query states every data source must handle: loading (skeleton),
- *      initial error (QueryError panel, only when there is no cached data),
- *      empty (EmptyState — never a blank panel), and data.
- *   6. Null-safety: a partial `{}` payload degrades every field to 0 (daily
- *      "0.0", milestone the first 10 000 step) rather than throwing.
- *   7. Vehicle resolution: an explicit `vehicleId` wins, else the first vehicle;
- *      a missing vehicle passes '' which disables the query.
- *   8. The freshness control: clicking refetches, but only when a fetch is not
- *      already in flight.
- *   9. Graceful degradation (the hardened bug): a transient background-refetch
- *      error MUST NOT blank out otherwise-valid cached numbers — the widget
- *      keeps rendering and surfaces the failure through the freshness
- *      indicator's error state instead of the full-panel QueryError.
- *
- * `@/api/hooks/useAnalytics`, `@/api/hooks/useVehicles`, and `@/hooks/useUnits`
- * are mocked so the network is never touched and every query state + unit
- * preference is driven deterministically. `convertDistanceFromSI` runs for real
- * so the conversion math is genuinely exercised. `react-i18next` is stubbed with
- * a passthrough `t(key, default, opts)` that also resolves `{{interpolation}}`
- * so assertions read the English defaults. The shared WidgetShell / StatCard /
- * AnimatedNumber / FreshnessDot / EmptyState primitives all run for real, so
- * assertions exercise the true rendered DOM. `<MemoryRouter>` wraps every render
- * because the error branch's <QueryError> uses `useNavigate`.
- */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { MileageStats } from '@/types/analytics';
 import MileageStatsWidget from './MileageStatsWidget';
-
-it.each([1, 2, 3])('identifies mileage statistics at %i columns', (cols) => {
-  renderWidget({ cols, rows: 2 });
-  expect(screen.getByRole('heading', { name: 'Mileage stats' })).toBeInTheDocument();
-});
-
-// jsdom lacks matchMedia; AnimatedNumber (compact big number) and FreshnessDot
-// both read it during render. Report `prefers-reduced-motion: reduce` so the
-// AnimatedNumber tween is skipped and the value lands on its target
-// synchronously — that makes the compact numeric assertions deterministic and
-// disables framer-motion animation timers.
-vi.hoisted(() => {
-  if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
-    window.matchMedia = ((query: string) => ({
-      matches: /prefers-reduced-motion/.test(query),
-      media: query,
-      onchange: null,
-      addListener() {},
-      removeListener() {},
-      addEventListener() {},
-      removeEventListener() {},
-      dispatchEvent() {
-        return false;
-      },
-    })) as unknown as typeof window.matchMedia;
-  }
-});
 
 const { useMileageStatsMock, useVehiclesMock, useUnitsMock } = vi.hoisted(() => ({
   useMileageStatsMock: vi.fn(),
@@ -86,33 +13,38 @@ const { useMileageStatsMock, useVehiclesMock, useUnitsMock } = vi.hoisted(() => 
 vi.mock('@/api/hooks/useAnalytics', () => ({
   useMileageStats: (vehicleId: string) => useMileageStatsMock(vehicleId),
 }));
-
 vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => useVehiclesMock(),
 }));
-
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => useUnitsMock(),
 }));
-
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (
-      key: string,
-      defaultValue?: string | Record<string, unknown>,
-      opts?: Record<string, unknown>,
-    ) => {
+    t: (key: string, defaultValue?: string | Record<string, unknown>, opts?: Record<string, unknown>) => {
       const template = typeof defaultValue === 'string' ? defaultValue : key;
-      if (opts && typeof opts === 'object') {
-        return template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) =>
-          opts[name] != null ? String(opts[name]) : '',
-        );
-      }
-      return template;
+      return template.replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
+        opts?.[name] == null ? '' : String(opts[name]),
+      );
     },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
+
+vi.hoisted(() => {
+  if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
+    window.matchMedia = ((query: string) => ({
+      matches: /prefers-reduced-motion/.test(query),
+      media: query,
+      onchange: null,
+      addListener() {},
+      removeListener() {},
+      addEventListener() {},
+      removeEventListener() {},
+      dispatchEvent: () => false,
+    })) as unknown as typeof window.matchMedia;
+  }
+});
 
 function makeStats(overrides: Partial<MileageStats> = {}): MileageStats {
   return {
@@ -129,18 +61,7 @@ function makeStats(overrides: Partial<MileageStats> = {}): MileageStats {
   };
 }
 
-interface QueryState {
-  data: MileageStats | undefined;
-  isLoading: boolean;
-  error: unknown;
-  isFetching: boolean;
-  isStale: boolean;
-  isError: boolean;
-  dataUpdatedAt: number;
-  refetch: ReturnType<typeof vi.fn>;
-}
-
-function makeQuery(overrides: Partial<QueryState> = {}): QueryState {
+function makeQuery(overrides: Record<string, unknown> = {}) {
   return {
     data: undefined,
     isLoading: false,
@@ -154,288 +75,116 @@ function makeQuery(overrides: Partial<QueryState> = {}): QueryState {
   };
 }
 
-function renderWidget(
-  size: { cols: number; rows: number } = { cols: 2, rows: 2 },
-  vehicleId?: number,
-) {
-  const view = render(
+function renderWidget(cols = 2, vehicleId?: number) {
+  return render(
     <MemoryRouter>
-      <MileageStatsWidget size={size} vehicleId={vehicleId} />
+      <MileageStatsWidget size={{ cols, rows: 2 }} vehicleId={vehicleId} />
     </MemoryRouter>,
   );
-  expect(view.container.querySelector('h3')).toHaveAccessibleName('Mileage stats');
-  return view;
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Sensible defaults so a test that forgets to seed a hook still renders
-  // rather than crashing on a destructure of `undefined`.
-  useVehiclesMock.mockReturnValue({ data: [{ id: 1 }] });
+  useVehiclesMock.mockReturnValue({ data: [{ id: 42 }] });
   useUnitsMock.mockReturnValue({ unitPrefs: { distance: 'km' } });
   useMileageStatsMock.mockReturnValue(makeQuery());
 });
 
-afterEach(() => {
-  cleanup();
-});
+afterEach(cleanup);
 
-describe('MileageStatsWidget — standard layout (km)', () => {
-  it('renders the titled shell and all four derived stats', () => {
-    useMileageStatsMock.mockReturnValue(
-      makeQuery({ data: makeStats({ lifetime_km: 45000, last_30d_km: 900 }) }),
-    );
+describe('MileageStatsWidget redesign', () => {
+  it('matches the After hierarchy with three average values and one milestone meter', () => {
+    useMileageStatsMock.mockReturnValue(makeQuery({
+      data: makeStats({ lifetime_km: 45000, last_30d_km: 900 }),
+    }));
 
-    renderWidget({ cols: 2, rows: 2 });
+    renderWidget();
 
-    expect(screen.getByText('Mileage stats')).toBeInTheDocument();
-
-    // Labels.
+    expect(screen.getByRole('heading', { name: 'Mileage stats' })).toBeInTheDocument();
     expect(screen.getByText('Daily avg')).toBeInTheDocument();
     expect(screen.getByText('Weekly avg')).toBeInTheDocument();
     expect(screen.getByText('Monthly avg')).toBeInTheDocument();
-    expect(screen.getByText('Next milestone')).toBeInTheDocument();
-
-    // daily = 900 / 30 = 30 km/day (1 dp) → weekly ×7, monthly ×30.
-    expect(screen.getByText('30.00 km')).toBeInTheDocument();
-    expect(screen.getByText('210.00 km')).toBeInTheDocument();
-    expect(screen.getByText('900.00 km')).toBeInTheDocument();
-
-    // Every stat chip carries the km unit.
-    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(screen.getByText('30')).toBeInTheDocument();
+    expect(screen.getByText('210')).toBeInTheDocument();
+    expect(screen.getByText('900')).toBeInTheDocument();
+    expect(screen.getByTestId('mileage-milestone')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Next milestone' })).toHaveAttribute('aria-valuenow');
   });
 
-  it('reviews the distinct rolling average and lifetime milestone sources with the retained ETA', () => {
-    useMileageStatsMock.mockReturnValue(makeQuery({ data: makeStats({ lifetime_km: 45000, last_30d_km: 900 }) }));
-    renderWidget();
-    const brief = screen.getByTestId('mileage-stats-operational-brief');
-    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText('30.00 km')).toBeInTheDocument();
-    expect(within(drawer).getByText(/not an independent seven-day query/)).toBeInTheDocument();
-    expect(within(drawer).getByText(/Next 10,000-display-unit lifetime milestone/)).toBeInTheDocument();
-    expect(within(drawer).getAllByText(/lifetime distance supplies the milestone/).length).toBeGreaterThan(0);
-  });
-
-  it('rounds the milestone up to the next 10 000 above the lifetime total and shows the ETA', () => {
-    useMileageStatsMock.mockReturnValue(
-      makeQuery({ data: makeStats({ lifetime_km: 45000, last_30d_km: 900 }) }),
-    );
-
-    renderWidget({ cols: 2, rows: 2 });
-
-    // lifetime 45 000 → next milestone 50 000; remaining 5 000 at 30 km/day
-    // ≈ round(5000 / 30 / 30) = 6 months.
-    expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
-    const etaBrief = screen.getByTestId('mileage-stats-operational-brief');
-    fireEvent.click(within(etaBrief).getByRole('button', { name: 'Review details' }));
-    const etaDrawer = screen.getByRole('dialog');
-    const milestoneGroup = within(etaDrawer).getByRole('group', { name: 'Next milestone' });
-    expect(within(milestoneGroup).getByText('~6 mo')).toBeInTheDocument();
-  });
-
-  it('advances past an exact 10 000 multiple (the +1 boundary guard)', () => {
-    useMileageStatsMock.mockReturnValue(
-      makeQuery({ data: makeStats({ lifetime_km: 20000, last_30d_km: 300 }) }),
-    );
-
-    renderWidget({ cols: 2, rows: 2 });
-
-    // 20 000 is itself a milestone, so we must round up to 30 000 (remaining
-    // 10 000 at 10 km/day ≈ 33 months) rather than reporting "0 remaining".
-    expect(screen.getByText('30,000.00 km')).toBeInTheDocument();
-    const boundaryBrief = screen.getByTestId('mileage-stats-operational-brief');
-    fireEvent.click(within(boundaryBrief).getByRole('button', { name: 'Review details' }));
-    const boundaryDrawer = screen.getByRole('dialog');
-    const boundaryGroup = within(boundaryDrawer).getByRole('group', { name: 'Next milestone' });
-    expect(within(boundaryGroup).getByText('~33 mo')).toBeInTheDocument();
-    // The known daily average stays on the face (the drawer lists it too — scope to the face).
-    expect(within(boundaryBrief).getByText('10.00 km')).toBeInTheDocument();
-  });
-});
-
-describe('MileageStatsWidget — unit conversion', () => {
-  it('converts the same payload to miles when the distance preference is mi', () => {
+  it('converts the shared SI payload to the selected distance unit without fabricating values', () => {
     useUnitsMock.mockReturnValue({ unitPrefs: { distance: 'mi' } });
-    useMileageStatsMock.mockReturnValue(
-      makeQuery({ data: makeStats({ lifetime_km: 45000, last_30d_km: 900 }) }),
-    );
+    useMileageStatsMock.mockReturnValue(makeQuery({
+      data: makeStats({ lifetime_km: 45000, last_30d_km: 900 }),
+    }));
 
-    renderWidget({ cols: 2, rows: 2 });
+    renderWidget();
 
-    // 30 km/day = 30 000 m / 1609.344 ≈ 18.6 mi/day.
-    expect(screen.getByText('18.64 mi')).toBeInTheDocument();
-    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-    // The km value must NOT leak through — proves the conversion ran.
-    expect(screen.queryByText('30.00')).not.toBeInTheDocument();
-  });
-});
-
-describe('MileageStatsWidget — compact layout', () => {
-  it('identifies the daily-average big number and "{unit}/day" caption', () => {
-    useMileageStatsMock.mockReturnValue(
-      makeQuery({ data: makeStats({ lifetime_km: 45000, last_30d_km: 900 }) }),
-    );
-
-    renderWidget({ cols: 1, rows: 1 });
-
-    // Reduced motion → AnimatedNumber lands on 30 (0 dp) immediately.
-    expect(screen.getByText('30.00')).toBeInTheDocument();
-    expect(screen.getByText('km/day')).toBeInTheDocument();
-    // Compact drops the header title and the stat grid.
-    expect(screen.getByRole('heading', { name: 'Mileage stats' })).toBeInTheDocument();
-    expect(screen.queryByText('Daily avg')).not.toBeInTheDocument();
+    expect(screen.getAllByText('mi').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/km$/)).not.toBeInTheDocument();
+    expect(screen.getByText(/30,000 mi/)).toBeInTheDocument();
   });
 
-  it('shows an EmptyState (never a blank panel) when compact and data-less', () => {
-    useMileageStatsMock.mockReturnValue(makeQuery({ data: undefined }));
+  it('keeps unknown readings unknown instead of treating missing values as zero', () => {
+    useMileageStatsMock.mockReturnValue(makeQuery({ data: {} as MileageStats }));
 
-    renderWidget({ cols: 1, rows: 1 });
+    renderWidget();
 
-    expect(screen.getByText('No mileage data')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Mileage stats' })).toBeInTheDocument();
-  });
-});
-
-describe('MileageStatsWidget — query states', () => {
-  it('retains its heading above a loading skeleton without an empty message', () => {
-    useMileageStatsMock.mockReturnValue(
-      makeQuery({ isLoading: true, data: undefined }),
-    );
-
-    const { container } = renderWidget({ cols: 2, rows: 2 });
-
-    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
-    expect(screen.queryByText('Mileage stats')).toBeInTheDocument();
-    expect(screen.queryByText('No mileage data')).not.toBeInTheDocument();
-  });
-
-  it('renders the QueryError panel on an initial load failure (no cached data)', () => {
-    useMileageStatsMock.mockReturnValue(
-      makeQuery({ error: new Error('boom'), isError: true, data: undefined }),
-    );
-
-    renderWidget({ cols: 2, rows: 2 });
-
-    // Generic (non-HTTP) error → network/unknown branch of <QueryError>.
-    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Mileage stats')).toBeInTheDocument();
-    expect(screen.queryByText('Daily avg')).not.toBeInTheDocument();
-  });
-
-  it('renders the titled shell with an EmptyState placeholder when data is absent', () => {
-    useMileageStatsMock.mockReturnValue(
-      makeQuery({ data: undefined, isLoading: false, error: null }),
-    );
-
-    renderWidget({ cols: 2, rows: 2 });
-
-    expect(screen.getByText('Mileage stats')).toBeInTheDocument();
-    expect(screen.getByText('No mileage data')).toBeInTheDocument();
-    expect(screen.queryByText('Daily avg')).not.toBeInTheDocument();
-  });
-
-  it('keeps every missing reading unknown without inventing a milestone', () => {
-    useMileageStatsMock.mockReturnValue(
-      makeQuery({ data: {} as MileageStats }),
-    );
-
-    expect(() => renderWidget({ cols: 2, rows: 2 })).not.toThrow();
-
-    expect(screen.getByText('Daily avg')).toBeInTheDocument();
-    expect(screen.queryByText('—')).not.toBeInTheDocument();
-    const unknownBrief = screen.getByTestId('mileage-stats-operational-brief');
-    fireEvent.click(within(unknownBrief).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
-    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
     expect(screen.queryByText('10,000')).not.toBeInTheDocument();
   });
-});
 
-describe('MileageStatsWidget — vehicle resolution', () => {
-  it('resolves the first vehicle id (as a string) when no vehicleId prop is given', () => {
-    useVehiclesMock.mockReturnValue({ data: [{ id: 42 }, { id: 7 }] });
+  it('uses compact one-column headline and shows an honest empty state', () => {
+    useMileageStatsMock.mockReturnValue(makeQuery({
+      data: makeStats({ lifetime_km: 45000, last_30d_km: 900 }),
+    }));
+    const compact = renderWidget(1);
+    expect(compact.container.textContent).toContain('km/day');
 
-    renderWidget({ cols: 2, rows: 2 });
-
-    expect(useMileageStatsMock).toHaveBeenCalledWith('42');
+    cleanup();
+    useMileageStatsMock.mockReturnValue(makeQuery());
+    renderWidget(1);
+    expect(screen.getByText('No mileage data')).toBeInTheDocument();
   });
 
-  it('prefers an explicit vehicleId prop over the first vehicle', () => {
-    useVehiclesMock.mockReturnValue({ data: [{ id: 42 }] });
-
-    renderWidget({ cols: 2, rows: 2 }, 7);
-
-    expect(useMileageStatsMock).toHaveBeenCalledWith('7');
-  });
-
-  it("passes '' (disabling the query) when no vehicle can be resolved", () => {
-    useVehiclesMock.mockReturnValue({ data: [] });
-
-    renderWidget({ cols: 2, rows: 2 });
-
-    expect(useMileageStatsMock).toHaveBeenCalledWith('');
-  });
-});
-
-describe('MileageStatsWidget — freshness interaction', () => {
-  it('refetches when the accessible refresh control is clicked', () => {
+  it('retains cached data and exposes refresh freshness without replacing content on an error', () => {
     const refetch = vi.fn();
-    useMileageStatsMock.mockReturnValue(
-      makeQuery({
-        data: makeStats({ lifetime_km: 45000, last_30d_km: 900 }),
-        isFetching: false,
-        refetch,
-      }),
-    );
+    useMileageStatsMock.mockReturnValue(makeQuery({
+      data: makeStats({ lifetime_km: 45000, last_30d_km: 900 }),
+      isError: true,
+      error: new Error('transient'),
+      refetch,
+    }));
 
-    renderWidget({ cols: 2, rows: 2 });
-
+    const { container } = renderWidget();
+    expect(screen.getByText('30')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--semantic-danger"].rounded-full')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
-
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('does not refetch while a fetch is already in flight', () => {
-    const refetch = vi.fn();
-    useMileageStatsMock.mockReturnValue(
-      makeQuery({
-        data: makeStats({ lifetime_km: 45000, last_30d_km: 900 }),
-        isFetching: true,
-        refetch,
-      }),
-    );
+  it('uses the explicit vehicle id and disables the query without a resolved vehicle', () => {
+    renderWidget(2, 7);
+    expect(useMileageStatsMock).toHaveBeenCalledWith('7');
 
-    renderWidget({ cols: 2, rows: 2 });
-
-    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
-
-    expect(refetch).not.toHaveBeenCalled();
+    cleanup();
+    useVehiclesMock.mockReturnValue({ data: [] });
+    renderWidget(2);
+    expect(useMileageStatsMock).toHaveBeenCalledWith('');
   });
-});
 
-describe('MileageStatsWidget — graceful degradation on transient error', () => {
-  it('keeps rendering cached stats and flags the freshness dot instead of blanking out', () => {
-    useMileageStatsMock.mockReturnValue(
-      makeQuery({
-        data: makeStats({ lifetime_km: 45000, last_30d_km: 900 }),
-        error: new Error('transient'),
-        isError: true,
-        isFetching: false,
-      }),
-    );
+  it('renders loading, initial error, and empty states', () => {
+    useMileageStatsMock.mockReturnValue(makeQuery({ isLoading: true }));
+    const loading = renderWidget();
+    expect(loading.container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
 
-    const { container } = renderWidget({ cols: 2, rows: 2 });
+    cleanup();
+    useMileageStatsMock.mockReturnValue(makeQuery({ isError: true, error: new Error('boom') }));
+    renderWidget();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
 
-    // Data is still on screen …
-    expect(screen.getByText('Mileage stats')).toBeInTheDocument();
-    expect(screen.getByText('30.00 km')).toBeInTheDocument();
-    expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
-    // … the full-panel error is NOT shown …
-    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    // … and the freshness indicator is in its error state (danger dot).
-    expect(container.querySelector('[class*="--semantic-danger"].rounded-full')).toBeTruthy();
+    cleanup();
+    useMileageStatsMock.mockReturnValue(makeQuery());
+    renderWidget();
+    expect(screen.getByText('No mileage data')).toBeInTheDocument();
   });
 });

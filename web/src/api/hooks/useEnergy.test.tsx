@@ -190,6 +190,20 @@ describe('useEnergyStats', () => {
     expect(result.current.data).toBeUndefined();
   });
 
+  it('sends exact upper bounds and isolates caches when only the end changes', async () => {
+    mockedRequest.mockResolvedValue({total_wh:1000,daily_breakdown:[]});
+    const start='2026-01-01T08:00:00.000Z';
+    const {result,rerender}=renderHook(({end})=>useEnergyStats('7',{start,end}),{
+      initialProps:{end:'2026-01-03T08:00:00.000Z'},wrapper:makeWrapper(makeClient()),
+    });
+    await waitFor(()=>expect(result.current.isSuccess).toBe(true));
+    const first=new URL(String(mockedRequest.mock.calls[0][0]),'https://example.test');
+    expect(first.searchParams.get('start')).toBe(start);expect(first.searchParams.get('end')).toBe('2026-01-03T08:00:00.000Z');
+    rerender({end:'2026-01-04T08:00:00.000Z'});
+    await waitFor(()=>expect(mockedRequest).toHaveBeenCalledTimes(2));
+    expect(new URL(String(mockedRequest.mock.calls[1][0]),'https://example.test').searchParams.get('end')).toBe('2026-01-04T08:00:00.000Z');
+  });
+
   it('is disabled (no request) when vehicleId is null', async () => {
     const { result } = renderHook(() => useEnergyStats(null), { wrapper: makeWrapper(makeClient()) });
     await new Promise((r) => setTimeout(r, 10));

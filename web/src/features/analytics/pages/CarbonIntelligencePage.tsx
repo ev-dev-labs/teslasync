@@ -12,7 +12,7 @@ import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import {
   CarbonAccountingIdentities,
   CarbonIntensityCurve,
@@ -38,7 +38,7 @@ export default function CarbonIntelligencePage() {
   const { t } = useTranslation();
   usePageTitle(t('carbon.title', 'Carbon intelligence'));
   const { vehicleId } = useSelectedVehicle();
-  const timezone = useTimezone('vehicle');
+  const { tz: timezone } = useDateFormat();
   const { start, end, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'carbon.range',
     defaultPresetId: '90d',

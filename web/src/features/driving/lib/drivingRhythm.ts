@@ -8,6 +8,7 @@
  */
 
 import type { Drive } from '@/types/driving';
+import { browserTimeZone, isValidTimeZone, zonedDateParts } from '@/lib/dateFormat';
 
 export const DEFAULT_MIN_PREDICTABILITY_DRIVES = 5;
 export const DEFAULT_MIN_CONSISTENCY_DRIVES = 3;
@@ -213,51 +214,26 @@ function median(sortedAsc: readonly number[]): number {
     : (sortedAsc[middle - 1]! + sortedAsc[middle]!) / 2;
 }
 
-function browserTimeZone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-  } catch {
-    return 'UTC';
-  }
-}
-
 function resolveTimeZone(requested?: string): {
   timeZone: string;
   fallback: boolean;
 } {
   const candidate = requested?.trim() || browserTimeZone();
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(0);
-    return { timeZone: candidate, fallback: false };
-  } catch {
-    return { timeZone: 'UTC', fallback: true };
-  }
-}
-
-function calendarFormatter(timeZone: string): Intl.DateTimeFormat {
-  return new Intl.DateTimeFormat('en-US-u-ca-gregory-nu-latn', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  });
+  if (isValidTimeZone(candidate)) return { timeZone: candidate, fallback: false };
+  return { timeZone: 'UTC', fallback: true };
 }
 
 function calendarParts(
-  formatter: Intl.DateTimeFormat,
+  timeZone: string,
   timestampMs: number,
 ): CalendarParts | null {
-  const parts = formatter.formatToParts(new Date(timestampMs));
-  const value = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((part) => part.type === type)?.value;
-  const year = Number(value('year'));
-  const month = Number(value('month'));
-  const date = Number(value('day'));
-  const hour = Number(value('hour'));
-  const minute = Number(value('minute'));
+  const parts = zonedDateParts(timestampMs, timeZone);
+  if (!parts) return null;
+  const year = parts.year;
+  const month = parts.month;
+  const date = parts.day;
+  const hour = parts.hour;
+  const minute = parts.minute;
   if (
     !Number.isInteger(year) ||
     !Number.isInteger(month) ||
@@ -436,7 +412,6 @@ export function buildDrivingRhythm(
       ? null
       : positiveInteger(options.windowLimit, 'windowLimit');
   const zone = resolveTimeZone(options.timeZone);
-  const formatter = calendarFormatter(zone.timeZone);
 
   let invalidTimestampCount = 0;
   let futureTimestampCount = 0;
@@ -457,7 +432,7 @@ export function buildDrivingRhythm(
       futureTimestampCount += 1;
       continue;
     }
-    const calendar = calendarParts(formatter, startMs);
+    const calendar = calendarParts(zone.timeZone, startMs);
     if (!calendar) {
       invalidTimestampCount += 1;
       continue;

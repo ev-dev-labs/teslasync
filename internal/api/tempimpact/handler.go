@@ -44,6 +44,33 @@ func newHandler(repo tempImpactRepository) *Handler {
 	return &Handler{repo: repo}
 }
 
+// maxTimezoneLen rejects absurd `timezone` values before they reach
+// time.LoadLocation, which touches the filesystem zoneinfo database.
+const maxTimezoneLen = 64
+
+// defaultTimezone is the bucketing frame when the caller omits
+// `?timezone=`: UTC preserves the historical bucketing behavior.
+const defaultTimezone = "UTC"
+
+// resolveTimezone validates the optional `timezone` query parameter and
+// reports whether the handler may proceed. An invalid zone fails the
+// request: silently attributing months/days in a guessed zone would
+// mislabel the trend the user sees.
+func resolveTimezone(w http.ResponseWriter, raw string) (string, bool) {
+	if raw == "" {
+		return defaultTimezone, true
+	}
+	if len(raw) > maxTimezoneLen {
+		httpx.WriteError(w, http.StatusBadRequest, "timezone must be a valid IANA timezone")
+		return "", false
+	}
+	if _, err := time.LoadLocation(raw); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "timezone must be a valid IANA timezone")
+		return "", false
+	}
+	return raw, true
+}
+
 type tempEfficiencyBucket struct {
 	TempBucket         string  `json:"temp_bucket"`
 	DriveCount         int     `json:"drive_count"`
@@ -146,6 +173,11 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	zone, ok := resolveTimezone(w, r.URL.Query().Get("timezone"))
+	if !ok {
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), queryTimeout)
 	defer cancel()
 
@@ -156,7 +188,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	monthlyTrend, err := h.repo.MonthlyTrend(ctx, vehicleID)
+	monthlyTrend, err := h.repo.MonthlyTrend(ctx, vehicleID, zone)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("temp impact: failed to query monthly trend")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to query monthly trend")
@@ -166,7 +198,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	// Drive points power a best-effort scatter plot; a failure here must
 	// not sink the whole response (pre-refactor behaviour), so it is logged
 	// and the series degrades to empty while the primary payload is served.
-	points, err := h.repo.DrivePoints(ctx, vehicleID)
+	points, err := h.repo.DrivePoints(ctx, vehicleID, zone)
 	if err != nil {
 		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("temp impact: failed to query drive points; serving empty series")
 		points = nil

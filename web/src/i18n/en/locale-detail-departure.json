@@ -73,7 +73,7 @@
       },
       "daypartsAria": "Departure daypart distribution",
       "daypartValue": "{{departures}} · {{share}}%",
-      "timezone": "All hour and daypart labels use {{timeZone}}."
+      "timezone": "All hour and daypart labels use your selected time zone."
     },
     "kpis": {
       "aria": "Departure forecast evidence summary",
@@ -134,18 +134,18 @@
       "title": "Methodology and limitations",
       "subtitle": "What the forecast learns, what it excludes, and how to interpret every estimate.",
       "notice": "Planning aid only: no automation is created, and no departure is promised.",
-      "effectiveZone": "Effective model timezone: {{timeZone}}.",
-      "zoneMetadata": "Source: selected vehicle timezone metadata ({{timeZone}}).",
-      "zoneFallback": "Source: shared vehicle-mode fallback ({{source}}); vehicle timezone metadata is missing or UTC.",
+      "effectiveZone": "The model follows your selected time zone.",
+      "zoneMetadata": "Source: selected vehicle timezone metadata.",
+      "zoneFallback": "Source: shared vehicle-mode fallback ({{source}}); vehicle timezone metadata is missing, invalid, or UTC.",
       "zoneSavedUser": "saved user timezone",
       "zoneBrowser": "browser timezone, or UTC if unavailable",
-      "zoneInvalid": "The resolved timezone \"{{requested}}\" is missing or invalid; this model uses UTC without changing shared settings.",
+      "zoneInvalid": "The selected time zone is missing or invalid; this model uses UTC without changing shared settings.",
       "snapshotTitle": "Fixed model snapshot",
       "snapshotBody": "The clock is captured when this page mounts and stays fixed while it remains mounted, including history refreshes and vehicle or timezone changes. The lookback, next-24-hour horizon, “in” times, and planning marker use that anchor, not the current clock or the history fetch time. Refreshed rows can change the estimates without advancing the anchor.",
       "calendarModelBody": "Each local weekday-hour is a Poisson event cell with a Gamma prior (α {{alpha}}, β {{beta}}). The rate is (recorded departures + α) / (model-assumed calendar opportunities + β), and likelihood is 1 − exp(−rate). Outputs are modeled estimates, not calibrated probabilities.",
       "opportunityTitle": "Model-assumed calendar opportunity",
       "opportunityBody": "The denominator counts matching local-hour boundaries from the hour containing the earliest included returned drive start through the fixed model anchor, including elapsed gaps. Span days and weeks measure elapsed time, not observed recording coverage. Zero-event weeks mean no included returned starts; they do not prove inactivity. No telemetry uptime, completeness, or monitoring coverage metadata is available to this model.",
-      "modelTimezoneBody": "Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use the effective model timezone: {{timeZone}}."
+      "modelTimezoneBody": "Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use your selected time zone."
     },
     "next24": {
       "likelihoodSeries": "Hourly modeled likelihood",
@@ -178,7 +178,7 @@
     },
     "weekdays": {
       "title": "Weekday peaks and routine support",
-      "subtitle": "Supported peak cells in {{timeZone}} from qualifying returned drive starts; unsupported days remain explicit.",
+      "subtitle": "Supported peak cells in your selected time zone from qualifying returned drive starts; unsupported days remain explicit.",
       "supported": "Supported",
       "unsupported": "Unsupported",
       "peak": "{{time}} · {{likelihood}}% modeled likelihood",
@@ -201,7 +201,7 @@
       "calendarSubtitle": "Monday-based local weeks include zero returned events between the earliest included drive start and the fixed model anchor; elapsed calendar opportunity is model-assumed, not verified coverage.",
       "calendarAria": "Weekly returned departure events and active local driving days across the elapsed model-timezone span",
       "returnedDescription": "Bars count returned drive starts and the line counts distinct local days containing at least one returned drive start. Zero-event buckets mean no included returned events, not confirmed inactivity or continuous recording.",
-      "elapsedSummary": "{{departures}} returned departures across {{activeDays}} active days and {{activeWeeks}} active weeks over {{observedWeeks}} elapsed weeks in {{timeZone}}. Calendar opportunity is model-assumed; gaps do not establish recording coverage."
+      "elapsedSummary": "{{departures}} returned departures across {{activeDays}} active days and {{activeWeeks}} active weeks over {{observedWeeks}} elapsed weeks in your selected time zone. Calendar opportunity is model-assumed; gaps do not establish recording coverage."
     },
     "time": {
       "inMinutes": "in {{count}} min",

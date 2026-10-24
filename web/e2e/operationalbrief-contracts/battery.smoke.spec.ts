@@ -272,7 +272,9 @@ for (const theme of ['light', 'dark'] as const) {
     test(`energy flow preserves returned period denominator and SI energy/distance/efficiency ${width} ${theme}`, async ({ page }) => {
       const path = '/energy-flow?from=2026-08-04&to=2026-08-06';
       const mocks = await setup(page, theme, width, path);
-      await installBatteryEndpoint(page, mocks, '/vehicles/7/energy', energyStats, { days: '3' });
+      await installBatteryEndpoint(page, mocks, '/vehicles/7/energy', energyStats, {
+        start: '2026-08-04T00:00:00.000Z', end: '2026-08-07T00:00:00.000Z',
+      });
       await installBatteryEndpoint(page, mocks, '/vehicles/7/energy/flow', vehicleFlow, {});
       const diagnostics = monitorPage(page);
       await ready(page, mocks, path, theme);
@@ -290,9 +292,8 @@ for (const theme of ['light', 'dark'] as const) {
       // The returned 30-day denominator is not the two visible daily rows or
       // the requested 3-day window. The source limitation remains explicit.
       await reading(drivers, 'average-per-day', /0\.40\s*kWh/);
-      // Trailing-window label is period scope: drawer-only without showRange.
-      await review(page, overview, /Trailing 3 days/);
-      await review(page, overview, /custom calendar bounds are not applied by this source/i);
+      await review(page, overview, /Selected workspace range/);
+      await review(page, overview, /Completed drives are filtered by the workspace start and exclusive end/i);
       await review(page, drivers, /Estimated avoided CO₂, not a vehicle emissions measurement/i);
       await finish(page, mocks, diagnostics);
     });
@@ -505,15 +506,19 @@ for (const theme of ['light', 'dark'] as const) {
     });
 
     test(`charge advisor retains separate current snapshot and empty-history count evidence ${width} ${theme}`, async ({ page }) => {
+      const planningNow = new Date('2026-08-27T12:00:00.000Z');
+      await page.clock.setFixedTime(planningNow);
+      const completeHistory = trailingHistoryWindow(180, planningNow.getTime());
+      const planningEvidence = { start: completeHistory.start, end: planningNow.toISOString() };
       const mocks = await setup(page, theme, width, '/charge-advisor');
       await installExistingEnergySources(page, mocks);
       await installBatteryEndpoint(page, mocks, '/charging', [],
-        { vehicle_id: '7', limit: '1000', ...trailingWeekWindow() });
-      // The advisor issues both the 7-day evidence window and the 180-day
-      // accounting window (exclusive of partial today) for drives.
+        { vehicle_id: '7', limit: '1000', ...planningEvidence });
+      // Planning owns its clock and history. The evidence query includes
+      // today's observations; the calendar separately certifies complete days.
       await installBatteryEndpoint(page, mocks, '/drives', [], [
-        { vehicle_id: '7', limit: '1000', ...trailingWeekWindow() },
-        { vehicle_id: '7', limit: '1000', offset: '0', ...trailingHistoryWindow() },
+        { vehicle_id: '7', limit: '1000', ...planningEvidence },
+        { vehicle_id: '7', limit: '1000', offset: '0', ...completeHistory },
       ]);
       const diagnostics = monitorPage(page);
       await ready(page, mocks, '/charge-advisor', theme);

@@ -111,7 +111,7 @@ describe('PageLayout production composition', () => {
         <section>Cached report</section>
       </PageLayout>,
     );
-    fireEvent.click(screen.getByRole('button', { name: /Refresh data · Error/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data · error/ }));
     expect(failed.refetch).toHaveBeenCalledOnce();
     expect(fresh.refetch).toHaveBeenCalledOnce();
     expect(screen.getByText('Cached report')).toBeInTheDocument();

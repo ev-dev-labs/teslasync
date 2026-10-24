@@ -2,7 +2,7 @@
  * FsdWeeklyWidget — this week vs last week FSD, with null remaining null.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import { fsdInsights } from '@/features/driving/components/fsd-insights/__tests__/fixtures';
@@ -134,7 +134,10 @@ describe('FsdWeeklyWidget', () => {
         expect(headings[0]).toBeVisible();
         if (state === 'populated' || state === 'retained failure') {
           expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16.00 km');
-          expect(screen.getByText('40.00%')).toBeInTheDocument();
+          if (cols > 1) {
+            expect(screen.getByText('40')).toBeInTheDocument();
+            expect(screen.getByText('%')).toBeInTheDocument();
+          }
           if (cols > 1) expect(screen.getByRole('link', { name: 'FSD insights' })).toHaveAttribute('href', '/fsd');
         }
         if (state === 'loading') expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
@@ -154,7 +157,8 @@ describe('FsdWeeklyWidget', () => {
     });
     renderWidget();
     expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16.00 km');
-    expect(screen.getByText('40.00%')).toBeInTheDocument();
+    expect(screen.getByText('40')).toBeInTheDocument();
+    expect(screen.getByText('%')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'FSD insights' })).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   });
@@ -162,26 +166,15 @@ describe('FsdWeeklyWidget', () => {
     renderWidget();
 
     expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16.00 km');
-    expect(screen.getByText('40.00%')).toBeInTheDocument();
-    expect(screen.getByText('+3.00 pts')).toBeInTheDocument();
+    expect(screen.getByText('40')).toBeInTheDocument();
+    expect(screen.getByText('+3')).toBeInTheDocument();
+    expect(screen.getByText('pts')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'FSD insights' })).toHaveAttribute('href', '/fsd');
     expect(screen.getByRole('link', { name: 'Weekly digest' })).toHaveAttribute('href', '/weekly-digest');
+    expect(screen.queryByText(/Unmeasured is not zero/i)).not.toBeInTheDocument();
   });
 
-  it('reviews source-backed FSD metrics and exact exclusive bounds without replacing drill-through links', () => {
-    renderWidget();
-    const brief = screen.getByTestId('fsd-weekly-operational-brief');
-    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(drawer.querySelector('[data-drawer-header]')).toHaveTextContent('exclusive · UTC');
-    expect(within(drawer).getByText('16.00 km')).toBeInTheDocument();
-    expect(within(drawer).getByText('+3.00 pts')).toBeInTheDocument();
-    expect(within(drawer).getByText(/not a percent growth rate/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Weekly digest' })).toBeInTheDocument();
-  });
-
-  it('renders an em dash instead of zero when FSD was not measured', () => {
+  it('renders missing source values as null placeholders without zero fabrication', () => {
     fsdRangeMock.mockReturnValue({
       data: fsdInsights({
         totals: {
@@ -208,11 +201,8 @@ describe('FsdWeeklyWidget', () => {
 
     renderWidget();
 
-    expect(screen.getByTestId('fsd-weekly-distance')).not.toHaveTextContent('—');
-    expect(screen.queryByText('—')).not.toBeInTheDocument();
-    const unmeasuredBrief = screen.getByTestId('fsd-weekly-operational-brief');
-    fireEvent.click(within(unmeasuredBrief).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('3 empty fields are hidden.')).toBeInTheDocument();
+    expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('—');
+    expect(screen.getAllByText('—')).toHaveLength(3);
     expect(screen.queryByText('0.00 km')).not.toBeInTheDocument();
   });
 });

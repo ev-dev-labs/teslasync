@@ -7,16 +7,15 @@ import { useDriveCalendarHistory, useDriveHistory } from '@/api/hooks/useDriving
 import { CardGrid, PageLayout } from '@/components/layout';
 import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { Select } from '@/components/ui';
+import { Caption, Select } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useRangeState } from '@/hooks/useRangeState';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { isLiveFieldFresh, liveFieldAge, LIVE_FRESHNESS_MS, useVehicleLive } from '@/hooks/useVehicleLive';
 import { calendarRangeToInstants } from '@/lib/dateRange';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { ChargeAdvisorLiveSnapshot } from '../lib/chargeAdvisor';
 import {
   ChargeAdvisorAccounting,
@@ -47,14 +46,8 @@ export default function ChargeAdvisorPage() {
   const operationalMode = useOperationalMode();
   const liveRecommendationsBlocked = operationalMode.mode !== 'live';
   const { formatEnergy } = useUnits();
-  const timeZone = useTimezone('vehicle');
-  const { startInstant, endInstantExclusive } = useRangeState({ timezone: timeZone });
+  const { tz: timeZone } = useDateFormat();
   const vehicleIdStr = vehicleId == null ? undefined : String(vehicleId);
-  const historyWindow = { start: startInstant, end: endInstantExclusive };
-  const drivesQuery = useDriveHistory(vehicleIdStr, HISTORY_LIMIT, historyWindow);
-  const chargingQuery = useChargingHistory(vehicleIdStr, HISTORY_LIMIT, historyWindow);
-  const driveSource = useDataState(drivesQuery, { provenance: 'historical' });
-  const chargingSource = useDataState(chargingQuery, { provenance: 'historical' });
   const live = useVehicleLive(vehicleId ?? undefined);
   const [analysisNowMs] = useState(() => Date.now());
   // The scenario gate needs independently established complete drive
@@ -73,6 +66,13 @@ export default function ChargeAdvisorPage() {
     }),
     [coverageWindow, timeZone],
   );
+  // Planning is anchored to this visit's clock, independently of the
+  // workspace's historical range. Include today's observations up to now.
+  const historyWindow = { start: coverageBounds.startInstant, end: new Date(analysisNowMs).toISOString() };
+  const drivesQuery = useDriveHistory(vehicleIdStr, HISTORY_LIMIT, historyWindow);
+  const chargingQuery = useChargingHistory(vehicleIdStr, HISTORY_LIMIT, historyWindow);
+  const driveSource = useDataState(drivesQuery, { provenance: 'historical' });
+  const chargingSource = useDataState(chargingQuery, { provenance: 'historical' });
   const coverageQuery = useDriveCalendarHistory(
     vehicleIdStr, coverageBounds.startInstant, coverageBounds.endInstantExclusive,
   );
@@ -223,6 +223,7 @@ export default function ChargeAdvisorPage() {
       )}
       contextActions={(
         <div className="flex flex-wrap items-end gap-2">
+          <Caption>{t('chargeAdvisor.planningWindow', 'The planning window covers the next seven local days, starting tomorrow.')}</Caption>
           <Select
             id="charge-advisor-reserve-floor"
             label={t('chargeAdvisor.reserveLabel', 'Reserve floor')}

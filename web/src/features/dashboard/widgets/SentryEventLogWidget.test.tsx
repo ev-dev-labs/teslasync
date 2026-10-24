@@ -387,6 +387,7 @@ describe('SentryEventLogWidget — populated', () => {
     renderWidget({ cols: 3, rows: 2 });
     expect(screen.getByText('Vehicle unlocked')).toBeInTheDocument();
     expect(screen.getByText('Sentry mode activated')).toBeInTheDocument();
+    expect(screen.getByText('2 events')).toBeInTheDocument();
   });
 
   it('REGRESSION: an Off sentry event renders "deactivated", not "activated"', () => {

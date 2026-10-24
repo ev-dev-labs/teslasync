@@ -80,15 +80,15 @@
     },
     "calendar": {
       "title": "Vehicle-local calendar coverage",
-      "subtitle": "Month and date fields use the vehicle IANA timezone, including DST boundaries.",
+      "subtitle": "Month and date fields use your selected time zone, including DST boundaries.",
       "months": "Calendar months",
       "monthHint": "distinct months of year",
       "span": "Observed span",
       "spanHint": "first to last included start",
       "active": "Active local periods",
       "activeHint": "days / weeks",
-      "zone": "Timezone",
-      "rows": "{{count}} included rows"
+      "zone": "Included rows",
+      "rows": "included rows"
     },
     "support": {
       "title": "Evidence support and fit eligibility",
@@ -221,7 +221,7 @@
       "eligibilityTitle": "Eligibility",
       "eligibility": "A completed non-live drive needs valid local calendar fields, positive duration, at least the distance floor, finite positive energy, and plausible canonical Wh/m intensity.",
       "scopeTitle": "Scope",
-      "scope": "The result describes the returned latest history in {{timeZone}}. Weather, temperature, route mix, tyres, firmware, charging losses, and driving behavior are not modeled or attributed.",
+      "scope": "The result describes the returned latest history in your selected time zone. Weather, temperature, route mix, tyres, firmware, charging losses, and driving behavior are not modeled or attributed.",
       "disclosure": "R² is an in-sample descriptive fit statistic and is null for constant observations. Residual bands and support bands describe this returned sample only; they are not a promise about an unobserved interval.",
       "accounting": "Returned: {{returned}} · included: {{included}} · excluded: {{excluded}} · fit: {{fit}}"
     },

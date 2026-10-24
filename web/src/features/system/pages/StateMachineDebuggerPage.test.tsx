@@ -16,7 +16,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { getStateColor } from '@/types/fsm';
-import { formatDurationMsCompact } from '@/lib/dateFormat';
+import { formatDurationMsCompact } from '@/lib/dateConvert';
 
 // jsdom lacks matchMedia; chart containers read it on mount.
 vi.hoisted(() => {

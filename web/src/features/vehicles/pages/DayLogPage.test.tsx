@@ -229,12 +229,8 @@ describe('DayLogPage', () => {
     expect(within(header).getByTestId('daylog-controls')).toBeInTheDocument();
     expect(within(header).getByTestId('daylog-date')).toHaveValue('2026-09-14');
     expect(within(header).getByRole('button', { name: /copy link/i })).toBeInTheDocument();
-    expect(header.querySelector('[data-action-group="metadata"]')).not.toBeNull();
-    const timezoneNote = within(header).getByText(/Day boundaries in/);
-    expect(timezoneNote).toBeVisible();
-    expect(timezoneNote.closest('[data-action-group="metadata"]')).not.toBeNull();
-    expect(within(screen.getByTestId('daylog-controls')).queryByText(/Day boundaries in/)).not.toBeInTheDocument();
-    expect(screen.getByTestId('daylog-date')).toHaveAccessibleDescription(/Day boundaries in/);
+    expect(within(header).queryByText(/Day boundaries in/)).not.toBeInTheDocument();
+    expect(screen.getByTestId('daylog-date')).not.toHaveAttribute('aria-describedby');
     expect(screen.getAllByTestId('daylog-controls')).toHaveLength(1);
   });
 
@@ -598,14 +594,16 @@ describe('DayLogPage', () => {
     expect(brief.querySelector('[data-operational-metric="drive-time"]')).toHaveTextContent('1.0 h');
     expect(brief.querySelector('[data-operational-metric="energy-used"]')).toHaveTextContent('5.2 kWh');
     expect(brief.querySelector('[data-operational-metric="energy-added"]')).toBeNull();
-    assertOperationalBriefDisclosure(brief, '[2026-09-14T00:00:00Z, 2026-09-15T00:00:00Z) · end exclusive', { contains: true });
+    assertOperationalBriefDisclosure(brief, 'Selected vehicle day · Sep 14, 2026', { contains: true });
+    assertOperationalBriefDisclosure(brief, '[2026-09-14T00:00:00Z', { contains: true, absent: true });
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Day summary details' });
     expect(within(drawer).getByText('25.0 km')).toBeInTheDocument();
     expect(within(drawer).getByText('5.2 kWh')).toBeInTheDocument();
     expect(within(drawer).getByText(/Recorded driving duration in seconds/)).toBeInTheDocument();
-    expect(within(drawer).getAllByText(/2026-09-14 · UTC/).length).toBeGreaterThanOrEqual(6);
-    expect(within(drawer).getByText(/\[2026-09-14T00:00:00Z, 2026-09-15T00:00:00Z\) · end exclusive/, { selector: '[data-drawer-header] span' })).toBeInTheDocument();
+    expect(within(drawer).getAllByText('Selected vehicle day · Sep 14, 2026').length).toBeGreaterThanOrEqual(6);
+    expect(within(drawer).getByText('Selected vehicle day · Sep 14, 2026', { selector: '[data-drawer-header] span' })).toBeInTheDocument();
+    expect(within(drawer).queryByText(/2026-09-14 · UTC/)).toBeNull();
     fireEvent.keyDown(drawer, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByTestId('daylog-search')).toBeInTheDocument();

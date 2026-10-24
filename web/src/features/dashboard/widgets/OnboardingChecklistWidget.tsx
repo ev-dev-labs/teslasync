@@ -4,11 +4,10 @@ import { useTranslation } from 'react-i18next'
 import {
   Rocket,
   CheckCircle2,
-  Circle,
+  Check,
   ArrowRight,
   Sparkles,
   X,
-  RotateCcw,
 } from 'lucide-react'
 
 import { EmptyState } from '@/components/feedback'
@@ -19,7 +18,6 @@ import { useAlertRules, useNotificationChannels } from '@/api/hooks/useNotificat
 import { useDataState } from '@/hooks/useDataState'
 import { combineDataStates, deriveDataState } from '@/api/dataState'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting'
-import { severityTokens } from '@/lib/tokens'
 import { dashboardTokens } from '../lib/dashboardTokens'
 
 import {
@@ -170,87 +168,85 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
       isError={vehicles.isError || rules.isError || channels.isError}
       onRefresh={retry}
     >
-      <div className="flex flex-col h-full gap-4">
-        {/* Progress header */}
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span className="font-medium text-[var(--text-primary)]">
-              {t('checklist.progress', '{{done}}/{{total}} complete', {
-                done: fmtInt(completed),
-                total: fmtInt(total),
-              })}
-            </span>
-            <span className="text-[var(--text-muted)] tabular-nums">{fmtInt(progressPct)}%</span>
-          </div>
-          <div
-            className="h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={total}
-            aria-valuenow={completed}
-            aria-label={t('checklist.progress', '{{done}}/{{total}} complete', {
-              done: completed,
-              total,
+      <div className="flex flex-col h-full">
+        {/* After hero: one headline ("X of Y done") + progress meter. The
+            standalone % is dropped — the meter carries it (spec rule 3). */}
+        <div className="flex flex-wrap items-end justify-between gap-2.5">
+          <span className={cn(dashboardTokens.density.text, 'font-semibold text-[var(--text-primary)]')}>
+            {t('checklist.progressDone', '{{done}} of {{total}} done', {
+              done: fmtInt(completed),
+              total: fmtInt(total),
             })}
-          >
-            <div
-              className={cn(
-                'h-full rounded-full transition-all duration-slow',
-                'bg-[var(--theme-primary)]',
-              )}
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
+          </span>
+        </div>
+        <div
+          className={cn('mt-3 h-2 overflow-hidden bg-[var(--surface-2)]', dashboardTokens.radius.control)}
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={total}
+          aria-valuenow={completed}
+          aria-label={t('checklist.progressDone', '{{done}} of {{total}} done', {
+            done: completed,
+            total,
+          })}
+        >
+          <div
+            className={cn(
+              'h-full transition-all duration-slow motion-reduce:transition-none',
+              dashboardTokens.radius.control,
+              'bg-[var(--theme-primary)]',
+            )}
+            style={{ width: `${progressPct}%` }}
+          />
         </div>
 
-        {/* Task list */}
+        {/* Task list — After `.check` rows: 18px round box + title only.
+            Descriptions and per-task icons are dropped per the preview;
+            the CTA and Unknown badge stay (navigation / trust semantics). */}
         {total === 0 ? (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<CheckCircle2 className="h-5 w-5" />}
             message={t('checklist.empty', 'No setup steps available right now.')}
-            className="py-4"
+            className="py-4 mt-3"
           />
         ) : (
-          <ul className="flex flex-col gap-2" data-testid="onboarding-checklist">
+          <ul className="mt-3 flex flex-col" data-testid="onboarding-checklist">
             {tasks.map((task) => {
-              const Icon = task.icon
               const source = taskSources[task.id as keyof typeof taskSources]
               const unknown = source != null && !source.hasData
               return (
                 <li
                   key={task.id}
                   className={cn(
-                    'flex flex-wrap items-center gap-3 border-b border-[var(--border-subtle)] py-3 transition-colors',
-                    task.complete
-                      ? 'opacity-60'
-                      : 'hover:bg-[var(--surface-2)]',
+                    'flex flex-wrap items-center py-[7px] transition-colors',
+                    dashboardTokens.density.row,
+                    dashboardTokens.density.rowGap,
                   )}
                   data-testid={`checklist-task-${task.id}`}
                   data-complete={task.complete ? 'true' : 'false'}
                 >
-                  <span className="flex-shrink-0" aria-hidden="true">
-                    {task.complete ? (
-                      <CheckCircle2 className={cn('h-4 w-4', severityTokens.success.fg)} />
-                    ) : (
-                      <Circle className="h-4 w-4 text-[var(--text-muted)]" />
+                  <span
+                    className={cn(
+                      'grid h-[18px] w-[18px] flex-none place-items-center rounded-full border-[1.5px]',
+                      task.complete
+                        ? 'border-[var(--semantic-success)] bg-[var(--semantic-success)] text-[var(--text-on-accent)]'
+                        : 'border-[var(--border-default)] text-transparent',
                     )}
+                    aria-hidden="true"
+                  >
+                    <Check className="h-3 w-3" strokeWidth={3} />
                   </span>
-                  <span className="flex-shrink-0 hidden @sm:inline-flex h-7 w-7 items-center justify-center text-[var(--text-secondary)]">
-                    <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span
+                    className={cn(
+                      'min-w-0 flex-1 font-medium',
+                      dashboardTokens.density.text,
+                      task.complete
+                        ? 'text-[var(--text-muted)] line-through'
+                        : 'text-[var(--text-primary)]',
+                    )}
+                  >
+                    {t(task.titleKey, task.titleFallback)}
                   </span>
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className={cn(
-                        dashboardTokens.title,
-                        task.complete ? 'text-[var(--text-secondary)] line-through' : 'text-[var(--text-primary)]',
-                      )}
-                    >
-                      {t(task.titleKey, task.titleFallback)}
-                    </p>
-                    <p className={dashboardTokens.metricLabel}>
-                      {t(task.descriptionKey, task.descriptionFallback)}
-                    </p>
-                  </div>
                   {unknown && <Badge variant="neutral">{t('common.unknown', 'Unknown')}</Badge>}
                   {!task.complete && (
                     <Button
@@ -268,27 +264,6 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
               )
             })}
           </ul>
-        )}
-
-        {/* Completion footer — celebrates 100 % and offers restart */}
-        {allComplete && (
-          <div className={cn('flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3', severityTokens.success.bg, severityTokens.success.border)}>
-            <div className="flex items-center gap-2 min-w-0">
-              <Sparkles className={cn('h-4 w-4 flex-shrink-0', severityTokens.success.fg)} />
-              <p className={dashboardTokens.title}>
-                {t('checklist.completeMessage', "You're all set! 🎉")}
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={dismiss}
-              className="flex-shrink-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              icon={<RotateCcw className="h-3.5 w-3.5" />}
-            >
-              {t('checklist.dismiss', 'Dismiss')}
-            </Button>
-          </div>
         )}
       </div>
     </WidgetShell>

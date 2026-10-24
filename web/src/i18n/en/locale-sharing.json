@@ -350,7 +350,7 @@
       "identity": "Rows are accepted only after record, positive-integer ID, duplicate-ID, timestamp, and half-open selected-window checks.",
       "metrics": "Each metric has an independent valid/missing denominator. Measured zero remains valid; malformed or absent values remain unknown.",
       "efficiency": "Consumption is distance-weighted only across rows with positive measured distance and nonnegative measured drive energy.",
-      "timezone": "Month, weekday, and active-day buckets use {{timezone}}; URL calendar labels remain distinct from RFC3339 query instants.",
+      "timezone": "Month, weekday, and active-day buckets use your selected time zone; calendar labels remain distinct from the queried instants.",
       "privacy": "The representative directory and SVG omit exact addresses, coordinates, paths, VINs, and vehicle location.",
       "export": "The 800×418 SVG is deterministic, XML-escaped, generated locally, and downloaded through a delayed object-URL cleanup.",
       "step": "Method {{number}}",

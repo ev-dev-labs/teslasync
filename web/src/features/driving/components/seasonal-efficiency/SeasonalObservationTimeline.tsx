@@ -6,7 +6,8 @@ import { useTranslation } from 'react-i18next';
 
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
-import { formatDisplayIntensity, formatLocalDate, toDisplayIntensity } from './formatters';
+import { formatDisplayIntensity, toDisplayIntensity } from './formatters';
+import { formatDateShort } from '@/lib/dateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalObservationTimeline({
@@ -20,7 +21,7 @@ export function SeasonalObservationTimeline({
   const { t } = useTranslation();
   const chartData = analysis.timeline.map((row) => ({
     dateKey: `${row.timestampMs}-${row.driveId}`,
-    date: formatLocalDate(row.timestampMs, locale, timeZone, { month: 'short', day: 'numeric' }),
+    date: formatDateShort(new Date(row.timestampMs), { locale, tz: timeZone }),
     actual: toDisplayIntensity(row.actualEnergyIntensityWhPerM, units.unitPrefs),
     fitted: toDisplayIntensity(row.fittedEnergyIntensityWhPerM, units.unitPrefs),
     deseasonalized: toDisplayIntensity(row.deseasonalizedEnergyIntensityWhPerM, units.unitPrefs),

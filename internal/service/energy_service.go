@@ -2,6 +2,9 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"math"
+	"time"
 
 	energymodel "github.com/ev-dev-labs/teslasync/internal/models/energy"
 
@@ -68,4 +71,27 @@ func (s *EnergyService) CalculateStats(ctx context.Context, vehicleID int64, day
 		CO2Saved:       (totalEnergy / 1000.0) * CO2PerKWh,
 		DailyBreakdown: breakdown,
 	}, nil
+}
+
+// CalculateStatsRange computes totals from the same bounded rows used by the
+// charts, so a historical end cannot leak later drives into either surface.
+func (s *EnergyService) CalculateStatsRange(ctx context.Context, vehicleID int64, start, end time.Time) (*EnergyStats, error) {
+	if !end.After(start) || end.Sub(start) > 3650*24*time.Hour {
+		return nil, fmt.Errorf("invalid energy window")
+	}
+	rows, err := s.energyRepo.GetDailyRange(ctx, vehicleID, start, end)
+	if err != nil {
+		return nil, err
+	}
+	stats := &EnergyStats{VehicleID: vehicleID, PeriodDays: int(math.Ceil(end.Sub(start).Hours() / 24)), DailyBreakdown: rows}
+	for _, row := range rows {
+		stats.TotalEnergy += row.EnergyWh
+		stats.TotalDistance += row.DistanceM
+		stats.TotalCost += row.Cost
+	}
+	if stats.TotalDistance > 0 {
+		stats.AvgEfficiency = stats.TotalEnergy / stats.TotalDistance
+	}
+	stats.CO2Saved = stats.TotalEnergy / 1000 * CO2PerKWh
+	return stats, nil
 }

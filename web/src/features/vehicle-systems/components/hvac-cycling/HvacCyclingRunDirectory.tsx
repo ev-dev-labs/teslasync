@@ -65,9 +65,6 @@ export function HvacCyclingRunDirectory({
             'Newest first; each fragment discloses state, observed duration, interval support, boundaries, and eligibility.',
           )}
         </Text>
-        <Text as="p" variant="caption" className="mt-1">
-          {t('quietHours.form.timezone', 'Timezone (IANA)')}: {summary.timeZone}
-        </Text>
         <Text as="p" variant="caption" className="mb-4 mt-1">
           {t(
             'hvacCycling.directory.cap',

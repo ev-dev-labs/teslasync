@@ -591,7 +591,7 @@ describe('VampireDrainPage', () => {
     })
     expect(chart?.dataColumns?.[0].label).toBe('Session start date')
     expect(chart?.dataColumns?.[0].format?.('2026-01-14')).toBe('14. Jan. 2026')
-    expect(screen.getByText(/Whole-session battery loss and duration are grouped by start date in America\/New_York/)).toBeInTheDocument()
+    expect(screen.getByText(/Whole-session battery loss and duration are grouped by start date in your selected time zone/)).toBeInTheDocument()
     expect(screen.queryByText('Daily drain while parked')).not.toBeInTheDocument()
   })
 
@@ -633,7 +633,7 @@ describe('VampireDrainPage', () => {
     const options = { locale, tz: 'America/New_York' }
     const started = formatDateTime(event.started_at, options)
     const ended = formatDateTime(event.ended_at, options)
-    expect(await screen.findByText('America/New_York', { exact: true })).toBeInTheDocument()
+    expect(screen.queryByText('America/New_York', { exact: true })).not.toBeInTheDocument()
     const sessions = await screen.findByRole('table', { name: 'Drain sessions' })
     const split = await screen.findByTestId('vampire-split')
     await waitFor(() => expect(within(split).getByText(started)).toBeInTheDocument())

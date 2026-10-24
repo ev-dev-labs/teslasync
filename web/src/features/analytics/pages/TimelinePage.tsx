@@ -9,7 +9,7 @@ import { PageLayout, CardGrid, LayoutCard, ChartCard } from '@/components/layout
 import { Badge, Button, DataTable, Text, Caption, Icon, type Column } from '@/components/ui';
 
 import { useRangeState } from '@/hooks/useRangeState';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import {
   FreshnessDotAuto,
   EntityPreviewDrawer,
@@ -30,7 +30,7 @@ import {
 } from '@/api/hooks/useTimelinePage';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDateRange, formatDateTime } from '@/lib/dateFormat';
 
 import { getErrorMessage } from '@/lib/errorMessage';
 import { buildContextHref } from '@/lib/contextNavigation';
@@ -144,7 +144,7 @@ export default function TimelinePage() {
   const activeId = vehicleId != null ? String(vehicleId) : '';
   const enabled = activeId !== '';
 
-  const timezone = useTimezone('vehicle');
+  const { tz: timezone, formatDayKey } = useDateFormat();
   const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'timeline.range',
     defaultPresetId: '7d',
@@ -208,11 +208,9 @@ export default function TimelinePage() {
   };
   const summaryPeriod: StatPeriod = {
     kind: 'analysis',
-    label: t('timeline.summary.period', '{{start}} – {{end}} (exclusive) · {{timezone}}', {
-      start: formatDateTime(startInstant, { tz: timezone, locale }),
-      end: formatDateTime(endInstantExclusive, { tz: timezone, locale }),
-      timezone,
-    }),
+    // One formatted range in the display zone; the explicit-datimes plus
+    // zone suffix duplicated the span and exposed the exclusive end.
+    label: formatDateRange(startInstant, endInstantExclusive, { tz: timezone, locale }),
     start: startInstant,
     endExclusive: endInstantExclusive,
     timezone,
@@ -237,7 +235,8 @@ export default function TimelinePage() {
     }));
   }, [transitionsRaw]);
 
-  /* Daily breakdown — bin transitions by YYYY-MM-DD of `ts`, count by
+  /* Daily breakdown — bin transitions by zoned YYYY-MM-DD day key of `ts`
+   * (day boundaries follow the user's selected zone), count by
    * the *destination* state (to_state) since that is what the original
    * pre-refactor chart visualised. We collapse the 8 raw FSM states
    * into the 4 user-facing buckets shown in the legend (driving /
@@ -250,9 +249,8 @@ export default function TimelinePage() {
       { day: string; driving: number; charging: number; idle: number; sleeping: number; unclassified: number }
     >();
     for (const row of transitions) {
-      const date = new Date(row.ts);
-      if (Number.isNaN(date.getTime())) continue;
-      const day = date.toISOString().slice(0, 10);
+      const day = localDayKey(row.ts, timezone);
+      if (day == null) continue;
       const bucket = buckets.get(day) ?? {
         day,
         driving: 0,
@@ -270,7 +268,7 @@ export default function TimelinePage() {
       buckets.set(day, bucket);
     }
     return Array.from(buckets.values()).sort((a, b) => a.day.localeCompare(b.day));
-  }, [transitions]);
+  }, [transitions, timezone]);
 
   // Per-state dwell time for the bento side panel — same summary payload as the
   // KPIs, sorted so dominant states surface first, with a display color.
@@ -546,7 +544,7 @@ export default function TimelinePage() {
           size: 'full',
           content: <ChartCard
               title={t('timeline.dailyBreakdown', 'Daily breakdown')}
-              subtitle={t('timeline.daily.utcNote', 'Transition counts grouped by UTC day; state durations come from the summary')}
+              subtitle={t('timeline.daily.utcNote', 'Transition counts grouped by day; state durations come from the summary')}
               ariaLabel={t('timeline.dailyBreakdownAria', 'Daily transition counts by vehicle state')}
               loading={enabled && tlLoading && !timelineSource.available && !timelineSource.paused}
               error={!timelineSource.available ? timelineError : undefined}
@@ -571,7 +569,7 @@ export default function TimelinePage() {
               </>}
               data={dailyBreakdown}
               dataColumns={[
-                { key: 'day', label: t('timeline.day', 'Day') },
+                { key: 'day', label: t('timeline.day', 'Day'), format: (value) => formatDayKey(value as string) },
                 { key: 'driving', label: t('timeline.driving', 'Driving') },
                 { key: 'charging', label: t('timeline.charging', 'Charging') },
                 { key: 'idle', label: t('timeline.idle', 'Idle') },
@@ -584,7 +582,7 @@ export default function TimelinePage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={dailyBreakdown}>
                     <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
-                    <XAxis dataKey="day" minTickGap={64} interval="preserveStartEnd" tick={chartTick} />
+                    <XAxis dataKey="day" minTickGap={64} interval="preserveStartEnd" tick={chartTick} tickFormatter={(val: string) => formatDayKey(val, { style: 'short' })} />
                     <YAxis tick={chartTick} allowDecimals={false} />
                     <Tooltip content={<ChartTooltip />} />
                     <ChartLegend />

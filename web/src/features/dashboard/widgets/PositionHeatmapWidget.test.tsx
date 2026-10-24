@@ -15,7 +15,7 @@
  *   2. Responsive layout keyed off `size.cols`:
  *        - compact (≤1) → title-less, non-interactive, coarser 200-grid map,
  *        - standard (2)  → titled shell, 500-grid, interactive map,
- *        - wide (≥3)     → standard + a raw-count "N positions" badge.
+ *        - wide (≥3)     → standard map with a wider radius scale, no count label.
  *   3. Density encoding: circle radius + fill colour scale with intensity.
  *   4. Loading / empty / error states (never a blank panel). The error branch
  *      is the key regression guard — the widget now forwards `error`, so a
@@ -172,6 +172,16 @@ vi.mock('@/api/hooks/useVehicles', async () => {
   };
 });
 
+vi.mock('@/hooks/useRangeState', () => ({
+  useRangeState: () => ({
+    start: '2026-10-01',
+    end: '2026-10-22',
+    startInstant: '2026-10-01T00:00:00.000Z',
+    endInstantExclusive: '2026-10-23T00:00:00.000Z',
+    timezone: 'UTC',
+  }),
+}));
+
 import PositionHeatmapWidget, {
   clusterPositions,
   centroid,
@@ -292,8 +302,8 @@ describe('clusterPositions', () => {
 });
 
 describe('centroid', () => {
-  it('falls back to San Francisco for an empty cluster set', () => {
-    expect(centroid([])).toEqual([37.7749, -122.4194]);
+  it('does not fabricate a map centre for an empty cluster set', () => {
+    expect(centroid([])).toBeNull();
   });
 
   it('averages the cluster centres', () => {
@@ -360,11 +370,10 @@ describe('PositionHeatmapWidget — standard layout', () => {
 /* ── Component — wide layout ──────────────────────────────────────── */
 
 describe('PositionHeatmapWidget — wide layout', () => {
-  it('shows the raw-count badge and uses the wider radius + zoom', () => {
+  it('uses the wider radius and zoom without a count label', () => {
     renderWidget({ cols: 3, rows: 2 });
 
-    // Badge reflects the RAW fix count (4), not the cluster count (2).
-    expect(screen.getByText('4 positions')).toBeInTheDocument();
+    expect(screen.queryByText(/\bpositions\b/i)).not.toBeInTheDocument();
     expect(captured.map?.zoom).toBe(12);
     // dense intensity 1 → 6 + 1*14 = 20 (wider than the standard 16).
     expect(Math.max(...radii())).toBeCloseTo(20, 5);

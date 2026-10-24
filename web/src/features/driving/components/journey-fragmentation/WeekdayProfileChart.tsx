@@ -23,7 +23,7 @@ export function WeekdayProfileChart({ result, state, loading = false }: JourneyF
   return (
     <ChartContainer
       title={t('journeyFragmentation.weekday.title', 'Weekday journey-start profile')}
-      subtitle={t('journeyFragmentation.weekday.subtitle', 'Local weekday counts use the normalized vehicle timezone.')}
+      subtitle={t('journeyFragmentation.weekday.subtitle', 'Local weekday counts use your selected time zone.')}
       ariaLabel={t('journeyFragmentation.weekday.aria', 'Bar chart of observed journey starts by local weekday')}
       loading={loading}
       empty={(!state || state.hasData) && !loading && result.journeyCount === 0}

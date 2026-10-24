@@ -84,17 +84,61 @@ type CostForecastMeta struct {
 	Assumptions          []string
 }
 
+// maxTimezoneLen rejects absurd `timezone` values before they reach
+// time.LoadLocation, which touches the filesystem zoneinfo database.
+const maxTimezoneLen = 64
+
+// defaultTimezone is the bucketing frame when the caller omits
+// `?timezone=`: UTC preserves the historical bucketing behavior.
+const defaultTimezone = "UTC"
+
+// resolveTimezone validates the optional `timezone` query parameter and
+// reports whether the handler may proceed. An invalid zone fails the
+// request: silently attributing monthly cost in a guessed zone would
+// mislabel the history the forecast is built on.
+func resolveTimezone(w http.ResponseWriter, raw string) (string, bool) {
+	if raw == "" {
+		return defaultTimezone, true
+	}
+	if len(raw) > maxTimezoneLen {
+		httpx.WriteError(w, http.StatusBadRequest, "timezone must be a valid IANA timezone")
+		return "", false
+	}
+	if _, err := time.LoadLocation(raw); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "timezone must be a valid IANA timezone")
+		return "", false
+	}
+	return raw, true
+}
+
+// costHistoricalSQL aggregates charging cost into calendar months. Months
+// are attributed in the caller's `?timezone` frame ($2, UTC when omitted)
+// so the history lines up with the user's selected zone instead of the
+// database session timezone. Exposed as a package constant so the
+// SQL-shape test can pin the zone clause without a live database.
+const costHistoricalSQL = `
+		SELECT DATE_TRUNC('month', started_at AT TIME ZONE $2) AT TIME ZONE $2 AS month,
+		       SUM(cost_decimal)                                              AS total_cost,
+		       SUM(total_energy_added_wh) / 1000.0                            AS total_kwh,
+		       COUNT(*)                                                       AS sessions,
+		       AVG(cost_decimal / NULLIF(total_energy_added_wh / 1000.0, 0))  AS avg_cost_per_kwh
+		FROM charging_sessions
+		WHERE vehicle_id = $1 AND cost_decimal > 0
+		GROUP BY month ORDER BY month`
+
 // ComputeCostForecast is the shared deterministic forecast for REST and AI.
 // Surfacing the minimum-data threshold lets narration refuse insufficient data
-// instead of inventing a trend.
-func ComputeCostForecast(ctx context.Context, db *database.DB, vehicleID int64, months int) (costForecastResponse, CostForecastMeta, error) {
+// instead of inventing a trend. The zone frames the monthly history the
+// forecast is built on; REST passes the caller's `?timezone`, the AI
+// adapter passes UTC (see ForecastCosts).
+func ComputeCostForecast(ctx context.Context, db *database.DB, vehicleID int64, months int, zone string) (costForecastResponse, CostForecastMeta, error) {
 	const minRequiredMonths = 3
 
 	if months <= 0 || months > 24 {
 		months = 6
 	}
 
-	historical, err := loadCostHistorical(ctx, db, vehicleID)
+	historical, err := loadCostHistorical(ctx, db, vehicleID, zone)
 	if err != nil {
 		return costForecastResponse{}, CostForecastMeta{}, err
 	}
@@ -148,17 +192,9 @@ func ComputeCostForecast(ctx context.Context, db *database.DB, vehicleID int64, 
 }
 
 // loadCostHistorical is shared by REST and AI so both consume the same monthly
-// aggregation rows.
-func loadCostHistorical(ctx context.Context, db *database.DB, vehicleID int64) ([]historicalMonth, error) {
-	rows, err := db.Pool.Query(ctx, `
-		SELECT DATE_TRUNC('month', started_at)                                AS month,
-		       SUM(cost_decimal)                                              AS total_cost,
-		       SUM(total_energy_added_wh) / 1000.0                            AS total_kwh,
-		       COUNT(*)                                                       AS sessions,
-		       AVG(cost_decimal / NULLIF(total_energy_added_wh / 1000.0, 0))  AS avg_cost_per_kwh
-		FROM charging_sessions
-		WHERE vehicle_id = $1 AND cost_decimal > 0
-		GROUP BY month ORDER BY month`, vehicleID)
+// aggregation shape; the zone frames the month attribution.
+func loadCostHistorical(ctx context.Context, db *database.DB, vehicleID int64, zone string) ([]historicalMonth, error) {
+	rows, err := db.Pool.Query(ctx, costHistoricalSQL, vehicleID, zone)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +244,12 @@ func (h *Handler) GetForecast(w http.ResponseWriter, r *http.Request) {
 		forecastMonths = m
 	}
 
-	resp, _, err := ComputeCostForecast(r.Context(), h.db, vehicleID, forecastMonths)
+	zone, ok := resolveTimezone(w, r.URL.Query().Get("timezone"))
+	if !ok {
+		return
+	}
+
+	resp, _, err := ComputeCostForecast(r.Context(), h.db, vehicleID, forecastMonths, zone)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("cost-forecast: compute failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get cost data")
@@ -574,6 +615,11 @@ func NewAICostForecaster(db *database.DB) *AICostForecaster {
 // this slice. The narrator's system prompt does not assume any
 // currency code; it quotes raw dollar figures consistent with
 // the chart.
+//
+// The AI port carries no user zone, so the history is bucketed in UTC
+// (the historical frame). When the REST caller uses a non-UTC zone the
+// two can disagree on sessions within hours of a month boundary; the
+// narration quotes rounded monthly figures, so the impact is negligible.
 func (a *AICostForecaster) ForecastCosts(ctx context.Context, vehicleID int64, months int) (*forecast.CostForecast, error) {
 	if vehicleID <= 0 {
 		return nil, errors.New("api ai cost-forecast-narration: vehicle_id must be > 0")
@@ -582,7 +628,7 @@ func (a *AICostForecaster) ForecastCosts(ctx context.Context, vehicleID int64, m
 		months = defaultCostForecastMonths
 	}
 
-	resp, meta, err := ComputeCostForecast(ctx, a.db, vehicleID, months)
+	resp, meta, err := ComputeCostForecast(ctx, a.db, vehicleID, months, defaultTimezone)
 	if err != nil {
 		return nil, fmt.Errorf("api ai cost-forecast-narration: ComputeCostForecast: %w", err)
 	}

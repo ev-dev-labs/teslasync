@@ -1,35 +1,19 @@
 import { useMemo, useRef, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollText, Pause, Play } from 'lucide-react';
-import { Badge, IconButton } from '@/components/ui';
+import { IconButton } from '@/components/ui';
 import { useSignalObservations, useMQTTStatus } from '@/api/hooks/useTelemetry';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { isFiniteNumber } from '@/lib/numberFormat';
 import { deriveDataState, knownNumber } from '@/api/dataState';
-import { gaugeTone } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
-import { WidgetEventFeed, WidgetBigNumber } from './shared';
+import { WidgetBigNumber } from './shared';
 import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 import type { SignalObservation } from '@/types/signals';
 import type { VehicleTelemetry } from '@/types/telemetry';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-
-// ── Source → visual mapping ──────────────────────────────────────────
-
-const SOURCE_COLORS: Record<string, string> = {
-  fleet_telemetry: gaugeTone.success,
-  fleet_api: gaugeTone.info,
-  manual: gaugeTone.warning,
-  backfill: gaugeTone.neutral,
-};
-
-const SOURCE_LABELS: Record<string, string> = {
-  fleet_telemetry: 'MQTT',
-  fleet_api: 'API',
-  manual: 'Manual',
-  backfill: 'Cache',
-};
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { EmptyState } from '@/components/feedback';
 
 /**
  * Render a single observation's value for the feed subtitle.
@@ -86,8 +70,8 @@ function CompactView({
 // ── Main widget ──────────────────────────────────────────────────────
 
 export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
-  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const { formatTime } = useDateFormat();
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
@@ -118,31 +102,18 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
   const feedItems = useMemo<EventFeedItem[]>(() => {
     const list = observations ?? [];
     return list.map((obs, i) => {
-      const source = typeof obs.source === 'string' && obs.source.trim() !== ''
-        ? obs.source : 'unknown';
-      const sourceLabel = t(
-        `widget.signalLog.source.${source}`,
-        SOURCE_LABELS[source] ?? (source === 'unknown' ? t('widget.signalLog.unknownSource', 'Unknown') : source),
-      );
       return {
         id: `${obs.ts}-${obs.signal_name}-${i}`,
-        icon: (
-          <Badge
-            variant={source === 'fleet_telemetry' ? 'success' : 'neutral'}
-            size="sm"
-          >
-            {sourceLabel}
-          </Badge>
-        ),
+        icon: null,
         title: obs.signal_name ?? '—',
         subtitle: formatSignalValue(obs),
         timestamp: obs.ts ?? '',
-        color: SOURCE_COLORS[source] ?? 'var(--text-muted)',
+        color: 'var(--text-muted)',
         severity: 'info' as const,
         wrap: true,
       };
     });
-  }, [observations, t, displayPrecision, displayLocale]);
+  }, [observations]);
 
   // Freeze display when paused
   const displayItems = useMemo(() => {
@@ -178,10 +149,7 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
       icon={<ScrollText className="h-3.5 w-3.5" />}
       loading={isLoading}
       dataState={state}
-      updatedAt={query.dataUpdatedAt}
-      isFetching={query.isFetching}
-      isStale={query.isStale}
-      isError={query.isError}
+      query={query}
       onRefresh={() => { void observationsQuery.refetch(); void mqttQuery.refetch(); }}
       actions={!isCompact ? pauseAction : undefined}
     >
@@ -189,13 +157,34 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
         <CompactView rate={rate} t={t} />
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <WidgetEventFeed
-            items={displayItems}
-            maxItems={20}
-            compact={false}
-            emptyMessage={t('widget.signalLog.noSignals', 'No signal updates yet')}
-            emptyIcon={<ScrollText className="h-5 w-5" />}
-          />
+          {displayItems.length === 0 ? (
+            <EmptyState
+              variant="informational"
+              message={t('widget.signalLog.noSignals', 'No signal updates yet')}
+              className="py-4"
+            />
+          ) : (
+            <ul aria-label={t('widget.eventFeed.label', 'Event feed')} className="divide-y divide-[var(--border-subtle)] font-mono">
+              {[...displayItems]
+                .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                .slice(0, 20)
+                .map((item) => {
+                  const parsed = new Date(item.timestamp);
+                  const timeLabel = Number.isNaN(parsed.getTime())
+                    ? '—'
+                    : formatTime(parsed);
+                  return (
+                    <li key={item.id} className="grid min-h-9 grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-2 py-1.5 text-xs">
+                      <span className="tabular-nums text-[var(--text-muted)]">{timeLabel}</span>
+                      <span className="truncate text-[var(--text-primary)]" title={item.title}>{item.title}</span>
+                      <span className="max-w-24 truncate text-end font-semibold tabular-nums text-[var(--text-primary)]" title={item.subtitle}>
+                        {item.subtitle ?? '—'}
+                      </span>
+                    </li>
+                  );
+                })}
+            </ul>
+          )}
         </div>
       )}
     </WidgetShell>

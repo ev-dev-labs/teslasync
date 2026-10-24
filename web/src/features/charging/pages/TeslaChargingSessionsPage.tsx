@@ -52,7 +52,8 @@ import {
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
-import { formatDateTime } from '@/lib/dateFormat';
+import {formatDateTime} from '@/lib/dateFormat'
+import {toIsoString} from '@/lib/dateConvert';
 
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { formatCurrencyValue } from '@/lib/currencyFormat';
@@ -145,6 +146,9 @@ export function groupSessions(
 
 export default function TeslaChargingSessionsPage() {
   const { fmtNumber, fmtInt, precision, locale } = useNumberFormatting();
+  const todayKey = (toIsoString(new Date()) ?? '').slice(0, 10);
+  const monthlyCostExportFilename = `tesla-monthly-cost-${todayKey}`;
+  const fleetSessionsExportFilename = `tesla-fleet-sessions-${todayKey}`;
   const { t } = useTranslation();
   const formatChargingDuration = useCallback(
     (seconds: number | null | undefined) => formatDurationSeconds(seconds, t, locale),
@@ -907,7 +911,7 @@ export default function TeslaChargingSessionsPage() {
               error={error}
               onRetry={() => { void sessionsQuery.refetch(); }}
               exportData={monthlyData}
-              exportFilename={`tesla-monthly-cost-${new Date().toISOString().slice(0, 10)}`}
+              exportFilename={monthlyCostExportFilename}
             >
               {isLoading ? (
                 <ChartSkeleton
@@ -1102,7 +1106,7 @@ export default function TeslaChargingSessionsPage() {
                 virtualized
                 rowHeight={56}
                 exportable
-                exportFilename={`tesla-fleet-sessions-${new Date().toISOString().slice(0, 10)}`}
+                exportFilename={fleetSessionsExportFilename}
                 exportRow={(row) => ({
                   date: row.charge_start_datetime,
                   location: row.site_location_name ?? '',

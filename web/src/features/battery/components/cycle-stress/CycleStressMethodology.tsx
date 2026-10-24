@@ -115,8 +115,7 @@ export function CycleStressMethodology({
       ),
       body: t(
         'cycleStress.method.calendarBody',
-        'Cycle closure months, active days, and active weeks use {{timeZone}}. The analysis clock is frozen when the page mounts so future-row classification does not drift during the session.',
-        { timeZone: result.timeZone },
+        'Cycle closure months, active days, and active weeks use your selected time zone. The analysis clock is frozen when the page mounts so future-row classification does not drift during the session.',
       ),
     },
     {

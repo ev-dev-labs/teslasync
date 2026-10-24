@@ -12,7 +12,7 @@ import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 vi.mock('react-i18next', () => ({
@@ -238,12 +238,19 @@ function notebook(over: Partial<ScienceNotebook> = {}): ScienceNotebook {
   };
 }
 
+function HeaderRangeControl() {
+ const [, setParams] = useSearchParams();
+ return <button data-testid="header-science-range" onClick={() => setParams(previous => {
+  const next = new URLSearchParams(previous); next.set('from','2026-09-01'); next.set('to','2026-09-30'); return next;
+ })}>Choose a workspace range.</button>;
+}
 function renderPage(route = '/science') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[route]}>
         {children}
+        <HeaderRangeControl />
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -261,6 +268,7 @@ const oneCarFleet = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
   settingsMock.unit_of_length = 'km';
   settingsMock.unit_of_temp = 'C';
   settingsMock.unit_of_pressure = 'kPa';
@@ -367,8 +375,10 @@ describe('ScienceLabPage', () => {
       expect(copied.pathname).toBe('/science');
       expect(copied.hash).toBe(original.hash);
       expect(copied.searchParams.get('vehicle_id')).toBe('42');
-      expect(copied.searchParams.get('start')).toBe(effectiveScope.start);
-      expect(copied.searchParams.get('end')).toBe(effectiveScope.end);
+      expect(copied.searchParams.get('from')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(copied.searchParams.get('to')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(copied.searchParams.has('start')).toBe(false);
+      expect(copied.searchParams.has('end')).toBe(false);
       expect(Date.parse(effectiveScope.end)).toBeGreaterThan(Date.parse(effectiveScope.start));
       for (const key of ['tab', 'tag', 'days']) {
         expect(copied.searchParams.getAll(key)).toEqual(original.searchParams.getAll(key));
@@ -379,12 +389,12 @@ describe('ScienceLabPage', () => {
         expect(screen.getByTestId(`science-${domain}`)).toBeInTheDocument();
       }
 
-      await user.click(screen.getByRole('button', { name: 'Last 30d' }));
+      await user.click(screen.getByTestId('header-science-range'));
       await user.click(screen.getByRole('button', { name: 'Copy link to this view' }));
       const updated = new URL(writeText.mock.calls[1][0]);
       const updatedScope = scienceMocks.thermal.mock.calls.at(-1)?.[0];
-      expect(updated.searchParams.get('start')).toBe(updatedScope.start);
-      expect(updated.searchParams.get('end')).toBe(updatedScope.end);
+      expect(updated.searchParams.get('from')).toBe('2026-09-01');
+      expect(updated.searchParams.get('to')).toBe('2026-09-30');
       expect(Date.parse(updatedScope.end) - Date.parse(updatedScope.start)).toBe(30 * 24 * 3600 * 1000);
       expect(updated.searchParams.get('vehicle_id')).toBe('42');
       expect(updated.searchParams.getAll('tag')).toEqual(original.searchParams.getAll('tag'));
@@ -492,10 +502,12 @@ describe('ScienceLabPage', () => {
   });
 
   it.each([
-    ['user', 'America/Los_Angeles'],
-    ['vehicle', 'Asia/Tokyo'],
-    ['utc', 'UTC'],
-  ])('formats science dates in %s mode and updates locale without changing raw evidence or query scope', async (mode, timezone) => {
+    // [display mode, resolved zone, scope start, scope end-exclusive] for
+    // ?from=2026-09-01&to=2026-09-07: scope AND display follow the setting.
+    ['user', 'America/Los_Angeles', '2026-09-01T07:00:00.000Z', '2026-09-08T07:00:00.000Z'],
+    ['vehicle', 'Asia/Tokyo', '2026-08-31T15:00:00.000Z', '2026-09-07T15:00:00.000Z'],
+    ['utc', 'UTC', '2026-09-01T00:00:00.000Z', '2026-09-08T00:00:00.000Z'],
+  ])('formats science dates in %s mode and updates locale without changing raw evidence or query scope', async (mode, timezone, start, end) => {
     const { fireEvent } = await import('@testing-library/react');
     settingsMock.tz_display_default = mode;
     settingsMock.timezone_user = 'America/Los_Angeles';
@@ -514,9 +526,7 @@ describe('ScienceLabPage', () => {
     for (const domain of ['electrochem', 'thermal', 'weather', 'tires', 'notebook'] as const) {
       scienceMocks[domain].mockReturnValue(queryState({ data: reports[domain], dataUpdatedAt: loadedAt }));
     }
-    const start = '2026-09-01T00:00:00.000Z';
-    const end = '2026-09-08T00:00:00.000Z';
-    const { rerenderPage } = renderPage(`/science?start=${start}&end=${end}`);
+    const { rerenderPage } = renderPage('/science?from=2026-09-01&to=2026-09-07');
     fireEvent.click(screen.getByText(/electrochem · Rest voltage maps SOC/));
 
     const formatted = (value: string | number) => new Intl.DateTimeFormat(settingsMock.locale, {
@@ -548,7 +558,7 @@ describe('ScienceLabPage', () => {
       const overviewHeader = overviewDrawer.querySelector('[data-drawer-header]');
       if (!(overviewHeader instanceof HTMLElement)) throw new Error('Review drawer header is missing');
       expect(overviewHeader).toHaveTextContent(
-        `${formatted(reports.electrochem.start)} → ${formatted(reports.electrochem.end)}`,
+        `${formatted(start)} → ${formatted(end)}`,
       );
       // (The overview never repeats per-domain load times when states are
       // plain success -- 'Independent reports…' in the header; the load time
@@ -595,14 +605,14 @@ describe('ScienceLabPage', () => {
     const originalPaths = paths.map((path) => path?.getAttribute('d'));
 
     settingsMock.chart_palette = 'neon';
-    fireEvent.click(screen.getByRole('button', { name: 'Last 30d' }));
+    fireEvent.click(screen.getByTestId('header-science-range'));
     for (const [index, chart] of charts.entries()) {
       const path = chart.querySelector('.recharts-area-curve');
       expect(path).toHaveAttribute('stroke', CHART_COLORS_NEON[0]);
       expect(path).toHaveAttribute('d', originalPaths[index]!);
     }
     expect(settingsMock.chart_palette).toBe('neon');
-    expect(screen.getByRole('button', { name: 'Last 30d' })).toHaveAttribute('aria-pressed', 'true');
+    expect(Date.parse(scienceMocks.thermal.mock.calls.at(-1)![0].end) - Date.parse(scienceMocks.thermal.mock.calls.at(-1)![0].start)).toBe(30 * 86400_000);
     expect(report).toEqual(originalReport);
     const panel = screen.getByTestId('science-electrochem');
     expect(panel).toHaveTextContent('405.00 V');
@@ -687,13 +697,11 @@ describe('ScienceLabPage', () => {
     for (const id of ['electrochem', 'thermal', 'weather', 'tires', 'notebook']) {
       expect(document.getElementById(`science-${id}`)).toBeInTheDocument();
     }
-    expect(screen.getByRole('button', { name: 'Last 7d' })).toHaveAttribute('aria-pressed', 'true');
     const windowControls = screen.getByRole('group', { name: 'Window' });
-    for (const name of ['Last 7d', 'Last 30d']) {
-      expect(within(windowControls).getByRole('button', { name })).toHaveClass(
-        'min-h-11', 'md:min-h-9', 'h-auto', 'whitespace-normal',
-      );
-    }
+    expect(within(windowControls).queryByRole('button')).not.toBeInTheDocument();
+    const scope = scienceMocks.thermal.mock.calls.at(-1)![0];
+    expect(Date.parse(scope.end)-Date.parse(scope.start)).toBe(7*86400_000);
+
   });
 
   it('exposes observed inputs, fit diagnostics, and linked source drives', () => {
@@ -725,8 +733,8 @@ describe('ScienceLabPage', () => {
   it('allows the full supported 30-day window without hiding any report', async () => {
     const { fireEvent } = await import('@testing-library/react');
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Last 30d' }));
-    expect(screen.getByRole('button', { name: 'Last 30d' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByTestId('header-science-range'));
+    expect(Date.parse(scienceMocks.thermal.mock.calls.at(-1)![0].end) - Date.parse(scienceMocks.thermal.mock.calls.at(-1)![0].start)).toBe(30 * 86400_000);
     expect(screen.getByTestId('science-overview')).toBeInTheDocument();
     for (const id of ['electrochem', 'thermal', 'weather', 'tires', 'notebook']) {
       expect(document.getElementById(`science-${id}`)).toBeInTheDocument();
@@ -1284,3 +1292,9 @@ describe('ScienceLabPage', () => {
     expect(screen.getByLabelText('Pack resistance over the window')).toBeInTheDocument();
   });
 });
+
+ it('does not query any science panel when the header exceeds its 30-day limit', () => {
+  renderPage('/science?from=2026-01-01&to=2026-02-01');
+  expect(screen.getByText('Choose a workspace range of at most 30 days to view science evidence.')).toBeVisible();
+  for(const domain of ['electrochem','thermal','weather','tires','notebook'] as const) expect(scienceMocks[domain]).not.toHaveBeenCalled();
+ });

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { OperationalBrief } from '@/components/data-display';
 import { Text } from '@/components/ui';
 import type { StatMetric, StatPeriod } from '@/components/data-display';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import type { MetricPreferences } from '@/components/data-display';
 
@@ -28,6 +29,7 @@ export function NestedDrivingBrief({
   retained = false, unavailable = false, testId, variant = 'standalone',
 }: Props) {
   const { t } = useTranslation();
+  const { formatDateRange, formatDateTime } = useDateFormat();
   const sourceMetrics: StatMetric[] = metrics.map(({ displayValue, ...metric }) =>
     displayValue === undefined ? metric : {
       ...metric,
@@ -39,12 +41,15 @@ export function NestedDrivingBrief({
     subset: t('driving.brief.subsetScope', 'Returned subset'),
     unknown: t('driving.brief.unknownScope', 'Coverage unknown'),
   };
+  // One formatted range/moment in the user's display zone: the raw ISO
+  // bounds plus zone suffix duplicated the span and exposed an exclusive
+  // end day. Coverage wording is unchanged.
   const scope = period.kind === 'analysis'
-    ? `${period.label} · ${t('driving.brief.exclusiveBounds', '{{start}} to {{end}} (exclusive end)', { start: period.start, end: period.endExclusive })} · ${period.timezone} · ${coverage[period.completeness]}`
+    ? `${period.label} · ${formatDateRange(period.start, period.endExclusive)} · ${coverage[period.completeness]}`
     : period.kind === 'event'
-      ? `${period.label} · #${period.eventId} · ${period.start} – ${period.end ?? t('dynamics.trip.inProgress', 'In progress')}`
+      ? `${period.label} · #${period.eventId} · ${formatDateTime(period.start)} – ${period.end ? formatDateTime(period.end) : t('dynamics.trip.inProgress', 'In progress')}`
       : period.kind === 'snapshot'
-        ? `${period.label} · ${period.observedAt ?? t('driving.brief.observationUnknown', 'Source observation time not provided')}`
+        ? `${period.label} · ${period.observedAt ? formatDateTime(period.observedAt) : t('driving.brief.observationUnknown', 'Source observation time not provided')}`
         : period.label;
   const provenance = period.kind === 'unknown'
     ? period.reason ?? description

@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
@@ -12,6 +12,7 @@ import {
 } from '@/components/data-display';
 import type { WidgetHelp } from './types';
 import { WidgetTitleContext } from './WidgetTitleContext';
+import { WidgetHeaderContext } from './WidgetHeaderContext';
 
 export interface WidgetShellProps {
   title?: string;
@@ -72,6 +73,8 @@ export function WidgetShell({
   widgetId, dashboardId,
 }: WidgetShellProps) {
   const { t } = useTranslation();
+  const header = useContext(WidgetHeaderContext);
+  const visibleTitle = title ?? t('widget.overview', 'Widget overview');
   const initialLoading = dataState ? dataState.status === 'initial' : loading;
   const fatalError = dataState ? dataState.fatalError : error ? new Error(error) : null;
   const retry = onRefresh ?? dataState?.retry ?? (query ? () => { void query.refetch(); } : undefined);
@@ -92,14 +95,18 @@ export function WidgetShell({
           onRefresh={retry}
           refreshIntervalMs={refreshIntervalMs}
           manual={refreshIntervalMs == null}
-          compact={!title}
+          compact={false}
+          edgeAligned
         />
       );
     } else if (query) {
         freshnessEl = (
-        <FreshnessDotAuto query={query} refreshIntervalMs={refreshIntervalMs} manual={refreshIntervalMs == null} compact={!title} />
+        <FreshnessDotAuto query={query} refreshIntervalMs={refreshIntervalMs} manual={refreshIntervalMs == null} compact={false} edgeAligned />
       );
     }
+  }
+  if (!freshnessEl) {
+    freshnessEl = <FreshnessDot updatedAt={null} isFetching={false} isStale={false} isError={false} untracked edgeAligned />;
   }
 
   return (
@@ -112,13 +119,17 @@ export function WidgetShell({
       aria-busy={Boolean(initialLoading || dataState?.isRefreshing)}
       data-data-state={dataState?.status}
     >
-      {title ? (
         <div className={dashboardTokens.header} data-role="widget-shell-header">
+          <div className="flex min-w-0 w-full items-center gap-2" data-role="widget-header-line">
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-start gap-2">
+            <div className={cn('flex min-w-0 items-center gap-2', header.editMode && 'widget-drag-handle cursor-grab active:cursor-grabbing')}>
               {icon && <span aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--text-secondary)] [&>svg]:size-4">{icon}</span>}
-              <h3 className={cn(dashboardTokens.title, 'min-w-0 truncate')} title={title}>{title}</h3>
-              {help && (
+              <h3 data-role="widget-header-title" className={cn(dashboardTokens.title, 'min-w-0 truncate')} title={visibleTitle}>{visibleTitle}</h3>
+            </div>
+          </div>
+          <div className="ms-auto flex shrink-0 items-center gap-1.5" data-role="widget-header-actions">
+            {status}
+            {help && (
                 <HelpTooltip
                   size="xs"
                   placement="top"
@@ -126,14 +137,9 @@ export function WidgetShell({
                   i18nKey={help.i18nKey}
                   defaultValue={help.defaultValue}
                   learnMore={help.learnMore}
-                  ariaLabel={t('widget.moreInfoAbout', 'More info about {{title}}', { title })}
+                  ariaLabel={t('widget.moreInfoAbout', 'More info about {{title}}', { title: visibleTitle })}
                 />
               )}
-            </div>
-            {description && <p className={dashboardTokens.description}>{description}</p>}
-          </div>
-          <div className="ms-auto flex shrink-0 items-center gap-1.5">
-            {status}
             {widgetId && dashboardId && (
               <PinButton
                 itemType="widget"
@@ -143,26 +149,12 @@ export function WidgetShell({
               />
             )}
             {actions}
+            {header.actions}
             {freshnessEl}
           </div>
+          </div>
+          {description && <p className={dashboardTokens.description}>{description}</p>}
         </div>
-      ) : (
-        <>
-          {/* Overlay freshness indicator for title-less widgets */}
-          {freshnessEl && (
-            <div className="absolute top-1.5 right-4 z-[5]">
-              {freshnessEl}
-            </div>
-          )}
-          {(actions || status || description) && (
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 pl-4 pr-4 pb-2 pt-3">
-              {description && <p className={cn(dashboardTokens.description, 'mr-auto')}>{description}</p>}
-              {status}
-              {actions}
-            </div>
-          )}
-        </>
-      )}
       <div
         data-testid="widget-body"
         className={cn(

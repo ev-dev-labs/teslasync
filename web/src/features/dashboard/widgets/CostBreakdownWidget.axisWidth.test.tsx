@@ -82,6 +82,9 @@ vi.mock('@/api/hooks/useVehicleSystems', () => ({
   useTirePressureHistory: () => query([
     { created_at: timestamp, frontLeft: 123456789.123, frontRight: null, rearLeft: 0, rearRight: 240000 },
   ]),
+  useTirePressureAnalysisHistory: () => query([
+    { created_at: timestamp, frontLeft: 123456789.123, frontRight: null, rearLeft: 0, rearRight: 240000 },
+  ]),
 }));
 
 function fmt(value: number, precision = state.precision) {
@@ -144,6 +147,7 @@ vi.mock('@/components/charts', async () => {
   const Nothing = () => null;
   return {
     ...chartTestDoubles, useMeasuredAxisWidth, axisTick, axisTickSm, chartMargin,
+    CHART_COLORS: ['#06b6d4', '#3b82f6', '#f59e0b', '#22c55e', '#ef4444', '#a855f7'],
     chartAnimation: {}, chartGrid: <Grid />,
     useThemeChartPalette: () => ({ primary: '#123456', neutral: '#654321', series: ['#123456'] }),
     ResponsiveContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,

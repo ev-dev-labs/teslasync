@@ -240,7 +240,7 @@ export default function VehicleDetailPage() {
             provenance={stateDataState.provenance}
             status={stateTrustStatus}
           />
-          <Caption className="min-w-0 break-words" title={stateData?.observed_at ?? undefined}>
+          <Caption className="min-w-0 break-words">
             {observationAge
               ? t('dashboard.fleetPosture.scope.observed', 'Last real observation {{age}}', { age: observationAge })
               : t('dashboard.fleetPosture.scope.noObservation', 'No verified observation time for this vehicle')}

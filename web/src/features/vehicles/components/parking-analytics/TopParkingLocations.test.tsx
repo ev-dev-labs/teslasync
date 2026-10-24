@@ -71,12 +71,14 @@ vi.mock('@/hooks/useUnits', () => ({
 }));
 
 vi.mock('@/hooks/useDateFormat', async () => {
-  const { formatTime } = await vi.importActual<typeof import('@/lib/dateFormat')>('@/lib/dateFormat');
+  const { formatTime, formatWeekdayName } = await vi.importActual<typeof import('@/lib/dateFormat')>('@/lib/dateFormat');
   return {
     useDateFormat: () => ({
       ...datePreferences,
       formatTime: (value: Date, override?: import('@/lib/dateFormat').FormatOptions) =>
         formatTime(value, { ...datePreferences, ...override }),
+      formatWeekdayName: (value: Date, override?: import('@/lib/dateFormat').FormatOptions) =>
+        formatWeekdayName(value, { ...datePreferences, ...override }),
       formatDateTime: (date: Date | null) => date?.toISOString() ?? '—',
     }),
   };
@@ -227,7 +229,9 @@ describe('ParkingTemporalProfile locale-aware hour labels', () => {
       expect(tables[0]).toHaveTextContent(label);
     }
     expect(value.hourly).toEqual(originalHours);
-    expect(screen.getByTestId('parking-temporal')).toHaveTextContent(tz);
+    // Wall-hour buckets stay unshifted AND the zone itself is never labelled
+    // on the page (single user-selected zone; see timezone spec section 3).
+    expect(screen.getByTestId('parking-temporal')).not.toHaveTextContent(tz);
 
     datePreferences.locale = 'fr-FR';
     rerender(<ParkingTemporalProfile summary={value} state={state} />);

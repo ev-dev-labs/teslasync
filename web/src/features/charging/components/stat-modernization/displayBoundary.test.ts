@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { formatMetric, type MetricPreferences } from '@/lib/metric-reference';
 import { fmtCompact, fmtNumber, getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
-import { formatDurationMinutes } from '@/lib/dateFormat';
+import { formatDurationMinutes } from '@/lib/dateConvert';
 import { convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import {
   energyDisplay, minuteDisplay, powerDisplay, kwhToCanonicalWh,

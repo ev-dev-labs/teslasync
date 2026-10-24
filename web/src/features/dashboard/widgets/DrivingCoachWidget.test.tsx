@@ -11,14 +11,12 @@
  *     first fleet vehicle vs. an empty fleet → `undefined` so the coach query
  *     stays disabled), including the number → string coercion;
  *   - every render state fanned out by `WidgetShell` — loading skeleton, the
- *     QueryError panel on failure, and the empty tips state (never a blank
- *     panel: the score header still renders);
- *   - the populated full-size widget — score, "/ 100" label, the "Potential
- *     savings" badge, the recommendation cards (title / tip / impact badge),
- *     the 3-card cap, and the badge being hidden when there is no headroom;
- *   - null-safety — a recommendation missing category/tip/impact renders em
- *     dashes and no `undefined` leaks to the DOM;
- *   - the compact (1×1) variant — heading + score + savings badge, with its
+ *     QueryError panel on failure, and the empty tips state;
+ *   - the populated full-size widget — recommendation cards (title / tip),
+ *     no fabricated score or savings badge, and the 3-card cap;
+ *   - null-safety — a recommendation missing category/tip renders em dashes
+ *     and no `undefined` leaks to the DOM;
+ *   - the compact (1×1) variant — heading + one recommendation, with its
  *     own empty state;
  *   - a11y — the decorative lightbulb icons are hidden from the a11y tree and
  *     the freshness Refresh control exposes an accessible name that wires back
@@ -40,8 +38,7 @@ import type { WidgetSize } from './types';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-// i18n passthrough: returns the English default and interpolates {{var}} tokens
-// so the savings copy ("Potential savings: 25%") is asserted as a real string.
+// i18n passthrough: returns the English default and interpolates tokens.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, defaultValue?: unknown, options?: Record<string, unknown>) => {
@@ -68,7 +65,7 @@ vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => useVehiclesMock(),
 }));
 
-import DrivingCoachWidget, { computeSavingsPct } from './DrivingCoachWidget';
+import DrivingCoachWidget from './DrivingCoachWidget';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -147,37 +144,6 @@ it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
   expect(screen.getByRole('heading', { name: 'Driving coach', level: 3 })).toBeVisible();
 });
 
-// ── Pure helper: computeSavingsPct ───────────────────────────────────────────
-
-describe('computeSavingsPct', () => {
-  it('computes the rounded improvement from current vs. best efficiency', () => {
-    expect(computeSavingsPct(200, 150)).toBe(25);
-    expect(computeSavingsPct(300, 200)).toBe(33); // 33.33… rounds to 33
-  });
-
-  it('keeps missing or non-positive efficiency unknown (no divide-by-zero)', () => {
-    expect(computeSavingsPct(0, 150)).toBeNull();
-    expect(computeSavingsPct(-10, 150)).toBeNull();
-    expect(computeSavingsPct(undefined, 150)).toBeNull();
-  });
-
-  it('keeps a missing/zero baseline unknown instead of a misleading 100%', () => {
-    expect(computeSavingsPct(200, 0)).toBeNull();
-    expect(computeSavingsPct(200, undefined)).toBeNull();
-    expect(computeSavingsPct(200, null)).toBeNull();
-  });
-
-  it('clamps a run that already beats the recorded best to 0, not a negative', () => {
-    expect(computeSavingsPct(150, 200)).toBe(0);
-  });
-
-  it('is NaN-safe on either input', () => {
-    expect(computeSavingsPct(NaN, 150)).toBeNull();
-    expect(computeSavingsPct(200, NaN)).toBeNull();
-    expect(computeSavingsPct(200, Infinity)).toBeNull();
-  });
-});
-
 // ── Data-source resolution ───────────────────────────────────────────────────
 
 describe('DrivingCoachWidget — vehicle resolution', () => {
@@ -203,21 +169,20 @@ describe('DrivingCoachWidget — vehicle resolution', () => {
 // ── Render states ────────────────────────────────────────────────────────────
 
 describe('DrivingCoachWidget — states', () => {
-  it('preserves a real zero score but never manufactures a score from absent data', () => {
+  it('never manufactures coaching data when coach data is absent', () => {
     useDrivingCoachMock.mockReturnValue(makeResult({ data: undefined }));
     renderWidget({ cols: 1, rows: 1 });
-    expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.queryByText('0')).not.toBeInTheDocument();
+    expect(screen.getByText('No tips available')).toBeInTheDocument();
   });
 
-  it('retains score and recommendations after a failed background refresh', () => {
+  it('retains recommendations after a failed background refresh', () => {
     useDrivingCoachMock.mockReturnValue(makeResult({
       data: makeCoachData({ recommendations: [makeRec()] }),
       error: new Error('background outage'),
       isError: true,
     }));
     renderWidget();
-    expect(screen.getByText('82')).toBeInTheDocument();
     expect(screen.getByText('Smooth acceleration')).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
   });
@@ -240,7 +205,7 @@ describe('DrivingCoachWidget — states', () => {
     expect(screen.queryByText('/ 100')).toBeNull();
   });
 
-  it('shows the empty tips state but keeps the score header when there are no recommendations', () => {
+  it('shows the empty tips state when there are no recommendations', () => {
     useDrivingCoachMock.mockReturnValue(
       makeResult({
         data: makeCoachData({
@@ -252,7 +217,6 @@ describe('DrivingCoachWidget — states', () => {
     );
     renderWidget();
     expect(screen.getByText('No tips available')).toBeInTheDocument();
-    expect(screen.getByText('/ 100')).toBeInTheDocument();
     expect(screen.queryByText(/Potential savings/)).toBeNull();
   });
 });
@@ -260,7 +224,7 @@ describe('DrivingCoachWidget — states', () => {
 // ── Populated (full size) ────────────────────────────────────────────────────
 
 describe('DrivingCoachWidget — populated (full size)', () => {
-  it('renders the score, the savings badge and the recommendation card', () => {
+  it('renders recommendation cards without fabricated score or savings data', () => {
     useDrivingCoachMock.mockReturnValue(
       makeResult({
         data: makeCoachData({
@@ -274,12 +238,10 @@ describe('DrivingCoachWidget — populated (full size)', () => {
       }),
     );
     renderWidget();
-    expect(screen.getByText('82')).toBeInTheDocument();
-    expect(screen.getByText('/ 100')).toBeInTheDocument();
-    expect(screen.getByText('Potential savings: 25%')).toBeInTheDocument();
     expect(screen.getByText('Smooth acceleration')).toBeInTheDocument();
     expect(screen.getByText('Ease off the pedal')).toBeInTheDocument();
-    expect(screen.getByText('high')).toBeInTheDocument();
+    expect(screen.queryByText(/Potential savings/)).toBeNull();
+    expect(screen.queryByText('/ 100')).toBeNull();
   });
 
   it('caps the recommendation list at three cards', () => {
@@ -294,16 +256,6 @@ describe('DrivingCoachWidget — populated (full size)', () => {
     expect(screen.getByText('Category 2')).toBeInTheDocument();
     expect(screen.queryByText('Category 3')).toBeNull();
     expect(screen.queryByText('Category 5')).toBeNull();
-  });
-
-  it('hides the savings badge when there is no improvement headroom', () => {
-    useDrivingCoachMock.mockReturnValue(
-      makeResult({
-        data: makeCoachData({ efficiency_wh_km: 150, best_efficiency_wh_km: 150 }),
-      }),
-    );
-    renderWidget();
-    expect(screen.queryByText(/Potential savings/)).toBeNull();
   });
 
   it('falls back to em dashes for a recommendation with missing fields (no undefined leak)', () => {
@@ -333,21 +285,23 @@ describe('DrivingCoachWidget — populated (full size)', () => {
 // ── Compact (1×1) variant ────────────────────────────────────────────────────
 
 describe('DrivingCoachWidget — compact (1×1)', () => {
-  it('renders its heading, score and savings badge without "/ 100"', () => {
+  it('renders its heading and one recommendation without a score or savings badge', () => {
     useDrivingCoachMock.mockReturnValue(
       makeResult({
         data: makeCoachData({
           overall_score: 91,
           efficiency_wh_km: 200,
           best_efficiency_wh_km: 150,
+          recommendations: [makeRec({ category: 'Smooth acceleration', tip: 'Ease off the pedal' })],
         }),
       }),
     );
     renderWidget({ cols: 1, rows: 1 });
-    expect(screen.getByText('91')).toBeInTheDocument();
-    expect(screen.getByText('Potential savings: 25%')).toBeInTheDocument();
+    expect(screen.getByText('Smooth acceleration')).toBeInTheDocument();
+    expect(screen.getByText('Ease off the pedal')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Driving coach', level: 3 })).toBeVisible();
     expect(screen.queryByText('/ 100')).toBeNull();
+    expect(screen.queryByText(/Potential savings/)).toBeNull();
   });
 
   it('shows the compact empty state when there is no coaching data', () => {
@@ -362,7 +316,6 @@ describe('DrivingCoachWidget — compact (1×1)', () => {
       }),
     );
     renderWidget({ cols: 1, rows: 1 });
-    expect(screen.getByText('0')).toBeInTheDocument();
     expect(screen.getByText('No tips available')).toBeInTheDocument();
   });
 });

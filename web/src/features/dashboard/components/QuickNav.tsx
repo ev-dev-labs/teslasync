@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { to: '/drives', icon: navRouteIcons['/drives'], labelKey: 'nav.drives', label: 'Drives', descKey: 'nav.drivesDesc', desc: 'Trip history', color: '#00f0ff' },
   { to: '/charging', icon: navRouteIcons['/charging'], labelKey: 'nav.charging', label: 'Charging', descKey: 'nav.chargingDesc', desc: 'Sessions & costs', color: '#10b981' },
   { to: '/analytics', icon: navRouteIcons['/analytics'], labelKey: 'nav.analytics', label: 'Analytics', descKey: 'nav.analyticsDesc', desc: 'Fleet insights', color: '#a855f7' },
-  { to: '/battery', icon: navRouteIcons['/battery'], labelKey: 'nav.battery', label: 'Battery', descKey: 'nav.batteryDesc', desc: 'Health & degradation', color: '#f59e0b' },
+  { to: '/battery', icon: navRouteIcons['/battery'], labelKey: 'nav.battery', label: 'Battery health', descKey: 'nav.batteryDesc', desc: 'Health & degradation', color: '#f59e0b' },
 ] as const;
 
 function QuickNavComponent() {

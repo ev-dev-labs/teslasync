@@ -183,7 +183,8 @@ export interface ChargingSession {
   start_ts?: string
   end_ts?: string | null
   startedAt: string
-  duration_min: number
+  /** Session duration in seconds (SI canonical). */
+  duration_s?: number | null
   cost?: number | null
   ended_status?: string | null
   /** Supercharger invoice energy in watt-hours when Tesla billing history matches. */

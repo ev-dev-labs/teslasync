@@ -54,25 +54,22 @@ vi.mock('@/components/motion', () => ({
   ),
 }));
 
-// <DateTime> double: surface value + variant + showTz as data attributes so the
+// <DateTime> double: surface value + variant as data attributes so the
 // meta-line composition (which timestamp, which variant) is deterministically
 // assertable without pulling in the real timezone/settings machinery.
 vi.mock('@/components/data-display', () => ({
   DateTime: ({
     value,
     variant,
-    showTz,
   }: {
     value: string | Date | null | undefined;
     variant?: string;
-    showTz?: boolean;
     in?: string;
   }) => (
     <time
       data-testid="dt"
       data-variant={variant ?? 'full'}
       data-value={typeof value === 'string' ? value : ''}
-      data-showtz={showTz ? 'true' : 'false'}
     >
       {typeof value === 'string' ? value : ''}
     </time>
@@ -226,12 +223,13 @@ describe('DriveDetailHeader — meta line', () => {
     expect(metaLine(container).textContent).toContain('My Roadster');
 
     const dts = within(metaLine(container)).getAllByTestId('dt');
-    // Start date (variant=date) + start time (variant=time, showTz) + end time.
+    // Start date (variant=date) + start time (variant=time) + end time, with
+    // no zone suffix on any timestamp.
     const startDate = dts.find((d) => d.getAttribute('data-variant') === 'date');
     expect(startDate).toHaveAttribute('data-value', START_TS);
 
     const startTime = dts.find(
-      (d) => d.getAttribute('data-variant') === 'time' && d.getAttribute('data-showtz') === 'true',
+      (d) => d.getAttribute('data-variant') === 'time' && d.getAttribute('data-value') === START_TS,
     );
     expect(startTime).toHaveAttribute('data-value', START_TS);
   });

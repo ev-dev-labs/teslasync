@@ -96,7 +96,7 @@ describe('FsdConfidencePanel', () => {
 
     expect(screen.getByText('Observation window')).toBeInTheDocument();
     expect(
-      screen.getByText('Feb 2, 2026 – Mar 3, 2026 (America/Los_Angeles)'),
+      screen.getByText('Feb 2, 2026 – Mar 3, 2026'),
     ).toBeInTheDocument();
     expect(screen.getByText('28 of 30 (93.33%)')).toBeInTheDocument();
     expect(screen.getByText('12 self-driving / 14 driving')).toBeInTheDocument();

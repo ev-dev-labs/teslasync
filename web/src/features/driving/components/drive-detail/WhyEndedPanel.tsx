@@ -91,7 +91,7 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
         filterValue: (row) => row.ts,
         header: t('driveDetail.whyEnded.signal.cols.ts', 'Timestamp'),
         visibleOnMobile: true,
-        render: (row) => <time dateTime={row.ts} title={row.ts}><TimeStamp value={row.ts} format="absolute" /></time>,
+        render: (row) => <time dateTime={row.ts}><TimeStamp value={row.ts} format="absolute" /></time>,
       },
       {
         key: 'field',
@@ -126,7 +126,7 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
     () =>
       transitions.map((tx) => ({
         title: (
-          <span className="font-mono text-sm" title={tx.ts}>
+          <span className="font-mono text-sm">
             {tx.fsm_name}: {tx.from_state} → {tx.to_state}
           </span>
         ),

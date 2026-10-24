@@ -89,7 +89,8 @@ describe('CommunicationsPanel authoritative versus unavailable evidence', () => 
 
   it('renders recall report dates as calendar publications without inventing an instant', () => {
     render(<RecallFindingCard finding={serviceReport.recall_findings[0]} />);
-    expect(screen.getByTitle('2026-07-01')).toHaveTextContent('Jul 1, 2026');
+    expect(screen.getByText('Jul 1, 2026')).toBeInTheDocument();
+    expect(screen.queryByTitle('2026-07-01')).not.toBeInTheDocument();
     expect(screen.getByText('Published campaign summary.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open NHTSA campaign' }))
       .toHaveAttribute('href', serviceReport.recall_findings[0].source_document_url);
@@ -132,7 +133,8 @@ describe('CommunicationsPanel authoritative versus unavailable evidence', () => 
     expect(within(rows[1]).getByRole('heading', { name: 'SB-26-08' })).toBeInTheDocument();
     expect(within(rows[0]).getByText('Returned bulletin summary.')).toBeInTheDocument();
     expect(within(rows[0]).getByText('Technical service bulletin')).toBeInTheDocument();
-    expect(within(rows[0]).getByTitle('2026-07-02')).toHaveTextContent('Jul 2, 2026');
+    expect(within(rows[0]).getByText('Jul 2, 2026')).toBeInTheDocument();
+    expect(within(rows[0]).queryByTitle('2026-07-02')).not.toBeInTheDocument();
     expect(within(rows[0]).getByText('Needs review')).toBeInTheDocument();
     expect(within(rows[0]).getByText('41% confidence')).toBeInTheDocument();
     expect(within(rows[0]).getByText('1 observed symptom match')).toBeInTheDocument();

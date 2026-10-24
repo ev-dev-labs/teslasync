@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 import { Badge, Caption, Text, type Column } from '@/components/ui';
-import { formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
+import {formatDateShort} from '@/lib/dateFormat'
+import {formatDurationMinutes} from '@/lib/dateConvert';
 import { cn } from '@/lib/cn';
 import { gradeTextClass, gradeVariant, type HistoryRow } from './scoreDomain';
 

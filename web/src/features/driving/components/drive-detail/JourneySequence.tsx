@@ -49,7 +49,7 @@ export function JourneySequence({ drive, distance, duration, comparisons = [] }:
       icon: MapPin,
       label: t('driveDetail.start', 'Start'),
       place: place(drive.startAddress, startCoords, t('driveDetail.noAddress', 'No address data')),
-      time: <time dateTime={drive.startTs} title={drive.startTs}>{formatDateTime(drive.startTs, { tz: timezone })}</time>,
+      time: <time dateTime={drive.startTs}>{formatDateTime(drive.startTs, { tz: timezone })}</time>,
       battery: battery(drive.startBatteryPct),
     },
     {
@@ -58,7 +58,7 @@ export function JourneySequence({ drive, distance, duration, comparisons = [] }:
       label: t('driveDetail.destination', 'Destination'),
       place: place(drive.endAddress, endCoords, hasEnded ? t('driveDetail.noAddress', 'No address data') : t('driveDetail.inProgress', 'In progress')),
       time: hasEnded
-        ? <time dateTime={drive.endTs ?? undefined} title={drive.endTs ?? undefined}>{formatDateTime(drive.endTs, { tz: timezone })}</time>
+        ? <time dateTime={drive.endTs ?? undefined}>{formatDateTime(drive.endTs, { tz: timezone })}</time>
         : t('driveDetail.inProgress', 'In progress'),
       battery: battery(drive.endBatteryPct),
     },

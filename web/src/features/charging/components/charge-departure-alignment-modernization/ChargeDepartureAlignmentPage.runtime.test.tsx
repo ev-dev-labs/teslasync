@@ -12,7 +12,8 @@ import type { Drive } from '@/types/driving';
 import {
   fmtInt, fmtNumber, getFormatterPreferences, isFiniteNumber, setGlobalLocale, setGlobalPrecision,
 } from '@/lib/numberFormat';
-import { formatDateTime, formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import {formatDateTime} from '@/lib/dateFormat'
+import {formatDurationSecondsAsMinutes} from '@/lib/dateConvert';
 import { analyzeChargeDepartureAlignment } from '../../lib/chargeDepartureAlignment';
 import ChargeDepartureAlignmentPage from '../../pages/ChargeDepartureAlignmentPage';
 
@@ -74,10 +75,11 @@ vi.mock('@/components/charts', async importOriginal => {
   };
 });
 
-// Mirrors the page's instantLabel: locale rendering plus zone and ISO
-// provenance. The global timezone mock pins the zone to UTC.
+// Mirrors the page's instantLabel: the single user-zone rendering shown in
+// UI rows, bounds and tooltips (no zone suffix, no ISO duplicate). The
+// global timezone mock pins the zone to UTC. CSV keeps raw ISO (see below).
 function instantLabel(iso: string) {
-  return `${formatDateTime(iso, { locale: 'en-US', tz: 'UTC', clock: { second: '2-digit' } })} (UTC) · ${new Date(iso).toISOString()}`;
+  return formatDateTime(iso, { locale: 'en-US', tz: 'UTC', clock: { second: '2-digit' } });
 }
 
 function session(index: number, overrides: Partial<ChargingSession> = {}): ChargingSession {
@@ -525,7 +527,9 @@ describe('Charge departure chart flag alternatives (AUTHORED_NOTRUN)', () => {
       expect(lines[0]).toBe('date,dwellMin,margin,flags');
       expect(lines).toHaveLength(16);
       expect(lines.slice(1)).toEqual(pairs.map(pair => [
-        `"${instantLabel(new Date(pair.chargeEndedMs).toISOString())}"`,
+        // CSV keeps the full raw ISO instant (unquoted: no commas), while
+        // the on-screen rows show only the friendly user-zone label.
+        new Date(pair.chargeEndedMs).toISOString(),
         Math.round(pair.dwellS / 60),
         pair.readinessMarginPct,
         pair.flags.length > 0 ? '"Heuristic flags, not confirmed faults"' : 'Well matched',

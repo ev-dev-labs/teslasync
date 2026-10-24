@@ -57,7 +57,9 @@ const captured = vi.hoisted(() => ({
 
 vi.mock('@/lib/timezone', () => ({
   useTimezone: (mode: string) => {
-    expect(mode).toBe('user');
+    // The chart follows the display-mode setting (global stub: 'vehicle'),
+    // never a hardcoded mode.
+    expect(mode).toBe('vehicle');
     return captured.timezone;
   },
 }));

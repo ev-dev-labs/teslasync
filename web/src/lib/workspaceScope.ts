@@ -24,6 +24,7 @@ export type WorkspaceScopedComponent = {
 export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/activity',
   '/admin/audit-log',
+  '/admin/vehicle-cost',
   '/analytics',
   '/analytics/carbon',
   '/api-logs',
@@ -31,7 +32,6 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/battery-degradation',
   '/cabin-thermal',
   '/charging',
-  '/charge-advisor',
   '/charging-curve',
   '/charging-heatmap',
   '/charging/costs',
@@ -70,6 +70,7 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/regen-efficiency',
   '/route-efficiency',
   '/security-access',
+  '/science',
   '/share-card',
   '/signal-change-points',
   '/signal-correlation',

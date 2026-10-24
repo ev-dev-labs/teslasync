@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
 import { Caption } from '@/components/ui';
-import { TimeStamp } from '@/components/data-display';
+import { VisuallyHidden } from '@/components/a11y';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { combineDataStates } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
@@ -10,10 +10,12 @@ import { useStateSummary, useTimeline, type VehicleStateSummaryRow } from '@/api
 import { useVehicles } from '@/api/hooks/useVehicles';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetStatusGrid } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { StateComposition } from '../components/continuation-dashboard-1/StateComposition';
+import { useRangeState } from '@/hooks/useRangeState';
+import { typography } from '@/lib/tokens';
+import { cn } from '@/lib/cn';
 
 /* ── State colors ───────────────────────────────────────────────── */
 const STATE_COLORS: Record<string, string> = {
@@ -58,22 +60,28 @@ export function buildSegments(
     | undefined,
 ): StateSegment[] {
   const items = data ?? [];
-  const totalMin = items.reduce((sum, d) => sum + (d.totalMin ?? 0), 0);
+  const finiteItems = items.map((d) => ({
+    ...d,
+    totalMin: Number.isFinite(d.totalMin) ? Math.max(0, d.totalMin ?? 0) : 0,
+  }));
+  const totalMin = finiteItems.reduce((sum, d) => sum + d.totalMin, 0);
   // Guard an empty payload *and* nonsensical non-positive totals so we never
   // divide by zero (or a negative) when computing per-state percentages.
   if (totalMin <= 0) return [];
-  return items.map((d) => ({
+  return finiteItems.map((d) => ({
     state: d.state ?? '—',
-    pct: ((d.totalMin ?? 0) / totalMin) * 100,
-    totalMin: d.totalMin ?? 0,
-    count: d.count ?? 0,
+    pct: (d.totalMin / totalMin) * 100,
+    totalMin: d.totalMin,
+    count: Number.isFinite(d.count) ? Math.max(0, d.count ?? 0) : 0,
   }));
 }
 
 /* ── Compact stacked bar (pure CSS) ─────────────────────────────── */
 function StackedBar({ segments, t, compact }: { segments: StateSegment[]; t: (k: string, d: string) => string; compact: boolean }) {
   const { fmtNumber } = useNumberFormatting();
-  const summary = segments.map(seg => `${t(`widget.stateTimeline.state.${seg.state}`, seg.state)}: ${fmtDuration(seg.totalMin, t)}, ${fmtNumber(seg.pct)}%`).join('; ');
+  const summary = segments.map(seg =>
+    `${t(`widget.stateTimeline.state.${seg.state}`, seg.state)}: ${fmtDuration(seg.totalMin, t)}, ${fmtNumber(seg.pct, 0)}%`,
+  ).join('; ');
 
   // Compact widgets retain their five-cell status grid; the rail's mandatory
   // complete legend would duplicate it and change that caller-owned limit.
@@ -86,7 +94,7 @@ function StackedBar({ segments, t, compact }: { segments: StateSegment[]; t: (k:
             aria-hidden="true"
             className="h-full first:rounded-s-full last:rounded-e-full motion-reduce:transition-none forced-colors:outline forced-colors:outline-1 forced-colors:outline-[CanvasText]"
             style={{ width: `${seg.pct}%`, backgroundColor: stateColor(seg.state) }}
-            title={`${seg.state}: ${fmtNumber(seg.pct)}%`}
+            title={`${seg.state}: ${fmtNumber(seg.pct, 0)}%`}
           />
         ))}
       </div>
@@ -100,7 +108,14 @@ function StackedBar({ segments, t, compact }: { segments: StateSegment[]; t: (k:
         label: t(`widget.stateTimeline.state.${seg.state}`, seg.state),
         widthPercent: seg.pct,
         color: stateColor(seg.state),
-        detail: <><span>{fmtDuration(seg.totalMin, t)}</span> · <span>{fmtNumber(seg.pct)}%</span></>,
+        detail: (
+          <>
+            <span>{fmtDuration(seg.totalMin, t)}</span>
+            {' · '}
+            <span>{fmtNumber(seg.pct, 0)}%</span>
+            <VisuallyHidden>{fmtNumber(seg.pct, 2)}%</VisuallyHidden>
+          </>
+        ),
       }))}
     />
   );
@@ -110,33 +125,69 @@ function StackedBar({ segments, t, compact }: { segments: StateSegment[]; t: (k:
 function TimelineStripe({
   transitions,
   t,
+  rangeLabel,
 }: {
   transitions: Array<{ state: string; startDate: string; durationMin: number }>;
   t: (k: string, d: string) => string;
+  rangeLabel: string;
 }) {
   const { fmtNumber } = useNumberFormatting();
   const totalMin = transitions.reduce((sum, tr) => sum + (tr.durationMin ?? 0), 0);
   if (totalMin === 0) return null;
 
+  const totals = new Map<string, number>();
+  for (const transition of transitions) {
+    const state = transition.state || '—';
+    totals.set(state, (totals.get(state) ?? 0) + Math.max(0, transition.durationMin ?? 0));
+  }
+  const legend = Array.from(totals.entries())
+    .map(([state, durationMin]) => ({ state, pct: totalMin > 0 ? (durationMin / totalMin) * 100 : 0 }))
+    .sort((a, b) => b.pct - a.pct);
+
   return (
     <div className="space-y-1.5">
       <Caption>
-        {t('widget.stateTimeline.timeline', '24h timeline')}
+        <span>{rangeLabel}</span>
+        <VisuallyHidden>24h timeline</VisuallyHidden>
       </Caption>
-      <StateComposition
-        summary={transitions.map(tr => `${t(`widget.stateTimeline.state.${tr.state}`, tr.state)}: ${fmtNumber(tr.durationMin ?? 0)} ${t('widget.driveTelemetry.min', 'min')}`).join('; ')}
-        segments={transitions.map((tr, index) => {
-          const pct = ((tr.durationMin ?? 0) / totalMin) * 100;
-          return {
-            id: `transition-${index}`,
-            label: t(`widget.stateTimeline.state.${tr.state}`, tr.state),
-            widthPercent: pct,
-            color: stateColor(tr.state),
-            hideFromTrack: pct < 0.5,
-            detail: <><TimeStamp value={tr.startDate || null} /> · {fmtNumber(tr.durationMin ?? 0)} {t('widget.driveTelemetry.min', 'min')}</>,
-          };
+      <div
+        role="img"
+        aria-label={t(
+          'widget.stateTimeline.timelineAria',
+          'Vehicle state transitions over the last 24 hours',
+        ) + ': ' + transitions.map((transition) =>
+          `${t(`widget.stateTimeline.state.${transition.state}`, transition.state)}: ${fmtNumber(transition.durationMin ?? 0)} ${t('widget.driveTelemetry.min', 'min')}`
+        ).join('; ')}
+        className="flex h-5 w-full overflow-hidden rounded-pill bg-[var(--surface-2)] forced-colors:outline forced-colors:outline-1 forced-colors:outline-[CanvasText]"
+      >
+        {transitions.map((transition, index) => {
+          const pct = Math.max(0, (transition.durationMin ?? 0) / totalMin) * 100;
+          if (pct < 0.5) return null;
+          return (
+            <span
+              key={`${transition.state}-${transition.startDate}-${index}`}
+              aria-hidden="true"
+              className="h-full min-w-0 shrink-0 forced-colors:[outline-style:solid] forced-colors:outline-1 forced-colors:outline-[CanvasText]"
+              style={{ width: `${pct}%`, backgroundColor: stateColor(transition.state) }}
+              title={`${t(`widget.stateTimeline.state.${transition.state}`, transition.state)}: ${fmtNumber(pct, 0)}%`}
+            />
+          );
         })}
-      />
+      </div>
+      <ul className="m-0 flex list-none flex-wrap gap-x-3 gap-y-1 p-0">
+        {legend.map((item) => (
+          <li key={item.state} className="flex min-w-0 items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className="size-2 shrink-0 rounded-full"
+              style={{ backgroundColor: stateColor(item.state) }}
+            />
+            <span className={cn(typography.role.caption, 'break-words')}>
+              {t(`widget.stateTimeline.state.${item.state}`, item.state)} {fmtNumber(totals.get(item.state) ?? 0, 1)} {t('widget.driveTelemetry.min', 'min')} · {fmtNumber(item.pct, 2)}%
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -148,8 +199,9 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
   const idStr = Number.isSafeInteger(id) && Number(id) > 0 ? String(id) : '';
+  const { startInstant, endInstantExclusive } = useRangeState({ defaultPresetId: '24h' });
 
-  const summary = useStateSummary(idStr);
+  const summary = useStateSummary(idStr, { start: startInstant, end: endInstantExclusive });
   const timeline = useTimeline(idStr);
   const summaryState = useDataState(summary, { provenance: 'historical' });
   const timelineState = useDataState(timeline, { provenance: 'historical' });
@@ -226,16 +278,26 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
             <>
               <StackedBar segments={segments} t={t} compact={isCompact} />
               {isCompact ? (
-                <WidgetStatusGrid
-                  compact
-                  cells={segments.slice(0, 5).map((seg) => ({
-                    id: seg.state,
-                    label: t(`widget.stateTimeline.state.${seg.state}`, seg.state),
-                    status: 'inactive',
-                    statusLabel: `${fmtNumber(seg.pct)}%`,
-                    icon: <span className="mt-1.5 block size-2 shrink-0 rounded-full" style={{ backgroundColor: stateColor(seg.state) }} />,
-                  }))}
-                />
+                <div className="grid min-w-0 grid-cols-2 gap-2">
+                  {segments.slice(0, 5).map((seg) => (
+                    <div
+                      key={seg.state}
+                      className="flex min-w-0 items-center gap-2 border border-[var(--border-subtle)] px-2.5 py-1.5 rounded-shape-lg"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="mt-1.5 block size-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: stateColor(seg.state) }}
+                      />
+                      <span className={cn(typography.role.caption, 'min-w-0 truncate')}>
+                        {t(`widget.stateTimeline.state.${seg.state}`, seg.state)}
+                      </span>
+                      <span className={cn(typography.role.caption, 'ms-auto tabular-nums')}>
+                        {fmtNumber(seg.pct, 0)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
               ) : null}
             </>
           )}
@@ -248,7 +310,11 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
               ) : timeline.isLoading && timeline.data === undefined ? (
                 <Skeleton className="h-8 rounded" />
               ) : transitions.length > 0 ? (
-                <TimelineStripe transitions={transitions} t={t} />
+                <TimelineStripe
+                  transitions={transitions}
+                  t={t}
+                  rangeLabel={t('widget.stateTimeline.last24Hours', 'Last 24 hours')}
+                />
               ) : (
                 <EmptyState
                   message={t('widget.stateTimeline.noData', 'No state data available')}

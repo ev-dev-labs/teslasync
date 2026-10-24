@@ -3,7 +3,7 @@
  *
  * The widget charts a vehicle's daily driving efficiency (Wh/km, converted to
  * the user's distance unit at the render boundary) over the last 30 days,
- * with a 7-day rolling average and an Avg / Best-day / Trend summary. It
+ * with a 7-day rolling average and a single 30-day headline. It
  * exposes a default component plus two pure helpers (`estimateEfficiency`,
  * `buildDailyEfficiency`).
  *
@@ -23,7 +23,7 @@
  *   - buildDailyEfficiency: distance-weighted daily intensity + trailing rolling average,
  *     skipping timestamp-less / estimator-rejected drives, 1-decimal rounding,
  *     and the empty-input / all-rejected → [] contract.
- *   - rendering: populated km render (stats + unit + legend + title), the
+ *   - rendering: populated km render (headline + unit + legend + title), the
  *     km→mi conversion of the unit label AND the numbers, the "no data" empty
  *     state (role="status") with stats withheld, the >30-day filter collapsing
  *     to empty, the loading skeleton, and the error branch (role="alert").
@@ -34,7 +34,7 @@
  *     (id 0) query, and the prefix-free, snake_case drives URL.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { Drive } from '@/api/types';
@@ -129,8 +129,6 @@ import { useQuery } from '@tanstack/react-query';
 import { request } from '@/api/client';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { useMeasuredAxisWidth } from '@/components/charts';
-import { getGlobalPrecision, setGlobalPrecision } from '@/lib/numberFormat';
 import DriveEfficiencyChartWidget, {
   estimateEfficiency,
   buildDailyEfficiency,
@@ -251,45 +249,11 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('DriveEfficiencyChartWidget axis gutter', () => {
-  it.each([2, 3])('measures converted series and unchanged padded bounds at %i columns', cols => {
-    const precision = getGlobalPrecision();
-    setGlobalPrecision(6);
-    try {
-      const context = {
-        font: '',
-        measureText: vi.fn((label: string) => ({ width: label.length * 14 })),
-      } as unknown as CanvasRenderingContext2D;
-      vi.mocked(HTMLCanvasElement.prototype.getContext).mockReturnValue(context);
-      setup({ drives: makeQuery({ data: recentDrives() }), distancePref: 'mi' });
-      renderWidget({ size: { cols, rows: 2 } });
-      const options = vi.mocked(useMeasuredAxisWidth).mock.lastCall![0];
-      const data = axisCapture.chart.data as { efficiency: number; rollingAvg: number | null }[];
-      const values = data.flatMap(point => [point.efficiency, point.rollingAvg]).filter((value): value is number => value != null);
-      const formatter = axisCapture.axis.tickFormatter as (value: number) => string;
-      expect(options.labels).toEqual([...values, Math.min(...values) - 20, Math.max(...values) + 20].map(formatter));
-      expect(options.labels.every(label => !/NaN|Infinity|—/.test(label))).toBe(true);
-      expect(options.fontSize).toBe(cols === 3 ? 11 : 10);
-      expect(options.minWidth).toBe(36);
-      expect(options.padding).toBe(20);
-      expect(formatter(123.456789)).toBe('123.456789');
-      expect(axisCapture.axis.width).toBeGreaterThanOrEqual(Math.ceil(Math.max(...options.labels.map(label => label.length)) * options.fontSize * 0.75) + 20);
-      expect(axisCapture.axis.width).toBe(Math.max(...options.labels.map(label => label.length * 14)) + 20);
-      expect(context.font).toMatch(new RegExp(`^${cols === 3 ? 11 : 10}px `));
-      for (const label of options.labels) expect(context.measureText).toHaveBeenCalledWith(label);
-      expect((axisCapture.chart.margin as { left: number }).left).toBe(4);
-      expect(axisCapture.axis.domain).toEqual(['dataMin - 20', 'dataMax + 20']);
-    } finally {
-      act(() => setGlobalPrecision(precision));
-    }
-  });
-
-  it('keeps rejected non-finite drives out of layout labels and compact charts absent', () => {
+  it('keeps compact charts absent and hides chart axis labels', () => {
     setup({ drives: makeQuery({ data: [makeDrive({ start_ts: daysAgoIso(2), energy_used_wh: Number.NaN }), ...recentDrives()] }) });
     renderWidget({ size: COMPACT });
     expect(axisCapture.chart).toEqual({});
-    const options = vi.mocked(useMeasuredAxisWidth).mock.lastCall![0];
-    expect(options.enabled).toBe(false);
-    expect(options.labels.every(label => !/NaN|Infinity|—/.test(label))).toBe(true);
+    expect(axisCapture.axis).toEqual({});
   });
 });
 
@@ -430,45 +394,42 @@ describe('DriveEfficiencyChartWidget — rendering', () => {
     ] }) });
     renderWidget({ size: STANDARD });
 
-    expect(axisCapture.reference.y).toBe(100);
-    expect(axisCapture.reference.label).toMatchObject({ value: 'Avg: 100.00 Wh/km' });
     expect(axisCapture.series.map(series => series.dataKey)).not.toContain('rollingAvg');
     expect(axisCapture.series.map(series => series.dataKey)).toContain('efficiency');
+    expect(screen.getByText('100')).toBeInTheDocument();
+    expect(screen.getByText('Wh/km')).toBeInTheDocument();
   });
 
   it('preserves the measured rolling series and display units when multiple days exist', () => {
     setup({ drives: makeQuery({ data: recentDrives() }), distancePref: 'mi' });
     renderWidget({ size: STANDARD });
 
-    expect(axisCapture.reference.y).toBeCloseTo(130 * 1.609344);
-    expect(axisCapture.reference.label).toMatchObject({ value: 'Avg: 209.21 Wh/mi' });
     expect(axisCapture.series.map(series => series.dataKey)).toContain('rollingAvg');
+    expect(screen.getByText('209')).toBeInTheDocument();
+    expect(screen.getByText('Wh/mi')).toBeInTheDocument();
   });
 
   it('retains chart layers and stats on refresh failure with a working warning retry', () => {
     const refetch = vi.fn();
     setup({ drives: makeQuery({ data: recentDrives(), error: new Error('offline'), isError: true, refetch }) });
     renderWidget({ size: STANDARD });
-    expect(screen.getByText('130.00')).toBeInTheDocument();
+    expect(screen.getByText('130')).toBeInTheDocument();
     expect(screen.getByTestId('embedded-chart')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i })); // shell hides the warning retry; recovery is the freshness dot
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the title, Avg/Best/Trend stats, unit, and the two-series legend', () => {
+  it('renders the title, headline, unit, and the two-series legend', () => {
     setup({ drives: makeQuery({ data: recentDrives() }) });
     renderWidget({ size: STANDARD });
 
     expect(screen.getByText('Drive efficiency')).toBeInTheDocument();
-    expect(screen.getByText('Avg')).toBeInTheDocument();
-    expect(screen.getByText('130.00')).toBeInTheDocument();
-    expect(screen.getByText('Best day')).toBeInTheDocument();
-    expect(screen.getByText('100.00')).toBeInTheDocument();
-    expect(screen.getByText('Trend')).toBeInTheDocument();
-    expect(screen.getByText('+36.36%')).toBeInTheDocument();
-    // The Wh/km unit label rides along the Avg and Best stats.
-    expect(screen.getAllByText('Wh/km')).toHaveLength(2);
+    expect(screen.getByText('130')).toBeInTheDocument();
+    expect(screen.getByText('Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('30-day average')).toBeInTheDocument();
+    expect(screen.getByText('Daily')).toBeInTheDocument();
+    expect(screen.getByText('7-day avg')).toBeInTheDocument();
     // Multi-series charts identify their shared persisted legend state.
     expect(screen.getByTestId('embedded-chart')).toHaveAttribute(
       'data-chart-key',
@@ -481,11 +442,10 @@ describe('DriveEfficiencyChartWidget — rendering', () => {
     renderWidget({ size: STANDARD });
 
     // Label follows the preference, never the SI source.
-    expect(screen.getAllByText('Wh/mi')).toHaveLength(2);
+    expect(screen.getByText('Wh/mi')).toBeInTheDocument();
     expect(screen.queryByText('Wh/km')).not.toBeInTheDocument();
-    // Best day: 100 Wh/km × 1.609344 → 160.9 → "161".
-    expect(screen.getByText('160.93')).toBeInTheDocument();
-    expect(screen.queryByText('100.00')).not.toBeInTheDocument();
+    expect(screen.getAllByText('209')[0]).toBeInTheDocument();
+    expect(screen.queryByText('209.21')).not.toBeInTheDocument();
   });
 
   it('shows the empty state (role="status") and withholds the stats when there is no data', () => {
@@ -497,7 +457,7 @@ describe('DriveEfficiencyChartWidget — rendering', () => {
     // Standard widgets keep their header even when empty…
     expect(screen.getByText('Drive efficiency')).toBeInTheDocument();
     // …but the summary stats are gated behind having data.
-    expect(screen.queryByText('Avg')).not.toBeInTheDocument();
+    expect(screen.queryByText('30-day average')).not.toBeInTheDocument();
   });
 
   it('collapses to empty when every drive is older than the 30-day window', () => {
@@ -509,7 +469,7 @@ describe('DriveEfficiencyChartWidget — rendering', () => {
     renderWidget({ size: STANDARD });
 
     expect(screen.getByText('No efficiency data yet')).toBeInTheDocument();
-    expect(screen.queryByText('Avg')).not.toBeInTheDocument();
+    expect(screen.queryByText('30-day average')).not.toBeInTheDocument();
   });
 
   it('shows a loading skeleton and withholds header + content while loading', () => {
@@ -542,16 +502,16 @@ describe('DriveEfficiencyChartWidget — interaction & layout', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('drops the title and chart legend but keeps the stats in the compact 1×1 layout', () => {
+  it('drops the title and chart legend but keeps the headline in the compact 1×1 layout', () => {
     setup({ drives: makeQuery({ data: recentDrives() }) });
     renderWidget({ size: COMPACT });
 
     // Compact widgets are title-less and chart-less…
     expect(screen.queryByText('Drive efficiency')).not.toBeInTheDocument();
     expect(screen.queryByTestId('chart-legend')).not.toBeInTheDocument();
-    // …but the summary stats still render.
-    expect(screen.getByText('Avg')).toBeInTheDocument();
-    expect(screen.getByText('130.00')).toBeInTheDocument();
+    // …but the headline still renders.
+    expect(screen.getByText('130')).toBeInTheDocument();
+    expect(screen.getByText('Wh/km')).toBeInTheDocument();
   });
 });
 

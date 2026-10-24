@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 
+import { formatMonthYear } from '@/lib/dateConvert';
 import type {
   CapacityFitStatus,
   PackCapacityEvidenceBand,
@@ -33,12 +34,8 @@ export function packCapacityMonthLabel(
   locale: string,
 ): string {
   const [year, month] = monthKey.split('-').map(Number);
-  if (!year || !month) return monthKey;
-  return new Intl.DateTimeFormat(locale, {
-    month: 'short',
-    year: '2-digit',
-    timeZone: 'UTC',
-  }).format(new Date(Date.UTC(year, month - 1, 1)));
+  if (!year || !month || month < 1 || month > 12) return monthKey;
+  return formatMonthYear(monthKey, { locale, yearStyle: '2-digit' });
 }
 
 export function packCapacityBandLabel(

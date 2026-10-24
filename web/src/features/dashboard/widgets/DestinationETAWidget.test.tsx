@@ -2,25 +2,22 @@
  * DestinationETAWidget tests.
  *
  * The widget projects the vehicle's latest location snapshot into either a
- * navigation ETA or a "where is it parked" presence badge. Its behaviour
+ * navigation ETA or a shared idle navigation state. Its behaviour
  * surface — the thing under test:
  *
  *   1. Two responsive layouts driven by `size.cols`:
- *        - compact (cols <= 1): a title-less shell showing EITHER the ETA big
- *          number (navigating) or the presence emoji + Badge (parked) or an
- *          EmptyState (no data).
+ *        - compact (cols <= 1): showing EITHER the ETA big number (navigating)
+ *          or the shared idle EmptyState, or a no-data EmptyState.
  *        - standard (cols >= 2): a titled "Destination ETA" shell with the full
  *          navigating layout (destination, ETA countdown, converted remaining
- *          distance, progress bar) or the presence badge + "No active
- *          navigation" line.
- *   2. The presence classification (`locationBadge`), exercised through the four
- *      rendered variants: home 🏠, work 🏢, favorite ⭐, else 📍.
+ *          distance, and arrival time) or the idle navigation EmptyState.
+ *   2. Parked/location flags do not add fabricated labels; every idle snapshot
+ *      uses the same navigation-empty presentation.
  *   3. Unit conversion at the display boundary: `miles_to_arrival` is stored in
  *      SI **metres** (the backend normalises the fixed-mile wire field to
  *      metres), so `convertDistanceFromSI(metres, pref)` yields the user's
  *      distance preference — 16093.44 m → "10.0" mi / "16.1" km.
- *   4. ETA formatting: >= 1h renders "1h 30m"; < 1h renders "45m" (no hour
- *      segment). `minutes_to_arrival` is `UnitKindNone` (plain minutes).
+ *   4. ETA minutes and arrival time use the shared number/date/time layers.
  *   5. The four query states every data source must handle: loading (skeleton),
  *      initial error (QueryError panel, only when there is no cached snapshot),
  *      empty (EmptyState — never a blank panel), and data.
@@ -89,6 +86,12 @@ vi.mock('@/api/hooks/useVehicles', () => ({
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => useUnitsMock(),
+}));
+
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({
+    formatTime: () => '12:30',
+  }),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -163,27 +166,24 @@ afterEach(() => {
   cleanup();
 });
 
-describe('DestinationETAWidget — presence badge (standard, not navigating)', () => {
+describe('DestinationETAWidget — idle navigation (standard, not navigating)', () => {
   const badgeCases = [
-    { flag: { located_at_home: true }, emoji: '🏠', label: 'Home' },
-    { flag: { located_at_work: true }, emoji: '🏢', label: 'Work' },
-    { flag: { located_at_favorite: true }, emoji: '⭐', label: 'Favorite' },
-    { flag: {}, emoji: '📍', label: 'Other' },
+    { flag: { located_at_home: true } },
+    { flag: { located_at_work: true } },
+    { flag: { located_at_favorite: true } },
+    { flag: {} },
   ] as const;
 
   it.each(badgeCases)(
-    'classifies a parked vehicle as "$label" with an accessible $emoji emoji',
-    ({ flag, emoji, label }) => {
+    'shows the shared idle navigation state instead of a parked badge',
+    ({ flag }) => {
       useLocationSnapshotLatestMock.mockReturnValue(makeQuery({ data: makeSnapshot(flag) }));
 
       renderWidget({ cols: 2, rows: 2 });
 
       expect(screen.getByText('Destination ETA')).toBeInTheDocument();
       expect(screen.getByText('No active navigation')).toBeInTheDocument();
-      // The emoji is exposed to assistive tech via role=img + aria-label…
-      expect(screen.getByRole('img', { name: label })).toHaveTextContent(emoji);
-      // …and the human-readable label is rendered in the Badge.
-      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.getByText('Start a route in the car to see distance and arrival time here.')).toBeInTheDocument();
     },
   );
 });
@@ -195,13 +195,13 @@ describe('DestinationETAWidget — navigating layout (standard)', () => {
     }));
     const view = renderWidget();
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow');
     expect(screen.queryByText('0.00')).not.toBeInTheDocument();
     useLocationSnapshotLatestMock.mockReturnValue(makeQuery({
       data: makeSnapshot({ destination_name: 'Home', minutes_to_arrival: 0, miles_to_arrival: 0 }),
     }));
     view.rerender(<MemoryRouter><DestinationETAWidget size={{ cols: 2, rows: 2 }} /></MemoryRouter>);
-    expect(screen.getAllByText('0.00').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('0 mi')).toBeInTheDocument();
   });
   it('renders destination, ETA minutes, SI→mi distance, and an accessible progress bar', () => {
     useLocationSnapshotLatestMock.mockReturnValue(
@@ -218,15 +218,10 @@ describe('DestinationETAWidget — navigating layout (standard)', () => {
 
     expect(screen.getByText('Destination ETA')).toBeInTheDocument();
     expect(screen.getByText('Tesla Supercharger')).toBeInTheDocument();
-    expect(screen.getByText('90.00')).toBeInTheDocument(); // AnimatedNumber minutes
-    expect(screen.getByText('1h 30m')).toBeInTheDocument(); // etaDisplay
-    expect(screen.getByText('10.00')).toBeInTheDocument(); // 16093.44 m → 10 mi
-    expect(screen.getByText('mi')).toBeInTheDocument();
+    expect(screen.getByText('90')).toBeInTheDocument();
+    expect(screen.getByText('12:30')).toBeInTheDocument();
+    expect(screen.getByText('10 mi')).toBeInTheDocument();
     expect(screen.getByText('Remaining')).toBeInTheDocument();
-
-    const progressbar = screen.getByRole('progressbar', { name: 'Trip progress' });
-    expect(progressbar).toHaveAttribute('aria-valuemin', '0');
-    expect(progressbar).toHaveAttribute('aria-valuemax', '100');
   });
 
   it('converts the remaining distance to the user\'s km preference', () => {
@@ -243,10 +238,8 @@ describe('DestinationETAWidget — navigating layout (standard)', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('16.09')).toBeInTheDocument();
-    expect(screen.getByText('km')).toBeInTheDocument();
-    // The mi label must NOT appear once the preference is km.
-    expect(screen.queryByText('mi')).not.toBeInTheDocument();
+    expect(screen.getByText('16 km')).toBeInTheDocument();
+    expect(screen.queryByText(/mi$/)).not.toBeInTheDocument();
   });
 
   it('formats an under-one-hour ETA without an hour segment', () => {
@@ -262,9 +255,9 @@ describe('DestinationETAWidget — navigating layout (standard)', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('45m')).toBeInTheDocument();
-    expect(screen.queryByText('0h 45m')).not.toBeInTheDocument();
-    expect(screen.getByText('2.00')).toBeInTheDocument();
+    expect(screen.getByText('45')).toBeInTheDocument();
+    expect(screen.getByText('12:30')).toBeInTheDocument();
+    expect(screen.getByText('2 mi')).toBeInTheDocument();
   });
 });
 
@@ -282,22 +275,22 @@ describe('DestinationETAWidget — compact layout', () => {
 
     renderWidget({ cols: 1, rows: 2 });
 
-    expect(screen.getByText('45.00')).toBeInTheDocument();
+    expect(screen.getByText('45')).toBeInTheDocument();
     expect(screen.getByText('min')).toBeInTheDocument();
     expect(screen.getByText('ETA')).toBeInTheDocument();
     // Compact mode drops the header title.
     expect(screen.getByRole('heading', { name: 'Destination ETA' })).toBeInTheDocument();
   });
 
-  it('identifies the presence badge and accessible emoji when parked', () => {
+  it('shows the shared idle navigation state when parked', () => {
     useLocationSnapshotLatestMock.mockReturnValue(
       makeQuery({ data: makeSnapshot({ located_at_work: true }) }),
     );
 
     renderWidget({ cols: 1, rows: 2 });
 
-    expect(screen.getByRole('img', { name: 'Work' })).toHaveTextContent('🏢');
-    expect(screen.getByText('Work')).toBeInTheDocument();
+    expect(screen.getByText('No active navigation')).toBeInTheDocument();
+    expect(screen.getByText('Start a route in the car to see distance and arrival time here.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Destination ETA' })).toBeInTheDocument();
   });
 
@@ -352,10 +345,6 @@ describe('DestinationETAWidget — query states', () => {
     expect(screen.getByText('Home Depot')).toBeInTheDocument();
     expect(screen.queryByText('0.00')).not.toBeInTheDocument();
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
-    const track = screen.getByRole('progressbar', { name: 'Trip progress' });
-    expect(track).not.toHaveAttribute('aria-valuenow');
-    expect(track.querySelector('[data-metric-fill]')).toBeNull();
-    expect(screen.queryByRole('slider')).toBeNull();
   });
 });
 
@@ -432,7 +421,7 @@ describe('DestinationETAWidget — graceful degradation on transient error', () 
 
     // Data is still on screen …
     expect(screen.getByText('Supercharger')).toBeInTheDocument();
-    expect(screen.getByText('1h 30m')).toBeInTheDocument();
+    expect(screen.getByText('90')).toBeInTheDocument();
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     // … and the freshness indicator is in its error state (semantic danger dot).

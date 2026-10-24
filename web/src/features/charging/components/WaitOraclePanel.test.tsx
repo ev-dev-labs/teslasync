@@ -83,7 +83,7 @@ const forecast = {
   verdict: 'packed',
   confidence: 'high',
   stalls_estimated: 4,
-  best_hour_utc: 15,
+  best_hour: 15,
   best_wait_s: 0,
   save_s: 2646,
   hours: [
@@ -121,9 +121,9 @@ function renderPanel() {
 }
 
 function expectChartShell() {
-  expect(screen.getByText('Wait across the arrival day (UTC)')).toBeInTheDocument();
+  expect(screen.getByText('Wait across the arrival day')).toBeInTheDocument();
   expect(screen.getByRole('figure', {
-    name: 'Wait across the arrival day (UTC)',
+    name: 'Wait across the arrival day',
   })).toBeInTheDocument();
   expect(screen.getByRole('group', { name: 'Arrival' })).toBeInTheDocument();
   expect(screen.getByLabelText('Custom arrival')).toBeEnabled();
@@ -284,7 +284,7 @@ describe('WaitOraclePanel', () => {
     expect(payload.expected_wait_s).toBe(seconds);
     expect(payload.hours[0].expected_wait_s).toBe(seconds);
     if (seconds >= 60) {
-      expect(screen.getByText(`Arrive 15:00 UTC instead to save ~${formatted} min.`)).toBeInTheDocument();
+      expect(screen.getByText(`Arrive 15:00 instead to save ~${formatted} min.`)).toBeInTheDocument();
     } else {
       expect(screen.queryByText(/instead to save/)).not.toBeInTheDocument();
     }
@@ -297,11 +297,11 @@ describe('WaitOraclePanel', () => {
 
   it('renders the forecast with verdict, best hour, and evidence', () => {
     renderPanel();
-    expect(screen.getByText('Supercharger Wait Oracle')).toBeInTheDocument();
+    expect(screen.getByText('Supercharger wait oracle')).toBeInTheDocument();
     expect(screen.getByText('44.10 min expected wait')).toBeInTheDocument();
     expect(screen.getByText('Packed')).toBeInTheDocument();
     expect(screen.getByText('High confidence')).toBeInTheDocument();
-    expect(screen.getByText('Arrive 15:00 UTC instead to save ~44.10 min.')).toBeInTheDocument();
+    expect(screen.getByText('Arrive 15:00 instead to save ~44.10 min.')).toBeInTheDocument();
     expect(screen.getByText(/1740 sessions over 10.0 weeks/)).toBeInTheDocument();
   });
 
@@ -380,7 +380,7 @@ describe('WaitOraclePanel', () => {
     expect(screen.queryByText(/No named sites yet/)).not.toBeInTheDocument();
     expect(screen.queryByRole('status', { name: /Loading sites|Forecasting wait/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', {
-      name: `Retry unavailable sources: ${source === 'sites' ? 'Site' : 'Supercharger Wait Oracle'}`,
+      name: `Retry unavailable sources: ${source === 'sites' ? 'Site' : 'Supercharger wait oracle'}`,
     }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });

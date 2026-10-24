@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Lock, Unlock, Thermometer, ThermometerSnowflake, Container, Flashlight,
+  Unlock, Thermometer, Container, Flashlight,
   Volume2, Loader2, Zap,
 } from 'lucide-react';
 import { Button, Text } from '@/components/ui';
@@ -23,33 +23,21 @@ export interface QuickCommand {
 }
 
 export const COMMANDS: QuickCommand[] = [
-  { id: 'lock', command: 'lock', icon: Lock, labelKey: 'glance.action.lock', labelFallback: 'Lock', color: 'text-neon-green' },
-  { id: 'unlock', command: 'unlock', icon: Unlock, labelKey: 'glance.action.unlock', labelFallback: 'Unlock', color: 'text-neon-red' },
-  { id: 'climate_on', command: 'climate_on', icon: Thermometer, labelKey: 'glance.action.climateOn', labelFallback: 'Climate on', color: 'text-neon-cyan' },
-  { id: 'climate_off', command: 'climate_off', icon: ThermometerSnowflake, labelKey: 'glance.action.climateOff', labelFallback: 'Climate off', color: 'text-blue-400' },
+  { id: 'unlock', command: 'unlock', icon: Unlock, labelKey: 'glance.action.unlock', labelFallback: 'Unlock', color: 'text-[var(--theme-on-primary)]' },
+  { id: 'climate_on', command: 'climate_on', icon: Thermometer, labelKey: 'widget.climatePanel.title', labelFallback: 'Climate', color: 'text-cyan-300' },
   { id: 'frunk', command: 'actuate_frunk', icon: Container, labelKey: 'commands.doors.frunk', labelFallback: 'Frunk', color: 'text-purple-400' },
-  { id: 'honk', command: 'honk_horn', icon: Volume2, labelKey: 'glance.action.horn', labelFallback: 'Horn', color: 'text-amber-400' },
-  { id: 'flash', command: 'flash_lights', icon: Flashlight, labelKey: 'palette.cmd.flash', labelFallback: 'Flash Lights', color: 'text-yellow-400' },
   { id: 'trunk', command: 'actuate_trunk', icon: Container, labelKey: 'commands.doors.trunk', labelFallback: 'Trunk', color: 'text-indigo-400' },
+  { id: 'flash', command: 'flash_lights', icon: Flashlight, labelKey: 'palette.cmd.flash', labelFallback: 'Flash', color: 'text-yellow-400' },
+  { id: 'honk', command: 'honk_horn', icon: Volume2, labelKey: 'glance.action.horn', labelFallback: 'Honk', color: 'text-amber-400' },
 ];
 
 /**
- * Choose which quick-command tiles to show for a given widget size.
- *
- * Pure + exported so the size→command-set rule is unit-testable in isolation
- * (mirrors the helper-export convention of the sibling widgets). Dimensions are
- * read defensively so a malformed persisted layout falls back to the medium
- * (6-command) set instead of throwing on `size.cols`.
- *   • compact 1×1 tile → the 4 most-used actions
- *   • wide (≥3 cols)   → the full set
- *   • otherwise        → 6 actions
+ * The command set follows the widget's After card: it is stable across sizes,
+ * with layout density changing only for a compact 1×1 tile.
  */
 export function visibleCommandsForSize(size: WidgetSize): QuickCommand[] {
-  const cols = size?.cols ?? 2;
-  const rows = size?.rows ?? 2;
-  if (cols <= 1 && rows <= 1) return COMMANDS.slice(0, 4);
-  if (cols >= 3) return COMMANDS;
-  return COMMANDS.slice(0, 6);
+  void size;
+  return COMMANDS;
 }
 
 export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetProps) {
@@ -66,7 +54,6 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
   const cols = size?.cols ?? 2;
   const rows = size?.rows ?? 2;
   const isCompact = cols <= 1 && rows <= 1;
-  const isWide = cols >= 3;
 
   // Only show the skeleton while we're still resolving a vehicle id from the
   // list. If an explicit vehicleId prop was supplied the command grid is
@@ -107,10 +94,8 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
         <div
           className={
             isCompact
-              ? 'grid grid-cols-2 gap-1.5 h-full items-center'
-              : isWide
-                ? 'grid grid-cols-2 @xs:grid-cols-4 gap-2'
-                : 'grid grid-cols-2 @xs:grid-cols-3 gap-2'
+              ? 'grid grid-cols-3 gap-1.5 h-full items-center'
+              : 'grid grid-cols-3 gap-2'
           }
         >
           {visibleCommands.map((cmd) => {
@@ -120,9 +105,9 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
             return (
               <Button
                 key={cmd.id}
-                variant="ghost"
+                variant={cmd.id === 'unlock' ? 'primary' : 'secondary'}
                 size="sm"
-                wrapLabel={!isCompact}
+                wrapLabel={false}
                 icon={isRunning
                   ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-neon-cyan" />
                   : <Icon aria-hidden="true" className={`h-4 w-4 ${cmd.color}`} />}
@@ -135,7 +120,11 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
                 aria-busy={isRunning || undefined}
                 onClick={() => handleCommand(cmd.command)}
                 aria-label={t(cmd.labelKey, cmd.labelFallback)}
-                className="flex min-h-11 min-w-0 flex-row items-center gap-2 py-2 px-1 rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-3)] border border-[var(--border-subtle)] transition-colors h-auto"
+                className={
+                  isCompact
+                    ? 'h-full min-h-8 min-w-0 flex-col gap-1 px-1 rounded-shape-lg'
+                    : 'h-auto min-h-[68px] min-w-0 flex-col gap-1 px-2 py-2 rounded-shape-lg'
+                }
               >
                 {!isCompact && (
                   <Text variant="bodySm" className="w-full text-center">

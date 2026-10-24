@@ -6,20 +6,20 @@ import { useTranslation } from 'react-i18next';
 
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
-import { formatDisplayIntensity, formatMonth, toDisplayIntensity } from './formatters';
+import { formatDisplayIntensity, toDisplayIntensity } from './formatters';
+import { formatMonthName } from '@/lib/dateConvert';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalMonthProfile({
   analysis,
   state,
   locale,
-  timeZone,
   units,
 }: SeasonalSectionProps) {
   useNumberFormatting();
   const { t } = useTranslation();
   const chartData = analysis.months.map((month) => ({
-    monthKey: `${month.month}-${formatMonth(month.month, locale, timeZone)}`,
+    monthKey: `${month.month}-${formatMonthName(month.month, { locale })}`,
     observed: toDisplayIntensity(month.observedEnergyIntensityWhPerM, units.unitPrefs),
     fitted: toDisplayIntensity(month.fittedEnergyIntensityWhPerM, units.unitPrefs),
     samples: month.sampleCount,

@@ -63,7 +63,7 @@ const EXPECTED = [
   },
   {
     href: '/battery',
-    label: 'Battery',
+    label: 'Battery health',
     labelKey: 'nav.battery',
     desc: 'Health & degradation',
     descKey: 'nav.batteryDesc',

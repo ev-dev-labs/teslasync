@@ -2,10 +2,12 @@
  * RecentDrivesWidget — behaviour, hardening & a11y contract.
  *
  * The widget resolves a vehicle (explicit prop → first vehicle → none), reads a
- * single `useQuery('/drives?…limit=5')` result and renders a compact list of
- * the five most-recent drives (distance in the user's unit, duration, SOC
- * transition, date) with a "View all" affordance — or an empty state. This
- * suite drives the whole component through its accessible surface:
+ * single `useQuery('/drives?…limit=5')` result and renders the After design:
+ * up to four route rows ("Start → End", "Today 8:12 AM · 22 min" underneath,
+ * distance on the right with Wh-per-distance efficiency below it) plus a
+ * footer summarising the fetched set ("5 drives this week · 58 mi") with an
+ * "All drives" link — or an empty state. This suite drives the whole component
+ * through its accessible surface:
  *
  *   - vehicle resolution (prop wins over the vehicle list; the list supplies the
  *     fallback; no vehicle → id 0 keeps the query disabled so `/drives` is never
@@ -14,21 +16,23 @@
  *     FAILED request must surface a `QueryError` ("never a blank panel"), NOT
  *     the misleading "No recent drives" empty state (the widget previously
  *     swallowed the error and rendered the empty copy);
- *   - the populated list: title, SI→display distance maths (km AND mi), the
- *     duration/SOC line, the date cell (formatter fed `start_ts`), the row +
- *     "View all" link targets, and the limit=5 request contract;
- *   - null-safety: a drive with 0 distance / 0 duration / null SOC renders
- *     "0.0 km", "0 min" and "?" placeholders instead of NaN / "undefined";
+ *   - the populated rows: route title, SI→display distance maths (km AND mi),
+ *     the date/duration line (formatters fed `start_ts`), per-row efficiency,
+ *     the four-row cap, the footer summary/link, and the limit=5 request
+ *     contract;
+ *   - null-safety: a drive with 0 distance / 0 duration / null energy renders
+ *     "0.0 km", "0 min" and no efficiency hint instead of NaN / "undefined";
+ *     unmeasured (null) distance/duration stay distinct from a real zero;
  *   - the freshness refresh interaction re-issues the `/drives` read.
  *
  * The network boundary (`request` from `@/api/client`) is mocked; TanStack Query
- * runs for real against it. `useVehicles`, `useUnits` and `useDateFormat` are
- * mocked at the hook boundary (the last provides `formatTime` too, which
- * `<FreshnessDot>` inside `<WidgetShell>` also consumes). `react-i18next` is
- * stubbed to echo the English fallback. `@testing-library/user-event` is not
- * installed in this repo (see the sibling BackupMonitorWidget /
- * ChargeSessionChartWidget suites), so the one interaction goes through
- * `fireEvent`.
+ * runs for real against it. `useVehicles`, `useUnits`, `useDateFormat` and
+ * `useDateLabels` are mocked at the hook boundary (the last provides the
+ * day/weekday labels; `formatTime` is supplied too, which `<FreshnessDot>`
+ * inside `<WidgetShell>` also consumes). `react-i18next` is stubbed to echo
+ * the English fallback. `@testing-library/user-event` is not installed in this
+ * repo (see the sibling BackupMonitorWidget / ChargeSessionChartWidget
+ * suites), so the one interaction goes through `fireEvent`.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -73,11 +77,13 @@ vi.mock('@/hooks/useUnits', () => ({
   useUnits: vi.fn(),
 }));
 
-// Date formatting is deterministic. `formatDateShort` is a shared spy (so we
-// can assert it is fed the drive's `start_ts`); `formatTime` is supplied too
-// because <FreshnessDot> inside <WidgetShell> reads it.
-const { formatDateShortSpy } = vi.hoisted(() => ({
-  formatDateShortSpy: vi.fn((_v: unknown) => 'May 1'),
+// Date formatting is deterministic. `formatTime` is a shared spy (so we
+// can assert it is fed the drive's `start_ts`); the day/weekday labels come
+// from `useDateLabels`, spied for the same reason.
+const { formatTimeSpy, formatRelativeDaysSpy, formatWeekdayNameSpy } = vi.hoisted(() => ({
+  formatTimeSpy: vi.fn((_v: unknown) => '12:00'),
+  formatRelativeDaysSpy: vi.fn((_v: unknown) => 'Today'),
+  formatWeekdayNameSpy: vi.fn((_v: unknown) => 'Wed'),
 }));
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({
@@ -86,12 +92,24 @@ vi.mock('@/hooks/useDateFormat', () => ({
     locale: 'en-US',
     formatDate: (v: unknown) => String(v),
     formatDateTime: (v: unknown) => String(v),
-    formatTime: () => '12:00',
-    formatDateShort: formatDateShortSpy,
+    formatTime: formatTimeSpy,
+    formatDateShort: (v: unknown) => String(v),
     formatDateWithDay: (v: unknown) => String(v),
     formatRelative: (v: unknown) => String(v),
     formatRelativeTime: () => 'just now',
     formatRelativeDays: () => 'today',
+  }),
+}));
+vi.mock('@/hooks/useDateLabels', () => ({
+  useDateLabels: () => ({
+    opts: {},
+    tz: 'UTC',
+    locale: 'en-US',
+    formatMonthYear: (v: unknown) => String(v),
+    formatMonthName: (v: unknown) => String(v),
+    formatWeekdayName: formatWeekdayNameSpy,
+    formatMonthDayHour: (v: unknown) => String(v),
+    formatRelativeDays: formatRelativeDaysSpy,
   }),
 }));
 
@@ -156,6 +174,8 @@ function makeDrive(over: Partial<Drive> = {}): Drive {
     end_soc_pct: 60,
     energy_used_wh: null,
     regen_energy_wh: null,
+    start_address: 'Home',
+    end_address: 'Office',
     ...over,
   };
 }
@@ -190,7 +210,9 @@ function renderWidget(vehicleId?: number) {
 beforeEach(() => {
   driveSeq = 0;
   vi.clearAllMocks();
-  formatDateShortSpy.mockImplementation((_v: unknown) => 'May 1');
+  formatTimeSpy.mockImplementation((_v: unknown) => '12:00');
+  formatRelativeDaysSpy.mockImplementation((_v: unknown) => 'Today');
+  formatWeekdayNameSpy.mockImplementation((_v: unknown) => 'Wed');
   mockUseVehicles.mockReturnValue({ data: [{ id: 1 }] } as never);
   mockUseUnits.mockReturnValue(unitsResult('km'));
   routeDrives([]);
@@ -252,6 +274,9 @@ describe('RecentDrivesWidget states', () => {
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(empty).toBeInTheDocument();
     expect(empty.closest('[role="status"]')).not.toBeNull();
+    // No footer summary or "All drives" link without drives.
+    expect(screen.queryByText(/drives this week/)).toBeNull();
+    expect(screen.queryByRole('link', { name: /All drives/ })).toBeNull();
   });
 
   it('surfaces a QueryError — not the empty state — when the drives request fails', async () => {
@@ -271,38 +296,37 @@ describe('RecentDrivesWidget states', () => {
   });
 });
 
-// ── Populated list ──────────────────────────────────────────────────────────
+// ── Populated rows ──────────────────────────────────────────────────────────
 
-describe('RecentDrivesWidget populated list', () => {
+describe('RecentDrivesWidget populated rows', () => {
   it('keeps unmeasured distance and duration distinct from a real zero', async () => {
     routeDrives([Object.assign(makeDrive(), { distance_m: null, duration_s: null })]);
     renderWidget(1);
-    expect(await screen.findByText('—')).toBeInTheDocument();
-    expect(screen.getByText(/— min/)).toBeInTheDocument();
-    expect(screen.queryByText('0.00 km')).not.toBeInTheDocument();
+    expect(await screen.findByText('Home → Office')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('Today 12:00 · —')).toBeInTheDocument();
+    expect(screen.queryByText('0.0 km')).not.toBeInTheDocument();
   });
 
   it('preserves cached rows after a failed background refresh', async () => {
     routeDrives([makeDrive({ id: 99 })]);
     renderWidget(1);
-    expect(await screen.findByText('5.00 km')).toBeInTheDocument();
+    expect(await screen.findByText('Home → Office')).toBeInTheDocument();
+    expect(screen.getByText('5.0 km')).toBeInTheDocument();
     mockRequest.mockRejectedValue(new Error('background outage'));
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
-    await waitFor(() => expect(screen.getByRole('link', {
-      name: '5.00 km 30.00 min · 80.00% → 60.00% · May 1 2024-05-01T10:00:00Z',
-    })).toHaveAttribute('href', '/drives/99'));
+    await waitFor(() => expect(screen.getByText('Home → Office')).toBeInTheDocument());
     await waitFor(() => expect(document.querySelector('[data-data-state="stale"]')).not.toBeNull());
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
   });
 
-  it('renders the title, distance, duration/SOC line, date and link targets', async () => {
+  it('renders route, distance, efficiency, date/duration line and footer', async () => {
     routeDrives([
       makeDrive({
         id: 42,
         distance_m: 5000,
         duration_s: 1800,
-        start_soc_pct: 80,
-        end_soc_pct: 60,
+        energy_used_wh: 1155, // 231 Wh/km over 5 km
         start_ts: '2024-05-01T10:00:00Z',
       }),
     ]);
@@ -312,69 +336,106 @@ describe('RecentDrivesWidget populated list', () => {
     expect(await screen.findByText('Recent drives')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
-    // Distance: 5000 m → 5.0 km (default unit), rendered with its unit.
-    expect(screen.getByText('5.00 km')).toBeInTheDocument();
+    // Route is the row title (the After design drops the SOC transition).
+    expect(screen.getByText('Home → Office')).toBeInTheDocument();
+    expect(screen.queryByText(/% →/)).toBeNull();
 
-    // Duration (1800 s → 30 min) + SOC transition on one line.
-    expect(screen.getByText('30.00 min · 80.00% → 60.00% · May 1')).toBeInTheDocument();
+    // Distance: 5000 m → 5.0 km (one decimal, matching the After rows).
+    expect(screen.getByText('5.0 km')).toBeInTheDocument();
 
-    // Date cell is produced by the formatter, fed the drive's start_ts.
-    expect(screen.getByText(/May 1/)).toBeInTheDocument();
-    expect(formatDateShortSpy).toHaveBeenCalledWith('2024-05-01T10:00:00Z');
+    // Efficiency under the distance: 1155 Wh / 5 km.
+    expect(screen.getByText('231 Wh/km')).toBeInTheDocument();
 
-    // "View all" affordance points at the drives index…
+    // Date + duration line, produced by the shared date layer fed `start_ts`.
+    expect(screen.getByText('Today 12:00 · 30 min')).toBeInTheDocument();
+    expect(formatTimeSpy).toHaveBeenCalledWith('2024-05-01T10:00:00Z');
+    expect(formatRelativeDaysSpy).toHaveBeenCalledWith('2024-05-01T10:00:00Z');
+
+    // Footer summarises the fetched set and links to the drives index…
+    expect(screen.getByText('1 drives this week · 5 km')).toBeInTheDocument();
+    const allDrives = screen.getByRole('link', { name: /All drives/ });
+    expect(allDrives).toHaveAttribute('href', '/drives');
+
+    // …as does the header "View all" affordance. Rows themselves are not
+    // per-drive links in the After design.
     const viewAll = screen.getByRole('link', { name: /View all/ });
     expect(viewAll).toHaveAttribute('href', '/drives');
-
-    // …and the row links to that specific drive.
     const hrefs = screen.getAllByRole('link').map((l) => l.getAttribute('href'));
-    expect(hrefs).toContain('/drives/42');
+    expect(hrefs).not.toContain('/drives/42');
   });
 
-  it('renders one row per drive and honours the limit=5 request contract', async () => {
+  it('uses the weekday label for drives older than yesterday', async () => {
+    formatRelativeDaysSpy.mockImplementation((_v: unknown) => '3d ago');
+    routeDrives([makeDrive()]);
+    renderWidget(1);
+
+    expect(await screen.findByText('Wed 12:00 · 30 min')).toBeInTheDocument();
+    expect(formatWeekdayNameSpy).toHaveBeenCalledWith('2024-05-01T10:00:00Z');
+  });
+
+  it('caps the list at four rows while the footer counts the full fetched set', async () => {
     routeDrives([
-      makeDrive({ id: 1 }),
-      makeDrive({ id: 2 }),
-      makeDrive({ id: 3 }),
+      makeDrive({ id: 1, end_address: 'Office 1' }),
+      makeDrive({ id: 2, end_address: 'Office 2' }),
+      makeDrive({ id: 3, end_address: 'Office 3' }),
+      makeDrive({ id: 4, end_address: 'Office 4' }),
+      makeDrive({ id: 5, end_address: 'Office 5' }),
     ]);
     renderWidget(1);
 
     await screen.findByText('Recent drives');
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
-    // Three drive rows + the "View all" link = four links total.
-    const driveLinks = screen
-      .getAllByRole('link')
-      .map((l) => l.getAttribute('href'))
-      .filter((h) => h?.startsWith('/drives/'));
-    expect(driveLinks).toEqual(['/drives/1', '/drives/2', '/drives/3']);
+    expect(screen.getByText('Home → Office 4')).toBeInTheDocument();
+    expect(screen.queryByText('Home → Office 5')).toBeNull();
+    // 5 × 5000 m = 25 km across the fetched set.
+    expect(screen.getByText('5 drives this week · 25 km')).toBeInTheDocument();
     expect(drivesCalls()[0]?.[0]).toBe('/drives?vehicle_id=1&limit=5');
   });
 
-  it('converts distance to miles when the unit preference is mi', async () => {
-    mockUseUnits.mockReturnValue(unitsResult('mi'));
-    routeDrives([makeDrive({ distance_m: 1609.344 })]); // exactly 1 mile
+  it('renders one row per drive and honours the limit=5 request contract', async () => {
+    routeDrives([
+      makeDrive({ id: 1, end_address: 'Office 1' }),
+      makeDrive({ id: 2, end_address: 'Office 2' }),
+      makeDrive({ id: 3, end_address: 'Office 3' }),
+    ]);
     renderWidget(1);
 
-    expect(await screen.findByText('1.00 mi')).toBeInTheDocument();
+    await screen.findByText('Recent drives');
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.queryByText('1.00 km')).toBeNull();
+
+    expect(screen.getByText('Home → Office 1')).toBeInTheDocument();
+    expect(screen.getByText('Home → Office 2')).toBeInTheDocument();
+    expect(screen.getByText('Home → Office 3')).toBeInTheDocument();
+    expect(screen.getByText('3 drives this week · 15 km')).toBeInTheDocument();
+    expect(drivesCalls()[0]?.[0]).toBe('/drives?vehicle_id=1&limit=5');
   });
 
-  it('is null-safe: 0 distance / 0 duration / null SOC render placeholders, not NaN', async () => {
+  it('converts distance and efficiency to miles when the unit preference is mi', async () => {
+    mockUseUnits.mockReturnValue(unitsResult('mi'));
+    routeDrives([makeDrive({ distance_m: 1609.344, energy_used_wh: 231 })]); // exactly 1 mile
+    renderWidget(1);
+
+    expect(await screen.findByText('1.0 mi')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    expect(screen.getByText('231 Wh/mi')).toBeInTheDocument();
+    expect(screen.queryByText('1.0 km')).toBeNull();
+  });
+
+  it('is null-safe: 0 distance / 0 duration / null energy render without NaN', async () => {
     routeDrives([
       makeDrive({
         distance_m: 0,
         duration_s: 0,
-        start_soc_pct: null as never,
-        end_soc_pct: null,
+        energy_used_wh: null,
       }),
     ]);
     renderWidget(1);
 
-    expect(await screen.findByText('0.00 km')).toBeInTheDocument();
+    expect(await screen.findByText('0.0 km')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.getByText('0.00 min · ?% → ?% · May 1')).toBeInTheDocument();
+    expect(screen.getByText('Today 12:00 · 0 min')).toBeInTheDocument();
+    expect(screen.queryByText(/Wh\//)).toBeNull();
     expect(screen.queryByText(/NaN|undefined/)).toBeNull();
   });
 });

@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { StatStrip, type StatMetric } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { LayoutCard } from '@/components/layout';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { CarbonSectionBody } from './CarbonSectionBody';
 import type { CarbonSectionProps } from './types';
 
@@ -20,6 +21,7 @@ export function CarbonEvidenceLedger({
   display,
 }: CarbonSectionProps) {
   const { t } = useTranslation();
+  const { formatDateRange } = useDateFormat();
   const period = analysis.period;
   const resolved = states.period.hasData;
   const netLabel = period.netDisposition === 'excess'
@@ -97,9 +99,7 @@ export function CarbonEvidenceLedger({
               reason: t('carbon.source.invalidWindow', 'The date-window labels or RFC3339 boundaries are invalid; period interpretation is withheld.'),
             } : {
               kind: 'analysis',
-              label: t('carbon.source.periodScope', '{{start}} through {{end}} calendar labels', {
-                start: analysis.window.startLabel, end: analysis.window.endLabel,
-              }),
+              label: formatDateRange(analysis.window.startInstant, analysis.window.endInstantExclusive),
               start: analysis.window.startInstant,
               endExclusive: analysis.window.endInstantExclusive,
               timezone: analysis.window.timezone,

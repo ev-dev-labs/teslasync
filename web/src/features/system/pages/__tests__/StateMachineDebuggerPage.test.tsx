@@ -32,7 +32,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import type { ReactNode } from 'react';
 import type { FSMTransition } from '@/types/fsm';
-import { formatDurationMsCompact } from '@/lib/dateFormat';
+import { formatDurationMsCompact } from '@/lib/dateConvert';
 import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 // ── Mutable per-test fixture (referenced inside hoisted vi.mock factories) ──
@@ -275,7 +275,8 @@ describe('StateMachineDebuggerPage — exact chart range', () => {
     expect(screen.getByTestId('live-controls-counter')).toHaveTextContent(
       '0 in window · 1 in filtered buffer · 1 loaded · 200 matching',
     );
-    expect(screen.getAllByText(/2026-03-08T08:00:00.000Z/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Mar 8, 2026').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/2026-03-08T08:00:00.000Z/)).toBeNull();
     expect(screen.getAllByText('Loaded transition page only').length).toBeGreaterThanOrEqual(4);
     expect(screen.getByTestId('live-controls-counter')).not.toHaveTextContent('in 24 h');
   });

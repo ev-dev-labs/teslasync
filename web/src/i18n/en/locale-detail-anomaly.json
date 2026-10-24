@@ -1,0 +1,82 @@
+{
+  "anomaly": {
+    "summary": {
+      "snapshot": "Current detector snapshot",
+      "period": "Current snapshot · last 7 days · last 24 hours",
+      "scope": "Coverage and health categories describe the current detector snapshot. Anomaly counts retain their separate 7-day and 24-hour source windows.",
+      "sevenDays": "Last 7 days",
+      "day": "Last 24 hours",
+      "title": "Coverage and anomaly windows",
+      "available": "Detector snapshot available",
+      "unavailable": "Detector snapshot unavailable"
+    },
+    "title": "Anomaly detection",
+    "subtitle": "Automatic health monitoring and signal anomaly detection",
+    "monitored": "Signals monitored",
+    "last7d": "Anomalies (7d)",
+    "last24h": "Anomalies (24h)",
+    "categories": "Health categories",
+    "healthSummary": "System health",
+    "noHealth": "Health data will appear once telemetry is available.",
+    "timeline": "Anomaly timeline",
+    "value": "Value",
+    "baseline": "Baseline",
+    "noAnomalies": "No anomalies detected — all systems normal.",
+    "frequency": "Most frequent anomalies",
+    "count": "Anomalies",
+    "noFrequency": "Anomaly frequency data will appear after detection runs.",
+    "noData": "No data available yet.",
+    "kpis": "Summary metrics",
+    "aiInsights": "AI insights",
+    "selectVehicle": "Select a vehicle to view its anomaly analysis.",
+    "frequencyAria": "Bar chart of the most frequently anomalous signals",
+    "category": {
+      "battery": "Battery",
+      "tires": "Tires",
+      "motors": "Motors",
+      "hvac": "Climate",
+      "charging": "Charging",
+      "unknown": "Unknown"
+    },
+    "status": {
+      "normal": "Normal",
+      "warning": "Warning",
+      "critical": "Critical",
+      "unknown": "Unknown"
+    },
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Info"
+    },
+    "type": {
+      "z_score": "Statistical",
+      "range": "Range",
+      "trend": "Trend"
+    },
+    "aiExplanation": {
+      "title": "Helix explanation",
+      "description": "Generate independent, inferred narration for the selected vehicle over 30 days, not an explanation of the detector’s 7-day results or the baseline’s 14-day training data.",
+      "generateButton": "Generate explanation",
+      "badge": "Helix",
+      "emptyHint": "Select a vehicle above to explain its anomalies."
+    },
+    "aiBaseline": {
+      "title": "Learn per-vehicle baseline",
+      "description": "Compute statistical anomaly bounds (mean, stddev, p5/p95) from this vehicle's recent signal history and walk through how each signal compares to the static safe-range fallback.",
+      "generateButton": "Train baseline",
+      "badge": "Helix"
+    },
+    "colSignal": "Signal",
+    "overview": "Anomaly overview",
+    "explanation": {
+      "zScore": "{{signal}} value {{value}} is {{sigma}} standard deviations from the mean ({{baseline}}).",
+      "belowMinimum": "{{signal}} value {{value}} is below the safe minimum ({{minimum}}).",
+      "aboveMaximum": "{{signal}} value {{value}} exceeds the safe maximum ({{maximum}}).",
+      "increased": "{{signal}} increased in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}}).",
+      "decreased": "{{signal}} decreased in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}}).",
+      "increasedPercent": "{{signal}} increased by {{percent}}% in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}}).",
+      "decreasedPercent": "{{signal}} decreased by {{percent}}% in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}})."
+    }
+  }
+}

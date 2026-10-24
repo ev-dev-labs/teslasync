@@ -13,12 +13,10 @@ import { Caption } from '@/components/ui';
 import { useCostBreakdown } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFormatting } from '@/hooks/useFormatting';
-import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
-import { knownNumber, knownString } from '@/api/dataState';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { WidgetRankedList, WidgetBigNumber, WidgetDetailCard, type RankedItem } from './shared';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
+import { knownNumber } from '@/api/dataState';
+import { useDateLabels } from '@/hooks/useDateLabels';
+import { WidgetBigNumber } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
@@ -33,8 +31,7 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
   const vehiclesQuery = useVehicles();
   const id = vehicleId ?? config?.vehicleId ?? vehiclesQuery.data?.[0]?.id;
   const { formatCurrency } = useFormatting();
-  const { unitPrefs } = useUnits();
-  const distanceUnit = unitPrefs.distance;
+  const { formatMonthName, locale, tz } = useDateLabels('vehicle');
 
   const {
     data,
@@ -63,22 +60,16 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
       : []
   ), [data]);
 
-  // The existing tariff contract is currency/km, not a distance measurement.
-  const costPerDist = useMemo(() => {
-    const costPerKm = knownNumber(data?.cost_per_km_ev);
-    return costPerKm == null ? null : costPerKm / convertDistanceFromSI(1000, distanceUnit);
-  }, [data, distanceUnit]);
-
-  const latestMonthCost = knownNumber(monthlyEntries[monthlyEntries.length - 1]?.ev_cost);
-
   const donutData = useMemo((): DonutSegment[] => {
     const recent = monthlyEntries.slice(-6);
     return recent.map((entry, i) => ({
-      name: knownString(entry.month) ?? '—',
+      name: entry.month == null
+        ? '—'
+        : formatMonthName(String(entry.month), { locale, tz }),
       value: knownNumber(entry.ev_cost),
       color: palette.series[i % palette.series.length],
     }));
-  }, [monthlyEntries, palette]);
+  }, [monthlyEntries, palette, formatMonthName, locale, tz]);
 
   const canUseDonut = donutData.every((entry) => entry.value != null && entry.value >= 0)
     && donutData.some((entry) => entry.value != null && entry.value > 0);
@@ -140,24 +131,8 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
   }, [donutData, isCompact, canUseDonut]);
   const yAxisWidth = axisWidth + axisOverflow;
 
-  const rankedItems = useMemo((): (RankedItem & { value: number })[] => {
-    return monthlyEntries.flatMap((entry, i) => {
-      const value = knownNumber(entry.ev_cost);
-      return value == null ? [] : [{
-        id: `${entry.month ?? 'unknown'}-${i}`,
-        label: knownString(entry.month) ?? '—',
-        value,
-        formattedValue: formatAmount(value),
-      }];
-    }).sort((a, b) => b.value - a.value);
-  }, [monthlyEntries, formatAmount]);
-
-  const unknownMonths = monthlyEntries
-    .filter((entry) => knownNumber(entry.ev_cost) == null)
-    .map((entry) => ({ label: knownString(entry.month) ?? '—', value: '—' }));
   const totalCost = knownNumber(data?.total_charging_cost);
   const totalSavings = knownNumber(data?.total_savings);
-  const monthlySavings = knownNumber(data?.monthly_savings);
   const handleRefresh = useCallback(() => {
     if (id == null) vehiclesQuery.refetch?.();
     else refetch();
@@ -170,14 +145,18 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
     partial: data != null && (
       !Array.isArray(data.monthly_breakdown)
       || monthlyEntries.length !== data.monthly_breakdown.length
-      || unknownMonths.length > 0
-      || [totalCost, totalSavings, costPerDist, monthlySavings].some((value) => value == null)
+      || [totalCost, totalSavings].some((value) => value == null)
     ),
   });
-  const primaryCost = monthlyEntries.length > 0 ? latestMonthCost : totalCost;
   const shellProps = {
     title: t('widget.costBreakdown.title', 'Cost breakdown'),
     icon: <PieIcon className="h-3.5 w-3.5 text-emerald-400" />,
+  };
+  const savingsDelta = totalSavings == null ? undefined : {
+    text: totalSavings >= 0
+      ? t('widget.costBreakdown.savedVsGas', 'Saved {{amount}} vs gas', { amount: formatCurrency(totalSavings) })
+      : t('widget.costBreakdown.gasComparisonDelta', 'Gas comparison difference {{amount}}', { amount: formatCurrency(totalSavings) }),
+    tone: totalSavings > 0 ? 'good' as const : 'neutral' as const,
   };
 
   if (isCompact) {
@@ -195,22 +174,11 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
       >
         {data != null ? (
           <WidgetBigNumber
-            value={primaryCost == null ? null : formatAmount(primaryCost)}
-            label={monthlyEntries.length > 0
-              ? t('widget.costBreakdown.latestMonth', 'Latest recorded month')
-              : t('widget.costBreakdown.totalCost', 'Total cost')}
-            subtitle={
-              monthlySavings != null
-                ? t('widget.costBreakdown.monthlySavingsEstimate', 'Monthly savings estimate vs gas: {{amount}}', {
-                    amount: formatCurrency(monthlySavings),
-                  })
-                : undefined
-            }
-            badge={
-              totalSavings != null && totalSavings > 0
-                ? { text: t('widget.costBreakdown.saving', 'Saving'), variant: 'success' as const }
-                : undefined
-            }
+            value={totalCost == null ? null : formatAmount(totalCost)}
+            label={t('widget.costBreakdown.lifetimeCost', 'Lifetime charging cost')}
+            delta={savingsDelta}
+            animated={false}
+            align="center"
           />
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -244,19 +212,13 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
       onRefresh={handleRefresh}
     >
         <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
-          <DashboardSourceBrief
-            metrics={[
-              { metricId: 'currency', rawValue: totalCost, label: t('widget.costBreakdown.totalCost', 'Total cost'), description: t('widget.costBreakdown.totalDescription', 'Reported total charging cost, retaining the configured currency display.'), display: { formatter: raw => ({ value: formatAmount(raw), unit: '' }) } },
-              { metricId: 'rate', rawValue: knownNumber(data?.cost_per_km_ev) == null ? null : Number(data?.cost_per_km_ev) / 1000, label: t('widget.costBreakdown.costPerDist', 'Cost / {{unit}}', { unit: distanceUnit }), description: t('widget.costBreakdown.rateDescription', 'Source currency per kilometre normalized to currency per metre; display conversion occurs exactly once.'), display: { formatter: raw => ({ value: formatAmount(Number(raw) * 1000 / convertDistanceFromSI(1000, distanceUnit)), unit: '' }) } },
-              { metricId: 'currency', rawValue: totalSavings, label: t('widget.costBreakdown.gasSavings', 'Gas savings'), description: t('widget.costBreakdown.savingsDescription', 'Reported gasoline comparison is an estimate, not independently measured savings.'), display: { formatter: raw => ({ value: formatAmount(raw), unit: '' }) } },
-            ]}
-            state={dataState} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
-            title={t('widget.costBreakdown.summaryTitle', 'Charging cost sources')}
-            description={t('widget.costBreakdown.summaryDescription', 'Lifetime totals, the existing source tariff and estimated gasoline comparison remain independent of ranked monthly rows.')}
-            scope={t('widget.costBreakdown.summaryScope', 'Vehicle {{vehicleId}}; lifetime source totals and available monthly records, exact coverage bounds unknown', { vehicleId: id ?? '—' })}
-            loading={isLoading && !data} testId="cost-breakdown-operational-brief"
+          <WidgetBigNumber
+            value={totalCost == null ? null : formatAmount(totalCost)}
+            label={t('widget.costBreakdown.lifetimeCost', 'Lifetime charging cost')}
+            delta={savingsDelta}
+            animated={false}
           />
-          <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-2 gap-3 @sm:grid-cols-2 @sm:grid-rows-1">
+          <div className="min-h-0 flex-1 grid grid-cols-1">
           <EmbeddedChart
             title={t('widget.costBreakdown.title', 'Cost breakdown')}
             ariaLabel={t(
@@ -310,20 +272,6 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
             </ResponsiveContainer>
             </div>
           </EmbeddedChart>
-
-          <div className="min-h-0 min-w-0 overflow-auto">
-          <WidgetRankedList
-            items={rankedItems}
-            order="source"
-            wrapContent
-            compact={false}
-            maxItems={5}
-            showBars={rankedItems.every((entry) => entry.value >= 0)}
-            emptyMessage={t('widget.costBreakdown.noData', 'No cost data')}
-            emptyIcon={<PieIcon className="h-5 w-5" />}
-          />
-          {unknownMonths.length > 0 && <WidgetDetailCard entries={unknownMonths} compact />}
-          </div>
           </div>
         </div>
     </WidgetShell>

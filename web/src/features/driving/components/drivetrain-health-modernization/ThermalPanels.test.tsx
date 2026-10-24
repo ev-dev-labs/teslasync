@@ -30,11 +30,13 @@ vi.mock('@/hooks/useRangeState', () => ({
 }));
 
 vi.mock('@/hooks/useDateFormat', async () => {
-  const { formatDateTime } = await import('@/lib/dateFormat');
+  const { formatDateTime, formatDateRange } = await import('@/lib/dateFormat');
   return {
     useDateFormat: () => ({
       formatDateTime: (value: string | undefined, override: { tz?: string }) =>
         formatDateTime(value, { locale: scopePreferences.locale, ...override }),
+      formatDateRange: (start: string | undefined, endExclusive: string | undefined) =>
+        formatDateRange(start, endExclusive, { locale: scopePreferences.locale, tz: scopePreferences.timezone }),
     }),
   };
 });
@@ -105,24 +107,24 @@ describe('Drivetrain statistics scope copy', () => {
 
   it('describes all completed-drive statistics and exact local bounds across a DST day', () => {
     renderScope();
-    const scope = screen.getAllByText(/Drive start:.*inclusive.*exclusive/);
+    const scope = screen.getAllByText(/Drive start in .* \(start inclusive, end exclusive\)/);
     expect(scope.length).toBeGreaterThanOrEqual(1);
     for (const copy of scope) {
-      expect(copy).toHaveTextContent('8. März 2026, 00:00');
-      expect(copy).toHaveTextContent('9. März 2026, 00:00');
-      expect(copy).toHaveTextContent('[2026-03-08T08:00:00.000Z]');
-      expect(copy).toHaveTextContent('[2026-03-09T07:00:00.000Z]');
-      expect(copy).toHaveTextContent('America/Los_Angeles');
+      // Both LA-midnight bounds fall on Mar 8 across the DST transition, so
+      // the end-inclusive range collapses to the single local day, shown once.
+      expect(copy).toHaveTextContent('Drive start in 8. März 2026 (start inclusive, end exclusive)');
+      expect(copy).not.toHaveTextContent('2026-03-08T08:00:00.000Z');
+      expect(copy).not.toHaveTextContent('2026-03-09T07:00:00.000Z');
+      expect(copy).not.toHaveTextContent('America/Los_Angeles');
     }
     const stats = screen.getByRole('region', { name: 'Vehicle drive statistics' });
     fireEvent.click(within(stats).getByRole('button', { name: 'Review details' }));
     const statsDrawer = screen.getByRole('dialog');
     const statsHeader = statsDrawer.querySelector('[data-drawer-header]')!;
-    expect(statsHeader).toHaveTextContent('8. März 2026, 00:00');
-    expect(statsHeader).toHaveTextContent('9. März 2026, 00:00');
-    expect(statsHeader).toHaveTextContent('[2026-03-08T08:00:00.000Z]');
-    expect(statsHeader).toHaveTextContent('[2026-03-09T07:00:00.000Z]');
-    expect(statsHeader).toHaveTextContent('America/Los_Angeles');
+    expect(statsHeader).toHaveTextContent('Drive start in 8. März 2026 (start inclusive, end exclusive)');
+    expect(statsHeader).not.toHaveTextContent('2026-03-08T08:00:00.000Z');
+    expect(statsHeader).not.toHaveTextContent('2026-03-09T07:00:00.000Z');
+    expect(statsHeader).not.toHaveTextContent('America/Los_Angeles');
     expect(statsHeader).toHaveTextContent(/Server statistics cover all completed drives/);
     fireEvent.keyDown(statsDrawer, { key: 'Escape' });
     expect(screen.getAllByText(/Server statistics cover all completed drives/).length).toBeGreaterThanOrEqual(1);
@@ -136,12 +138,13 @@ describe('Drivetrain statistics scope copy', () => {
     scopePreferences.startInstant = '2026-10-01T15:00:00.123Z';
     scopePreferences.endInstantExclusive = '2026-10-02T15:00:00.456Z';
     renderScope();
-    for (const copy of screen.getAllByText(/Drive start:.*inclusive.*exclusive/)) {
-      expect(copy).toHaveTextContent('2 oct. 2026, 00:00');
-      expect(copy).toHaveTextContent('3 oct. 2026, 00:00');
-      expect(copy).toHaveTextContent('[2026-10-01T15:00:00.123Z]');
-      expect(copy).toHaveTextContent('[2026-10-02T15:00:00.456Z]');
-      expect(copy).toHaveTextContent('Asia/Tokyo');
+    for (const copy of screen.getAllByText(/Drive start in .* \(start inclusive, end exclusive\)/)) {
+      // Tokyo civil days (UTC would be Oct 1–2); the sub-second exclusive end
+      // still includes part of Oct 3, so the inclusive last day is Oct 3.
+      expect(copy).toHaveTextContent('Drive start in 2–3 oct. 2026 (start inclusive, end exclusive)');
+      expect(copy).not.toHaveTextContent('2026-10-01T15:00:00.123Z');
+      expect(copy).not.toHaveTextContent('2026-10-02T15:00:00.456Z');
+      expect(copy).not.toHaveTextContent('Asia/Tokyo');
     }
   });
 
@@ -153,9 +156,9 @@ describe('Drivetrain statistics scope copy', () => {
     scopePreferences.startInstant = start;
     scopePreferences.endInstantExclusive = end;
     renderScope();
-    for (const copy of screen.getAllByText(/Drive start:.*inclusive.*exclusive/)) {
-      expect(copy).toHaveTextContent('Drive start: — (inclusive) to — (exclusive)');
-      expect(copy).toHaveTextContent('America/Los_Angeles');
+    for (const copy of screen.getAllByText(/Drive start in .* \(start inclusive, end exclusive\)/)) {
+      expect(copy).toHaveTextContent('Drive start in — (start inclusive, end exclusive)');
+      expect(copy).not.toHaveTextContent('America/Los_Angeles');
       expect(copy).not.toHaveTextContent('Invalid Date');
       expect(copy).not.toHaveTextContent('invalid-date');
     }
@@ -192,7 +195,7 @@ describe('MethodologyPanel layout contract', () => {
       'Peak-labelled power uses average drive power from up to 30 returned drives. Per-drive regen power is not supplied; gaps are unknown, not zero.',
       'Motor history uses the existing unbounded 200-snapshot request in source order, independent of the selected range. Drive charts and power use the last 30 returned drives within the selected range; this subset is separate from the full completed-drive statistics.',
       'Server statistics cover all completed drives for the selected vehicle whose start falls within the selected bounds, not just the returned drive subset.',
-      /Drive start:.*inclusive.*exclusive.*America\/Los_Angeles/,
+      /Drive start in .* \(start inclusive, end exclusive\)/,
       'Average power requires a power reading for every included drive. An incomplete set remains unknown rather than treating missing readings as zero.',
       'Without temperature evidence, no active health assessment is presented. A returned status is still recorded as source data.',
     ]) {
@@ -201,6 +204,8 @@ describe('MethodologyPanel layout contract', () => {
     for (const label of ['Front Motor', 'Rear Motor', 'Inverter', 'Battery']) {
       expect(methodology.getByText(label, { selector: 'dt' })).toBeVisible();
     }
+    expect(methodology.queryByText(/America\/Los_Angeles/)).not.toBeInTheDocument();
+    expect(methodology.queryByText(/2026-03-08T08:00:00\.000Z/)).not.toBeInTheDocument();
   });
 });
 

@@ -4,6 +4,7 @@ import { OperationalBrief, type StatMetric, type StatPeriod } from '@/components
 import { SourceContent } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { formatDayKey } from '@/lib/dateFormat';
 import { calendarDayKey, type DriveCalendar } from '../../lib/driveCalendar';
@@ -21,6 +22,7 @@ export function CalendarSummaryCards({
 }: CalendarSummaryCardsProps) {
   const { t } = useTranslation();
   const { formatDistance, unitPrefs } = useUnits();
+  const { formatDateRange } = useDateFormat();
   const known = !isLoading && !error;
   const title = t('driveCalendar.kpis', 'Drive calendar summary metrics');
   const metrics: StatMetric[] = [
@@ -83,7 +85,7 @@ export function CalendarSummaryCards({
         description={t('driveCalendar.brief.description', 'Activity, streaks, distance, and the busiest day from returned drives in the selected workspace range.')}
         statusLabel={statusLabel} statusTone={error || retained ? 'warning' : 'neutral'}
         scope={<span>{sourcePeriod.label}{sourcePeriod.kind === 'analysis'
-          ? ` · ${sourcePeriod.start} – ${sourcePeriod.endExclusive} · ${sourcePeriod.timezone}`
+          ? ` · ${formatDateRange(sourcePeriod.start, sourcePeriod.endExclusive)}`
           : null}</span>}
         freshness={<span>{sourcePeriod.kind === 'unknown' ? sourcePeriod.reason : sourcePeriod.provenance}</span>}
         provenance={t('driveCalendar.sourcePeriod', 'Returned drives in the selected workspace range; continuous coverage is unknown.')}

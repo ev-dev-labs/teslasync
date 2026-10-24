@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ChartContainer } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
+import { formatMonthYear } from '@/lib/dateConvert';
 
 
 import type { DrivingRhythm } from '../../lib/drivingRhythm';
@@ -14,18 +15,9 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function formatMonth(month: string, locale?: string): string {
   const match = /^(\d{4})-(\d{2})$/.exec(month);
-  if (!match) return month;
-  try {
-    return new Intl.DateTimeFormat(locale, {
-      month: 'short',
-      year: '2-digit',
-      timeZone: 'UTC',
-    }).format(
-      new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1, 12)),
-    );
-  } catch {
-    return month;
-  }
+  const monthNumber = match ? Number(match[2]) : NaN;
+  if (!match || monthNumber < 1 || monthNumber > 12) return month;
+  return formatMonthYear(month, { locale, yearStyle: '2-digit' });
 }
 
 interface MonthlyRhythmTrendProps {

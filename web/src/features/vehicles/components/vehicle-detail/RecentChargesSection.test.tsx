@@ -121,9 +121,9 @@ beforeEach(() => tSpy.mockClear())
 afterEach(() => cleanup())
 
 describe('chargeDurationMinutes', () => {
-  it('prefers an explicit, positive duration_min over the timestamp delta', () => {
-    // Timestamps say 90m, but an explicit 45 wins.
-    expect(chargeDurationMinutes(makeSession({ duration_min: 45 }))).toBe(45)
+  it('prefers an explicit, positive duration_s over the timestamp delta', () => {
+    // Timestamps say 90m, but an explicit 45-minute duration wins.
+    expect(chargeDurationMinutes(makeSession({ duration_s: 2700 }))).toBe(45)
   })
 
   it('derives minutes from started_at/ended_at when duration_min is absent', () => {

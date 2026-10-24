@@ -5,6 +5,7 @@ import type { StatMetric } from '@/components/data-display/stat-reference/types'
 import { EmptyState, QueryError } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
 import { formatDistance, formatDuration, formatEnergy } from '@/lib/unitConversion';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import type { DataStatus } from '@/api/dataState';
 import type { DayLogResponse } from '@/api/types';
@@ -12,7 +13,6 @@ import type { DayLogResponse } from '@/api/types';
 interface DayLogOperationalSummaryProps {
   data: DayLogResponse | null;
   date: string;
-  timezone: string;
   isLoading: boolean;
   error: unknown;
   status: DataStatus;
@@ -20,14 +20,13 @@ interface DayLogOperationalSummaryProps {
 }
 
 export function DayLogOperationalSummary({
-  data, date, timezone, isLoading, error, status, onRetry,
+  data, date, isLoading, error, status, onRetry,
 }: DayLogOperationalSummaryProps) {
   const { t } = useTranslation();
+  const { formatDayKey } = useDateFormat();
   const summary = data?.summary ?? null;
   const hasSessions = (summary?.drive_count ?? 0) + (summary?.charge_count ?? 0) > 0;
-  const scope = t('dayLog.brief.scope', '{{date}} · {{timezone}}', {
-    date: data?.date ?? date, timezone: data?.timezone ?? timezone,
-  });
+  const scope = formatDayKey(data?.date ?? date);
   const period = t('dayLog.summary.period', 'Selected vehicle day');
   const metricContext = <>{period} · {scope}</>;
   const sourceMetrics: readonly StatMetric[] = [
@@ -94,17 +93,9 @@ export function DayLogOperationalSummary({
         metrics={metrics}
         loading={isLoading}
         scope={<Text as="span" variant="caption">{period} · {scope}</Text>}
-        freshness={<Text as="span" variant="caption">
-          {data?.day_start && data?.day_end
-            ? t('dayLog.brief.bounds', '[{{start}}, {{end}}) · end exclusive', { start: data.day_start, end: data.day_end })
-            : t('dayLog.brief.boundsUnknown', 'Recorded day bounds unavailable')}
-        </Text>}
         provenance={[
           t('dayLog.brief.provenance', 'Recorded drives and charging sessions for the selected vehicle day. Signal transitions and per-source availability remain in Timeline and Sources.'),
           scope,
-          data?.day_start && data?.day_end
-            ? t('dayLog.brief.bounds', '[{{start}}, {{end}}) · end exclusive', { start: data.day_start, end: data.day_end })
-            : t('dayLog.brief.boundsUnknown', 'Recorded day bounds unavailable'),
         ].join(' · ')}
       />
       {!isLoading && error ? (

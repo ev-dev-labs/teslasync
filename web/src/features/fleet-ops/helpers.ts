@@ -5,7 +5,7 @@ import type {
   FleetReservation,
   FleetWorkOrder,
 } from '@/api/hooks/useFleetOps';
-import { ymdInTz } from '@/lib/dateFormat';
+import { ymdInTz } from '@/lib/dateConvert';
 import { getGlobalLocale, getGlobalPrecision, isFiniteNumber } from '@/lib/numberFormat';
 
 export function reservationCalendarDays(items: FleetReservation[], tz: string) {

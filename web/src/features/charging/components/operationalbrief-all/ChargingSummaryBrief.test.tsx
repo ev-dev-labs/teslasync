@@ -15,6 +15,19 @@ vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({
     energy: 'kWh', duration: 'min', power: 'kW', precision: 2, locale: 'en-US' },
 }) }));
 vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => ({ currencySymbol: '$' }) }));
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>(
+    '@/hooks/useSettings',
+  );
+  return {
+    ...actual,
+    useSettings: () => ({ settings: { locale: 'en-US', tz_display_default: 'user', timezone_user: 'America/Los_Angeles' }, locale: 'en-US' }),
+  };
+});
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: null }),
+}));
+vi.unmock('@/lib/timezone');
 
 afterEach(cleanup);
 const preferences: MetricPreferences = {
@@ -166,5 +179,34 @@ describe('charging summaries use the real compact OperationalBrief and numeric b
     expect(container.querySelector('[data-operational-metric="energy"]')).toBeNull();
     expect(screen.getByText('Reconnect to load charging history.')).toBeInTheDocument();
     expect(reviewDetails().getByText('No source measurements')).toBeInTheDocument();
+  });
+});
+
+describe('charging brief period bounds follow the display timezone once', () => {
+  const analysisPeriod = {
+    kind: 'analysis', label: 'Last 30 days',
+    start: '2026-09-22T07:00:00.000Z', endExclusive: '2026-10-22T07:00:00.000Z',
+    timezone: 'America/Los_Angeles', completeness: 'unknown', provenance: 'test-only',
+  } as const;
+
+  it('renders one formatted inclusive range without raw ISO or a zone suffix', () => {
+    render(<ChargingSummaryBrief title="Charging summary" metrics={metrics}
+      period={analysisPeriod} preferences={preferences} />, { wrapper });
+    const drawer = reviewDetails();
+    expect(drawer.getByText('Sep 22 – Oct 21, 2026')).toBeVisible();
+    expect(drawer.queryByText(/2026-09-22T07:00:00/)).toBeNull();
+    expect(drawer.queryByText(/America\/Los_Angeles/)).toBeNull();
+  });
+
+  it('formats event bounds and snapshot observations in the display zone', () => {
+    render(<ChargingSummaryBrief title="Charging summary" metrics={metrics}
+      period={{ kind: 'event', label: 'Session', eventId: '7', start: '2026-10-21T07:30:00.000Z', end: null, provenance: 'test-only' }}
+      preferences={preferences} />, { wrapper });
+    expect(reviewDetails().getByText('Oct 21, 2026, 12:30 AM')).toBeVisible();
+    cleanup();
+    render(<ChargingSummaryBrief title="Charging summary" metrics={metrics}
+      period={{ kind: 'snapshot', label: 'Snapshot', observedAt: '2026-10-21T19:45:00.000Z', provenance: 'test-only' }}
+      preferences={preferences} />, { wrapper });
+    expect(reviewDetails().getByText('Oct 21, 2026, 12:45 PM')).toBeVisible();
   });
 });

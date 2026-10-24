@@ -61,7 +61,10 @@ vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({ currencySymbol: '$' }),
 }));
 vi.mock('@/hooks/useDateFormat', () => ({
-  useDateFormat: () => ({ formatDateTime: (value: string | null | undefined) => value ?? '—' }),
+  useDateFormat: () => ({
+    formatDateTime: (value: string | null | undefined) => value == null ? '—' : `fmt(${value})`,
+    formatDateRange: (start: string | null | undefined, end: string | null | undefined) => `range(${start}..${end})`,
+  }),
 }));
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
@@ -159,9 +162,9 @@ describe('NestedDrivingBrief — real compact renderer and unconditional numeric
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Returned evidence details' });
     expect(within(drawer).getByText('Returned records only.')).toBeVisible();
-    expect(within(drawer).getByText(/2026-08-01T00:00:00Z.*2026-08-09T00:00:00Z.*UTC/)).toBeVisible();
-    expect(within(drawer).getByText(/exclusive end/)).toBeVisible();
-    expect(within(drawer).getByText(/Returned subset/)).toBeVisible();
+    expect(within(drawer).getByText('Selected range · range(2026-08-01T00:00:00Z..2026-08-09T00:00:00Z) · Returned subset')).toBeVisible();
+    expect(within(drawer).queryByText(/exclusive end/)).toBeNull();
+    expect(within(drawer).queryByText(/\(UTC\)|· UTC/)).toBeNull();
     expect(within(drawer).getByText('0/8')).toBeVisible();
   });
   it.each([
@@ -389,7 +392,7 @@ describe('Released nested driving quantity contracts', () => {
     expect(captured('ride-energy-recovered')?.rawValue).toBe(0);
     expect(screen.getByRole('link', { name: 'Open trip details' })).toHaveAttribute('href', '/drives/82');
     assertOperationalBriefDisclosure(screen.getByTestId('dynamics-ride-metrics'),
-      'Selected ride · #82 · 2026-08-08T10:00:00Z – 2026-08-08T10:10:00Z');
+      'Selected ride · #82 · fmt(2026-08-08T10:00:00Z) – fmt(2026-08-08T10:10:00Z)');
     expect(screen.getByText(/recorded regeneration, not peak regen power/)).toBeVisible();
   });
   it('keeps completed-week grading separate from the ungraded active-week snapshot', () => {

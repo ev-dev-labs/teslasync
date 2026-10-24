@@ -31,6 +31,20 @@ vi.mock('@/api/client', async () => {
   return { ...actual, request: vi.fn() };
 });
 
+// Saved display zone for the regen omitted-timezone test: Auckland is neither
+// the CI host zone (UTC) nor a typical dev host zone, so it proves the hook
+// resolves the effective zone instead of the browser zone.
+const h = vi.hoisted(() => ({
+  timezone_user: 'Pacific/Auckland',
+  tz_display_default: 'user',
+}));
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    locale: 'en-US',
+    settings: { timezone_user: h.timezone_user, tz_display_default: h.tz_display_default },
+  }),
+}));
+
 import { request } from '@/api/client';
 import type { TripPlanRequest } from '@/types/driving';
 import {
@@ -407,9 +421,10 @@ describe('vehicle-scoped analytics hooks', () => {
 // ---------------------------------------------------------------------------
 
 describe('date-range analytics hooks', () => {
+  // useRegenEfficiency is covered in its own describe below: it also sends
+  // the effective display zone as `?timezone=` for month bucketing.
   const cases: Array<[string, (id?: string, s?: string, e?: string) => unknown, string]> = [
     ['useSpeedProfile', useSpeedProfile, '/analytics/speed-profile'],
-    ['useRegenEfficiency', useRegenEfficiency, '/analytics/regen'],
     ['useRouteEfficiency', useRouteEfficiency, '/analytics/route-efficiency'],
   ];
 
@@ -436,6 +451,56 @@ describe('date-range analytics hooks', () => {
   it.each(cases)('%s is disabled when vehicleId is undefined', async (_name, hook) => {
     const { Wrapper } = makeWrapper();
     renderHook(() => hook(undefined), { wrapper: Wrapper });
+    await tick();
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useRegenEfficiency — date range plus the effective display zone, which the
+// backend uses to bucket the monthly trend in the user's selected zone.
+// ---------------------------------------------------------------------------
+
+describe('useRegenEfficiency', () => {
+  it('builds a vehicle-only URL with an explicit timezone when no range is given', async () => {
+    mockedRequest.mockResolvedValueOnce({});
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useRegenEfficiency('5', undefined, undefined, 'UTC'), {
+      wrapper: Wrapper,
+    }) as { result: { current: { isSuccess: boolean } } };
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(callArgs()[0]).toBe('/analytics/regen?vehicle_id=5&timezone=UTC');
+  });
+
+  it('appends start and end when provided', async () => {
+    mockedRequest.mockResolvedValueOnce({});
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(
+      () => useRegenEfficiency('5', '2025-01-01', '2025-02-01', 'America/Los_Angeles'),
+      { wrapper: Wrapper },
+    ) as { result: { current: { isSuccess: boolean } } };
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const params = new URLSearchParams(callArgs()[0].split('?')[1]);
+    expect(params.get('vehicle_id')).toBe('5');
+    expect(params.get('start')).toBe('2025-01-01');
+    expect(params.get('end')).toBe('2025-02-01');
+    expect(params.get('timezone')).toBe('America/Los_Angeles');
+  });
+
+  it('sends the effective display zone when the timezone is omitted', async () => {
+    mockedRequest.mockResolvedValueOnce({});
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useRegenEfficiency('5'), { wrapper: Wrapper }) as {
+      result: { current: { isSuccess: boolean } };
+    };
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const params = new URLSearchParams(callArgs()[0].split('?')[1]);
+    expect(params.get('timezone')).toBe('Pacific/Auckland');
+  });
+
+  it('is disabled when vehicleId is undefined', async () => {
+    const { Wrapper } = makeWrapper();
+    renderHook(() => useRegenEfficiency(undefined), { wrapper: Wrapper });
     await tick();
     expect(mockedRequest).not.toHaveBeenCalled();
   });

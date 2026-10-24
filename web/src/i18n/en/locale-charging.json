@@ -49,7 +49,7 @@
       "detailsScope": "All loaded pairs, newest first. “Well matched” means no model flag was triggered, not proof of intent. Already-full dwell is inferred from charge-end SoC, not continuous parked measurements. Dates use your browser timezone.",
       "pending": "Both charging and drive history must be loaded before pairings can be evaluated.",
       "chargeBounds": "Observed charge-end timestamps",
-      "chartTime": "Chart timestamps use {{zone}}. Pairing uses elapsed instants within 24 hours, not local calendar dates or a business timezone.",
+      "chartTime": "Chart timestamps use your selected time zone. Pairing uses elapsed instants within 24 hours, not local calendar dates or a separate business timezone.",
       "driveBounds": "Observed drive-start timestamps",
       "paused": "History loading is paused. Connect to resume or retry this source.",
       "loaded": "{{count}} records loaded",
@@ -1215,7 +1215,15 @@
     },
     "kpis": "Cost summary metrics",
     "trends": "Cost trends",
-    "impact": "Lifetime and environmental impact"
+    "impact": "Lifetime and environmental impact",
+    "category": {
+      "home": "Home",
+      "supercharger": "Supercharger",
+      "public": "Public",
+      "publicDC": "Public DC",
+      "workL2": "Work / L2",
+      "other": "Other"
+    }
   },
   "metrics": {
     "peakPower": "{{value}} kW peak",
@@ -1448,7 +1456,7 @@
   },
   "wait_oracle": {
     "title": "Supercharger wait oracle",
-    "subtitle": "Expected queue wait per site and arrival time, predicted from your fleet charging history. All hours UTC.",
+    "subtitle": "Expected queue wait per site and arrival time, predicted from your fleet charging history.",
     "site": "Site",
     "sessions": "{{count}} sessions",
     "pickSite": "Select a site",
@@ -1462,7 +1470,7 @@
     "expectedWait": "{{min}} min expected wait",
     "confidence": "{{level}} confidence",
     "waitProb": "{{pct}}% chance of any wait · ~{{stalls}} stalls",
-    "bestHour": "Arrive {{hour}}:00 UTC instead to save ~{{min}} min.",
+    "bestHour": "Arrive {{hour}}:00 instead to save ~{{min}} min.",
     "verdict": {
       "quiet": "Quiet",
       "steady": "Steady",
@@ -1475,10 +1483,10 @@
       "low": "Low"
     },
     "chart": {
-      "title": "Wait across the arrival day (UTC)",
+      "title": "Wait across the arrival day",
       "aria": "Expected wait minutes by hour of day",
       "col": {
-        "hour": "Hour (UTC)",
+        "hour": "Hour",
         "wait": "Expected wait (min)"
       }
     }

@@ -31,6 +31,15 @@ import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockAp
  * charging/201, vehicles/7, trips/1, automations/1/edit,
  * system-status/incidents/1, year-review/2025, s/e2e-token); `*` becomes
  * one bogus path exercising the not-found page.
+ *
+ * TZ-5 sweep: the same pass also fails a route/width when visible text
+ * contains a raw ISO timestamp (`2026-10-22T07:00:00.000Z`), a time zone
+ * name/offset (`America/Los_Angeles`, `UTC`, `GMT-7`), or the same instant
+ * in two different strings (friendly + raw pairs). `TZ_ALLOW` below excuses
+ * design-accepted hits per route (`'*'` excuses a whole category); GMT
+ * offsets inside SVG axis ticks are accepted globally (chart ticks by
+ * design) but still recorded. Calibrate with
+ * `GALLERY_ONLY=/a,/b` plus `-g "at 1280px"`.
  */
 
 const ROUTES: string[] = [
@@ -321,12 +330,38 @@ const WIDTHS = [
   { width: 1920, height: 900 },
 ] as const
 
+/**
+ * Design-accepted TZ hits per route. Each entry excuses hits whose text
+ * contains the substring; `'*'` excuses the whole category for the route.
+ * - `/dev-tools` ISO: the TimestampTool converter's subject is the raw
+ *   format itself (tz-tool-subject).
+ * - `/settings` zones: the page's own time-zone explanation (tz-settings).
+ * - `/notifications/quiet-hours` zones containing `/`: each window carries
+ *   its own IANA zone as schedule data (tz-schedule-data); bare UTC/GMT
+ *   hits are still flagged.
+ * - `/day-log` GMT offsets: fall-back disambiguation on the timeline
+ *   (tz-dst-offset, same class as the shared formatChartInstant).
+ */
+const TZ_ALLOW: Record<string, { iso?: string[]; zones?: string[]; dupes?: string[] }> = {
+  '/dev-tools': { iso: ['*'] },
+  '/settings': { zones: ['*'] },
+  '/notifications/quiet-hours': { zones: ['/'] },
+  '/day-log': { zones: ['GMT-', 'GMT+'] },
+}
+
+function tzExcused(route: string, kind: 'iso' | 'zones' | 'dupes', text: string): boolean {
+  const allow = TZ_ALLOW[route]?.[kind] ?? []
+  return allow.some((sub) => sub === '*' || text.includes(sub))
+}
+
 const onlyEnv = process.env.GALLERY_ONLY?.split(',').map((s) => s.trim()).filter(Boolean) ?? null
 const ACTIVE_ROUTES = onlyEnv ? ROUTES.filter((r) => onlyEnv.includes(r)) : ROUTES
 const CHUNKS = Math.min(64, Math.max(1, ACTIVE_ROUTES.length))
 
 interface NarrowCard { selector: string; width: number; height: number; text: string }
 interface PerChar { tag: string; text: string; width: number; height: number; lines: number }
+interface TzHit { text: string; inSvg: boolean; context: string }
+interface TzSweep { iso: TzHit[]; zones: TzHit[]; dupes: string[] }
 interface RouteRecord {
   route: string
   width: number
@@ -337,6 +372,7 @@ interface RouteRecord {
   perchar: PerChar[]
   overflow: { root: [number, number]; body: [number, number] } | null
   error: string | null
+  tz: TzSweep
 }
 
 function slug(route: string): string {
@@ -460,6 +496,89 @@ async function measure(page: Page, width: number): Promise<Pick<RouteRecord, 'ca
   }, width)
 }
 
+async function measureTz(page: Page): Promise<TzSweep> {
+  return page.evaluate(() => {
+    const iso: TzHit[] = []
+    const zones: TzHit[] = []
+    const candidates: string[] = []
+    const ISO_RE = /\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?\b/g
+    const IANA_CANDIDATE_RE = /[A-Za-z][\w+.-]*\/[\w+.-]+(?:\/[\w+.-]+)*/g
+    const UTC_RE = /\bUTC\b/g
+    const GMT_RE = /GMT[+-]\d{1,2}\b/g
+    const UTC_OFF_RE = /UTC[+-]\d/g
+    const MONTHS = 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec'
+    const FRIENDLY_RE = new RegExp(
+      `\\b(?:${MONTHS})[a-z]*\\s+\\d{1,2},\\s+\\d{4}(?:,?\\s+\\d{1,2}:\\d{2}(?::\\d{2})?\\s*(?:AM|PM)?)?`
+      + `|\\b\\d{1,2}\\/\\d{1,2}\\/\\d{4}(?:,?\\s+\\d{1,2}:\\d{2}(?::\\d{2})?\\s*(?:AM|PM)?)?`,
+      'g',
+    )
+    let iana: Set<string> | null = null
+    try {
+      const sv = (Intl as unknown as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf
+      if (typeof sv === 'function') iana = new Set(sv.call(Intl, 'timeZone'))
+    } catch {
+      iana = null
+    }
+    const CONTINENTS = /^(Africa|America|Antarctica|Arctic|Asia|Atlantic|Australia|Europe|Indian|Pacific)\//
+    const els = document.querySelectorAll(
+      'p,span,div,h1,h2,h3,h4,h5,h6,li,td,th,a,button,label,dt,dd,time,text',
+    )
+    for (const el of els) {
+      const html = el as HTMLElement
+      if (html.closest('script,style,noscript,template,input,textarea,select,option,.leaflet-container')) continue
+      const rect = html.getBoundingClientRect?.()
+      if (!rect || (rect.width === 0 && rect.height === 0)) continue
+      const cs = getComputedStyle(html)
+      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.visibility === 'collapse') continue
+      const own = Array.from(el.childNodes)
+        .filter((node) => node.nodeType === 3)
+        .map((node) => node.textContent ?? '')
+        .join(' ')
+      if (!own.trim()) continue
+      const inSvg = html.closest('svg') != null
+      const context = (html.parentElement?.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 100)
+      for (const m of own.matchAll(ISO_RE)) {
+        if (iso.length < 20) iso.push({ text: m[0].slice(0, 80), inSvg, context })
+        if (candidates.length < 400) candidates.push(m[0])
+      }
+      for (const m of own.matchAll(IANA_CANDIDATE_RE)) {
+        const v = m[0]
+        if ((iana ? iana.has(v) : CONTINENTS.test(v)) && zones.length < 20) {
+          zones.push({ text: v.slice(0, 80), inSvg, context })
+        }
+      }
+      for (const m of own.matchAll(UTC_RE)) {
+        if (zones.length < 20) zones.push({ text: m[0], inSvg, context })
+      }
+      for (const m of own.matchAll(GMT_RE)) {
+        if (zones.length < 20) zones.push({ text: m[0], inSvg, context })
+      }
+      for (const m of own.matchAll(UTC_OFF_RE)) {
+        if (zones.length < 20) zones.push({ text: m[0], inSvg, context })
+      }
+      for (const m of own.matchAll(FRIENDLY_RE)) {
+        if (candidates.length < 400) candidates.push(m[0])
+      }
+    }
+    const byEpoch = new Map<number, Set<string>>()
+    for (const c of candidates) {
+      const ms = Date.parse(c)
+      if (!Number.isFinite(ms)) continue
+      let set = byEpoch.get(ms)
+      if (!set) {
+        set = new Set()
+        byEpoch.set(ms, set)
+      }
+      set.add(c.trim().slice(0, 80))
+    }
+    const dupes: string[] = []
+    for (const set of byEpoch.values()) {
+      if (set.size >= 2 && dupes.length < 10) dupes.push([...set].join('  <>  '))
+    }
+    return { iso, zones, dupes }
+  })
+}
+
 for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
   for (const { width, height } of WIDTHS) {
     test(`route layout guard chunk ${chunk} at ${width}px`, async ({ page }) => {
@@ -477,6 +596,7 @@ for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
         const record: RouteRecord = {
           route, width, finalUrl: '', status: 'pass', cards: 0,
           narrow: [], perchar: [], overflow: null, error: null,
+          tz: { iso: [], zones: [], dupes: [] },
         }
         try {
           await page.goto(route, { waitUntil: 'domcontentloaded' })
@@ -506,6 +626,28 @@ for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
             if (over) parts.push(`overflow root ${m.overflow.root[0]}/${m.overflow.root[1]} body ${m.overflow.body[0]}/${m.overflow.body[1]}`)
             violations.push(`${route} @${width}: ${parts.join('; ')}`)
           }
+          const tz = await measureTz(page)
+          record.tz = tz
+          // GMT offsets inside SVG axis ticks are chart ticks by design
+          // (shared formatChartInstant); everything else must be allowlisted.
+          const tzIso = tz.iso.filter((h) => !tzExcused(route, 'iso', h.text))
+          const tzZones = tz.zones.filter(
+            (h) => !(h.inSvg && /^GMT[+-]/.test(h.text)) && !tzExcused(route, 'zones', h.text),
+          )
+          const tzDupes = tz.dupes.filter((d) => !tzExcused(route, 'dupes', d))
+          if (tzIso.length > 0 || tzZones.length > 0 || tzDupes.length > 0) {
+            record.status = 'violation'
+            const parts = [
+              ...tzIso.slice(0, 5).map((h) => `raw-iso "${h.text}"${h.inSvg ? ' [svg]' : ''} <<${h.context}>>`),
+              ...tzZones.slice(0, 5).map((h) => `zone "${h.text}"${h.inSvg ? ' [svg]' : ''} <<${h.context}>>`),
+              ...tzDupes.slice(0, 5).map((d) => `dupe ${d}`),
+            ]
+            violations.push(`${route} @${width}: TZ ${parts.join('; ')}`)
+            await writeFile(
+              await guardArtifactPath(`tz-dom-${slug(route)}-${width}.html`),
+              await page.content(),
+            )
+          }
           if (width === 1280 || width === 375) {
             await page.screenshot({
               path: await guardArtifactPath(`${slug(route)}-${width}.jpg`),
@@ -526,6 +668,7 @@ for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
         console.log(
           `[route-guard] ${route} @${width}: ${record.status} `
           + `cards=${record.cards} narrow=${record.narrow.length} perchar=${record.perchar.length}`
+          + ` tzIso=${record.tz.iso.length} tzZones=${record.tz.zones.length} tzDupes=${record.tz.dupes.length}`
           + (record.error ? ` error=${record.error}` : ''),
         )
       }

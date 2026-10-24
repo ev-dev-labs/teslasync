@@ -7,6 +7,7 @@
  */
 
 import type { Drive } from '@/types/driving';
+import { browserTimeZone, isValidTimeZone, zonedDateParts } from '@/lib/dateFormat';
 
 export const PARKING_DRIVE_LIMIT = 1_000;
 
@@ -174,8 +175,6 @@ const DURATION_BANDS: ReadonlyArray<{
   { key: '3dPlus', minMs: 72 * HOUR_MS, maxMs: null },
 ];
 
-const zonedFormatterCache = new Map<string, Intl.DateTimeFormat>();
-
 function parseUtcDate(raw: string): CalendarDate | null {
   const match = DATE_ONLY.exec(raw);
   if (!match) return null;
@@ -226,58 +225,15 @@ export function parseParkingInstantRange(
 
 function resolveTimeZone(raw: string): { timeZone: string; fallback: boolean } {
   const candidate = raw.trim() || 'UTC';
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(0);
-    return { timeZone: candidate, fallback: false };
-  } catch {
-    return { timeZone: 'UTC', fallback: true };
-  }
-}
-
-function getZonedFormatter(timeZone: string): Intl.DateTimeFormat {
-  let formatter = zonedFormatterCache.get(timeZone);
-  if (!formatter) {
-    formatter = new Intl.DateTimeFormat('en-US-u-ca-gregory-nu-latn', {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hourCycle: 'h23',
-    });
-    zonedFormatterCache.set(timeZone, formatter);
-  }
-  return formatter;
+  if (isValidTimeZone(candidate)) return { timeZone: candidate, fallback: false };
+  return { timeZone: 'UTC', fallback: true };
 }
 
 function zonedParts(epochMs: number, timeZone: string): ZonedParts | null {
   if (!Number.isFinite(epochMs)) return null;
-  const values: Partial<Record<Intl.DateTimeFormatPartTypes, number>> = {};
-  for (const part of getZonedFormatter(timeZone).formatToParts(new Date(epochMs))) {
-    if (
-      part.type === 'year'
-      || part.type === 'month'
-      || part.type === 'day'
-      || part.type === 'hour'
-      || part.type === 'minute'
-      || part.type === 'second'
-    ) {
-      values[part.type] = Number(part.value);
-    }
-  }
-  const { year, month, day, hour, minute, second } = values;
-  if (
-    year == null
-    || month == null
-    || day == null
-    || hour == null
-    || minute == null
-    || second == null
-  ) {
-    return null;
-  }
+  const parts = zonedDateParts(epochMs, timeZone);
+  if (!parts) return null;
+  const { year, month, day, hour, minute, second } = parts;
   return { year, month, day, hour, minute, second };
 }
 
@@ -328,7 +284,7 @@ function zonedHourToEpoch(
 export function nightOverlapMs(
   startMs: number,
   endMs: number,
-  requestedTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+  requestedTimeZone = browserTimeZone(),
 ): number {
   if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
     return 0;

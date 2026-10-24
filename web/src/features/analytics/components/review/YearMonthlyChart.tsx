@@ -8,6 +8,7 @@ import {
 } from '@/components/charts';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useUnits } from '@/hooks/useUnits';
+import { formatMonthName } from '@/lib/dateConvert';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 import type { YearReview } from '@/api/types';
@@ -26,7 +27,7 @@ interface Props {
 function monthShortLabel(month: number | null | undefined, locale: string | undefined): string {
   const n = typeof month === 'number' && Number.isFinite(month) ? month : 1;
   const clamped = Math.min(12, Math.max(1, Math.round(n)));
-  return new Date(2000, clamped - 1, 1).toLocaleString(locale, { month: 'short' });
+  return formatMonthName(clamped, { locale });
 }
 
 /** Month-by-month drives (bars) and distance (line) across the year. */

@@ -3,7 +3,8 @@ import { Link2 } from 'lucide-react';
 import { DataTable, type Column, Badge, GlassPanel, PanelTitle, HelpTooltip, Text } from '@/components/ui';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateConvert';
 import type { AlignmentFlag, DeparturePair } from '../../lib/chargeDepartureAlignment';
 import { pairDisplayValues } from './presentation';
 
@@ -25,9 +26,10 @@ interface Props {
 /** The same complete, newest-first rows and display accessors power desktop and mobile.
  * The former twelve-card preview becomes a twelve-row page, with all pairs reachable. */
 export function AlignmentPairs({ pairs, loading, available, missingReason }: Props) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { fmtPercent } = useNumberFormatting();
-  const date = (ms: number) => new Date(ms).toLocaleString(i18n.language);
+  const { formatDateTime } = useDateFormat();
+  const date = (ms: number) => formatDateTime(new Date(ms));
   const flags = (pair: DeparturePair) => pair.flags.length > 0
     ? pair.flags.map(flag => t(`chargeDepartureAlignment.flag.${flag}`, FLAG_DEFAULTS[flag])).join(' · ')
     : t('chargeDepartureAlignment.wellMatched', 'Well matched');

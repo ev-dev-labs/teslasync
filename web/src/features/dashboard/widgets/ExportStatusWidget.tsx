@@ -1,13 +1,12 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download } from 'lucide-react';
-import { Badge, Caption } from '@/components/ui';
-import { TimeStamp } from '@/components/data-display';
+import { Badge, Caption, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { exportDownloadUrl, useExports } from '@/api/hooks/useExports';
 import { useExportJobs } from '@/api/hooks/useAdmin';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetEventFeed } from './shared';
+import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import type { ExportJob as ExportJobExport } from '@/types/export';
 import type { ExportJob as ExportJobAdmin } from '@/types/admin';
@@ -17,24 +16,29 @@ import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { cn } from '@/lib/cn';
 
 // ── Normalised job shape used within this widget ─────────────────────
 
 export interface NormalisedJob {
   id: string;
   format: string;
+  type?: string;
   filePath?: string;
   fileSize: number | null;
   createdAt: string;
+  failedReason?: string;
 }
 
 function fromExportHook(j: ExportJobExport): NormalisedJob {
   return {
     id: j.id,
     format: j.format,
+    type: undefined,
     filePath: j.filePath,
     fileSize: j.fileSize ?? null,
     createdAt: j.createdAt,
+    failedReason: j.failedReason,
   };
 }
 
@@ -42,9 +46,11 @@ function fromAdminHook(j: ExportJobAdmin): NormalisedJob {
   return {
     id: j.id,
     format: j.format,
+    type: j.type,
     filePath: undefined,
     fileSize: j.fileSize ?? null,
     createdAt: j.createdAt,
+    failedReason: undefined,
   };
 }
 
@@ -117,6 +123,7 @@ export function mergeExportJobs(
         ...adminJob,
         filePath: existing?.job.filePath ?? adminJob.filePath,
         fileSize: adminJob.fileSize ?? existing?.job.fileSize ?? null,
+        failedReason: existing?.job.failedReason ?? adminJob.failedReason,
       },
       status: normaliseStatusFromAdmin(j.status),
     });
@@ -172,8 +179,8 @@ function StandardView({
   maxItems: number;
   t: (key: string, fallback: string) => string;
 }) {
-  useNumberFormatting();
   const { formatDateTime } = useDateFormat();
+  useNumberFormatting();
 
   if (jobs.length === 0) {
     return (
@@ -187,45 +194,83 @@ function StandardView({
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
-      <WidgetEventFeed
-        order="source"
-        maxItems={maxItems}
-        items={jobs.map(({ job, status }) => {
+      <div
+        role="list"
+        aria-label={t('widget.eventFeed.label', 'Event feed')}
+        className="divide-y divide-[var(--border-subtle)]"
+      >
+        {jobs.slice(0, maxItems).map(({ job, status }) => {
           const cfg = STATUS_BADGE[status];
-          return {
-            id: job.id,
-            icon: <Download className="h-3.5 w-3.5" aria-hidden="true" />,
-            title: job.filePath ? job.filePath.split('/').pop() || job.filePath : '—',
-            timestamp: job.createdAt,
-            // Keep the preferred TimeStamp and its alternate tooltip in metadata.
-            timeLabel: formatDateTime(job.createdAt),
-            color: '',
-            wrap: true,
-            badges: (
-              <span className="inline-flex max-w-full flex-wrap gap-2">
-                <Badge variant="neutral" size="sm">{(job.format ?? '').toUpperCase() || '—'}</Badge>
-                <Badge variant={cfg.variant} size="sm">{t(cfg.labelKey, cfg.label)}</Badge>
-              </span>
-            ),
-            metadata: (
-              <span className="inline-flex max-w-full flex-wrap items-center gap-2">
-                <Caption className="tabular-nums">{fmtBytes(job.fileSize)}</Caption>
-                <TimeStamp value={job.createdAt} />
-              </span>
-            ),
-            actions: showDownload && job.filePath && status === 'ready' ? (
-              <a
-                href={exportDownloadUrl(job.id)}
-                aria-label={t('widget.exportDownload', 'Download')}
-                title={t('widget.exportDownload', 'Download')}
-                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-cyan-300 transition-colors hover:text-[var(--text-primary)]"
-              >
-                <Download className="h-3.5 w-3.5" aria-hidden="true" />
-              </a>
-            ) : undefined,
-          };
+          const basename = job.filePath?.split('/').pop();
+          const typeLabel = job.type
+            ? t(`export.types.${job.type}`, job.type.charAt(0).toUpperCase() + job.type.slice(1))
+            : null;
+          const title = basename || typeLabel || '—';
+          const formatLabel = job.format?.trim() ? job.format.toUpperCase() : null;
+          const statusLabel = t(cfg.labelKey, cfg.label);
+          const size = fmtBytes(job.fileSize);
+          const date = job.createdAt ? formatDateTime(job.createdAt) : '—';
+          const metadata = status === 'ready'
+            ? [date !== '—' ? date : null].filter(Boolean).join(' · ')
+            : status === 'failed'
+              ? [job.failedReason?.trim() || null, date !== '—' ? date : null].filter(Boolean).join(' · ')
+              : status === 'unknown'
+                ? ''
+                : [date !== '—' ? date : null].filter(Boolean).join(' · ');
+
+          return (
+            <div
+              role="listitem"
+              key={job.id}
+              className="flex min-w-0 items-start justify-between gap-3 py-2.5 first:pt-0"
+            >
+              <div className="min-w-0 flex-1">
+                <Text variant="bodySm" className="block min-w-0 whitespace-normal [overflow-wrap:anywhere]">
+                  {title}
+                </Text>
+                <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
+                  {formatLabel && <Badge variant="neutral" size="sm">{formatLabel}</Badge>}
+                  {status === 'ready' && size !== '—' && (
+                    <Caption className="tabular-nums">{size}</Caption>
+                  )}
+                  {metadata && (
+                    <Caption className="min-w-0 [overflow-wrap:anywhere] tabular-nums">{metadata}</Caption>
+                  )}
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="inline-flex items-center gap-1.5">
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'h-2 w-2 shrink-0 rounded-full',
+                      status === 'ready' ? 'bg-[var(--semantic-success)]'
+                        : status === 'failed' ? 'bg-[var(--semantic-danger)]'
+                          : status === 'processing' ? 'bg-[var(--semantic-info)]'
+                            : status === 'queued' ? 'bg-[var(--semantic-warning)]'
+                              : 'bg-[var(--text-muted)]',
+                    )}
+                  />
+                  <Text variant="bodySm" className="whitespace-nowrap">{statusLabel}</Text>
+                </span>
+                {showDownload && job.filePath && status === 'ready' && (
+                  <a
+                    href={exportDownloadUrl(job.id)}
+                    aria-label={t('widget.exportDownload', 'Download')}
+                    title={t('widget.exportDownload', 'Download')}
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-cyan-300 transition-colors hover:text-[var(--text-primary)]"
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span>{t('widget.exportDownload', 'Download')}</span>
+                    </span>
+                  </a>
+                )}
+              </div>
+            </div>
+          );
         })}
-      />
+      </div>
     </div>
   );
 }

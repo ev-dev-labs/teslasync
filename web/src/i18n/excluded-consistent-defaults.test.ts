@@ -24,7 +24,7 @@ const additions = [
   ['admin.teslaOrders.card.aria', '{{model}} order, {{status}}'],
   ['widget.backupHistory.summaryScope', 'Energy site {{siteId}}; history since {{since}}, no explicit exclusive end bound'],
   ['widget.energyStats.summary.scope', 'Vehicle {{id}} · source period {{days}} days'],
-  ['widget.fsdWeekly.summary.scope', 'Vehicle {{id}} · {{start}} to {{end}} exclusive · {{timezone}}'],
+  ['widget.fsdWeekly.summary.scope', 'Vehicle {{id}} · {{range}}'],
   ['widget.lifetimeStats.summary.scope', 'Vehicle {{id}} · lifetime'],
   ['widget.mileageStats.summary.scope', 'Vehicle {{id}} · rolling 30 days / lifetime'],
   ['widget.speedHeatmap.gridLabel', 'Average speed by day of week and hour of day'],
@@ -224,10 +224,10 @@ describe('exact81 feature-owned consistent producer defaults', () => {
     expect(keys.size).toBe(2931)
     const oldEntries = leaves(catalog).filter(([key]) => !keys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
-    expect(oldEntries).toHaveLength(30046)
+    expect(oldEntries).toHaveLength(30229)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
-      .toBe("2db64574cfb37892e8f6cac9fe57faaf0d90efacbcb9d8fca71a182d2dcee4df")
-    expect(leaves(catalog)).toHaveLength(32977)
+      .toBe("c076d63e69957b3e69970eea64d6c2c675f8f3e335596f8c622793489481b208")
+    expect(leaves(catalog)).toHaveLength(33160)
     expect(english.t('settings.title')).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)
     expect(shell.pwa.offline).toEqual(catalog.pwa.offline)

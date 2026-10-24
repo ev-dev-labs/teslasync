@@ -4,7 +4,8 @@ import { GlassPanel, PanelTitle, Badge, Text, Caption } from '@/components/ui';
 import { LinearGauge } from '@/components/charts';
 import { KVList } from '@/components/data-display';
 import { knownNumber } from '@/api/dataState';
-import { formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
+import {formatDateShort} from '@/lib/dateFormat'
+import {formatDurationMinutes} from '@/lib/dateConvert';
 import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import type { ScoredDrive } from '../../pages/DriveScorePage';

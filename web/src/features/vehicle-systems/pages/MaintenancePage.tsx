@@ -42,7 +42,7 @@ export default function MaintenancePage() {
     [formatDate, locale],
   );
   const formatServiceDate = useCallback(
-    (value: string | Date | null | undefined) => formatMaintenanceDate(value, formatDateTime, locale),
+    (value: string | number | Date | null | undefined) => formatMaintenanceDate(value, formatDateTime, locale),
     [formatDateTime, locale],
   );
 

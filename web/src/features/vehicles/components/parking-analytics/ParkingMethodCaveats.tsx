@@ -55,8 +55,7 @@ export function ParkingMethodCaveats({
         <Text as="p" variant="bodySm">
           {t(
             'parking.coverage.localTime',
-            'Hour, weekday, month, and the 22:00–06:00 split use {{timeZone}}. Dwell is assigned to the period in which parking starts.',
-            { timeZone: coverage.timeZone },
+            'Hour, weekday, month, and the 22:00–06:00 split use your selected time zone. Dwell is assigned to the period in which parking starts.',
           )}
         </Text>
       </div>

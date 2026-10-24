@@ -177,12 +177,12 @@ export function RouteMapSection({
           ))}
           {hasRoute && startPos && (
             <CircleMarker center={startPos} radius={8} pathOptions={{ color: chartTokens.series[1], fillColor: chartTokens.series[1], fillOpacity: 1, weight: 2 }}>
-              <Popup><span className="text-xs font-bold">{t('driveDetail.start', 'Start')}</span><br /><time className="text-xs" dateTime={drive.startTs} title={drive.startTs}>{formatDateTime(drive.startTs)}</time></Popup>
+              <Popup><span className="text-xs font-bold">{t('driveDetail.start', 'Start')}</span><br /><time className="text-xs" dateTime={drive.startTs}>{formatDateTime(drive.startTs)}</time></Popup>
             </CircleMarker>
           )}
           {hasRoute && endPos && (
             <CircleMarker center={endPos} radius={8} pathOptions={{ color: chartTokens.series[3], fillColor: chartTokens.series[3], fillOpacity: 1, weight: 2 }}>
-              <Popup><span className="text-xs font-bold">{t('driveDetail.end', 'End')}</span><br /><time className="text-xs" dateTime={drive.endTs ?? undefined} title={drive.endTs ?? undefined}>{drive.endTs ? formatDateTime(drive.endTs) : t('driveDetail.inProgress', 'In progress')}</time></Popup>
+              <Popup><span className="text-xs font-bold">{t('driveDetail.end', 'End')}</span><br /><time className="text-xs" dateTime={drive.endTs ?? undefined}>{drive.endTs ? formatDateTime(drive.endTs) : t('driveDetail.inProgress', 'In progress')}</time></Popup>
             </CircleMarker>
           )}
           {!hasRoute && anchorPoint && (

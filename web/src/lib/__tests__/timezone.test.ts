@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { resolveTimezone, browserTimezone } from '../timezone';
+import { resolveTimezone, browserTimezone, isValidTimezone, sanitizeTimezone } from '../timezone';
+import { resolveRawTimezone } from '../dateConvert';
 
 describe('resolveTimezone', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -34,6 +35,60 @@ describe('resolveTimezone', () => {
     expect(resolveTimezone('vehicle', null, null)).toBe(browserTz);
     expect(resolveTimezone('vehicle', 'UTC', '')).toBe(browserTz);
   });
+
+  it('falls back to the browser tz when the user override is not a real zone', () => {
+    const browserTz = browserTimezone();
+    expect(resolveTimezone('user', 'America/New_York', 'Mars/Olympus_Mons')).toBe(browserTz);
+    expect(resolveTimezone('user', 'America/New_York', 'UTC+5')).toBe(browserTz);
+    expect(resolveTimezone('user', 'America/New_York', '   ')).toBe(browserTz);
+  });
+
+  it('ignores an invalid vehicle tz and falls back to the user tz', () => {
+    expect(resolveTimezone('vehicle', 'Not/AZone', 'Europe/Berlin')).toBe('Europe/Berlin');
+    const browserTz = browserTimezone();
+    expect(resolveTimezone('vehicle', 'Not/AZone', '')).toBe(browserTz);
+    expect(resolveTimezone('vehicle', 'Not/AZone')).toBe(browserTz);
+  });
+
+  it('accepts a padded override by trimming it', () => {
+    expect(resolveTimezone('user', null, '  Europe/Paris  ')).toBe('Europe/Paris');
+  });
+
+  it('never returns an invalid zone from any mode', () => {
+    for (const mode of ['vehicle', 'user', 'utc'] as const) {
+      expect(isValidTimezone(resolveTimezone(mode, 'Bogus/Zone', 'Also/Bogus'))).toBe(true);
+    }
+  });
+});
+
+describe('isValidTimezone', () => {
+  it.each(['UTC', 'America/Los_Angeles', 'Asia/Tokyo', 'Europe/Paris'])('accepts %s', (tz) => {
+    expect(isValidTimezone(tz)).toBe(true);
+  });
+
+  it.each(['', '   ', 'Mars/Olympus_Mons', 'UTC+5', 'America/Los Angeles', null, undefined, 42])(
+    'rejects %s',
+    (tz) => {
+      expect(isValidTimezone(tz)).toBe(false);
+    },
+  );
+});
+
+describe('sanitizeTimezone', () => {
+  it('returns the candidate when it is a real zone', () => {
+    expect(sanitizeTimezone('Asia/Tokyo')).toBe('Asia/Tokyo');
+  });
+
+  it('falls back to the browser tz for invalid candidates', () => {
+    const browserTz = browserTimezone();
+    expect(sanitizeTimezone('Mars/Olympus_Mons')).toBe(browserTz);
+    expect(sanitizeTimezone('')).toBe(browserTz);
+    expect(sanitizeTimezone(null)).toBe(browserTz);
+  });
+
+  it('prefers an explicit valid fallback over the browser tz', () => {
+    expect(sanitizeTimezone('Bogus/Zone', 'Europe/Berlin')).toBe('Europe/Berlin');
+  });
 });
 
 describe('browserTimezone', () => {
@@ -41,5 +96,27 @@ describe('browserTimezone', () => {
     const tz = browserTimezone();
     expect(typeof tz).toBe('string');
     expect(tz.length).toBeGreaterThan(0);
+  });
+});
+
+describe('resolveRawTimezone', () => {
+  it('mirrors the sanitized resolver for valid inputs', () => {
+    expect(resolveRawTimezone('utc', 'Asia/Tokyo', 'Europe/Berlin')).toBe('UTC');
+    expect(resolveRawTimezone('user', 'Asia/Tokyo', 'Europe/Berlin')).toBe('Europe/Berlin');
+    expect(resolveRawTimezone('vehicle', 'Asia/Tokyo', 'Europe/Berlin')).toBe('Asia/Tokyo');
+    expect(resolveRawTimezone('vehicle', null, '')).toBe(browserTimezone());
+  });
+
+  it('propagates an invalid saved zone raw so conversion throws instead of guessing', () => {
+    // Display (resolveTimezone) must fall back; conversion must NOT guess.
+    expect(resolveTimezone('user', 'Asia/Tokyo', 'Invalid/Zone')).toBe(browserTimezone());
+    expect(resolveRawTimezone('user', 'Asia/Tokyo', 'Invalid/Zone')).toBe('Invalid/Zone');
+    expect(() => new Intl.DateTimeFormat('en-US', {
+      timeZone: resolveRawTimezone('user', 'Asia/Tokyo', 'Invalid/Zone'),
+    }).format(0)).toThrow(RangeError);
+  });
+
+  it('still prefers a valid vehicle zone over an invalid override', () => {
+    expect(resolveRawTimezone('vehicle', 'Asia/Tokyo', 'Invalid/Zone')).toBe('Asia/Tokyo');
   });
 });

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
 import { STALE_TIMES } from '@/lib/constants';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 /**
  * Carbon Intelligence — grid-aware CO2 accounting for charging. These hooks
@@ -19,8 +20,8 @@ import { STALE_TIMES } from '@/lib/constants';
 /** One hour of the diurnal grid carbon-intensity curve. */
 export interface CarbonHourIntensity {
   /**
-   * Backend/model clock-hour 0..23. The endpoint does not expose the
-   * timezone used by its EXTRACT(HOUR FROM started_at) attribution.
+   * Backend clock-hour 0..23, attributed in the `?timezone` frame the hook
+   * sends (the user's selected zone).
    */
   hour_of_day: number;
   /** Grams of CO2 attributed per kWh drawn during this hour. */
@@ -93,21 +94,28 @@ export function useCarbonIntensity() {
  * Per-vehicle CO2 summary. Optional `from`/`to` (YYYY-MM-DD or RFC 3339) scope
  * the window; omit both for full history. Disabled until a vehicle is known so
  * an empty selection never fires a request.
+ *
+ * The user's zone travels as `?timezone=`: the backend attributes sessions to
+ * (month, hour) buckets in that frame. An omitted zone resolves to the single
+ * display value (`useDateFormat().tz`); the backend defaults to UTC.
  */
-export function useCarbonSummary(vehicleId: number | null, from?: string, to?: string) {
+export function useCarbonSummary(
+  vehicleId: number | null,
+  from?: string,
+  to?: string,
+  timezone?: string,
+) {
+  const { tz } = useDateFormat();
+  const zone = timezone ?? tz;
   return useQuery({
-    queryKey: ['carbon-summary', vehicleId, from ?? null, to ?? null],
+    queryKey: ['carbon-summary', vehicleId, from ?? null, to ?? null, zone],
     queryFn: ({ signal }) => {
       const params = new URLSearchParams();
       if (from) params.set('from', from);
       if (to) params.set('to', to);
+      params.set('timezone', zone);
       const qs = params.toString();
-      return request<CarbonSummary>(
-        qs
-          ? `/vehicles/${vehicleId}/carbon/summary?${qs}`
-          : `/vehicles/${vehicleId}/carbon/summary`,
-        { signal },
-      );
+      return request<CarbonSummary>(`/vehicles/${vehicleId}/carbon/summary?${qs}`, { signal });
     },
     enabled: vehicleId !== null && vehicleId > 0,
     staleTime: STALE_TIMES.ANALYTICS,
@@ -116,13 +124,19 @@ export function useCarbonSummary(vehicleId: number | null, from?: string, to?: s
 
 /**
  * The greenest charging window for a vehicle and the CO2 shifting into it would
- * save. Disabled until a vehicle is known.
+ * save. Disabled until a vehicle is known. The zone travels for the same
+ * reason as the summary: hour attribution must match the user's selected zone.
  */
-export function useCarbonRecommendation(vehicleId: number | null) {
+export function useCarbonRecommendation(vehicleId: number | null, timezone?: string) {
+  const { tz } = useDateFormat();
+  const zone = timezone ?? tz;
   return useQuery({
-    queryKey: ['carbon-recommendation', vehicleId],
+    queryKey: ['carbon-recommendation', vehicleId, zone],
     queryFn: ({ signal }) =>
-      request<CarbonRecommendation>(`/vehicles/${vehicleId}/carbon/recommendation`, { signal }),
+      request<CarbonRecommendation>(
+        `/vehicles/${vehicleId}/carbon/recommendation?timezone=${encodeURIComponent(zone)}`,
+        { signal },
+      ),
     enabled: vehicleId !== null && vehicleId > 0,
     staleTime: STALE_TIMES.ANALYTICS,
   });

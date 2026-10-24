@@ -3,18 +3,22 @@ import { useTranslation } from 'react-i18next';
 import { MonitorSmartphone } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { MetricBar } from '@/components/data-display';
 import { useVehicles, useVehicleState, useVehicleConfigLatest } from '@/api/hooks/useVehicles';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
 import { isFiniteNumber } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import { SoftwareUpdateBody } from '../components/continuation-dashboard-3/SoftwareUpdateBody';
-import { SoftwareUpdateCompact } from '../components/continuation-dashboard-3/SoftwareUpdateCompact';
-import type { UpdateStatus } from '../components/continuation-dashboard-3/SoftwareUpdateBadge';
+import { WidgetBigNumber } from './shared';
+import { SoftwareUpdateBadge, type UpdateStatus } from '../components/continuation-dashboard-3/SoftwareUpdateBadge';
 
 export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { formatDateTime } = useDateFormat();
+  const { fmtNumber } = useNumberFormatting();
   const vehiclesQuery = useVehicles();
   const rawId = vehicleId ?? vehiclesQuery.data?.[0]?.id;
   const id = rawId != null && Number.isSafeInteger(rawId) && rawId > 0 ? rawId : 0;
@@ -103,21 +107,85 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
       {hasData ? (
         <FadeIn>
           {isCompact ? (
-            <SoftwareUpdateCompact
-              version={currentVersion}
-              updateStatus={updateStatus}
-            />
+            <div className="h-full min-w-0 flex flex-col items-center justify-center gap-1.5 px-1">
+              <MonitorSmartphone className="h-5 w-5 text-cyan-300" aria-hidden="true" />
+              <WidgetBigNumber value={currentVersion} align="center" size="secondary" />
+              <SoftwareUpdateBadge status={updateStatus} />
+            </div>
           ) : (
-            <SoftwareUpdateBody
-              version={currentVersion}
-              updateVersion={updateVersion}
-              downloadPct={downloadPct}
-              installPct={installPct}
-              expectedDuration={expectedDuration}
-              scheduledStart={scheduledStart}
-              updateStatus={updateStatus}
-              isTall={size.rows >= 2}
-            />
+            <div className="h-full min-w-0 flex flex-col justify-center gap-3">
+              <div className="flex min-w-0 items-start justify-between gap-2">
+                <WidgetBigNumber
+                  label={t('widget.currentVersion', 'Current version')}
+                  value={currentVersion}
+                  size="primary"
+                />
+                <SoftwareUpdateBadge status={updateStatus} />
+              </div>
+
+              {updateVersion && updateStatus !== 'up-to-date' ? (
+                <div className="min-w-0 space-y-2.5">
+                  <div className="min-w-0">
+                    <span className="text-sm text-[var(--text-secondary)]">
+                      {t('widget.updateAvailable', 'Update available')}
+                    </span>
+                    <span className="ms-1 text-sm font-semibold text-cyan-300 [overflow-wrap:anywhere]">
+                      {updateVersion}
+                    </span>
+                  </div>
+
+                  {updateStatus === 'downloading' && downloadPct != null && (
+                    <MetricBar
+                      value={downloadPct}
+                      max={100}
+                      color="var(--theme-primary)"
+                      label={t('widget.downloading', 'Downloading')}
+                      sublabel={`${fmtNumber(downloadPct, 0)}%`}
+                      size="default"
+                    />
+                  )}
+                  {updateStatus === 'installing' && installPct != null && (
+                    <MetricBar
+                      value={installPct}
+                      max={100}
+                      color="var(--theme-primary)"
+                      label={t('widget.installing', 'Installing')}
+                      sublabel={`${fmtNumber(installPct, 0)}%`}
+                      size="default"
+                    />
+                  )}
+                  {updateStatus === 'ready' && (
+                    <p className="text-sm font-medium text-emerald-300">
+                      {t('widget.readyToInstall', 'Ready to install')}
+                    </p>
+                  )}
+
+                  {size.rows >= 2 && isFiniteNumber(expectedDuration) && expectedDuration > 0 && (
+                    <p className="border-t border-[var(--border-subtle)] pt-2 text-sm text-[var(--text-secondary)]">
+                      {t('widget.estimatedTime', 'Est. time')}: ~{fmtNumber(expectedDuration, 0)}{' '}
+                      {t('widget.minutes', 'min')}
+                    </p>
+                  )}
+                  {size.rows >= 2 && scheduledStart && (
+                    (() => {
+                      const scheduledDate = new Date(scheduledStart);
+                      const scheduledText = Number.isNaN(scheduledDate.getTime())
+                        ? null
+                        : formatDateTime(scheduledDate);
+                      return scheduledText ? (
+                        <p className="border-t border-[var(--border-subtle)] pt-2 text-sm text-[var(--text-secondary)]">
+                          {t('widget.scheduledStart', 'Scheduled')}: {scheduledText}
+                        </p>
+                      ) : null;
+                    })()
+                  )}
+                </div>
+              ) : updateStatus === 'up-to-date' ? (
+                <p className="text-sm font-medium text-emerald-300">
+                  {t('widget.upToDate', 'Up to date')}
+                </p>
+              ) : null}
+            </div>
           )}
         </FadeIn>
       ) : (

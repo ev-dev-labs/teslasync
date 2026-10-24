@@ -31,10 +31,9 @@ export function useFsdConfidenceItems(
   return [
     {
       label: t('fsd.confidence.window', 'Observation window'),
-      value: t('fsd.confidence.windowValue', '{{start}} – {{end}} ({{timezone}})', {
+      value: t('fsd.confidence.windowValue', '{{start}} – {{end}}', {
         start: formatDayKey(period.start_date, { locale, style: 'long' }),
         end: formatDayKey(period.end_date, { locale, style: 'long' }),
-        timezone: period.timezone,
       }),
     },
     {

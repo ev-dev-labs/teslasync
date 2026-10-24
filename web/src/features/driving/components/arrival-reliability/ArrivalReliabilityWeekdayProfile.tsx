@@ -22,7 +22,6 @@ export function ArrivalReliabilityWeekdayProfile({
   analysis,
   state,
   locale,
-  timeZone,
 }: ArrivalReliabilityWeekdayProfileProps) {
   const { t } = useTranslation();
   const rows = useMemo<ArrivalReliabilityProfileRow[]>(
@@ -62,8 +61,7 @@ export function ArrivalReliabilityWeekdayProfile({
         )}
         ariaDescription={t(
           'arrivalReliability.profiles.weekdayDescription',
-          'Multiple drives on one local day count separately; weekday labels use {{timeZone}}.',
-          { timeZone },
+          'Multiple drives on one local day count separately; weekday labels use your selected time zone.',
         )}
         height={360}
         chartKey="arrival-weekday-profile"

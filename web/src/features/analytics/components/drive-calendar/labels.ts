@@ -1,5 +1,7 @@
 import type { TFunction } from 'i18next';
 
+import { formatMonthName, formatMonthYear } from '@/lib/dateConvert';
+
 const WEEKDAYS = [
   ['sun', 'Sun', 'Sunday'],
   ['mon', 'Mon', 'Monday'],
@@ -29,15 +31,7 @@ export function formatCalendarMonth(
   const month = Number(match[2]);
   if (!Number.isInteger(year) || month < 1 || month > 12) return '—';
 
-  const date = new Date(Date.UTC(year, month - 1, 1, 12));
-  const options: Intl.DateTimeFormatOptions = {
-    month: 'short',
-    timeZone: 'UTC',
-    ...(includeYear ? { year: '2-digit' as const } : {}),
-  };
-  try {
-    return new Intl.DateTimeFormat(locale || undefined, options).format(date);
-  } catch {
-    return new Intl.DateTimeFormat('en-US', options).format(date);
-  }
+  return includeYear
+    ? formatMonthYear(monthKey, { locale, yearStyle: '2-digit' })
+    : formatMonthName(monthKey, { locale });
 }

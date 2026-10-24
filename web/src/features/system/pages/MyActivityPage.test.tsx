@@ -452,8 +452,8 @@ describe('MyActivityPage — Project Apex elevation', () => {
       expect(activityCalls().length).toBeGreaterThan(0);
     });
     const params = new URL(activityCalls()[0], 'http://localhost').searchParams;
-    expect(params.get('start')).toBe(new Date('2024-01-01T00:00:00').toISOString());
-    expect(params.get('end')).toBe(new Date('2024-02-02T00:00:00').toISOString());
+    expect(params.get('start')).toBe(new Date('2024-01-01T00:00:00Z').toISOString());
+    expect(params.get('end')).toBe(new Date('2024-02-02T00:00:00Z').toISOString());
     const url = new URLSearchParams(screen.getByTestId('activity-url').textContent!);
     expect(url.get('from')).toBe('2024-01-01');
     expect(url.get('to')).toBe('2024-02-01');
@@ -467,8 +467,8 @@ describe('MyActivityPage — Project Apex elevation', () => {
     renderPage('/me/activity?from=2025-06-01&to=2025-06-08&start=2024-01-01&end=2024-02-01');
     await waitFor(() => expect(activityCalls().length).toBeGreaterThan(0));
     const params = new URL(activityCalls()[0], 'http://localhost').searchParams;
-    expect(params.get('start')).toBe(new Date('2025-06-01T00:00:00').toISOString());
-    expect(params.get('end')).toBe(new Date('2025-06-09T00:00:00').toISOString());
+    expect(params.get('start')).toBe(new Date('2025-06-01T00:00:00Z').toISOString());
+    expect(params.get('end')).toBe(new Date('2025-06-09T00:00:00Z').toISOString());
   });
 
   it('restores the saved shared range instead of an obsolete page preference', async () => {
@@ -479,8 +479,8 @@ describe('MyActivityPage — Project Apex elevation', () => {
     renderPage();
     await waitFor(() => expect(activityCalls().length).toBeGreaterThan(0));
     const params = new URL(activityCalls()[0], 'http://localhost').searchParams;
-    expect(params.get('start')).toBe(new Date('2025-06-01T00:00:00').toISOString());
-    expect(params.get('end')).toBe(new Date('2025-06-09T00:00:00').toISOString());
+    expect(params.get('start')).toBe(new Date('2025-06-01T00:00:00Z').toISOString());
+    expect(params.get('end')).toBe(new Date('2025-06-09T00:00:00Z').toISOString());
     expect(window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY)).toBe(saved);
     expect(window.localStorage.getItem('my-activity.range')).toBe(pageSaved);
     expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
@@ -513,7 +513,7 @@ describe('MyActivityPage — Project Apex elevation', () => {
     await waitFor(() => {
       expect(activityCalls().some((u) =>
         new URL(u, 'http://localhost').searchParams.get('start') ===
-          new Date('2015-01-01T00:00:00').toISOString()
+          new Date('2015-01-01T00:00:00Z').toISOString()
       )).toBe(true);
     });
   });

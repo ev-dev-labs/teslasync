@@ -180,9 +180,9 @@ describe('getWorkspaceRouteScope', () => {
     expect(getWorkspaceRouteScope('/analytics/range')).toEqual({ range: false, vehicle: true });
   });
 
-  it('owns the charge advisor analysis window in the header', () => {
+  it('keeps charge advisor planning independent of the historical header', () => {
     for (const path of ['/charge-advisor', '/charge-advisor/', '/charge-advisor?from=2026-01-01']) {
-      expect(getWorkspaceRouteScope(path)).toEqual({ range: true, vehicle: true });
+      expect(getWorkspaceRouteScope(path)).toEqual({ range: false, vehicle: true });
     }
   });
   it('does not scope account-wide energy installations to a vehicle or date range', () => {

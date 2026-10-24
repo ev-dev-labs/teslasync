@@ -45,7 +45,7 @@ export function DriveDetailHeader({ drive, driveId, vehicleName, onShare }: Driv
           <p className="text-sm text-[var(--text-muted)] mt-0.5">
             {displayVehicle} · <DateTime value={drive.startTs} variant="date" in="vehicle" />
             {' · '}
-            <DateTime value={drive.startTs} variant="time" in="vehicle" showTz />
+            <DateTime value={drive.startTs} variant="time" in="vehicle" />
             {drive.endTs && (
               <>
                 {' → '}

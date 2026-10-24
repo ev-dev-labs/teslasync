@@ -15,7 +15,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { Drive } from '@/types/driving';
 
 import {
@@ -48,7 +48,7 @@ export default function DriveDNAPage() {
   usePageTitle(t('driveDna.title', 'Drive DNA'));
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
-  const timezone = useTimezone('vehicle');
+  const { tz: timezone } = useDateFormat();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(vehicleIdStr, DRIVE_HISTORY_LIMIT);
   const drivesState = useDataState(drivesQuery, { provenance: 'historical' });

@@ -164,7 +164,7 @@
       "description": "Bars count included drive starts rather than unique driving days.",
       "series": "Recorded departures",
       "subtitle": "Qualifying drive starts grouped in the vehicle timezone; multiple trips on one day remain separate events.",
-      "timezone": "All hour and daypart labels use {{timeZone}}.",
+      "timezone": "All hour and daypart labels use your selected time zone.",
       "title": "Historical local-hour and daypart distribution"
     },
     "kpis": {
@@ -191,14 +191,14 @@
     },
     "method": {
       "calendarModelBody": "Each local weekday-hour is a Poisson event cell with a Gamma prior (α {{alpha}}, β {{beta}}). The rate is (recorded departures + α) / (model-assumed calendar opportunities + β), and likelihood is 1 − exp(−rate). Outputs are modeled estimates, not calibrated probabilities.",
-      "effectiveZone": "Effective model timezone: {{timeZone}}.",
+      "effectiveZone": "The model follows your selected time zone.",
       "eventsBody": "Every recorded drive start counts as a departure by design. Multiple trips on one local day are separate events; the model does not infer a unique driver or destination.",
       "eventsTitle": "Departure event definition",
       "inputsBody": "No calendar, destination, geofence, weather, battery temperature, state of charge, charging plan, traffic, or driver-identity input is used.",
       "inputsTitle": "Inputs not modeled",
       "limitsBody": "The 20-minute planning marker is illustrative and appears only with enough descriptive support. It does not schedule climate, wake, charge, navigate, or command the vehicle.",
       "limitsTitle": "No command or guarantee",
-      "modelTimezoneBody": "Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use the effective model timezone: {{timeZone}}.",
+      "modelTimezoneBody": "Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use your selected time zone.",
       "modelTitle": "Model and shrinkage",
       "notice": "Planning aid only: no automation is created, and no departure is promised.",
       "opportunityBody": "The denominator counts matching local-hour boundaries from the hour containing the earliest included returned drive start through the fixed model anchor, including elapsed gaps. Span days and weeks measure elapsed time, not observed recording coverage. Zero-event weeks mean no included returned starts; they do not prove inactivity. No telemetry uptime, completeness, or monitoring coverage metadata is available to this model.",
@@ -211,9 +211,9 @@
       "windowBody": "The model filters the newest rows returned by /drives to an absolute {{days}}-day lookback. A {{limit}}-row response can be capped and is not guaranteed lifetime history.",
       "windowTitle": "Returned evidence window",
       "zoneBrowser": "browser timezone, or UTC if unavailable",
-      "zoneFallback": "Source: shared vehicle-mode fallback ({{source}}); vehicle timezone metadata is missing or UTC.",
-      "zoneInvalid": "The resolved timezone \"{{requested}}\" is missing or invalid; this model uses UTC without changing shared settings.",
-      "zoneMetadata": "Source: selected vehicle timezone metadata ({{timeZone}}).",
+      "zoneFallback": "Source: shared vehicle-mode fallback ({{source}}); vehicle timezone metadata is missing, invalid, or UTC.",
+      "zoneInvalid": "The selected time zone is missing or invalid; this model uses UTC without changing shared settings.",
+      "zoneMetadata": "Source: selected vehicle timezone metadata.",
       "zoneSavedUser": "saved user timezone"
     },
     "next24": {
@@ -326,7 +326,7 @@
     },
     "weekdays": {
       "peak": "{{time}} · {{likelihood}}% modeled likelihood",
-      "subtitle": "Supported peak cells in {{timeZone}} from qualifying returned drive starts; unsupported days remain explicit.",
+      "subtitle": "Supported peak cells in your selected time zone from qualifying returned drive starts; unsupported days remain explicit.",
       "support": "{{departures}} peak-cell departures · {{activeDays}} active local days · {{concentration}}% of this weekday’s events",
       "supported": "Supported",
       "title": "Weekday peaks and routine support",
@@ -343,7 +343,7 @@
         "week": "Local week starting"
       },
       "departureSeries": "Departure events",
-      "elapsedSummary": "{{departures}} returned departures across {{activeDays}} active days and {{activeWeeks}} active weeks over {{observedWeeks}} elapsed weeks in {{timeZone}}. Calendar opportunity is model-assumed; gaps do not establish recording coverage.",
+      "elapsedSummary": "{{departures}} returned departures across {{activeDays}} active days and {{activeWeeks}} active weeks over {{observedWeeks}} elapsed weeks in your selected time zone. Calendar opportunity is model-assumed; gaps do not establish recording coverage.",
       "returnedDescription": "Bars count returned drive starts and the line counts distinct local days containing at least one returned drive start. Zero-event buckets mean no included returned events, not confirmed inactivity or continuous recording.",
       "title": "Recent weekly departure trend and active-day cadence"
     }

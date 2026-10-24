@@ -18,6 +18,7 @@ import {
   convertEnergyFromSI,
   type EnergyUnitPref,
 } from '@/lib/unitConversion';
+import { formatDate } from '@/lib/dateFormat';
 import { chartTokens } from '@/lib/tokens';
 import type { PackCapacityResult } from '../../lib/packCapacity';
 import { PackCapacitySectionBody } from './PackCapacitySectionBody';
@@ -40,12 +41,7 @@ export function PackCapacityInfluenceTimeline({
   const rows = useMemo(
     () =>
       result.timeline.map((point) => ({
-        date: new Intl.DateTimeFormat(locale, {
-          month: 'short',
-          day: 'numeric',
-          year: '2-digit',
-          timeZone: result.timeZone,
-        }).format(new Date(point.tsMs)),
+        date: formatDate(new Date(point.tsMs), { locale, tz: result.timeZone, yearStyle: '2-digit' }),
         gain: point.gain * 100,
         innovation: point.standardizedInnovation,
         sigma: convertEnergyFromSI(point.sigmaWh, energyUnit),

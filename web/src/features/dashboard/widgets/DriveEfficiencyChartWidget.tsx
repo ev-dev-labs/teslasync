@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { TrendingUp } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, chartGrid, axisTick, axisTickSm, chartAnimation, useThemeChartPalette, AREA_DEFAULTS, areaGradient, ChartLegend, EmbeddedChart, useMeasuredAxisWidth } from '@/components/charts';
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, chartGrid, chartAnimation, useThemeChartPalette, AREA_DEFAULTS, areaGradient, EmbeddedChart, ChartLegend } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDataState } from '@/hooks/useDataState';
@@ -13,10 +13,11 @@ import { request } from '@/api/client';
 import { getEnergyIntensityWhPerKm } from '@/lib/drivesAggregation';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetChartSummary, type ChartSummaryStat } from './shared';
+import { WidgetBigNumber, WidgetChartSummary } from './shared';
 import type { WidgetProps } from './types';
 import type { Drive } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { zonedDateParts } from '@/lib/dateFormat';
 
 const ROLLING_AVG_COLOR = '#f59e0b';
 
@@ -36,14 +37,21 @@ export function estimateEfficiency(d: Drive): number | null {
 }
 
 /** Group drives by date and compute distance-weighted daily intensity. */
-export function buildDailyEfficiency(drives: Drive[], windowSize: number, fmtShortDate: (iso: string) => string): DailyEfficiency[] {
+export function buildDailyEfficiency(
+  drives: Drive[],
+  windowSize: number,
+  fmtShortDate: (iso: string) => string,
+  timezone = 'UTC',
+): DailyEfficiency[] {
   const byDate = new Map<string, { energyWh: number; distanceM: number }>();
 
   for (const d of drives) {
     if (!d.start_ts) continue;
     const eff = estimateEfficiency(d);
     if (eff == null) continue;
-    const dateKey = d.start_ts.slice(0, 10); // YYYY-MM-DD
+    const parts = zonedDateParts(d.start_ts, timezone);
+    if (!parts) continue;
+    const dateKey = `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
     const existing = byDate.get(dateKey) ?? { energyWh: 0, distanceM: 0 };
     existing.energyWh += d.energy_used_wh ?? 0;
     existing.distanceM += d.distance_m ?? 0;
@@ -76,14 +84,13 @@ export function buildDailyEfficiency(drives: Drive[], windowSize: number, fmtSho
 }
 
 export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber: fmt } = useNumberFormatting();
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
-  const { formatDateShort } = useDateFormat();
+  const { formatDateShort, tz } = useDateFormat();
 
   const query = useQuery({
     queryKey: ['drives', id, 'efficiency-chart-60'],
@@ -98,12 +105,12 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
     const items = drives ?? [];
     // Filter to last 30 days
     const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 30);
+    cutoff.setHours(cutoff.getHours() - 30 * 24);
     const recent = items.filter(
-      (d) => d.start_ts && new Date(d.start_ts) >= cutoff,
+      (d) => d.start_ts && !Number.isNaN(new Date(d.start_ts).getTime()) && new Date(d.start_ts) >= cutoff,
     );
-    return buildDailyEfficiency(recent, 7, formatDateShort);
-  }, [drives, formatDateShort]);
+    return buildDailyEfficiency(recent, 7, formatDateShort, tz);
+  }, [drives, formatDateShort, tz]);
 
   // Convert Wh/km to the user's distance unit.
   const displayData = useMemo(
@@ -126,59 +133,10 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
   }, [displayData]);
   const hasRollingAverage = displayData.some(point => point.rollingAvg != null);
 
-  const bestDay = useMemo(() => {
-    if (displayData.length === 0) return null;
-    return displayData.reduce(
-      (min, d) => (d.efficiency < min ? d.efficiency : min),
-      displayData[0].efficiency,
-    );
-  }, [displayData]);
-
-  const trend = useMemo(() => {
-    if (displayData.length < 4) return null;
-    const mid = Math.floor(displayData.length / 2);
-    const first = displayData.slice(0, mid);
-    const second = displayData.slice(mid);
-    const avgFirst = first.reduce((s, d) => s + d.efficiency, 0) / first.length;
-    const avgSecond = second.reduce((s, d) => s + d.efficiency, 0) / second.length;
-    return ((avgSecond - avgFirst) / avgFirst) * 100;
-  }, [displayData]);
-
   const isCompact = size.cols <= 1 && size.rows <= 1;
-  const isWide = size.cols >= 3;
-  const tick = isWide ? axisTick : axisTickSm;
-  const efficiencyAxisLabels = useMemo(() => {
-    const values = displayData.flatMap(point => [point.efficiency, point.rollingAvg])
-      .filter((value): value is number => value != null && Number.isFinite(value));
-    return [...values, ...(values.length ? [Math.min(...values) - 20, Math.max(...values) + 20] : [])]
-      .map(value => `${fmt(value)}`);
-  }, [displayData, fmt]);
-  const efficiencyAxisWidth = useMeasuredAxisWidth({
-    labels: efficiencyAxisLabels, fontSize: tick.fontSize, minWidth: 36, padding: 20, enabled: !isCompact,
-  });
 
   // Series colour follows the active theme.
   const palette = useThemeChartPalette();
-
-  const stats = useMemo<ChartSummaryStat[]>(() => {
-    const items: ChartSummaryStat[] = [
-      {
-        label: t('widget.driveEfficiencyChart.avg', 'Avg'),
-        value: overallAvg != null ? fmtNumber(overallAvg) : '—',
-        unit: efficiencyUnit,
-      },
-      {
-        label: t('widget.driveEfficiencyChart.best', 'Best day'),
-        value: bestDay != null ? fmtNumber(bestDay) : '—',
-        unit: efficiencyUnit,
-      },
-      {
-        label: t('widget.driveEfficiencyChart.trend', 'Trend'),
-        value: trend != null ? `${trend > 0 ? '+' : ''}${fmtNumber(trend)}%` : '—',
-      },
-    ];
-    return items;
-  }, [t, overallAvg, bestDay, trend, efficiencyUnit, fmtNumber]);
 
   const chartEl = (
     <EmbeddedChart
@@ -211,36 +169,24 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
           >
             {areaGradient('efficiency-grad', palette.series[0])}
             {chartGrid}
-            <XAxis dataKey="label" tick={tick} tickLine={false} axisLine={false} />
+            <XAxis dataKey="label" tick={false} tickLine={false} axisLine={false} />
             <YAxis
-              tick={tick}
+              tick={false}
               tickLine={false}
               axisLine={false}
-              width={efficiencyAxisWidth}
+              width={1}
               domain={['dataMin - 20', 'dataMax + 20']}
-              tickFormatter={(v: number) => `${fmt(v)}`}
             />
             <Tooltip content={<ChartTooltip />} />
             <ChartLegend />
-            {overallAvg != null && (
-              <ReferenceLine
-                y={overallAvg}
-                stroke={palette.neutral}
-                strokeDasharray="4 4"
-                strokeOpacity={0.5}
-                label={{
-                  value: `${t('widget.driveEfficiencyChart.avg', 'Avg')}: ${fmtNumber(overallAvg)} ${efficiencyUnit}`,
-                  position: 'insideTopRight',
-                  fill: palette.neutral,
-                  fontSize: tick.fontSize,
-                }}
-              />
-            )}
             <Area
               {...AREA_DEFAULTS}
               dataKey="efficiency"
               stroke={palette.series[0]}
               fill="url(#efficiency-grad)"
+              fillOpacity={0.08}
+              dot={{ r: 2, fill: palette.series[0], strokeWidth: 0 }}
+              activeDot={{ r: 3 }}
               name={t('widget.driveEfficiencyChart.daily', 'Daily') + ` (${efficiencyUnit})`}
               hide={hiddenSeries?.isHidden('efficiency')}
             />
@@ -272,14 +218,44 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
       isError={isError}
       onRefresh={() => refetch()}
     >
-      <WidgetChartSummary
-        chart={chartEl}
-        stats={stats}
-        compact={isCompact}
-        isEmpty={displayData.length === 0}
-        emptyMessage={t('widget.driveEfficiencyChart.empty', 'No efficiency data yet')}
-        emptyIcon={<TrendingUp className="h-5 w-5" />}
-      />
+      {displayData.length === 0 ? (
+        <WidgetChartSummary
+          chart={null}
+          stats={[]}
+          compact={isCompact}
+          isEmpty
+          emptyMessage={t('widget.driveEfficiencyChart.empty', 'No efficiency data yet')}
+          emptyIcon={<TrendingUp className="h-5 w-5" />}
+        />
+      ) : (
+        <div className="flex h-full min-w-0 flex-col">
+          {!isCompact && (
+            <WidgetBigNumber
+              value={overallAvg != null ? fmtNumber(overallAvg, 0) : null}
+              unit={efficiencyUnit}
+              subtitle={t('widget.driveEfficiencyChart.windowAverage', '30-day average')}
+              animated={false}
+            />
+          )}
+          {isCompact ? (
+            <WidgetBigNumber
+              value={overallAvg != null ? fmtNumber(overallAvg, 0) : null}
+              unit={efficiencyUnit}
+              align="center"
+              animated={false}
+            />
+          ) : (
+            <WidgetChartSummary
+              stats={[]}
+              chart={chartEl}
+              legend={[
+                { label: t('widget.driveEfficiencyChart.daily', 'Daily'), color: palette.series[0] },
+                { label: t('widget.driveEfficiencyChart.rolling', '7-day avg'), color: ROLLING_AVG_COLOR },
+              ]}
+            />
+          )}
+        </div>
+      )}
     </WidgetShell>
   );
 }

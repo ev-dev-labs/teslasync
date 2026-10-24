@@ -5,14 +5,14 @@ import { EmptyState } from '@/components/feedback';
 import { useTeslaChargingHistory } from '@/api/hooks/useCharging';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { formatDuration } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
-import { WidgetRankedList, type RankedItem } from './shared';
-import { WidgetBigNumber } from './shared';
+import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 
 /**
  * Parse an entry's ISO start timestamp to epoch milliseconds. A missing or
@@ -29,7 +29,8 @@ function startTimeMs(raw: string | null | undefined): number {
 export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { formatCurrency } = useFormatting();
-  const { formatEnergy } = useUnits();
+  const { formatEnergy, unitPrefs } = useUnits();
+  const { formatDateShort } = useDateFormat();
 
   const query = useTeslaChargingHistory();
   const {
@@ -57,7 +58,7 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
   });
   const isCompact = size.cols <= 1;
 
-  const rankedItems: RankedItem[] = useMemo(() => {
+  const detailEntries: DetailEntry[] = useMemo(() => {
     const sorted = [...entries]
       .sort((a, b) => startTimeMs(b.charge_start_datetime) - startTimeMs(a.charge_start_datetime))
       .slice(0, 10);
@@ -65,38 +66,28 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
     return sorted.map((entry) => {
       const wh = knownNumber(entry.usage_wh);
       const cost = knownNumber(entry.total_due);
+      const startMs = startTimeMs(entry.charge_start_datetime);
+      const stopMs = entry.charge_stop_datetime ? startTimeMs(entry.charge_stop_datetime) : 0;
+      const durationS = startMs > 0 && stopMs >= startMs ? (stopMs - startMs) / 1000 : null;
+      const date = startMs > 0 ? formatDateShort(entry.charge_start_datetime) : '—';
+      const duration = durationS == null
+        ? null
+        : formatDuration(durationS, { ...unitPrefs, duration: 'min' }, { precision: 0 });
+
       return {
         id: entry.id,
         label: entry.site_location_name ?? '—',
-        value: wh,
-        formattedValue: wh == null ? '—' : formatEnergy(wh),
+        sublabel: duration == null ? date : `${date} · ${duration}`,
+        value: wh == null ? '—' : formatEnergy(wh, { precision: 0 }),
         badge: cost != null
           ? { text: formatCurrency(cost), variant: 'neutral' as const }
           : undefined,
-        barColor: 'bg-[var(--text-secondary)]',
       };
-    }).sort((a, b) => {
-      if (a.value == null) return b.value == null ? 0 : 1;
-      if (b.value == null) return -1;
-      return b.value - a.value;
     });
-  }, [entries, formatCurrency, formatEnergy]);
+  }, [entries, formatCurrency, formatDateShort, formatEnergy, unitPrefs]);
 
-  const totalWh = knownNumber(summary?.total_wh);
   const totalSpend = knownNumber(summary?.total_spend);
-  const sourceBrief = (
-    <DashboardSourceBrief
-      metrics={[
-        { metricId: 'energy', rawValue: totalWh, label: t('widget.superchargerHistory.totals', '30-day totals'), description: t('widget.superchargerHistory.energyDescription', 'Reported summary energy in watt-hours, not the sum of the top-ten presentation rows.'), display: { formatter: raw => ({ value: formatEnergy(Number(raw)), unit: '' }) } },
-        { metricId: 'currency', rawValue: totalSpend, label: t('widget.superchargerHistory.compactLabel', '30-day Supercharger'), description: t('widget.superchargerHistory.spendDescription', 'Reported Supercharger summary spend; missing values remain unknown, not free charging.'), display: { formatter: raw => ({ value: formatCurrency(Number(raw)), unit: '' }) } },
-      ]}
-      state={dataState} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
-      title={t('widget.superchargerHistory.summaryTitle', 'Supercharger source totals')}
-      description={t('widget.superchargerHistory.summaryDescription', 'Reported 30-day totals remain independent of the ten most-recent sessions ranked by energy; incomplete session energy does not imply a complete sample.')}
-      scope={t('widget.superchargerHistory.summaryScope', 'Tesla charging history; source summary window, exact instants and timezone are not supplied')}
-      loading={isLoading && !data} testId="supercharger-history-operational-brief"
-    />
-  );
+  const totalSessions = knownNumber(summary?.total_sessions);
 
   // Compact: show 30-day Supercharger spend as big number
   if (isCompact) {
@@ -111,15 +102,12 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
         onRefresh={() => refetch()}
       >
         {entries.length > 0 ? (
-          <>
-            {sourceBrief}
-            <div role="group" aria-label={t('widget.superchargerHistory.compactLabel', '30-day Supercharger')}>
-              <WidgetBigNumber
-                value={totalSpend == null ? null : formatCurrency(totalSpend)}
-                label={t('widget.superchargerHistory.compactLabel', '30-day Supercharger')}
-              />
-            </div>
-          </>
+          <div role="group" aria-label={t('widget.superchargerHistory.compactLabel', '30-day Supercharger')}>
+            <WidgetBigNumber
+              value={totalSpend == null ? null : formatCurrency(totalSpend)}
+              label={t('widget.superchargerHistory.compactLabel', '30-day Supercharger')}
+            />
+          </div>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Zap className="h-5 w-5" />}
@@ -142,17 +130,25 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
       isStale={isStale}
       isError={isError}
       onRefresh={() => refetch()}
+      footer={entries.length > 0 ? (
+        <div className="flex min-w-0 items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
+          <span>
+            {totalSessions != null && (
+              <>
+                {t('widget.chargeCost.sessions', '{{count}} sessions', { count: totalSessions })}
+                {totalSpend != null && ' · '}
+              </>
+            )}
+            {totalSpend == null ? '—' : formatCurrency(totalSpend)}
+          </span>
+        </div>
+      ) : undefined}
     >
       {entries.length > 0 ? (
         <div className="flex flex-col gap-2 h-full">
-          {sourceBrief}
           <div className="flex-1 min-h-0 overflow-y-auto">
-            <WidgetRankedList
-              items={rankedItems}
-              order="source"
-              wrapContent
-              maxItems={10}
-              showBars={entries.every((entry) => knownNumber(entry.usage_wh) != null)}
+            <WidgetDetailCard
+              entries={detailEntries}
               emptyMessage={t('widget.superchargerHistory.noData', 'No Supercharger sessions')}
               emptyIcon={<Zap className="h-5 w-5" />}
             />

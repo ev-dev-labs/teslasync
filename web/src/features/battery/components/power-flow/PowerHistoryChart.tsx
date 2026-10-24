@@ -12,7 +12,7 @@ import {
 import { cn } from '@/lib/cn';
 import { formatDateShort, formatDateTime } from '@/lib/dateFormat';
 import { isFiniteNumber } from '@/lib/numberFormat';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { fmtWatts } from './helpers';
 import { FLOW_COLORS } from './constants';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -41,7 +41,7 @@ const CHART_HEIGHT = 320;
 /** Hero stacked-area chart of solar / battery / grid / home power over time. */
 export function PowerHistoryChart({ data, loading, error, onRetry, className }: PowerHistoryChartProps) {
   const { precision: displayPrecision, locale: displayLocale, fmtPercent } = useNumberFormatting();
-  const timezone = useTimezone('user');
+  const { tz: timezone } = useDateFormat();
   const { t } = useTranslation();
 
   // The API layer is untyped at runtime and can transiently omit the series;

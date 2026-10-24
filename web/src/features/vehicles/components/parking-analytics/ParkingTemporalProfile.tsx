@@ -6,6 +6,7 @@ import { ChartContainer } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { Subhead } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
 
 
 import type { ParkingSummary } from '../../lib/parkingDwell';
@@ -28,7 +29,8 @@ export function ParkingTemporalProfile({
 }: ParkingTemporalProfileProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  const { locale, formatTime } = useDateFormat();
+  const { formatTime } = useDateFormat();
+  const { formatWeekdayName } = useDateLabels();
   const hourRows = useMemo(
     () =>
       summary.hourly.map((bucket) => ({
@@ -41,17 +43,15 @@ export function ParkingTemporalProfile({
     [summary.hourly, formatTime],
   );
   const weekdayRows = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat(locale, {
-      weekday: 'short',
-      timeZone: 'UTC',
-    });
+    // Anchors are UTC-nooned Sundays; pin UTC so names never shift zones.
     return summary.weekdays.map((bucket) => ({
-      label: formatter.format(
+      label: formatWeekdayName(
         new Date(Date.UTC(2026, 0, 4 + bucket.weekday, 12)),
+        { tz: 'UTC' },
       ),
       stints: bucket.stints,
     }));
-  }, [locale, summary.weekdays]);
+  }, [formatWeekdayName, summary.weekdays]);
   const hasData = summary.stints.length > 0;
   const fallbackRows = hasData
     ? [
@@ -82,10 +82,9 @@ export function ParkingTemporalProfile({
         title={t('parking.temporal.title', 'When parking starts')}
         subtitle={t(
           'parking.temporal.subtitle',
-          '{{count}} reconstructed starts grouped in {{timeZone}}; dwell is credited to its start period.',
+          '{{count}} reconstructed starts grouped by local start; dwell is credited to its start period.',
           {
             count: summary.stints.length,
-            timeZone: summary.coverage.timeZone,
           },
         )}
         ariaLabel={t(

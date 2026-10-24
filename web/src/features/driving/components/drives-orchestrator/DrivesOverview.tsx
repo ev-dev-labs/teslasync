@@ -3,7 +3,7 @@ import { Delta } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { QueryError, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { formatDurationMinutes } from '@/lib/dateFormat';
+import { formatDurationMinutes } from '@/lib/dateConvert';
 import type { DrivesListPageController } from '../../hooks/useDrivesListPage';
 import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { useUnits } from '@/hooks/useUnits';

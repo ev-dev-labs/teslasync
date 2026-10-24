@@ -91,7 +91,7 @@ describe('RoadAnomalyPanel', () => {
     const label = formatDateTime(ts, { locale: 'de-DE', tz: 'America/Los_Angeles' });
     const button = screen.getByRole('button', { name: label });
     expect(button.querySelector('time')).toHaveAttribute('datetime', ts);
-    expect(button.querySelector('time')).toHaveAttribute('title', ts);
+    expect(button.querySelector('time')).not.toHaveAttribute('title');
     fireEvent.click(button);
     expect(screen.getByRole('status')).toHaveTextContent(label);
   });

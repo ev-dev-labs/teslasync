@@ -291,7 +291,6 @@
   "driving": {
     "brief": {
       "completeScope": "Complete analysis window",
-      "exclusiveBounds": "{{start}} to {{end}} (exclusive end)",
       "eyebrow": "Driving evidence",
       "loading": "Loading source",
       "observationUnknown": "Source observation time not provided",

@@ -18,7 +18,7 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
 import { useUnits } from '@/hooks/useUnits';
 
 import { convertDurationFromSI } from '@/lib/unitConversion';
@@ -39,17 +39,12 @@ export function MonthlyDwellTrend(
 ) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  const { locale } = useDateFormat();
+  const { formatMonthYear } = useDateLabels();
   const { unitPrefs } = useUnits();
   const durationUnit = unitPrefs.duration;
   const rows = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat(locale, {
-      month: 'short',
-      year: 'numeric',
-      timeZone: 'UTC',
-    });
     return summary.monthly.map((month) => ({
-      month: formatter.format(new Date(`${month.month}-15T12:00:00.000Z`)),
+      month: formatMonthYear(`${month.month}-15T12:00:00.000Z`),
       dwell:
         Math.round(
           convertDurationFromSI(month.totalMs / 1_000, durationUnit) * 10,
@@ -60,7 +55,7 @@ export function MonthlyDwellTrend(
         ) / 10,
       stints: month.stints,
     }));
-  }, [durationUnit, locale, summary.monthly]);
+  }, [durationUnit, formatMonthYear, summary.monthly]);
   const hasData = rows.length > 0;
   const dwellName = t(
     'parking.monthly.dwellSeries',
@@ -79,10 +74,9 @@ export function MonthlyDwellTrend(
         title={t('parking.monthly.title', 'Monthly dwell & stint trend')}
         subtitle={t(
           'parking.monthly.subtitle',
-          '{{count}} stints grouped by parking-start month in {{timeZone}}; observed dwell includes right-censored tails.',
+          '{{count}} stints grouped by parking-start month in your selected time zone; observed dwell includes right-censored tails.',
           {
             count: summary.stints.length,
-            timeZone: summary.coverage.timeZone,
           },
         )}
         ariaLabel={t(

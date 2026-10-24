@@ -119,15 +119,21 @@ func tempSlope(months []monthlyTempTrend) float64 {
 }
 
 // Shift serves GET /analytics/temperature-impact/shift?vehicle_id=....
+// It accepts the same `?timezone=` frame as Get: the monthly trend it
+// folds into a seasonal shift must be bucketed in the user's zone.
 func (h *Handler) Shift(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := parseVehicleID(r.URL.Query().Get("vehicle_id"))
 	if err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	zone, ok := resolveTimezone(w, r.URL.Query().Get("timezone"))
+	if !ok {
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), queryTimeout)
 	defer cancel()
-	trend, err := h.repo.MonthlyTrend(ctx, vehicleID)
+	trend, err := h.repo.MonthlyTrend(ctx, vehicleID, zone)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("temp impact: failed to query monthly trend")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to query monthly trend")

@@ -9,6 +9,7 @@ import {
 } from '@/lib/unitConversion';
 import type { ShareCardDisplay } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { formatMonthYear } from '@/lib/dateConvert';
 import { getGlobalPrecision } from '@/lib/numberFormat';
 
 function finite(value: number | null | undefined): value is number {
@@ -72,13 +73,7 @@ export function useShareCardDisplay(): ShareCardDisplay {
   );
   const formatMonth = useCallback(
     (month: string) => {
-      const match = /^(\d{4})-(\d{2})$/.exec(month);
-      if (!match) return month;
-      return new Intl.DateTimeFormat(locale, {
-        month: 'short',
-        year: 'numeric',
-        timeZone: 'UTC',
-      }).format(new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1)));
+      return formatMonthYear(month, { locale });
     },
     [locale],
   );

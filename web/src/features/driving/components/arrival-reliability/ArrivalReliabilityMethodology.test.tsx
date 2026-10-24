@@ -91,7 +91,8 @@ describe('ArrivalReliabilityMethodology', () => {
     expect(section).toHaveTextContent('0.65 × observed within-allowance share');
     expect(section).toHaveTextContent('Scaled MAD = 1.4826');
     expect(section).toHaveTextContent('capped at 1,000');
-    expect(section).toHaveTextContent('use America/Los_Angeles');
+    expect(section).toHaveTextContent('use your selected time zone');
+    expect(section).not.toHaveTextContent('America/Los_Angeles');
     expect(section).toHaveTextContent('reverse travel is a different route');
     expect(section).toHaveTextContent('at least 3 and 3 samples');
     expect(section).toHaveTextContent('limited to 2,500 rows');

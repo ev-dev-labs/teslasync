@@ -34,13 +34,13 @@ const CHART_KEY = 'charge-departure-alignment';
 
 export default function ChargeDepartureAlignmentPage() {
   const { t } = useTranslation();
-  const { formatDateTime, formatDateShort, tz } = useDateFormat();
+  const { formatDateTime, formatDateShort } = useDateFormat();
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const instantLabel = useCallback((ms: number) => {
     const date = new Date(ms);
     if (!Number.isFinite(ms)) return formatDateTime(date);
-    return `${formatDateTime(date, { clock: { second: '2-digit' } })} (${tz}) · ${date.toISOString()}`;
-  }, [formatDateTime, tz]);
+    return formatDateTime(date, { clock: { second: '2-digit' } });
+  }, [formatDateTime]);
   usePageTitle(t('chargeDepartureAlignment.title', 'Charge \u2192 Departure Alignment'));
 
   const { vehicleId } = useSelectedVehicle();
@@ -101,13 +101,18 @@ export default function ChargeDepartureAlignmentPage() {
   );
 
   // Keep the color-only boolean out of scalar alternatives; the localized
-  // pairing status stays in both accessible rows and CSV.
-  const exportData = useMemo(
+  // pairing status stays in both accessible rows and CSV. Accessible rows
+  // show the single user-zone label; CSV keeps the full ISO instant.
+  const scalarRows = useMemo(
     () => chartData.map(({ misaligned: _misaligned, ...rest }) => ({
       ...rest,
       date: instantLabel(Date.parse(rest.date)),
     })),
     [chartData, instantLabel],
+  );
+  const csvRows = useMemo(
+    () => chartData.map(({ misaligned: _misaligned, ...rest }) => ({ ...rest })),
+    [chartData],
   );
 
   if (vehicleId == null) {
@@ -213,8 +218,7 @@ export default function ChargeDepartureAlignmentPage() {
               t('chargeDepartureAlignment.modernization.heuristic', 'Heuristic flags, not confirmed faults'),
               t(
                 'chargeDepartureAlignment.modernization.chartTime',
-                'Chart timestamps use {{zone}}. Pairing uses elapsed instants within 24 hours, not local calendar dates or a business timezone.',
-                { zone: tz },
+                'Chart timestamps use your selected time zone. Pairing uses elapsed instants within 24 hours, not local calendar dates or a separate business timezone.',
               ),
             ].join(' · ')}
             ariaLabel={t(
@@ -240,8 +244,8 @@ export default function ChargeDepartureAlignmentPage() {
             emptyIcon={<Icon icon={Link2} size="xl" />}
             className="w-full min-w-0"
             height={340}
-            data={exportData}
-            exportData={exportData}
+            data={scalarRows}
+            exportData={csvRows}
             dataColumns={[
               { key: 'date', label: t('chargeDepartureAlignment.col.date', 'Date') },
               { key: 'dwellMin', label: t('chargeDepartureAlignment.col.dwell', 'Dwell (min)'),

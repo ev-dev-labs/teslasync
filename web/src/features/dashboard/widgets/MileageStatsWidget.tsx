@@ -1,7 +1,5 @@
-import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
-import { Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useMileageStats } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -10,11 +8,9 @@ import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber } from './shared';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
+import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
-import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Next 10 000-display-unit milestone, strictly above the current total. */
@@ -24,7 +20,7 @@ function nextMilestone(total: number): number {
 }
 
 export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -55,45 +51,28 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
     ? Math.max(1, Math.round(remaining / dailyAvgDisplay / 30))
     : 0;
 
-  const stats = useMemo((): StatMetric[] => {
-    if (!data) return [];
-    return [
-      {
-        metricId: 'distance',
-        label: t('widget.mileageStats.dailyAvg', 'Daily avg'),
-        rawValue: monthly == null ? null : monthly / 30 * 1000,
-        description: t('widget.mileageStats.summary.dailyHelp', 'Last 30-day distance divided by 30; not today’s measured distance.'),
-        display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
-      },
-      {
-        metricId: 'distance',
-        label: t('widget.mileageStats.weeklyAvg', 'Weekly avg'),
-        rawValue: monthly == null ? null : monthly / 30 * 1000 * 7,
-        description: t('widget.mileageStats.summary.weeklyHelp', 'Seven times the 30-day-derived daily average; not an independent seven-day query.'),
-        display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
-      },
-      {
-        metricId: 'distance',
-        label: t('widget.mileageStats.monthlyAvg', 'Monthly avg'),
-        rawValue: monthly == null ? null : monthly * 1000,
-        description: t('widget.mileageStats.summary.monthlyHelp', 'Thirty times the derived daily average, preserving the rolling 30-day distance.'),
-        display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
-      },
-      {
-        metricId: 'distance',
-        label: t('widget.mileageStats.nextMilestone', 'Next milestone'),
-        rawValue: milestone == null ? null : convertDistanceToSI(milestone, distanceUnit),
-        description: t('widget.mileageStats.summary.milestoneHelp', 'Next 10,000-display-unit lifetime milestone. Estimated months retain the existing 30-day average and rounding rule.'),
-        display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
-        comparisonContent: <Caption className="flex items-center gap-1">
-          <TrendingUp className="h-3 w-3" aria-hidden="true" />
-          {monthsToMilestone > 0
-            ? t('widget.mileageStats.inMonths', '~{{months}} mo', { months: monthsToMilestone })
-            : '—'}
-        </Caption>,
-      },
-    ];
-  }, [data, monthly, distanceUnit, milestone, monthsToMilestone, t, fmtNumber]);
+  const stats: StatGridItem[] = [
+    {
+      label: t('widget.mileageStats.dailyAvg', 'Daily avg'),
+      value: dailyAvgDisplay == null ? null : fmtInt(dailyAvgDisplay),
+      unit: distanceUnit,
+    },
+    {
+      label: t('widget.mileageStats.weeklyAvg', 'Weekly avg'),
+      value: dailyAvgDisplay == null ? null : fmtInt(dailyAvgDisplay * 7),
+      unit: distanceUnit,
+    },
+    {
+      label: t('widget.mileageStats.monthlyAvg', 'Monthly avg'),
+      value: monthly == null ? null : fmtInt(toDistanceDisplay(monthly * 1000)),
+      unit: distanceUnit,
+    },
+  ];
+
+  const previousMilestone = milestone == null ? null : milestone - 10_000;
+  const progress = totalDisplay != null && milestone != null && previousMilestone != null
+    ? Math.max(0, Math.min(100, ((totalDisplay - previousMilestone) / (milestone - previousMilestone)) * 100))
+    : null;
 
   const shellProps = {
     title: t('widget.mileageStats.title', 'Mileage stats'),
@@ -111,7 +90,7 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
     return (
       <WidgetShell {...shellProps}>
         {hasData ? (
-          <WidgetBigNumber value={dailyAvgDisplay == null ? null : fmtNumber(dailyAvgDisplay)} unit={`${distanceUnit}/${t('widget.mileageStats.day', 'day')}`} />
+          <WidgetBigNumber value={dailyAvgDisplay == null ? null : fmtInt(dailyAvgDisplay)} unit={`${distanceUnit}/${t('widget.mileageStats.day', 'day')}`} animated={false} />
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<TrendingUp className="h-5 w-5" />}
@@ -130,15 +109,41 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
       {...shellProps}
     >
       {hasData ? (
-        <DashboardSourceBrief
-          metrics={stats}
-          state={trust}
-          eyebrow={t('widget.mileageStats.summary.eyebrow', 'Mileage history')}
-          title={t('widget.mileageStats.summary.title', 'Mileage operating summary')}
-          description={t('widget.mileageStats.summary.description', 'Rolling 30-day distance supplies the daily, weekly and monthly averages; lifetime distance supplies the milestone. Exact source bounds and completeness are not supplied.')}
-          scope={t('widget.mileageStats.summary.scope', 'Vehicle {{id}} · rolling 30 days / lifetime', { id })}
-          testId="mileage-stats-operational-brief"
-        />
+        <div className="flex min-w-0 flex-col gap-3" data-testid="mileage-stats-after-card">
+          <WidgetStatGrid stats={stats} cols={3} maxPerRow={3} />
+          {(totalDisplay != null || milestone != null) && (
+            <div className="min-w-0" data-testid="mileage-milestone">
+              <div className="mb-1.5 flex min-w-0 items-end justify-between gap-2 text-xs">
+                <span className="font-semibold tabular-nums text-[var(--text-primary)]">
+                  {totalDisplay == null ? '—' : `${fmtInt(totalDisplay)} ${distanceUnit}`}
+                </span>
+                {milestone != null && (
+                  <span className="min-w-0 text-end text-[var(--text-secondary)]">
+                    {t('widget.mileageStats.nextMilestone', 'Next milestone')} {fmtInt(milestone)} {distanceUnit}
+                    {monthsToMilestone > 0 && (
+                      <> · {t('widget.mileageStats.inMonths', '~{{months}} mo', { months: monthsToMilestone })}</>
+                    )}
+                  </span>
+                )}
+              </div>
+              {progress != null && (
+                <div
+                  className="h-2 overflow-hidden bg-[var(--surface-2)] rounded-shape-sm"
+                  role="progressbar"
+                  aria-label={t('widget.mileageStats.nextMilestone', 'Next milestone')}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(progress)}
+                >
+                  <div
+                    className="h-full rounded-shape-sm bg-[var(--accent-primary)] transition-[width] duration-fast motion-reduce:transition-none"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<TrendingUp className="h-5 w-5" />}

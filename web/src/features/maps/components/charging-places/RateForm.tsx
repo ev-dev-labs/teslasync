@@ -7,9 +7,9 @@ import { LayoutCard } from '@/components/layout';
 import { CurrencyInput } from '@/components/forms';
 import { AlertBanner, QueryError } from '@/components/feedback';
 import { useSettings } from '@/hooks/useSettings';
-import { useDateFormat } from '@/hooks/useDateFormat';
 import { currencyCodeFromSymbol, microToValue } from '@/lib/currencyFormat';
 import { formatTime } from '@/lib/dateFormat';
+import { useConversionTimezone } from '@/lib/dateConvert';
 import { addCivilDays, civilDateInTimeZone, localMidnightToInstant } from '@/lib/dateRange';
 import { useCreateGeofenceRate } from '@/api/hooks/useLocations';
 import { currencyPerKwhToRatePerWh } from './helpers';
@@ -99,7 +99,10 @@ function dayBeforeSessionAsLocalInput(startedAt: string, timezone: string): stri
 export function RateForm({ geofenceId, currentRate, firstSessionAt }: RateFormProps) {
   const { t } = useTranslation();
   const { locale, settings } = useSettings();
-  const { tz } = useDateFormat();
+  // Business-instant conversion, NOT display: the raw saved zone, so an
+  // invalid saved zone throws at conversion time (validation error)
+  // instead of being silently replaced by the display fallback zone.
+  const tz = useConversionTimezone();
   const defaultCurrency = currentRate?.currency ?? currencyCodeFromSymbol(settings.currency_symbol);
 
   const [currency, setCurrency] = useState(defaultCurrency);

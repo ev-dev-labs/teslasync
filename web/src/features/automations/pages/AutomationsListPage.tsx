@@ -28,6 +28,7 @@ import { useAutomationEvents } from '@/hooks/useAutomationEvents';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import {
   useAutomationList,
+  useDuplicateAutomation,
   usePinnedAutomations,
   useToggleAutomation,
   useDeleteAutomation,
@@ -139,6 +140,7 @@ export default function AutomationsListPage() {
   const testRunMutation = useTestRunAutomation();
   const reEnableMutation = useReEnableAutomation();
   const importMutation = useImportAutomations();
+  const duplicateMutation = useDuplicateAutomation();
   const operationalMode = useOperationalMode();
 
   // Import file input — validation errors surface via alert; network
@@ -476,7 +478,7 @@ export default function AutomationsListPage() {
             </summary>
             <div className="mt-4">
               <PresetGallery
-                actionsDisabled={!operationalMode.canWrite}
+                actionsDisabled={!operationalMode.canWrite || duplicateMutation.isPending}
                 actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
               />
             </div>
@@ -549,7 +551,11 @@ export default function AutomationsListPage() {
                       onReEnable={handleReEnable}
                       onDelete={handleDelete}
                       onTestRun={handleTestRun}
-                      actionsDisabled={!operationalMode.canWrite}
+                      onDuplicate={(id) => {
+                        if (!operationalMode.canWrite || duplicateMutation.isPending) return;
+                        duplicateMutation.mutate(id, {onSuccess:(copy) => navigate(`/automations/${copy.id}/edit`)});
+                      }}
+                      actionsDisabled={!operationalMode.canWrite || duplicateMutation.isPending}
                       actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
                     />
                   </StaggerItem>

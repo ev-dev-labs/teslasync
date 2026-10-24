@@ -286,7 +286,6 @@
   "driving": {
     "brief": {
       "completeScope": "Complete analysis window",
-      "exclusiveBounds": "{{start}} to {{end}} (exclusive end)",
       "eyebrow": "Driving evidence",
       "loading": "Loading source",
       "observationUnknown": "Source observation time not provided",
@@ -454,8 +453,7 @@
       "noVehicle": "Select a vehicle",
       "observatoryMetrics": "Reset-safe counter quantities",
       "periodQuantities": "Current and previous period quantities",
-      "source": "Reported supervised self-driving and observed-driving counters, grouped by the requested local calendar window.",
-      "window": "{{start}}–{{end}} (exclusive end) · {{timezone}}"
+      "source": "Reported supervised self-driving and observed-driving counters, grouped by the requested local calendar window."
     },
     "chooseVehicle": "Choose a vehicle",
     "commute": {
@@ -527,7 +525,7 @@
       "title": "Data confidence & methodology",
       "unitNote": "The API stores and returns canonical SI meters; values are converted to your display unit only when rendered.",
       "window": "Observation window",
-      "windowValue": "{{start}} – {{end}} ({{timezone}})"
+      "windowValue": "{{start}} – {{end}}"
     },
     "drive": {
       "confidence": {
@@ -713,7 +711,7 @@
       "empty": "The supervised self-driving counter did not report a measurable distance in this period.",
       "fsdSeries": "Supervised self-driving",
       "section": "Supervised self-driving distance trend",
-      "subtitle": "Counter movement attributed to each local calendar day in {{timezone}}.",
+      "subtitle": "Counter movement attributed to each local calendar day.",
       "title": "Distance trend",
       "value": "{{value}} {{unit}}"
     },

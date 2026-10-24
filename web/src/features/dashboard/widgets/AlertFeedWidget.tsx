@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bell, AlertTriangle, Info, AlertOctagon, CheckCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Bell, AlertTriangle, Info, AlertOctagon, CheckCircle } from 'lucide-react';
 import { useAlerts } from '@/api/hooks/useNotifications';
 import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed, type EventFeedItem } from './shared';
@@ -8,6 +9,7 @@ import type { WidgetProps } from './types';
 import { normalizeSeverity, type Severity } from '@/lib/tokens';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import { useDataState } from '@/hooks/useDataState';
+import { Caption } from '@/components/ui';
 
 const SEVERITY_HEX: Record<Severity, string> = {
   info: '#0ea5e9',
@@ -32,34 +34,47 @@ export default function AlertFeedWidget({ size }: WidgetProps) {
   const isWide = size.cols >= 3;
   const isTall = size.rows >= 2;
 
-  // User-visible severity labels must go through i18n (module scope can't call
-  // `t`). Memoised so the map identity only changes when the language does.
-  const severityLabels = useMemo<Record<Severity, string>>(() => ({
-    info: t('widget.severity.info', 'Info'),
-    warn: t('widget.severity.warn', 'Warning'),
-    critical: t('widget.severity.critical', 'Critical'),
-    success: t('widget.severity.success', 'Success'),
-  }), [t]);
-
   const items: EventFeedItem[] = useMemo(() =>
     (alerts ?? []).map(a => {
       const sev = normalizeSeverity(a.severity);
-      const label = severityLabels[sev];
       return {
         id: a.id,
         icon: SEVERITY_ICONS[sev],
         title: a.title ?? '—',
-        // Wide widgets show the alert message; fall back to the severity label
-        // so a row with an empty/degraded message is never left contextless.
-        subtitle: isWide ? (a.message || label) : label,
         timestamp: a.created_at,
         color: SEVERITY_HEX[sev],
         href: getAlertDrillthroughHref(a),
         wrap: true,
       };
     }),
-    [alerts, isWide, severityLabels],
+    [alerts],
   );
+
+  const unreadCount = useMemo(
+    () => (alerts ?? []).filter((alert) => !alert.is_read).length,
+    [alerts],
+  );
+
+  const attentionCount = useMemo(
+    () => (alerts ?? []).filter((alert) => {
+      if (alert.is_read) return false;
+      const severity = normalizeSeverity(alert.severity);
+      return severity === 'warn' || severity === 'critical';
+    }).length,
+    [alerts],
+  );
+
+  const footerSummary = attentionCount > 0
+    ? t(
+        attentionCount === 1
+          ? 'widget.alertFeedNeedsAttention_one'
+          : 'widget.alertFeedNeedsAttention_other',
+        attentionCount === 1 ? '{{count}} needs attention' : '{{count}} need attention',
+        { count: attentionCount },
+      )
+    : unreadCount > 0
+      ? t('widget.alertFeedUnread', '{{count}} unread', { count: unreadCount })
+      : t('widget.alertFeedNoUnread', 'No unread alerts');
 
   return (
     <WidgetShell
@@ -72,6 +87,20 @@ export default function AlertFeedWidget({ size }: WidgetProps) {
       isStale={isStale}
       isError={isError}
       onRefresh={() => refetch()}
+      footer={alerts !== undefined && alerts.length > 0 && isWide ? (
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <Caption className="min-w-0 text-[var(--text-muted)] tabular-nums">
+            {footerSummary}
+          </Caption>
+          <Link
+            to="/notifications/inbox"
+            className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-[var(--accent-primary)] hover:underline"
+          >
+            {t('widget.allAlerts', 'All alerts')}
+            <ArrowRight className="h-3 w-3" aria-hidden="true" />
+          </Link>
+        </div>
+      ) : undefined}
     >
       <WidgetEventFeed
         items={items}

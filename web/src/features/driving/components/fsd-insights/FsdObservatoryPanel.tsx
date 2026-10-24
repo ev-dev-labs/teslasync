@@ -7,6 +7,7 @@ import { DataProvenanceBadge } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
 import { safeArray } from '@/lib/safeArray';
 import { neonColorMap, typography } from '@/lib/tokens';
@@ -35,6 +36,7 @@ export function FsdObservatoryPanel({ insights, state, dataState }: FsdObservato
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
+  const { formatDateRange } = useDateFormat();
   const source = dataState ?? deriveDataState({
     data: insights,
     error: state.error,
@@ -107,7 +109,7 @@ export function FsdObservatoryPanel({ insights, state, dataState }: FsdObservato
             description={honesty} loading={bodyState.isLoading} retained={retained}
             unavailable={!source.hasData || source.status === 'unavailable'}
             period={{ kind: 'unknown',
-              label: data ? `${data.period.start_at} – ${data.period.end_at} · ${data.period.timezone}` : t('fsd.notMeasured', 'Not measured'),
+              label: data ? formatDateRange(data.period.start_at, data.period.end_at) : t('fsd.notMeasured', 'Not measured'),
               reason: honesty }} />
 
           <div className="mt-6">

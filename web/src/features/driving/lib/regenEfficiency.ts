@@ -7,7 +7,8 @@
  */
 
 import type { Drive } from '@/types/driving';
-import { ymdInTz } from '@/lib/dateFormat';
+import {isValidTimeZone} from '@/lib/dateFormat'
+import {ymdInTz} from '@/lib/dateConvert';
 
 export const REGEN_HISTORY_LIMIT = 1_000;
 export const REGEN_MONTH_DISPLAY_LIMIT = 24;
@@ -165,12 +166,7 @@ function isMissing(value: unknown): boolean {
 
 function normalizeTimeZone(timeZone: string): string {
   const candidate = timeZone.trim() || 'UTC';
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(0);
-    return candidate;
-  } catch {
-    return 'UTC';
-  }
+  return isValidTimeZone(candidate) ? candidate : 'UTC';
 }
 
 function parseDriveDate(value: unknown, timeZone: string): DateResult {

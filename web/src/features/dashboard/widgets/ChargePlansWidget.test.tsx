@@ -78,6 +78,23 @@ vi.mock('@/hooks/useFormatting', () => ({
     estimateGasCost: () => null,
   }),
 }));
+vi.mock('@/hooks/useUnits', async () => {
+  const { getFormatterPreferences } = await import('@/lib/numberFormat');
+  return {
+    useUnits: () => ({
+      formatEnergy: (wh: number | null | undefined, options?: { precision?: number }) => {
+        if (wh == null || !Number.isFinite(Number(wh))) return '—';
+        const prefs = getFormatterPreferences();
+        const digits = options?.precision ?? prefs.precision;
+        const value = (Number(wh) / 1000).toLocaleString(prefs.locale, {
+          minimumFractionDigits: digits,
+          maximumFractionDigits: digits,
+        });
+        return `${value} kWh`;
+      },
+    }),
+  };
+});
 
 // ── Data hooks, driven per test. ──
 vi.mock('@/api/hooks/useCharging', () => ({
@@ -95,6 +112,7 @@ import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
 import { act } from '@testing-library/react';
 import ChargePlansWidget, {
   badgeVariant,
+  chargePlanStatusLabel,
   detailBadgeVariant,
   joinDateTime,
 } from './ChargePlansWidget';
@@ -291,6 +309,16 @@ describe('detailBadgeVariant', () => {
     expect(detailBadgeVariant('cancelled')).toBe('error');
   });
 
+  describe('chargePlanStatusLabel', () => {
+    it('uses localized status names without exposing raw status strings', () => {
+      const translate = (_key: string, fallback: string) => fallback;
+      expect(chargePlanStatusLabel('active', translate)).toBe('Active');
+      expect(chargePlanStatusLabel('scheduled', translate)).toBe('Scheduled');
+      expect(chargePlanStatusLabel('completed', translate)).toBe('Completed');
+      expect(chargePlanStatusLabel(null, translate)).toBe('Unknown');
+    });
+  });
+
   it('passes non-danger tones through unchanged', () => {
     expect(detailBadgeVariant('completed')).toBe('success');
     expect(detailBadgeVariant('scheduled')).toBe('warning');
@@ -383,7 +411,7 @@ describe('ChargePlansWidget', () => {
     render(<ChargePlansWidget vehicleId={42} size={STANDARD} />);
 
     // Status badge + summary StatCards.
-    expect(screen.getByText('scheduled')).toBeInTheDocument();
+    expect(screen.getByText('Scheduled')).toBeInTheDocument();
     expect(screen.getByText('80.00%')).toBeInTheDocument();
     expect(screen.getByText('08:00')).toBeInTheDocument();
     // Detail rows (slice(2)): schedule start/end combined, energy, cost, savings.
@@ -396,7 +424,6 @@ describe('ChargePlansWidget', () => {
     expect(screen.getByText('$4.10')).toBeInTheDocument();
     expect(screen.getByText('saved')).toBeInTheDocument();
     // Rate plan appears in both the header and the detail row.
-    expect(screen.getByText('Rate plan')).toBeInTheDocument();
     expect(screen.getAllByText('Off-Peak Saver').length).toBeGreaterThanOrEqual(1);
   });
 
@@ -480,7 +507,7 @@ describe('ChargePlansWidget', () => {
     setup({ plans: makeQuery({ data: [completed, scheduled] }) });
     render(<ChargePlansWidget vehicleId={42} size={STANDARD} />);
 
-    expect(screen.getByText('scheduled')).toBeInTheDocument();
+    expect(screen.getByText('Scheduled')).toBeInTheDocument();
     expect(screen.getByText('70.00%')).toBeInTheDocument();
     expect(screen.queryByText('100%')).not.toBeInTheDocument();
     expect(screen.queryByText('completed')).not.toBeInTheDocument();

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import type { MetricPreferences } from '@/lib/metric-reference';
 import type { SharedSessionData } from '@/types/sharing';
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateConvert';
 import { PublicReportBrief } from './PublicReportBrief';
 
 interface Props {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Popover } from '@/components/ui';
-import { MoreVertical, Play, RotateCcw, Copy, Download, Trash2 } from 'lucide-react';
+import { MoreVertical, Play, RotateCcw, Copy, Trash2 } from 'lucide-react';
 
 interface AutomationCardActionsProps {
   automationId: number;
@@ -10,13 +10,14 @@ interface AutomationCardActionsProps {
   actionsDisabled: boolean;
   actionsDisabledReason?: string;
   onTestRun: (id: number) => void;
+  onDuplicate?: (id: number) => void;
   onReEnable: (id: number) => void;
   onRequestDelete: () => void;
 }
 
 export function AutomationCardActions({
   automationId, automationName, autoDisabled, actionsDisabled, actionsDisabledReason,
-  onTestRun, onReEnable, onRequestDelete,
+  onTestRun, onReEnable, onRequestDelete, onDuplicate,
 }: AutomationCardActionsProps) {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -84,26 +85,16 @@ export function AutomationCardActions({
             {t('automations.reEnable', 'Re-enable')}
           </Button>
         )}
-        <Button
-          type="button"
-          variant="ghost"
-          wrapLabel
-          className={actionClassName}
+        {onDuplicate && <Button
+          type="button" variant="ghost" wrapLabel disabled={actionsDisabled}
+          title={actionsDisabledReason} className={actionClassName}
           icon={<Copy className="h-3.5 w-3.5" aria-hidden="true" />}
-          onClick={() => { setMenuOpen(false); }}
+          onClick={() => { onDuplicate(automationId); setMenuOpen(false); }}
         >
           {t('automations.duplicate', 'Duplicate')}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          wrapLabel
-          className={actionClassName}
-          icon={<Download className="h-3.5 w-3.5" aria-hidden="true" />}
-          onClick={() => { setMenuOpen(false); }}
-        >
-          {t('automations.export', 'Export')}
-        </Button>
+        </Button>}
+        {/* Export stays hidden: the current portable endpoint forwards arbitrary
+            command_params / setting values without a secret-free guarantee. */}
         <Button
           type="button"
           variant="ghost"

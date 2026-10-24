@@ -7,16 +7,8 @@ import {
   FRESHNESS_COLORS,
   type FreshnessQuery,
 } from '../FreshnessDot'
-import {
-  formatDate,
-  formatDateTime,
-  formatTime,
-  formatDateShort,
-  formatDateWithDay,
-  formatRelative,
-  formatRelativeTime,
-  formatRelativeDays,
-} from '@/lib/dateFormat'
+import {formatDate, formatDateTime, formatTime, formatDateShort, formatDateWithDay, formatRelative, formatRelativeTime} from '@/lib/dateFormat'
+import {formatRelativeDays} from '@/lib/dateConvert'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -68,6 +60,23 @@ describe('FRESHNESS_COLORS', () => {
 })
 
 describe('FreshnessDot widget variant', () => {
+  it('keeps exactly one painted widget dot while fetching and announces the busy state', () => {
+    const { container } = render(<FreshnessDot updatedAt={Date.now()} isFetching isStale={false} isError={false} edgeAligned />);
+    expect(container.querySelectorAll('[data-role="freshness-dot"]')).toHaveLength(1);
+    expect(container.querySelector('[data-role="freshness-dot"]')).toHaveClass('bg-[var(--semantic-info)]');
+    expect(screen.getByRole('button')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button')).toBeDisabled();
+    expect(container.querySelector('.animate-spin')).toBeNull();
+  });
+  it('uses a neutral, untimestamped indicator for static content instead of claiming freshness', () => {
+    const { container } = render(<FreshnessDot updatedAt={null} isFetching={false} isStale={false} isError={false} untracked edgeAligned />);
+    const control = screen.getByRole('button', { name: 'Data freshness: Never updated' });
+    expect(control).toBeDisabled();
+    expect(control).toHaveClass('!w-2.5');
+    expect(container.querySelectorAll('[data-role="freshness-dot"]')).toHaveLength(1);
+    expect(container.querySelector('[data-role="freshness-dot"]')).toHaveClass('bg-[var(--text-muted)]');
+    expect(control).not.toHaveAccessibleName(/Up to date/);
+  });
   it('uses the freshness dot itself as the icon-only refresh action', () => {
     const onRefresh = vi.fn()
     const { container } = render(
@@ -257,7 +266,7 @@ describe('FreshnessDot', () => {
         isError={false}
       />,
     )
-    expect(screen.getByRole('button', { name: 'Data freshness: Updating… · just now' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Data freshness: updating… · just now' })).toBeInTheDocument()
     // Busy swaps the dot for the shared spinner until data lands.
     expect(container.querySelector('span.rounded-full')).toBeNull()
     expect(container.querySelector('.animate-spin')).toBeInTheDocument()
@@ -272,7 +281,7 @@ describe('FreshnessDot', () => {
         isError
       />,
     )
-    expect(screen.getByRole('button', { name: 'Data freshness: Error' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Data freshness: error' })).toBeInTheDocument()
     expect(container.getElementsByClassName(FRESHNESS_COLORS.error.dot)[0]).toBeInTheDocument()
   })
 
@@ -455,7 +464,7 @@ describe('FreshnessDot', () => {
         source="Battery analytics"
       />,
     )
-    const failed = screen.getByRole('button', { name: 'Data freshness: Error · 5m ago · Source: Battery analytics' })
+    const failed = screen.getByRole('button', { name: 'Data freshness: error · 5m ago · Source: Battery analytics' })
     expect(failed).toHaveAccessibleDescription(expect.stringContaining('Last updated:'))
   })
 
@@ -471,7 +480,7 @@ describe('FreshnessDot', () => {
         compact
       />,
     )
-    const refresh = screen.getByRole('button', { name: 'Refresh data · Error · 1m ago' })
+    const refresh = screen.getByRole('button', { name: 'Refresh data · error · 1m ago' })
     expect(refresh).toHaveAttribute('type', 'button')
     expect(refresh).toBeDisabled()
     fireEvent.click(refresh)
@@ -540,7 +549,7 @@ describe('FreshnessDot', () => {
     // No title attribute in the icon-only design: the tooltip text is the
     // accessible description (accessible name + update line).
     expect(screen.getByRole('button')).toHaveAccessibleDescription(
-      'Data freshness: Updating… · just now · Updating…',
+      'Data freshness: updating… · just now · Updating…',
     )
   })
 

@@ -41,7 +41,7 @@ export default function ParkingAnalyticsPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-  const { tz } = useDateFormat();
+  const { formatDayKeyRange, tz } = useDateFormat();
   const { start, end, startInstant, endInstantExclusive, timezone } = useRangeState({
     persistKey: 'parking-analytics.range',
     timezone: tz,
@@ -130,12 +130,13 @@ export default function ParkingAnalyticsPage() {
             status={summaryStatus} loading={loadingSource}
             freshness={refreshPaused ? t('dataSources.status.paused', 'Refresh paused') : undefined}
             provenance={t('parking.briefSource', 'Drive-derived parking reconstruction')}
-            scope={t('parking.briefWindow', '{{sample}} · {{start}} → {{end}} · {{timezone}}', {
+            scope={t('parking.briefWindow', '{{sample}} · {{range}}', {
               sample: t('parking.kpis.observedSample', '{{drives}} usable drives · {{stints}} reconstructed stints', {
                 drives: fmtInt(summary.coverage.validDrives), stints: fmtInt(summary.stints.length),
               }),
-              start: start || t('vehicles.evidenceBrief.unbounded', 'Unbounded'),
-              end: end || t('vehicles.evidenceBrief.unbounded', 'Unbounded'), timezone,
+              range: start && end
+                ? formatDayKeyRange(start, end)
+                : t('vehicles.evidenceBrief.unbounded', 'Unbounded'),
             })}
             metrics={[
               { metricId: 'percent', occurrenceId: 'parked-share', label: t('parking.parkedShare', 'Time parked'),

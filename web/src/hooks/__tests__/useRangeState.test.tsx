@@ -4,10 +4,28 @@ import { MemoryRouter, Routes, Route, useSearchParams } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { SHARED_RANGE_STORAGE_KEY, useRangeState } from '../useRangeState';
 
+// The hook resolves its fallback zone through useDateFormat -> useTimezone.
+// Default to the real browser zone so existing tests observe the legacy
+// behavior; individual tests override h.tz to prove the settings path.
+const h = vi.hoisted(() => {
+  let browser = 'UTC';
+  try {
+    browser = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch { /* keep UTC */ }
+  return { tz: browser, browser };
+});
+vi.mock('@/lib/timezone', () => ({
+  useTimezone: () => h.tz,
+}));
+
 const STORED_PREFERENCE_VERSION = 2;
 
 afterEach(() => {
   vi.useRealTimers();
+});
+
+beforeEach(() => {
+  h.tz = h.browser;
 });
 
 function withRouter(initialEntries: string[]) {
@@ -104,6 +122,36 @@ describe('useRangeState — initialization precedence', () => {
           86_400_000,
       ) + 1;
     expect(days).toBe(7);
+  });
+});
+
+describe('useRangeState — timezone resolution', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    h.tz = h.browser;
+  });
+
+  it('prefers an explicit timezone option over everything else', () => {
+    h.tz = 'Pacific/Auckland';
+    const { result } = renderHook(
+      () => useRangeState({ timezone: 'Asia/Tokyo' }),
+      { wrapper: withRouter(['/charging?from=2026-09-19&to=2026-09-25']) },
+    );
+    expect(result.current.timezone).toBe('Asia/Tokyo');
+  });
+
+  it('resolves the fallback timezone from settings, not the browser', () => {
+    // Auckland is neither the CI host zone (UTC) nor a typical dev host
+    // zone, so this fails while the fallback reads the browser zone.
+    h.tz = 'Pacific/Auckland';
+    const { result } = renderHook(() => useRangeState(), {
+      wrapper: withRouter(['/charging?from=2026-09-19&to=2026-09-25']),
+    });
+    expect(result.current.timezone).toBe('Pacific/Auckland');
+    // Sep 19 Auckland midnight (NZST, UTC+12); `to` is inclusive so the
+    // exclusive end is Sep 26 Auckland midnight.
+    expect(result.current.startInstant).toBe('2026-09-18T12:00:00.000Z');
+    expect(result.current.endInstantExclusive).toBe('2026-09-25T12:00:00.000Z');
   });
 });
 

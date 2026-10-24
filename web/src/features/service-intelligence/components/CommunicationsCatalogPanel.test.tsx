@@ -93,9 +93,10 @@ describe('CommunicationsCatalogPanel', () => {
     const brief = screen.getByTestId('service-intelligence-catalog-summary');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Catalog coverage summary details' });
-    const observation = within(drawer).getByTitle('2026-08-05T02:30:47.000Z (America/Los_Angeles)');
+    const observation = within(drawer).getByText('4. Aug. 2026, 19:30:47');
     expect(observation).toHaveTextContent('4. Aug. 2026');
     expect(observation).toHaveTextContent('19:30:47');
+    expect(within(drawer).queryByTitle('2026-08-05T02:30:47.000Z (America/Los_Angeles)')).not.toBeInTheDocument();
     fireEvent.keyDown(drawer, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByText('321')).toBeInTheDocument();

@@ -36,6 +36,33 @@ type Handler struct {
 	db rulQuerier
 }
 
+// maxTimezoneLen rejects absurd `timezone` values before they reach
+// time.LoadLocation, which touches the filesystem zoneinfo database.
+const maxTimezoneLen = 64
+
+// defaultTimezone is the bucketing frame when the caller omits
+// `?timezone=`: UTC preserves the historical bucketing behavior.
+const defaultTimezone = "UTC"
+
+// resolveTimezone validates the optional `timezone` query parameter and
+// reports whether the handler may proceed. An invalid zone fails the
+// request: silently attributing SoH days in a guessed zone would shift the
+// degradation series the prognosis is built on.
+func resolveTimezone(w http.ResponseWriter, raw string) (string, bool) {
+	if raw == "" {
+		return defaultTimezone, true
+	}
+	if len(raw) > maxTimezoneLen {
+		httpx.WriteError(w, http.StatusBadRequest, "timezone must be a valid IANA timezone")
+		return "", false
+	}
+	if _, err := time.LoadLocation(raw); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "timezone must be a valid IANA timezone")
+		return "", false
+	}
+	return raw, true
+}
+
 // NewRULHandler wires the handler to the pgx pool. Panics on a nil pool — a nil
 // pool is a wiring bug, not a runtime condition, so it surfaces at construction
 // rather than as a nil-deref on the first request (mirrors
@@ -110,8 +137,11 @@ WHERE id = $1`
 // sibling daily roll-up but materialises SoC, not usable capacity, so the SoH
 // trend is rebuilt here from the raw energy/SoC pair (batterydegradation's
 // approach). The HAVING guarantees both signals are present on a retained day.
+// Days are attributed in the caller's `?timezone` frame ($2, UTC when omitted)
+// so the series lines up with the user's selected zone instead of the database
+// session timezone.
 const sohSeriesQuery = `
-SELECT date_trunc('day', ts)                                   AS day,
+SELECT date_trunc('day', ts AT TIME ZONE $2) AT TIME ZONE $2   AS day,
        MAX(float_value) FILTER (WHERE field = 'EnergyRemaining') AS max_energy_wh,
        MAX(float_value) FILTER (WHERE field = 'BatteryLevel')    AS max_soc_pct
 FROM signal_log
@@ -205,8 +235,8 @@ func (h *Handler) loadVehicle(ctx context.Context, vehicleID int64, now time.Tim
 // loadSoHSeries reads the daily (max energy, max SoC) pairs and normalises them
 // into an SoH series via the pure BuildSoHSeries. Each retained day becomes one
 // regression point.
-func (h *Handler) loadSoHSeries(ctx context.Context, vehicleID int64, capacityWh float64) ([]Point, error) {
-	rows, err := h.db.Query(ctx, sohSeriesQuery, vehicleID)
+func (h *Handler) loadSoHSeries(ctx context.Context, vehicleID int64, capacityWh float64, zone string) ([]Point, error) {
+	rows, err := h.db.Query(ctx, sohSeriesQuery, vehicleID, zone)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +281,7 @@ func (h *Handler) loadOdometer(ctx context.Context, vehicleID int64) (totalKm, k
 // QueryRow: [vehicle, odometer] — so a fake pool can script results by call
 // order. Any read error propagates for the caller to log + 500. Each helper
 // closes its own rows (no defer-in-loop).
-func (h *Handler) gather(ctx context.Context, vehicleID int64, now time.Time) (*gathered, error) {
+func (h *Handler) gather(ctx context.Context, vehicleID int64, now time.Time, zone string) (*gathered, error) {
 	configs, err := h.loadConfigs(ctx)
 	if err != nil {
 		return nil, err
@@ -260,7 +290,7 @@ func (h *Handler) gather(ctx context.Context, vehicleID int64, now time.Time) (*
 	if err != nil {
 		return nil, err
 	}
-	sohSeries, err := h.loadSoHSeries(ctx, vehicleID, capacityWh)
+	sohSeries, err := h.loadSoHSeries(ctx, vehicleID, capacityWh, zone)
 	if err != nil {
 		return nil, err
 	}
@@ -316,11 +346,16 @@ func (h *Handler) RUL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	zone, ok := resolveTimezone(w, r.URL.Query().Get("timezone"))
+	if !ok {
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), rulDataTimeout)
 	defer cancel()
 
 	now := time.Now().UTC()
-	g, err := h.gather(ctx, vehicleID, now)
+	g, err := h.gather(ctx, vehicleID, now, zone)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("rul: failed to gather prognostics inputs")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to compute remaining useful life")
@@ -353,11 +388,16 @@ func (h *Handler) Component(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	zone, ok := resolveTimezone(w, r.URL.Query().Get("timezone"))
+	if !ok {
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), rulDataTimeout)
 	defer cancel()
 
 	now := time.Now().UTC()
-	g, err := h.gather(ctx, vehicleID, now)
+	g, err := h.gather(ctx, vehicleID, now, zone)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Str("component", component).Msg("rul: failed to gather component prognostics")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to compute remaining useful life")

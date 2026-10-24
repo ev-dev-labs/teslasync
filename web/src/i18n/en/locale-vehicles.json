@@ -97,7 +97,7 @@
       "dwellSeries": "Observed dwell ({{unit}})",
       "countSeries": "Stints",
       "title": "Monthly dwell & stint trend",
-      "subtitle": "{{count}} stints grouped by parking-start month in {{timeZone}}; observed dwell includes right-censored tails.",
+      "subtitle": "{{count}} stints grouped by parking-start month in your selected time zone; observed dwell includes right-censored tails.",
       "aria": "Monthly bars for observed parking dwell with a line for reconstructed stint counts",
       "month": "Month",
       "average": "Average stint ({{unit}})",
@@ -106,8 +106,8 @@
     "overnight": {
       "night": "22:00–06:00",
       "daytime": "06:00–22:00",
-      "subtitle": "{{pct}}% of observed dwell overlaps the local night window across {{count}} stints in {{timeZone}}.",
-      "subtitleEmpty": "Observed dwell will be split at 22:00 and 06:00 in {{timeZone}}.",
+      "subtitle": "{{pct}}% of observed dwell overlaps the local night window across {{count}} stints in your selected time zone.",
+      "subtitleEmpty": "Observed dwell will be split at 22:00 and 06:00 in your selected time zone.",
       "title": "Overnight vs daytime context",
       "aria": "Donut chart splitting observed parking duration into local overnight and daytime windows",
       "window": "Local window",
@@ -124,7 +124,7 @@
       "reconstructed": "Reconstructed stints",
       "located": "Location coverage",
       "utcWindow": "The server filters drive starts from {{start}} (inclusive) to {{end}} (exclusive) as exact instants; parking before the first returned drive cannot be reconstructed.",
-      "localTime": "Hour, weekday, month, and the 22:00–06:00 split use {{timeZone}}. Dwell is assigned to the period in which parking starts.",
+      "localTime": "Hour, weekday, month, and the 22:00–06:00 split use your selected time zone. Dwell is assigned to the period in which parking starts.",
       "ongoing": "The final stint is ongoing as of the frozen page clock ({{time}}); its duration can only increase.",
       "rangeEdge": "The final stint is right-censored at the selected range edge ({{time}}); a later drive outside this window is unknown.",
       "noTrailing": "No positive trailing stint was reconstructed; parking before the first usable drive remains unknown.",
@@ -142,7 +142,7 @@
       "weekdayProfile": "Weekday",
       "startsSeries": "Parking starts",
       "title": "When parking starts",
-      "subtitle": "{{count}} reconstructed starts grouped in {{timeZone}}; dwell is credited to its start period.",
+      "subtitle": "{{count}} reconstructed starts grouped by local start; dwell is credited to its start period.",
       "aria": "Bar charts of reconstructed parking starts by local hour and weekday",
       "profile": "Profile",
       "period": "Period",
@@ -154,7 +154,7 @@
     "startBarColTime": "Time",
     "briefDescription": "Parking is reconstructed between usable drives, not observed continuously. Missing locations and incomplete history remain explicit.",
     "briefSource": "Drive-derived parking reconstruction",
-    "briefWindow": "{{sample}} · {{start}} → {{end}} · {{timezone}}",
+    "briefWindow": "{{sample}} · {{range}}",
     "kpis.overnightSample_one": "22:00–06:00 · {{count}} stint",
     "kpis.overnightSample_other": "22:00–06:00 · {{count}} stints",
     "kpis.longestSample_one": "{{location}} · longest of {{count}} stint",
@@ -1692,8 +1692,6 @@
   },
   "dayLog": {
     "brief": {
-      "bounds": "[{{start}}, {{end}}) · end exclusive",
-      "boundsUnknown": "Recorded day bounds unavailable",
       "chargesBasis": "Recorded charging-session count for the selected vehicle day, before timeline filters.",
       "description": "Recorded totals for this vehicle day, independent of timeline search and category filters. Missing measurements are not zero; source availability is listed below.",
       "distanceBasis": "Recorded driving distance in meters, displayed using your saved unit and precision preferences.",
@@ -1703,7 +1701,6 @@
       "energyUsedBasis": "Recorded driving energy in watt-hours; missing energy remains unknown.",
       "eyebrow": "Vehicle day history",
       "provenance": "Recorded drives and charging sessions for the selected vehicle day. Signal transitions and per-source availability remain in Timeline and Sources.",
-      "scope": "{{date}} · {{timezone}}",
       "status": {
         "failed": "History request failed",
         "loading": "Loading recorded history",
@@ -1738,7 +1735,6 @@
       "dateLabel": "Day",
       "nextDay": "Next day",
       "prevDay": "Previous day",
-      "timezoneNote": "Day boundaries in {{tz}}",
       "today": "Today"
     },
     "doors": {
@@ -4015,9 +4011,7 @@
   },
   "vehicleHero": {
     "action": {
-      "commands": "Commands",
-      "details": "Details",
-      "liveMap": "Live map"
+      "details": "Details"
     },
     "gauge": {
       "battery": "Battery",
@@ -4032,12 +4026,7 @@
       "alt": "{{name}} photo"
     },
     "stat": {
-      "firmware": "Firmware",
-      "insideTemp": "Inside temp",
-      "odometer": "Odometer",
-      "outsideTemp": "Outside temp",
       "power": "Power",
-      "range": "Range",
       "sentry": "Sentry",
       "status": "Status"
     },
@@ -4130,7 +4119,8 @@
   "widget": {
     "motorPerformance": {
       "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
-    }
+    },
+    "verifiedFields": "{{count}} verified fields"
   },
   "yearReview": {
     "aiNarration": {

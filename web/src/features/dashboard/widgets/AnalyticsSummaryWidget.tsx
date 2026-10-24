@@ -1,47 +1,32 @@
-import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
+import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { useDataState } from '@/hooks/useDataState';
-import { Sparkline } from '@/components/charts';
-import { EmptyState } from '@/components/feedback';
-import { useAnalyticsSummary } from '@/api/hooks/useAnalytics';
-import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
-
-import { WidgetBigNumber } from './shared';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
-import { WidgetShell } from './WidgetShell';
-import type { WidgetProps } from './types';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { isFiniteNumber } from '@/lib/numberFormat';
+import { useRangeState } from '@/hooks/useRangeState';
+import { EmptyState } from '@/components/feedback';
+import { WidgetShell } from './WidgetShell';
+import { WidgetStatGrid, type StatGridItem } from './shared';
+import type { WidgetProps } from './types';
 
-const MI_TO_KM = 1.60934;
+const METERS_PER_KM = 1000;
+const KM_PER_MILE = 1.609344;
 
-const SPARKLINE_COLORS = ['#00f0ff', '#34d399', '#fbbf24', '#a78bfa'];
-
-/**
- * Defensively coerce an unknown payload field into a finite-number array.
- * The trend fields below are not part of the typed `AnalyticsSummary`
- * contract yet, so a malformed value (missing, a scalar, or NaN-poisoned)
- * must never reach `<Sparkline>` where `.filter` would throw on a non-array.
- */
-function toNumberArray(value: unknown): number[] {
-  return Array.isArray(value)
-    ? value.filter((n): n is number => typeof n === 'number' && Number.isFinite(n))
-    : [];
+export function toAnalyticsDistanceDisplay(totalDistanceKm: number, distanceUnit: 'km' | 'mi'): number {
+  return convertDistanceFromSI(totalDistanceKm * METERS_PER_KM, distanceUnit);
 }
 
 export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { unitPrefs } = useUnits();
-  const distanceUnit = unitPrefs.distance;
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  const { fmtNumber } = useNumberFormatting();
   const { formatCurrency } = useFormatting();
-
-  const query = useAnalyticsSummary();
+  const { unitPrefs } = useUnits();
+  const { startInstant, endInstantExclusive } = useRangeState({ defaultPresetId: '30d' });
+  const query = useFleetAnalytics({ start: startInstant, end: endInstantExclusive });
   const {
     data,
     isLoading,
@@ -53,145 +38,78 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
     refetch,
   } = query;
   const dataState = useDataState(query, { provenance: 'historical' });
+  const distanceUnit = unitPrefs.distance === 'mi' ? 'mi' : 'km';
 
-  const isCompact = size.cols <= 1;
-  const isWide = size.cols >= 4;
+  const distance =
+    isFiniteNumber(data?.total_distance_km) ? toAnalyticsDistanceDisplay(data.total_distance_km, distanceUnit) : null;
+  const energyWh =
+    isFiniteNumber(data?.total_energy_kwh) ? data.total_energy_kwh * 1000 : null;
+  const efficiencyWhKm =
+    isFiniteNumber(data?.avg_efficiency_wh_km) ? data.avg_efficiency_wh_km : null;
+  const efficiency =
+    efficiencyWhKm == null
+      ? null
+      : distanceUnit === 'mi'
+        ? efficiencyWhKm * KM_PER_MILE
+        : efficiencyWhKm;
+  const distanceMeters =
+    isFiniteNumber(data?.total_distance_km) ? data.total_distance_km * METERS_PER_KM : null;
+  const costPerDistance =
+    isFiniteNumber(data?.total_cost) && distanceMeters != null && distanceMeters > 0
+      ? data.total_cost / convertDistanceFromSI(distanceMeters, distanceUnit)
+      : null;
 
-  const distKm = data?.totalDistanceKm ?? 0;
-  const displayDist = toDistanceDisplay(distKm * 1000);
-
-  const effUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
-
-  const totalCost = data?.totalCost ?? 0;
-  const costPerM = isFiniteNumber(data?.totalDistanceKm) && distKm > 0 && isFiniteNumber(data?.totalCost)
-    ? totalCost / (distKm * 1000) : null;
-
-  const hasData = data != null;
-
-  // Trend arrays — API may provide these in the future. Coerce defensively so
-  // a non-array/NaN-poisoned payload can never crash the sparkline row.
-  const sparklines = useMemo(() => {
-    const src = data as Record<string, unknown> | undefined;
-    return [
-      toNumberArray(src?.distanceTrend),
-      toNumberArray(src?.efficiencyTrend),
-      toNumberArray(src?.energyTrend),
-      toNumberArray(src?.costTrend),
-    ];
-  }, [data]);
-  const hasSparklines = sparklines.some((s) => s.length > 0);
-
-  const stats = useMemo((): StatMetric[] => [
+  const stats: StatGridItem[] = [
     {
-      metricId: 'distance',
-      label: t('widget.analyticsSummary.totalDistance', 'Total distance'),
-      rawValue: data?.totalDistanceKm == null ? null : data.totalDistanceKm * 1000,
-      description: t('widget.analyticsSummary.summary.distanceHelp', 'Fleet distance from the analytics source; kilometres normalized to metres.'),
-      display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
+      label: t('widget.analyticsSummary.distance30d', 'Distance (30d)'),
+      value: distance == null ? null : fmtNumber(distance, 0),
+      unit: distanceUnit,
     },
     {
-      metricId: 'efficiency',
       label: t('widget.analyticsSummary.avgEfficiency', 'Avg efficiency'),
-      rawValue: data?.avgEfficiencyWhKm == null ? null : data.avgEfficiencyWhKm / 1000,
-      description: t('widget.analyticsSummary.summary.efficiencyHelp', 'Source consumption in Wh/km normalized to Wh/m; the original distance conversion factor is retained.'),
-      display: { formatter: raw => ({ value: fmtNumber(distanceUnit === 'mi' ? raw * 1000 * MI_TO_KM : raw * 1000), unit: effUnit }) },
+      value: efficiency == null ? null : fmtNumber(efficiency, 1),
+      unit: distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km',
     },
     {
-      metricId: 'energy',
       label: t('widget.analyticsSummary.energyConsumed', 'Energy consumed'),
-      rawValue: data?.totalEnergyWh,
-      description: t('widget.analyticsSummary.summary.energyHelp', 'Source energy normalized from kWh to Wh; the existing kWh display is retained.'),
-      display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kWh' }) },
+      value: energyWh == null ? null : fmtNumber(energyWh / 1000, 1),
+      unit: 'kWh',
     },
     {
-      metricId: 'rate',
-      label: t('widget.analyticsSummary.costPerDist', 'Cost / {{unit}}', { unit: distanceUnit }),
-      rawValue: costPerM,
-      description: t('widget.analyticsSummary.summary.costHelp', 'Recorded cost divided by positive measured distance, retained as source currency per metre; missing operands or zero distance cannot define a rate.'),
-      display: { formatter: raw => ({ value: formatCurrency(raw * distKm * 1000 / displayDist), unit: '' }) },
+      label: t('widget.analyticsSummary.costPerDist30d', 'Cost / {{unit}}', { unit: distanceUnit }),
+      value: costPerDistance == null ? null : formatCurrency(costPerDistance),
     },
-  ], [data, displayDist, distKm, effUnit, costPerM, distanceUnit, formatCurrency, t, fmtNumber]);
+  ];
 
-  // Compact (1×2): large animated distance number
-  if (isCompact) {
-    return (
-      <WidgetShell
-        title={t('widget.analyticsSummary.title', 'Analytics summary')}
-        dataState={data || isLoading || isError ? dataState : undefined}
-        loading={isLoading}
-        error={error ? String(error) : null}
-        updatedAt={dataUpdatedAt}
-        isFetching={isFetching}
-        isStale={isStale}
-        isError={isError}
-        onRefresh={() => refetch()}
-      >
-        {hasData ? (
-          <WidgetBigNumber
-            value={isFiniteNumber(data?.totalDistanceKm) ? fmtNumber(displayDist) : null}
-            unit={distanceUnit}
-            label={t('widget.analyticsSummary.totalDistance', 'Total distance')}
-            align="center"
-          />
-        ) : (
-          <EmptyState
-            variant="informational"
-            icon={<BarChart3 className="h-5 w-5" />}
-            message={t('widget.analyticsSummary.noDataMessage', 'No analytics readings are available yet. They appear after the analytics source returns data.')}
-            className="py-4"
-          />
-        )}
-      </WidgetShell>
-    );
-  }
+  const retained = data != null;
 
-  // Standard (2×2) and Wide (4×2)
   return (
     <WidgetShell
-      dataState={data || isLoading || isError ? dataState : undefined}
       title={t('widget.analyticsSummary.title', 'Analytics summary')}
-      icon={<BarChart3 className="h-3.5 w-3.5 text-cyan-400" />}
+      icon={<BarChart3 className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
+      dataState={retained || isLoading || dataState.fatalError ? dataState : undefined}
       loading={isLoading}
       error={error ? String(error) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={() => { void refetch(); }}
     >
-      {hasData ? (
-        <div className="flex flex-col gap-2">
-          <DashboardSourceBrief
-            metrics={stats}
-            state={dataState}
-            eyebrow={t('widget.analyticsSummary.summary.eyebrow', 'Fleet analytics')}
-            title={t('widget.analyticsSummary.summary.title', 'Analytics operating summary')}
-            description={t('widget.analyticsSummary.summary.description', 'Fleet-wide analytics using the hook’s default source window. Exact bounds and completeness are not supplied; optional trend arrays retain their own source coverage.')}
-            scope={t('widget.analyticsSummary.summary.scope', 'Fleet-wide · default analytics window')}
-            testId="analytics-summary-operational-brief"
+      {retained ? (
+        <section aria-label={t('widget.analyticsSummary.summary.title', 'Analytics operating summary')} data-testid="analytics-summary">
+          <WidgetStatGrid
+            stats={stats}
+            cols={size.cols >= 4 ? 4 : 2}
+            maxPerRow={size.cols >= 4 ? 4 : 2}
           />
-          {isWide && hasSparklines && (
-            <div className="grid grid-cols-4 gap-3">
-              {sparklines.map((trend, i) => (
-                <div key={i} className="flex items-center justify-center h-[30px]">
-                  <Sparkline
-                    data={trend}
-                    color={SPARKLINE_COLORS[i]}
-                    ariaLabel={t('widget.analyticsSummary.trendAria', '{{metric}} trend', {
-                      metric: stats[i]?.label ?? '',
-                    })}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        </section>
       ) : (
         <EmptyState
           variant="informational"
           icon={<BarChart3 className="h-5 w-5" />}
           message={t('widget.analyticsSummary.noDataMessage', 'No analytics readings are available yet. They appear after the analytics source returns data.')}
-          className="py-8"
+          className="py-4"
         />
       )}
     </WidgetShell>

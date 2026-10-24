@@ -35,6 +35,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDayKey } from '@/lib/dateFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
 
 import { cn } from '@/lib/cn';
 import { gaugeTone, neonColorMap, typography, chartTokens } from '@/lib/tokens';
@@ -120,13 +121,11 @@ export default function BatteryDegradationPage() {
     (key: string | null | undefined) => formatDayKey(key, opts),
     [opts],
   );
+  const { formatMonthYear } = useDateLabels();
   const formatProjectionMonth = useCallback((key: string | null | undefined) => {
-    if (typeof key !== 'string' || !/^\d{4}-\d{2}$/.test(key) ||
-      formatDayKey(`${key}-01`, opts) === '—') return '—';
-    return new Intl.DateTimeFormat(opts.locale, {
-      year: 'numeric', month: 'short', timeZone: 'UTC',
-    }).format(new Date(`${key}-01T12:00:00Z`));
-  }, [opts]);
+    if (typeof key !== 'string' || !/^\d{4}-\d{2}$/.test(key)) return '—';
+    return formatMonthYear(key);
+  }, [formatMonthYear]);
   const formatChartDate = useCallback(
     (key: string | number | undefined) => typeof key !== 'string' ? '—'
       : /^\d{4}-\d{2}$/.test(key) ? formatProjectionMonth(key) : formatHistoryDate(key),

@@ -10,7 +10,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateConvert';
 import type { ActionCenterHistoryPage, ActionCenterProjectedImpact, ActionCenterRecommendation } from '@/types/actionCenter';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 

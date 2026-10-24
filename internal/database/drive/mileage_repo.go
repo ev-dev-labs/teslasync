@@ -2,8 +2,8 @@
 //
 // The legacy daily_mileage table no longer exists, so this repo re-derives
 // the same product surface from the SI-canonical drives table (migration
-// 000185), grouping per `date_trunc('month', started_at)` for the monthly
-// endpoint and using FILTER aggregates for the stats endpoint.
+// 000185), grouping per `date_trunc` over the caller's `?timezone` frame
+// for the monthly/daily endpoints and using FILTER aggregates for stats.
 //
 // Schema reality:
 //
@@ -29,8 +29,9 @@ import (
 )
 
 // MileageMonthlyRow is one bucket in the monthly response. The bucket
-// timestamp is the start of the UTC month (date_trunc('month', ts) in
-// PostgreSQL); the handler renders it as 'YYYY-MM'.
+// timestamp is the start of the month in the caller's zone frame
+// (date_trunc over zone wall-time in PostgreSQL); the handler renders
+// it as 'YYYY-MM'.
 //
 // total_wh_consumed and avg_efficiency_wh_per_km are pointers because
 // energy_used_wh is nullable in mig 000185 — a drive with NULL energy
@@ -45,8 +46,9 @@ type MileageMonthlyRow struct {
 }
 
 // MileageDailyRow is one bucket in the daily response. The bucket
-// timestamp is the start of a UTC calendar day (DATE(started_at AT TIME
-// ZONE 'UTC') in PostgreSQL); the handler renders it as 'YYYY-MM-DD'.
+// timestamp is the start of a calendar day in the caller's zone frame
+// (DATE(started_at AT TIME ZONE $3) in PostgreSQL); the handler renders
+// it as 'YYYY-MM-DD'.
 //
 // EndOdometerKm is a pointer because end_odometer_m is nullable on the
 // drives table — a drive that ended before the telemetry plant captured
@@ -107,16 +109,21 @@ func NewMileageRepo(pool *pgxpool.Pool) *MileageRepo {
 //
 // Filters:
 //   - vehicle_id = $1
-//   - started_at >= $2 (window start; UTC)
+//   - started_at >= $2 (window start instant)
 //   - distance_m IS NOT NULL AND distance_m > 0 (Decision #7e — NULL
 //     distance rows are skipped, not erroring; zero-distance rows are
 //     treated as ghost drives with no mileage to report).
+//
+// Months are attributed in the caller's `?timezone` frame ($3, UTC when
+// omitted) so the buckets line up with the user's selected zone. The
+// bucket is zone wall-time (a bare timestamp); the handler renders only
+// YYYY-MM from it, which is zone-correct — never convert it as an instant.
 //
 // Per-bucket aggregates keep energy in SI watt-hours. Distance remains in
 // kilometres until the deferred _km rename slice changes the mileage surface.
 const monthlySelectSQL = `
 SELECT
-    date_trunc('month', started_at AT TIME ZONE 'UTC') AS bucket,
+    date_trunc('month', started_at AT TIME ZONE $3) AS bucket,
     COUNT(*)                                            AS drive_count,
     COALESCE(SUM(distance_m), 0) / 1000.0               AS total_km,
     SUM(energy_used_wh)                                 AS total_wh,
@@ -171,9 +178,14 @@ const mileageVehicleExistsSQL = `SELECT EXISTS (SELECT 1 FROM vehicles WHERE id 
 //
 // ORDER BY day ASC matches /mileage/monthly's ascending contract so the
 // frontend can render the time series left-to-right without re-sorting.
+//
+// Days are attributed in the caller's `?timezone` frame ($3, UTC when
+// omitted) so drives near midnight land on the day the user experienced.
+// The day is a zone-framed calendar date; the handler renders only
+// YYYY-MM-DD from it.
 const dailySelectSQL = `
 SELECT
-    DATE(started_at AT TIME ZONE 'UTC')         AS day,
+    DATE(started_at AT TIME ZONE $3)         AS day,
     COUNT(*)                                    AS drive_count,
     COALESCE(SUM(distance_m), 0) / 1000.0       AS total_km,
     MAX(end_odometer_m) / 1000.0                AS end_odometer_km
@@ -197,11 +209,11 @@ func (r *MileageRepo) VehicleExists(ctx context.Context, vehicleID int64) (bool,
 	return exists, nil
 }
 
-// Monthly returns one row per UTC calendar month for vehicleID, oldest
-// first, restricted to drives whose started_at is >= windowStart. The
-// caller controls the window width (typically 24 months).
-func (r *MileageRepo) Monthly(ctx context.Context, vehicleID int64, windowStart time.Time) ([]MileageMonthlyRow, error) {
-	rows, err := r.pool.Query(ctx, monthlySelectSQL, vehicleID, windowStart)
+// Monthly returns one row per calendar month (in the zone frame) for
+// vehicleID, oldest first, restricted to drives whose started_at is >=
+// windowStart. The caller controls the window width (typically 24 months).
+func (r *MileageRepo) Monthly(ctx context.Context, vehicleID int64, windowStart time.Time, zone string) ([]MileageMonthlyRow, error) {
+	rows, err := r.pool.Query(ctx, monthlySelectSQL, vehicleID, windowStart, zone)
 	if err != nil {
 		return nil, fmt.Errorf("mileage: monthly query: %w", err)
 	}
@@ -265,15 +277,15 @@ func (r *MileageRepo) Stats(ctx context.Context, vehicleID int64, since7d, since
 	return s, nil
 }
 
-// Daily returns one row per UTC calendar day for vehicleID, oldest
-// first, restricted to drives whose started_at is >= windowStart. The
-// caller controls the window width (typically 90 days).
+// Daily returns one row per calendar day (in the zone frame) for
+// vehicleID, oldest first, restricted to drives whose started_at is >=
+// windowStart. The caller controls the window width (typically 90 days).
 //
 // Days with no qualifying drives (zero distance_m, or all NULL distance)
 // produce no row — the frontend chart treats absence as a gap rather
 // than imputing zero.
-func (r *MileageRepo) Daily(ctx context.Context, vehicleID int64, windowStart time.Time) ([]MileageDailyRow, error) {
-	rows, err := r.pool.Query(ctx, dailySelectSQL, vehicleID, windowStart)
+func (r *MileageRepo) Daily(ctx context.Context, vehicleID int64, windowStart time.Time, zone string) ([]MileageDailyRow, error) {
+	rows, err := r.pool.Query(ctx, dailySelectSQL, vehicleID, windowStart, zone)
 	if err != nil {
 		return nil, fmt.Errorf("mileage: daily query: %w", err)
 	}

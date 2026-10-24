@@ -4,6 +4,7 @@ import { Text } from '@/components/ui';
 import type { APICallLogStats } from '@/api/types';
 import type { DataState } from '@/api/dataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { sourceBriefStatus } from './sourceBriefStatus';
 
@@ -19,6 +20,7 @@ interface Props {
 export function ApiLogsSummary({ state, loading, start, endExclusive, timezone, allTime }: Props) {
   const { t } = useTranslation();
   const { fmtInt } = useNumberFormatting();
+  const { formatDateRange } = useDateFormat();
   const stats = state.data;
   const provenance = t('apiLogs.summary.rangeScope', 'Totals, error rate, and average duration use the View settings range; request-list filters do not change these metrics.');
   const period: StatPeriod = allTime
@@ -52,7 +54,7 @@ export function ApiLogsSummary({ state, loading, start, endExclusive, timezone, 
       eyebrow={t('apiLogs.title', 'API logs')} title={t('apiLogs.summary.title', 'Request activity')}
       description={provenance} {...status} loading={loading && !state.hasData}
       scope={<Text as="span" variant="caption">{period.label}{period.kind === 'analysis'
-        ? `: ${t('apiLogs.summary.rangeBounds', '{{start}} – {{end}} ({{timezone}}, exclusive end)', { start, end: endExclusive, timezone })}` : ''}</Text>}
+        ? `: ${formatDateRange(start, endExclusive)}` : ''}</Text>}
       provenance={provenance} />
     <OperationalBrief testId="api-logs-24h-summary" compact metrics={rollingMetrics}
       eyebrow={t('apiLogs.title', 'API logs')} title={t('apiLogs.last24h', 'Last 24h')}

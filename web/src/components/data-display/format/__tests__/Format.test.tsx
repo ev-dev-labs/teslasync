@@ -70,11 +70,13 @@ afterEach(() => {
 describe('DateTime', () => {
   beforeEach(() => mockSettings());
 
-  it('renders title attribute with the canonical ISO value', () => {
+  it('renders no title attribute (single friendly display, no ISO duplicate)', () => {
     const iso = '2026-04-04T14:30:00Z';
     const { container } = render(<DateTime value={iso} />);
     const span = container.querySelector('span');
-    expect(span?.title).toBe(new Date(iso).toISOString());
+    expect(span?.hasAttribute('title')).toBe(false);
+    expect(span?.textContent).toContain('2026');
+    expect(span?.textContent).not.toContain('2026-04-04T14:30:00');
   });
 
   it('renders — for null value', () => {
@@ -98,11 +100,13 @@ describe('DateTime', () => {
     expect(container.textContent?.toLowerCase()).toContain('just now');
   });
 
-  it('accepts a Date instance', () => {
+  it('accepts a Date instance and renders no ISO title', () => {
     const d = new Date('2026-04-04T14:30:00Z');
     const { container } = render(<DateTime value={d} />);
     const span = container.querySelector('span');
-    expect(span?.title).toBe(d.toISOString());
+    expect(span?.hasAttribute('title')).toBe(false);
+    expect(span?.textContent).toContain('2026');
+    expect(span?.textContent).not.toContain('2026-04-04T14:30:00');
   });
 });
 

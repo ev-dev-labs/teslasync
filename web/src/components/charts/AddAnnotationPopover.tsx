@@ -15,12 +15,12 @@ import type { AnnotationCategory } from '@/types/annotations';
  * `<input type="date">`. Returns an empty string when parsing fails so the
  * input renders empty rather than NaN.
  */
-export function toDateInputValue(timestamp: string): string {
-  if (!timestamp) return '';
-  const d = new Date(timestamp);
+export function toDateInputValue(timestamp: string | number | Date): string {
+  if (timestamp === '') return '';
+  const d = timestamp instanceof Date ? timestamp : new Date(timestamp);
   if (Number.isNaN(d.getTime())) {
     // Already in YYYY-MM-DD shape — accept verbatim.
-    return /^\d{4}-\d{2}-\d{2}$/.test(timestamp) ? timestamp : '';
+    return typeof timestamp === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(timestamp) ? timestamp : '';
   }
   const yyyy = d.getUTCFullYear();
   const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
@@ -165,6 +165,8 @@ export function AddAnnotationPopover({
     if (open && !inFlight.current && !retainDate.current) setEditedDate(toDateInputValue(timestamp));
   }, [open, timestamp]);
 
+  const maxDateInput = toDateInputValue(new Date());
+
   const resetDraft = () => {
     setLabel('');
     setCategory('milestone');
@@ -281,7 +283,7 @@ export function AddAnnotationPopover({
             onChange={(e) => { if (!inFlight.current && !locked) setEditedDate(e.target.value); }}
             disabled={locked}
             label={t('annotation.date', 'Date')}
-            max={toDateInputValue(new Date().toISOString())}
+            max={maxDateInput}
             required
           />
         ) : (

@@ -181,7 +181,7 @@ describe('weatherConditionFor (utility)', () => {
 });
 
 describe('WeatherAtCarWidget — standard (≥2 col) layout', () => {
-  it('renders the temperature, the label, and the vehicle coordinates', () => {
+  it('renders only the weather headline without fabricated location or forecast labels', () => {
     mockUseVehicleState.mockReturnValue(
       stateQuery(makeState({ outside_temp: 20, latitude: 37.4219, longitude: -122.0841 })),
     );
@@ -189,9 +189,8 @@ describe('WeatherAtCarWidget — standard (≥2 col) layout', () => {
 
     expect(screen.getByRole('heading', { name: 'Weather at car' })).toBeInTheDocument();
     expect(screen.getByText(`20${DEG}C`)).toBeInTheDocument();
-    expect(screen.getByText('Outside temperature')).toBeInTheDocument();
-    // Coordinates are rendered to two decimals.
-    expect(screen.getByText(`37.42${DEG}, -122.08${DEG}`)).toBeInTheDocument();
+    expect(screen.queryByText('Outside temperature')).not.toBeInTheDocument();
+    expect(screen.queryByText(`37.42${DEG}, -122.08${DEG}`)).not.toBeInTheDocument();
   });
 
   it('rounds the displayed temperature to a whole number', () => {
@@ -298,7 +297,7 @@ describe('WeatherAtCarWidget — unit conversion at the display boundary', () =>
 });
 
 describe('WeatherAtCarWidget — coordinate finite-guard', () => {
-  it('omits the coordinate line when latitude/longitude are non-finite', () => {
+  it('does not expose coordinates, even when latitude/longitude are non-finite', () => {
     mockUseVehicleState.mockReturnValue(
       stateQuery(
         makeState({ outside_temp: 12, latitude: Number.NaN, longitude: Number.NaN }),

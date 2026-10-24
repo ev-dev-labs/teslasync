@@ -61,13 +61,11 @@ export function ArchetypeMethodology({
         summary.temperatureImputationSource === 'observed_median'
           ? t(
               'archetypes.method.featuresBody',
-              'The standardized feature space uses log distance, average speed, circular hour in {{timeZone}} as sine and cosine, energy per distance, and outside temperature. Missing eligible temperature uses the eligible measured median and remains marked imputed.',
-              { timeZone: summary.thresholds.timeZone },
+              'The standardized feature space uses log distance, average speed, circular hour in your selected time zone as sine and cosine, energy per distance, and outside temperature. Missing eligible temperature uses the eligible measured median and remains marked imputed.',
             )
           : t(
               'archetypes.method.featuresDefaultBody',
-              'The standardized feature space uses log distance, average speed, circular hour in {{timeZone}} as sine and cosine, energy per distance, and outside temperature. Because no eligible measured temperature exists, missing temperature uses the configured default and remains marked imputed.',
-              { timeZone: summary.thresholds.timeZone },
+              'The standardized feature space uses log distance, average speed, circular hour in your selected time zone as sine and cosine, energy per distance, and outside temperature. Because no eligible measured temperature exists, missing temperature uses the configured default and remains marked imputed.',
             ),
     },
     {

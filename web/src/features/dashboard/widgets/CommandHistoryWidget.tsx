@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { Terminal, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Badge, type BadgeProps } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
+import { TimeStamp } from '@/components/data-display';
 import { useDataState } from '@/hooks/useDataState';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import { useCommandHistory } from '@/api/hooks/useCommands';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
-import { WidgetEventFeed } from './shared';
-import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
+import { WidgetEventFeed, type EventFeedItem } from './shared';
 
 /** Minimal translate signature the widget threads to its pure helpers. */
 type TranslateFn = (key: string, fallback: string) => string;
@@ -81,17 +81,22 @@ export function formatCommandName(raw: string | null | undefined): string {
 function CompactView({
   lastCommand,
   lastStatus,
+  createdAt,
   t,
 }: {
   lastCommand: string;
   lastStatus: string;
+  createdAt: string | null;
   t: TranslateFn;
 }) {
   return (
     <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 min-h-[44px]">
       <div className="flex items-center gap-2 min-w-0">
         <Terminal className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
-        <span className={dashboardTokens.metricLabel}>{lastCommand}</span>
+        <div className="min-w-0">
+          <p className={dashboardTokens.metricLabel}>{lastCommand}</p>
+          <TimeStamp value={createdAt} format="relative" className="text-xs text-[var(--text-muted)]" />
+        </div>
       </div>
       <Badge variant={commandBadgeVariant(lastStatus)}>{commandStatusLabel(lastStatus, t)}</Badge>
     </div>
@@ -132,10 +137,15 @@ export default function CommandHistoryWidget({ vehicleId, size }: WidgetProps) {
           id: cmd.id,
           icon: mapped.icon,
           title: formatCommandName(cmd.command),
-          subtitle: [commandStatusLabel(cmd.status, t), cmd.error?.trim()].filter(Boolean).join(' · '),
+          subtitle: cmd.error?.trim() || undefined,
           timestamp: cmd.created_at ?? '',
           color: mapped.color,
           severity: mapped.severity,
+          badges: (
+            <Badge variant={commandBadgeVariant(cmd.status)} size="sm">
+              {commandStatusLabel(cmd.status, t)}
+            </Badge>
+          ),
           wrap: true,
         };
       }),
@@ -166,6 +176,7 @@ export default function CommandHistoryWidget({ vehicleId, size }: WidgetProps) {
           <CompactView
             lastCommand={formatCommandName(lastEntry.command)}
             lastStatus={lastEntry.status ?? ''}
+            createdAt={lastEntry.created_at ?? null}
             t={t}
           />
         ) : (

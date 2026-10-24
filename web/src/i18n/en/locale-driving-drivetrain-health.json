@@ -371,7 +371,7 @@
       "reading": "Reading",
       "recordScope": "These details contain every field of the plotted records, including unknown signals. Motor history retains source order; drives retain chronological order and the existing 30-record cap.",
       "scorePolicy": "Status-to-score policy: good 95%, warning 60%, critical 25%. This is a rating, not a measured percentage.",
-      "selectedStatisticsBounds": "Drive start: {{start}} (inclusive) to {{end}} (exclusive) · {{timezone}}",
+      "selectedStatisticsBounds": "Drive start in {{range}} (start inclusive, end exclusive)",
       "separateHistoryPolicies": "Motor history uses the existing unbounded 200-snapshot request in source order, independent of the selected range. Drive charts and power use the last 30 returned drives within the selected range; this subset is separate from the full completed-drive statistics.",
       "snapshot": "Latest health response",
       "snapshotNotLive": "A health response is a snapshot; it does not establish an active telemetry connection.",
@@ -464,7 +464,6 @@
   "driving": {
     "brief": {
       "completeScope": "Complete analysis window",
-      "exclusiveBounds": "{{start}} to {{end}} (exclusive end)",
       "eyebrow": "Driving evidence",
       "loading": "Loading source",
       "observationUnknown": "Source observation time not provided",

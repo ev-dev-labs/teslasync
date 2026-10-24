@@ -6,6 +6,8 @@
  * substitutes a missing measurement with a measured zero.
  */
 
+import { isValidTimeZone, zonedDateParts } from '@/lib/dateFormat';
+
 export const SHARE_CARD_HISTORY_LIMIT = 1_000;
 export const SHARE_CARD_SVG_REVOKE_DELAY_MS = 1_500;
 
@@ -297,23 +299,16 @@ function resolveTimeZone(timezone: string): {
   resolvedTimezone: string;
   timezoneValid: boolean;
 } {
-  try {
-    new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(0);
-    return { resolvedTimezone: timezone, timezoneValid: true };
-  } catch {
-    return { resolvedTimezone: 'UTC', timezoneValid: false };
-  }
+  if (isValidTimeZone(timezone)) return { resolvedTimezone: timezone, timezoneValid: true };
+  return { resolvedTimezone: 'UTC', timezoneValid: false };
 }
 
 function localDay(timestampMs: number, timezone: string): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(timestampMs);
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}`;
+  const parts = zonedDateParts(timestampMs, timezone);
+  if (!parts) {
+    throw new RangeError(`unable to derive calendar parts in ${timezone}`);
+  }
+  return `${String(parts.year).padStart(4, '0')}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
 }
 
 function monthRange(startLabel: string, endLabel: string): string[] {

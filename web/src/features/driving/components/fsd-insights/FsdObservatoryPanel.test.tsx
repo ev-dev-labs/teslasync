@@ -33,6 +33,7 @@ vi.mock('@/hooks/useUnits', () => ({
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({
     formatDateTime: (value: string) => `preferred:${value}`,
+    formatDateRange: (start: string, end: string) => `preferred-range:${start}..${end}`,
   }),
 }));
 

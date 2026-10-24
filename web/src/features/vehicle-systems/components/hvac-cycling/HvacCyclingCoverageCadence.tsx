@@ -39,9 +39,6 @@ export function HvacCyclingCoverageCadence({
             'Valid unique timestamps define span and cadence even when HVAC state is unknown.',
           )}
         </Text>
-        <Text as="p" variant="caption" className="mb-4">
-          {t('quietHours.form.timezone', 'Timezone (IANA)')}: {summary.timeZone}
-        </Text>
         <HvacCyclingSectionBody summary={summary} state={state}>
           <VehicleOperationalBrief embedded id="hvac-cycling-coverage-summary"
             title={t('hvacCycling.coverage.title', 'Chronological coverage and cadence')}

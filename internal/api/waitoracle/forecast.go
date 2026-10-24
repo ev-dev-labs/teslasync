@@ -8,9 +8,10 @@
 // unknown from session data, so it is estimated as the peak concurrency
 // ever observed at the site — a documented lower bound.
 //
-// All buckets are UTC: historical starts are UTC and the arrival instant
-// is converted to UTC before bucketing, so the curve is self-consistent
-// (DST smears bucket edges by up to an hour twice a year).
+// Buckets are attributed in the request `?timezone` frame (UTC when
+// omitted): historical starts are bucketed by wall time in that zone
+// and the arrival instant is converted to it before bucketing, so the
+// curve follows the user's selected zone instead of smearing DST edges.
 package waitoracle
 
 import (
@@ -50,10 +51,10 @@ const (
 	historyWeeks = 26
 )
 
-// Bucket is one hour-of-week demand cell in UTC.
+// Bucket is one hour-of-week demand cell in the request zone.
 type Bucket struct {
 	Weekday int // 0=Sunday, matching time.Weekday
-	Hour    int // 0..23 UTC
+	Hour    int // 0..23 in the request zone
 	Starts  int // session starts observed in this cell
 	// Congested counts starts that paid a congestion fee — Tesla's own
 	// "this site was full" signal.
@@ -94,7 +95,7 @@ type Forecast struct {
 	Verdict        string      `json:"verdict"`
 	Confidence     string      `json:"confidence"`
 	StallsEstimate int         `json:"stalls_estimated"`
-	BestHour       int         `json:"best_hour_utc"`
+	BestHour       int         `json:"best_hour"`
 	BestWaitS      float64     `json:"best_wait_s"`
 	SaveS          float64     `json:"save_s"`
 	Hours          []HourPoint `json:"hours"`
@@ -109,9 +110,9 @@ func (e noHistoryError) Error() string { return string(e) }
 // ErrNoHistory signals insufficient site history.
 const ErrNoHistory = noHistoryError("site has insufficient charging history")
 
-// Predict computes the wait forecast for arriving at arrival (any location; it
-// is converted to UTC). Pure: no I/O, deterministic.
-func Predict(h SiteHistory, arrival time.Time) (*Forecast, error) {
+// Predict computes the wait forecast for arriving at arrival, bucketed in
+// loc (the request zone; nil means UTC). Pure: no I/O, deterministic.
+func Predict(h SiteHistory, arrival time.Time, loc *time.Location) (*Forecast, error) {
 	if h.Sessions < minSiteSessions || len(h.Spans) == 0 {
 		return nil, ErrNoHistory
 	}
@@ -146,8 +147,11 @@ func Predict(h SiteHistory, arrival time.Time) (*Forecast, error) {
 		return starts[cell] / weeks
 	}
 
-	arrUTC := arrival.UTC()
-	arrCell := int(arrUTC.Weekday())*24 + arrUTC.Hour()
+	if loc == nil {
+		loc = time.UTC
+	}
+	arr := arrival.In(loc)
+	arrCell := int(arr.Weekday())*24 + arr.Hour()
 	load := rate(arrCell) * medianMin / 60 // Erlangs (Little's law)
 	waitMin, waitProb := erlangCWait(load, float64(medianMin), stalls)
 
@@ -165,10 +169,10 @@ func Predict(h SiteHistory, arrival time.Time) (*Forecast, error) {
 	}
 
 	// Best arrival within ±3h of the arrival hour, same weekday.
-	bestHour, bestWait := arrUTC.Hour(), waitMin
-	day := int(arrUTC.Weekday()) * 24
+	bestHour, bestWait := arr.Hour(), waitMin
+	day := int(arr.Weekday()) * 24
 	for d := -3; d <= 3; d++ {
-		hr := arrUTC.Hour() + d
+		hr := arr.Hour() + d
 		if hr < 0 || hr > 23 {
 			continue
 		}
@@ -190,7 +194,7 @@ func Predict(h SiteHistory, arrival time.Time) (*Forecast, error) {
 
 	return &Forecast{
 		Site:           h.Site,
-		ArriveAt:       arrUTC,
+		ArriveAt:       arrival.UTC(),
 		ExpectedS:      minutesToSeconds(waitMin),
 		WaitProbPct:    round1(waitProb * 100),
 		Busyness:       round1(busyness),

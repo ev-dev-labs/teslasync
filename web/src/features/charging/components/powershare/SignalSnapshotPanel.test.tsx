@@ -114,11 +114,11 @@ describe('SignalSnapshotPanel — structure + data states', () => {
     const alphaRow = screen.getByText('Alpha').closest('tr') as HTMLElement;
     expect(within(alphaRow).getByText('—')).toBeInTheDocument();
 
-    // Bravo has a real ts — the DateTime renders a span titled with the exact
-    // canonical ISO string (time-independent, unlike its relative display text).
+    // Bravo has a real ts — the DateTime renders relative display text with
+    // no raw-ISO title.
     const bravoRow = screen.getByText('Bravo').closest('tr') as HTMLElement;
     expect(within(bravoRow).queryByText('—')).not.toBeInTheDocument();
-    expect(screen.getByTitle(/^2026-05-05T12:02:00/)).toBeInTheDocument();
+    expect(within(bravoRow).queryByTitle(/^2026-05-05T12:02:00/)).not.toBeInTheDocument();
   });
 
   it('shows the empty message and keeps the section visible when no signals have arrived', () => {

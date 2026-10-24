@@ -178,7 +178,7 @@
     "method": {
       "boundariesBody": "Incomplete, invalid, future, nonpositive-duration, and unknown-end rows remain chronological boundaries whenever their start can be placed. An unplaceable start creates a source-order boundary while unrelated placed segments remain analyzable. The model never bridges over a known unusable row.",
       "boundariesTitle": "Sequence boundaries",
-      "calendarBody": "Hour, weekday, date, week, and month use {{timeZone}}. Multiple drives on one local day remain separate visits. Only the latest {{limit}} returned rows are requested.",
+      "calendarBody": "Hour, weekday, date, week, and month use your selected time zone. Multiple drives on one local day remain separate visits. Only the latest {{limit}} returned rows are requested.",
       "calendarTitle": "Vehicle-local calendar and cap",
       "continuityBody": "Adjacent rows connect only when normalized addresses match or valid coordinates are within {{meters}} m, and the current start does not overlap the previous end. {{maxGap}}",
       "continuityTitle": "Endpoint continuity",
@@ -216,7 +216,7 @@
         "concentration": "Transition concentration index",
         "count": "Accepted transitions"
       },
-      "subtitle": "Accepted transition starts grouped by calendar month in {{timeZone}}.",
+      "subtitle": "Accepted transition starts grouped by calendar month in your selected time zone.",
       "title": "Local-month transition trend"
     },
     "originChart": {
@@ -353,7 +353,7 @@
         "concentration": "Transition concentration index",
         "count": "Accepted transitions"
       },
-      "subtitle": "Accepted transitions use the current drive start in {{timeZone}}; multiple drives per day remain separate samples.",
+      "subtitle": "Accepted transitions use the current drive start in your selected time zone; multiple drives per day remain separate samples.",
       "title": "Vehicle-local two-hour transition profile"
     },
     "visitShare": {
@@ -386,7 +386,7 @@
         "concentration": "Transition concentration index",
         "count": "Accepted transitions"
       },
-      "subtitle": "Accepted transition starts grouped by weekday in {{timeZone}}.",
+      "subtitle": "Accepted transition starts grouped by weekday in your selected time zone.",
       "title": "Vehicle-timezone weekday profile"
     }
   },
@@ -556,7 +556,6 @@
   "driving": {
     "brief": {
       "completeScope": "Complete analysis window",
-      "exclusiveBounds": "{{start}} to {{end}} (exclusive end)",
       "eyebrow": "Driving evidence",
       "loading": "Loading source",
       "observationUnknown": "Source observation time not provided",

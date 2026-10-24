@@ -12,8 +12,10 @@
  *     that the list is *replaced* — not rendered blank — when there is no data,
  *   - the cap precedence (default 10, compact 3, explicit maxItems wins),
  *   - most-recent-first ordering regardless of input order,
- *   - the i18n'd relative-time buckets ("Just now" / "Nm ago" / "Nh ago") and
- *     the tz-aware absolute-date fallback past 24h,
+ *   - stable sub-hour formatted time and the i18n'd minute buckets, the tz-aware
+ *     day-relative labels past the hour ("Today 7:30 AM", "Yesterday 11:02 PM"
+ *     via `useDateLabels`), and the tz-aware absolute-date fallback past
+ *     yesterday,
  *   - null-safety: a malformed/empty timestamp must SINK to the bottom (never
  *     scramble the sort via a NaN comparator) and render the "—" placeholder
  *     instead of "NaNm ago",
@@ -47,7 +49,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 import { WidgetEventFeed, type EventFeedItem } from './WidgetEventFeed';
-import { formatDateTime as libFormatDateTime } from '@/lib/dateFormat';
+import { formatDateTime as libFormatDateTime, formatTime as libFormatTime } from '@/lib/dateFormat';
 import { Badge, Button } from '@/components/ui';
 
 const MIN = 60_000;
@@ -193,18 +195,38 @@ describe('WidgetEventFeed — relative time labels', () => {
     vi.useRealTimers();
   });
 
-  it('renders recent timestamps as i18n relative buckets', () => {
+  it('renders sub-hour timestamps in stable formatted buckets', () => {
     renderFeed({
       items: [
         makeItem({ id: 'a', title: 'Now event', timestamp: isoAgo(30 * 1000) }),
         makeItem({ id: 'b', title: 'Minutes event', timestamp: isoAgo(5 * MIN) }),
-        makeItem({ id: 'c', title: 'Hours event', timestamp: isoAgo(3 * HOUR) }),
       ],
     });
 
-    expect(screen.getByText('Just now')).toBeInTheDocument();
+    expect(screen.getAllByText(/\d{1,2}:\d{2}/).length).toBeGreaterThan(0);
     expect(screen.getByText('5m ago')).toBeInTheDocument();
-    expect(screen.getByText('3h ago')).toBeInTheDocument();
+  });
+
+  it('renders same-day timestamps past the hour as "Today <time>" instead of "Nh ago"', () => {
+    const iso = isoAgo(3 * HOUR);
+    // NOW is 18:00 UTC and the test tz is UTC, so 3h ago is still today.
+    const expected = `Today ${libFormatTime(iso, { locale: 'en-US', tz: 'UTC' })}`;
+
+    renderFeed({ items: [makeItem({ title: 'Hours event', timestamp: iso })] });
+
+    expect(screen.getByText(expected)).toBeInTheDocument();
+    expect(screen.queryByText(/^\d+h ago$/)).not.toBeInTheDocument();
+  });
+
+  it('renders yesterday timestamps as "Yesterday <time>"', () => {
+    // NOW is 18:00 UTC; 20h ago is yesterday 22:00 UTC.
+    const iso = isoAgo(20 * HOUR);
+    const expected = `Yesterday ${libFormatTime(iso, { locale: 'en-US', tz: 'UTC' })}`;
+
+    renderFeed({ items: [makeItem({ title: 'Yesterday event', timestamp: iso })] });
+
+    expect(screen.getByText(expected)).toBeInTheDocument();
+    expect(screen.queryByText(/^\d+h ago$/)).not.toBeInTheDocument();
   });
 
   it('falls back to a tz-aware absolute date for timestamps older than a day', () => {

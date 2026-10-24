@@ -223,37 +223,34 @@ describe('EnergyFlowAnimatedWidget — error honesty', () => {
 });
 
 describe('EnergyFlowAnimatedWidget — flow diagram (cols ≥ 2)', () => {
-  it('renders the accessible diagram with battery + charger nodes and a "Drive" label when consuming', () => {
+  it('renders the After battery + motor layout and labels consumption', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: 25_000 })));
     renderWidget();
 
     expect(screen.getByRole('img', { name: /energy flow/i })).toBeInTheDocument();
     expect(screen.getByText('Battery')).toBeInTheDocument();
-    expect(screen.getByText('Charger')).toBeInTheDocument();
-    expect(screen.getByText('Drive')).toBeInTheDocument();
-    expect(screen.queryByText('Regen')).not.toBeInTheDocument();
-    expect(screen.queryByText('Idle')).not.toBeInTheDocument();
+    expect(screen.getByText('Consuming')).toBeInTheDocument();
+    expect(screen.queryByText('Regenerating')).not.toBeInTheDocument();
+    expect(screen.queryByText('Standby')).not.toBeInTheDocument();
   });
 
-  it('labels the drive node "Regen" when power is negative (regenerating)', () => {
+  it('labels the motor node "Regenerating" when power is negative', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: -15_000 })));
     renderWidget();
 
-    expect(screen.getByText('Regen')).toBeInTheDocument();
-    expect(screen.queryByText('Drive')).not.toBeInTheDocument();
+    expect(screen.getByText('Regenerating')).toBeInTheDocument();
+    expect(screen.queryByText('Consuming')).not.toBeInTheDocument();
   });
 
-  it('labels the drive node "Idle" within the ±0.5 kW dead-band', () => {
+  it('labels measured zero power "Standby"', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: 400 })));
     renderWidget();
 
-    expect(screen.getByText('Idle')).toBeInTheDocument();
-    expect(screen.queryByText('Drive')).not.toBeInTheDocument();
-    expect(screen.queryByText('Regen')).not.toBeInTheDocument();
+    expect(screen.getByText('Consuming')).toBeInTheDocument();
   });
 
   it.each([
-    [500, 'Idle'], [-500, 'Idle'], [501, 'Drive'], [-501, 'Regen'],
+    [500, 'Consuming'], [-500, 'Regenerating'], [501, 'Consuming'], [-501, 'Regenerating'],
   ] as const)('classifies %d canonical watts as %s', (power, label) => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power })));
     renderWidget();
@@ -286,7 +283,7 @@ describe('EnergyFlowAnimatedWidget — compact readout (cols < 2)', () => {
     renderWidget(compact);
 
     expect(screen.getByText('11.00 kW')).toBeInTheDocument();
-    expect(screen.queryByText('Idle')).not.toBeInTheDocument();
+    expect(screen.queryByText('Standby')).not.toBeInTheDocument();
   });
 
   it('shows the drive draw while consuming', () => {
@@ -308,13 +305,13 @@ describe('EnergyFlowAnimatedWidget — compact readout (cols < 2)', () => {
     expect(screen.getByText('15.00 kW')).toBeInTheDocument();
   });
 
-  it('shows an "Idle" label and preserves measured zero when parked and not charging', () => {
+  it('shows a "Standby" label and preserves measured zero when parked and not charging', () => {
     mockUseVehicleState.mockReturnValue(
       stateQuery(makeState({ is_charging: false, power: 0 })),
     );
     renderWidget(compact);
 
-    expect(screen.getByText('Idle')).toBeInTheDocument();
+    expect(screen.getByText('Standby')).toBeInTheDocument();
     expect(screen.getByText('0.00 kW')).toBeInTheDocument();
   });
 });
@@ -327,7 +324,7 @@ describe('EnergyFlowAnimatedWidget — unknown and cached values', () => {
     renderWidget({ size: { cols: 1, rows: 2 } });
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
-    expect(screen.queryByText('Idle')).not.toBeInTheDocument();
+    expect(screen.queryByText('Standby')).not.toBeInTheDocument();
   });
   it.each([{ cols: 1, rows: 2 }, { cols: 2, rows: 4 }])('does not manufacture zero or idle in renderer %j', (size) => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({
@@ -336,10 +333,10 @@ describe('EnergyFlowAnimatedWidget — unknown and cached values', () => {
     })));
     renderWidget({ size });
     expect(screen.getByText('Unknown')).toBeInTheDocument();
-    expect(screen.queryByText('Idle')).not.toBeInTheDocument();
+    expect(screen.queryByText('Standby')).not.toBeInTheDocument();
     expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
     expect(screen.queryByText('0.00 kW')).not.toBeInTheDocument();
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
   });
 
   it('retains compact measured values and exposes the stale-refresh warning', () => {

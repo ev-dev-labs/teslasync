@@ -1,10 +1,10 @@
 import type { ChargingSession } from '@/types/charging';
 import type { Drive } from '@/types/driving';
+import { isValidTimeZone, zonedDateParts } from '@/lib/dateFormat';
 
 const DAY_S = 86_400;
 const DAY_MS = DAY_S * 1_000;
 const MIN_SOC_SWING_PCT = 0.05;
-const PARTS_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
 
 export const DEPTH_STRESS_EXPONENT = 1.7;
 export const DEEP_CYCLE_THRESHOLD_PCT = 60;
@@ -806,46 +806,15 @@ export function extractRainflowCycles(
 function resolveTimeZone(candidate: string): string {
   const trimmed = candidate.trim();
   if (!trimmed) return 'UTC';
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone: trimmed }).format(0);
-    return trimmed;
-  } catch {
-    return 'UTC';
-  }
-}
-
-function partsFormatter(timeZone: string): Intl.DateTimeFormat {
-  const cached = PARTS_FORMATTERS.get(timeZone);
-  if (cached) return cached;
-  const formatter = new Intl.DateTimeFormat(
-    'en-US-u-ca-gregory-nu-latn',
-    {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    },
-  );
-  PARTS_FORMATTERS.set(timeZone, formatter);
-  return formatter;
-}
-
-function localWeekKey(year: number, month: number, day: number): string {
-  const date = new Date(Date.UTC(year, month - 1, day));
-  const mondayIndex = (date.getUTCDay() + 6) % 7;
-  date.setUTCDate(date.getUTCDate() - mondayIndex);
-  return date.toISOString().slice(0, 10);
+  return isValidTimeZone(trimmed) ? trimmed : 'UTC';
 }
 
 function localParts(ms: number, timeZone: string): LocalParts {
-  const parts = partsFormatter(timeZone).formatToParts(new Date(ms));
-  const value = (type: Intl.DateTimeFormatPartTypes): number => {
-    const parsed = Number(parts.find((part) => part.type === type)?.value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
-  const year = value('year');
-  const month = value('month');
-  const day = value('day');
+  const parts = zonedDateParts(ms, timeZone);
+  if (!parts) {
+    throw new RangeError(`unable to derive calendar parts in ${timeZone}`);
+  }
+  const { year, month, day } = parts;
   return {
     year,
     month,
@@ -854,6 +823,13 @@ function localParts(ms: number, timeZone: string): LocalParts {
     monthKey: `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}`,
     weekKey: localWeekKey(year, month, day),
   };
+}
+
+function localWeekKey(year: number, month: number, day: number): string {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const mondayIndex = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - mondayIndex);
+  return date.toISOString().slice(0, 10);
 }
 
 function dateOrdinal(dateKey: string): number {

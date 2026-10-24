@@ -14,10 +14,10 @@ import { useSignalQueryInvalidation } from '@/hooks/useSignalQueryInvalidation';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useDataState } from '@/hooks/useDataState';
 import { useUrlString } from '@/hooks/useUrlState';
 import { INTERVALS } from '@/lib/constants';
-import { useTimezone } from '@/lib/timezone';
 import { convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import {
   AutopilotSection,
@@ -99,7 +99,7 @@ export default function DrivingDynamicsPage() {
 
   /* Selected-drive evidence and current vehicle state are separate sources.
    * The page freshness indicator follows the selector, never parked motors. */
-  const timezone = useTimezone('vehicle');
+  const { tz: timezone } = useDateFormat();
   const [driveParam, setDriveParam] = useUrlString('drive');
 
   /* ---- push updates ----

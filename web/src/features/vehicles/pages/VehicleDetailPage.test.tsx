@@ -461,7 +461,7 @@ describe('VehicleDetailPage', () => {
     )
     const { client } = renderPage()
     await waitFor(() => expect(H.captured.BatteryRangePanel?.state).toBe(STATE))
-    expect(screen.getByText('Last real observation 10m ago')).toHaveAttribute('title', observed_at)
+    expect(screen.getByText('Last real observation 10m ago')).not.toHaveAttribute('title')
     expect(screen.getByLabelText('Live')).toHaveAttribute('data-data-status', 'stale')
 
     await act(async () => {
@@ -479,7 +479,7 @@ describe('VehicleDetailPage', () => {
       await client.invalidateQueries({ queryKey: ['vehicle-state', 1], exact: true })
     })
     await waitFor(() => expect(screen.getByLabelText('Cached')).toHaveAttribute('data-data-status', 'stale'))
-    expect(screen.getByText('Last real observation 10m ago')).toHaveAttribute('title', observed_at)
+    expect(screen.getByText('Last real observation 10m ago')).not.toHaveAttribute('title')
     for (const sectionId of ALL_SECTION_IDS) expect(screen.getByTestId(sectionId)).toBeInTheDocument()
     expect(H.captured.BatteryRangePanel?.state).toBe(STATE)
     expect(H.captured.BatteryRangeCharts?.state).toBe(STATE)

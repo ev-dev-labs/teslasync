@@ -266,7 +266,7 @@ describe('WhyEndedPanel — inline evidence', () => {
     useDriveWhyEnded.mockReturnValue(makeWhy({ data: makeResponse({ fsm_transitions: [{ ...TRANSITIONS[0], ts }] }) }));
     render(<WhyEndedPanel driveId="42" />);
     expect(screen.getByTestId('tl-time')).toHaveTextContent(formatTransitionTime(ts, dateOpts));
-    expect(screen.getByTestId('tl-title').querySelector('span')).toHaveAttribute('title', ts);
+    expect(screen.getByTestId('tl-title').querySelector('span')).not.toHaveAttribute('title');
   });
 
   it('starts expanded with its selector and query enabled, without tabs', () => {

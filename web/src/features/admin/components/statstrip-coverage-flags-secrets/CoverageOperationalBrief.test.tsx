@@ -5,6 +5,7 @@ import type { ComponentProps } from 'react';
 import type { OperationalBrief } from '@/components/data-display';
 import { CoverageOperationalBrief } from './CoverageOperationalBrief';
 import { sourceFreshness, sourceStatus } from './sourceMetadata';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dateFormat';
 
 const saved = vi.hoisted(() => ({
   locale: 'de-DE', timezone_user: 'America/Los_Angeles', tz_display_default: 'user',
@@ -68,7 +69,7 @@ describe('coverage last-success source metadata', () => {
 
   it('preserves the two-argument metadata contract and never formats invalid dates', () => {
     const updatedAt = Date.parse('2026-10-01T12:00:00Z');
-    expect(sourceFreshness(updatedAt, translation.t)).toBe(`Fetched ${new Date(updatedAt).toLocaleString()}`);
+    expect(sourceFreshness(updatedAt, translation.t)).toBe(`Fetched ${formatDateTimeShared(new Date(updatedAt))}`);
     const formatter = vi.fn(() => 'formatted date');
     for (const value of [null, Number.NaN, Infinity, 8640000000000001]) {
       expect(sourceFreshness(value, translation.t, formatter)).toBe('Fetch time not supplied');

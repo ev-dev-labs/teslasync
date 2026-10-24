@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -14,13 +15,17 @@ type fakeStore struct {
 	sites   []*Site
 	history SiteHistory
 	err     error
+	gotZone *string
 }
 
 func (f *fakeStore) ListSites(_ context.Context, _ string, _ int) ([]*Site, error) {
 	return f.sites, f.err
 }
 
-func (f *fakeStore) History(_ context.Context, _ string) (SiteHistory, error) {
+func (f *fakeStore) History(_ context.Context, _ string, zone string) (SiteHistory, error) {
+	if f.gotZone != nil {
+		*f.gotZone = zone
+	}
 	return f.history, f.err
 }
 
@@ -141,5 +146,75 @@ func TestForecastHandlerStoreError(t *testing.T) {
 	h.Forecast(rec, req)
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("code = %d, want 500", rec.Code)
+	}
+}
+
+func TestForecastHandlerTimezone(t *testing.T) {
+	cases := []struct {
+		name     string
+		param    string
+		wantZone string
+	}{
+		{"omitted defaults to UTC", "", "UTC"},
+		{"explicit zone honored", "America/Los_Angeles", "America/Los_Angeles"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var gotZone string
+			h := NewHandler(&fakeStore{history: fridayPeakHistory(), gotZone: &gotZone})
+			url := "/waitoracle/forecast?site=Kettleman+City&arrive_at=2026-09-11T18:00:00Z"
+			if c.param != "" {
+				url += "&timezone=" + c.param
+			}
+			req := httptest.NewRequest(http.MethodGet, url, nil)
+			rec := httptest.NewRecorder()
+			h.Forecast(rec, req)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("code = %d, body = %s", rec.Code, rec.Body.String())
+			}
+			if gotZone != c.wantZone {
+				t.Fatalf("store zone = %q, want %q", gotZone, c.wantZone)
+			}
+		})
+	}
+}
+
+func TestForecastHandlerBadTimezone(t *testing.T) {
+	h := NewHandler(&fakeStore{history: fridayPeakHistory()})
+	long := "America/" + strings.Repeat("x", 60)
+	cases := []struct {
+		name string
+		url  string
+	}{
+		{"unknown zone", "/waitoracle/forecast?site=x&timezone=Mars/Olympus"},
+		{"overlong zone", "/waitoracle/forecast?site=x&timezone=" + long},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, c.url, nil)
+			rec := httptest.NewRecorder()
+			h.Forecast(rec, req)
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("code = %d, want 400", rec.Code)
+			}
+		})
+	}
+}
+
+func TestForecastHandlerBestHourKey(t *testing.T) {
+	h := NewHandler(&fakeStore{history: fridayPeakHistory()})
+	req := httptest.NewRequest(http.MethodGet,
+		"/waitoracle/forecast?site=Kettleman+City&arrive_at=2026-09-11T18:00:00Z", nil)
+	rec := httptest.NewRecorder()
+	h.Forecast(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `"best_hour":`) {
+		t.Fatalf("body lacks best_hour key: %s", body)
+	}
+	if strings.Contains(body, "best_hour_utc") {
+		t.Fatalf("body still carries the UTC-suffixed key: %s", body)
 	}
 }

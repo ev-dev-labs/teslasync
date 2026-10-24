@@ -7,13 +7,13 @@ import { LIMIT_OPTIONS } from './helpers';
 type Props = { controller: ReturnType<typeof useAuditLogPage> };
 
 export function AuditLogFilters({ controller }: Props) {
-  const { t, since, setSince, until, setUntil, category, setCategory, action, setAction, actor, setActor, entityType, setEntityType, limit, setLimit, setOffset, logQuery, categoryOptions, actionOptions, handleReset, workspaceRangeAvailable, timezone } = controller;
+  const { t, since, setSince, until, setUntil, category, setCategory, action, setAction, actor, setActor, entityType, setEntityType, limit, setLimit, setOffset, logQuery, categoryOptions, actionOptions, handleReset, workspaceRangeAvailable } = controller;
 
   return (
 <div className="min-w-0 xl:col-span-2">
           <LayoutCard title={t('admin.auditLog.filtersTitle', 'Filters')}>
             <Caption className="mb-3 block">
-              {t('admin.auditLog.rangeZone', 'Filter timezone: {{timezone}}', { timezone })}
+              {t('admin.auditLog.rangeZone', 'Filters use your selected time zone.')}
             </Caption>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 3xl:grid-cols-3">
               {!workspaceRangeAvailable && <>

@@ -47,7 +47,9 @@ type fakeTempImpactRepo struct {
 
 	gotEffCalls    []int64
 	gotTrendCalls  []int64
+	gotTrendZones  []string
 	gotPointsCalls []int64
+	gotPointsZones []string
 }
 
 func (f *fakeTempImpactRepo) EfficiencyBuckets(_ context.Context, vehicleID int64) ([]tempEfficiencyBucket, error) {
@@ -58,16 +60,18 @@ func (f *fakeTempImpactRepo) EfficiencyBuckets(_ context.Context, vehicleID int6
 	return f.eff, nil
 }
 
-func (f *fakeTempImpactRepo) MonthlyTrend(_ context.Context, vehicleID int64) ([]monthlyTempTrend, error) {
+func (f *fakeTempImpactRepo) MonthlyTrend(_ context.Context, vehicleID int64, zone string) ([]monthlyTempTrend, error) {
 	f.gotTrendCalls = append(f.gotTrendCalls, vehicleID)
+	f.gotTrendZones = append(f.gotTrendZones, zone)
 	if f.trendErr != nil {
 		return nil, f.trendErr
 	}
 	return f.trend, nil
 }
 
-func (f *fakeTempImpactRepo) DrivePoints(_ context.Context, vehicleID int64) ([]drivePoint, error) {
+func (f *fakeTempImpactRepo) DrivePoints(_ context.Context, vehicleID int64, zone string) ([]drivePoint, error) {
 	f.gotPointsCalls = append(f.gotPointsCalls, vehicleID)
+	f.gotPointsZones = append(f.gotPointsZones, zone)
 	if f.pointsErr != nil {
 		return nil, f.pointsErr
 	}
@@ -565,7 +569,7 @@ func TestDBTempImpactRepo_MonthlyTrend(t *testing.T) {
 			return nil, sentinel
 		}}
 		repo := &dbTempImpactRepo{pool: pool}
-		got, err := repo.MonthlyTrend(context.Background(), 1)
+		got, err := repo.MonthlyTrend(context.Background(), 1, "UTC")
 		if got != nil {
 			t.Errorf("rows = %v, want nil", got)
 		}
@@ -586,13 +590,16 @@ func TestDBTempImpactRepo_MonthlyTrend(t *testing.T) {
 			if !strings.Contains(sql, "DATE_TRUNC('month'") {
 				t.Errorf("unexpected sql: %s", sql)
 			}
-			if len(args) != 3 || args[0].(int64) != 3 {
+			if len(args) != 4 || args[0].(int64) != 3 {
 				t.Errorf("args = %v, want [3 ...]", args)
+			}
+			if len(args) == 4 && args[3].(string) != "UTC" {
+				t.Errorf("args[3] = %v, want UTC", args[3])
 			}
 			return rows, nil
 		}}
 		repo := &dbTempImpactRepo{pool: pool}
-		got, err := repo.MonthlyTrend(context.Background(), 3)
+		got, err := repo.MonthlyTrend(context.Background(), 3, "UTC")
 		if err != nil {
 			t.Fatalf("err = %v, want nil", err)
 		}
@@ -614,7 +621,7 @@ func TestDBTempImpactRepo_MonthlyTrend(t *testing.T) {
 		}}
 		pool := &fakePool{queryFn: func(_ context.Context, _ string, _ ...any) (pgx.Rows, error) { return rows, nil }}
 		repo := &dbTempImpactRepo{pool: pool}
-		got, err := repo.MonthlyTrend(context.Background(), 1)
+		got, err := repo.MonthlyTrend(context.Background(), 1, "UTC")
 		if err != nil {
 			t.Fatalf("err = %v, want nil", err)
 		}
@@ -632,7 +639,7 @@ func TestDBTempImpactRepo_MonthlyTrend(t *testing.T) {
 		rows := &fakeRows{scans: []func(dest ...any) error{errScan(sentinel)}}
 		pool := &fakePool{queryFn: func(_ context.Context, _ string, _ ...any) (pgx.Rows, error) { return rows, nil }}
 		repo := &dbTempImpactRepo{pool: pool}
-		_, err := repo.MonthlyTrend(context.Background(), 1)
+		_, err := repo.MonthlyTrend(context.Background(), 1, "UTC")
 		if !errors.Is(err, sentinel) || !strings.Contains(err.Error(), "scan monthly trend row") {
 			t.Errorf("err = %v, want wrapped scan error", err)
 		}
@@ -647,7 +654,7 @@ func TestDBTempImpactRepo_MonthlyTrend(t *testing.T) {
 		}
 		pool := &fakePool{queryFn: func(_ context.Context, _ string, _ ...any) (pgx.Rows, error) { return rows, nil }}
 		repo := &dbTempImpactRepo{pool: pool}
-		_, err := repo.MonthlyTrend(context.Background(), 1)
+		_, err := repo.MonthlyTrend(context.Background(), 1, "UTC")
 		if !errors.Is(err, sentinel) || !strings.Contains(err.Error(), "iterate monthly trend rows") {
 			t.Errorf("err = %v, want wrapped iterate error", err)
 		}
@@ -668,7 +675,7 @@ func TestDBTempImpactRepo_DrivePoints(t *testing.T) {
 			return nil, sentinel
 		}}
 		repo := &dbTempImpactRepo{pool: pool}
-		got, err := repo.DrivePoints(context.Background(), 1)
+		got, err := repo.DrivePoints(context.Background(), 1, "UTC")
 		if got != nil {
 			t.Errorf("rows = %v, want nil", got)
 		}
@@ -687,13 +694,16 @@ func TestDBTempImpactRepo_DrivePoints(t *testing.T) {
 			if !strings.Contains(sql, "LIMIT 500") {
 				t.Errorf("unexpected sql: %s", sql)
 			}
-			if len(args) != 3 || args[0].(int64) != 9 {
+			if len(args) != 4 || args[0].(int64) != 9 {
 				t.Errorf("args = %v, want [9 ...]", args)
+			}
+			if len(args) == 4 && args[3].(string) != "UTC" {
+				t.Errorf("args[3] = %v, want UTC", args[3])
 			}
 			return rows, nil
 		}}
 		repo := &dbTempImpactRepo{pool: pool}
-		got, err := repo.DrivePoints(context.Background(), 9)
+		got, err := repo.DrivePoints(context.Background(), 9, "UTC")
 		if err != nil {
 			t.Fatalf("err = %v, want nil", err)
 		}
@@ -719,7 +729,7 @@ func TestDBTempImpactRepo_DrivePoints(t *testing.T) {
 		}}
 		pool := &fakePool{queryFn: func(_ context.Context, _ string, _ ...any) (pgx.Rows, error) { return rows, nil }}
 		repo := &dbTempImpactRepo{pool: pool}
-		got, err := repo.DrivePoints(context.Background(), 1)
+		got, err := repo.DrivePoints(context.Background(), 1, "UTC")
 		if err != nil {
 			t.Fatalf("err = %v, want nil (bad row skipped, not fatal)", err)
 		}
@@ -740,7 +750,7 @@ func TestDBTempImpactRepo_DrivePoints(t *testing.T) {
 		}
 		pool := &fakePool{queryFn: func(_ context.Context, _ string, _ ...any) (pgx.Rows, error) { return rows, nil }}
 		repo := &dbTempImpactRepo{pool: pool}
-		got, err := repo.DrivePoints(context.Background(), 1)
+		got, err := repo.DrivePoints(context.Background(), 1, "UTC")
 		if got != nil {
 			t.Errorf("rows = %v, want nil on iteration error", got)
 		}
@@ -755,7 +765,7 @@ func TestDBTempImpactRepo_DrivePoints(t *testing.T) {
 		rows := &fakeRows{scans: []func(dest ...any) error{pointScan(nil, nil, nil, d)}}
 		pool := &fakePool{queryFn: func(_ context.Context, _ string, _ ...any) (pgx.Rows, error) { return rows, nil }}
 		repo := &dbTempImpactRepo{pool: pool}
-		got, err := repo.DrivePoints(context.Background(), 1)
+		got, err := repo.DrivePoints(context.Background(), 1, "UTC")
 		if err != nil {
 			t.Fatalf("err = %v, want nil", err)
 		}
@@ -805,6 +815,61 @@ func TestGet_BadVehicleID(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGet_TimezonePropagation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("forwards_timezone_to_monthly_trend_and_drive_points", func(t *testing.T) {
+		t.Parallel()
+		repo := &fakeTempImpactRepo{}
+		h := newHandler(repo)
+		rec := httptest.NewRecorder()
+		h.Get(rec, getReq("/analytics/temperature-impact?vehicle_id=42&timezone=America%2FLos_Angeles"))
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200 (body=%s)", rec.Code, rec.Body.String())
+		}
+		if len(repo.gotTrendZones) != 1 || repo.gotTrendZones[0] != "America/Los_Angeles" {
+			t.Fatalf("trend zones = %v, want [America/Los_Angeles]", repo.gotTrendZones)
+		}
+		if len(repo.gotPointsZones) != 1 || repo.gotPointsZones[0] != "America/Los_Angeles" {
+			t.Fatalf("points zones = %v, want [America/Los_Angeles]", repo.gotPointsZones)
+		}
+	})
+
+	t.Run("defaults_to_utc_when_omitted", func(t *testing.T) {
+		t.Parallel()
+		repo := &fakeTempImpactRepo{}
+		h := newHandler(repo)
+		rec := httptest.NewRecorder()
+		h.Get(rec, getReq("/analytics/temperature-impact?vehicle_id=42"))
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200 (body=%s)", rec.Code, rec.Body.String())
+		}
+		if len(repo.gotTrendZones) != 1 || repo.gotTrendZones[0] != "UTC" {
+			t.Fatalf("trend zones = %v, want [UTC]", repo.gotTrendZones)
+		}
+		if len(repo.gotPointsZones) != 1 || repo.gotPointsZones[0] != "UTC" {
+			t.Fatalf("points zones = %v, want [UTC]", repo.gotPointsZones)
+		}
+	})
+
+	t.Run("invalid_timezone_is_bad_request", func(t *testing.T) {
+		t.Parallel()
+		repo := &fakeTempImpactRepo{}
+		h := newHandler(repo)
+		rec := httptest.NewRecorder()
+		h.Get(rec, getReq("/analytics/temperature-impact?vehicle_id=42&timezone=Not%2FAZone"))
+
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want 400", rec.Code)
+		}
+		if len(repo.gotEffCalls) != 0 || len(repo.gotTrendCalls) != 0 {
+			t.Fatal("no repo calls expected on invalid zone")
+		}
+	})
 }
 
 func TestGet_Success(t *testing.T) {
@@ -1024,7 +1089,7 @@ func TestSQLShapes(t *testing.T) {
 	t.Run("monthly_trend", func(t *testing.T) {
 		t.Parallel()
 		for _, frag := range []string{
-			"DATE_TRUNC('month', started_at)", "FROM drives", "vehicle_id = $1",
+			"DATE_TRUNC('month', started_at AT TIME ZONE $4)", "FROM drives", "vehicle_id = $1",
 			"12 months", "GROUP BY month", "SUM(distance_m / 1000.0)",
 		} {
 			if !strings.Contains(monthlyTrendSQL, frag) {
@@ -1036,7 +1101,7 @@ func TestSQLShapes(t *testing.T) {
 	t.Run("drive_points", func(t *testing.T) {
 		t.Parallel()
 		for _, frag := range []string{
-			"FROM drives", "started_at::date", "distance_m / 1000.0", "LIMIT 500", "* 0.75",
+			"FROM drives", "(started_at AT TIME ZONE $4)::date", "distance_m / 1000.0", "LIMIT 500", "* 0.75",
 		} {
 			if !strings.Contains(drivePointsSQL, frag) {
 				t.Errorf("drivePointsSQL missing %q\nSQL: %s", frag, drivePointsSQL)

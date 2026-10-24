@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { Activity, BatteryCharging, Bell, Car, MapPin, Wrench } from 'lucide-react';
 import { EntityPreviewDrawer } from '@/components/data-display';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { formatDateTime, formatDurationMinutes } from '@/lib/dateFormat';
+import {formatDateTime} from '@/lib/dateFormat'
+import {formatDurationMinutes} from '@/lib/dateConvert';
 import { buildContextHref } from '@/lib/contextNavigation';
 import { getEfficiency, gradeFromEfficiency } from '@/lib/drivesAggregation';
 import type { Drive } from '@/types/driving';

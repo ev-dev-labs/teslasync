@@ -161,6 +161,25 @@ vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({ settings: { unit_of_length: 'km', locale: 'en-US' } }),
 }));
 
+vi.mock('@/hooks/useRangeState', () => ({
+  useRangeState: () => ({
+    startInstant: '2026-07-03T08:30:00.000Z',
+    endInstantExclusive: '2026-07-04T08:30:00.000Z',
+    start: '2026-07-03',
+    end: '2026-07-04',
+  }),
+}));
+
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({
+    formatTime: (value: string | number | Date | null | undefined) => {
+      if (value == null || value === '') return '—';
+      const date = new Date(value instanceof Date ? value : value);
+      return Number.isNaN(date.getTime()) ? String(value) : `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    },
+  }),
+}));
+
 import PowerFlowHistoryWidget, { shortTime } from './PowerFlowHistoryWidget';
 
 it.each([1, 2, 3])('identifies power flow history at %i columns', (cols) => {
@@ -327,19 +346,31 @@ describe('PowerFlowHistoryWidget — data-source wiring', () => {
     expect(useHistoryMock).toHaveBeenCalledWith(
       999,
       expect.stringMatching(/^\d{4}-\d{2}-\d{2}T.*Z$/),
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}T.*Z$/),
+      1000,
     );
   });
 
   it('passes an undefined site id (history query disabled) when no site is linked', () => {
     useSitesMock.mockReturnValue(makeQ<TeslaEnergySite[]>([]));
     renderWidget();
-    expect(useHistoryMock).toHaveBeenCalledWith(undefined, expect.any(String));
+    expect(useHistoryMock).toHaveBeenCalledWith(
+      undefined,
+      expect.any(String),
+      expect.any(String),
+      1000,
+    );
   });
 
   it('tolerates an undefined sites list without throwing', () => {
     useSitesMock.mockReturnValue(makeQ<TeslaEnergySite[]>(undefined));
     expect(() => renderWidget()).not.toThrow();
-    expect(useHistoryMock).toHaveBeenCalledWith(undefined, expect.any(String));
+    expect(useHistoryMock).toHaveBeenCalledWith(
+      undefined,
+      expect.any(String),
+      expect.any(String),
+      1000,
+    );
   });
 });
 

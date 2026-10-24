@@ -1,3 +1,5 @@
+import { isValidTimeZone } from '@/lib/dateFormat';
+
 const HOURS_PER_DAY = 24;
 const LEGACY_KWH_TO_WH = 1_000;
 const KG_TO_G = 1_000;
@@ -588,12 +590,7 @@ function calendarDateMilliseconds(value: string): number | null {
 
 function validTimezone(value: string): boolean {
   if (!value.trim()) return false;
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone: value }).format(0);
-    return true;
-  } catch {
-    return false;
-  }
+  return isValidTimeZone(value);
 }
 
 export function analyzeDateWindow(input: CarbonWindowInput): CarbonDateWindow {

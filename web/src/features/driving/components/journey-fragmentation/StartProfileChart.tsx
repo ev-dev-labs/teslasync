@@ -11,7 +11,7 @@ export function StartProfileChart({ result, state, loading = false }: JourneyFra
   return (
     <ChartContainer
       title={t('journeyFragmentation.startProfile.title', 'Local two-hour journey-start profile')}
-      subtitle={t('journeyFragmentation.startProfile.subtitle', 'Journey starts grouped in the vehicle timezone {{timeZone}}.', { timeZone: result.timeZone })}
+      subtitle={t('journeyFragmentation.startProfile.subtitle', 'Journey starts grouped in your selected time zone.')}
       ariaLabel={t('journeyFragmentation.startProfile.aria', 'Bar chart of observed journey starts by local two-hour period')}
       loading={loading}
       empty={(!state || state.hasData) && !loading && result.journeyCount === 0}

@@ -14,7 +14,7 @@ import {
 } from '@/components/data-display';
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/hooks/useFormatting';
-import { formatDurationMinutes } from '@/lib/dateFormat';
+import { formatDurationMinutes } from '@/lib/dateConvert';
 
 import type { ChargingSession } from '@/api/types';
 import { distanceAddedM } from './charging-curve/helpers';

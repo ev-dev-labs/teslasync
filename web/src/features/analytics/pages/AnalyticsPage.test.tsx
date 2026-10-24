@@ -68,6 +68,14 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
 
+// Display zone for the range hook. Defaults to UTC (what the global timezone
+// mock resolves for bare renders); the DST test sets a non-UTC zone to keep
+// its transition coverage. Spread keeps every other timezone export real.
+const savedZone = vi.hoisted(() => ({ tz: 'UTC' }));
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
+  return { ...actual, useTimezone: () => savedZone.tz };
+});
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
   return { ...actual, request: vi.fn() };
@@ -177,7 +185,10 @@ function renderPage(initialEntries: string[] = ['/analytics']) {
 
 function HeaderRangeChange() {
   const { setRange } = useRangeState();
-  return <button onClick={() => setRange(getDatePreset('7d')!.resolve())}>Change header range</button>;
+  // Resolve in UTC (the display zone this file pins): the page re-resolves
+  // the scope preset in the display zone, so a local-zone resolution would
+  // disagree by a day whenever the local and UTC dates differ.
+  return <button onClick={() => setRange(getDatePreset('7d')!.resolve(new Date(), 'UTC'))}>Change header range</button>;
 }
 
 /** The single fleet request path that was issued (last call). */
@@ -190,6 +201,7 @@ function fleetPaths(): string[] {
 beforeEach(() => {
   mockedRequest.mockReset();
   window.localStorage.clear();
+  savedZone.tz = 'UTC';
 });
 
 afterEach(() => {
@@ -202,9 +214,10 @@ function fleetPath(start: string, end: string) {
 }
 
 function calendarFleetPath(start: string, end: string) {
+  // Bare renders resolve the display zone to UTC (global timezone mock).
   const bounds = calendarRangeToInstants({
     startDate: start, endDate: end,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    timezone: 'UTC',
   });
   return fleetPath(bounds.startInstant, bounds.endInstantExclusive);
 }
@@ -448,7 +461,7 @@ describe('AnalyticsPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Change header range' }));
 
-    const expected = getDatePreset('7d')!.resolve();
+    const expected = getDatePreset('7d')!.resolve(new Date(), 'UTC');
     const expectedPath = calendarFleetPath(expected.start, expected.end);
     await waitFor(() => expect(fleetPaths()).toContain(expectedPath));
     // The window actually changed (a new request was issued, not the URL one).
@@ -482,10 +495,9 @@ describe('AnalyticsPage', () => {
   });
 
   it('preserves non-UTC custom boundaries across daylight saving time in both the request and cache key', async () => {
-    const resolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
-    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
-      return { ...resolvedOptions.call(this), timeZone: 'America/Los_Angeles' };
-    });
+    // The range follows the saved display zone (not the browser zone), so
+    // set a non-UTC saved zone to keep the DST-transition coverage.
+    savedZone.tz = 'America/Los_Angeles';
     installFleet();
     const { client } = renderPage(['/analytics?from=2025-03-08&to=2025-03-09']);
     const start = '2025-03-08T08:00:00.000Z';

@@ -90,6 +90,7 @@ vi.mock('./shared', () => ({
             data-testid={`arrow-${a.from}-${a.to}`}
             data-active={String(a.active)}
             data-value={String(a.value)}
+            data-label={a.label ?? ''}
           />
         ))}
       </div>
@@ -323,7 +324,7 @@ describe('LivePowerFlowWidget — loading & empty states', () => {
 // ── Node derivation (watts → kW) ─────────────────────────────────────────────────
 
 describe('LivePowerFlowWidget — node derivation', () => {
-  it('derives solar/grid/home/battery nodes at fixed positions with kW-formatted values', () => {
+  it('derives solar, grid, home, and battery readings without repeating grid or home power in nodes', () => {
     setLive({
       data: makeLive({ solar_power: 4000, grid_power: 2000, load_power: 3500, battery_power: 1500 }),
     });
@@ -332,26 +333,26 @@ describe('LivePowerFlowWidget — node derivation', () => {
     const solar = nodeById('solar');
     expect(solar?.position).toBe('top');
     expect(solar?.value).toBe(4);
-    expect(solar?.formattedValue).toBe('4.00 kW');
+    expect(solar?.formattedValue).toBe('');
     expect(screen.getByTestId('node-solar-label')).toHaveTextContent('Solar');
 
     expect(nodeById('grid')?.position).toBe('left');
-    expect(nodeById('grid')?.formattedValue).toBe('2.00 kW');
+    expect(nodeById('grid')?.formattedValue).toBe('');
     expect(nodeById('home')?.position).toBe('right');
-    expect(nodeById('home')?.formattedValue).toBe('3.50 kW');
+    expect(nodeById('home')?.formattedValue).toBe('');
     expect(nodeById('battery')?.position).toBe('bottom');
-    expect(nodeById('battery')?.value).toBe(1.5);
-    expect(nodeById('battery')?.formattedValue).toBe('1.50 kW');
+    expect(nodeById('battery')?.value).toBe(0);
+    expect(nodeById('battery')?.formattedValue).toBe('0%');
   });
 
-  it('uses the magnitude (abs) of negative power readings for node values', () => {
+  it('preserves measured grid direction without repeating grid power in the node', () => {
     setLive({ data: makeLive({ grid_power: -1000, battery_power: -2000 }) });
     renderWidget();
 
     expect(nodeById('grid')?.value).toBe(1);
-    expect(nodeById('grid')?.formattedValue).toBe('-1.00 kW');
-    expect(nodeById('battery')?.value).toBe(2);
-    expect(nodeById('battery')?.formattedValue).toBe('-2.00 kW');
+    expect(nodeById('grid')?.formattedValue).toBe('');
+    expect(nodeById('battery')?.value).toBe(0);
+    expect(nodeById('battery')?.formattedValue).toBe('0%');
   });
 
   it('gives every node an icon and a localized label', () => {
@@ -409,7 +410,7 @@ describe('LivePowerFlowWidget — solar & grid flow direction', () => {
   it('preserves a signed negative solar reading as consumption, not production', () => {
     setLive({ data: makeLive({ solar_power: -1000 }) });
     renderWidget();
-    expect(nodeById('solar')?.formattedValue).toBe('-1.00 kW');
+    expect(nodeById('solar')?.formattedValue).toBe('');
     expect(arrowByEnds('site', 'solar')?.value).toBe(1);
     expect(arrowByEnds('solar', 'site')).toBeUndefined();
   });
@@ -422,13 +423,14 @@ describe('LivePowerFlowWidget — solar & grid flow direction', () => {
     expect(solarHome?.value).toBe(4);
   });
 
-  it('marks Solar → Home inactive for a negligible (<10 W) solar reading', () => {
+  it('preserves a measured negligible solar reading without suppressing it', () => {
     setLive({ data: makeLive({ solar_power: 5 }) });
     renderWidget();
 
     const solarHome = arrowByEnds('solar', 'site');
     expect(solarHome).toBeDefined();
-    expect(solarHome?.active).toBe(false); // 0.005 kW ≤ 0.01 kW threshold
+    expect(solarHome?.active).toBe(true);
+    expect(solarHome?.value).toBe(0.005);
   });
 
   it('draws Grid → Home when importing (grid_power > 0)', () => {
@@ -466,7 +468,7 @@ describe('LivePowerFlowWidget — null safety', () => {
   it('retains measured power and directions on a failed cached refresh', () => {
     setLive({ data: makeLive({ solar_power: 4000 }), isError: true });
     renderWidget();
-    expect(nodeById('solar')?.formattedValue).toBe('4.00 kW');
+    expect(nodeById('solar')?.formattedValue).toBe('');
     expect(arrowByEnds('solar', 'site')?.active).toBe(true);
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
@@ -478,11 +480,13 @@ describe('LivePowerFlowWidget — null safety', () => {
         battery_power: null,
         grid_power: null,
         load_power: null,
+        percentage_charged: null,
       }),
     });
     renderWidget();
 
-    expect(lastFlowProps().nodes.filter((node) => node.id !== 'site').every((node) => node.formattedValue === '—')).toBe(true);
+    expect(nodeById('solar')?.formattedValue).toBe('');
+    expect(nodeById('battery')?.formattedValue).toBe('—');
     expect(nodeById('battery')?.value).toBe(0);
     expect(lastFlowProps().nodes).toHaveLength(5);
     expect(lastFlowProps().arrows).toHaveLength(0);
@@ -519,11 +523,11 @@ describe('LivePowerFlowWidget — compact sizing', () => {
     expect(screen.queryByTestId('flow-diagram')).not.toBeInTheDocument();
   });
 
-  it('passes compact=true to the diagram for a single-column widget', () => {
+  it('keeps every connection visible instead of suppressing links in a single-column widget', () => {
     renderWidget({ cols: 1, rows: 2 });
 
-    expect(lastFlowProps().compact).toBe(true);
-    expect(screen.getByTestId('flow-diagram')).toHaveAttribute('data-compact', 'true');
+    expect(lastFlowProps().compact).toBe(false);
+    expect(screen.getByTestId('flow-diagram')).toHaveAttribute('data-compact', 'false');
   });
 
   it('passes compact=false for a multi-column widget', () => {

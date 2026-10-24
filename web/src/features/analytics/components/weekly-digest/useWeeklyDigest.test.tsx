@@ -405,8 +405,10 @@ describe('request wiring', () => {
     const urls = urlsCalled();
     expect(urls).toContain('/vehicles');
     const alertParams = new URLSearchParams(urls.find((url) => url.startsWith('/alerts?'))?.split('?')[1]);
-    const [previousStart] = getWeekRange(-1);
-    const [, currentEnd] = getWeekRange(0);
+    // Mirror the hook's display-zone framing: the global stubs resolve no
+    // vehicle and an empty override, so the hook frames weeks in UTC.
+    const [previousStart] = getWeekRange(-1, 'UTC');
+    const [, currentEnd] = getWeekRange(0, 'UTC');
     expect(alertParams.get('vehicle_id')).toBe('1');
     expect(alertParams.get('from')).toBe(previousStart.toISOString());
     expect(alertParams.get('to')).toBe(new Date(currentEnd.getTime() + 1).toISOString());
@@ -703,7 +705,7 @@ describe('per-domain loading / error state', () => {
     const url = urlsCalled().find((value) => value.startsWith('/analytics/fsd'));
     expect(url).toBeDefined();
     const params = new URLSearchParams(url?.split('?')[1]);
-    const [weekStart, weekEnd] = getWeekRange(0);
+    const [weekStart, weekEnd] = getWeekRange(0, 'UTC');
     expect(params.get('vehicle_id')).toBe('1');
     expect(params.get('days')).toBeNull();
     expect(params.get('start')).toBe(weekStart.toISOString());

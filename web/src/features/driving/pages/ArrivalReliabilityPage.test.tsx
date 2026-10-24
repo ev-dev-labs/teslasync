@@ -770,8 +770,8 @@ describe('ArrivalReliabilityPage', () => {
     expect(weekday.getAllByText('Monday').length).toBeGreaterThan(0);
     expect(weekday.getAllByText('3').length).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(/America\/Los_Angeles/).length,
-    ).toBeGreaterThan(0);
+      screen.queryAllByText(/America\/Los_Angeles/).length,
+    ).toBe(0);
   });
 
   it('handles a sole supported window without duplicated extreme claims', () => {

@@ -70,8 +70,7 @@ export function WeeklyPunchcard({
       <Text as="p" variant="caption" className="mt-1">
         {t(
           'rhythm.weeklyPunchcard.timezone',
-          '24-hour departures grouped in {{timezone}}',
-          { timezone: summary.timeZone },
+          '24-hour departures grouped by local start hour.',
         )}
       </Text>
 

@@ -1,6 +1,481 @@
 # Post-redesign follow-ups — plan
 
-## Current status — 2026-10-20 CI closeout
+## Timezone display follow-up — 2026-10-21 (PR #202, high priority)
+
+Goal: every displayed date/time follows Settings > Units "Time zone
+display" + "My time zone override" (fallback: browser zone); no raw
+ISO/UTC text, no zone-name suffixes, no duplicate moments/ranges on
+pages; ranges end-inclusive for users; day boundaries in the effective
+zone; API timezone params send the effective zone; backend day
+bucketing gains a zone parameter where missing; setting changes apply
+without reload.
+
+Approach: harden the existing shared layer (`resolveTimezone` in
+`web/src/lib/timezone.ts`, formatters in `web/src/lib/dateFormat.ts`,
+`useDateFormat`/`useTimezone`) instead of building a parallel one:
+validate override/vehicle zones via `Intl` and fall back to the
+browser zone; add one end-inclusive range formatter. Migrate direct
+`Intl`/`toLocale*` display sites and `· {timezone}` / `({timezone})`
+suffix sites to it. Keep schedule-definition zones (automation cron /
+time-window, quiet-hours windows, car clock format) as domain data,
+not display preferences. Keep full ISO with offsets in CSV/JSON
+exports and the Settings page's own explanation.
+
+Decisions (recorded, no questions asked):
+- Invalid `timezone_user` or vehicle zone falls back to the browser
+  zone (then UTC), never throws, never renders raw.
+- Per-automation trigger/window timezones and quiet-hours window
+  zones are kept: they define when something fires, not how times
+  display. Zone-name suffixes are still removed from their display.
+- Exports keep ISO-with-offset; the audit allowlists export builders.
+- `DateTime.tsx` invalid-tz guard stays as the component-level backstop.
+
+Duplicates removed (file, shown before, what remains):
+- `charging/.../ChargingSummaryBrief.tsx`: freshness showed raw
+  `start – endExclusive (timezone)` plus raw event/snapshot ISO; now one
+  `formatDateRange` / formatted moment in the display zone (test:
+  `ChargingSummaryBrief.test.tsx` drawer assertions).
+- `driving/.../NestedDrivingBrief.tsx`: scope showed raw ISO bounds with
+  `(exclusive end)` plus `· timezone`; now one formatted range/moment
+  plus unchanged coverage wording (test: mock-marker scope assertions).
+- `analytics/.../CalendarSummaryCards.tsx`: scope label plus raw
+  `start – endExclusive · timezone`; now label plus one formatted range.
+- `analytics/.../CarbonEvidenceBrief.tsx`: calendar labels plus raw
+  instants plus zone; now one formatted range (`EvidenceBriefs.test`).
+- `analytics/.../CarbonFootprintBrief.tsx`: `startLabel – endLabel ·
+  timezone`; now one formatted range.
+- `analytics/.../MileageBudgetBrief.tsx`: raw event/analysis ISO plus
+  zone; now formatted bounds / one formatted range.
+- `driving/.../FsdDriveAnalyticsPanels.tsx`: previous-period
+  `start_date - end_date · timezone` and insights `start_at – end_at ·
+  timezone`; now `formatDayKeyRange` / `formatDateRange`
+  (`FsdDriveAnalyticsPanels.test.tsx` de-DE + en-US pins).
+- `driving/.../FsdObservatoryPanel.tsx`: `start_at – end_at · timezone`
+  label; now one formatted range.
+- `admin/.../ApiLogsSummary.tsx`: `start – end (timezone, exclusive
+  end)`; now one formatted range (both ApiLogsSummary tests).
+- `analytics/pages/TimelinePage.tsx`: formatted datetimes plus
+  `(exclusive) · timezone`; now one formatted range.
+- `driving/pages/RegenEfficiencyPage.tsx`: raw ISO em-dash span plus
+  `(timezone)`; now one formatted range.
+- `driving/pages/FSDInsightsPage.tsx`: raw `start–end (exclusive end) ·
+  timezone`; now one formatted range.
+- `driving/pages/DrivingRhythmPage.tsx`: raw `start–end · timezone`
+  calendar keys; now one `formatDayKeyRange`.
+- `notifications/.../NotificationReportPanel.tsx`: raw `from to to
+  (exclusive) · timezone`; now one formatted range (drawer test).
+- `system/.../FSMOperationalBrief.tsx`: `label · [start, end) ·
+  timezone`; now `label · formatted range` (de-DE pin `1.–3. Okt. 2026`).
+- `system/pages/StateMachineDebuggerPage.tsx`: raw `[start, end) ·
+  timezone` caption plus raw `YYYY-MM-DD` labels; now one formatted
+  range and formatted day labels (Mar 8 DST-day test).
+- `vehicles/.../DayLogOperationalSummary.tsx` + `DayLogPage.tsx` +
+  `DayLogControls.tsx`: scope `date · timezone` and raw freshness
+  bounds are now one formatted day; the `Day boundaries in {{tz}}` note
+  and its `aria-describedby` are gone; the unused timezone prop is gone.
+- `dashboard/widgets/FsdWeeklyWidget.tsx`: raw `start to end
+  exclusive · browserZone` is now `Vehicle id · formatted range`, and
+  the API call sends the display zone instead of the browser zone.
+- `vehicles/pages/ParkingAnalyticsPage.tsx`: raw `start → end ·
+  timezone` is now `sample · formatted day-key range` (de-DE + DST-day
+  pins).
+- `sharing/.../ShareCardBrief.tsx` +
+  `ShareCardSourceScopeLedger.tsx`: calendar labels plus zone are now
+  one formatted range; the API-window row keeps its `≤` notation with
+  formatted datetimes instead of raw ISO.
+- `analytics/.../CarbonSourceScopeLedger.tsx` +
+  `CarbonEvidenceLedger.tsx`: raw labels/window plus zone are now one
+  formatted range; API window uses formatted datetimes; `Calendar
+  timezone: X · N days` is now `N days`.
+- Methodology prose no longer names zones: `CarbonMethodology.tsx`
+  (range + selected-zone wording), `EnergyPage.tsx` (bucket tip),
+  `DrivingRhythmMethodology.tsx`, `DepartureConsistency.tsx` (×2),
+  `WeeklyPunchcard.tsx`, `FsdDistanceTrend.tsx`,
+  `ShareCardMethodology.tsx`. The rhythm UTC-fallback explainer stays:
+  it discloses grouping semantics, not a display zone.
+- `driving/.../drivetrain-health-modernization/MethodologyPanel.tsx`:
+  `formatted [raw ISO] · zone` is now one formatted range.
+- `admin/.../AuditLogFilters.tsx`: `Filter timezone: X` is now
+  `Filters use your selected time zone.` (the controller already
+  resolves the zone from settings).
+- `battery/.../DrainEventDirectory.tsx`: removed the per-page `Time
+  zone display: X` echo; event times already use the shared layer.
+- `dashboard/widgets/EnergySiteInfoWidget.tsx`: removed the
+  Installation timezone row (dashboard is a main route; the value
+  remains in API payloads and exports).
+- `advanced-intelligence/pages/JourneyAssurancePage.tsx`: departure
+  entry and default are now display-zone wall time (new
+  `zonedWallTimeToUtc`/`toZonedDatetimeStr` helpers with DST-gap,
+  overlap, and invalid-input tests); the browser-zone hint is now
+  `Enter departure in your selected time zone.`; the departure-zone
+  contract tests were rewritten for the new behavior.
+- `components/layout/sidebar/SidebarDriveBadge.tsx`: `today` is now
+  computed in the display zone instead of the browser zone.
+- `battery/.../charge-advisor/ChargeAdvisorAccounting.tsx`: `Analysis
+  window: rawStart – rawEnd (zone)` and `Included history window: raw
+  through raw in zone` are now one `formatDayKeyRange`; tests assert
+  `Included history window: … Jun 2, 2026`.
+- `battery/.../charge-advisor/ChargeAdvisorMethodology.tsx`: `Calendar
+  calculations use X.` is now selected-zone wording; the `analysis`
+  prop destructure is gone.
+- `analytics/.../drive-archetypes/ArchetypeMethodology.tsx`:
+  `circular hour in X` (×2) is now selected-zone wording.
+- `battery/.../cycle-stress/CycleStressMethodology.tsx` +
+  `CycleStressSourceCoverage.tsx`: `… use X` and `X local calendar`
+  are now selected-zone wording (formatter plumbing untouched).
+- `battery/.../pack-capacity/PackCapacityMethodology.tsx`: `… use X`
+  is now selected-zone wording.
+- `battery/pages/VampireDrainPage.tsx`: removed the standalone
+  `<Caption>{timeZone}</Caption>` zone echo; grouping caption is now
+  selected-zone wording.
+- `charging/pages/ChargeDepartureAlignmentPage.tsx`:
+  `friendly (tz) · ISO` instant labels are now the single friendly
+  label; CSV export rows keep full ISO instants via a separate
+  `csvRows` array (accessible rows use `scalarRows`).
+- `driving/.../arrival-reliability/`: methodology, month/weekday
+  profiles and window comparisons no longer name the zone; unused
+  `timeZone` destructures removed (WeekdayProfile, Methodology,
+  WindowComparisons).
+- `driving/.../departure-forecast/`: methodology snapshot anchor
+  dropped its `· zone` suffix; methodology/hour/weekday/weekly texts
+  are selected-zone wording. `DepartureForecastPage.tsx` provenance no
+  longer renders zone values; `usesVehicleMetadata` and the
+  saved-user/browser source label now validate zones, and the fallback
+  wording covers invalid metadata. Page tests rewritten for the
+  fallback chain (invalid vehicle → saved user zone; invalid saved
+  user → browser zone; blank legacy → model-local UTC).
+- `driving/.../destination-transitions/`: methodology, two-hour,
+  month and weekday texts no longer name the zone; unused `timeZone`
+  destructures removed.
+- `driving/.../range-buffer/`: methodology/hour/weekday texts are
+  selected-zone wording; unused destructures removed.
+- `driving/.../journey-fragmentation/MethodologyPanel.tsx` +
+  `StartProfileChart.tsx`: `vehicle IANA timezone: X` is now
+  selected-zone wording.
+- `driving/.../seasonal-efficiency/`: removed the `Vehicle timezone:
+  X` scope prefix (`SeasonalSummaryBrief`) and evidence-band span
+  (`SeasonalKpiEvidenceBand`); methodology scope is selected-zone
+  wording; unused destructures removed.
+- `driving/.../fsd-insights/useFsdConfidenceItems.ts`: observation
+  window value dropped its `(zone)` suffix.
+- `vehicles/.../parking-analytics/`: month/overnight/method-caveat
+  texts are selected-zone wording; `MonthlyDwellTrend` month labels
+  migrated from raw `Intl` to `formatMonthYear`.
+- i18n: `en.json` updated for 51 changed keys (values verified
+  against source fallbacks; ar/he have none of these keys);
+  checkpoints + fingerprints regenerated via
+  `i18n-trio-checkpoint`/`i18n-trio-combined-checkpoint`/`split-i18n-catalog`
+  (`--typed` for the debugger page's dynamic key); two fsdWeekly pins
+  updated to the new catalog value. `tsconfig.json` lib widened
+  ES2020→ES2021 (type-level; `formatRange` needs it).
+- Kept as schedule-definition domain data (not display preferences):
+  automation trigger/condition timezones, quiet-hours window zones and
+  their settings/preview summaries, the car clock format. Exports keep
+  full ISO with offsets; Settings keeps its own explanation.
+
+TZ-3b duplicates removed (shared-layer migration; full suite 2724
+files / 57248 tests green after migrating 19 test files' pins):
+- `components/data-display/format/DateTime.tsx` (shared): removed the
+  ISO `title` (`toISOString()` / `ISO (tz)`) and the `showTz`
+  abbreviation span; the `showTz` prop is deleted (no prod uses
+  left). One friendly span, no title.
+- Direct `Intl`/`toLocale*` migrated to shared helpers (zone now
+  resolved, output contract unchanged): `RangePicker.tsx`→
+  `formatDayKeyRange`; `YearReviewWidget`, `MonthlyRhythmTrend`,
+  `ParkingTemporalProfile` (weekday UTC-pinned);
+  `seasonal-efficiency/formatters.ts` deleted (`formatLocalDate`/
+  `formatMonth`) with 8 seasonal components migrated;
+  drive-archetype/odometer/carbon/cold-start/sweet-spot display
+  hooks; cycle-stress/range-buffer/pack-capacity/drive-calendar
+  `labels.ts`; 3 pack-capacity timelines; `SoftwareUpdatesPage`
+  monthLabel; audit-log `toDateTimeInput`→`toZonedDatetimeStr`;
+  departure labels→`formatChartInstant` (GMT-offset, no zone name).
+- Zone/abbrev suffixes removed: `ColdStartPage` `(PT)`,
+  HVAC/seasonal zone cards, cabin-thermal suffix.
+- ISO `title` attributes removed (friendly text remains, shown
+  once): `GDPRArtifactDetails` (`title={iso}`), TripReplay drawers,
+  `JourneyDetailsPanel`/`JourneySequence`, `RoadAnomalyPanel`,
+  `RouteMapSection`, `SilentCounterPanel`, `ShareDriveDialog`,
+  `NotificationRow`, `TimeMachinePage`, `DriveDetailHeader`
+  (double `showTz`), Gear/WhyEnded panels, `SignalEvidence`,
+  `TeslaAccountSection`, `VehicleDetailPage`,
+  Communications/SourceFreshness panels, `FleetSetupSubscribePanel`,
+  `CabinThermalCandidateRow`.
+- Copy to selected-zone wording: `SeasonalCalendarCoverage`/
+  `SeasonalCoverageBrief` (`Timezone` row → `Included rows`,
+  vehicle-IANA → selected zone), journey `WeekdayProfileChart`
+  (normalized-vehicle → selected zone). `ApiLogsSummary` and
+  drivetrain `MethodologyPanel` scopes (batch-1 code) had their
+  tests migrated to the friendly range.
+- Conversion boundaries use the raw saved zone
+  (`useConversionTimezone`/`resolveRawTimezone`): `RateForm` and
+  `JourneyAssurancePage`. Display still falls back (never throws);
+  conversion with an invalid saved zone reaches the helper, which
+  throws → form validation error instead of persisting instants
+  converted in a guessed zone.
+- `TopParkingLocations` zone-label assertion was stale (fails on
+  HEAD too) and contradicts spec §3: flipped to assert absence;
+  its no-shift assertions (the test's subject) pass unchanged.
+- i18n: 4 more `en.json` keys (calendar subtitle/zone/rows,
+  weekday subtitle); split catalogs + producer/combined
+  checkpoints + catalog pins regenerated via repo scripts.
+- Calendar values verified: `formatMonthYear` validates its own
+  input (incl. day rollover, e.g. `2026-02-30` → placeholder);
+  `2026-03`→Mar 2026 and `2026-03-01`→Mar 1, 2026 unshifted in
+  America/Los_Angeles and Pacific/Kiritimati; midnight-UTC
+  instants convert (new unit tests).
+
+TZ-4 API timezone sends + backend zone params (spec §5; full suite +
+tsc green, see TZ-7 gate for the replica):
+- Backend `?timezone=` added (validate IANA → 400, default UTC,
+  `AT TIME ZONE $N` bucketing, Go tests per endpoint): carbon
+  summary (month+hour) + recommendation (hour); regen monthly;
+  tempimpact monthly trend + drive-point dates (+ Shift endpoint);
+  costforecast monthly history (SQL extracted to a pinned const);
+  RUL daily SoH series (both endpoints); mileage monthly + daily
+  (window starts snap to zone midnight/month-start; new
+  zone-frame snap tests). FSD + daylog already had zone params.
+- Frontend sends the effective display zone (`useDateFormat().tz`,
+  explicit-overridable, in query keys): new `useCarbon.test.tsx`
+  + `useRUL.test.tsx`; extended `useDriving` (regen),
+  `useAnalytics` (mileage monthly/daily, tempimpact),
+  `useCharging` (cost forecast) tests with omitted-zone →
+  Auckland assertions.
+- Display follows the setting (32 files): 24 pages/components
+  converted from hardcoded `useTimezone('vehicle'|'user')` to
+  `useDateFormat().tz`; `DateTime` (`in` prop), `ChartTooltip`
+  (default), `DayLogPage`, audit-log hook likewise; `getWeekRange`
+  takes an optional zone (digest + FSD widget pass `tz`; zoned +
+  fallback tests). ScienceLab scope+display unified (was
+  split-brain); mode-pin tests updated to setting-driven.
+- Deliberately unchanged: legacy getters without prod callers
+  (`getRegenStats`, `getTemperatureImpact`, `getDailyMileage`,
+  `getMonthlyMileage`) stay on the UTC default; rolling-duration
+  stats (mileage stats, carbon intensity) take no zone; AI cost
+  forecaster buckets in UTC (the AI port carries no user zone);
+  journey drive-detail keeps the drive-vehicle frame (differs
+  from the selected vehicle by design); automation
+  trigger/condition schedule zones stay (schedule data, not
+  display); pure lib zone sanitizers take the caller value.
+
+## Post-merge execution — 2026-10-20
+
+Base: `origin/main` at `e6c401fba1` (PR #198 squash `c353a59399`).
+Branch: `fix/post-merge-followups`; draft [PR #202](https://github.com/ev-dev-labs/teslasync/pull/202).
+No old branch merges or cherry-picks.
+The historical branch instructions and decision options below are superseded
+by the owner's explicit post-merge task. Draft PR only; never merge it.
+
+- A1–3: implemented; full local verification passed — header-owned, server-bounded vehicle cost, energy flow,
+  science lab; retain 90-day / 3650-day / 30-day ceilings respectively.
+- A4: implemented, full local verification passed — independent future planning; remove historical header coupling.
+- A5: implemented, full local verification passed — translate stable categories, preserve supplied names/unknown codes.
+- A6: implemented, full local Go/frontend verification passed — typed facts localize in both
+  the timeline and dashboard widget, with unit conversion and legacy prose fallback.
+- A7: implemented — disabled duplicate through create API, then open its editor.
+  Export hidden: the existing portable endpoint forwards arbitrary
+  `CommandParams` and `action_set_setting` text without secret redaction
+  (`internal/api/automation/handler.go`, `automationStepRawMessage`). A JSON
+  download cannot currently guarantee the requested secret-free contract.
+  No non-working Export control remains.
+- A8: NEEDS OWNER DECISION — Insurance "0..60" policy remains unresolved;
+  its audit origin is traced below. No guessed change.
+- B: re-check completed: web 9 (7 high, 2 moderate), docs 2 low to 0. Published
+  braces 3.0.3, micromatch 4.0.8 and x/crypto v0.58.0 still have no newer fix.
+  Mermaid plugin 2.0.17 still peers only Mermaid 10/11; replaced it with the
+  verified direct integration below. Tailwind belongs exclusively to Part C.
+- Additional owner item: implemented; final verification IN PROGRESS — shared widget-header freshness ownership, corner/action geometry, all-widget guard, reviewed Windows snapshots and eight light/dark responsive dashboard captures. Complete before the remaining CI loop and Part C.
+- C: NOT STARTED — separate draft PR only after A/B PR is fully green.
+
+Insurance origin (owner decision still required): audit F08 in
+`docs/frontend-audits/phase6-qa-ownership-insurance-telematics.json` (introduced
+by `acb9513fe2`) means maximum telematics discount. Current backend
+`internal/app/ownershipintelsvc/insurance.go:671` validates 0..60; current form
+`web/src/features/ownership/pages/InsuranceTelematicsPage.tsx:738` allows 100.
+No insurance issues were returned by the GitHub issue search. The owner
+explicitly requested no implementation, so neither bound was changed.
+
+Security re-check evidence (2026-10-20): docs Mermaid 11.17.2 to 12.2.0 via a
+small direct Vue/markdown integration; removed the Mermaid plugin. Kept neutral
+theme tokens, explicitly retained Dagre layout, strict rendering and keyboard
+zoom. `npm run docs:build` passes; all 20 diagrams on seven pages produce SVGs,
+zero browser errors. Docs npm audit: 2 low to 0. Web remains 9 (7 high, 2
+moderate); no published braces/micromatch fix, Tailwind reserved for Part C.
+x/crypto v0.58.0 remains latest; govulncheck reports 0 affecting / 1 uncalled
+module vulnerability ([GO-2026-5932](https://pkg.go.dev/vuln/GO-2026-5932),
+unmaintained OpenPGP package, fixed version N/A). No forced audit fixes or workflow changes.
+The direct integration follows the [Mermaid render API](https://mermaid.js.org/config/usage.html)
+and [VitePress theme component extension](https://vitepress.dev/guide/extending-default-theme).
+
+Dependabot has 2 open alerts (web medium, docs low), fewer than the historical
+inventory. Alerts track main; the docs alert can close after owner merge and rescan. Only open Dependabot PR: [#200 nginx
+1.31.5 to 1.31.7](https://github.com/ev-dev-labs/teslasync/pull/200), a patch
+upgrade with no expected configuration migration. Backend/database/race/build
+checks passed (latest inventory: 42 passing checks, 1 failure); Security Scan
+failed on 12 old Go stdlib vulnerabilities in
+run39164557505. Recommendation: update/retest against current main, then merge
+only after green CI; do not merge while that security check is red. Not merged.
+
+Verification: full local CI replica required before each push, followed by
+remote checks on the exact pushed commit. Temporary reports stay outside Git.
+
+### Latest security refresh — 2026-10-21 02:05 UTC
+
+Vite6.4.4 now replaces6.4.3 in web and the docs override, addressing the
+[Windows existence-check advisory](https://github.com/advisories/GHSA-587h-7wmj-h5pm),
+[Windows argument-escaping advisory](https://github.com/advisories/GHSA-698v-4r3x-3vcv)
+and [editor argument advisory](https://github.com/advisories/GHSA-r825-w8mm-5pxw).
+A final refresh had raised audits to web10/docs2; after sequential single-package
+updates with all tests/previews stopped, web returns9 (7 high/2 moderate), docs0.
+Only Vite versions changed; npm also normalized three web lockfile dev flags.
+Patched private/mock/docs builds and full strict perf:check pass (399.6KB/400KB).
+All20 Mermaid diagrams on seven pages render, zero browser errors; no snapshots
+changed for dependency patches.
+
+A refreshed Go scan newly reports reachable GO-2026-6809 in Go1.27.2 x509,
+fixed in1.27.3. Raised go.mod to1.27.3 and the automatic Windows toolchain is
+verified. All workflows already use go-version-file; Docker follows1.27, so
+no workflow edits. Go build/test and route generation pass. CI-pinned
+golangci-lint2.15.0 rebuilt with1.27.3 reports0 issues; govulncheck now
+reports0 reachable/0 imported-package/1 uncalled-module vulnerabilities.
+x/crypto0.58.0 remains latest; uncalled OpenPGP GO-2026-5932 has no fixed version.
+The previous fully passing header-source unit/browser sweep is preserved in
+the progress log; the full replica repeats after these environment patches.
+Tailwind v4 still waits for PR202 to pass every remote check.
+
+### Additional owner item — shared widget freshness header
+
+SUPERSEDED 2026-10-21 (owner update): the freshness indicator stays exactly
+as it is on `main`. Do not change FreshnessDot/FreshnessDotAuto, WidgetShell
+freshness props, or per-widget freshness wiring; ignore the "Live"/age dots in
+widgets-compare.html (placeholders); add no age text/"Live" labels/new
+freshness UI. CORRECTION APPLIED 2026-10-22 (owner override, committed as
+`b7c55d6ab2` + `b3f0ba6272` + `658e6563fc`): the Phase 1 WIDGET HEADER task is
+DONE and its guard assertions STAY PASSING — `f6d6be4106` (one shared
+FreshnessDot per widget, pinned top-right corner, header icons directly left)
+is KEPT; only `c8aad38605` + `dc22ed9bfb` stay reverted (`70b4c257a2`,
+`0a89cfc2ed`). The 2026-10-21 SKIPPED/DROPPED/revert-everything directive is
+void (it was executed before the correction as `70b4c257a2,0a89cfc2ed,fb85d89745`,
+then `fb85d89745` was itself reverted). History, kept for the record: on
+2026-10-21 the uncommitted working tree contained zero FreshnessDot/
+freshness-prop diff lines, so there was nothing to revert in uncommitted work;
+the in-flight timezone batch finished first (clean tree), then the freshness
+commits were reverted via `git revert` (no resets), re-verified, and pushed.
+The redesign loop must
+reject any worker diff touching freshness. Revert set identified
+2026-10-21: `c8aad38605`, `dc22ed9bfb`, `f6d6be4106` (reverse order); CORRECTION 2026-10-22 (owner override): the `f6d6be4106` revert (`fb85d89745`) was itself reverted (`b7c55d6ab2`), so `f6d6be4106` (one shared FreshnessDot per widget, pinned top-right corner, header icons directly left) is KEPT; only `c8aad38605` + `dc22ed9bfb` stay reverted (`70b4c257a2`, `0a89cfc2ed`). The header guard stays passing; the redesign keeps the existing FreshnessDot/FreshnessDotAuto wiring and never uses the preview 'Live'/'2m ago' design. Playbook freshness rule + Part 2 wording updated (`b3f0ba6272`).
+`cad1237f5f` (Layout preservation pins) only if the shell-preservation
+suite fails after the revert; `8a895df1ad` is range-label e2e, unrelated,
+keep. Expected revert conflicts in i18n pins (timezone commits touched the
+same files) — resolve by re-running the repo i18n generators, never by hand.
+
+Implemented on `fix/post-merge-followups`; complete local/remote verification
+is still in progress before the next push. Root cause: DashboardGrid reserved
+`pr-28` for a separate absolute expand target, while edit controls and title-less
+freshness used independent overlays. The shared shell now spans the widget,
+uses one horizontal inset, and owns the sole dot after one compact action cluster.
+The grid supplies controls through context, including inline edit actions.
+VehicleHero keeps its state badge/provenance without its body freshness or badge
+dot. Static widgets show a neutral untimestamped dot; title-less widgets use the
+same translated fallback header. These choices avoid inventing observation times.
+
+- Extended original overflow guard: all121 registry widgets x min/default/large
+  x view/edit pass (726 rows), with exactly one dot, <=2px right-inset/centering
+  deltas, <=8px action gaps, zero missing widgets and zero proxy escapes.
+- Added body import-ownership and real charging-hero regressions, fetching-dot
+  continuity and inline grid-header unit coverage. The ownership test and full
+  header guard were red before the change. Consumer tests preserve loading,
+  retained-data, error-color and refresh assertions under the new header contract.
+- Added eight responsive smoke cases with screenshots at375/768/1280/1920,
+  light/dark, asserting hover and edit alignment. First complete run8/8, proxy0.
+- Compared original/new dashboard frames before regeneration. Updated only five
+  intended Windows baselines: visual-390-dark, visual-390-light,
+  visual-1440-dark, visual-1440-light and visual-forced-colors. Differences are
+  the shared corner indicator and consistent header-line height (body links move
+  with that line). Degraded profile unchanged. Targeted regeneration5/5, proxy0.
+- Visual fixture correction: its legacy8.5rem freshness text-width pin distorted
+  new widget icon geometry. Scoped that pin to non-widget controls; widget
+  snapshots now use actual production geometry. Masks, threshold0.1,
+  maxDiffPixels500 and all assertions remain unchanged. No workflow edits.
+- Private production build and complete strict perf:check pass at399.7KB startup,
+  with the400KB limit unchanged (2026-10-22 NOTE: regressed to 401.6KB startup
+  on HEAD `658e6563fc` — Lighthouse CI red; TZ-5c/date-layer + waitoracle +
+  freshness-correction growth under bisect, fix in progress, see work queue).
+  Generated translations/source checkpoints use
+  repository generators and LF normalization. No temporary captures/reports added
+  to Git. Final full-unit and browser-matrix results will be recorded below.
+
+### Header verification correction — 2026-10-21 00:50 UTC
+
+The first full sweep exposed an existing44px Expand target requirement in four
+catalogue-workspace cases. Restored44px Expand and edit controls with8px gaps,
+and changed the collision guard to the requested icons-left/dot-right order.
+The guard retains44px minimums, keyboard/no-hover visibility, exact native hit
+targets, readable text and minimum8px spacing, adding maximum8px spacing.
+All four cases pass. All726 registry rows and eight responsive capture cases
+pass again with zero proxy escapes after the correction.
+
+Compared the five affected Windows dashboard frames before regeneration again:
+the only additional difference is the intentional44px header-line height and
+dependent content displacement. Updated390light/dark,1440light/dark and
+forced-colors; degraded unchanged. Comparison and eight final responsive shots
+are in D:/tmp/widget-touch-* outside Git. No tolerance or mask changes.
+
+Remote f6d6be4106 WebKit3/3 job118970569625 passed assertions but the preview
+correctly rejected a late settings request. Its mobile navigation test omitted
+the existing strict mock-completion guard used by its siblings. Added that
+assertion/drain; both engines repeated three times pass18/18, zero escapes.
+Full local matrices are repeating before the next explicit branch push.
+No workflow changes.
+
+### A/B local verification — 2026-10-20 15:38 UTC
+
+- All 16 quality shards: 2,021 passed, 2 existing conditional skips, no flaky
+  or failed tests; all 10 Windows visual shards: 49 passed, 41 existing
+  profile skips, no baseline or tolerance changes. Every wrapper reports
+  zero proxy escapes. Backend/Docker services remain stopped.
+- Accessibility 13/13, Firefox/WebKit 6/6, isolated performance 9/9, and Edge
+  guard 35/35 on the seven affected routes at 375/414/768/1280/1920 passed.
+- Full Vitest: 57,184 passed, 0 failed, 4 existing pending. TypeScript, full
+  lint and audits, production/postbuild, hermetic mock build, route generator
+  checks, route/scenario/harness contracts and discovery passed. Go build,
+  full tests and golangci-lint passed. Generated freshness verified all 281
+  registered paths without mutation. Docs build/assets/diagrams passed.
+- Browser corrections preserve all assertions: Science pins the shared
+  header's exact “Last 30 days” label and all five API bounds. Telemetry holds
+  every live request through its explicit release, so background polling
+  cannot consume the refresh barrier. Affected full shards pass with retries
+  disabled. Playwright cache garbage collection interrupted an earlier run;
+  restored the exact pinned official browsers and reran every affected shard.
+- Frozen producer/catalog fingerprints were regenerated by repository tools
+  after English/Arabic/Hebrew verification; no hashes were edited manually.
+  No workflow, coverage, test-skip, visual-tolerance or baseline changes.
+- Pushed ce1e14ddff after its stable-HEAD production rebuild/postbuild passed.
+  Remote validation: CI39450664946 / Frontend Quality39450664732 running.
+  Part C remains gated on fully green A/B CI.
+
+### PR #202 CI correction — 2026-10-20 16:08 UTC
+
+Initial head ce1e14ddff completed with 198 passing checks, one existing
+conditional skip and one failure. Lighthouse's strict preflight found startup
+JavaScript400.5KB over the unchanged400KB budget; actual Lighthouse measurements
+had not run. The exact local private-map build reproduced it.
+
+Deferred the closed tour launcher using the existing command-palette event/initialOpen
+pattern; the first opening request, close/reopen and seen state remain covered.
+The new regression failed before and passed after; focused layout/launcher110
+passed. Complete private build and perf:check now pass at399.6KB, including
+translation locality and duplicate-module gates. No budget/workflow changes.
+The catalog generator moved11 unchanged tour strings into their existing lazy
+bundle (1262 startup keys). Verified translations and regenerated both source
+and shell-preservation pins with repository generators, LF-normalized.
+
+Full unit rerun:57,185 passed with one stale Layout pin; after generator refresh,
+all8,110 i18n tests pass. Other unit source files remain unchanged. The complete
+browser replica is running again against the committed application source before
+the next push; interrupted resource-contention attempts do not count as passes.
+
+## Historical CI closeout — 2026-10-20 CI closeout
 
 Current working branch is `ui/simplification`, draft PR #198; the branch note
 and baseline results below describe historical work, not a new checkout instruction.

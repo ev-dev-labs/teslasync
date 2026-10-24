@@ -9,7 +9,7 @@ import type { DistanceFormatter, ServiceRecord } from './maintenanceModel';
 
 /** Calendar-only service dates are business days, not midnight UTC instants. */
 export function formatMaintenanceDate(
-  value: string | Date | null | undefined,
+  value: string | number | Date | null | undefined,
   formatInstant: DateFormatter,
   locale: string,
 ): string {

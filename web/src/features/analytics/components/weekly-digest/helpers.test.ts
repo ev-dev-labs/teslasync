@@ -99,6 +99,61 @@ describe('getWeekRange', () => {
     expect(Math.round((curStart.getTime() - prevStart.getTime()) / 86_400_000)).toBe(7);
     expect(Math.round((nextStart.getTime() - curStart.getTime()) / 86_400_000)).toBe(7);
   });
+
+  // Reads the wall calendar of `d` in `timeZone` as [weekday, Y, M, D, h, mi, s, ms].
+  const wallIn = (d: Date, timeZone: string): [string, number, number, number, number, number, number, number] => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone, weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+    }).formatToParts(d);
+    const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? '';
+    return [get('weekday'), Number(get('year')), Number(get('month')), Number(get('day')),
+      Number(get('hour')), Number(get('minute')), Number(get('second')), d.getMilliseconds()];
+  };
+
+  it('frames the week in the given zone instead of the browser zone', () => {
+    // 2026-07-12T10:30:00Z is Sunday Jul 12 in UTC but Monday Jul 13
+    // 00:30 in Pacific/Kiritimati (UTC+14, no DST): the zoned week is
+    // Mon Jul 13 … Sun Jul 19 regardless of the host zone.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-12T10:30:00.000Z'));
+
+    const [start, end] = getWeekRange(0, 'Pacific/Kiritimati');
+
+    expect(wallIn(start, 'Pacific/Kiritimati')).toEqual(['Mon', 2026, 7, 13, 0, 0, 0, 0]);
+    expect(wallIn(end, 'Pacific/Kiritimati')).toEqual(['Sun', 2026, 7, 19, 23, 59, 59, 999]);
+    // No DST in Kiritimati: the span is exactly 7 days minus 1 ms.
+    expect(end.getTime() - start.getTime()).toBe(7 * 86_400_000 - 1);
+    // "Now" is inside its own zoned week.
+    const now = new Date('2026-07-12T10:30:00.000Z');
+    expect(now >= start && now <= end).toBe(true);
+  });
+
+  it('keeps Sunday in the zoned week and shifts offsets by whole weeks', () => {
+    // 2026-07-12T09:00:00Z is Sunday Jul 12 23:00 in Kiritimati: the
+    // last day of the Jul 6 … Jul 12 week, not the start of a new one.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-12T09:00:00.000Z'));
+
+    const [curStart, curEnd] = getWeekRange(0, 'Pacific/Kiritimati');
+    const [prevStart] = getWeekRange(-1, 'Pacific/Kiritimati');
+
+    expect(wallIn(curStart, 'Pacific/Kiritimati').slice(0, 4)).toEqual(['Mon', 2026, 7, 6]);
+    expect(wallIn(curEnd, 'Pacific/Kiritimati').slice(0, 4)).toEqual(['Sun', 2026, 7, 12]);
+    expect(wallIn(prevStart, 'Pacific/Kiritimati').slice(0, 4)).toEqual(['Mon', 2026, 6, 29]);
+    expect(curStart.getTime() - prevStart.getTime()).toBe(7 * 86_400_000);
+  });
+
+  it('falls back to the local week for an unparseable zone', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 6, 8, 12, 0, 0));
+
+    const [start, end] = getWeekRange(0, 'Not/AZone');
+    const [localStart, localEnd] = getWeekRange(0);
+
+    expect(start.getTime()).toBe(localStart.getTime());
+    expect(end.getTime()).toBe(localEnd.getTime());
+  });
 });
 
 describe('isInRange', () => {

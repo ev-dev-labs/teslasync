@@ -35,7 +35,6 @@ export function DepartureForecastWeeklyTrend({
   forecast,
   state,
   locale,
-  timeZone,
 }: DepartureForecastWeeklyTrendProps) {
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
@@ -178,7 +177,7 @@ export function DepartureForecastWeeklyTrend({
             <Text as="p" variant="caption" className="mt-3">
               {t(
                 'departure.weeklyTrend.elapsedSummary',
-                '{{departures}} returned departures across {{activeDays}} active days and {{activeWeeks}} active weeks over {{observedWeeks}} elapsed weeks in {{timeZone}}. Calendar opportunity is model-assumed; gaps do not establish recording coverage.',
+                '{{departures}} returned departures across {{activeDays}} active days and {{activeWeeks}} active weeks over {{observedWeeks}} elapsed weeks in your selected time zone. Calendar opportunity is model-assumed; gaps do not establish recording coverage.',
                 {
                   departures: fmtInt(forecast.totalDepartures, locale),
                   activeDays: fmtInt(forecast.activeDays, locale),
@@ -188,7 +187,6 @@ export function DepartureForecastWeeklyTrend({
                     undefined,
                     locale,
                   ),
-                  timeZone,
                 },
               )}
             </Text>

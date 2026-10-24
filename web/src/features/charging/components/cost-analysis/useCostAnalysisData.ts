@@ -1,11 +1,13 @@
+import { useTranslation } from 'react-i18next';
 import { useMemo } from 'react';
 import type { ChargingSession } from '@/api/types';
 import { distanceAddedM } from '../charging-curve/helpers';
-import { ymdInTz } from '@/lib/dateFormat';
+import {zonedDateParts} from '@/lib/dateFormat'
+import {ymdInTz} from '@/lib/dateConvert';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { CHART_COLORS, CHARGER_COLORS } from '@/lib/colors';
 import { KWH_PER_GALLON, CO2_PER_GAL_KG, KG_CO2_PER_TREE_YEAR } from './constants';
-import { categorizeCharger, gasEquivalentCost } from './helpers';
+import { chargerCategoryCode, chargerCategoryLabel, gasEquivalentCost } from './helpers';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import type {
   CoreStats, MonthlyBucket, ChargerTypeData, HourBucket,
@@ -146,20 +148,15 @@ export function useCostAnalysisData({
   mpg,
   electricityRate,
 }: UseCostAnalysisDataParams): UseCostAnalysisDataResult {
+  const { t } = useTranslation();
   const { tz: accountingTimezone, formatDateShort } = useDateFormat();
   const sessionDates = useMemo(() => {
-    const hourFormatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: accountingTimezone, hour: 'numeric', hourCycle: 'h23',
-    });
     return new Map((sourceSessions ?? []).map(session => {
       const date = session.started_at ? new Date(session.started_at) : null;
       const validDate = date && Number.isFinite(date.getTime()) ? date : null;
-      const hour = validDate
-        ? Number(hourFormatter.formatToParts(validDate).find(part => part.type === 'hour')?.value)
-        : NaN;
       return [session, {
         month: validDate ? ymdInTz(validDate, accountingTimezone)?.slice(0, 7) ?? null : null,
-        hour: Number.isFinite(hour) ? hour : null,
+        hour: validDate ? zonedDateParts(validDate, accountingTimezone)?.hour ?? null : null,
         timestamp: validDate?.getTime() ?? null,
       }];
     }));
@@ -264,7 +261,7 @@ export function useCostAnalysisData({
 
   const monthlyData = useMemo<UseCostAnalysisDataResult['monthlyData']>(() => {
     if (!sessions || sessions.length === 0) return [];
-    const buckets: Record<string, { cost: number; energy: number; sessions: number; records: ChargingSession[] }> = {};
+    const buckets: Record<string, { cost: number; energy: number; sessions: number; records: ChargingSession[] }> = Object.create(null);
     sessions.forEach((s) => {
       const key = sessionDates.get(s)?.month;
       if (!key) return;
@@ -315,9 +312,9 @@ export function useCostAnalysisData({
 
   const chargerTypeData = useMemo<UseCostAnalysisDataResult['chargerTypeData']>(() => {
     if (!sessions || sessions.length === 0) return [];
-    const groups: Record<string, { cost: number; energy: number; sessions: number; records: ChargingSession[] }> = {};
+    const groups: Record<string, { cost: number; energy: number; sessions: number; records: ChargingSession[] }> = Object.create(null);
     sessions.forEach((s) => {
-      const cat = categorizeCharger(s);
+      const cat = chargerCategoryCode(s);
       if (!groups[cat]) groups[cat] = { cost: 0, energy: 0, sessions: 0, records: [] };
       groups[cat].records.push(s);
       groups[cat].cost += finite(s.cost_decimal) ?? 0;
@@ -328,20 +325,20 @@ export function useCostAnalysisData({
       .map(([name, v]) => {
         const groupCoverage = coverage(v.records);
         return {
-          name,
+          name: chargerCategoryLabel(t, name),
           cost: groupCoverage.pricedCount > 0 ? v.cost : NaN,
           energy: groupCoverage.energyCount > 0 ? convertEnergyFromSI(v.energy, 'kWh') : NaN,
           sessions: v.sessions,
           coverage: groupCoverage,
-          color: CHARGER_COLORS[name] ?? CHART_COLORS[4],
+          color: CHARGER_COLORS[({home:'Home',supercharger:'Supercharger',public_dc:'Public DC',work_l2:'Work / L2'} as Record<string,string>)[name] ?? name] ?? CHART_COLORS[4],
         };
       })
       .sort((a, b) => b.cost - a.cost);
-  }, [sessions]);
+  }, [sessions, t]);
 
   const hourlyData = useMemo<UseCostAnalysisDataResult['hourlyData']>(() => {
     if (!sessions || sessions.length === 0) return [];
-    const buckets: Record<number, { sessions: number; totalCost: number; totalEnergy: number; records: ChargingSession[] }> = {};
+    const buckets: Record<number, { sessions: number; totalCost: number; totalEnergy: number; records: ChargingSession[] }> = Object.create(null);
     for (let h = 0; h < 24; h++) {
       buckets[h] = { sessions: 0, totalCost: 0, totalEnergy: 0, records: [] };
     }

@@ -101,7 +101,9 @@ describe('real carbon and archetype raw bridge and retained drawers', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const evidenceDialog = screen.getByRole('dialog');
     expect(within(evidenceDialog).getByText('Gas baseline minus attributed charging CO₂')).toBeInTheDocument();
-    expect(within(evidenceDialog).getByText(/2026-01-01T00:00:00Z – 2026-07-01T00:00:00Z · UTC/)).toBeInTheDocument();
+    expect(within(evidenceDialog).getByText('Jan 1 – Jun 30, 2026')).toBeInTheDocument();
+    expect(within(evidenceDialog).queryByText(/2026-01-01T00:00:00Z/)).toBeNull();
+    expect(within(evidenceDialog).queryByText(/· UTC/)).toBeNull();
     fireEvent.keyDown(evidenceDialog, { key: 'Escape' });
     expect(JSON.stringify(analysis)).toBe(original);
   });

@@ -1,5 +1,6 @@
 import type { ThermalTaxSample, ThermalPhase } from '../../lib/chargingThermalTax';
 import type { DateFormatter } from '@/hooks/useDateFormat';
+import { formatTime as formatTimeShared } from '@/lib/dateFormat';
 
 /** Presentation evidence only. Never changes the specialist's operands or summary. */
 export function heaterEvidence(samples: readonly ThermalTaxSample[]) {
@@ -34,7 +35,7 @@ export function thermalPowerRows(samples: readonly ThermalTaxSample[], locale: s
       tMs: row.tMs,
       time: formatTime
         ? formatTime(new Date(row.tMs))
-        : new Date(row.tMs).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
+        : formatTimeShared(new Date(row.tMs), { locale }),
       heaterW: row.heaterW,
       chargeW: row.chargeW,
     }));

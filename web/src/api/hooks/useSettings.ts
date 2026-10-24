@@ -42,7 +42,11 @@ export function useSaveSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       }),
-    onSuccess: () => {
+    onSuccess: (saved) => {
+      // Push the saved settings into the cache synchronously so every
+      // subscriber (including all display-timezone formatters) re-renders
+      // in the same tick, without waiting for the confirmation refetch.
+      qc.setQueryData(settingsKeys.settings, saved);
       invalidateAndBroadcast(qc, { queryKey: settingsKeys.settings });
       success('toast.settings.save.success', 'Settings saved');
     },

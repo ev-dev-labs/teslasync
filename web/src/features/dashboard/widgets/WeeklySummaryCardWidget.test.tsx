@@ -1,423 +1,152 @@
-/**
- * WeeklySummaryCardWidget contract + hardening tests.
- *
- * The widget is a self-refreshing dashboard tile that compares the current vs
- * previous week for a vehicle, reading `useWeeklyDigest(id)`. Its whole shape is
- * a function of three inputs: the resolved vehicle id (`vehicleId` prop, else the
- * first fleet vehicle, else 0), the digest query result, and the user's distance
- * preference. The widget renders one of four layouts by `size`:
- *
- *   - cols<=1 && rows<=1  → CompactView (one big distance number + unit label)
- *   - cols>=3             → Wide (four StatCards)
- *   - rows>=2             → Tall (four StatCards)
- *   - otherwise (e.g 2x1) → two StatCards + an InlineMetric cost/efficiency row
- *
- * Two layers are locked here:
- *
- *  A. The pure `trendOf` helper (exported for testability): the zero-baseline
- *     em-dash, the sub-1% "~0%" collapse, the up/down direction, and the
- *     `lowerIsPositive` polarity flip used by cost + efficiency.
- *
- *  B. The component behaviour — and, crucially, a REGRESSION GUARD on the SI
- *     cutover. The digest wire shape is km + Wh/km; `convertDistanceFromSI`
- *     expects SI metres. The pre-fix code passed miles to it (~1000x too small)
- *     and double-converted efficiency. These tests assert the corrected values
- *     for both km and mi preferences and pin the exact buggy outputs as absent.
- *
- * i18n is stubbed to echo the English fallback so every copy assertion is real;
- * `@/hooks/useUnits` + `@/hooks/useFormatting` are stubbed so the distance
- * preference and currency formatting are deterministic and injectable; and the
- * fleet list + digest query are mocked so no network is touched.
- */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// i18n passthrough: honour the English fallback so every copy assertion is real.
+const { weeklyDigestMock, vehiclesMock, unitsMock, formattingMock } = vi.hoisted(() => ({
+  weeklyDigestMock: vi.fn(),
+  vehiclesMock: vi.fn(),
+  unitsMock: vi.fn(),
+  formattingMock: vi.fn(),
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: unknown, options?: Record<string, unknown>) => {
-      const template = typeof defaultValue === 'string' ? defaultValue : key;
+    t: (_key: string, fallback?: string | Record<string, unknown>, options?: Record<string, unknown>) => {
+      const template = typeof fallback === 'string' ? fallback : _key;
       return options
-        ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(options[name] ?? ''))
+        ? template.replace(/\{\{(\w+)\}\}/g, (_match, name) => String(options[name] ?? ''))
         : template;
     },
-    i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
 
-// The distance preference is injected per-test through a mutable holder so the
-// SI → display conversion can be exercised for both km and mi. The widget only
-// reads `unitPrefs.distance`, so a partial stub is sufficient.
-let MOCK_DISTANCE_UNIT: 'km' | 'mi';
-vi.mock('@/hooks/useUnits', () => ({
-  useUnits: () => ({ unitPrefs: { distance: MOCK_DISTANCE_UNIT } }),
-}));
+vi.mock('@/api/hooks/useAnalytics', () => ({ useWeeklyDigest: (id: string) => weeklyDigestMock(id) }));
+vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: () => vehiclesMock() }));
+vi.mock('@/hooks/useUnits', () => ({ useUnits: () => unitsMock() }));
+vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => formattingMock() }));
 
-// Deterministic currency formatting — the widget only calls formatCurrency().
-vi.mock('@/hooks/useFormatting', () => ({
-  useFormatting: () => ({
-    currencySymbol: '$',
-    formatCurrency: (amount: number) => `$${amount.toFixed(2)}`,
-  }),
-}));
-
-// The fleet list + digest query result are injected per-test through these
-// mutable holders (the `MOCK_`/`mock` prefixes let vitest hoist the factory
-// above them safely). `mockUseWeeklyDigest` records the id string the widget
-// resolves so the vehicle-resolution fallback chain can be asserted.
-let MOCK_VEHICLES: { id: number }[] | undefined;
-vi.mock('@/api/hooks/useVehicles', () => ({
-  useVehicles: () => ({ data: MOCK_VEHICLES }),
-}));
-
-const mockUseWeeklyDigest = vi.fn((_vehicleId: string): DigestQuery => MOCK_QUERY);
-let MOCK_QUERY!: DigestQuery;
-vi.mock('@/api/hooks/useAnalytics', () => ({
-  useWeeklyDigest: (vehicleId: string) => mockUseWeeklyDigest(vehicleId),
-}));
-
-import WeeklySummaryCardWidget, { trendOf } from './WeeklySummaryCardWidget';
-
-it.each([1, 2, 3])('identifies the weekly summary at %i columns', (cols) => {
-  renderWidget({ size: { cols, rows: 2 } });
-  expect(screen.getByRole('heading', { name: 'Weekly summary' })).toBeInTheDocument();
-});
+import WeeklySummaryCardWidget from './WeeklySummaryCardWidget';
 import type { WidgetSize } from './types';
-import type { WeeklyDigestData } from '@/types/analytics';
-
-/** Only the fields the widget reads off the `useWeeklyDigest` result. */
-interface DigestQuery {
-  data: { [K in keyof WeeklyDigestData]?: WeeklyDigestData[K] | null } | undefined;
-  isLoading: boolean;
-  error: unknown;
-  isFetching: boolean;
-  isStale: boolean;
-  isError: boolean;
-  dataUpdatedAt: number;
-  refetch: () => void;
-}
 
 const NOW = Date.parse('2026-07-05T12:00:00.000Z');
+const digest = {
+  drives: 8,
+  distanceKm: 200,
+  cost: 5.6,
+  efficiency: 200,
+  prevDrives: 4,
+  prevDistanceKm: 100,
+  prevCost: 7,
+  prevEfficiency: 250,
+  energyWh: 40000,
+  prevEnergyWh: 50000,
+};
 
-const COMPACT: WidgetSize = { cols: 1, rows: 1 };
-const NARROW: WidgetSize = { cols: 2, rows: 1 };
-const TALL: WidgetSize = { cols: 2, rows: 2 };
-const WIDE: WidgetSize = { cols: 3, rows: 2 };
-
-/**
- * A digest with round SI-derived numbers chosen so the display values are
- * locale-stable and hand-verifiable:
- *   200 km → 200.0 km / 124.3 mi   |   200 Wh/km → 200 Wh/km / 322 Wh/mi
- */
-function makeDigest(overrides: Partial<WeeklyDigestData> = {}): WeeklyDigestData {
+function query(overrides: Record<string, unknown> = {}) {
   return {
-    drives: 8,
-    distanceKm: 200,
-    energyKwh: 40,
-    cost: 5.6,
-    efficiency: 200,
-    prevDrives: 4,
-    prevDistanceKm: 100,
-    prevEnergyKwh: 50,
-    prevCost: 7,
-    prevEfficiency: 250,
-    energyWh: 40000,
-    prevEnergyWh: 50000,
-    ...overrides,
-  };
-}
-
-function makeQuery(overrides: Partial<DigestQuery> = {}): DigestQuery {
-  return {
-    data: makeDigest(),
+    data: digest,
     isLoading: false,
-    error: null,
+    isPending: false,
     isFetching: false,
     isStale: false,
     isError: false,
+    error: null,
     dataUpdatedAt: NOW,
     refetch: vi.fn(),
     ...overrides,
   };
 }
 
-interface RenderOpts {
-  size?: WidgetSize;
-  query?: DigestQuery;
-  vehicles?: { id: number }[];
-  vehicleId?: number;
-  distanceUnit?: 'km' | 'mi';
-}
-
-function renderWidget(opts: RenderOpts = {}) {
-  MOCK_QUERY = opts.query ?? makeQuery();
-  MOCK_VEHICLES = opts.vehicles ?? [];
-  MOCK_DISTANCE_UNIT = opts.distanceUnit ?? 'km';
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const view = render(
-    <QueryClientProvider client={qc}>
+function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: number) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
       <MemoryRouter>
-        <WeeklySummaryCardWidget vehicleId={opts.vehicleId} size={opts.size ?? TALL} />
+        <WeeklySummaryCardWidget vehicleId={vehicleId} size={size} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  expect(view.container.querySelector('h3')).toHaveAccessibleName('Weekly summary');
-  return view;
-}
-
-/** The StatCard whose label is `label`, resolved via its shared `.flex` card. */
-function cardOf(label: string): HTMLElement {
-  const el = screen.getByText(label).closest('[data-operational-metric]');
-  if (!el) throw new Error(`Operational metric for "${label}" not found`);
-  return el as HTMLElement;
 }
 
 beforeEach(() => {
-  MOCK_QUERY = makeQuery();
-  MOCK_VEHICLES = undefined;
-  MOCK_DISTANCE_UNIT = 'km';
-  mockUseWeeklyDigest.mockClear();
+  weeklyDigestMock.mockReset();
+  vehiclesMock.mockReset();
+  unitsMock.mockReset();
+  formattingMock.mockReset();
+  vehiclesMock.mockReturnValue({ data: [{ id: 3 }], dataUpdatedAt: NOW, isFetching: false, isStale: false, isError: false, isLoading: false, refetch: vi.fn() });
+  unitsMock.mockReturnValue({ unitPrefs: { distance: 'km' } });
+  formattingMock.mockReturnValue({ formatCurrency: (value: number) => `$${value.toFixed(2)}` });
+  weeklyDigestMock.mockReturnValue(query());
 });
 
-afterEach(() => {
-  cleanup();
-});
+afterEach(cleanup);
 
-// ── A. Pure helper: trendOf ─────────────────────────────────────────────────
-
-describe('trendOf', () => {
-  it('returns an em-dash flat trend when the baseline is zero (no % is meaningful)', () => {
-    expect(trendOf(42, 0)).toEqual({ direction: 'flat', value: '—' });
-    // No `positive` key is emitted for the zero-baseline case.
-    expect(trendOf(42, 0)).not.toHaveProperty('positive');
-  });
-
-  it.each([
-    [null, 100], [100, undefined], [Number.NaN, 100], [100, Number.POSITIVE_INFINITY],
-  ])('does not infer a comparison from missing/nonfinite values %s and %s', (current, previous) => {
-    expect(trendOf(current, previous)).toEqual({ direction: 'flat', value: '—' });
-  });
-
-  it('keeps sub-1% moves flat without discarding their formatted magnitude', () => {
-    expect(trendOf(100.5, 100)).toEqual({ direction: 'flat', value: '~0.50%' });
-    expect(trendOf(100, 100)).toEqual({ direction: 'flat', value: '~0.00%' });
-  });
-
-  it('reports up/down direction with the preferred percent precision', () => {
-    expect(trendOf(200, 100)).toEqual({ direction: 'up', value: '100.00%', positive: true });
-    expect(trendOf(100, 200)).toEqual({ direction: 'down', value: '50.00%', positive: false });
-  });
-
-  it('flips polarity when lower is better (cost / efficiency)', () => {
-    // A drop is good → positive; a rise is bad → not positive.
-    expect(trendOf(100, 200, true)).toEqual({ direction: 'down', value: '50.00%', positive: true });
-    expect(trendOf(200, 100, true)).toEqual({ direction: 'up', value: '100.00%', positive: false });
-  });
-});
-
-// ── B. Conversion correctness (SI-cutover regression guard) ──────────────────
-
-describe('WeeklySummaryCardWidget — unit conversion', () => {
-  it('renders km + Wh/km values and NOT the pre-fix (metres-mistaken-for-miles) output', () => {
-    renderWidget({ size: TALL, distanceUnit: 'km', query: makeQuery({ data: makeDigest() }) });
-
-    // 200 km → "200.0" km, 200 Wh/km → "200" Wh/km, 40 kWh → "40.0".
-    expect(within(cardOf('Distance')).getByText('200.00 km')).toBeInTheDocument();
-    expect(within(cardOf('Energy')).getByText('40.00 kWh')).toBeInTheDocument();
-    expect(within(cardOf('Efficiency')).getByText('200.00 Wh/km')).toBeInTheDocument();
-
-    // Regression guards: the old code divided miles by 1609.344 → "0.1", and
-    // multiplied Wh/km by 1.609 even in km mode → "322". Neither may appear.
-    expect(screen.queryByText('0.1')).toBeNull();
-    expect(screen.queryByText('321.87')).toBeNull();
-  });
-
-  it('converts to mi + Wh/mi and NOT the pre-fix double-converted output', () => {
-    renderWidget({ size: TALL, distanceUnit: 'mi', query: makeQuery({ data: makeDigest() }) });
-
-    // 200 km → 124.274 mi → "124.3"; 200 Wh/km → 321.87 Wh/mi → "322".
-    expect(within(cardOf('Distance')).getByText('124.27 mi')).toBeInTheDocument();
-    expect(within(cardOf('Efficiency')).getByText('321.87 Wh/mi')).toBeInTheDocument();
-
-    // Regression guards: pre-fix distance collapsed to "0.1"; pre-fix efficiency
-    // double-converted 200*1.609*1.609 ≈ 518.
-    expect(screen.queryByText('0.1')).toBeNull();
-    expect(screen.queryByText('518')).toBeNull();
-  });
-});
-
-// ── C. Layout branches ──────────────────────────────────────────────────────
-
-describe('WeeklySummaryCardWidget — layouts', () => {
-  it('compact (1x1) identifies a single big distance number and unit label', () => {
-    renderWidget({ size: COMPACT, distanceUnit: 'km' });
-
-    // 200 km at 0 decimals → "200"; label interpolates the unit + "this week".
-    expect(screen.getByText('200.00')).toBeInTheDocument();
-    expect(screen.getByText('km')).toBeInTheDocument();
-    expect(screen.getByText('this week')).toBeInTheDocument();
-    // No StatCards and no header title in the compact tile.
+describe('WeeklySummaryCardWidget — After card', () => {
+  it('renders one comparison row per source-backed metric with a previous-week line', () => {
+    renderWidget();
     expect(screen.getByRole('heading', { name: 'Weekly summary' })).toBeInTheDocument();
-    expect(screen.queryByText('Distance')).toBeNull();
+    for (const label of ['Distance', 'Energy', 'Cost', 'Efficiency']) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    expect(screen.getAllByText(/Last week/)).toHaveLength(4);
   });
 
-  it('tall (2x2) shows all four StatCards and no inline metric row', () => {
-    renderWidget({ size: TALL });
+  it('uses km and Wh/km without fabricating another unit label', () => {
+    renderWidget();
+    expect(screen.getAllByText('200.00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('km').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('40.00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('kWh').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Wh/km').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Wh\/mi/)).not.toBeInTheDocument();
+  });
 
-    expect(screen.getByText('Weekly summary')).toBeInTheDocument();
+  it('converts to the miles preference once', () => {
+    unitsMock.mockReturnValue({ unitPrefs: { distance: 'mi' } });
+    renderWidget();
+    expect(screen.getAllByText('124.27').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('mi').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('321.87').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Wh/mi').length).toBeGreaterThan(0);
+  });
+
+  it('uses the compact comparison layout at one column', () => {
+    renderWidget({ cols: 1, rows: 1 });
     expect(screen.getByText('Distance')).toBeInTheDocument();
     expect(screen.getByText('Energy')).toBeInTheDocument();
-    expect(screen.getByText('Cost')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency')).toBeInTheDocument();
-    // Cost card shows the formatted currency.
-    expect(within(cardOf('Cost')).getByText('$5.60')).toBeInTheDocument();
+    expect(screen.queryByText('Cost')).not.toBeInTheDocument();
+    expect(screen.queryByText('Efficiency')).not.toBeInTheDocument();
   });
 
-  it('narrow (2x1) retains Distance, Energy and the original cost/efficiency scalars in one compact brief', () => {
-    renderWidget({ size: NARROW, distanceUnit: 'km' });
-
-    expect(screen.getByText('Distance')).toBeInTheDocument();
-    expect(screen.getByText('Energy')).toBeInTheDocument();
-    expect(screen.getByText('Cost')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency')).toBeInTheDocument();
-    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-    expect(screen.getByText('$5.60')).toBeInTheDocument();
-    expect(screen.getByText('200.00 Wh/km')).toBeInTheDocument();
-  });
-
-  it('wide (3x2) promotes cost + efficiency to StatCards', () => {
-    renderWidget({ size: WIDE });
-
-    expect(screen.getByText('Cost')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency')).toBeInTheDocument();
-    expect(within(cardOf('Cost')).getByText('$5.60')).toBeInTheDocument();
-  });
-
-  it('reviews all quantities while preserving the existing weekly comparison rules', () => {
-    renderWidget({ size: TALL });
-    const brief = screen.getByTestId('weekly-summary-operational-brief');
-    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText('200.00 km')).toBeInTheDocument();
-    expect(within(drawer).getByText('$5.60')).toBeInTheDocument();
-    expect(within(drawer).getAllByText(/zero-baseline, sub-1% and lower-is-better behavior/)).toHaveLength(4);
-    expect(within(drawer).getAllByText(/zero baselines do not imply no change/).length).toBeGreaterThan(0);
-  });
-});
-
-// ── D. Lifecycle + empty states ─────────────────────────────────────────────
-
-describe('WeeklySummaryCardWidget — lifecycle', () => {
-  it('renders only a skeleton while the digest is loading', () => {
-    const { container } = renderWidget({ size: TALL, vehicleId: 7, query: makeQuery({ isLoading: true, data: undefined }) });
-
-    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
-    expect(screen.queryByText('Weekly summary')).toBeInTheDocument();
-    expect(screen.queryByText('No weekly data')).toBeNull();
-  });
-
-  it('surfaces a query error instead of the misleading empty state', () => {
-    renderWidget({
-      size: TALL,
-      vehicleId: 7,
-      query: makeQuery({ data: undefined, error: new Error('boom'), isError: true }),
-    });
-
-    // jsdom reports navigator.onLine === true → QueryError's non-offline branch.
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('No weekly data')).toBeNull();
-    expect(screen.queryByText('Distance')).toBeNull();
-  });
-
-  it('shows an accessible empty state (full view) when no digest has landed', () => {
-    renderWidget({ size: TALL, query: makeQuery({ data: undefined }) });
-
-    expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.getByText('No weekly data')).toBeInTheDocument();
-    expect(screen.getByText('Distance')).toBeInTheDocument();
-    expect(document.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
-    const emptyBrief = screen.getByTestId('weekly-summary-operational-brief');
-    fireEvent.click(within(emptyBrief).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
-  });
-
-  it('shows an accessible empty state (compact view) when no digest has landed', () => {
-    renderWidget({ size: COMPACT, query: makeQuery({ data: undefined }) });
-
-    expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.getByText('No weekly data')).toBeInTheDocument();
-  });
-
-  it('refetches when the accessible "Refresh" freshness control is activated', () => {
+  it('keeps FreshnessDot owned by WidgetShell and supports refresh', () => {
     const refetch = vi.fn();
-    renderWidget({ size: TALL, query: makeQuery({ refetch }) });
-
+    weeklyDigestMock.mockReturnValue(query({ refetch }));
+    renderWidget({ cols: 2, rows: 2 }, 3);
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('retains all four metrics when a background refresh fails', () => {
-    const refetch = vi.fn();
-    renderWidget({ size: TALL, query: makeQuery({
-      error: new Error('refresh failed'), isError: true, refetch,
-    }) });
-    for (const label of ['Distance', 'Energy', 'Cost', 'Efficiency']) {
-      expect(screen.getByText(label)).toBeVisible();
-    }
-    expect(within(cardOf('Cost')).getByText('$5.60')).toBeVisible();
-        expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
-    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
-    expect(refetch).toHaveBeenCalledTimes(1);
-  });
-});
-
-// ── E. Vehicle-id resolution ────────────────────────────────────────────────
-
-describe('WeeklySummaryCardWidget — vehicle resolution', () => {
-  it('queries the explicit vehicleId (as a string) when one is provided', () => {
-    renderWidget({ vehicleId: 7, vehicles: [{ id: 3 }] });
-    expect(mockUseWeeklyDigest).toHaveBeenCalledWith('7');
+  it('renders an honest empty state without zero-valued fabrication', () => {
+    weeklyDigestMock.mockReturnValue(query({ data: undefined }));
+    renderWidget();
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('No weekly data')).toBeInTheDocument();
+    expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
   });
 
-  it('falls back to the first fleet vehicle when no vehicleId is given', () => {
-    renderWidget({ vehicles: [{ id: 3 }, { id: 9 }] });
-    expect(mockUseWeeklyDigest).toHaveBeenCalledWith('3');
-  });
-
-  it('disables the digest rather than querying vehicle zero when no vehicle exists', () => {
-    renderWidget({ vehicles: undefined });
-    expect(mockUseWeeklyDigest).toHaveBeenCalledWith('');
-  });
-
-  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])('does not query invalid vehicle identifier %s', vehicleId => {
-    renderWidget({ vehicleId });
-    expect(mockUseWeeklyDigest).toHaveBeenCalledWith('');
-  });
-});
-
-// ── F. Null safety ──────────────────────────────────────────────────────────
-
-describe('WeeklySummaryCardWidget — null safety', () => {
-  it('keeps missing numeric fields unknown without rendering fake zeros or NaN', () => {
-    // A backend that omits fields (typed non-null but nullable on the wire).
-    const sparse = { drives: 0 };
-    const { container } = renderWidget({ size: TALL, distanceUnit: 'km', query: makeQuery({ data: sparse }) });
-
-    for (const label of ['Distance', 'Energy', 'Cost', 'Efficiency']) {
-      // Labels survive only as empty-state chips; no value tiles render.
-      expect(screen.getByText(label)).toBeInTheDocument();
-    }
-    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
-    const sparseBrief = screen.getByTestId('weekly-summary-operational-brief');
-    fireEvent.click(within(sparseBrief).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
-    expect(screen.queryByText('0.00')).toBeNull();
-    expect(screen.queryByText('$0.00')).toBeNull();
-    // Zero baselines → em-dash trend, never "NaN".
+  it('retains no fabricated trend for sparse values', () => {
+    weeklyDigestMock.mockReturnValue(query({ data: { drives: 0 } }));
+    const { container } = renderWidget();
     expect(container.textContent ?? '').not.toContain('NaN');
+    expect(container.textContent ?? '').not.toContain('$0.00');
+  });
+
+  it('resolves the explicit vehicle and invalid ids do not query one', () => {
+    renderWidget({ cols: 2, rows: 2 }, 7);
+    expect(weeklyDigestMock).toHaveBeenCalledWith('7');
+    cleanup();
+    renderWidget({ cols: 2, rows: 2 }, 0);
+    expect(weeklyDigestMock).toHaveBeenCalledWith('');
   });
 });

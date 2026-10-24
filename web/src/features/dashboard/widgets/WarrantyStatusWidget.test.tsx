@@ -73,6 +73,12 @@ vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => dateFormatMock(),
 }));
 
+// The widget reads month labels from the route-side `useDateLabels` hook;
+// mirror the date mock there so label copy stays deterministic.
+vi.mock('@/hooks/useDateLabels', () => ({
+  useDateLabels: () => dateFormatMock(),
+}));
+
 import WarrantyStatusWidget, {
   asString,
   asNumber,
@@ -142,6 +148,7 @@ beforeEach(() => {
     formatRelative: () => 'formatted-relative',
     formatRelativeTime: () => 'formatted-rel-time',
     formatRelativeDays: () => 'formatted-rel-days',
+    formatMonthYear: (v: unknown) => (v ? 'formatted-month-year' : ''),
     opts: { locale: 'en-US', tz: 'UTC' },
     tz: 'UTC',
     locale: 'en-US',
@@ -358,8 +365,7 @@ describe('WarrantyStatusWidget — standard layout', () => {
     expect(screen.getByText('Battery/drive unit')).toBeInTheDocument();
     expect(screen.getByText('Corrosion')).toBeInTheDocument();
     expect(screen.getByText('Included')).toBeInTheDocument();
-    expect(screen.getByText('Jun 2040')).toBeInTheDocument();
-    expect(screen.getByText('Jan 2010')).toBeInTheDocument();
+    expect(screen.getAllByText('formatted-month-year')).toHaveLength(2);
     // basic + corrosion are covered; the past-dated battery coverage is expired.
     expect(screen.getAllByText('Covered')).toHaveLength(1);
     expect(screen.getByText('Unknown')).toBeInTheDocument();

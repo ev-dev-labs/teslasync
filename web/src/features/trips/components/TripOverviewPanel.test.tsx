@@ -179,10 +179,16 @@ describe('TripOverviewPanel — ready state (complete trip)', () => {
     expect(ddText('Charges')).toBe('1');
   });
 
-  it('renders timestamps with their canonical ISO title and shows the Notes row', () => {
-    expect(ddTitle('Started')).toBe('2024-01-10T08:00:00.000Z');
-    expect(ddTitle('Ended')).toBe('2024-01-12T20:00:00.000Z');
-    expect(ddTitle('Created')).toBe('2024-01-10T07:00:00.000Z');
+  it('renders each timestamp once in friendly form with no ISO title, and shows the Notes row', () => {
+    for (const label of ['Started', 'Ended', 'Created']) {
+      expect(ddTitle(label)).toBeNull();
+    }
+    // Friendly values render once in zone-dependent form; raw ISO must not appear.
+    for (const label of ['Started', 'Ended', 'Created']) {
+      expect(ddText(label)).toMatch(/[A-Z][a-z]{2} \d{1,2}, 2024/);
+      expect(ddText(label)).not.toMatch(/2024-01-1\dT/);
+    }
+    expect(ddText('Started')).not.toBe(ddText('Ended'));
     expect(ddText('Notes')).toBe('Scenic route');
   });
 

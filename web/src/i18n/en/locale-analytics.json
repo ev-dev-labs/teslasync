@@ -479,8 +479,8 @@
       "title": "Archetype centroid map"
     },
     "method": {
-      "featuresBody": "The standardized feature space uses log distance, average speed, circular hour in {{timeZone}} as sine and cosine, energy per distance, and outside temperature. Missing eligible temperature uses the eligible measured median and remains marked imputed.",
-      "featuresDefaultBody": "The standardized feature space uses log distance, average speed, circular hour in {{timeZone}} as sine and cosine, energy per distance, and outside temperature. Because no eligible measured temperature exists, missing temperature uses the configured default and remains marked imputed.",
+      "featuresBody": "The standardized feature space uses log distance, average speed, circular hour in your selected time zone as sine and cosine, energy per distance, and outside temperature. Missing eligible temperature uses the eligible measured median and remains marked imputed.",
+      "featuresDefaultBody": "The standardized feature space uses log distance, average speed, circular hour in your selected time zone as sine and cosine, energy per distance, and outside temperature. Because no eligible measured temperature exists, missing temperature uses the configured default and remains marked imputed.",
       "featuresTitle": "Features and imputation",
       "labelsBody": "Rules run in order: at least {{roadTrip}} is long-distance; at least {{highwayDistance}} and {{highwaySpeed}} is highway; at most {{shortHop}} is short-hop; at most {{cold}} is cold-weather; then 05:30–10:29 and 15:30–20:29 receive morning or evening pattern labels. These are not verified commutes.",
       "labelsTitle": "Heuristic label rules",
@@ -2477,7 +2477,7 @@
       "gasBody": "The comparison is distance × 0.192 kg CO₂/km. It is a fixed generic baseline, not the user’s prior vehicle. Gas less charging may be negative and is shown as excess rather than clipped.",
       "gasTitle": "Gas comparison",
       "normalization": "Existing legacy wire energy fields are converted from kWh to canonical Wh exactly once at the analytical model boundary. All analysis remains in Wh; display conversion occurs only at render boundaries.",
-      "rangeBody": "URL calendar labels {{start}} through {{end}} are interpreted in {{timezone}} and sent as RFC3339 instants using an exclusive upper bound. Period charts never substitute lifetime rows.",
+      "rangeBody": "The selected range ({{range}}) is interpreted in your selected time zone and queried with an exclusive upper bound. Period charts never substitute lifetime rows.",
       "rangeTitle": "Selected range",
       "scenarioBody": "The recommendation is full-history only and shifts all observed lifetime charging energy into the fixed greenest three-hour model window. It is a counterfactual estimate, not selected-period evidence or a schedule guarantee.",
       "scenarioTitle": "Recommendation boundary",
@@ -2557,7 +2557,6 @@
       "lifetimeScope": "Full vehicle history",
       "period": "Selected-period summary",
       "periodFailed": "Selected-period query failed",
-      "periodScope": "{{start}} through {{end}} calendar labels",
       "recommendation": "Green-window scenario",
       "recommendationFailed": "Recommendation query failed",
       "recommendationScope": "Full vehicle history; independent of the selected range",
@@ -2575,7 +2574,7 @@
         "ready": "Ready",
         "refreshing": "Refreshing cached data"
       },
-      "timezone": "Calendar timezone: {{timezone}} · {{days}} calendar days",
+      "timezone": "{{days}} calendar days",
       "title": "Source, query status, and scope ledger"
     },
     "states": {
@@ -3605,7 +3604,7 @@
     "daily": {
       "groupingNote": "Idle groups idle, online and parked transitions. Sleeping groups sleeping, asleep and offline transitions; this grouping does not establish measured sleep. Other destination states are unclassified. Raw states remain in State transitions.",
       "unclassified": "Unclassified",
-      "utcNote": "Transition counts grouped by UTC day; state durations come from the summary"
+      "utcNote": "Transition counts grouped by day; state durations come from the summary"
     },
     "dailyBreakdown": "Daily breakdown",
     "dailyBreakdownAria": "Daily transition counts by vehicle state",
@@ -3652,7 +3651,6 @@
       "drivingDescription": "Time in the driving state, rounded to whole minutes",
       "idleSleepDescription": "Combined online, parked, idle, asleep, sleeping and offline time, rounded to whole minutes",
       "missing": "No state summary is available for this window",
-      "period": "{{start}} – {{end}} (exclusive) · {{timezone}}",
       "provenance": "Vehicle FSM summary for the requested window; continuous observation coverage is unknown",
       "transitionDescription": "Sum of transition counts returned by the state summary for this window"
     },

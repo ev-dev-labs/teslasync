@@ -243,16 +243,16 @@ describe('normalizeHeading', () => {
 
 // ── Widget render states ─────────────────────────────────────────────────────
 describe('LocationMapWidget', () => {
-  it('keeps last-known, heading and coordinates in the logical-edge wrapping status overlay', () => {
+  it('shows last-known, normalized heading and coordinates in the quiet map footer', () => {
     vehicleStateMock.mockReturnValue(makeStateQuery(makeState({ latitude: 51.48, longitude: 0, heading: -90 }), false));
     renderWidget(<LocationMapWidget size={SIZE_EXPANDED} />);
     const overlay = screen.getByRole('group', { name: 'Vehicle location status' });
-    expect(overlay).toHaveClass('start-2', 'end-2', 'min-w-0');
+    expect(overlay).toHaveClass('border-t', 'px-4', 'py-2', 'min-w-0');
     expect(screen.getByText('Last known position')).toBeInTheDocument();
-    expect(screen.getByText('Heading: 270.00°')).toBeInTheDocument();
+    expect(screen.getByText('270°')).toBeInTheDocument();
     expect(screen.getByText('51.48, 0.00')).toBeInTheDocument();
     expect(screen.getByTestId('marker')).toHaveAttribute('data-heading', '270');
-    expect(overlay.querySelector('.truncate')).toBeNull();
+    expect(overlay.querySelector('.truncate')).not.toBeNull();
   });
 
   it('renders the map + marker at the vehicle position (medium, live)', () => {
@@ -321,7 +321,7 @@ describe('LocationMapWidget', () => {
   it('adds the heading + coordinate chips at expanded size', () => {
     renderWidget(<LocationMapWidget size={SIZE_EXPANDED} />);
 
-    expect(screen.getByText('Heading: 90.00°')).toBeInTheDocument();
+    expect(screen.getByText('90°')).toBeInTheDocument();
     expect(screen.getByText('37.77, -122.42')).toBeInTheDocument();
     // Live fix ⇒ still no last-known chip even when expanded.
     expect(screen.queryByText('Last known position')).not.toBeInTheDocument();
@@ -334,7 +334,7 @@ describe('LocationMapWidget', () => {
 
     // 450° wraps to 90° for both the marker rotation and the readout.
     expect(screen.getByTestId('marker')).toHaveAttribute('data-heading', '90');
-    expect(screen.getByText('Heading: 90.00°')).toBeInTheDocument();
+    expect(screen.getByText('90°')).toBeInTheDocument();
   });
 
   it('omits the heading chip (but keeps coordinates) when heading is unavailable', () => {

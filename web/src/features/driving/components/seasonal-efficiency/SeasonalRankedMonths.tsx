@@ -5,14 +5,14 @@ import { EmptyState } from '@/components/feedback';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
-import { formatIntensityWhPerM, formatMonth } from './formatters';
+import { formatIntensityWhPerM } from './formatters';
+import { formatMonthName } from '@/lib/dateConvert';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalRankedMonths({
   analysis,
   state,
   locale,
-  timeZone,
   units,
 }: SeasonalSectionProps) {
   useNumberFormatting();
@@ -43,7 +43,7 @@ export function SeasonalRankedMonths({
                 <div key={month.month} className="flex items-center gap-3 rounded-lg border border-[var(--panel-border)] p-3">
                   <Text variant="metricValue" className="w-7 text-center text-[var(--text-muted)]">{index + 1}</Text>
                   <div className="min-w-0 flex-1">
-                    <Text variant="bodySm" as="p">{formatMonth(month.month, locale, timeZone)}</Text>
+                    <Text variant="bodySm" as="p">{formatMonthName(month.month, { locale })}</Text>
                     <Text variant="caption" as="p">{t('seasonalEfficiency.rankedMonths.support', '{{samples}} samples · {{distance}}', {
                       samples: month.sampleCount,
                       distance: units.formatDistance(month.distanceM),

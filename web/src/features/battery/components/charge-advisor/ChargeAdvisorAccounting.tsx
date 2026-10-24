@@ -6,11 +6,13 @@ import { type StatMetric } from '@/components/data-display';
 import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import { ChargeAdvisorSection } from './ChargeAdvisorSection';
 import type { ChargeAdvisorComponentProps } from './types';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeAdvisorAccounting({ analysis, state }: ChargeAdvisorComponentProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatDayKeyRange } = useDateFormat();
   const driveCategories = Object.entries(analysis.driveAccounting.categories);
   const chargingCategories = Object.entries(analysis.chargingAccounting.categories);
   const categoryLabel = (category: string) => {
@@ -70,10 +72,8 @@ export function ChargeAdvisorAccounting({ analysis, state }: ChargeAdvisorCompon
     }));
   const period = {
     kind: 'unknown' as const,
-    label: t('chargeAdvisor.accounting.summaryWindow', 'Analysis window: {{start}} – {{end}} ({{timeZone}})', {
-      start: analysis.evidence.windowStartLocalDate,
-      end: analysis.evidence.windowEndLocalDate,
-      timeZone: analysis.timeZone,
+    label: t('chargeAdvisor.accounting.summaryWindow', 'Analysis window: {{range}}', {
+      range: formatDayKeyRange(analysis.evidence.windowStartLocalDate, analysis.evidence.windowEndLocalDate),
     }),
     reason: t('chargeAdvisor.accounting.scope', 'Returned histories; qualification uses the stated local-date analysis window. Counts are not lifetime totals.'),
   };
@@ -147,11 +147,9 @@ export function ChargeAdvisorAccounting({ analysis, state }: ChargeAdvisorCompon
       <Text as="p" variant="caption" className="mt-4">
         {t(
           'chargeAdvisor.accounting.window',
-          'Included history window: {{start}} through {{end}} in {{timeZone}}.',
+          'Included history window: {{range}}.',
           {
-            start: analysis.evidence.windowStartLocalDate,
-            end: analysis.evidence.windowEndLocalDate,
-            timeZone: analysis.timeZone,
+            range: formatDayKeyRange(analysis.evidence.windowStartLocalDate, analysis.evidence.windowEndLocalDate),
           },
         )}
       </Text>

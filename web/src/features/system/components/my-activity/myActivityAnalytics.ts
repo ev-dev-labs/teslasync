@@ -8,7 +8,8 @@
  */
 import type { UserActivityEntry } from '@/types/admin';
 import { getActivityVisual } from '@/lib/activityIcons';
-import { ymdInTz, formatDayKey, formatTime, type FormatOptions } from '@/lib/dateFormat';
+import {formatDayKey, formatTime, type FormatOptions} from '@/lib/dateFormat'
+import {ymdInTz} from '@/lib/dateConvert';
 import { chartTokens } from '@/lib/tokens';
 
 /** Sentinel key for entries whose `entity_type` is null. */

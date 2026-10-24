@@ -1,11 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Thermometer, Armchair, Snowflake, Zap, Power,
-} from 'lucide-react';
-import { Badge, Text } from '@/components/ui';
-import type { StatMetric } from '@/components/data-display';
-import type { DataState } from '@/api/dataState';
+import { Thermometer } from 'lucide-react';
+import { Badge } from '@/components/ui';
 import { deriveDataState } from '@/api/dataState';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useClimateLatest } from '@/api/hooks/useVehicles';
@@ -14,10 +10,11 @@ import { resolveHvacActive } from '@/lib/climateState';
 
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { dashboardTokens } from '../lib/dashboardTokens';
+import { cn } from '@/lib/cn';
 
 export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetProps) {
   const { fmtInt } = useNumberFormatting();
@@ -37,29 +34,18 @@ export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetPro
 
   const temps = useMemo(() => {
     if (!climateData) return null;
+    const inside = climateData.inside_temp_c ?? climateData.inside_temp;
+    const outside = climateData.outside_temp_c ?? climateData.outside_temp;
+    const driverSetpoint = climateData.driver_setpoint_c ?? climateData.driver_temp_setting;
     return {
-      inside: climateData.inside_temp != null ? fmtInt(toTemperatureDisplay(climateData.inside_temp)) : null,
-      outside: climateData.outside_temp != null ? fmtInt(toTemperatureDisplay(climateData.outside_temp)) : null,
+      inside: inside != null && Number.isFinite(inside) ? fmtInt(toTemperatureDisplay(inside)) : null,
+      outside: outside != null && Number.isFinite(outside) ? fmtInt(toTemperatureDisplay(outside)) : null,
+      setpoint: driverSetpoint != null && Number.isFinite(driverSetpoint)
+        ? fmtInt(toTemperatureDisplay(driverSetpoint))
+        : null,
     };
   }, [climateData, toTemperatureDisplay, fmtInt]);
 
-  const seatHeaters = useMemo(() => {
-    if (!climateData) return [];
-    const seats: { label: string; level: number }[] = [];
-    if (climateData.seat_heater_left != null && climateData.seat_heater_left > 0)
-      seats.push({ label: t('widget.climatePanel.seatFL', 'FL'), level: climateData.seat_heater_left });
-    if (climateData.seat_heater_right != null && climateData.seat_heater_right > 0)
-      seats.push({ label: t('widget.climatePanel.seatFR', 'FR'), level: climateData.seat_heater_right });
-    if (climateData.seat_heater_rear_left != null && climateData.seat_heater_rear_left > 0)
-      seats.push({ label: t('widget.climatePanel.seatRL', 'RL'), level: climateData.seat_heater_rear_left });
-    if (climateData.seat_heater_rear_center != null && climateData.seat_heater_rear_center > 0)
-      seats.push({ label: t('widget.climatePanel.seatRC', 'RC'), level: climateData.seat_heater_rear_center });
-    if (climateData.seat_heater_rear_right != null && climateData.seat_heater_rear_right > 0)
-      seats.push({ label: t('widget.climatePanel.seatRR', 'RR'), level: climateData.seat_heater_rear_right });
-    return seats;
-  }, [climateData, t]);
-
-  const steeringHeat = climateData?.hvac_steering_wheel_heat_level ?? null;
   const loading = isLoading || (vehiclesLoading && !id);
   const queryError = error ?? (!id ? vehiclesError : null);
   const dataState = deriveDataState({
@@ -89,12 +75,8 @@ export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetPro
         ) : (
           <FullView
             climateData={climateData}
-            dataState={dataState}
-            sourceScope={t('widget.climatePanel.summaryScope', 'Vehicle {{id}} · returned climate snapshot; continuous recording coverage is not established.', { id })}
             toTemperatureDisplay={toTemperatureDisplay}
             tempUnit={tempUnit}
-            seatHeaters={seatHeaters}
-            steeringHeat={steeringHeat}
             t={t}
           />
         )
@@ -119,84 +101,121 @@ function CompactView({ inside, tempUnit }: { inside: string | null; tempUnit: st
 /* ── Full 2x2 view ── */
 interface FullViewProps {
   climateData: NonNullable<ReturnType<typeof useClimateLatest>['data']>;
-  dataState: DataState<unknown>;
-  sourceScope: string;
   toTemperatureDisplay: (value: number) => number;
   tempUnit: string;
-  seatHeaters: { label: string; level: number }[];
-  steeringHeat: number | null;
   t: (k: string, f: string) => string;
 }
 
-function FullView({ climateData, dataState, sourceScope, toTemperatureDisplay, tempUnit, seatHeaters, steeringHeat, t }: FullViewProps) {
+function FullView({ climateData, toTemperatureDisplay, tempUnit, t }: FullViewProps) {
   const { fmtInt } = useNumberFormatting();
   const hvacState = resolveHvacActive(climateData.hvac_power, climateData.is_ac_on);
-  const metrics: StatMetric[] = [
-    { metricId: 'temperature', occurrenceId: 'climate-panel-cabin', rawValue: climateData.inside_temp,
-      label: t('widget.climatePanel.cabin', 'Cabin'),
-      display: { formatter: raw => ({ value: fmtInt(toTemperatureDisplay(raw)), unit: tempUnit }) } },
-    { metricId: 'temperature', occurrenceId: 'climate-panel-outside', rawValue: climateData.outside_temp,
-      label: t('widget.climatePanel.outside', 'Outside'),
-      display: { formatter: raw => ({ value: fmtInt(toTemperatureDisplay(raw)), unit: tempUnit }) } },
-    { metricId: 'number', occurrenceId: 'climate-panel-fan-level', rawValue: climateData.fan_speed,
-      label: t('widget.climatePanel.fanSpeed', 'Fan speed'),
-      description: t('widget.climatePanel.fanLevelDescription', 'Reported fan level, not a velocity measurement.'),
-      display: { notation: 'source' } },
-    { metricId: 'number', occurrenceId: 'climate-panel-wheel-level', rawValue: steeringHeat,
-      label: t('widget.climatePanel.steeringHeat', 'Wheel heat'),
-      description: t('widget.climatePanel.wheelLevelDescription', 'Reported wheel-heater level on the 0–3 scale; zero means Off.'),
-      display: { formatter: raw => ({ value: raw > 0 ? `${raw}/3` : t('widget.climatePanel.off', 'Off'), unit: '' }) } },
+  const inside = climateData.inside_temp_c ?? climateData.inside_temp;
+  const outside = climateData.outside_temp_c ?? climateData.outside_temp;
+  const setpoint = climateData.driver_setpoint_c ?? climateData.driver_temp_setting;
+  const insideValue = inside != null && Number.isFinite(inside) ? fmtInt(toTemperatureDisplay(inside)) : null;
+  const outsideValue = outside != null && Number.isFinite(outside) ? fmtInt(toTemperatureDisplay(outside)) : null;
+  const setpointValue = setpoint != null && Number.isFinite(setpoint) ? fmtInt(toTemperatureDisplay(setpoint)) : null;
+
+  const seatValues = [
+    { label: t('widget.climatePanel.seatFL', 'FL'), value: climateData.seat_heater_left },
+    { label: t('widget.climatePanel.seatFR', 'FR'), value: climateData.seat_heater_right },
+    { label: t('widget.climatePanel.seatRL', 'RL'), value: climateData.seat_heater_rear_left },
+    { label: t('widget.climatePanel.seatRC', 'RC'), value: climateData.seat_heater_rear_center },
+    { label: t('widget.climatePanel.seatRR', 'RR'), value: climateData.seat_heater_rear_right },
   ];
+  const activeSeats = seatValues.filter(({ value }) =>
+    typeof value === 'number' && Number.isFinite(value) && value > 0,
+  );
+  const seatSummary = activeSeats.length > 0
+    ? activeSeats.map(({ label, value }) => `${label}${value}/3`).join(' · ')
+    : seatValues.every(({ value }) => typeof value === 'number' && Number.isFinite(value))
+      ? t('widget.climatePanel.off', 'Off')
+      : seatValues.some(({ value }) => value == null)
+        ? t('hero.unknownStatus', 'Unknown')
+        : null;
+  const steeringLevel = climateData.hvac_steering_wheel_heat_level;
+  const wheelHeat = typeof steeringLevel === 'number' && Number.isFinite(steeringLevel)
+    ? steeringLevel > 0 ? `${steeringLevel}/3` : t('widget.climatePanel.off', 'Off')
+    : null;
+  const overheat = climateData.cabin_overheat_protection;
+  const fanLevel = climateData.fan_speed ?? climateData.fan_status ?? climateData.hvac_fan_status ?? climateData.hvac_fan_speed;
 
   return (
-    <div className="flex min-w-0 flex-col gap-3">
-      {/* HVAC status badge */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <Power className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-          <Badge variant={hvacState === true ? 'success' : 'neutral'} size="sm">
-            {hvacState === true
-              ? t('widget.climatePanel.hvacOn', 'HVAC on')
-              : hvacState === false
-                ? t('widget.climatePanel.hvacOff', 'HVAC off')
-                : t('widget.climatePanel.hvacUnknown', 'HVAC unknown')}
-          </Badge>
+    <div className="flex h-full min-w-0 flex-col gap-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <WidgetBigNumber
+            value={insideValue}
+            unit={insideValue != null ? tempUnit : undefined}
+            label={setpointValue != null
+              ? `${t('hero.inside', 'Inside')} · ${t('widget.climatePanel.set', 'set')} ${setpointValue}${tempUnit}`
+              : t('hero.inside', 'Inside')}
+            animated={false}
+          />
+        </div>
+        <div className="shrink-0 text-end">
+          <p className={dashboardTokens.metricLabel}>{t('widget.climatePanel.outside', 'Outside')}</p>
+          <p className={cn(dashboardTokens.secondaryMetric, 'mt-1')}>
+            {outsideValue != null ? `${outsideValue}${tempUnit}` : '—'}
+          </p>
         </div>
       </div>
 
-      <DashboardSourceBrief metrics={metrics} state={dataState}
-        eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
-        title={t('widget.climatePanel.summaryTitle', 'Returned climate control readings')}
-        description={t('widget.climatePanel.summaryDescription', 'Cabin and outside temperatures are independent SI measurements converted only for display. Fan and wheel-heater levels are not speeds; HVAC and heater statuses remain separate.')}
-        scope={sourceScope}
-        testId="dashboard-climate-panel-brief" />
-
-      {/* Seat heaters + status badges */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {seatHeaters.length > 0 ? (
-          seatHeaters.map((s) => (
-            <Badge key={s.label} variant="warning" size="sm">
-              <Armchair className="size-3" aria-hidden="true" /> {s.label} {s.level}/3
-            </Badge>
-          ))
-        ) : (
-          <Text variant="caption">
-            {[climateData.seat_heater_left, climateData.seat_heater_right, climateData.seat_heater_rear_left, climateData.seat_heater_rear_center, climateData.seat_heater_rear_right].some((level) => level == null)
-              ? t('hero.unknownStatus', 'Unknown')
-              : t('widget.climatePanel.noSeatHeat', 'No seat heaters active')}
-          </Text>
+      <div className="flex flex-wrap items-center gap-2">
+        {hvacState !== null && (
+          <span className="inline-flex items-center gap-2 text-sm text-[var(--text-primary)]">
+            <span aria-hidden="true" className={cn(
+              'size-2 rounded-full',
+              hvacState ? 'bg-[var(--semantic-success)]' : 'bg-[var(--text-secondary)]',
+            )} />
+            {hvacState
+              ? t('widget.climatePanel.hvacOn', 'HVAC on')
+              : t('widget.climatePanel.hvacOff', 'HVAC off')}
+          </span>
         )}
-        {climateData.defrost_mode && climateData.defrost_mode !== 'Off' && (
-          <Badge variant="info" size="sm">
-            <Snowflake className="size-3" aria-hidden="true" /> {t('widget.climatePanel.defrost', 'Defrost')}
+        {typeof fanLevel === 'number' && Number.isFinite(fanLevel) && (
+          <Badge variant="neutral" size="sm">
+            {t('widget.climatePanel.fanShort', 'Fan')} {fmtInt(fanLevel)}
           </Badge>
         )}
-        {climateData.battery_heater && (
-          <Badge variant="warning" size="sm">
-            <Zap className="size-3" aria-hidden="true" /> {t('widget.climatePanel.batHeater', 'Bat heater')}
+        {typeof climateData.defrost_mode === 'string' && climateData.defrost_mode !== 'Off' && climateData.defrost_mode.trim() !== '' && (
+          <Badge variant="info" size="sm">
+            {t('widget.climatePanel.defrost', 'Defrost')}
           </Badge>
         )}
       </div>
+
+      {(seatSummary || wheelHeat != null || typeof overheat === 'boolean' || climateData.battery_heater != null) && (
+        <div className={cn('grid grid-cols-1 @xs:grid-cols-2', dashboardTokens.density.gridGap)}>
+          {seatSummary && (
+            <StatusTile label={t('widget.climatePanel.seats', 'Seats')} value={seatSummary} />
+          )}
+          {wheelHeat != null && (
+            <StatusTile label={t('widget.climatePanel.steeringHeat', 'Steering heat')} value={wheelHeat} />
+          )}
+          {typeof overheat === 'boolean' && (
+            <StatusTile
+              label={t('widget.climatePanel.cabinOverheat', 'Cabin overheat')}
+              value={overheat ? t('widget.climatePanel.on', 'On') : t('widget.climatePanel.off', 'Off')}
+            />
+          )}
+          {typeof climateData.battery_heater === 'boolean' && (
+            <StatusTile
+              label={t('widget.climatePanel.batHeater', 'Battery heater')}
+              value={climateData.battery_heater ? t('widget.climatePanel.on', 'On') : t('widget.climatePanel.off', 'Off')}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatusTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className={cn('min-w-0 border border-[var(--border-subtle)]', dashboardTokens.radius.inner, dashboardTokens.density.itemPadding)}>
+      <p className="text-xs text-[var(--text-muted)]">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold text-[var(--text-primary)] tabular-nums" title={value}>{value}</p>
     </div>
   );
 }

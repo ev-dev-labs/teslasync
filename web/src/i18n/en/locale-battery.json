@@ -660,7 +660,7 @@
       "returnedRows": "Returned rows",
       "inWindowRows": "In-window rows",
       "includedRows": "Included rows",
-      "window": "Included history window: {{start}} through {{end}} in {{timeZone}}.",
+      "window": "Included history window: {{range}}.",
       "category": {
         "included": "included",
         "outside_window": "outside window",
@@ -674,7 +674,7 @@
         "nonpositive_soc_gain": "nonpositive SoC gain",
         "implausible_soc_drop": "implausible SoC drop"
       },
-      "summaryWindow": "Analysis window: {{start}} – {{end}} ({{timeZone}})",
+      "summaryWindow": "Analysis window: {{range}}",
       "scope": "Returned histories; qualification uses the stated local-date analysis window. Counts are not lifetime totals.",
       "driveSummary": "Drive-row evidence summary",
       "chargingSummary": "Charging-row evidence summary"
@@ -686,7 +686,7 @@
       "dropBody": "Completed drives need valid order, duration, and SoC. Positive start-minus-end SoC drops are summed by vehicle-local calendar day; they are not total energy use.",
       "calendarTitle": "Exact local calendar",
       "calendarBody": "IANA timezone date, weekday, hour, and week parts are explicit. Every calendar occurrence in the 180-day window contributes to weekday denominators, including zero-driving dates.",
-      "timeZone": "Calendar calculations use {{timeZone}}.",
+      "timeZone": "Calendar calculations use your selected time zone.",
       "scenarioTitle": "Tomorrow-first scenarios",
       "scenarioBody": "Seven complete local days start tomorrow from the observed current SoC. Calendar-day mean and calendar-day p75 paths include zero-use days and are historical-use scenarios, not calibrated outcomes.",
       "omittedTitle": "Omitted inputs",
@@ -721,7 +721,8 @@
     "weekdayEvidence": "Weekday and frequency evidence",
     "burnEvidence": "Daily trend and consumption distribution",
     "chargingEvidence": "Charging profile and timing",
-    "summaryScope": "History evidence uses the returned drive and charging windows; current SoC is a separate observed snapshot."
+    "summaryScope": "History evidence uses the returned drive and charging windows; current SoC is a separate observed snapshot.",
+    "planningWindow": "The planning window covers the next seven local days, starting tomorrow."
   },
   "cycleStress": {
     "modernization": {
@@ -949,7 +950,7 @@
       "metricsTitle": "Descriptive metrics",
       "metricsBody": "Equivalent full cycles sum count x depth fraction. The depth-weighted index sums count x depth fraction raised to exponent {{exponent}}. The exponent is illustrative and selectable; it is not a Tesla or cell-manufacturer damage curve.",
       "calendarTitle": "Vehicle-local calendar",
-      "calendarBody": "Cycle closure months, active days, and active weeks use {{timeZone}}. The analysis clock is frozen when the page mounts so future-row classification does not drift during the session.",
+      "calendarBody": "Cycle closure months, active days, and active weeks use your selected time zone. The analysis clock is frozen when the page mounts so future-row classification does not drift during the session.",
       "supportTitle": "Support, not confidence",
       "supportBody": "The support index combines interval volume, weighted-cycle volume, active weeks, recency, and represented source types. It describes evidence breadth, not statistical confidence or pack condition.",
       "scopeTitle": "Capped historical scope",
@@ -977,7 +978,7 @@
       "commonOverlap": "Common source overlap",
       "overlapHint": "calendar time covered by both sources",
       "combinedSpan": "Combined observed span",
-      "localCalendar": "{{zone}} local calendar",
+      "localCalendar": "Selected-zone local calendar",
       "activeDays": "Active local days",
       "retainedEndpoints": "days with retained endpoints",
       "requestCaps": "Per-source request cap",
@@ -1116,7 +1117,7 @@
     "tip": {
       "offPeak": "Off-peak charging saves money",
       "solar": "Solar-optimal: 10am–3pm",
-      "timezone": "Buckets use {{timezone}} session start time.",
+      "timezone": "Buckets use session start time in your selected time zone.",
       "noSavingsClaim": "Timing alone does not prove tariff or solar savings."
     },
     "sources": {
@@ -1236,7 +1237,9 @@
       "trailingWindow": "Trailing {{days}} days",
       "trailingWindow_one": "Trailing {{days}} day",
       "trailingWindow_other": "Trailing {{days}} days",
-      "windowReason": "The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source."
+      "windowReason": "The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source.",
+      "selectedWindow": "Selected workspace range",
+      "boundedSource": "Completed drives are filtered by the workspace start and exclusive end; live power remains a separate snapshot."
     },
     "metrics": {
       "estimated": "Estimated",
@@ -1322,7 +1325,8 @@
       "title": "Daily energy history",
       "noData": "No energy history records available.",
       "empty": "No energy records found."
-    }
+    },
+    "rangeLimit": "Choose a workspace range of at most 3650 days to view energy history."
   },
   "energyLedger": {
     "summaryScope": "Months reconstructed from returned charging and drive history; exact complete-history bounds are not supplied.",
@@ -1604,7 +1608,7 @@
       "duplicatesTitle": "Duplicate and overlap rejection",
       "duplicatesBody": "Candidates are ordered deterministically. Repeated session identifiers and intervals beginning before the prior accepted completion are classified out rather than double-counted.",
       "calendarTitle": "Vehicle-local calendar",
-      "calendarBody": "Months, active days, and active weeks use {{timeZone}}. The analysis clock is frozen when the page mounts so future classification and recency do not drift.",
+      "calendarBody": "Months, active days, and active weeks use your selected time zone. The analysis clock is frozen when the page mounts so future classification and recency do not drift.",
       "scopeTitle": "Capped historical scope",
       "scopeBody": "The canonical charging endpoint is requested with a {{limit}}-row cap. If the cap is reached, older history may be omitted; chart and directory caps never change summary calculations.",
       "limitsTitle": "Unmodeled factors",
@@ -2246,7 +2250,7 @@
     "startDateGroups": {
       "section": "Sessions by start date and reduction tips",
       "title": "Parked sessions by start date",
-      "scope": "Whole-session battery loss and duration are grouped by start date in {{timeZone}}, not distributed across calendar days. Sessions with missing or invalid start dates are excluded from this chart.",
+      "scope": "Whole-session battery loss and duration are grouped by start date in your selected time zone, not distributed across calendar days. Sessions with missing or invalid start dates are excluded from this chart.",
       "aria": "Whole-session battery loss and parked hours grouped by session start date",
       "date": "Session start date"
     }
@@ -2681,8 +2685,7 @@
     }
   },
   "app": {
-    "currency": "Currency",
-    "tzDisplayDefault": "Time zone display"
+    "currency": "Currency"
   },
   "automations": {
     "builder": {

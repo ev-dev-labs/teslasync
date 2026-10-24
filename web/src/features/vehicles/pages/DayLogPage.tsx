@@ -10,7 +10,7 @@ import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSel
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { isValidYmd, todayYmd } from '../lib/daylog';
 import { DayLogControls } from '../components/daylog/DayLogControls';
 import { DayLogOperationalSummary } from '../components/operationalbrief-a-m/DayLogOperationalSummary';
@@ -33,7 +33,10 @@ export default function DayLogPage() {
   usePageTitle(title);
 
   const { vehicleId } = useSelectedVehicle();
-  const timezone = useTimezone('vehicle');
+  // Single resolved display zone: the day scope, the controls' today/max,
+  // and the timeline all share it, so the page follows the user's
+  // Settings > Units time-zone choice (vehicle frame by default).
+  const { tz: timezone } = useDateFormat();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const date = useMemo(() => {
@@ -76,11 +79,6 @@ export default function DayLogPage() {
       actionLayout="scope-first"
       title={title}
       subtitle={t('dayLog.subtitle', 'What happened to this vehicle today')}
-      metadataActions={
-        <Text as="span" variant="caption" className="[overflow-wrap:anywhere]" id="daylog-timezone">
-          {t('dayLog.controls.timezoneNote', 'Day boundaries in {{tz}}', { tz: timezone })}
-        </Text>
-      }
       query={dayLogQuery}
       copyLink
       contextActions={<DayLogControls date={date} timezone={timezone} onDateChange={setDate} />}
@@ -119,7 +117,6 @@ export default function DayLogPage() {
             <DayLogOperationalSummary
               data={data}
               date={date}
-              timezone={timezone}
               isLoading={isLoading}
               error={fatalError}
               status={state.status}

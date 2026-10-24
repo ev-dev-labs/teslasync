@@ -83,7 +83,7 @@ describe('DrainEventDirectory preference-aware absolute timestamps', () => {
     const snapshot = structuredClone(data);
     mount(data);
     const directory = screen.getByTestId('sleep-efficiency-event-directory');
-    expect(within(directory).getByText(`Time zone display: ${timeZone}`)).toBeInTheDocument();
+    expect(within(directory).queryByText(/Time zone display:/)).not.toBeInTheDocument();
     for (const event of data.events.directory) {
       expect(within(directory).getByText(expectedDate(event.startDate, locale, timeZone))).toBeInTheDocument();
       expect(within(directory).getByText(expectedDate(event.endDate, locale, timeZone))).toBeInTheDocument();
@@ -135,6 +135,6 @@ describe('DrainEventDirectory preference-aware absolute timestamps', () => {
     expect(screen.getByTestId('sleep-efficiency-event-directory')).toHaveTextContent(
       'No event passed timestamp, future, duration, battery, and duplicate validation.',
     );
-    expect(screen.getByText('Time zone display: America/Los_Angeles')).toBeInTheDocument();
+    expect(screen.queryByText(/Time zone display:/)).not.toBeInTheDocument();
   });
 });
