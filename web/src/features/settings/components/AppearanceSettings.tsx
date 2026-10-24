@@ -38,9 +38,7 @@ export function AppearanceSettings() {
     (settings?.time_format_default as TimeFormatId | undefined) ?? 'relative'
 
   // Chart palette default (). Drives the reactive
-  // `useChartPalette()` hook so consumers re-render with the new colours
-  // when the user toggles between the CB-safe Okabe-Ito default and the
-  // stylistic neon palette.
+  // `useChartPalette()` hook without changing the UI accent preset.
   const chartPalette: ChartPaletteId =
     (settings?.chart_palette as ChartPaletteId | undefined) ?? 'cb_safe'
 
@@ -86,10 +84,10 @@ export function AppearanceSettings() {
     },
     {
       id: 'neon',
-      label: t('theme.chartPalette.neon', 'Stylistic neon'),
+      label: t('theme.chartPalette.neon', 'Alternate order'),
       help: t(
         'theme.chartPalette.neonHelp',
-        'Bright cyan/magenta — best when colour vision is unimpaired.',
+        'The same calm palette in a violet-led order.',
       ),
       swatches: CHART_COLORS_NEON,
     },

@@ -10,6 +10,7 @@ import { FixtureSection } from './FixtureSection';
 import { FixtureStateControls } from './FixtureStateControls';
 import { completeChartRows, plottedChartRows } from './fixtureData';
 import { useCompletionLabels } from './useCompletionLabels';
+import { CHART_COLORS } from '@/lib/colors';
 
 export function ChartFixtures() {
   const c = useCompletionLabels();
@@ -22,6 +23,16 @@ export function ChartFixtures() {
   return (
     <FixtureSection id="charts" contract="chart-card" title={c.chartTitle} description={c.chartDescription}>
       <FixtureStateControls state={state} onChange={setState} label={c.chartName} />
+      <div className="flex items-center gap-2" aria-label="Chart palette swatches">
+        {CHART_COLORS.map((color, index) => (
+          <span
+            key={color}
+            data-chart-palette-swatch={`preview-${index}`}
+            className="h-4 w-4 rounded-full border border-[var(--glass-border)]"
+            style={{ background: color }}
+          />
+        ))}
+      </div>
       {state === 'retained' && <div className="space-y-2">
         <Text as="p" variant="bodySm" role="status">{c.sourceRetained}</Text>
         <Button wrapLabel type="button" variant="secondary" onClick={() => setState('ready')}>{c.chartRetry}</Button>

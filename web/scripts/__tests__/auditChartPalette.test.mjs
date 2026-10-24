@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { auditCanonicalPalettes, readCanonicalPalettes } from '../auditChartPalette.mjs';
+import { auditCanonicalPalettes, readCanonicalPalettes, findVisualColorLiterals } from '../auditChartPalette.mjs';
 
 const canonicalSource = readFileSync(new URL('../../src/lib/colors.ts', import.meta.url), 'utf8');
 const names = ['CHART_COLORS_CB_SAFE', 'CHART_COLORS_NEON'];
@@ -83,4 +83,16 @@ test('drift sensitivity includes a temporary override of the actual canonical so
   const result = run(changed);
   assert.equal(result.exit, 1);
   assert.ok(result.output.includes(`[2] ${palettes.CHART_COLORS_CB_SAFE[2]} -> ${palettes.CHART_COLORS_CB_SAFE[2]}`));
+});
+
+test('visual color guard finds resolved hex and CSS color literals but masks comments and prose', () => {
+  const source = [
+    '// fill="#123456"',
+    'const prose = "not a visual color";',
+    'const chart = { fill: "#398ad6", background: "rgba(1, 2, 3, 0.5)" };',
+  ].join('\n');
+  assert.deepEqual(
+    findVisualColorLiterals(source).map((hit) => hit.value),
+    ['#398ad6', 'rgba(1, 2, 3, 0.5)'],
+  );
 });

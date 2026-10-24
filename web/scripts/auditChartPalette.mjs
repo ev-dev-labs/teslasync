@@ -22,7 +22,7 @@
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { converter } from 'culori';
 import ts from 'typescript';
 
@@ -103,6 +103,46 @@ function check(palette, logger) {
   return failed;
 }
 
+function isVisualColorLiteral(text) {
+  return /^#[\da-f]{3}(?:[\da-f]{3})?(?:[\da-f]{2})?$/i.test(text.trim())
+    || /^(?:rgb|rgba|hsl|hsla)\s*\(/i.test(text.trim());
+}
+
+/** Find resolved color literals in chart/data-visual source, excluding comments. */
+export function findVisualColorLiterals(source, fileName = 'visual.tsx') {
+  const file = ts.createSourceFile(
+    fileName,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    fileName.endsWith('.ts') ? ts.ScriptKind.TS : ts.ScriptKind.TSX,
+  );
+  const hits = [];
+  const visit = (node) => {
+    if (ts.isStringLiteral(node) && isVisualColorLiteral(node.text)) {
+      hits.push({ position: node.getStart(file), value: node.text });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return hits;
+}
+
+function walk(root, predicate) {
+  const files = [];
+  for (const entry of readdirSync(root)) {
+    const full = join(root, entry);
+    const stat = statSync(full);
+    if (stat.isDirectory()) files.push(...walk(full, predicate));
+    else if (predicate(full)) files.push(full);
+  }
+  return files;
+}
+
+function lineOf(source, position) {
+  return source.slice(0, position).split('\n').length;
+}
+
 export function auditCanonicalPalettes(source, logger = console) {
   let palettes;
   try {
@@ -123,7 +163,42 @@ export function auditCanonicalPalettes(source, logger = console) {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   try {
-    process.exitCode = auditCanonicalPalettes(readFileSync(COLORS_SRC, 'utf8'));
+    const paletteExit = auditCanonicalPalettes(readFileSync(COLORS_SRC, 'utf8'));
+    const webRoot = join(__dirname, '..');
+    const allowed = new Set([
+      join(webRoot, 'src', 'lib', 'colors.ts'),
+      join(webRoot, 'src', 'lib', 'tokens.ts'),
+      join(webRoot, 'src', 'features', 'dashboard', 'lib', 'dashboardTokens.ts'),
+    ]);
+    const visualRoots = [
+      join(webRoot, 'src', 'components', 'charts'),
+      join(webRoot, 'src', 'components', 'maps'),
+      join(webRoot, 'src', 'features', 'dashboard', 'widgets'),
+      join(webRoot, 'src', 'features', 'analytics'),
+      join(webRoot, 'src', 'features', 'driving'),
+      join(webRoot, 'src', 'features', 'charging'),
+      join(webRoot, 'src', 'features', 'battery'),
+      join(webRoot, 'src', 'features', 'vehicles'),
+      join(webRoot, 'src', 'features', 'maps'),
+      join(webRoot, 'src', 'features', 'telemetry'),
+      join(webRoot, 'src', 'features', 'system'),
+      join(webRoot, 'src', 'features', 'settings'),
+      join(webRoot, 'src', 'features', 'developer-reference'),
+    ];
+    let visualFailures = 0;
+    for (const root of visualRoots) {
+      for (const file of walk(root, candidate => /\.(?:ts|tsx)$/.test(candidate))) {
+        if (allowed.has(file) || /\.(?:test)\.tsx?$/.test(file)) continue;
+        const source = readFileSync(file, 'utf8');
+        if (!/(?:<(?:Line|Area|Bar|Pie|Scatter|Cell|Polyline|CircleMarker|Radar|ReferenceArea)\b|fill=|stroke=|stopColor=|pathOptions=|\b(?:heatmap|gradient|sparkline)\b)/i.test(source)) continue;
+        for (const hit of findVisualColorLiterals(source, file)) {
+          console.error(`hard-coded visual color: ${join(relative(webRoot, file))}:${lineOf(source, hit.position)} ${hit.value}`);
+          visualFailures += 1;
+        }
+      }
+    }
+    if (visualFailures === 0) console.log('OK - no hard-coded visual colors outside the token modules.');
+    process.exitCode = paletteExit || visualFailures > 0 ? 1 : 0;
   } catch (err) {
     console.error(`drift guard: cannot read ${COLORS_SRC}: ${err.message}`);
     process.exitCode = 1;

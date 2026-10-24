@@ -5,6 +5,7 @@ import { Badge, Button, Text } from '@/components/ui';
 import { WidgetEventFeed, type EventFeedItem } from '@/features/dashboard/widgets/shared';
 import { FixtureSection } from './FixtureSection';
 import { useCompletionLabels } from './useCompletionLabels';
+import { CHART_COLORS } from '@/lib/colors';
 
 export function EventFixtures() {
   const c = useCompletionLabels();
@@ -15,7 +16,7 @@ export function EventFixtures() {
     <Button wrapLabel type="button" variant="secondary" onClick={() => setInspected(id)}>{c.eventAction}</Button>
   );
   const common = {
-    icon: <Info className="h-4 w-4" />, color: '#38bdf8', wrap: true,
+    icon: <Info className="h-4 w-4" />, color: CHART_COLORS[0], wrap: true,
     subtitle: c.eventSubtitle, badges: <Badge variant="warning">{c.unresolved}</Badge>,
     metadata: <Text as="p" variant="bodySm">{c.eventMetadata}</Text>,
     href: '#shared-completion-event-target',

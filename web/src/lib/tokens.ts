@@ -395,8 +395,8 @@ export const chartTokens = {
   /** Calm, CVD-oriented categorical series; modes select dedicated variants. */
   series: [
     'light-dark(#398ad6, #67aaed)',
-    'light-dark(#18a7a1, #52bfb9)',
-    'light-dark(#4fa866, #73bb83)',
+    'light-dark(#009e98, #52bfb9)',
+    'light-dark(#459f5d, #73bb83)',
     'light-dark(#b8790e, #e7b369)',
     'light-dark(#e57255, #ee8f63)',
     'light-dark(#cd6199, #e98092)',

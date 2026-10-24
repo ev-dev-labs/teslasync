@@ -83,8 +83,8 @@ export function resolveMapRendererColor(input: string, context: HTMLElement): st
  */
 export const CHART_COLORS_CB_SAFE = [
   '#398ad6', // blue
-  '#18a7a1', // teal
-  '#4fa866', // green
+  '#009e98', // teal
+  '#459f5d', // green
   '#b8790e', // amber
   '#e57255', // orange
   '#cd6199', // rose
@@ -96,8 +96,8 @@ export const CHART_COLORS_CB_SAFE = [
 export const CHART_COLORS_NEON = [
   '#876cca', // violet
   '#398ad6', // blue
-  '#18a7a1', // teal
-  '#4fa866', // green
+  '#009e98', // teal
+  '#459f5d', // green
   '#b8790e', // amber
   '#e57255', // orange
   '#cd6199', // rose
@@ -218,7 +218,7 @@ export const CHARGER_COLORS: Record<string, string> = {
 /* ── Semantic Color Constants ── */
 
 export const COLOR = {
-  GOOD: '#4fa866',
+  GOOD: '#459f5d',
   WARN: '#b8790e',
   BAD: '#cd6199',
   CYAN: '#398ad6',
