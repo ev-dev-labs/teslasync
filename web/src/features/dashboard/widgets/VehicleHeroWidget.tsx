@@ -218,7 +218,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
   const subtitle = state
     ? [
         fsmState
-          ? t(`vehicle.state.${fsmState}`, VEHICLE_STATE_LABELS[fsmState])
+          ? VEHICLE_STATE_LABELS[fsmState]
           : null,
         sinceDuration,
       ]
