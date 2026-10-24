@@ -40,6 +40,7 @@ import { useDataState } from '@/hooks/useDataState'
 import { QueryError, StaleRefreshWarning } from '@/components/feedback'
 import { Caption, Text } from '@/components/ui'
 import { MetricBar } from '@/components/data-display'
+import { COLOR } from '@/lib/colors'
 import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
 
@@ -180,9 +181,9 @@ function vinTail(vin: string | undefined | null): string {
 }
 
 function batteryColor(pct: number): string {
-  if (pct >= 50) return 'rgb(52 211 153 / 0.7)'
-  if (pct >= 20) return 'rgb(251 191 36 / 0.7)'
-  return 'rgb(239 68 68 / 0.7)'
+  if (pct >= 50) return COLOR.GOOD
+  if (pct >= 20) return COLOR.WARN
+  return COLOR.BAD
 }
 
 function vehicleStateBadge(state: string | undefined): string {

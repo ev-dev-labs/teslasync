@@ -27,6 +27,7 @@ import type { BatteryChargingAnalysis } from '@/types/energy';
 import { computeEnergyBreakdown } from './helpers';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { BATTERY_PANEL_CLASS, BATTERY_PANEL_HEADER_CLASS } from './layout';
+import { COLOR } from '@/lib/colors';
 
 interface BatteryChargingChartsProps {
   analysis: BatteryChargingAnalysis;
@@ -136,7 +137,7 @@ export default function BatteryChargingCharts({
                       <Bar
                         dataKey="startCount"
                         name={t('battery.chart.chargeStarted', 'Charge Started')}
-                        fill="#ef4444"
+                        fill={COLOR.BAD}
                         fillOpacity={0.5}
                         radius={[3, 3, 0, 0]}
                         hide={hiddenSeries?.isHidden('startCount')}
@@ -144,7 +145,7 @@ export default function BatteryChargingCharts({
                       <Bar
                         dataKey="endCount"
                         name={t('battery.chart.chargeEnded', 'Charge Ended')}
-                        fill="#10b981"
+                        fill={COLOR.GOOD}
                         fillOpacity={0.5}
                         radius={[3, 3, 0, 0]}
                         hide={hiddenSeries?.isHidden('endCount')}
@@ -222,7 +223,7 @@ export default function BatteryChargingCharts({
                     outerRadius={80}
                     innerRadius={40}
                     strokeWidth={2}
-                    stroke="rgba(0,0,0,0.3)"
+                    stroke="var(--border-default)"
                   >
                     {energyBreakdownRows.map((entry) => (
                       <Cell key={entry.name} fill={entry.fill} />

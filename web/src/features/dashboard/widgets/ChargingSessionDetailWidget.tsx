@@ -19,6 +19,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { classifyChargingSource, type ChargerKind } from '@/lib/chargerKind';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import { Badge } from '@/components/ui';
+import { CHART_SEMANTIC } from '@/lib/colors';
 
 interface ChartDatum extends ChartDataRow {
   time: string;
@@ -271,7 +272,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
           margin={{ top: 4, right: 4, bottom: 0, left: 4 }}
           {...chartAnimation}
         >
-          {areaGradient('charge-power-grad', '#22c55e')}
+          {areaGradient('charge-power-grad', CHART_SEMANTIC.vehicle.charging)}
           {chartGrid}
 
           <XAxis
@@ -309,7 +310,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
           <Area
             yAxisId="power"
             dataKey="power"
-            stroke="#22c55e"
+            stroke={CHART_SEMANTIC.vehicle.charging}
             fill="url(#charge-power-grad)"
             fillOpacity={0.3}
             strokeWidth={1.5}
@@ -321,7 +322,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
           <Line
             yAxisId="soc"
             dataKey="soc"
-            stroke="#22d3ee"
+            stroke={CHART_SEMANTIC.vehicle.driving}
             strokeWidth={1.5}
             strokeDasharray="4 3"
             dot={false}

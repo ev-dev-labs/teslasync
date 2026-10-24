@@ -18,13 +18,14 @@ import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { COLOR, CHART_NEUTRAL } from '@/lib/colors';
 
 // Battery state-of-charge health bands → gauge/accent color:
 // healthy (>50%) emerald, low (>20%) amber, critical (≤20%) red.
 export function getBatteryColor(level: number): string {
-  if (level > 50) return '#10b981';
-  if (level > 20) return '#f59e0b';
-  return '#ef4444';
+  if (level > 50) return COLOR.GOOD;
+  if (level > 20) return COLOR.WARN;
+  return COLOR.BAD;
 }
 
 export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
@@ -99,7 +100,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
   ];
 
   const color = useMemo(
-    () => (batteryLevel != null ? getBatteryColor(batteryLevel) : '#374151'),
+    () => (batteryLevel != null ? getBatteryColor(batteryLevel) : CHART_NEUTRAL),
     [batteryLevel],
   );
 

@@ -8,6 +8,7 @@ import {
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { CHART_COLORS, CHART_NEUTRAL } from '@/lib/colors';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -119,18 +120,18 @@ export function ElevationProfile({
           onClick={handleClick}
           className={cn(onClickIndex && 'cursor-pointer')}
         >
-          {areaGradient('elevGrad', '#10b981', 0.4)}
+          {areaGradient('elevGrad', CHART_COLORS[2], 0.4)}
           <CartesianGrid {...chartGrid} />
           <XAxis
             dataKey="distance"
             {...axisTick}
             tickFormatter={(value: number) => fmtNumber(value)}
-            label={{ value: distanceUnit, position: 'insideBottomRight', offset: -5, style: { fontSize: 10, fill: '#9ca3af' } }}
+            label={{ value: distanceUnit, position: 'insideBottomRight', offset: -5, style: { fontSize: 10, fill: CHART_NEUTRAL } }}
           />
           <YAxis
             {...axisTick}
             tickFormatter={(value: number) => fmtNumber(value)}
-            label={{ value: 'm', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: '#9ca3af' } }}
+            label={{ value: 'm', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: CHART_NEUTRAL } }}
           />
           <Tooltip
             content={<ChartTooltip />}
@@ -140,7 +141,7 @@ export function ElevationProfile({
           <Area
             {...AREA_DEFAULTS}
             dataKey="elevation"
-            stroke="#10b981"
+            stroke={CHART_COLORS[2]}
             fill="url(#elevGrad)"
             isAnimationActive={false}
           />

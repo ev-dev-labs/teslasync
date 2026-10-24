@@ -220,13 +220,13 @@ export default function EfficiencyLandscapePage() {
                               <>
                                 <Text variant="bodySm" weight="semibold"
                                   className="font-mono tabular-nums"
-                                  style={{ color: trusted ? '#0b1220' : 'var(--text-secondary)' }}
+                                  style={{ color: trusted ? 'var(--text-inverse)' : 'var(--text-secondary)' }}
                                 >
                                   {toEff(cell.whPerKm)}
                                 </Text>
                                 <Text variant="caption"
                                   className="tabular-nums"
-                                  style={{ color: trusted ? '#0b1220' : 'var(--text-muted)', opacity: 0.75 }}
+                                  style={{ color: trusted ? 'var(--text-inverse)' : 'var(--text-muted)', opacity: 0.75 }}
                                 >
                                   ×{cell.drives}
                                 </Text>

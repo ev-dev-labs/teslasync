@@ -27,6 +27,7 @@ import { useSignalHistory } from '@/api/hooks/useSignals';
 import { useDataState } from '@/hooks/useDataState';
 import type { SignalKind, SignalEnvelope } from '@/api/types';
 import { cn } from '@/lib/cn';
+import { CHART_COLORS } from '@/lib/colors';
 
 const SPARKLINE_LIMIT = 30;
 const SPARKLINE_HOURS = 1;
@@ -37,7 +38,7 @@ const SPARKLINE_HOURS = 1;
 const MIN_POINTS = 2;
 
 export interface SignalSparklinePreviewProps {
-  vehicleId: number;
+  vehicleId: number | null | undefined;
   signal: string;
   valueKind: SignalKind;
   /** Gates the underlying fetch. Parent flips on per-leaf as a group expands. */
@@ -80,7 +81,7 @@ export function SignalSparklinePreview({
   signal,
   valueKind,
   enabled,
-  color = '#22d3ee',
+  color = CHART_COLORS[0],
   width = 80,
   height = 18,
   className,
@@ -114,7 +115,7 @@ export function SignalSparklinePreview({
 
   return (
     <SparklineFetcher
-      vehicleId={vehicleId}
+      vehicleId={vehicleId ?? 0}
       signal={signal}
       color={color}
       width={width}

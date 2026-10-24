@@ -19,6 +19,7 @@ import {
 import { FadeIn } from '@/components/motion';
 
 import type { MotorChartDataPoint } from './constants';
+import { CHART_COLORS, CHART_NEUTRAL } from '@/lib/colors';
 
 interface TorqueHistoryChartProps {
   data: MotorChartDataPoint[];
@@ -61,7 +62,7 @@ export function TorqueHistoryChart({ data, loading = false }: TorqueHistoryChart
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={rows}>
             <defs>
-              <ChartGradient id="dtTorqueGrad" color="#00f0ff" />
+              <ChartGradient id="dtTorqueGrad" color={CHART_COLORS[0]} />
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
             <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
@@ -72,10 +73,10 @@ export function TorqueHistoryChart({ data, loading = false }: TorqueHistoryChart
               {...AREA_DEFAULTS}
               dataKey="torque"
               name={`${t('drivetrain.torque', 'Torque')} (Nm)`}
-              stroke="#00f0ff"
+              stroke={CHART_COLORS[0]}
               fill="url(#dtTorqueGrad)"
             />
-            <ReferenceLine y={0} stroke="#64748b" strokeDasharray="2 2" />
+            <ReferenceLine y={0} stroke={CHART_NEUTRAL} strokeDasharray="2 2" />
           </AreaChart>
         </ResponsiveContainer>
       </ChartContainer>

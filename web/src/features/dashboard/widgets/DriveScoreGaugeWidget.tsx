@@ -11,12 +11,13 @@ import { useDataState } from '@/hooks/useDataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { COLOR, CHART_NEUTRAL } from '@/lib/colors';
 
 const SCORE_COLORS = {
-  excellent: '#10b981',
-  good: '#22d3ee',
-  fair: '#f59e0b',
-  poor: '#ef4444',
+  excellent: COLOR.GOOD,
+  good: COLOR.CYAN,
+  fair: COLOR.WARN,
+  poor: COLOR.BAD,
 } as const;
 
 export function scoreColor(score: number): string {
@@ -38,7 +39,7 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
   const trust = useDataState({ ...query, data: score ?? undefined }, { provenance: 'inferred' });
 
   const overall = knownNumber(score?.overall);
-  const color = useMemo(() => overall == null ? '#94a3b8' : scoreColor(overall), [overall]);
+  const color = useMemo(() => overall == null ? CHART_NEUTRAL : scoreColor(overall), [overall]);
 
   const isCompact = size.cols === 1 && size.rows === 1;
   const constrained = size.rows <= 5;
@@ -112,7 +113,7 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
                   key={s.key}
                   value={null}
                   max={100}
-                  color="#94a3b8"
+                  color={CHART_NEUTRAL}
                   label={s.label}
                   sublabel="—"
                   size="slim"

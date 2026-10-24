@@ -11,6 +11,7 @@ import {
 
 import type { EnergyTrendPoint, ChargerBreakdownEntry, CostByTypeEntry } from './helpers';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { CHART_COLORS } from '@/lib/colors';
 
 interface ChartsRowProps {
   energyTrend: EnergyTrendPoint[];
@@ -70,15 +71,15 @@ export function ChartsRow({ energyTrend, chargerBreakdown, costByType }: ChartsR
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trend}>
                   <defs>
-                    <ChartGradient id="eGrad" color="#10b981" />
+                    <ChartGradient id="eGrad" color={CHART_COLORS[2]} />
                   </defs>
                   {chartGrid}
                   <XAxis dataKey="date" tick={axisTickSm} />
                   <YAxis tick={axisTickSm} />
                   <Tooltip content={<ChartTooltip />} />
                   <ChartLegend />
-                  <Area {...AREA_DEFAULTS} dataKey="energy" name={energySeriesName} stroke="#10b981" fill="url(#eGrad)" hide={hiddenSeries?.isHidden('energy')} />
-                  <Area {...AREA_DEFAULTS} dataKey="cost" name={costSeriesName} stroke="#f59e0b" fill="transparent" strokeWidth={1.5} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('cost')} />
+                  <Area {...AREA_DEFAULTS} dataKey="energy" name={energySeriesName} stroke={CHART_COLORS[2]} fill="url(#eGrad)" hide={hiddenSeries?.isHidden('energy')} />
+                  <Area {...AREA_DEFAULTS} dataKey="cost" name={costSeriesName} stroke={CHART_COLORS[3]} fill="transparent" strokeWidth={1.5} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('cost')} />
                 </AreaChart>
               </ResponsiveContainer>
             )}

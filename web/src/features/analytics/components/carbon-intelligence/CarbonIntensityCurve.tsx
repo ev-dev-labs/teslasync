@@ -18,10 +18,11 @@ import { EmptyState } from '@/components/feedback';
 import { ChartCard } from '@/components/layout';
 import { CarbonSectionBody } from './CarbonSectionBody';
 import type { CarbonSectionProps } from './types';
+import { CHART_COLORS, CHART_SEMANTIC } from '@/lib/colors';
 
-const COLOR_CURVE = '#2dd4bf';
-const COLOR_CLEAN = '#10b981';
-const COLOR_DIRTY = '#f43f5e';
+const COLOR_CURVE = CHART_COLORS[1];
+const COLOR_CLEAN = CHART_SEMANTIC.vehicle.online;
+const COLOR_DIRTY = CHART_COLORS[5];
 
 export function CarbonIntensityCurve({
   analysis,

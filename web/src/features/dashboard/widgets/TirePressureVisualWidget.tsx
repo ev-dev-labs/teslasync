@@ -9,6 +9,7 @@ import { usePressureFormat } from '@/hooks/usePressureFormat';
 import { tirePressureVariant } from '@/features/vehicles/components/vehicle-detail/helpers';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { COLOR, CHART_NEUTRAL } from '@/lib/colors';
 
 type TireVariant = ReturnType<typeof tirePressureVariant>;
 
@@ -21,10 +22,10 @@ type TireVariant = ReturnType<typeof tirePressureVariant>;
  * than an alarming critical-red.
  */
 const VARIANT_STYLE: Record<TireVariant, { fill: string; text: string }> = {
-  success: { fill: '#22c55e', text: 'text-emerald-300' },
-  warning: { fill: '#f59e0b', text: 'text-amber-300' },
-  danger: { fill: '#ef4444', text: 'text-rose-300' },
-  neutral: { fill: '#6b7280', text: 'text-[var(--text-muted)]' },
+  success: { fill: COLOR.GOOD, text: 'text-emerald-300' },
+  warning: { fill: COLOR.WARN, text: 'text-amber-300' },
+  danger: { fill: COLOR.BAD, text: 'text-rose-300' },
+  neutral: { fill: CHART_NEUTRAL, text: 'text-[var(--text-muted)]' },
 };
 
 interface TireInfo {

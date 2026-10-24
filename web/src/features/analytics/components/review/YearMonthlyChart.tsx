@@ -13,6 +13,7 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 import type { YearReview } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { CHART_COLORS } from '@/lib/colors';
 
 interface Props {
   data: YearReview;
@@ -76,8 +77,8 @@ export function YearMonthlyChart({ data }: Props) {
             <YAxis yAxisId="right" orientation="right" tick={axisTick} tickLine={false} axisLine={false} />
             <Tooltip content={<ChartTooltip />} />
             <ChartLegend state={hidden} wrapperStyle={{ fontSize: 12 }} />
-            <Bar yAxisId="left" dataKey="drives" name={drivesName} fill="#a78bfa" radius={[4, 4, 0, 0]} maxBarSize={36} animationDuration={800} hide={hidden.isHidden('drives')} />
-            <Line yAxisId="right" type="monotone" dataKey="distance" name={distanceName} stroke="#22d3ee" strokeWidth={2} dot={false} animationDuration={800} hide={hidden.isHidden('distance')} />
+            <Bar yAxisId="left" dataKey="drives" name={drivesName} fill={CHART_COLORS[6]} radius={[4, 4, 0, 0]} maxBarSize={36} animationDuration={800} hide={hidden.isHidden('drives')} />
+            <Line yAxisId="right" type="monotone" dataKey="distance" name={distanceName} stroke={CHART_COLORS[0]} strokeWidth={2} dot={false} animationDuration={800} hide={hidden.isHidden('distance')} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>

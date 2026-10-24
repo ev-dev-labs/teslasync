@@ -7,13 +7,14 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, EmbeddedChart,
 } from '@/components/charts';
 import type { StartLevelBucket } from './helpers';
+import { CHART_COLORS } from '@/lib/colors';
 
 interface BatteryLevelChartProps {
   data: StartLevelBucket[];
 }
 
 // Hoisted so the recharts <Bar> never receives a fresh literal each render.
-const BAR_COLOR = '#f59e0b';
+const BAR_COLOR = CHART_COLORS[3];
 const BAR_RADIUS: [number, number, number, number] = [4, 4, 0, 0];
 
 export function BatteryLevelChart({ data }: BatteryLevelChartProps) {

@@ -18,9 +18,10 @@ import { EmptyState } from '@/components/feedback';
 import { ChartCard } from '@/components/layout';
 import { CarbonSectionBody } from './CarbonSectionBody';
 import type { CarbonSectionProps } from './types';
+import { CHART_COLORS } from '@/lib/colors';
 
-const COLOR_CO2 = '#f59e0b';
-const COLOR_ENERGY = '#22d3ee';
+const COLOR_CO2 = CHART_COLORS[3];
+const COLOR_ENERGY = CHART_COLORS[0];
 
 export function CarbonMonthlyTrend({
   analysis,

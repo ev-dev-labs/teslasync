@@ -18,8 +18,9 @@ import type { WidgetProps } from './types';
 import type { Drive } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { zonedDateParts } from '@/lib/dateFormat';
+import { CHART_COLORS } from '@/lib/colors';
 
-const ROLLING_AVG_COLOR = '#f59e0b';
+const ROLLING_AVG_COLOR = CHART_COLORS[3];
 
 export interface DailyEfficiency {
   date: string;

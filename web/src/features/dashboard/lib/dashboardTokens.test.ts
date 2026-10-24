@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { dashboardTokens, resolveDashboardSeriesColor } from './dashboardTokens';
 
-const AFTER_LIGHT = ['#2563eb', '#0d9488', '#7c3aed', '#d97706', '#db2777'];
-const AFTER_DARK = ['#60a5fa', '#2dd4bf', '#a78bfa', '#fbbf24', '#f472b6'];
+const AFTER_LIGHT = ['#398ad6', '#18a7a1', '#4fa866', '#b8790e', '#e57255', '#cd6199', '#876cca', '#748192'];
+const AFTER_DARK = ['#67aaed', '#52bfb9', '#73bb83', '#e7b369', '#ee8f63', '#e98092', '#a48fe1', '#8c9aab'];
 
 describe('dashboardTokens legacy exports', () => {
   it('keeps every pre-redesign export working with identical values', () => {
@@ -44,8 +44,8 @@ describe('dashboardTokens radius', () => {
 });
 
 describe('dashboardTokens chart palette', () => {
-  it('exposes five After series as light-dark() pairs in After order', () => {
-    expect(dashboardTokens.chart.series).toHaveLength(5);
+  it('exposes eight calm series as light-dark() pairs in palette order', () => {
+    expect(dashboardTokens.chart.series).toHaveLength(8);
     dashboardTokens.chart.series.forEach((entry, index) => {
       expect(entry).toBe(`light-dark(${AFTER_LIGHT[index]}, ${AFTER_DARK[index]})`);
     });
@@ -91,8 +91,8 @@ describe('dashboardTokens chart palette', () => {
 
 describe('resolveDashboardSeriesColor', () => {
   it('picks the per-mode hex without wrapping', () => {
-    expect(resolveDashboardSeriesColor(0, 'light')).toBe('#2563eb');
-    expect(resolveDashboardSeriesColor(4, 'dark')).toBe('#f472b6');
+    expect(resolveDashboardSeriesColor(0, 'light')).toBe('#398ad6');
+    expect(resolveDashboardSeriesColor(4, 'dark')).toBe('#ee8f63');
   });
 
   it('cycles past the end and maps hue names consistently', () => {
@@ -100,12 +100,12 @@ describe('resolveDashboardSeriesColor', () => {
       resolveDashboardSeriesColor(0, 'light'),
     );
     expect(resolveDashboardSeriesColor(dashboardTokens.chart.seriesByName.amber, 'dark')).toBe(
-      '#fbbf24',
+      '#e7b369',
     );
   });
 
   it('wraps negative indices instead of returning undefined', () => {
-    expect(resolveDashboardSeriesColor(-1, 'light')).toBe('#db2777');
+    expect(resolveDashboardSeriesColor(-1, 'light')).toBe('#748192');
   });
 });
 

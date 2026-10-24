@@ -11,6 +11,7 @@ import { useFormatting } from '@/hooks/useFormatting';
 import type { CostForecastData } from '@/types/charging';
 import { CostSection } from './CostSection';
 import { ForecastDetails } from './ForecastDetails';
+import { CHART_COLORS } from '@/lib/colors';
 
 interface CostForecastSectionProps {
   forecastData: CostForecastData | undefined;
@@ -101,7 +102,7 @@ export function CostForecastSection({
             <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData}>
               <CartesianGrid {...chartGrid} />
-              {areaGradient('forecastBand', '#a855f7', 0.15)}
+              {areaGradient('forecastBand', CHART_COLORS[6], 0.15)}
               {areaGradient('actualCostFill', palette[0], 0.3)}
               <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
               <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit={currencySymbol} />
@@ -110,7 +111,7 @@ export function CostForecastSection({
               <Area {...AREA_DEFAULTS} dataKey="ci_low" stackId="ci" stroke="none" fill="transparent" fillOpacity={0} legendType="none" connectNulls={false} hide={hiddenSeries?.isHidden('ci_band')} />
               <Area {...AREA_DEFAULTS} dataKey="ci_band" stackId="ci" stroke="none" fill="url(#forecastBand)" name={t('costAnalysis.forecast.confidence', '95% Confidence')} connectNulls={false} hide={hiddenSeries?.isHidden('ci_band')} />
               <Area {...AREA_DEFAULTS} dataKey="actual" stroke={palette[0]} fill="url(#actualCostFill)" name={t('costAnalysis.forecast.actual', 'Actual Cost')} connectNulls={false} hide={hiddenSeries?.isHidden('actual')} />
-              <Line {...AREA_DEFAULTS} dataKey="forecast" stroke="#a855f7" strokeDasharray="8 4" name={t('costAnalysis.forecast.projected', 'Projected Cost')} connectNulls={false} hide={hiddenSeries?.isHidden('forecast')} />
+              <Line {...AREA_DEFAULTS} dataKey="forecast" stroke={CHART_COLORS[6]} strokeDasharray="8 4" name={t('costAnalysis.forecast.projected', 'Projected Cost')} connectNulls={false} hide={hiddenSeries?.isHidden('forecast')} />
             </ComposedChart>
             </ResponsiveContainer>
           )}
@@ -152,7 +153,7 @@ export function CostForecastSection({
               <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
               <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit={currencySymbol} />
               <Tooltip content={<ChartTooltip />} />
-              <Line {...AREA_DEFAULTS} dataKey="cost_per_kwh" stroke="#06b6d4" dot={{ fill: '#06b6d4', r: 3 }} name={t('costAnalysis.forecast.costPerKwh', '$/kWh')} />
+              <Line {...AREA_DEFAULTS} dataKey="cost_per_kwh" stroke={CHART_COLORS[1]} dot={{ fill: CHART_COLORS[1], r: 3 }} name={t('costAnalysis.forecast.costPerKwh', '$/kWh')} />
             </LineChart>
           </ResponsiveContainer>
         </EmbeddedChart>

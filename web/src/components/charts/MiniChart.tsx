@@ -1,5 +1,6 @@
 import { forwardRef, useMemo } from 'react';
 import { cn } from '@/lib/cn';
+import { CHART_COLORS } from '@/lib/colors';
 
 interface MiniChartProps {
   data: number[];
@@ -24,7 +25,7 @@ const toFinite = (v: number): number => (Number.isFinite(v) ? v : 0);
 /** Tiny inline SVG trend line — no axes, no recharts, sized for stat cards. */
 export const MiniChart = forwardRef<HTMLDivElement, MiniChartProps>(
   function MiniChart(
-    { data, color = '#3b82f6', height = 32, width = 100, className, label },
+    { data, color = CHART_COLORS[0], height = 32, width = 100, className, label },
     ref,
   ) {
     // Build the polyline once per data/size change. Sanitising every value up

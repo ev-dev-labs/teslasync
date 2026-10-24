@@ -21,6 +21,7 @@ import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 
 import type { MotorChartDataPoint } from './constants';
 import { convertTempFromSI } from '@/lib/unitConversion';
+import { CHART_COLORS, COLOR } from '@/lib/colors';
 
 interface StatorTempChartProps {
   data: MotorChartDataPoint[];
@@ -95,36 +96,36 @@ export function StatorTempChart({ data, loading = false }: StatorTempChartProps)
               {...AREA_DEFAULTS}
               dataKey="stator"
               name={`${t('drivetrain.statorTemp', 'Stator Temp')} (${tempUnit})`}
-              stroke="#ef4444"
+              stroke={COLOR.BAD}
               hide={hidden.isHidden('stator')}
             />
             <Line
               {...AREA_DEFAULTS}
               dataKey="statorRel"
               name={`${t('drivetrain.statorTempRearLeft', 'Rear-Left Stator Temp')} (${tempUnit})`}
-              stroke="#a855f7"
+              stroke={CHART_COLORS[6]}
               hide={hidden.isHidden('statorRel')}
             />
             <Line
               {...AREA_DEFAULTS}
               dataKey="statorRer"
               name={`${t('drivetrain.statorTempRearRight', 'Rear-Right Stator Temp')} (${tempUnit})`}
-              stroke="#06b6d4"
+              stroke={CHART_COLORS[1]}
               hide={hidden.isHidden('statorRer')}
             />
             <ReferenceLine
               y={normalThreshold}
-              stroke="#4ade80"
+              stroke={COLOR.GOOD}
               strokeDasharray="4 4"
               strokeOpacity={0.5}
-              label={{ value: t('drivetrain.normal', 'Normal'), position: 'right', fill: '#4ade80', fontSize: 10 }}
+              label={{ value: t('drivetrain.normal', 'Normal'), position: 'right', fill: COLOR.GOOD, fontSize: 10 }}
             />
             <ReferenceLine
               y={warmThreshold}
-              stroke="#fbbf24"
+              stroke={COLOR.WARN}
               strokeDasharray="4 4"
               strokeOpacity={0.5}
-              label={{ value: t('drivetrain.warm', 'Warm'), position: 'right', fill: '#fbbf24', fontSize: 10 }}
+              label={{ value: t('drivetrain.warm', 'Warm'), position: 'right', fill: COLOR.WARN, fontSize: 10 }}
             />
           </LineChart>
         </ResponsiveContainer>

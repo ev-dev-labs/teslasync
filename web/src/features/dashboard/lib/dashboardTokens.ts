@@ -67,15 +67,15 @@ export const dashboardTokens = {
   chart: {
     series: [
       'light-dark(#398ad6, #67aaed)',
-      'light-dark(#18a7a1, #52bfb9)',
-      'light-dark(#4fa866, #73bb83)',
+      'light-dark(#009e98, #52bfb9)',
+      'light-dark(#459f5d, #73bb83)',
       'light-dark(#b8790e, #e7b369)',
       'light-dark(#e57255, #ee8f63)',
       'light-dark(#cd6199, #e98092)',
       'light-dark(#876cca, #a48fe1)',
       'light-dark(#748192, #8c9aab)',
     ],
-    seriesLight: ['#398ad6', '#18a7a1', '#4fa866', '#b8790e', '#e57255', '#cd6199', '#876cca', '#748192'],
+    seriesLight: ['#398ad6', '#009e98', '#459f5d', '#b8790e', '#e57255', '#cd6199', '#876cca', '#748192'],
     seriesDark: ['#67aaed', '#52bfb9', '#73bb83', '#e7b369', '#ee8f63', '#e98092', '#a48fe1', '#8c9aab'],
     /** Series index by hue name, so widgets pick color by meaning not slot. */
     seriesByName: {

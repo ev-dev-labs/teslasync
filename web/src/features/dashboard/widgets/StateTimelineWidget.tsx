@@ -16,20 +16,23 @@ import { StateComposition } from '../components/continuation-dashboard-1/StateCo
 import { useRangeState } from '@/hooks/useRangeState';
 import { typography } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
+import { CHART_SEMANTIC, CHART_NEUTRAL } from '@/lib/colors';
 
 /* ── State colors ───────────────────────────────────────────────── */
 const STATE_COLORS: Record<string, string> = {
-  driving: '#22d3ee',   // cyan-400
-  charging: '#22c55e',  // green-500
-  asleep: '#a855f7',    // purple-500
-  idle: '#f59e0b',      // amber-500
-  offline: '#ef4444',   // red-500
+  driving: CHART_SEMANTIC.vehicle.driving,
+  charging: CHART_SEMANTIC.vehicle.charging,
+  online: CHART_SEMANTIC.vehicle.online,
+  parked: CHART_SEMANTIC.vehicle.parked,
+  asleep: CHART_SEMANTIC.vehicle.asleep,
+  idle: CHART_SEMANTIC.vehicle.charging,
+  offline: CHART_SEMANTIC.vehicle.offline,
 };
 
 export function stateColor(state: string | null | undefined): string {
   // Null-safe: an absent/empty state falls through to the neutral grey rather
   // than throwing on `undefined.toLowerCase()` at a mis-mapped call site.
-  return STATE_COLORS[(state ?? '').toLowerCase()] ?? '#6b7280';
+  return STATE_COLORS[(state ?? '').toLowerCase()] ?? CHART_NEUTRAL;
 }
 
 /* ── Duration formatter ─────────────────────────────────────────── */

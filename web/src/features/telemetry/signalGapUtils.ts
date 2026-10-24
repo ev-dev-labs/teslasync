@@ -8,6 +8,7 @@
 
 import { fmtInt } from '@/lib/numberFormat';
 import type { SignalRow } from '@/types/telemetry';
+import { COLOR, CHART_NEUTRAL } from '@/lib/colors';
 
 /** Age (seconds) below which a signal is considered live/active. */
 export const GAP_ACTIVE_MAX_S = 30;
@@ -19,10 +20,10 @@ export type GapBucketKey = 'active' | 'aging' | 'stale' | 'never';
 
 /** Series colors for the staleness buckets — color-blind-safe, theme-stable. */
 export const GAP_BUCKET_COLORS: Record<GapBucketKey, string> = {
-  active: '#10b981',
-  aging: '#f59e0b',
-  stale: '#ef4444',
-  never: '#64748b',
+  active: COLOR.GOOD,
+  aging: COLOR.WARN,
+  stale: COLOR.BAD,
+  never: CHART_NEUTRAL,
 };
 
 export interface GapBuckets {

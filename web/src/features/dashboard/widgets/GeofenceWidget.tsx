@@ -11,6 +11,7 @@ import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
 import { useDataState, useCombinedDataState } from '@/hooks/useDataState';
 import { WidgetDetailCard, type DetailEntry } from './shared';
+import { CHART_SEMANTIC, CHART_NEUTRAL } from '@/lib/colors';
 
 /** Haversine distance in meters between two lat/lon points */
 export function haversineMeters(
@@ -195,8 +196,8 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
                     center={[f.latitude, f.longitude]}
                     radius={f.radius ?? 0}
                     pathOptions={{
-                      color: f.inside ? '#22c55e' : '#6b7280',
-                      fillColor: f.inside ? '#22c55e' : '#6b7280',
+                      color: f.inside ? CHART_SEMANTIC.vehicle.online : CHART_NEUTRAL,
+                      fillColor: f.inside ? CHART_SEMANTIC.vehicle.online : CHART_NEUTRAL,
                       fillOpacity: 0.15,
                       weight: 2,
                     }}
