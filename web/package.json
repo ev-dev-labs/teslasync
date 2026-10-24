@@ -8,6 +8,14 @@
     "node": ">=26.0.0"
   },
   "scripts": {
+    "test:shared-pattern-guards": "node --test scripts/__tests__/shared-pattern-guards.test.mjs",
+    "guard:shared-patterns": "node scripts/shared-pattern-guards.mjs",
+    "guard:shared-statistics": "node scripts/shared-pattern-guards.mjs --guard=statistics",
+    "guard:charger-identity": "node scripts/shared-pattern-guards.mjs --guard=charger-identity",
+    "guard:lucide-icons": "node scripts/shared-pattern-guards.mjs --guard=lucide-icons",
+    "guard:timezone": "node scripts/shared-pattern-guards.mjs --guard=timezone",
+    "guard:unit-factors": "node scripts/shared-pattern-guards.mjs --guard=unit-factors",
+    "guard:ui-adoption": "node scripts/shared-pattern-guards.mjs --guard=ui-adoption",
     "predev": "node scripts/buildChangelog.mjs --check",
     "dev": "vite",
     "prebuild": "node scripts/buildChangelog.mjs --check",
