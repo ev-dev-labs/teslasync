@@ -14,3 +14,10 @@ work item | status | worker | commit | notes
 5 audit HTTP identity call sites | done | worker-http-sites | 6397bc7b07 | audit/httputil Go tests passed
 7 ML statistics call sites | done | worker-ml-sites | 132c5b54d9 | anomaly/range/chargingcurves Go tests passed
 10 icon registry adoption | done | worker-icons | ddf12a130f | 39 targeted Vitest tests passed
+final tsc | done | parent | 2254834891 | `npx tsc --noEmit` passed with 0 diagnostics
+final lint | done | parent | 2254834891 | `npm run lint` passed; release/audit registry gates passed
+final build | done | parent | 2254834891 | `npm run build` passed; bundle/PWA/source-map contracts passed
+final Go tests | done | parent | 0e7c9dffb4 | `go test ./...` passed
+final Vitest | blocked | parent |  | stopped after 45 minutes while actively progressing; no failure summary; rerun process produced no terminal exit
+final E2E | blocked/failed | parent |  | old run exposed operationalbrief/overflow failures; item attribution not isolated in this phase
+merge readiness | ready-pending-PR-202 | parent |  | `feat/shared-patterns` is ready to merge into `fix/post-merge-followups` only after PR #202 is green; no merge performed
