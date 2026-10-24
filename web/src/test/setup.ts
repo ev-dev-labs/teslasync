@@ -367,8 +367,8 @@ export function createTranslationT(options: TranslationMockOptions = {}) {
     if (typeof bag?.count === 'number') {
       fallback =
         bag.count === 1
-          ? bag.defaultValue_one ?? explicitFallback ?? plainResource ?? key
-          : bag.defaultValue_other ?? explicitFallback ?? plainResource ?? key
+          ? bag.defaultValue_one ?? bag.defaultValue ?? explicitFallback ?? plainResource ?? key
+          : bag.defaultValue_other ?? bag.defaultValue ?? explicitFallback ?? plainResource ?? key
     } else {
       fallback =
         explicitFallback

@@ -133,6 +133,14 @@ test('SP-13 rejects raw HTML, direct libraries, double API prefixes, routes, and
   assert.ok(findings.some((finding) => finding.fix.includes('shared storage')));
 });
 
+test('SP-13 rejects static CSS-variable inline styles without exception markers', () => {
+  const source = `
+    export const page = <div style={{ color: 'var(--text-primary)', background: 'var(--surface-2)' }}>Text</div>;
+  `;
+  const findings = scanUiAdoptionGuard(source, { rel: 'src/features/settings/pages/Profile.tsx' });
+  assert.ok(findings.some((finding) => finding.fix.includes('Tailwind class')));
+});
+
 test('SP-13 accepts shared components, barrel imports, hook-relative routes, and typed storage helpers', () => {
   const source = `
     import { Button } from '@/components/ui';

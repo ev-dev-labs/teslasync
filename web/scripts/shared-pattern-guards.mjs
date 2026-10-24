@@ -337,6 +337,23 @@ export function scanUiAdoptionGuard(source, { rel = 'src/features/example/Page.t
   const isHookScope = /^src\/(?:api\/hooks|api)\//u.test(rel);
 
   const visit = (node) => {
+    if (isFeatureScope && ts.isJsxAttribute(node) && node.name.text === 'style' && node.initializer
+      && ts.isJsxExpression(node.initializer) && node.initializer.expression
+      && ts.isObjectLiteralExpression(node.initializer.expression)) {
+      for (const property of node.initializer.expression.properties) {
+        if (!ts.isPropertyAssignment(property) || !ts.isStringLiteral(property.initializer)) continue;
+        const value = property.initializer.text;
+        if (/var\(--[^)]+\)/u.test(value)) {
+          findings.push(finding(
+            'SP-13',
+            rel,
+            sf,
+            property,
+            'Replace static CSS-variable inline style with a Tailwind class; no exception marker bypasses this guard.',
+          ));
+        }
+      }
+    }
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
       const from = node.moduleSpecifier.text;
       if (isFeatureScope && DIRECT_LIBRARIES.has(from)) {
