@@ -76,30 +76,122 @@ export function resolveMapRendererColor(input: string, context: HTMLElement): st
  * Restrained dark presentation in the saved Okabe-Ito hue order.
  * Labels/markers remain necessary; derived colors require separate CVD QA.
  */
+/**
+ * Calm categorical chart palette. These are the canonical light-mode marks;
+ * dark-mode variants live in CHART_COLORS_DARK. Hue order prioritizes
+ * distinguishability for common CVD, while text/axes still use text tokens.
+ */
 export const CHART_COLORS_CB_SAFE = [
-  '#91b4d2', // blue
-  '#c0a384', // orange
-  '#91b9a5', // bluish green
-  '#cfbf81', // yellow
-  '#99bfd0', // sky blue
-  '#c69b89', // vermillion
-  '#c0a1b5', // reddish purple
-  '#abb4bf', // neutral grey
+  '#398ad6', // blue
+  '#18a7a1', // teal
+  '#4fa866', // green
+  '#b8790e', // amber
+  '#e57255', // orange
+  '#cd6199', // rose
+  '#876cca', // violet
+  '#748192', // slate
 ] as const
 
-/**
- * Persisted neon choice retains its hue order, not fluorescent intensity.
- */
+/** Persisted legacy "neon" choice is now the same calm second order, never neon. */
 export const CHART_COLORS_NEON = [
-  '#91bbc0', // cyan
-  '#91b9a5', // emerald green
-  '#b5a8c9', // purple
-  '#cfb481', // amber
-  '#a5aac9', // indigo
-  '#d6a0a5', // red
-  '#c3a2b7', // pink
-  '#91bcb2', // teal
+  '#876cca', // violet
+  '#398ad6', // blue
+  '#18a7a1', // teal
+  '#4fa866', // green
+  '#b8790e', // amber
+  '#e57255', // orange
+  '#cd6199', // rose
+  '#748192', // slate
 ] as const
+
+export const CHART_COLORS_DARK = [
+  '#67aaed',
+  '#52bfb9',
+  '#73bb83',
+  '#e7b369',
+  '#ee8f63',
+  '#e98092',
+  '#a48fe1',
+  '#8c9aab',
+] as const
+
+export const CHART_COLORS_NEON_DARK = [
+  '#a48fe1',
+  '#67aaed',
+  '#52bfb9',
+  '#73bb83',
+  '#e7b369',
+  '#ee8f63',
+  '#e98092',
+  '#8c9aab',
+] as const
+
+export const CHART_SEQUENTIAL = [
+  '#d4e7fc',
+  '#a2c8f0',
+  '#73a9e1',
+  '#398ad6',
+  '#006ac0',
+  '#004c9f',
+] as const
+
+export const CHART_SEQUENTIAL_DARK = [
+  '#1e3a5f',
+  '#26527b',
+  '#326d9e',
+  '#398ad6',
+  '#67aaed',
+  '#a2c8f0',
+] as const
+
+export const CHART_DIVERGING = [
+  '#398ad6',
+  '#73a9e1',
+  '#d4e7fc',
+  '#edf0f3',
+  '#f2cf8f',
+  '#df6850',
+  '#bd4e67',
+] as const
+
+export const CHART_DIVERGING_DARK = [
+  '#67aaed',
+  '#398ad6',
+  '#26527b',
+  '#8c9aab',
+  '#b8790e',
+  '#ee8f63',
+  '#e98092',
+] as const
+
+export const CHART_NEUTRAL = '#748192'
+export const CHART_NEUTRAL_DARK = '#8c9aab'
+
+export const CHART_SEMANTIC = {
+  vehicle: {
+    driving: CHART_COLORS_CB_SAFE[0],
+    charging: CHART_COLORS_CB_SAFE[3],
+    parked: CHART_COLORS_CB_SAFE[1],
+    online: CHART_COLORS_CB_SAFE[2],
+    asleep: CHART_COLORS_CB_SAFE[6],
+    offline: CHART_COLORS_CB_SAFE[7],
+    unknown: CHART_NEUTRAL,
+  },
+  energy: {
+    solar: CHART_COLORS_CB_SAFE[3],
+    battery: CHART_COLORS_CB_SAFE[6],
+    grid: CHART_COLORS_CB_SAFE[5],
+    home: CHART_COLORS_CB_SAFE[1],
+    charging: CHART_COLORS_CB_SAFE[4],
+  },
+  charger: {
+    home: CHART_COLORS_CB_SAFE[2],
+    supercharger: CHART_COLORS_CB_SAFE[5],
+    dc: CHART_COLORS_CB_SAFE[4],
+    work: CHART_COLORS_CB_SAFE[3],
+    other: CHART_COLORS_CB_SAFE[7],
+  },
+} as const
 
 /**
  * Default static dark chart palette, preserving the CB-safe preference.
@@ -112,42 +204,38 @@ export const CHART_COLORS = CHART_COLORS_CB_SAFE
 /** Charger type colors (includes both internal keys and display-name keys) */
 export const CHARGER_COLORS: Record<string, string> = {
   // Internal keys (Charging page)
-  supercharger: '#ef4444',
-  dc: '#f59e0b',
-  home: '#10b981',
+  supercharger: CHART_SEMANTIC.charger.supercharger,
+  dc: CHART_SEMANTIC.charger.dc,
+  home: CHART_SEMANTIC.charger.home,
   // Display-name keys (CostAnalysis page)
-  Home: '#10b981',
-  Supercharger: '#ef4444',
-  'Public DC': '#a855f7',
-  'Work / L2': '#f59e0b',
-  Other: '#6366f1',
+  Home: CHART_SEMANTIC.charger.home,
+  Supercharger: CHART_SEMANTIC.charger.supercharger,
+  'Public DC': CHART_SEMANTIC.charger.dc,
+  'Work / L2': CHART_SEMANTIC.charger.work,
+  Other: CHART_SEMANTIC.charger.other,
 }
-
-/** Traffic-light status indicator colors */
-export const STATUS_COLORS = {
-  good: '#10b981',
-  warning: '#f59e0b',
-  critical: '#ef4444',
-} as const
-
-/** Battery health colors */
-export const BATTERY_COLORS = {
-  good: '#10b981',
-  warning: '#f59e0b',
-  critical: '#ef4444',
-} as const
 
 /* ── Semantic Color Constants ── */
 
 export const COLOR = {
-  GOOD: '#10b981',
-  WARN: '#f59e0b',
-  BAD: '#ef4444',
-  CYAN: '#00f0ff',
-  PURPLE: '#a855f7',
-  MUTED: '#6b7280',
-  DARK: '#374151',
+  GOOD: '#4fa866',
+  WARN: '#b8790e',
+  BAD: '#cd6199',
+  CYAN: '#398ad6',
+  PURPLE: '#876cca',
+  MUTED: '#748192',
+  DARK: '#748192',
 } as const
+
+/** Traffic-light status indicator colors */
+export const STATUS_COLORS = {
+  good: COLOR.GOOD,
+  warning: COLOR.WARN,
+  critical: COLOR.BAD,
+} as const
+
+/** Battery health colors */
+export const BATTERY_COLORS = STATUS_COLORS
 
 /* ── Domain Color Functions ── */
 
@@ -192,9 +280,13 @@ export function boolColorMuted(active: boolean): string {
 /** Hex color for vehicle state (for SVG/Recharts) */
 export function stateHexColor(state: string | undefined | null): string {
   switch ((state ?? '').toLowerCase()) {
-    case 'driving': return COLOR.CYAN
-    case 'charging': case 'online': return COLOR.GOOD
-    default: return COLOR.MUTED
+    case 'driving': return CHART_SEMANTIC.vehicle.driving
+    case 'charging': return CHART_SEMANTIC.vehicle.charging
+    case 'online': return CHART_SEMANTIC.vehicle.online
+    case 'parked': return CHART_SEMANTIC.vehicle.parked
+    case 'asleep': return CHART_SEMANTIC.vehicle.asleep
+    case 'offline': return CHART_SEMANTIC.vehicle.offline
+    default: return CHART_SEMANTIC.vehicle.unknown
   }
 }
 
@@ -266,65 +358,6 @@ export interface ChartPalette {
   neutral: string
 }
 
-/* ── HSL helpers (no chroma.js dependency) ─────────────────────────────────── */
-
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '')
-  const full = h.length === 3
-    ? h.split('').map((c) => c + c).join('')
-    : h.padEnd(6, '0').slice(0, 6)
-  const r = parseInt(full.slice(0, 2), 16)
-  const g = parseInt(full.slice(2, 4), 16)
-  const b = parseInt(full.slice(4, 6), 16)
-  return [r, g, b]
-}
-
-function rgbToHex(r: number, g: number, b: number): string {
-  const toHex = (n: number) => Math.round(Math.max(0, Math.min(255, n))).toString(16).padStart(2, '0')
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
-}
-
-function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
-  const rn = r / 255, gn = g / 255, bn = b / 255
-  const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn)
-  const l = (max + min) / 2
-  if (max === min) return [0, 0, l]
-  const d = max - min
-  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
-  let h: number
-  switch (max) {
-    case rn: h = ((gn - bn) / d + (gn < bn ? 6 : 0)); break
-    case gn: h = (bn - rn) / d + 2; break
-    default: h = (rn - gn) / d + 4
-  }
-  return [h * 60, s, l]
-}
-
-function hslToRgb(h: number, s: number, l: number): [number, number, number] {
-  const c = (1 - Math.abs(2 * l - 1)) * s
-  const hh = ((h % 360) + 360) % 360 / 60
-  const x = c * (1 - Math.abs((hh % 2) - 1))
-  let r = 0, g = 0, b = 0
-  if (hh < 1) [r, g, b] = [c, x, 0]
-  else if (hh < 2) [r, g, b] = [x, c, 0]
-  else if (hh < 3) [r, g, b] = [0, c, x]
-  else if (hh < 4) [r, g, b] = [0, x, c]
-  else if (hh < 5) [r, g, b] = [x, 0, c]
-  else [r, g, b] = [c, 0, x]
-  const m = l - c / 2
-  return [(r + m) * 255, (g + m) * 255, (b + m) * 255]
-}
-
-function hexToHsl(hex: string): [number, number, number] {
-  const [r, g, b] = hexToRgb(hex)
-  return rgbToHsl(r, g, b)
-}
-
-function hslToHex(h: number, s: number, l: number): string {
-  const [r, g, b] = hslToRgb(h, s, l)
-  return rgbToHex(r, g, b)
-}
-
 /**
  * Produce the deterministic chart palette for a given theme + mode. Pure
  * function — same inputs always yield the same output. The series array
@@ -333,35 +366,23 @@ function hslToHex(h: number, s: number, l: number): string {
  * shorter arc. Optional saved series retain their own hue order. Only chart
  * presentation is derived; saved theme colors and semantic roles stay intact.
  */
-export function buildChartPalette(theme: ColorTheme, mode: ModeTheme, sourceSeries?: readonly string[]): ChartPalette {
-  const [hPrim, sPrim] = hexToHsl(theme.primary)
-  const [hAcc, sAcc] = hexToHsl(theme.accent)
-
+export function buildChartPalette(_theme: ColorTheme, mode: ModeTheme, sourceSeries?: readonly string[]): ChartPalette {
   const isLight = mode.colorScheme === 'light'
-  const targetL = isLight ? 0.36 : 0.7
-  const present = (h: number, s: number) => hslToHex(h, Math.min(0.3, s), targetL)
-
-  // Walk the shorter arc between primary and accent.
-  let delta = hAcc - hPrim
-  if (delta > 180) delta -= 360
-  else if (delta < -180) delta += 360
-
-  const SERIES_LEN = 8
-  const series: string[] = []
-  for (let i = 0; i < SERIES_LEN; i++) {
-    const t = i / (SERIES_LEN - 1)
-    const h = hPrim + delta * t
-    const s = sPrim + (sAcc - sPrim) * t
-    series.push(present(h, s))
+  const canonical = isLight ? CHART_COLORS_CB_SAFE : CHART_COLORS_DARK
+  const neon = isLight ? CHART_COLORS_NEON : CHART_COLORS_NEON_DARK
+  let series: string[]
+  if (sourceSeries === CHART_COLORS_CB_SAFE || sourceSeries === CHART_COLORS_DARK) {
+    series = [...canonical]
+  } else if (sourceSeries === CHART_COLORS_NEON || sourceSeries === CHART_COLORS_NEON_DARK) {
+    series = [...neon]
+  } else {
+    series = sourceSeries ? [...sourceSeries] : [...canonical]
   }
 
   return {
-    primary: present(hPrim, sPrim),
-    accent: present(hAcc, sAcc),
-    series: sourceSeries?.map(color => {
-      const [h, s] = hexToHsl(color)
-      return present(h, s)
-    }) ?? series,
+    primary: series[0],
+    accent: series[7],
+    series,
     positive: COLOR.GOOD,
     negative: COLOR.BAD,
     warning: COLOR.WARN,

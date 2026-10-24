@@ -7,7 +7,7 @@ import { Caption, Text } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSignals, useSignalGaps, useSignalHistory } from '@/api/hooks/useTelemetry';
 
-import { NEON_COLORS } from '@/components/charts';
+import { CHART_COLORS, CHART_SEMANTIC } from '@/lib/colors';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -35,12 +35,12 @@ const DEFAULT_SIGNALS = [
 // (previously NEON_COLORS[1]/[2] were mislabelled "purple"/"amber", which made
 // index 1 and index 3 both resolve to emerald `#10b981` — a duplicate colour).
 export const SIGNAL_COLORS = [
-  NEON_COLORS[0], // cyan    (#00f0ff)
-  NEON_COLORS[2], // purple  (#a855f7)
-  NEON_COLORS[3], // amber   (#f59e0b)
-  '#10b981',      // emerald
-  '#3b82f6',      // blue
-  '#f43f5e',      // rose
+  CHART_SEMANTIC.vehicle.driving,
+  CHART_SEMANTIC.vehicle.asleep,
+  CHART_SEMANTIC.vehicle.charging,
+  CHART_SEMANTIC.vehicle.online,
+  CHART_COLORS[0],
+  CHART_COLORS[5],
 ];
 
 /** Pretty-print a PascalCase signal name as spaced words */

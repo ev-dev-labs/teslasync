@@ -2,7 +2,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors'
+import {
+  CHART_COLORS_CB_SAFE,
+  CHART_COLORS_DARK,
+  CHART_COLORS_NEON,
+  CHART_COLORS_NEON_DARK,
+} from '@/lib/colors'
 
 vi.mock('@/components/ui/ThemeProvider', () => ({
   useTheme: () => ({
@@ -34,7 +39,7 @@ function wrap(): (props: { children: ReactNode }) => JSX.Element {
 }
 
 describe('resolveChartPalette (pure)', () => {
-  it('returns CB-safe for undefined', () => {
+  it('returns light CB-safe for undefined', () => {
     expect(resolveChartPalette(undefined)).toBe(CHART_COLORS_CB_SAFE)
   })
 
@@ -72,14 +77,14 @@ describe('useChartPalette (hook)', () => {
   it('returns CB-safe palette by default when settings have not loaded', () => {
     const { result } = renderHook(() => useChartPalette(), { wrapper: wrap() })
     // Initial render — settings query has not resolved yet, so we get the fallback.
-    expect(result.current).toBe(CHART_COLORS_CB_SAFE)
+    expect(result.current).toBe(CHART_COLORS_DARK)
   })
 
   it('returns CB-safe palette when chart_palette is "cb_safe"', async () => {
     nextSettings = { chart_palette: 'cb_safe' }
     const { result } = renderHook(() => useChartPalette(), { wrapper: wrap() })
     await waitFor(() => {
-      expect(result.current).toBe(CHART_COLORS_CB_SAFE)
+      expect(result.current).toBe(CHART_COLORS_DARK)
     })
   })
 
@@ -87,7 +92,7 @@ describe('useChartPalette (hook)', () => {
     nextSettings = { chart_palette: 'neon' }
     const { result } = renderHook(() => useChartPalette(), { wrapper: wrap() })
     await waitFor(() => {
-      expect(result.current).toBe(CHART_COLORS_NEON)
+      expect(result.current).toBe(CHART_COLORS_NEON_DARK)
     })
   })
 
@@ -97,7 +102,7 @@ describe('useChartPalette (hook)', () => {
     // The query resolves but the value is not one of the known palettes —
     // resolveChartPalette() must coerce it back to the CB-safe default.
     await waitFor(() => {
-      expect(result.current).toBe(CHART_COLORS_CB_SAFE)
+      expect(result.current).toBe(CHART_COLORS_DARK)
     })
   })
 
@@ -113,16 +118,16 @@ describe('useChartPalette (hook)', () => {
   it('adapts a saved neon choice to light mode without changing its ID or order', async () => {
     nextSettings = { chart_palette: 'neon' }
     const { result, rerender } = renderHook(() => useChartPalette(), { wrapper: wrap() })
-    await waitFor(() => expect(result.current).toBe(CHART_COLORS_NEON))
+    await waitFor(() => expect(result.current).toBe(CHART_COLORS_NEON_DARK))
     nextColorScheme = 'light'
     rerender()
-    expect(result.current).not.toEqual(CHART_COLORS_NEON)
+    expect(result.current).toEqual(CHART_COLORS_NEON)
     expect(result.current).toHaveLength(8)
     expect(new Set(result.current).size).toBe(8)
     result.current.forEach(color => expect(color).toMatch(/^#[0-9a-f]{6}$/i))
     expect(nextSettings.chart_palette).toBe('neon')
     nextColorScheme = 'dark'
     rerender()
-    expect(result.current).toBe(CHART_COLORS_NEON)
+    expect(result.current).toBe(CHART_COLORS_NEON_DARK)
   })
 })

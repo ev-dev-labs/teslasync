@@ -20,7 +20,7 @@
 // Run via: `node scripts/auditChartPalette.mjs`
 // `npm run audit:palette`
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { converter } from 'culori';
@@ -64,6 +64,7 @@ export function readCanonicalPalettes(source) {
 
 const MIN_DELTA_L = 0.1;
 const MIN_DELTA_H_DEG = 30;
+const MIN_DELTA_E = 0.12;
 
 const okl = converter('oklch');
 

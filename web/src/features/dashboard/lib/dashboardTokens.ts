@@ -63,29 +63,20 @@ export const dashboardTokens = {
     /** Pills, chips and status dots. */
     pill: 'rounded-pill',
   },
-  /**
-   * Redesign categorical chart palette with dark-mode pairs, sampled from the
-   * After cards (`--acc`, `--c2..--c5`, status and track variables). Data
-   * series only — never status semantics (spec rule 4); status foregrounds
-   * below exist for genuinely good/watch/problem segments such as donut
-   * slices, paired with the dot + word / pill pattern.
-   */
+  /** Shared calm categorical chart palette, kept separate from UI accents. */
   chart: {
-    /**
-     * Five series in After order (blue, teal, violet, amber, pink) as
-     * `light-dark()` strings, drop-in for SVG `fill`/`stroke` via CSS just
-     * like `chartTokens.series` in `@/lib/tokens`.
-     */
     series: [
-      'light-dark(#2563eb, #60a5fa)',
-      'light-dark(#0d9488, #2dd4bf)',
-      'light-dark(#7c3aed, #a78bfa)',
-      'light-dark(#d97706, #fbbf24)',
-      'light-dark(#db2777, #f472b6)',
+      'light-dark(#398ad6, #67aaed)',
+      'light-dark(#18a7a1, #52bfb9)',
+      'light-dark(#4fa866, #73bb83)',
+      'light-dark(#b8790e, #e7b369)',
+      'light-dark(#e57255, #ee8f63)',
+      'light-dark(#cd6199, #e98092)',
+      'light-dark(#876cca, #a48fe1)',
+      'light-dark(#748192, #8c9aab)',
     ],
-    /** Per-mode hexes for JS-computed paints (canvas, legend swatches). */
-    seriesLight: ['#2563eb', '#0d9488', '#7c3aed', '#d97706', '#db2777'],
-    seriesDark: ['#60a5fa', '#2dd4bf', '#a78bfa', '#fbbf24', '#f472b6'],
+    seriesLight: ['#398ad6', '#18a7a1', '#4fa866', '#b8790e', '#e57255', '#cd6199', '#876cca', '#748192'],
+    seriesDark: ['#67aaed', '#52bfb9', '#73bb83', '#e7b369', '#ee8f63', '#e98092', '#a48fe1', '#8c9aab'],
     /** Series index by hue name, so widgets pick color by meaning not slot. */
     seriesByName: {
       blue: 0,

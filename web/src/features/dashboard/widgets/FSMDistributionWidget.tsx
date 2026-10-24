@@ -16,18 +16,21 @@ import { combineDataStates } from '@/api/dataState';
 import { WidgetBigNumber } from './shared';
 import { fmtNumber as formatDurationNumber } from '@/lib/numberFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { CHART_SEMANTIC, CHART_NEUTRAL } from '@/lib/colors';
 
 /* ── State colors for donut chart ──────────────────────────────── */
 const STATE_COLORS: Record<string, string> = {
-  driving: '#22d3ee',   // cyan-400
-  charging: '#22c55e',  // green-500
-  asleep: '#a855f7',    // purple-500
-  idle: '#f59e0b',      // amber-500
-  offline: '#6b7280',   // gray-500
+  driving: CHART_SEMANTIC.vehicle.driving,
+  charging: CHART_SEMANTIC.vehicle.charging,
+  online: CHART_SEMANTIC.vehicle.online,
+  parked: CHART_SEMANTIC.vehicle.parked,
+  asleep: CHART_SEMANTIC.vehicle.asleep,
+  idle: CHART_SEMANTIC.vehicle.charging,
+  offline: CHART_SEMANTIC.vehicle.offline,
 };
 
 function stateColor(state: string): string {
-  return STATE_COLORS[state.toLowerCase()] ?? '#6b7280';
+  return STATE_COLORS[state.toLowerCase()] ?? CHART_NEUTRAL;
 }
 
 /* ── Duration formatter (ms → human readable) ──────────────────── */

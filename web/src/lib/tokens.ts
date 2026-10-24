@@ -392,11 +392,17 @@ export const chartTokens = {
   tooltipText: 'var(--text-primary)',
   /** Secondary text color inside Recharts tooltip (label key, units). */
   tooltipMutedText: 'var(--text-secondary)',
-  /**
-   * Restrained series in the existing blue/green/amber/rose/purple/cyan/pink/
-   * lime order. The existing root color-scheme selects the presentation pair.
-   */
-  series: ['light-dark(#385e7e, #91b4d2)', 'light-dark(#38614f, #91b9a5)', 'light-dark(#745829, #cfb481)', 'light-dark(#83464e, #d6a0a5)', 'light-dark(#625077, #b5a8c9)', 'light-dark(#3f6268, #91bbc0)', 'light-dark(#785568, #c3a2b5)', 'light-dark(#586437, #acba91)'] as const,
+  /** Calm, CVD-oriented categorical series; modes select dedicated variants. */
+  series: [
+    'light-dark(#398ad6, #67aaed)',
+    'light-dark(#18a7a1, #52bfb9)',
+    'light-dark(#4fa866, #73bb83)',
+    'light-dark(#b8790e, #e7b369)',
+    'light-dark(#e57255, #ee8f63)',
+    'light-dark(#cd6199, #e98092)',
+    'light-dark(#876cca, #a48fe1)',
+    'light-dark(#748192, #8c9aab)',
+  ] as const,
   /**
    * Brush widget styling — used by `<ChartBrush>` to keep zoom-selection bars
    * consistent across pages. The fill is intentionally near-transparent so the

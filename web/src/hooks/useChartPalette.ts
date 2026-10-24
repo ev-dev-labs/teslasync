@@ -1,7 +1,12 @@
 import { useMemo } from 'react'
 import { useTheme, type ColorTheme, type ModeTheme } from '@/components/ui/ThemeProvider'
 import { useSettings } from '@/api/hooks/useSettings'
-import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON, buildChartPalette } from '@/lib/colors'
+import {
+  CHART_COLORS_CB_SAFE,
+  CHART_COLORS_DARK,
+  CHART_COLORS_NEON,
+  CHART_COLORS_NEON_DARK,
+} from '@/lib/colors'
 
 /** Persisted Settings value for the user's preferred chart palette. */
 export type ChartPaletteId = 'cb_safe' | 'neon'
@@ -21,10 +26,10 @@ export function resolveChartPalette(
   pref: string | null | undefined,
   context?: { theme: ColorTheme; mode: ModeTheme },
 ): readonly string[] {
-  const palette = pref === 'neon' ? CHART_PALETTES.neon : CHART_PALETTES.cb_safe
-  return context?.mode.colorScheme === 'light'
-    ? buildChartPalette(context.theme, context.mode, palette).series
-    : palette
+  const colorScheme = context?.mode.colorScheme ?? 'light'
+  return colorScheme === 'light'
+    ? (pref === 'neon' ? CHART_COLORS_NEON : CHART_COLORS_CB_SAFE)
+    : (pref === 'neon' ? CHART_COLORS_NEON_DARK : CHART_COLORS_DARK)
 }
 
 /**

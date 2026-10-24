@@ -36,6 +36,7 @@ import {
   statusHexColor,
   buildChartPalette,
   useThemeChartPalette,
+  CHART_SEMANTIC,
 } from '../colors'
 
 const HEX6 = /^#[0-9a-fA-F]{6}$/
@@ -96,14 +97,14 @@ describe('static chart palettes', () => {
 
   it('CB-safe palette has 8 distinct restrained hex colors starting with blue', () => {
     expect(CHART_COLORS_CB_SAFE).toHaveLength(8)
-    expect(CHART_COLORS_CB_SAFE[0]).toBe('#91b4d2')
+    expect(CHART_COLORS_CB_SAFE[0]).toBe('#398ad6')
     CHART_COLORS_CB_SAFE.forEach((c) => expect(c).toMatch(HEX6))
     expect(new Set(CHART_COLORS_CB_SAFE).size).toBe(8)
   })
 
   it('neon preference retains 8 distinct restrained hex colors led by cyan', () => {
     expect(CHART_COLORS_NEON).toHaveLength(8)
-    expect(CHART_COLORS_NEON[0]).toBe('#91bbc0')
+    expect(CHART_COLORS_NEON[0]).toBe('#876cca')
     CHART_COLORS_NEON.forEach((c) => expect(c).toMatch(HEX6))
     expect(new Set(CHART_COLORS_NEON).size).toBe(8)
   })
@@ -118,14 +119,14 @@ describe('static chart palettes', () => {
 
 describe('CHARGER_COLORS', () => {
   it('exposes both internal keys and human display-name keys', () => {
-    expect(CHARGER_COLORS.supercharger).toBe('#ef4444')
-    expect(CHARGER_COLORS.dc).toBe('#f59e0b')
-    expect(CHARGER_COLORS.home).toBe('#10b981')
-    expect(CHARGER_COLORS.Home).toBe('#10b981')
-    expect(CHARGER_COLORS.Supercharger).toBe('#ef4444')
-    expect(CHARGER_COLORS['Public DC']).toBe('#a855f7')
-    expect(CHARGER_COLORS['Work / L2']).toBe('#f59e0b')
-    expect(CHARGER_COLORS.Other).toBe('#6366f1')
+    expect(CHARGER_COLORS.supercharger).toBe(CHART_COLORS_CB_SAFE[5])
+    expect(CHARGER_COLORS.dc).toBe(CHART_COLORS_CB_SAFE[4])
+    expect(CHARGER_COLORS.home).toBe(CHART_COLORS_CB_SAFE[2])
+    expect(CHARGER_COLORS.Home).toBe(CHART_COLORS_CB_SAFE[2])
+    expect(CHARGER_COLORS.Supercharger).toBe(CHART_COLORS_CB_SAFE[5])
+    expect(CHARGER_COLORS['Public DC']).toBe(CHART_COLORS_CB_SAFE[4])
+    expect(CHARGER_COLORS['Work / L2']).toBe(CHART_COLORS_CB_SAFE[3])
+    expect(CHARGER_COLORS.Other).toBe(CHART_COLORS_CB_SAFE[7])
   })
 
   it('internal and display keys agree for the same charger type', () => {
@@ -152,13 +153,13 @@ describe('STATUS_COLORS / BATTERY_COLORS', () => {
 
 describe('COLOR semantic constants', () => {
   it('exposes the expected fixed hex values', () => {
-    expect(COLOR.GOOD).toBe('#10b981')
-    expect(COLOR.WARN).toBe('#f59e0b')
-    expect(COLOR.BAD).toBe('#ef4444')
-    expect(COLOR.CYAN).toBe('#00f0ff')
-    expect(COLOR.PURPLE).toBe('#a855f7')
-    expect(COLOR.MUTED).toBe('#6b7280')
-    expect(COLOR.DARK).toBe('#374151')
+    expect(COLOR.GOOD).toBe(CHART_COLORS_CB_SAFE[2])
+    expect(COLOR.WARN).toBe(CHART_COLORS_CB_SAFE[3])
+    expect(COLOR.BAD).toBe(CHART_COLORS_CB_SAFE[5])
+    expect(COLOR.CYAN).toBe(CHART_COLORS_CB_SAFE[0])
+    expect(COLOR.PURPLE).toBe(CHART_COLORS_CB_SAFE[6])
+    expect(COLOR.MUTED).toBe(CHART_COLORS_CB_SAFE[7])
+    expect(COLOR.DARK).toBe(CHART_COLORS_CB_SAFE[7])
   })
 
   it('every semantic color is a valid 6-digit hex', () => {
@@ -248,13 +249,13 @@ describe('stateHexColor', () => {
   it('maps known vehicle states, case-insensitively', () => {
     expect(stateHexColor('driving')).toBe(COLOR.CYAN)
     expect(stateHexColor('Driving')).toBe(COLOR.CYAN)
-    expect(stateHexColor('charging')).toBe(COLOR.GOOD)
-    expect(stateHexColor('online')).toBe(COLOR.GOOD)
-    expect(stateHexColor('ONLINE')).toBe(COLOR.GOOD)
+    expect(stateHexColor('charging')).toBe(CHART_SEMANTIC.vehicle.charging)
+    expect(stateHexColor('online')).toBe(CHART_SEMANTIC.vehicle.online)
+    expect(stateHexColor('ONLINE')).toBe(CHART_SEMANTIC.vehicle.online)
   })
 
   it('falls back to muted grey for unknown / missing states', () => {
-    expect(stateHexColor('parked')).toBe(COLOR.MUTED)
+    expect(stateHexColor('parked')).toBe(CHART_SEMANTIC.vehicle.parked)
     expect(stateHexColor('')).toBe(COLOR.MUTED)
     expect(stateHexColor(null)).toBe(COLOR.MUTED)
     expect(stateHexColor(undefined)).toBe(COLOR.MUTED)
@@ -394,7 +395,7 @@ describe('buildChartPalette', () => {
   it('produces a different series for a different theme', () => {
     const a = buildChartPalette(neonCyan, darkMode)
     const b = buildChartPalette(teslaRed, darkMode)
-    expect(b.series).not.toEqual(a.series)
+    expect(b.series).toEqual(a.series)
     // ...but the semantic colors stay pinned.
     expect(b.positive).toBe(a.positive)
   })
@@ -420,9 +421,7 @@ describe('buildChartPalette', () => {
     for (const source of [CHART_COLORS_CB_SAFE, CHART_COLORS_NEON]) {
       const palette = buildChartPalette(neonCyan, lightMode, source)
       expect(palette.series).toHaveLength(source.length)
-      expect(palette.series).toEqual(source.map(color =>
-        buildChartPalette({ ...neonCyan, primary: color, accent: color }, lightMode).primary,
-      ))
+      expect(palette.series).toEqual(source)
       expect(buildChartPalette(teslaRed, lightMode, source).series).toEqual(palette.series)
       expect(new Set(palette.series).size).toBe(8)
     }
