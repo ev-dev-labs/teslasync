@@ -523,7 +523,6 @@ export class MockServiceWorkerLifecycle {
   private readonly containerListeners = new Set<(event: Event) => void>()
   private readonly messageListeners = new Set<(event: MessageEvent) => void>()
   private readonly registrations: MockServiceWorkerRegistration[] = []
-  private controllerValue: ServiceWorker | null = null
   readyResolve!: () => void
   readonly ready: Promise<ServiceWorkerRegistration>
 
@@ -575,7 +574,6 @@ export class MockServiceWorkerLifecycle {
   activate(): void {
     this.registration.waiting = null
     this.registration.active = this.controller
-    this.controllerValue = this.controller
     this.container.containerController = this.controller
     this.readyResolve()
     const event = new Event('controllerchange')
