@@ -4,7 +4,7 @@ import { Cog } from 'lucide-react';
 import {
   ComposedChart, Line, XAxis, YAxis, Tooltip, ReferenceArea,
   ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm,
-  chartAnimation, EmbeddedChart, ChartTooltip, useMeasuredAxisWidth, type ChartDataRow,
+  chartAnimation, EmbeddedChart, ChartTooltip, ChartLegend, useMeasuredAxisWidth, type ChartDataRow,
 } from '@/components/charts';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { useMotorHistory, useVehicles } from '@/api/hooks/useVehicles';
@@ -202,7 +202,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
               ]}
               chartKey="dashboard-motor-history"
             >
-              {() => (
+              {({ hiddenSeries }) => (
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
                     {chartGrid}
@@ -251,6 +251,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                       fill="#ef4444"
                       fillOpacity={0.1}
                     />
+                    <ChartLegend />
                     <Line
                       yAxisId="torque"
                       type="monotone"
@@ -260,6 +261,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                       dot={false}
                       connectNulls={false}
                       name={t('widget.motorHistory.torque', 'Torque')}
+                      hide={hiddenSeries?.isHidden('torque')}
                     />
                     <Line
                       yAxisId="temp"
@@ -270,6 +272,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                       dot={false}
                       connectNulls={false}
                       name={t('widget.motorHistory.statorTemp', 'Stator')}
+                      hide={hiddenSeries?.isHidden('temperature')}
                     />
                   </ComposedChart>
                 </ResponsiveContainer>

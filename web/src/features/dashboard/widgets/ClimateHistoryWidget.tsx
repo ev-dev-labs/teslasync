@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThermometerSun } from 'lucide-react';
-import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, type ChartDataRow } from '@/components/charts';
+import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, ChartLegend, EmbeddedChart, type ChartDataRow } from '@/components/charts';
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
@@ -197,6 +197,7 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
                   return [`${fmt(value)}${tempUnit}`, label];
                 }}
               />
+              <ChartLegend />
               <Line
                 type="monotone"
                 dataKey="inside"

@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CircleDot } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceArea, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceArea, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, ChartLegend, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { useTirePressureAnalysisHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePressureFormat } from '@/hooks/usePressureFormat';
@@ -214,6 +214,7 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
             return [`${fmtNumber(value)} ${pressureUnit}`, labels[name] ?? name];
           }}
         />
+        <ChartLegend />
         <Line type="monotone" dataKey="fl" stroke={TIRE_COLORS.fl} strokeWidth={2} dot={false} connectNulls={false} name="fl" hide={hiddenSeries?.isHidden('fl')} />
         <Line type="monotone" dataKey="fr" stroke={TIRE_COLORS.fr} strokeWidth={2} dot={false} connectNulls={false} name="fr" hide={hiddenSeries?.isHidden('fr')} />
         <Line type="monotone" dataKey="rl" stroke={TIRE_COLORS.rl} strokeWidth={2} dot={false} connectNulls={false} name="rl" hide={hiddenSeries?.isHidden('rl')} />

@@ -75,6 +75,7 @@ vi.mock('@/components/charts', () => {
     axisTickSm: {},
     chartAnimation: {},
     ChartTooltip: () => null,
+    ChartLegend: () => null,
     EmbeddedChart: ({ children }: { children: (ctx: { hiddenSeries: never }) => ReactNode }) => <>{children({ hiddenSeries: undefined as never })}</>,
     type: {},
   };

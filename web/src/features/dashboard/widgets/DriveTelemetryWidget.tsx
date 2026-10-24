@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartAnimation, useThemeChartPalette, EmbeddedChart, type ChartDataRow } from '@/components/charts';
+import { ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartAnimation, useThemeChartPalette, EmbeddedChart, ChartLegend, type ChartDataRow } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { SourceContent } from '@/components/layout';
@@ -137,7 +137,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
         ]}
         chartKey="dashboard-drive-telemetry"
       >
-        {() => (
+        {({ hiddenSeries }) => (
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData} margin={{ top: 2, right: 0, bottom: 0, left: 0 }} {...chartAnimation}>
           {chartGrid}
@@ -159,6 +159,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             hide
           />
           <Tooltip content={<ChartTooltip />} />
+          <ChartLegend />
           <Line
             yAxisId="speed"
             dataKey="speed"
@@ -167,6 +168,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             dot={false}
             name={`${t('widget.driveTelemetry.speed', 'Speed')} (${unitPrefs.speed})`}
             connectNulls={false}
+            hide={hiddenSeries?.isHidden('speed')}
           />
           <Line
             yAxisId="power"
@@ -176,6 +178,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             dot={false}
             name={`${t('widget.driveTelemetry.powerLabel', 'Power')} (${unitPrefs.power ?? 'kW'})`}
             connectNulls={false}
+            hide={hiddenSeries?.isHidden('power')}
           />
             </ComposedChart>
           </ResponsiveContainer>

@@ -196,6 +196,6 @@ Track A and Track B are reconciled into one tree and the widget redesign is
 ancestor-merged. Dashboard recovery verification: 222 test files / 3828 tests
 passed; TypeScript passed; focused maintenance/catalog repairs passed.
 Next: commit and push the verified dashboard lint repair batch, then collect
-the remaining PR #202 chart-legend/lint failures and fix them by root cause.
+the remaining PR #202 failures and fix them by root cause.
 Only after CI is green: finish TZ-5/TZ-6/TZ-7, run the full replica, and
 proceed to Parts 3-6.

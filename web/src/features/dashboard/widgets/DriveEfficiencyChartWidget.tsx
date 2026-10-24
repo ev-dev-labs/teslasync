@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { TrendingUp } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, chartGrid, chartAnimation, useThemeChartPalette, AREA_DEFAULTS, areaGradient, EmbeddedChart } from '@/components/charts';
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, chartGrid, chartAnimation, useThemeChartPalette, AREA_DEFAULTS, areaGradient, EmbeddedChart, ChartLegend } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDataState } from '@/hooks/useDataState';
@@ -178,6 +178,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
               domain={['dataMin - 20', 'dataMax + 20']}
             />
             <Tooltip content={<ChartTooltip />} />
+            <ChartLegend />
             <Area
               {...AREA_DEFAULTS}
               dataKey="efficiency"
