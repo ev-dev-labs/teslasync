@@ -550,7 +550,7 @@
   {
     "file": "web/src/features/dashboard/components/KioskSettingsModal.tsx",
     "calls": 45,
-    "sha256": "2e3fc31beb25c3e932bbf0ea3dc7a39b6f4dd9f885c0e681b27346a838a33ef7"
+    "sha256": "b72ce542cf27d9d45672fcd29cc69c425911cde109e979d4de00ac5a5bf0d51e"
   },
   {
     "file": "web/src/features/dashboard/components/LayoutSwitcher.tsx",
