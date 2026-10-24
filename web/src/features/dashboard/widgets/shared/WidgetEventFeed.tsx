@@ -63,12 +63,8 @@ export function WidgetEventFeed({
       const ms = new Date(isoStr).getTime();
       if (Number.isNaN(ms)) return TIME_FALLBACK;
       const diffMin = Math.floor((Date.now() - ms) / 60_000);
-      // feed-time: sub-hour events stay relative ("Just now", "5m ago") so
-      // fresh activity reads as fresh; anything older gets a stable
-      // tz-aware day label ("Today 7:30 AM", "Yesterday 11:02 PM", then the
-      // absolute date). Hourly "Nh ago" labels are deliberately gone: the
-      // feed does not poll, so they would go stale within the hour.
-      if (diffMin < 1) return t('widget.eventFeed.justNow', 'Just now');
+      // feed-time: show stable formatted time for very recent events.
+      if (diffMin < 1) return formatTime(isoStr);
       if (diffMin < 60)
         return t('widget.eventFeed.minutesAgo', '{{minutes}}m ago', { minutes: diffMin });
       // 'Today' / 'Yesterday' are the exact day words produced by the shared

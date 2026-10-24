@@ -230,7 +230,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
     >
       {latestDrive ? (
         <div className="flex min-h-full flex-col">
-          <p className="break-words px-0 pb-1 text-[13px] text-[var(--text-secondary)]">
+          <p className="break-words px-0 pb-1 text-sm text-[var(--text-secondary)]">
             {t('widget.driveTelemetry.lastDrive', 'Last drive')}
             {latestDrive.startAddress && ` · ${latestDrive.startAddress}`}
             {latestDrive.endAddress && ` → ${latestDrive.endAddress}`}

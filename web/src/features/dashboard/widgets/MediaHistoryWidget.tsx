@@ -101,7 +101,7 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
       if (!Number.isNaN(ms)) {
         const diffMin = Math.floor((Date.now() - ms) / 60_000);
         if (diffMin < 1) {
-          value = t('widget.eventFeed.justNow', 'Just now');
+          value = formatTime(timestamp);
         } else if (diffMin < 60) {
           value = t('widget.eventFeed.minutesAgo', '{{minutes}}m ago', { minutes: diffMin });
         } else {

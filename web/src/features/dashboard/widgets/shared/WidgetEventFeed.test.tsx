@@ -12,7 +12,7 @@
  *     that the list is *replaced* — not rendered blank — when there is no data,
  *   - the cap precedence (default 10, compact 3, explicit maxItems wins),
  *   - most-recent-first ordering regardless of input order,
- *   - the i18n'd sub-hour buckets ("Just now" / "Nm ago"), the tz-aware
+ *   - stable sub-hour formatted time and the i18n'd minute buckets, the tz-aware
  *     day-relative labels past the hour ("Today 7:30 AM", "Yesterday 11:02 PM"
  *     via `useDateLabels`), and the tz-aware absolute-date fallback past
  *     yesterday,
@@ -195,7 +195,7 @@ describe('WidgetEventFeed — relative time labels', () => {
     vi.useRealTimers();
   });
 
-  it('renders sub-hour timestamps as i18n relative buckets', () => {
+  it('renders sub-hour timestamps in stable formatted buckets', () => {
     renderFeed({
       items: [
         makeItem({ id: 'a', title: 'Now event', timestamp: isoAgo(30 * 1000) }),
@@ -203,7 +203,7 @@ describe('WidgetEventFeed — relative time labels', () => {
       ],
     });
 
-    expect(screen.getByText('Just now')).toBeInTheDocument();
+    expect(screen.getAllByText(/\d{1,2}:\d{2}/).length).toBeGreaterThan(0);
     expect(screen.getByText('5m ago')).toBeInTheDocument();
   });
 

@@ -69,12 +69,12 @@ function AutomationRow({
 }) {
   const toggle = useToggleAutomation();
   const status = getStatusBadge(automation, t);
-  const { formatDateTime, formatRelative } = useDateFormat();
+  const { formatDateTime } = useDateFormat();
   const lastRun = automation.last_triggered_at;
   const nextRun = automation.next_fire_time;
   const scheduleSource = nextRun ?? lastRun;
   const schedule = scheduleSource
-    ? formatRelative(scheduleSource).replace(/^just now$/i, t('widget.justNow', 'Just now'))
+    ? formatDateTime(scheduleSource)
       : '—';
 
   return (

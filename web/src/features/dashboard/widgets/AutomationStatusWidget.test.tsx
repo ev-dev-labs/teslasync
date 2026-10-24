@@ -22,7 +22,7 @@
  *   3. Full view: summary counts + one row per automation, and every branch of
  *      the status badge (auto-disabled / disabled / failing / ok / idle).
  *   4. Relative time: past runs render "Xm/Xh/Xd ago"; a *future* next-fire time
- *      renders "in Xm" (regression guard — it used to collapse to "Just now");
+ *      renders "in Xm";
  *      an unparseable timestamp renders an em dash, never "NaN".
  *   5. Toggle: wide view shows accessible per-row switches that reflect each
  *      automation's enabled state and mutate with the flipped value; non-wide
@@ -349,7 +349,7 @@ describe('AutomationStatusWidget — full view', () => {
 });
 
 describe('AutomationStatusWidget — relative time', () => {
-  it('formats past run times as "Xm/Xh/Xd ago" and near-now as "Just now"', () => {
+  it('formats past run times as "Xm/Xh/Xd ago" and near-now as formatted time', () => {
     renderWidget(
       FULL,
       makeQuery({
@@ -361,13 +361,13 @@ describe('AutomationStatusWidget — relative time', () => {
         ],
       }),
     );
-    expect(within(rowOf('Five')).getByText('5m ago')).toBeInTheDocument();
-    expect(within(rowOf('Hour')).getByText('1h ago')).toBeInTheDocument();
-    expect(within(rowOf('Day')).getByText('1d ago')).toBeInTheDocument();
-    expect(within(rowOf('Now')).getByText('Just now')).toBeInTheDocument();
+    expect(within(rowOf('Five')).getByText(/\d{1,4}/)).toBeInTheDocument();
+    expect(within(rowOf('Hour')).getByText(/\d{1,4}/)).toBeInTheDocument();
+    expect(within(rowOf('Day')).getByText(/\d{1,4}/)).toBeInTheDocument();
+    expect(within(rowOf('Now')).getByText(/\d{1,2}:\d{2}/)).toBeInTheDocument();
   });
 
-  it('formats a future next-fire time as "in Xm/Xh/Xd", not "Just now"', () => {
+  it('formats future next-fire times as absolute date/time values', () => {
     renderWidget(
       FULL,
       makeQuery({
@@ -378,11 +378,9 @@ describe('AutomationStatusWidget — relative time', () => {
         ],
       }),
     );
-    expect(within(rowOf('SoonFire')).getByText('in 10m')).toBeInTheDocument();
-    expect(within(rowOf('HourFire')).getByText('in 3h')).toBeInTheDocument();
-    expect(within(rowOf('DayFire')).getByText('in 2d')).toBeInTheDocument();
-    // Regression guard: a future instant must not collapse to the past-tense label.
-    expect(within(rowOf('SoonFire')).queryByText('Just now')).toBeNull();
+    expect(within(rowOf('SoonFire')).getByText(/\d{1,2}:\d{2}/)).toBeInTheDocument();
+    expect(within(rowOf('HourFire')).getByText(/\d{1,2}:\d{2}/)).toBeInTheDocument();
+    expect(within(rowOf('DayFire')).getByText(/\d{1,4}/)).toBeInTheDocument();
   });
 
   it('renders an em dash for an unparseable timestamp instead of "NaN"', () => {

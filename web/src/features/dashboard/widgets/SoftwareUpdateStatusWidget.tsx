@@ -126,10 +126,10 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
               {updateVersion && updateStatus !== 'up-to-date' ? (
                 <div className="min-w-0 space-y-2.5">
                   <div className="min-w-0">
-                    <span className="text-[13px] text-[var(--text-secondary)]">
+                    <span className="text-sm text-[var(--text-secondary)]">
                       {t('widget.updateAvailable', 'Update available')}
                     </span>
-                    <span className="ms-1 text-[13px] font-semibold text-cyan-300 [overflow-wrap:anywhere]">
+                    <span className="ms-1 text-sm font-semibold text-cyan-300 [overflow-wrap:anywhere]">
                       {updateVersion}
                     </span>
                   </div>
@@ -155,13 +155,13 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
                     />
                   )}
                   {updateStatus === 'ready' && (
-                    <p className="text-[13px] font-medium text-emerald-300">
+                    <p className="text-sm font-medium text-emerald-300">
                       {t('widget.readyToInstall', 'Ready to install')}
                     </p>
                   )}
 
                   {size.rows >= 2 && isFiniteNumber(expectedDuration) && expectedDuration > 0 && (
-                    <p className="border-t border-[var(--border-subtle)] pt-2 text-[13px] text-[var(--text-secondary)]">
+                    <p className="border-t border-[var(--border-subtle)] pt-2 text-sm text-[var(--text-secondary)]">
                       {t('widget.estimatedTime', 'Est. time')}: ~{fmtNumber(expectedDuration, 0)}{' '}
                       {t('widget.minutes', 'min')}
                     </p>
@@ -173,7 +173,7 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
                         ? null
                         : formatDateTime(scheduledDate);
                       return scheduledText ? (
-                        <p className="border-t border-[var(--border-subtle)] pt-2 text-[13px] text-[var(--text-secondary)]">
+                        <p className="border-t border-[var(--border-subtle)] pt-2 text-sm text-[var(--text-secondary)]">
                           {t('widget.scheduledStart', 'Scheduled')}: {scheduledText}
                         </p>
                       ) : null;
@@ -181,7 +181,7 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
                   )}
                 </div>
               ) : updateStatus === 'up-to-date' ? (
-                <p className="text-[13px] font-medium text-emerald-300">
+                <p className="text-sm font-medium text-emerald-300">
                   {t('widget.upToDate', 'Up to date')}
                 </p>
               ) : null}

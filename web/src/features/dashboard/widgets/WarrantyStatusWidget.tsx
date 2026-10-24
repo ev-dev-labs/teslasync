@@ -359,7 +359,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
               <section key={row.key} className="min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-semibold text-[var(--text-primary)]">{row.title}</p>
+                    <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{row.title}</p>
                     <p className={dashboardTokens.metricLabel}>
                       {'included' in row && row.included && !row.expiry
                         ? t('widget.status.unknown', 'Unknown')
