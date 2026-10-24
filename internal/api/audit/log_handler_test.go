@@ -196,3 +196,39 @@ func TestUserActivity_StorageUnavailable(t *testing.T) {
 		t.Fatalf("status=%d, want 503; body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestClientIP(t *testing.T) {
+	tests := []struct {
+		name   string
+		xff    string
+		remote string
+		want   string
+	}{
+		{name: "remote addr only", remote: "10.0.0.1:54321", want: "10.0.0.1"},
+		{name: "ipv6 remote addr", remote: "[::1]:54321", want: "::1"},
+		{name: "xff single", xff: "203.0.113.5", remote: "10.0.0.1:54321", want: "203.0.113.5"},
+		{name: "xff chain prefers leftmost", xff: "203.0.113.5, 10.0.0.2", remote: "10.0.0.1:54321", want: "203.0.113.5"},
+		{name: "xff with whitespace", xff: "  203.0.113.5  ", remote: "10.0.0.1:54321", want: "203.0.113.5"},
+		{name: "empty xff falls back to remote", xff: "  , 203.0.113.5", remote: "10.0.0.1:54321", want: "10.0.0.1"},
+		{name: "nil request", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.name == "nil request" {
+				if got := clientIP(nil); got != "" {
+					t.Fatalf("clientIP(nil) = %q, want empty", got)
+				}
+				return
+			}
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.RemoteAddr = tt.remote
+			if tt.xff != "" {
+				req.Header.Set("X-Forwarded-For", tt.xff)
+			}
+			if got := clientIP(req); got != tt.want {
+				t.Fatalf("clientIP = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

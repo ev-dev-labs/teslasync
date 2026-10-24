@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // auditEntry is the canonical write-shape for audit_logs.
@@ -88,25 +88,7 @@ func actorFromRequest(r *http.Request, headerName string) string {
 // X-Forwarded-For (trusted reverse-proxy chain) then RemoteAddr. The port
 // is stripped so the value is comparable across requests.
 func clientIP(r *http.Request) string {
-	if r == nil {
-		return ""
-	}
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// XFF is a comma-separated chain; the first entry is the original client.
-		if i := strings.IndexByte(xff, ','); i >= 0 {
-			xff = xff[:i]
-		}
-		if ip := strings.TrimSpace(xff); ip != "" {
-			return ip
-		}
-	}
-	if r.RemoteAddr == "" {
-		return ""
-	}
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		return host
-	}
-	return r.RemoteAddr
+	return httputil.ClientIP(r, httputil.ClientIPOptions{TrustXForwardedFor: true})
 }
 
 // logAuditFromRequest persists a fully-attributed audit event for an HTTP

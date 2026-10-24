@@ -45,9 +45,17 @@ func TestClientIP(t *testing.T) {
 		{name: "xff single", xff: "203.0.113.5", remote: "10.0.0.1:54321", wantHost: "203.0.113.5"},
 		{name: "xff chain prefers leftmost", xff: "203.0.113.5, 10.0.0.2", remote: "10.0.0.1:54321", wantHost: "203.0.113.5"},
 		{name: "xff with whitespace", xff: "  203.0.113.5  ", remote: "10.0.0.1:54321", wantHost: "203.0.113.5"},
+		{name: "empty xff falls back to remote", xff: "  , 203.0.113.5", remote: "10.0.0.1:54321", wantHost: "10.0.0.1"},
+		{name: "nil request", wantHost: ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.name == "nil request" {
+				if got := clientIP(nil); got != "" {
+					t.Fatalf("clientIP(nil) = %q, want empty", got)
+				}
+				return
+			}
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			req.RemoteAddr = tt.remote
 			if tt.xff != "" {
