@@ -9,6 +9,7 @@
 //   - Response:       standardized JSON response envelope
 //   - Request:        generic JSON decode + validation
 //   - Client:         composable HTTP client builder
+//   - Identity:       opt-in forwarded client IP and actor identity extraction
 //
 // See ENGINEERING_GUIDELINES.md Section 6.3 for usage patterns.
 // Layer: platform
