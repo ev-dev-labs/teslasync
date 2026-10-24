@@ -22,7 +22,7 @@ import {
 } from '@/components/ui';
 import type { FeatureFlagEntry } from '@/types/admin-diagnostics';
 import { TableSkeleton } from '@/components/feedback';
-import type { CsvCellValue } from '@/lib/csvExport';
+import { normalizeCsvCellValue } from '@/lib/csvValidation';
 
 interface FlagsTableProps {
   rows: FeatureFlagEntry[];
@@ -84,11 +84,6 @@ export function previewValue(value: unknown): string {
   return truncatePreview(fullValue(value));
 }
 
-function rawExportValue(value: unknown): CsvCellValue {
-  return value == null || typeof value === 'string' || typeof value === 'number'
-    || typeof value === 'boolean' || typeof value === 'object' ? value : '—';
-}
-
 export function FlagsTable({
   rows,
   loading,
@@ -127,7 +122,7 @@ export function FlagsTable({
       {
         key: 'value',
         header: t('admin.flags.cols.value', 'Value'),
-        exportValue: (row) => rawExportValue(row.value),
+        exportValue: (row) => normalizeCsvCellValue(row.value),
         visibleOnMobile: true,
         render: (row) => (
           <Text as="span" mono size="xs" color="muted">
