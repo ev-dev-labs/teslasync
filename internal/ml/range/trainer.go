@@ -55,8 +55,9 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"sort"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/ml/stats"
 )
 
 // SourceLearned marks a per-bucket LearnedBucket whose Wh/km was
@@ -334,13 +335,9 @@ func fallbackBucket(tempBucket, speedBucket string, sampleCount int) LearnedBuck
 // This function does NOT validate len(obs); the caller (Train) has
 // already gated on len(obs) >= MinSamples.
 func learnedBucket(tempBucket, speedBucket string, obs []float64) LearnedBucket {
-	values := make([]float64, len(obs))
-	copy(values, obs)
-	sort.Float64s(values)
-
-	mean, stddev := meanStddev(values)
-	p5 := percentile(values, 0.05)
-	p95 := percentile(values, 0.95)
+	mean, stddev := stats.MeanStddev(obs)
+	p5 := stats.Percentile(obs, 0.05)
+	p95 := stats.Percentile(obs, 0.95)
 
 	return LearnedBucket{
 		TempBucket:  tempBucket,
@@ -352,58 +349,6 @@ func learnedBucket(tempBucket, speedBucket string, obs []float64) LearnedBucket 
 		P95:         p95,
 		SampleCount: len(obs),
 	}
-}
-
-// meanStddev computes the population mean and stddev of values.
-// Returns (0,0) for an empty slice. Population (1/n) form rather
-// than sample (1/(n-1)) for stable boundary behaviour at the
-// MinSamples=5 floor.
-func meanStddev(values []float64) (float64, float64) {
-	n := len(values)
-	if n == 0 {
-		return 0, 0
-	}
-	var sum float64
-	for _, v := range values {
-		sum += v
-	}
-	mean := sum / float64(n)
-	var sq float64
-	for _, v := range values {
-		d := v - mean
-		sq += d * d
-	}
-	return mean, math.Sqrt(sq / float64(n))
-}
-
-// percentile returns the q-th percentile of an ALREADY-SORTED slice
-// using linear interpolation (the "C=1" type-7 definition Numpy
-// defaults to). q in [0,1]. Empty slice returns 0.
-//
-// The caller MUST sort the slice ascending before calling this; the
-// helper does not re-sort to keep the per-bucket Train() loop linear.
-func percentile(sortedValues []float64, q float64) float64 {
-	n := len(sortedValues)
-	if n == 0 {
-		return 0
-	}
-	if n == 1 {
-		return sortedValues[0]
-	}
-	if q <= 0 {
-		return sortedValues[0]
-	}
-	if q >= 1 {
-		return sortedValues[n-1]
-	}
-	pos := q * float64(n-1)
-	lo := int(math.Floor(pos))
-	hi := int(math.Ceil(pos))
-	if lo == hi {
-		return sortedValues[lo]
-	}
-	frac := pos - float64(lo)
-	return sortedValues[lo]*(1-frac) + sortedValues[hi]*frac
 }
 
 // CurrentEffectiveBuckets returns the per-bucket envelope that the
