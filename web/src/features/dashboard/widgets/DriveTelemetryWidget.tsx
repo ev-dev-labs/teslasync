@@ -127,7 +127,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
         title={t('widget.driveTelemetry.title', 'Drive telemetry')}
         ariaLabel={t(
           'widget.driveTelemetry.chartAria',
-          'Speed and power during the latest drive',
+          'Speed, power, battery, and elevation during the latest drive',
         )}
         data={chartData}
         dataColumns={[

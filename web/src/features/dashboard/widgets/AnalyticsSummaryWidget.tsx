@@ -97,7 +97,7 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
       onRefresh={() => { void refetch(); }}
     >
       {retained ? (
-        <section aria-label={t('widget.analyticsSummary.summary.title', 'Fleet operating summary')} data-testid="analytics-summary">
+        <section aria-label={t('widget.analyticsSummary.summary.title', 'Analytics operating summary')} data-testid="analytics-summary">
           <WidgetStatGrid
             stats={stats}
             cols={size.cols >= 4 ? 4 : 2}

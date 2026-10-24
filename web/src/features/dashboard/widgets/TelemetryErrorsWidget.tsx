@@ -144,7 +144,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
       {isCompact ? (
         /* ── Compact layout (1×2) ── */
         <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
-          <WidgetBigNumber value={activeVINCount == null ? null : fmtInt(activeVINCount)} label={t('widget.telemetryErrors.errorVINs', 'Error VINs')} />
+          <WidgetBigNumber value={activeVINCount == null ? null : fmtInt(activeVINCount)} label={t('widget.telemetryErrors.errorVINs', "error VINs")} />
           <Badge variant={statusBadge} className="text-xs min-h-[28px]">
             {statusLabel}
           </Badge>
@@ -155,7 +155,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
             {!isCompact && (
               <div className="flex min-w-0 items-center justify-between gap-2">
                 <div className="flex min-w-0 items-baseline gap-2">
-                  <Caption>{t('widget.telemetryErrors.errorVINs', 'Error VINs')}</Caption>
+                  <Caption>{t('widget.telemetryErrors.errorVINs', "error VINs")}</Caption>
                   <Text variant="bodySm" className="font-medium">
                     {activeVINCount == null
                       ? t('widget.telemetryErrors.vinsUnknown', '— VINs with errors')
@@ -173,7 +173,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
           {(errorVINs == null || sourceStates[0].refreshError || sourceStates[0].isRefreshBlocked) && (
             <SourceContent
               state={sourceBoundaryState(sourceStates[0], errorVINs != null)}
-              label={t('widget.telemetryErrors.errorVINs', 'Error VINs')}
+              label={t('widget.telemetryErrors.errorVINs', "error VINs")}
               emptyMessage={t('widget.telemetryErrors.vinsUnavailable', 'Error VIN summary unavailable')}
               errorMessage={t('widget.telemetryErrors.vinsUnavailable', 'Error VIN summary unavailable')}
               error={sourceStates[0].fatalError}
@@ -230,7 +230,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
                     </div>
                     <div className="flex max-w-full flex-col items-end [overflow-wrap:anywhere]">
                       <Caption>{entry.observed ? t('widget.telemetryErrors.observed', 'Observed') : t('widget.telemetryErrors.fetched', 'Fetched')}</Caption>
-                      {isRecent && <Badge variant="warning" size="sm">{t('widget.telemetryErrors.recent', 'Recent')}</Badge>}
+                      {isRecent && <Badge variant="warning" size="sm">{t('widget.telemetryErrors.recent', "recent")}</Badge>}
                       <TimeStamp value={entry.last_seen || null} format="relative" className="text-xs text-[var(--text-muted)]" />
                     </div>
                   </div>

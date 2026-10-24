@@ -104,7 +104,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       {statsState.fatalError ? (
         <QueryError error={statsState.fatalError} onRetry={() => { void statsRefetch(); }} />
       ) : statsLoading && stats == null ? (
-        <div className="min-h-[44px]" aria-label={t('common.loading', 'Loading')} />
+        <div className="min-h-[44px]" aria-label={t('common.loading', 'Loading...')} />
       ) : stats ? (
         <div className="flex h-full min-h-[44px] flex-col justify-center gap-2">
           <WidgetBigNumber

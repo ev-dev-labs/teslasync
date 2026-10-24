@@ -125,7 +125,7 @@ export function KioskSettingsModal({
             {cfg.rotateInterval > 0 && safeDashboards.length > 1 && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[var(--text-secondary)]">
-                  {t('kiosk.dashboardsToRotate', 'Dashboards to rotate')}
+                  {t('kiosk.dashboardsToRotate', 'Dashboards to Rotate')}
                 </label>
                 <div className="space-y-1.5 max-h-40 overflow-y-auto">
                   {safeDashboards.map((d) => (
@@ -159,7 +159,7 @@ export function KioskSettingsModal({
             {/* Cursor auto-hide */}
             <div className="space-y-2">
               <Toggle
-                label={t('kiosk.hideCursor', 'Auto-hide cursor')}
+                label={t('kiosk.hideCursor', 'Auto-hide Cursor')}
                 checked={cfg.hideCursor}
                 onChange={(v) => onUpdateConfig({ hideCursor: v })}
               />

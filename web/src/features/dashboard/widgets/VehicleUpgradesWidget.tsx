@@ -175,7 +175,7 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
   if (!stringId) {
     return <WidgetShell {...shellProps}>
       <EmptyState icon={<ArrowUpCircle className="h-5 w-5" />}
-        message={t('widget.noVehicle', 'No vehicle')}
+        message={t('widget.noVehicle', 'No vehicle data')}
         actionTo={{ label: t('widget.chooseVehicle', 'Choose vehicle'), to: '/vehicles' }} />
     </WidgetShell>;
   }
@@ -224,7 +224,7 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
         <div>
           <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)]">
             <Link2 className="h-3 w-3" />
-            {t('widget.upgrades.shareLinksHeading', 'Active share links')}
+            {t('widget.upgrades.shareLinksHeading', 'Share links')}
           </div>
           {sharingState.fatalError ? (
             <QueryError error={sharingState.fatalError} onRetry={() => {

@@ -70,7 +70,7 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
       unit: 't',
     },
     {
-      label: t('widget.lifetimeStats.ownershipDays', 'Owned'),
+      label: t('widget.lifetimeStats.ownershipDays', 'Ownership days'),
       value: knownNumber(data?.ownership_days) == null ? null : fmtInt(data?.ownership_days),
       unit: t('widget.lifetimeStats.days', 'days'),
     },
@@ -100,7 +100,7 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
             value={displayDistance == null ? null : fmtInt(displayDistance)}
             unit={distanceUnit}
             label={t('widget.lifetimeStats.totalDistance', 'Total distance')}
-            subtitle={t('widget.lifetimeStats.lifetime', 'Lifetime')}
+            subtitle={t('widget.lifetimeStats.lifetime', "lifetime")}
             align="start"
           />
         ) : (

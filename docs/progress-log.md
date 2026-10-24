@@ -532,3 +532,5 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-23 21:14Z - Copilot: recovery handoff
 - Split i18n regeneration now passes locally; only usage-manifest and locale-dashboard obsolete-key removals changed generated artifacts.
 - PR run 40060471218 revealed 31 frozen producer/checkpoint mismatches from the intentional removal of visible Just-now strings and absolute-time migration. Update via sanctioned i18n trio generators/checkpoints; do not hand-edit hashes.
+## 2026-10-24 21:52Z - Copilot: frozen i18n producer checkpoint refresh
+- Refreshed 31 frozen producer/checkpoint expectations through the sanctioned split/trio generators; no hashes or fingerprint counts were hand-edited. 29 source producer checkpoints were re-pinned after translation verification. Verified combined producers: 96; known catalog calls: 41,867; 7 i18n suites: 7,728/7,728 pass; npx tsc --noEmit pass; split catalog check pass; dashboard audit 200 files/0 violations. Next: commit/push this batch, collect remaining PR #202 failures, fix by root cause.

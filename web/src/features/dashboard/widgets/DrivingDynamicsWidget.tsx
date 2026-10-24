@@ -67,15 +67,13 @@ export default function DrivingDynamicsWidget({
   const styleText =
     style == null
       ? null
-      : t(
-          `widget.drivingDynamics.severity.${style}`,
-          {
-            smooth: "Smooth",
-            normal: "Normal",
-            sporty: "Sporty",
-            aggressive: "Aggressive",
-          }[style],
-        );
+      : style === 'smooth'
+        ? t('widget.drivingDynamics.severity.smooth', 'Smooth')
+        : style === 'normal'
+          ? t('widget.drivingDynamics.severity.normal', 'Normal')
+          : style === 'sporty'
+            ? t('widget.drivingDynamics.severity.sporty', 'Sporty')
+            : t('widget.drivingDynamics.severity.aggressive', 'Aggressive');
 
   const peakStats: StatGridItem[] = [
     {

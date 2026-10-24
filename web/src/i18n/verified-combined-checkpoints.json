@@ -36,9 +36,34 @@
     "web/src/features/driving/components/ShareDriveDialog.tsx",
     "web/src/features/charging/components/SitePriceRadar.tsx",
     "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+    "web/src/features/dashboard/widgets/AnalyticsSummaryWidget.tsx",
+    "web/src/features/dashboard/widgets/APIUsageWidget.tsx",
+    "web/src/features/dashboard/widgets/AutomationStatusWidget.tsx",
+    "web/src/features/dashboard/widgets/BackupHistoryWidget.tsx",
     "web/src/features/dashboard/widgets/ChargeCostTrackerWidget.tsx",
+    "web/src/features/dashboard/widgets/CostBreakdownWidget.tsx",
+    "web/src/features/dashboard/widgets/MQTTStatusWidget.tsx",
+    "web/src/features/dashboard/widgets/NotificationStatsWidget.tsx",
+    "web/src/features/dashboard/widgets/RegenEfficiencyWidget.tsx",
+    "web/src/features/dashboard/widgets/SignalHealthWidget.tsx",
+    "web/src/features/dashboard/widgets/SleepEfficiencyWidget.tsx",
+    "web/src/features/dashboard/widgets/SuperchargerHistoryWidget.tsx",
+    "web/src/features/dashboard/widgets/SystemHealthWidget.tsx",
+    "web/src/features/dashboard/widgets/TelemetryErrorsWidget.tsx",
+    "web/src/features/dashboard/widgets/DashboardStatsWidget.tsx",
+    "web/src/features/dashboard/widgets/DrivingDynamicsWidget.tsx",
+    "web/src/features/dashboard/widgets/EnergyStatsWidget.tsx",
+    "web/src/features/dashboard/widgets/FleetStatsBarWidget.tsx",
+    "web/src/features/dashboard/widgets/FleetStatsWidget.tsx",
+    "web/src/features/dashboard/widgets/FsdWeeklyWidget.tsx",
+    "web/src/features/dashboard/widgets/LifetimeStatsWidget.tsx",
+    "web/src/features/dashboard/widgets/MileageStatsWidget.tsx",
     "web/src/features/dashboard/widgets/QuickNavWidget.tsx",
     "web/src/features/dashboard/widgets/shared/WidgetEventFeed.tsx",
+    "web/src/features/dashboard/widgets/UptimeMonitorWidget.tsx",
+    "web/src/features/dashboard/widgets/WeeklyDigestWidget.tsx",
+    "web/src/features/dashboard/widgets/WeeklySummaryCardWidget.tsx",
+    "web/src/features/dashboard/widgets/YearReviewWidget.tsx",
     "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
     "web/src/features/driving/pages/DriveDetailPage.tsx",
     "web/src/features/driving/components/drive-detail/SupervisedDrivingPanel.tsx",
@@ -258,9 +283,114 @@
       "sha256": "5729f17d6d2f3421a50441e33592722ae23daa5ed955fdd2b4bb657c82b8407a"
     },
     {
+      "file": "web/src/features/dashboard/widgets/AnalyticsSummaryWidget.tsx",
+      "calls": 7,
+      "sha256": "8f93c4872b7b4033d31a092e9258b2e0681ecd006178db522248cd703947d520"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/APIUsageWidget.tsx",
+      "calls": 9,
+      "sha256": "cdcc2b7590d416443258405195c752540ecd020ac353a87c7758b88a25197497"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/AutomationStatusWidget.tsx",
+      "calls": 12,
+      "sha256": "bebcd91a0fe7a319a912f17616438fb01085fd70944b3327e4922cd693a99572"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/BackupHistoryWidget.tsx",
+      "calls": 8,
+      "sha256": "4bab711765f3363fded61f9b80867dbf78533a1fc03f4a69348c8434a68fdf56"
+    },
+    {
       "file": "web/src/features/dashboard/widgets/ChargeCostTrackerWidget.tsx",
       "calls": 14,
       "sha256": "8af29a65ccaa4add819e44114fc4285be04ef88a5e8063058d7cf911bda5f9cb"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/CostBreakdownWidget.tsx",
+      "calls": 14,
+      "sha256": "59a4689748656b4161f98b7a70030ea1ff51932afa8f0cc05bdde0fd6cfc6acd"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/MQTTStatusWidget.tsx",
+      "calls": 11,
+      "sha256": "49e5b58a9fe44a226a06fca8c0941b046ab9d3fe36fabec20b444d00f0339e2f"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/NotificationStatsWidget.tsx",
+      "calls": 6,
+      "sha256": "7b7c7d669536a5e30e47af31e650213168b3d359ecb074452af071800e254b8d"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/RegenEfficiencyWidget.tsx",
+      "calls": 5,
+      "sha256": "52c95ee2193ab5a6f179d4a32964e4494866275ef05f5f38722d69fcb73418db"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/SignalHealthWidget.tsx",
+      "calls": 22,
+      "sha256": "6c954e1ed0b4ad5edb6d348f057e4af4a4b78c6e3445ea82222e9798f420e2cb"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/SleepEfficiencyWidget.tsx",
+      "calls": 5,
+      "sha256": "df91a21f27be4d4f8d72b75918fa116723728141920a884b672a5e519528892c"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/SuperchargerHistoryWidget.tsx",
+      "calls": 8,
+      "sha256": "bae7e7c109f286571ce7027a798d912873d7bf7827557a75537a973b2b65a2ea"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/SystemHealthWidget.tsx",
+      "calls": 12,
+      "sha256": "8c358965722130c987e6f6fb37e6ac68a69f91140bfda20e2db3f20d19437719"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/TelemetryErrorsWidget.tsx",
+      "calls": 24,
+      "sha256": "c9918ab5cee07c01600a50e7ddcf2ce36085e8ac9b59e8da49780d9774a51033"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/DashboardStatsWidget.tsx",
+      "calls": 8,
+      "sha256": "32cc1761c128a63bf0250b9c5beb9f8c774027772a352072f92a17d506d18926"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/DrivingDynamicsWidget.tsx",
+      "calls": 11,
+      "sha256": "c95ca2481a62b0354613bb38368963cc7a1d28f218de0546e392bc64dba47a40"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/EnergyStatsWidget.tsx",
+      "calls": 15,
+      "sha256": "3f48c9e2f2474ab7d39681e7de3e6581190f6d58a3771a27e29c77480ba8ce93"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/FleetStatsBarWidget.tsx",
+      "calls": 8,
+      "sha256": "3873240f38df0a7836f9e5c8baa91536c3374f28db42d5621a348f52089ba8ce"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/FleetStatsWidget.tsx",
+      "calls": 6,
+      "sha256": "a4c3a74db0a5212be37e51957d4bf9642fcd266bf084e4a719a81add16bb6bae"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/FsdWeeklyWidget.tsx",
+      "calls": 7,
+      "sha256": "d1f768c8531cdbaf841bd141e70147377211a0aab582d0ad8b87ec8097366858"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/LifetimeStatsWidget.tsx",
+      "calls": 12,
+      "sha256": "ad738b4dcf8cf30bdc232d588a2490b39bc63e5d4f13582d295551e97f01f20c"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/MileageStatsWidget.tsx",
+      "calls": 10,
+      "sha256": "5686f8d8a082be6d9c4a2882163d0e1c7a694badcba97a58c58aac87ba8a587c"
     },
     {
       "file": "web/src/features/dashboard/widgets/QuickNavWidget.tsx",
@@ -269,8 +399,28 @@
     },
     {
       "file": "web/src/features/dashboard/widgets/shared/WidgetEventFeed.tsx",
-      "calls": 4,
-      "sha256": "33d8169cac4861057197d3fb94e477614a3e12168063882527bef96beb789185"
+      "calls": 3,
+      "sha256": "824274a420cffe4589b3acd86ba67501d3ad91638467dd0f86c8344f31ad4ff7"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/UptimeMonitorWidget.tsx",
+      "calls": 10,
+      "sha256": "f88bc180ace3d7e3db74a93adc1820b99cdcbc2b40760a3baa94081b704ee57e"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/WeeklyDigestWidget.tsx",
+      "calls": 11,
+      "sha256": "bf976ce3a051887b5e8229adfa3aa0f6a88815e075ea9acfcf9fc3578c340198"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/WeeklySummaryCardWidget.tsx",
+      "calls": 7,
+      "sha256": "30fa39f9016e97e194fefacd2bb34dfab431447621f6c569adff9e8e1d203274"
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/YearReviewWidget.tsx",
+      "calls": 16,
+      "sha256": "14002764569bb6a89183844426d83453cbe75d2c7e575d49951cf1e90631f3f7"
     },
     {
       "file": "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",

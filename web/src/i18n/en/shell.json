@@ -407,7 +407,8 @@
       }
     },
     "idealRange": "Ideal Range",
-    "ratedRange": "Rated Range"
+    "ratedRange": "Rated Range",
+    "reviewDetails": "Review details"
   },
   "compat": {
     "banner": {

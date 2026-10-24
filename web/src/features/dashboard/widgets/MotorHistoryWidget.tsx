@@ -96,9 +96,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
 
   const rangeLabel = presetId === '7d'
     ? t('widget.motorHistory.last7Days', '7 days')
-    : presetId
-      ? t(`date.preset.${presetId}`, presetId)
-      : `${formatDateShort(`${start}T00:00:00`)} – ${formatDateShort(`${end}T00:00:00`)}`;
+    : `${formatDateShort(`${start}T00:00:00`)} – ${formatDateShort(`${end}T00:00:00`)}`;
   const temperatureLabels = useMemo(() => chartData
     .map((row) => row.temperature)
     .filter((value): value is number => value != null && Number.isFinite(value))
@@ -193,7 +191,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
               title={t('widget.motorHistory.title', 'Motor history')}
               ariaLabel={t(
                 'widget.motorHistory.chartAria',
-                'Motor stator temperature history',
+                'Motor torque, stator temperature, and acceleration history',
               )}
               data={chartData}
               dataColumns={[

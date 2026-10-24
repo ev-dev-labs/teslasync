@@ -216,3 +216,11 @@ proceed to Parts 3-6.
   mismatch intentional source removals and shared absolute-time formatting.
   Re-pinned only through the repository trio generators/checkpoints; do not
   hand-edit hashes or catalog fingerprint counts.
+
+- 2026-10-24 recovery: refreshed the 31 producer/checkpoint group through
+  the sanctioned trio generators (no hash hand edits). Verified combined
+  producers 96; known catalog calls 41,867; 29 source producer checkpoints
+  refreshed; 7 frozen i18n suites pass 7,728/7,728; TypeScript and split
+  catalog checks pass; dashboard code-guardian audit reports 200 files/0
+  violations. Next: commit/push this batch, then collect and fix PR #202
+  remaining failures by root cause.

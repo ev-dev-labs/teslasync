@@ -209,7 +209,7 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
           }>
             {overallLabel(overallStatus, t)}
           </Badge>
-          <WidgetBigNumber value={summary} label={t('widget.systemHealth.services', 'Services')} align="center" animated={false} />
+          <WidgetBigNumber value={summary} label={t('widget.systemHealth.services', "services")} align="center" animated={false} />
         </div>
       ) : (
         <div className="flex h-full min-w-0 flex-col gap-3">

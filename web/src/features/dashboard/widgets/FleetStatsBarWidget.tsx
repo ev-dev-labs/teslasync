@@ -81,7 +81,7 @@ export default function FleetStatsBarWidget({ size }: WidgetProps) {
         value: vehicleCount == null ? null : fmtInt(vehicleCount),
       },
       {
-        label: t('widget.fleetStatsBar.online', 'Online'),
+        label: t('widget.fleetStatsBar.online', "online"),
         value: onlineCount == null ? null : fmtInt(onlineCount),
         sublabel: asleepCount != null && asleepCount > 0
           ? t('widget.fleetStatsBar.asleepCount', '{{count}} asleep/offline', { count: asleepCount })
