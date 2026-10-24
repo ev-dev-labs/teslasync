@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui';
 import {
   Bar,
   BarChart,
+  EmbeddedChart,
   ResponsiveContainer,
   XAxis,
   type ChartDataRow,
@@ -199,20 +200,31 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
 
           {!isCompact && bars.length > 0 && (
             <div className="min-h-16 flex-1">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={bars}
-                  margin={{ top: 2, right: 2, bottom: 0, left: 2 }}
-                >
-                  <XAxis dataKey="index" hide />
-                  <Bar
-                    dataKey="rate"
-                    fill={dashboardBarColor(bars)}
-                    radius={[3, 3, 0, 0]}
-                    maxBarSize={18}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <EmbeddedChart
+                title={t('widget.vampireDrain.chartTitle', 'Recent parked drain')}
+                ariaLabel={t('widget.vampireDrain.chartAria', 'Battery drain rate by recent parked window')}
+                data={bars}
+                dataColumns={[
+                  { key: 'index', label: t('widget.vampireDrain.window', 'Window') },
+                  { key: 'rate', label: t('widget.vampireDrain.rate', 'Drain (%/day)'), format: (value) => formatNumber(knownNumber(value), 1) },
+                ]}
+                className="h-full w-full"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={bars}
+                    margin={{ top: 2, right: 2, bottom: 0, left: 2 }}
+                  >
+                    <XAxis dataKey="index" hide />
+                    <Bar
+                      dataKey="rate"
+                      fill={dashboardBarColor(bars)}
+                      radius={[3, 3, 0, 0]}
+                      maxBarSize={18}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </EmbeddedChart>
             </div>
           )}
 
@@ -227,6 +239,7 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
         </div>
       ) : (
         <EmptyState
+          variant="informational"
           icon={<BatteryWarning className="h-5 w-5" />}
           message={t('widget.vampireDrain.noData', 'No vampire drain data')}
           description={t(

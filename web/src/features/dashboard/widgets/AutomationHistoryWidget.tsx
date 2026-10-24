@@ -104,6 +104,7 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
     >
       {rows.length === 0 ? (
         <EmptyState
+          variant="informational"
           icon={<PlayCircle className="h-5 w-5" aria-hidden="true" />}
           message={t('widget.noAutomationRuns', 'No automation runs yet')}
           className="py-4"

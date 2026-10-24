@@ -135,6 +135,7 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
           />
         ) : (
           <EmptyState
+            variant="informational"
             icon={<Calendar className="h-5 w-5" />}
             message={t('widget.yearReview.noData', 'No year-in-review data')}
             className="py-4"
@@ -168,6 +169,7 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
         </section>
       ) : (
         <EmptyState
+          variant="informational"
           icon={<Calendar className="h-5 w-5" />}
           message={t('widget.yearReview.noData', 'No year-in-review data')}
           className="py-4"

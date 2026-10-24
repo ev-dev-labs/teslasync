@@ -51,7 +51,6 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('@/components/charts', () => {
-  const Box = ({ children, ...props }: { children?: ReactNode; [key: string]: unknown }) => <div {...props}>{children}</div>;
   return {
     useMeasuredAxisWidth: () => 40,
     ComposedChart: ({ data, children }: { data?: unknown[]; children?: ReactNode }) => (

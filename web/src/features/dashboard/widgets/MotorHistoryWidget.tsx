@@ -139,6 +139,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
   };
   const noData = (
     <EmptyState
+      variant="informational"
       icon={<Cog className="h-5 w-5" />}
       message={t('widget.motorHistory.noData', 'No motor history')}
     />

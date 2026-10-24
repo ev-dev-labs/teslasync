@@ -110,6 +110,7 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
       )}
       {!data && !isLoading && (
         <EmptyState
+          variant="informational"
           icon={<Activity className="h-5 w-5" />}
           message={t('widget.uptime.noData', 'No system health data')}
           className="py-4"

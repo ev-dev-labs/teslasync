@@ -153,6 +153,7 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
           />
         ) : (
           <EmptyState
+            variant="informational"
             icon={<Zap className="h-5 w-5" />}
             message={t('widget.energyStats.noData', 'No energy data available')}
             className="py-4"
@@ -245,6 +246,7 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
         </div>
       ) : (
         <EmptyState
+          variant="informational"
           icon={<Zap className="h-5 w-5" />}
           message={t('widget.energyStats.noData', 'No energy data available')}
           className="py-4"

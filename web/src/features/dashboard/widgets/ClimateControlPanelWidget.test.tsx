@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ClimateSnapshot } from '@/api/types';
 import type { WidgetSize } from './types';
@@ -200,7 +200,7 @@ describe('ClimateControlPanelWidget — After card layout', () => {
   });
 
   it('uses the resolved vehicle id and empty state', () => {
-    const query = setQuery({ data: undefined });
+    setQuery({ data: undefined });
     renderWidget(FULL, 42);
     expect(climateMock).toHaveBeenCalledWith(42, 5000);
     expect(screen.getByRole('status')).toHaveTextContent('No climate data');

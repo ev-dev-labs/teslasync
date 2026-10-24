@@ -126,7 +126,7 @@ describe('VehicleAccessWidget After-card behavior', () => {
 
   it('keeps independent source trust and retries only the failed source', () => {
     const drivers = setDrivers({ data: [makeDriver()] });
-    const invitations = setInvitations({ data: undefined, isError: true });
+    setInvitations({ data: undefined, isError: true });
     const mobile = setMobile({ data: { data: { enabled: true }, fetched_at: NOW } });
     renderWidget(FULL);
 
@@ -136,7 +136,7 @@ describe('VehicleAccessWidget After-card behavior', () => {
   });
 
   it('retains cached rows during background errors and exposes shared freshness refresh', () => {
-    const drivers = setDrivers({ data: [makeDriver()], isError: true });
+    setDrivers({ data: [makeDriver()], isError: true });
     setInvitations({ data: [] });
     renderWidget(FULL);
     expect(screen.getByText('Alice')).toBeInTheDocument();

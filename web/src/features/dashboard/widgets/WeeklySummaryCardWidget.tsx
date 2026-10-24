@@ -115,6 +115,7 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
         />
       ) : !isLoading ? (
         <EmptyState
+          variant="informational"
           icon={<CalendarDays className="h-5 w-5" />}
           message={t('widget.weeklySummary.noData', 'No weekly data')}
           className="py-4"

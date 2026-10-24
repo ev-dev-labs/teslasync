@@ -49,7 +49,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { chartTokens } from '@/lib/tokens';
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({ settings: { unit_of_length: 'km', locale: 'en-US' } }),
 }));

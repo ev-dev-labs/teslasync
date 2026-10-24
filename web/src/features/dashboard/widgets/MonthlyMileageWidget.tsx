@@ -162,6 +162,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
           />
         ) : (
           <EmptyState
+            variant="informational"
             icon={<BarChart3 className="h-5 w-5" />}
             message={t('widget.monthlyMileage.noData', 'No mileage data')}
           />

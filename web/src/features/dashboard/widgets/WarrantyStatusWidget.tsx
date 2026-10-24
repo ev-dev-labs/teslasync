@@ -318,6 +318,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
           {!warrantyData ? (
             <>
               <EmptyState
+                variant="informational"
                 icon={<ShieldCheck className="h-5 w-5" />}
                 message={t('widget.warranty.noData', 'No warranty data')}
               />

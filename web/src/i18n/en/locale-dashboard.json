@@ -3965,10 +3965,14 @@
     },
     "vampireDrain": {
       "averageUnavailable": "Average unavailable",
+      "chartAria": "Battery drain rate by recent parked window",
+      "chartTitle": "Recent parked drain",
       "hr": "h",
       "min": "m",
       "noData": "No vampire drain data",
-      "title": "Vampire drain"
+      "rate": "Drain (%/day)",
+      "title": "Vampire drain",
+      "window": "Window"
     },
     "vehicleAccess": "Vehicle access",
     "vehicleAccessAccepted": "Accepted",

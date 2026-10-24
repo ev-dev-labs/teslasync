@@ -335,9 +335,9 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           retainedMessage={t('widget.maintenance.recordsRetained', 'Previously loaded service records remain visible while they refresh.')}
         >
           {lastServiceEntries.length > 0 ? (
-            <ul role="list" aria-label={t('widget.maintenance.recentService', 'Recent service')} className="m-0 list-none space-y-2 p-0">
+            <ul aria-label={t('widget.maintenance.recentService', 'Recent service')} className="m-0 list-none space-y-2 p-0">
               {recentRecords.slice(0, 3).map((rec, index) => (
-                <li key={rec.itemId || index} role="listitem" className="rounded-panel border border-[var(--border-subtle)] px-3 py-2">
+                <li key={rec.itemId || index} className="rounded-panel border border-[var(--border-subtle)] px-3 py-2">
                   <span className="block text-sm font-medium text-[var(--text-primary)]">{items.find((entry) => entry.id === rec.itemId)?.name ?? rec.itemId ?? '—'}</span>
                   <span className="block text-xs text-[var(--text-muted)]">{rec.notes ?? '—'}</span>
                   <span className="block text-xs text-[var(--text-muted)]">{rec.date ? formatDate(rec.date) : '—'}</span>

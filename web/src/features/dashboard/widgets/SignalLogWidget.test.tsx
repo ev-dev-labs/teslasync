@@ -312,7 +312,7 @@ describe('SignalLogWidget — standard layout (2×2)', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('No signal updates yet')).toBeInTheDocument();
-    expect(screen.getByText('No signal updates yet')?.closest('[role="status"]')).toHaveAttribute('data-variant', 'default');
+    expect(screen.getByText('No signal updates yet')?.closest('[role="status"]')).toHaveAttribute('data-variant', 'informational');
     // The header survives; the feed list is replaced, not rendered blank.
     expect(screen.getByText('Signal log')).toBeInTheDocument();
     expect(screen.queryByRole('list')).not.toBeInTheDocument();

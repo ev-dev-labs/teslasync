@@ -127,6 +127,7 @@ export default function FleetStatsBarWidget({ size }: WidgetProps) {
         </section>
       ) : (
         <EmptyState
+          variant="informational"
           icon={<Car className="h-5 w-5" />}
           message={t('widget.fleetStatsBar.noData', 'No fleet data available')}
           className="py-4"

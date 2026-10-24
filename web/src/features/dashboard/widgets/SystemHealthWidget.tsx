@@ -217,6 +217,7 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
             <WidgetStatusGrid cells={cells} cols={size.cols >= 3 ? 4 : 2} />
           ) : !health.isLoading ? (
             <EmptyState
+              variant="informational"
               message={health.isError
                 ? t('widget.systemHealth.healthError', 'Unable to load service health')
                 : t('widget.systemHealth.noData', 'No system health data')}

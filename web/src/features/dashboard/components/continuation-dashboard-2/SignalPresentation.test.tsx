@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import SignalHealthWidget from '../../widgets/SignalHealthWidget';
 import LiveSignalSparklinesWidget from '../../widgets/LiveSignalSparklinesWidget';
 import { queryResult, renderWidget } from './testSupport';

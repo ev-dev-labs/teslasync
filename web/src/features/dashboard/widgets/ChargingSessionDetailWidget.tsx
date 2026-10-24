@@ -424,6 +424,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       )}
       {!detail && latestSessionId == null && chartData.length === 0 ? (
         <EmptyState
+          variant="informational"
           icon={<Zap className="h-5 w-5" />}
           message={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
           className="py-4"

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
 import { Caption } from '@/components/ui';
+import { VisuallyHidden } from '@/components/a11y';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { combineDataStates } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
@@ -112,7 +113,7 @@ function StackedBar({ segments, t, compact }: { segments: StateSegment[]; t: (k:
             <span>{fmtDuration(seg.totalMin, t)}</span>
             {' · '}
             <span>{fmtNumber(seg.pct, 0)}%</span>
-            <span className="sr-only">{fmtNumber(seg.pct, 2)}%</span>
+            <VisuallyHidden>{fmtNumber(seg.pct, 2)}%</VisuallyHidden>
           </>
         ),
       }))}
@@ -147,7 +148,7 @@ function TimelineStripe({
     <div className="space-y-1.5">
       <Caption>
         <span>{rangeLabel}</span>
-        <span className="sr-only">24h timeline</span>
+        <VisuallyHidden>24h timeline</VisuallyHidden>
       </Caption>
       <div
         role="img"

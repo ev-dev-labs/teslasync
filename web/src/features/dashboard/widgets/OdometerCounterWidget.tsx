@@ -161,6 +161,7 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
         </div>
       ) : (
         <EmptyState
+          variant="informational"
           icon={<Gauge className="h-6 w-6" />}
           message={t('widget.odometer.noData', 'No odometer data')}
           className="py-4"

@@ -128,6 +128,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
         </div>
       ) : (
         <EmptyState
+          variant="informational"
           icon={<Bell className="h-5 w-5" />}
           message={t('widget.notificationStats.noData', 'No notification data')}
           className="py-4"

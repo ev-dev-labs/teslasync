@@ -82,7 +82,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
           <div className="flex flex-col gap-3 h-full">
             <div className="flex items-start gap-3 min-w-0">
               <div className="flex items-center justify-center h-14 w-14 rounded-shape-lg bg-gradient-to-br from-[var(--theme-primary)]/70 to-[var(--text-secondary)]/30 shrink-0" aria-hidden="true">
-                <Music className="h-6 w-6 text-white/90" />
+                <Music className="h-6 w-6 text-[var(--text-primary)]" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className={`${dashboardTokens.secondaryMetric} break-words [overflow-wrap:anywhere]`} title={title}>{title}</p>

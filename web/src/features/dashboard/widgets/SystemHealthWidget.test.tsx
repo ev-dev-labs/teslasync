@@ -21,7 +21,7 @@ vi.mock('@/api/hooks/useSettings', () => ({
 import { useSystemHealth, useConnectionPool } from '@/api/hooks/useAdmin';
 import { useDBStats } from '@/api/hooks/useAdmin';
 import { useVersionInfo } from '@/api/hooks/useSettings';
-import SystemHealthWidget, { formatUptime, overallBadgeStatus, statusTier } from './SystemHealthWidget';
+import SystemHealthWidget, { overallBadgeStatus, statusTier } from './SystemHealthWidget';
 
 const mockHealth = useSystemHealth as ReturnType<typeof vi.fn>;
 const mockPool = useConnectionPool as ReturnType<typeof vi.fn>;

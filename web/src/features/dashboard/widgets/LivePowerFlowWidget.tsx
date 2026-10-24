@@ -11,7 +11,7 @@ import { WidgetFlowDiagram, type FlowNode, type FlowArrow } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
-export default function LivePowerFlowWidget({}: WidgetProps) {
+export default function LivePowerFlowWidget(_props: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { formatPower } = useUnits();
   const { fmtInt } = useNumberFormatting();

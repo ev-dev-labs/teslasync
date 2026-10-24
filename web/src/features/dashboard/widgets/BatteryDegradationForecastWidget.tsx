@@ -205,8 +205,8 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
                       <YAxis domain={['dataMin - 2', 100]} tickFormatter={(v: number) => `${v}%`} {...axisTickSm} tick={axisTickSm} width={44} />
                       <Tooltip content={<ChartTooltip />} />
                       <ReferenceLine y={80} stroke={gaugeTone.danger} strokeDasharray="4 4" strokeOpacity={0.4} />
-                      <Line type="monotone" dataKey="health" stroke={palette.series[1]} strokeWidth={2} dot={false} connectNulls isAnimationActive={!reduce} name={t('widget.healthPct', 'Health %')} />
-                      <Line type="monotone" dataKey="forecast" stroke={palette.series[1]} strokeWidth={2} strokeDasharray="5 4" dot={false} connectNulls isAnimationActive={!reduce} name={t('widget.costForecast.forecast', 'Forecast')} />
+                      <Line type="monotone" dataKey="health" stroke={palette.series[1]} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={!reduce} name={t('widget.healthPct', 'Health %')} />
+                      <Line type="monotone" dataKey="forecast" stroke={palette.series[1]} strokeWidth={2} strokeDasharray="5 4" dot={false} connectNulls={false} isAnimationActive={!reduce} name={t('widget.costForecast.forecast', 'Forecast')} />
                     </LineChart>
                   </ResponsiveContainer>
                 </EmbeddedChart>

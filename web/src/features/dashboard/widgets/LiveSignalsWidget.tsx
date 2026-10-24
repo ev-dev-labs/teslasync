@@ -101,6 +101,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
     >
       {!hasLiveData ? (
         <EmptyState
+          variant="informational"
           icon={<Radio className="h-5 w-5" />}
           message={t('widget.noSignals', 'No live signal data')}
           description={t(

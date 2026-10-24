@@ -105,6 +105,7 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
           />
         ) : (
           <EmptyState
+            variant="informational"
             icon={<Trophy className="h-5 w-5" />}
             message={t('widget.lifetimeStats.noData', 'No lifetime data')}
             className="py-4"
@@ -123,6 +124,7 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
         <WidgetStatGrid stats={stats} cols={3} />
       ) : (
         <EmptyState
+          variant="informational"
           icon={<Trophy className="h-5 w-5" />}
           message={t('widget.lifetimeStats.noData', 'No lifetime data')}
           className="py-4"

@@ -124,6 +124,7 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
         )
       ) : (
         <EmptyState
+          variant="informational"
           icon={<Zap className="h-5 w-5" />}
           message={t('widget.noChargeData', 'No charge data')}
           className="py-4"

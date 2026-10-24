@@ -100,7 +100,7 @@ afterEach(cleanup);
 
 describe('FleetStatsWidget — After card', () => {
   it('renders one concise 2-column stats grid with the shared shell freshness dot', () => {
-    const { container } = renderWidget();
+    renderWidget();
     const stats = within(screen.getByTestId('fleet-stats'));
     expect(stats.getByText('Fleet size')).toBeInTheDocument();
     expect(stats.getByText('3')).toBeInTheDocument();

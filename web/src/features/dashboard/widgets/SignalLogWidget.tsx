@@ -159,11 +159,12 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
         <div className="flex-1 min-h-0 overflow-y-auto">
           {displayItems.length === 0 ? (
             <EmptyState
+              variant="informational"
               message={t('widget.signalLog.noSignals', 'No signal updates yet')}
               className="py-4"
             />
           ) : (
-            <ul role="list" aria-label={t('widget.eventFeed.label', 'Event feed')} className="divide-y divide-[var(--border-subtle)] font-mono">
+            <ul aria-label={t('widget.eventFeed.label', 'Event feed')} className="divide-y divide-[var(--border-subtle)] font-mono">
               {[...displayItems]
                 .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                 .slice(0, 20)
@@ -173,7 +174,7 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
                     ? '—'
                     : formatTime(parsed);
                   return (
-                    <li role="listitem" key={item.id} className="grid min-h-9 grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-2 py-1.5 text-xs">
+                    <li key={item.id} className="grid min-h-9 grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-2 py-1.5 text-xs">
                       <span className="tabular-nums text-[var(--text-muted)]">{timeLabel}</span>
                       <span className="truncate text-[var(--text-primary)]" title={item.title}>{item.title}</span>
                       <span className="max-w-24 truncate text-end font-semibold tabular-nums text-[var(--text-primary)]" title={item.subtitle}>
