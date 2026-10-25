@@ -82,10 +82,31 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   using native `npm.cmd` (plain `npm` resolves to a PowerShell script blocked
   by the machine's existing execution policy; no policy changed and no
   dependencies installed). Reviewed-shard regeneration is next.
-- Current next step: regenerate reviewed Windows shards one at a time,
-  then repair the largest remaining dashboard acceptance group and semantic
-  timezone roots; inspect current CI failure logs as jobs finish.
-  Completed fixes this session: 6.
+- Fix 7: weekly loading/retention/retry/recovery assertions now require the
+  exact redesigned distance AND km unit, instead of obsolete two-decimal
+  substrings; initial/error states also reject the actual zero/value format.
+  All eight theme/viewport/state cases pass, including keyboard retry and
+  real 42->84 recovery; proxy escapes=0, affected lint and TypeScript exit 0.
+  The first anchored title filter selected no tests; the corrected
+  fully-qualified-title filter ran all eight. No case was skipped/deleted.
+  Evidence: `fix-7-weekly-final.log`, `fix-7-eslint.log`, `fix-7-tsc.log`.
+- All six reviewed Windows shards regenerated ONCE, serially (1/5/10/14/
+  39/56 out of 64): 10 tests pass, every wrapper proxy escape count 0.
+  Only the six approved PNG files changed and were copied back; mirror
+  snapshot tree restored clean. Three new files are byte-identical to the
+  reviewed CI actual; the other three differ by only 4/13/4 decoded pixels,
+  with no additional content/layout change. Old/new and generated pairs
+  reviewed. No tolerance/configuration change.
+  Native dependency inspection found pre-existing invalid zod@3.25.76
+  against the synchronized lockfile. Run the permitted single native
+  `npm.cmd ci --legacy-peer-deps`, rebuild, and verify those same shards
+  WITHOUT update-snapshots after syncing the committed images.
+- Current next step: commit/push the reviewed images, restore native
+  dependencies as above, then verify them without regenerating; repair
+  remaining exact dashboard readout contracts and semantic timezone roots.
+  Unknown-charger binding now passes; next observed assertion is obsolete
+  detail-energy precision, followed by removed aggregate KPI expectations.
+  Completed fixes this session: 7; final native baseline verification pending.
 
 ## Resume verification (2026-10-25, after `354deb1c1f`)
 
