@@ -31,6 +31,21 @@ const COLORS_SRC = join(__dirname, '..', 'src', 'lib', 'colors.ts');
 
 const PALETTE_NAMES = ['CHART_COLORS_CB_SAFE', 'CHART_COLORS_NEON'];
 
+export const HARD_COLOR_EXCEPTIONS = Object.freeze({
+  'src/components/ui/themePresets.ts': 'Theme/accent preset definitions',
+  'src/components/ui/ThemeProvider.tsx': 'Theme/accent provider definitions',
+  'src/components/vehicles/VehicleTwin.tsx': 'Kept widget — exact preserved vehicle illustration paint',
+  'src/components/data-display/TeslaCarViz.tsx': 'Tesla car illustration paint',
+  'src/features/admin/components/devtools/tools/ColorConverter.tsx': 'Color converter dev-tool input/output',
+  'src/features/notifications/components/channels/channelMeta.ts': 'Third-party notification brand colors',
+});
+
+export const HARD_COLOR_TOKEN_MODULES = Object.freeze([
+  'src/lib/colors.ts',
+  'src/lib/tokens.ts',
+  'src/features/dashboard/lib/dashboardTokens.ts',
+]);
+
 export function readCanonicalPalettes(source) {
   const file = ts.createSourceFile(COLORS_SRC, source, ts.ScriptTarget.Latest, true);
   if (file.parseDiagnostics.length) {
@@ -122,10 +137,28 @@ export function findVisualColorLiterals(source, fileName = 'visual.tsx') {
     if (ts.isStringLiteral(node) && isVisualColorLiteral(node.text)) {
       hits.push({ position: node.getStart(file), value: node.text });
     }
+    if (ts.isNoSubstitutionTemplateLiteral(node) && isVisualColorLiteral(node.text)) {
+      hits.push({ position: node.getStart(file), value: node.text });
+    }
     ts.forEachChild(node, visit);
   };
   visit(file);
   return hits;
+}
+
+export function isProductionPaletteFile(relativePath) {
+  const normalized = relativePath.replaceAll('\\', '/');
+  if (!/\.(?:ts|tsx)$/.test(normalized)) return false;
+  if (/(?:^|\/)(?:__tests__|tests)(?:\/|$)/.test(normalized)) return false;
+  if (/\.(?:test|spec|stories|story)\.[cm]?tsx?$/.test(normalized)) return false;
+  return true;
+}
+
+export function shouldScanPaletteFile(relativePath) {
+  const normalized = relativePath.replaceAll('\\', '/');
+  if (!isProductionPaletteFile(normalized)) return false;
+  if (HARD_COLOR_TOKEN_MODULES.includes(normalized)) return false;
+  return !Object.hasOwn(HARD_COLOR_EXCEPTIONS, normalized);
 }
 
 function walk(root, predicate) {
@@ -165,32 +198,16 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   try {
     const paletteExit = auditCanonicalPalettes(readFileSync(COLORS_SRC, 'utf8'));
     const webRoot = join(__dirname, '..');
-    const allowed = new Set([
-      join(webRoot, 'src', 'lib', 'colors.ts'),
-      join(webRoot, 'src', 'lib', 'tokens.ts'),
-      join(webRoot, 'src', 'features', 'dashboard', 'lib', 'dashboardTokens.ts'),
-    ]);
-    const visualRoots = [
-      join(webRoot, 'src', 'components', 'charts'),
-      join(webRoot, 'src', 'components', 'maps'),
-      join(webRoot, 'src', 'features', 'dashboard', 'widgets'),
-      join(webRoot, 'src', 'features', 'analytics'),
-      join(webRoot, 'src', 'features', 'driving'),
-      join(webRoot, 'src', 'features', 'charging'),
-      join(webRoot, 'src', 'features', 'battery'),
-      join(webRoot, 'src', 'features', 'vehicles'),
-      join(webRoot, 'src', 'features', 'maps'),
-      join(webRoot, 'src', 'features', 'telemetry'),
-      join(webRoot, 'src', 'features', 'system'),
-      join(webRoot, 'src', 'features', 'settings'),
-      join(webRoot, 'src', 'features', 'developer-reference'),
-    ];
     let visualFailures = 0;
-    for (const root of visualRoots) {
+    const broadRoots = [
+      join(webRoot, 'src', 'features'),
+      join(webRoot, 'src', 'components'),
+    ];
+    for (const root of broadRoots) {
       for (const file of walk(root, candidate => /\.(?:ts|tsx)$/.test(candidate))) {
-        if (allowed.has(file) || /\.(?:test)\.tsx?$/.test(file)) continue;
         const source = readFileSync(file, 'utf8');
-        if (!/(?:<(?:Line|Area|Bar|Pie|Scatter|Cell|Polyline|CircleMarker|Radar|ReferenceArea)\b|fill=|stroke=|stopColor=|pathOptions=|\b(?:heatmap|gradient|sparkline)\b)/i.test(source)) continue;
+        const relativePath = relative(webRoot, file);
+        if (!shouldScanPaletteFile(relativePath)) continue;
         for (const hit of findVisualColorLiterals(source, file)) {
           console.error(`hard-coded visual color: ${join(relative(webRoot, file))}:${lineOf(source, hit.position)} ${hit.value}`);
           visualFailures += 1;

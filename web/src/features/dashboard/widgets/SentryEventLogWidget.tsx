@@ -12,6 +12,7 @@ import { WidgetEventFeed, type EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 import { Caption } from '@/components/ui';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { COLOR, DATA_VISUAL_COLORS, CHART_NEUTRAL } from '@/lib/colors';
 
 export interface DerivedEvent {
   icon: ReactNode;
@@ -75,32 +76,32 @@ export function deriveEvent(ev: SecurityEvent, t: TFunction): DerivedEvent {
   if (openDoors.length > 0) {
     icon = <DoorOpen className="h-3.5 w-3.5" aria-hidden="true" />;
     title = t('widget.sentryLog.doorOpen', 'Door open: {{doors}}', { doors: openDoors.join(', ') });
-    color = '#f59e0b';
+    color = COLOR.WARN;
     severity = 'warning';
   } else if (sentryPresent && sentryOn) {
     icon = <Eye className="h-3.5 w-3.5" aria-hidden="true" />;
     title = t('widget.sentryLog.sentryActivated', 'Sentry mode activated');
-    color = '#06b6d4';
+    color = DATA_VISUAL_COLORS.info;
     severity = 'info';
   } else if (sentryPresent) {
     icon = <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />;
     title = t('widget.sentryLog.sentryDeactivated', 'Sentry mode deactivated');
-    color = '#6b7280';
+    color = CHART_NEUTRAL;
     severity = 'info';
   } else if (isLocked) {
     icon = <Lock className="h-3.5 w-3.5" aria-hidden="true" />;
     title = t('widget.sentryLog.vehicleLocked', 'Vehicle locked');
-    color = '#22c55e';
+    color = COLOR.GOOD;
     severity = 'info';
   } else if (ev.locked === false) {
     icon = <Unlock className="h-3.5 w-3.5" aria-hidden="true" />;
     title = t('widget.sentryLog.vehicleUnlocked', 'Vehicle unlocked');
-    color = '#ef4444';
+    color = COLOR.BAD;
     severity = 'critical';
   } else {
     icon = <DoorClosed className="h-3.5 w-3.5" aria-hidden="true" />;
     title = t('widget.sentryLog.securityUpdated', 'Security state updated');
-    color = '#8b5cf6';
+    color = DATA_VISUAL_COLORS.purple;
     severity = 'info';
   }
 

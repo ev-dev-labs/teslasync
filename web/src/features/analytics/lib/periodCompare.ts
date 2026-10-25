@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { resolveSemantic, type Direction, type MetricId } from '@/lib/metricSemantics';
 import { fmtNumber } from '@/lib/numberFormat';
 
@@ -66,7 +67,7 @@ export function assessDelta(
 
 /** Bar fills for the delta chart (repo semantic hexes, cf. SEVERITY_HEX). */
 export const DELTA_FILL = {
-  favorable: '#10b981',
-  unfavorable: '#ef4444',
-  neutral: '#64748b',
+  favorable: palette.COLOR.GOOD,
+  unfavorable: palette.COLOR.BAD,
+  neutral: palette.CHART_NEUTRAL,
 } as const;

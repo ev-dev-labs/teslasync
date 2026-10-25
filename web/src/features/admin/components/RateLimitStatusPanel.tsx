@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 /**
  * Rate-limit status panel.
  *
@@ -34,9 +35,9 @@ import { IconButton } from '@/components/ui/IconButton';
 // without a runtime lookup; the audit:inline-style guard tolerates
 // dynamic per-row colour values per the chart-colour exception.
 const SEVERITY_COLOR: Record<RateLimitSeverity, string> = {
-  ok: '#10b981',       // emerald-500
-  warn: '#f59e0b',     // amber-500
-  critical: '#ef4444', // red-500
+  ok: palette.COLOR.GOOD,       // emerald-500
+  warn: palette.COLOR.WARN,     // amber-500
+  critical: palette.COLOR.BAD, // red-500
 }
 
 const SEVERITY_TONE_CLASS: Record<RateLimitSeverity, string> = {

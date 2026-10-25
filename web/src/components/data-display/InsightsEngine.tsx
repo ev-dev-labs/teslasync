@@ -14,6 +14,7 @@ import type {
   Drive, ChargingSession, EnergyStats, BatteryReport,
   MileageStats, VampireDrainStats,
 } from '@/api/client'
+import { COLOR, DATA_VISUAL_COLORS } from '@/lib/colors'
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -42,15 +43,13 @@ interface Insight {
 // ─── Severity → border colour ─────────────────────────────────
 
 const SEVERITY_BORDER: Record<Severity, string> = {
-  info:    '#00f0ff',
-  success: '#10b981',
-  warning: '#f59e0b',
-  alert:   '#ef4444',
+  info:    DATA_VISUAL_COLORS.info,
+  success: COLOR.GOOD,
+  warning: COLOR.WARN,
+  alert:   COLOR.BAD,
 }
 
 const TREND_ICON: Record<Trend, { Icon: React.ElementType; color: string }> = {
-  up:      { Icon: TrendingUp,   color: '#10b981' },
-  down:    { Icon: TrendingDown,  color: '#ef4444' },
   neutral: { Icon: ArrowRight,    color: 'var(--text-secondary)' },
 }
 

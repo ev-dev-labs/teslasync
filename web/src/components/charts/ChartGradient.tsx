@@ -8,7 +8,7 @@ const BASE_BOTTOM_OPACITY = 0.02
 export interface ChartGradientProps {
   /** Unique gradient id; consumers reference it via `fill="url(#id)"`. */
   id: string
-  /** Stop color — a hex (`#3b82f6`) or a CSS custom property (`var(--theme-primary)`). */
+  /** Stop color — a hex (palette.DATA_VISUAL_COLORS.blue) or a CSS custom property (`var(--theme-primary)`). */
   color: string
   /** Top-of-gradient opacity, clamped to the SVG-valid [0, 1] range. Defaults to 0.3. */
   opacity?: number

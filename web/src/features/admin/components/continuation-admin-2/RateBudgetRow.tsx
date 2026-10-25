@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ScopeBudget, RateLimitSeverity } from '@/api/types';
@@ -7,7 +8,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { formatCurrencyValue } from '@/lib/currencyFormat';
 import { getGlobalLocale } from '@/lib/numberFormat';
 
-const COLOR: Record<RateLimitSeverity, string> = { ok: '#10b981', warn: '#f59e0b', critical: '#ef4444' };
+const COLOR: Record<RateLimitSeverity, string> = { ok: palette.COLOR.GOOD, warn: palette.COLOR.WARN, critical: palette.COLOR.BAD };
 const TONE: Record<RateLimitSeverity, string> = { ok: 'text-emerald-300', warn: 'text-amber-300', critical: 'text-rose-300' };
 
 export function RateBudgetRow({ scope }: { scope: ScopeBudget }) {

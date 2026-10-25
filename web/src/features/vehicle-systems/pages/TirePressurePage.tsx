@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle } from 'lucide-react';
@@ -135,9 +136,9 @@ export function getTirePressureValue(
 // Preserve the inherited helper's exact test contract. Production band colors
 // use shared semantic tokens below, never this fixed compatibility palette.
 export function pressureColor(pa: number): string {
-  if (pa >= NORMAL_MIN_PA && pa <= NORMAL_MAX_PA) return '#10b981';
-  if (pa >= SOFT_LOW_PA && pa <= SOFT_HIGH_PA) return '#f59e0b';
-  return '#ef4444';
+  if (pa >= NORMAL_MIN_PA && pa <= NORMAL_MAX_PA) return palette.COLOR.GOOD;
+  if (pa >= SOFT_LOW_PA && pa <= SOFT_HIGH_PA) return palette.COLOR.WARN;
+  return palette.COLOR.BAD;
 }
 
 export function pressureStatus(pa: number): PressureStatus {

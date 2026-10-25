@@ -18,6 +18,7 @@ import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { COLOR, DATA_VISUAL_COLORS, CHART_NEUTRAL } from '@/lib/colors';
 
 // ── Event type → visual mapping ──────────────────────────────────────
 
@@ -28,15 +29,15 @@ const EVENT_TYPE_MAP: Record<
   string,
   { icon: React.ReactNode; label: string; color: string; severity: EventFeedItem['severity'] }
 > = {
-  vehicle_moved:       { icon: <Move className="h-3.5 w-3.5" />,        label: 'Vehicle moved',       color: '#f59e0b', severity: 'warning' },
-  unauthorized_unlock: { icon: <Unlock className="h-3.5 w-3.5" />,      label: 'Unauthorized unlock', color: '#ef4444', severity: 'critical' },
-  unauthorized_drive:  { icon: <CarFront className="h-3.5 w-3.5" />,    label: 'Unauthorized drive',  color: '#ef4444', severity: 'critical' },
-  sentry_triggered:    { icon: <Eye className="h-3.5 w-3.5" />,         label: 'Sentry triggered',    color: '#06b6d4', severity: 'warning' },
-  manual_panic:        { icon: <Siren className="h-3.5 w-3.5" />,       label: 'Panic alert',         color: '#ef4444', severity: 'critical' },
-  test_alert:          { icon: <FlaskConical className="h-3.5 w-3.5" />,label: 'Test alert',          color: '#8b5cf6', severity: 'info' },
-  locked:              { icon: <ShieldCheck className="h-3.5 w-3.5" />, label: 'Lock state changed',  color: '#06b6d4', severity: 'info' },
-  sentry_mode:         { icon: <Eye className="h-3.5 w-3.5" />,         label: 'Sentry mode',         color: '#f59e0b', severity: 'warning' },
-  valet_mode_enabled:  { icon: <ShieldAlert className="h-3.5 w-3.5" />, label: 'Valet mode',          color: '#06b6d4', severity: 'info' },
+  vehicle_moved:       { icon: <Move className="h-3.5 w-3.5" />,        label: 'Vehicle moved',       color: COLOR.WARN, severity: 'warning' },
+  unauthorized_unlock: { icon: <Unlock className="h-3.5 w-3.5" />,      label: 'Unauthorized unlock', color: COLOR.BAD, severity: 'critical' },
+  unauthorized_drive:  { icon: <CarFront className="h-3.5 w-3.5" />,    label: 'Unauthorized drive',  color: COLOR.BAD, severity: 'critical' },
+  sentry_triggered:    { icon: <Eye className="h-3.5 w-3.5" />,         label: 'Sentry triggered',    color: DATA_VISUAL_COLORS.info, severity: 'warning' },
+  manual_panic:        { icon: <Siren className="h-3.5 w-3.5" />,       label: 'Panic alert',         color: COLOR.BAD, severity: 'critical' },
+  test_alert:          { icon: <FlaskConical className="h-3.5 w-3.5" />,label: 'Test alert',          color: DATA_VISUAL_COLORS.purple, severity: 'info' },
+  locked:              { icon: <ShieldCheck className="h-3.5 w-3.5" />, label: 'Lock state changed',  color: DATA_VISUAL_COLORS.info, severity: 'info' },
+  sentry_mode:         { icon: <Eye className="h-3.5 w-3.5" />,         label: 'Sentry mode',         color: COLOR.WARN, severity: 'warning' },
+  valet_mode_enabled:  { icon: <ShieldAlert className="h-3.5 w-3.5" />, label: 'Valet mode',          color: DATA_VISUAL_COLORS.info, severity: 'info' },
 };
 
 function mapEventToFeedItem(ev: GuardEvent, t: (key: string, fallback: string) => string): EventFeedItem {
@@ -52,7 +53,7 @@ function mapEventToFeedItem(ev: GuardEvent, t: (key: string, fallback: string) =
   const mapped = known ?? {
     icon: <ShieldAlert className="h-3.5 w-3.5" />,
     label: eventType || '—',
-    color: '#6b7280',
+    color: CHART_NEUTRAL,
     severity: 'info' as const,
   };
 

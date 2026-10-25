@@ -71,7 +71,7 @@ export function CarAnimation({ size = 120, className = '' }: { size?: number; cl
         />
         {/* Taillight */}
         <motion.rect x="28" y="50" width="4" height="12" rx="2"
-          fill="#ef4444" fillOpacity={0.7}
+          fill={COLOR.BAD} fillOpacity={0.7}
           initial={reduce ? false : { opacity: 0 }}
           animate={reduce ? { opacity: 0.7 } : { opacity: [0, 0.7, 0.3, 0.7] }}
           transition={reduce ? { duration: 0 } : { delay: 1.4, duration: 2, repeat: Infinity }}

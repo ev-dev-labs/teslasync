@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -105,7 +106,7 @@ export function BatteryPassportTrendTimeline({
                 'batteryPassport.trend.series',
                 'Certificate-reported SoH',
               ),
-              color: '#22d3ee',
+              color: palette.DATA_VISUAL_COLORS.info,
             },
           ]}
         />

@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useCallback, useEffect, useId } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -456,7 +457,7 @@ export function WatchPWAMeta() {
     const cleanupMeta = [
       setMeta('apple-mobile-web-app-capable', 'yes'),
       setMeta('apple-mobile-web-app-status-bar-style', 'black'),
-      setMeta('theme-color', '#000000'),
+      setMeta('theme-color', palette.DATA_VISUAL_COLORS.canvasInk),
     ];
 
     let link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');

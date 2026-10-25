@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useTranslation } from 'react-i18next';
 import { StatGroup, useMetricPreferences } from '@/components/data-display/stat-reference';
 import { MetricBar } from '@/components/data-display';
@@ -23,9 +24,9 @@ export function YearSavings({ data, period }: { data: YearReview; period: StatPe
       ]} />
       <Caption>{t('yearReview.vsGas', 'vs. driving a gas car')}</Caption>
       <div className="space-y-3">
-        <MetricBar value={gasEquiv} max={barMax} color="#fb7185"
+        <MetricBar value={gasEquiv} max={barMax} color={palette.COLOR.BAD}
           label={t('yearReview.gasCost', 'Gas would cost')} sublabel={formatMetric('currency', gasEquiv, prefs).text} />
-        <MetricBar value={electric} max={barMax} color="#34d399"
+        <MetricBar value={electric} max={barMax} color={palette.COLOR.GOOD}
           label={t('yearReview.electricCost', 'Electric cost')} sublabel={formatMetric('currency', electric, prefs).text} />
       </div>
       <Text as="p" variant="bodySm">

@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { Gauge, ListChecks, Scale } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,9 +11,9 @@ import { CarbonSectionBody } from './CarbonSectionBody';
 import type { CarbonSectionProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
-const COLOR_GOOD = '#10b981';
-const COLOR_MIDDLE = '#f59e0b';
-const COLOR_LOW = '#f43f5e';
+const COLOR_GOOD = palette.COLOR.GOOD;
+const COLOR_MIDDLE = palette.COLOR.WARN;
+const COLOR_LOW = palette.COLOR.BAD;
 
 export function CarbonGreenTimingScore({
   analysis,

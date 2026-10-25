@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useTranslation } from 'react-i18next';
 import { LinearGauge } from '@/components/charts';
 import type { StatMetric } from '@/components/data-display';
@@ -36,7 +37,7 @@ export function CarbonScoreBrief({ analysis, states, display }: CarbonSectionPro
     scope={<span>{t('carbon.source.lifetimeScope', 'Full vehicle history')}</span>}>
     {hasScoredSessions && score != null ? <div className="flex flex-col items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4 text-center">
       <LinearGauge value={score} max={100} label={t('carbon.score.gaugeLabel', 'Lifetime green score')}
-        color={score < 35 ? '#f43f5e' : score < 70 ? '#f59e0b' : '#10b981'} size={170} decimals={precision} />
+        color={score < 35 ? palette.COLOR.BAD : score < 70 ? palette.COLOR.WARN : palette.COLOR.GOOD} size={170} decimals={precision} />
       <Text as="p" variant="caption" className="mt-2">{t('carbon.score.scale', '100 maps to the model minimum; 0 maps to the model maximum.')}</Text>
     </div> : <EmptyState message={// no-action: Missing scored sessions or an invalid score cannot be repaired by this read-only gauge; source recovery belongs to the ledger.
       hasScoredSessions

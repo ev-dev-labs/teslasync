@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck } from 'lucide-react';
@@ -348,11 +349,11 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
             }
             const rowVariant = statusVariant(row.days);
             const barColor = rowVariant === 'success'
-              ? '#10b981'
+              ? palette.COLOR.GOOD
               : rowVariant === 'warning'
-                ? '#f59e0b'
+                ? palette.COLOR.WARN
                 : rowVariant === 'error'
-                  ? '#ef4444'
+                  ? palette.COLOR.BAD
                   : 'var(--text-muted)';
 
             return (

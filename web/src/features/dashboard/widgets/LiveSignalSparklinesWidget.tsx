@@ -33,7 +33,7 @@ const DEFAULT_SIGNALS = [
 // Six visually distinct series colours. NEON_COLORS is [cyan, emerald, purple,
 // amber, indigo, red, …]; index directly so the assignments match the comments
 // (previously NEON_COLORS[1]/[2] were mislabelled "purple"/"amber", which made
-// index 1 and index 3 both resolve to emerald `#10b981` — a duplicate colour).
+// index 1 and index 3 both resolve to emerald palette.COLOR.GOOD — a duplicate colour).
 export const SIGNAL_COLORS = [
   CHART_SEMANTIC.vehicle.driving,
   CHART_SEMANTIC.vehicle.asleep,

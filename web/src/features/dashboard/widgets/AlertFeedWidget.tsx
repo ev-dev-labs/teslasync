@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -12,10 +13,10 @@ import { useDataState } from '@/hooks/useDataState';
 import { Caption } from '@/components/ui';
 
 const SEVERITY_HEX: Record<Severity, string> = {
-  info: '#0ea5e9',
-  warn: '#f59e0b',
-  critical: '#ef4444',
-  success: '#10b981',
+  info: palette.DATA_VISUAL_COLORS.info,
+  warn: palette.COLOR.WARN,
+  critical: palette.COLOR.BAD,
+  success: palette.COLOR.GOOD,
 };
 
 const SEVERITY_ICONS: Record<Severity, React.ReactNode> = {

@@ -12,6 +12,7 @@ import { safeArray } from '@/lib/safeArray';
 import type { SoftwareUpdate } from '@/types/vehicle-systems';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { COLOR, DATA_VISUAL_COLORS, CHART_NEUTRAL } from '@/lib/colors';
 
 /** Narrow translate signature — the shared `t` is structurally compatible. */
 type TranslateFn = (key: string, fallback: string) => string;
@@ -37,11 +38,11 @@ export interface UpdateStatusMeta {
 }
 
 const STATUS_META: Record<string, UpdateStatusMeta> = {
-  installed:   { labelKey: 'widget.updateStatusInstalled',   labelDefault: 'Installed',   variant: 'success', color: '#22c55e', severity: 'info' },
-  installing:  { labelKey: 'widget.updateStatusInstalling',  labelDefault: 'Installing',  variant: 'warning', color: '#f59e0b', severity: 'warning' },
-  downloading: { labelKey: 'widget.updateStatusDownloading', labelDefault: 'Downloading', variant: 'info',    color: '#3b82f6', severity: 'info' },
-  available:   { labelKey: 'widget.updateStatusAvailable',   labelDefault: 'Available',   variant: 'info',    color: '#6b7280', severity: 'info' },
-  scheduled:   { labelKey: 'widget.updateStatusScheduled',   labelDefault: 'Scheduled',   variant: 'info',    color: '#a78bfa', severity: 'info' },
+  installed:   { labelKey: 'widget.updateStatusInstalled',   labelDefault: 'Installed',   variant: 'success', color: COLOR.GOOD, severity: 'info' },
+  installing:  { labelKey: 'widget.updateStatusInstalling',  labelDefault: 'Installing',  variant: 'warning', color: COLOR.WARN, severity: 'warning' },
+  downloading: { labelKey: 'widget.updateStatusDownloading', labelDefault: 'Downloading', variant: 'info',    color: DATA_VISUAL_COLORS.blue, severity: 'info' },
+  available:   { labelKey: 'widget.updateStatusAvailable',   labelDefault: 'Available',   variant: 'info',    color: CHART_NEUTRAL, severity: 'info' },
+  scheduled:   { labelKey: 'widget.updateStatusScheduled',   labelDefault: 'Scheduled',   variant: 'info',    color: DATA_VISUAL_COLORS.purple, severity: 'info' },
 };
 
 /**
@@ -59,7 +60,7 @@ export function updateStatusMeta(status: string | null | undefined): UpdateStatu
     labelKey: '',
     labelDefault: raw.length > 0 ? raw : '—',
     variant: 'info',
-    color: '#6b7280',
+    color: CHART_NEUTRAL,
     severity: 'info',
   };
 }

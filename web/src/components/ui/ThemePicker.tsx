@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useState, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle, Sun, Moon, Monitor, Sparkles } from 'lucide-react'
@@ -64,8 +65,8 @@ export function ThemePicker({
   const { t } = useTranslation()
   const toast = useToast()
   const { themeId, modeId, setTheme, setMode, setCustomColors, themes: allThemes, modes: allModes } = useTheme()
-  const [customPrimary, setCustomPrimary] = useState(() => localStorage.getItem('teslasync-custom-primary') || '#00b4d8')
-  const [customAccent, setCustomAccent] = useState(() => localStorage.getItem('teslasync-custom-accent') || '#e63946')
+  const [customPrimary, setCustomPrimary] = useState(() => localStorage.getItem('teslasync-custom-primary') || palette.DATA_VISUAL_COLORS.info)
+  const [customAccent, setCustomAccent] = useState(() => localStorage.getItem('teslasync-custom-accent') || palette.COLOR.BAD)
   const [modeQuery, setModeQuery] = useState('')
   const [showAllModes, setShowAllModes] = useState(false)
 

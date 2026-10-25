@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { typography } from '@/lib/tokens';
 
 /** Dashboard content is hosted by the canvas panel; these tokens add no card chrome. */
@@ -75,7 +76,7 @@ export const dashboardTokens = {
       'light-dark(#876cca, #a48fe1)',
       'light-dark(#748192, #8c9aab)',
     ],
-    seriesLight: ['#398ad6', '#009e98', '#459f5d', '#b8790e', '#e57255', '#cd6199', '#876cca', '#748192'],
+    seriesLight: [palette.DATA_VISUAL_COLORS.blue, '#009e98', palette.COLOR.GOOD, palette.COLOR.WARN, '#e57255', palette.COLOR.BAD, palette.DATA_VISUAL_COLORS.purple, palette.CHART_NEUTRAL],
     seriesDark: ['#67aaed', '#52bfb9', '#73bb83', '#e7b369', '#ee8f63', '#e98092', '#a48fe1', '#8c9aab'],
     /** Series index by hue name, so widgets pick color by meaning not slot. */
     seriesByName: {

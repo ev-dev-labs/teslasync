@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BatteryFull, Zap } from 'lucide-react';
@@ -124,7 +125,7 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
       : `${t('widget.backupHistory.duration', 'Duration')}: —`,
     timestamp: event.timestamp ?? '',
     timeLabel: event.timestamp?.trim() ? fmtEventTime(event.timestamp) : '—',
-    color: '#fbbf24',
+    color: palette.COLOR.WARN,
     wrap: true,
   })), [sortedItems, fmtEventTime, t]);
 

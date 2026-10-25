@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -123,7 +124,7 @@ export function RecentActivity({
                 title: item.title,
                 subtitle: item.subtitle,
                 time: formatTimeAgo(item.timeMs),
-                color: item.type === 'drive' ? '#00f0ff' : '#10b981',
+                color: item.type === 'drive' ? palette.DATA_VISUAL_COLORS.info : palette.COLOR.GOOD,
               }))}
             />
           </div>
@@ -147,7 +148,7 @@ export function RecentActivity({
               <AreaChartWrapper
                 data={batteryTrend}
                 xKey="i"
-                series={[{ key: 'v', label: t('battery.seriesLabel', 'Battery %'), color: '#10b981' }]}
+                series={[{ key: 'v', label: t('battery.seriesLabel', 'Battery %'), color: palette.COLOR.GOOD }]}
                 height={180}
                 yFormatter={(v) => `${v}%`}
               />

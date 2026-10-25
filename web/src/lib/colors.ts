@@ -234,6 +234,24 @@ export const STATUS_COLORS = {
   critical: COLOR.BAD,
 } as const
 
+/** Shared raw-hex mappings for status/data surfaces that cannot use CSS classes. */
+export const DATA_VISUAL_COLORS = {
+  success: COLOR.GOOD,
+  warning: COLOR.WARN,
+  danger: COLOR.BAD,
+  info: CHART_COLORS_CB_SAFE[1],
+  neutral: CHART_NEUTRAL,
+  purple: CHART_COLORS_CB_SAFE[6],
+  blue: CHART_COLORS_CB_SAFE[0],
+  canvasInk: '#0b1020',
+  canvasWhite: '#f8fafc',
+  canvasMuted: CHART_NEUTRAL_DARK,
+  canvasMidnight: CHART_SEQUENTIAL_DARK[0],
+  canvasAurora: '#123220',
+  canvasEmber: '#3a2a0b',
+  glassWash: 'rgba(255,255,255,0.04)',
+} as const
+
 /** Battery health colors */
 export const BATTERY_COLORS = STATUS_COLORS
 

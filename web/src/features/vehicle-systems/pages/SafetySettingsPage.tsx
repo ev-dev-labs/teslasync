@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PrefetchLink } from '@/components/layout';
@@ -120,9 +121,9 @@ export const TOTAL_FEATURES = 9;
 /** Legacy threshold helper retained for compatibility and its original tests.
  * Configuration coverage is not a safety rating; the page uses a neutral token. */
 export function scoreColor(pct: number): string {
-  if (pct >= 80) return '#10b981';
-  if (pct >= 50) return '#f59e0b';
-  return '#ef4444';
+  if (pct >= 80) return palette.COLOR.GOOD;
+  if (pct >= 50) return palette.COLOR.WARN;
+  return palette.COLOR.BAD;
 }
 
 /** Score → Badge variant. */

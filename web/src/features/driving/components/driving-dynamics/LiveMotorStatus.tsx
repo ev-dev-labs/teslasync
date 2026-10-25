@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useCallback, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cog, Gauge } from 'lucide-react';
@@ -48,9 +49,9 @@ const MOTOR_TEMP_HOT_C = 120;
 
 /** Colour the temperature ring by band rather than showing one flat hue. */
 function motorTempColor(tempC: number): string {
-  if (tempC >= MOTOR_TEMP_HOT_C) return '#f43f5e';
-  if (tempC >= MOTOR_TEMP_WARN_C) return '#f59e0b';
-  return '#10b981';
+  if (tempC >= MOTOR_TEMP_HOT_C) return palette.COLOR.BAD;
+  if (tempC >= MOTOR_TEMP_WARN_C) return palette.COLOR.WARN;
+  return palette.COLOR.GOOD;
 }
 
 /**
@@ -175,8 +176,8 @@ export default function LiveMotorStatus({
             max={TORQUE_DRIVE_MAX_NM}
             label={t('dynamics.torque', 'Torque')}
             unit={torqueTotal != null ? ' Nm' : ''}
-            positiveColor="#3b82f6"
-            negativeColor="#10b981"
+            positiveColor={palette.DATA_VISUAL_COLORS.blue}
+            negativeColor={palette.COLOR.GOOD}
             negativeLabel={t('dynamics.regen', 'Regen')}
             positiveLabel={t('dynamics.drive', 'Drive')}
           />
@@ -186,8 +187,8 @@ export default function LiveMotorStatus({
             max={RPM_FORWARD_MAX}
             label={t('dynamics.rpmFront', 'Front RPM')}
             unit={rpmFront != null ? ' RPM' : ''}
-            positiveColor="#a855f7"
-            negativeColor="#f59e0b"
+            positiveColor={palette.DATA_VISUAL_COLORS.purple}
+            negativeColor={palette.COLOR.WARN}
             negativeLabel={t('dynamics.reverse', 'Reverse')}
             positiveLabel={t('dynamics.forward', 'Forward')}
           />
@@ -197,8 +198,8 @@ export default function LiveMotorStatus({
             max={RPM_FORWARD_MAX}
             label={t('dynamics.rpmRear', 'Rear RPM')}
             unit={rpmRear != null ? ' RPM' : ''}
-            positiveColor="#a855f7"
-            negativeColor="#f59e0b"
+            positiveColor={palette.DATA_VISUAL_COLORS.purple}
+            negativeColor={palette.COLOR.WARN}
             negativeLabel={t('dynamics.reverse', 'Reverse')}
             positiveLabel={t('dynamics.forward', 'Forward')}
           />
