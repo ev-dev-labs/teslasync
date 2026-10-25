@@ -163,6 +163,19 @@ describe('HeroGauges', () => {
   });
 
   describe('ready — miles', () => {
+    it.each([0, -0, -150, 150.005, 150.006, Number.NaN, Infinity])(
+      'preserves efficiency rounding and nonfinite handling for %s Wh/km',
+      efficiency => {
+        h.distance.current = 'mi';
+        render(<HeroGauges query={makeQuery(makeData({ avg_efficiency_wh_km: efficiency }))} />);
+
+        const card = screen.getByText('Efficiency').closest('[data-role="metric-card"]');
+        const expected = fmtNumber((Number.isFinite(efficiency) ? efficiency : 0) * 1.609344);
+        expect(card?.querySelector('[data-role="metric-value"]')).toHaveTextContent(expected);
+        expect(card?.querySelector('[data-role="metric-subtitle"]')).toHaveTextContent('Wh/mi');
+      },
+    );
+
     it('converts distance to miles and efficiency to Wh/mi, keeping KM-based savings stable', () => {
       h.distance.current = 'mi';
       render(<HeroGauges query={makeQuery(makeData())} />);

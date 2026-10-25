@@ -525,7 +525,7 @@
   {
     "file": "web/src/features/analytics/pages/PeriodComparePage.tsx",
     "calls": 77,
-    "sha256": "488c96d5ead951b64100b000da619bff8ef628e07dc1f5125dae4cd1df1f004f"
+    "sha256": "eda7f1b5d84ca4bddfc02f5c070d9b94b6c3fdff78a378431be4d7641c48c323"
   },
   {
     "file": "web/src/features/analytics/pages/YearReviewPage.tsx",
@@ -1258,7 +1258,7 @@
   {
     "file": "web/src/features/vehicles/components/VehicleGauges.tsx",
     "calls": 14,
-    "sha256": "e1eab32290aa88541bd1e5732cf155b84cdb3e52e7ba54005bc036ef16654530"
+    "sha256": "0958a3ffc1f90d2b682e1867a57617329ca56337fe8956d46efb7c789a3ca38d"
   },
   {
     "file": "web/src/hooks/useStatusAnnouncer.ts",

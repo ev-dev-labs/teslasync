@@ -62,6 +62,20 @@ const drive: YearReviewDriveHighlight = { drive_id: 42, date: '2024-08-18',
 beforeEach(() => { state.distance = 'km'; state.metrics = {}; state.bars = []; });
 
 describe('specialist source behavior preserved inside shared card shells', () => {
+  it.each([
+    ['km', 150.49, '150'],
+    ['km', 150.51, '151'],
+    ['mi', 150, '241'],
+    ['mi', 150.1, '242'],
+    ['mi', 0, '—'],
+    ['mi', -1, '—'],
+    ['mi', Number.NaN, '—'],
+  ] as const)('keeps %s record efficiency %s at its existing integer precision', (unit, efficiency, expected) => {
+    state.distance = unit;
+    render(<YearDriveRecord drive={{ ...drive, efficiency_wh_km: efficiency }} id="record" period={period} />);
+    expect(state.metrics.record[2].rawValue).toBe(expected);
+  });
+
   it.each([['km', '100', '200'], ['mi', '62', '322']])('keeps %s record distance/intensity, full addresses, date and rounded duration', (unit, distance, efficiency) => {
     state.distance = unit;
     render(<YearDriveRecord drive={drive} id="record" period={period} />);

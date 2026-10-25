@@ -22,6 +22,7 @@ import { PublicDriveBrief } from '../components/operationalbrief-public';
 
 import {
   convertDistanceFromSI,
+  convertEfficiencyFromSI,
   convertSpeedFromSI,
   type DistanceUnitPref,
 } from '@/lib/unitConversion';
@@ -37,18 +38,6 @@ import { isApiError } from '@/api/client';
 /*  Boundary constants                                                */
 /* ------------------------------------------------------------------ */
 
-// Kilometres-per-mile factor, used inline to convert Wh/km → Wh/mi for
-// users on imperial preference (no SI helper exists for energy-per-distance
-// efficiency yet).
-const KM_PER_MILE = 1.609344;
-
-// Metres-per-foot factor, used inline to convert SI-meter elevations to
-// feet for imperial users. Elevation has no dedicated formatter in
-// `lib/unitConversion` (DistanceUnitPref's 'ft' variant exists but is not
-// derived by the standard distance preference), so a one-shot inline
-// conversion keeps the public report honest about units.
-const METERS_PER_FOOT = 0.3048;
-
 const METERS_PER_KM = 1000;
 
 /* ------------------------------------------------------------------ */
@@ -60,7 +49,7 @@ function elevationLabel(distancePref: DistanceUnitPref): string {
 }
 
 function convertElevation(meters: number, distancePref: DistanceUnitPref): number {
-  return distancePref === 'mi' ? meters / METERS_PER_FOOT : meters;
+  return distancePref === 'mi' ? convertDistanceFromSI(meters, 'ft') : meters;
 }
 
 function efficiencyUnit(distancePref: DistanceUnitPref): string {
@@ -68,7 +57,7 @@ function efficiencyUnit(distancePref: DistanceUnitPref): string {
 }
 
 function toEfficiencyDisplay(whPerKm: number, distancePref: DistanceUnitPref): number {
-  return distancePref === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
+  return convertEfficiencyFromSI(whPerKm, distancePref);
 }
 
 /* ------------------------------------------------------------------ */

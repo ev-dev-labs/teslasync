@@ -25,7 +25,7 @@ import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useDataState } from '@/hooks/useDataState';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { knownNumber } from '@/api/dataState';
 
 import { request } from '@/api/client';
@@ -36,7 +36,6 @@ import { StatisticsPeriodBrief } from '../components/operationalbrief-n-z/Statis
 import { StatisticsMileageBrief } from '../components/operationalbrief-n-z/StatisticsMileageBrief';
 import { StatisticsBatteryBrief } from '../components/operationalbrief-n-z/StatisticsBatteryBrief';
 
-const KM_PER_MILE = 1.609344;
 const METERS_PER_KM = 1000;
 
 const STATE_SERIES: Record<string, number> = {
@@ -74,7 +73,7 @@ export default function StatisticsPage() {
     [distanceUnit],
   );
   const whPerKmToDisplay = useCallback(
-    (whPerKm: number) => (distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm),
+    (whPerKm: number) => convertEfficiencyFromSI(whPerKm, distanceUnit),
     [distanceUnit],
   );
   const savedView = useSavedViewUrl();

@@ -42,6 +42,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import type { Vehicle, VehicleState } from '@/api/types'
+import { CHART_NEUTRAL, COLOR } from '@/lib/colors'
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -229,6 +230,7 @@ describe('VehicleGauges — gauges (metric)', () => {
     const power = screen.getByTestId('gauge-Power')
     expect(power).toHaveAttribute('data-value', '0')
     expect(power).toHaveAttribute('data-unit', 'kW')
+    expect(power).toHaveAttribute('data-color', CHART_NEUTRAL)
   })
 
   it('converts speed to km/h and colours the speed gauge by motion', () => {
@@ -239,23 +241,23 @@ describe('VehicleGauges — gauges (metric)', () => {
     // 25 m/s × 3600 / 1000 = 90 km/h.
     const moving = screen.getByTestId('gauge-Speed')
     expect(moving).toHaveAttribute('data-value', '90')
-    expect(moving).toHaveAttribute('data-color', '#a855f7') // COLOR.PURPLE while moving
+    expect(moving).toHaveAttribute('data-color', COLOR.PURPLE)
 
     rerender(<VehicleGauges vehicle={makeVehicle()} state={makeState({ speed: 0 })} />)
-    expect(screen.getByTestId('gauge-Speed')).toHaveAttribute('data-color', '#374151') // COLOR.DARK parked
+    expect(screen.getByTestId('gauge-Speed')).toHaveAttribute('data-color', COLOR.DARK)
   })
 
   it('colours the battery gauge by the good / warn / bad level bands', () => {
     const { rerender } = render(
       <VehicleGauges vehicle={makeVehicle()} state={makeState({ battery_level: 82 })} />,
     )
-    expect(screen.getByTestId('gauge-Battery')).toHaveAttribute('data-color', '#10b981') // good
+    expect(screen.getByTestId('gauge-Battery')).toHaveAttribute('data-color', COLOR.GOOD)
 
     rerender(<VehicleGauges vehicle={makeVehicle()} state={makeState({ battery_level: 50 })} />)
-    expect(screen.getByTestId('gauge-Battery')).toHaveAttribute('data-color', '#f59e0b') // warn
+    expect(screen.getByTestId('gauge-Battery')).toHaveAttribute('data-color', COLOR.WARN)
 
     rerender(<VehicleGauges vehicle={makeVehicle()} state={makeState({ battery_level: 12 })} />)
-    expect(screen.getByTestId('gauge-Battery')).toHaveAttribute('data-color', '#ef4444') // bad
+    expect(screen.getByTestId('gauge-Battery')).toHaveAttribute('data-color', COLOR.BAD)
   })
 })
 
@@ -293,7 +295,7 @@ describe('VehicleGauges — metric bars', () => {
 
     const power = screen.getByTestId('gauge-Power')
     expect(power).toHaveAttribute('data-value', '48')
-    expect(power).toHaveAttribute('data-color', '#10b981') // charging → boolColorMuted(true)
+    expect(power).toHaveAttribute('data-color', COLOR.GOOD)
   })
 })
 
@@ -351,6 +353,8 @@ describe('VehicleGauges — status chips', () => {
     expect(screen.getByText('Sentry ON')).toBeInTheDocument()
     expect(screen.getByText('Climate ON')).toBeInTheDocument()
     expect(screen.queryByText('Locked')).toBeNull()
+    const unlockIcon = screen.getByText('Unlocked').parentElement?.querySelector('svg')
+    expect(unlockIcon).toHaveStyle({ color: COLOR.BAD })
   })
 
   it('falls back to the i18n "N/A" label when the software version is empty', () => {
@@ -375,7 +379,7 @@ describe('VehicleGauges — accessibility', () => {
     icons.forEach((icon) => expect(icon).toHaveAttribute('aria-hidden', 'true'))
 
     const lockIcon = (screen.getByText('Locked').parentElement as HTMLElement).querySelector('svg')
-    expect(lockIcon).toHaveStyle({ color: 'rgb(16, 185, 129)' }) // boolColor(true) → green
+    expect(lockIcon).toHaveStyle({ color: COLOR.GOOD })
   })
 })
 

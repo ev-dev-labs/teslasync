@@ -1,4 +1,5 @@
 import type { MetricId, MetricPreferences, MetricRaw } from '@/lib/metric-reference';
+import { convertDistanceToSI } from '@/lib/unitConversion';
 
 export interface FormatFixture {
   readonly id: string;
@@ -38,7 +39,7 @@ export const formatFixtures: readonly FormatFixture[] = [
   { id: 'speed-km', metricId: 'speed', rawValue: 160 / 9, originalExample: '64 km/h' },
   { id: 'percent-whole', metricId: 'percent', rawValue: 74, originalExample: '74%' },
   { id: 'percent-fraction', metricId: 'percent', rawValue: 4.5, originalExample: '4.5%' },
-  { id: 'efficiency-mi', metricId: 'efficiency', rawValue: 300 / 1609.344, originalExample: '300 Wh/mi', units: { distance: 'mi', energy: 'Wh' } },
+  { id: 'efficiency-mi', metricId: 'efficiency', rawValue: 300 / convertDistanceToSI(1, 'mi'), originalExample: '300 Wh/mi', units: { distance: 'mi', energy: 'Wh' } },
   { id: 'efficiency-km', metricId: 'efficiency', rawValue: 0.186, originalExample: '18.6 kWh/100km (same quantity; selected display unit preserved)' },
   { id: 'temperature-c', metricId: 'temperature', rawValue: 21.5, originalExample: '21.5°C' },
   { id: 'grade', metricId: 'status', rawValue: 'A', originalExample: 'A' },

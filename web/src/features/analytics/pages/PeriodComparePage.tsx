@@ -23,7 +23,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useUrlEnum } from '@/hooks/useUrlState';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { knownNumber } from '@/api/dataState';
 import { neonColorMap, typography } from '@/lib/tokens';
 
@@ -63,7 +63,6 @@ const PERIOD_DAYS: Record<string, number> = {
 const PERIOD_VALUES = ['7', '30', '90', '365', '0'] as const;
 type PeriodValue = (typeof PERIOD_VALUES)[number];
 
-const KM_PER_MILE = 1.609344;
 const METERS_PER_KM = 1000;
 
 // Disambiguation banner dismissal is persisted so users who already understand
@@ -182,8 +181,8 @@ export default function PeriodComparePage() {
     const sourceEffB = knownNumber(b.avg_efficiency);
     const distA = sourceDistA == null ? null : convertDistanceFromSI(sourceDistA * METERS_PER_KM, distanceUnit);
     const distB = sourceDistB == null ? null : convertDistanceFromSI(sourceDistB * METERS_PER_KM, distanceUnit);
-    const effA = sourceEffA == null ? null : sourceEffA * (distanceUnit === 'mi' ? KM_PER_MILE : 1);
-    const effB = sourceEffB == null ? null : sourceEffB * (distanceUnit === 'mi' ? KM_PER_MILE : 1);
+    const effA = sourceEffA == null ? null : convertEfficiencyFromSI(sourceEffA, distanceUnit);
+    const effB = sourceEffB == null ? null : convertEfficiencyFromSI(sourceEffB, distanceUnit);
     return [
       { key: 'distance', label: t('compare.totalDistance', 'Total distance'), icon: <Car className="h-4 w-4" aria-hidden="true" />, a: distA, b: distB, unit: distanceUnit, color: 'cyan' as const, semantic: COMPARE_METRIC_SEMANTICS.distance },
       { key: 'drives', label: t('compare.totalDrives', 'Total drives'), icon: <TrendingUp className="h-4 w-4" aria-hidden="true" />, a: knownNumber(a.total_drives), b: knownNumber(b.total_drives), unit: '', color: 'green' as const, semantic: COMPARE_METRIC_SEMANTICS.drives },

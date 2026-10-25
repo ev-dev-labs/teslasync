@@ -789,6 +789,21 @@ describe('SharedDrivePage — rich v2 payload (metric)', () => {
 })
 
 describe('SharedDrivePage — imperial boundary', () => {
+  it.each(['km', 'mi'] as const)('preserves signed, zero and missing elevation profile values in %s', unit => {
+    h.unit.current = unit
+    const elevations = [-123.456, 0, 123.456]
+    const payload = makeV2({
+      elevation_profile: elevations.map((elevation_m, index) => ({ distance_m: index * 1000, elevation_m })),
+    })
+    setData(payload)
+    renderPage()
+
+    expect(h.charts.areaData.map(point => point.elevation))
+      .toEqual(elevations.map(value => unit === 'mi' ? value / 0.3048 : value))
+    expect(h.charts.frames[0].exportData).toEqual(payload.elevation_profile)
+    expect(h.charts.frames[0].dataColumns?.[1].format?.(null)).toBe('—')
+  })
+
   it.each(['km', 'mi'] as const)('formats rounded chart ticks with locale grouping and whole-number precision in %s', unit => {
     h.unit.current = unit
     h.unit.locale = 'de-DE'

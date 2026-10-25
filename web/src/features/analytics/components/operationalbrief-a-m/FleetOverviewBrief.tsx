@@ -4,7 +4,7 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 import type { FleetAnalyticsQuery } from '../analytics/constants';
 
 export function FleetOverviewBrief({ query, scope, retained }: {
@@ -34,7 +34,7 @@ export function FleetOverviewBrief({ query, scope, retained }: {
     { metricId: 'efficiency', occurrenceId: 'fleet-overview-efficiency',
       rawValue: data?.avg_efficiency_wh_km != null ? data.avg_efficiency_wh_km / 1000 : null,
       label: t('analytics.hero.efficiency', 'Efficiency'),
-      display: { formatter: raw => ({ value: fmtNumber(unitPrefs.distance === 'mi' ? raw * 1000 * 1.609344 : raw * 1000),
+      display: { formatter: raw => ({ value: fmtNumber(convertEfficiencyFromSI(raw * 1000, unitPrefs.distance)),
         unit: unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km' }) } },
     { metricId: 'currency', occurrenceId: 'fleet-overview-gas-savings', rawValue: gasSavings,
       label: gasSavings != null && gasSavings < 0

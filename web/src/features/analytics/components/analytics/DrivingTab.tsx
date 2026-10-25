@@ -11,13 +11,11 @@ import {
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
-import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertEfficiencyFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import { DrivingPerformanceCards } from './DrivingPerformanceCards';
 import { DrivingTemperatureStats } from './DrivingTemperatureStats';
 import type { FleetAnalyticsQuery } from './constants';
-
-const KM_PER_MILE = 1.609344;
 
 export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
   const { t } = useTranslation();
@@ -47,7 +45,7 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
     [distanceUnit],
   );
   const fromWhPerKm = useCallback(
-    (whPerKm: number) => (distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm),
+    (whPerKm: number) => convertEfficiencyFromSI(whPerKm, distanceUnit),
     [distanceUnit],
   );
 

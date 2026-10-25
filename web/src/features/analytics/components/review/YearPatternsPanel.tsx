@@ -3,7 +3,7 @@ import { CalendarDays, Clock } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Text, Caption, MetricValue } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 
 import type { YearReview } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -11,8 +11,6 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 interface Props {
   data: YearReview;
 }
-
-const KM_PER_MILE = 1.609344;
 
 /**
  * Convert an hour-of-day into 12-hour clock parts. Telemetry can surface a
@@ -36,9 +34,7 @@ export function YearPatternsPanel({ data }: Props) {
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   const avgDistance = convertDistanceFromSI((data.avg_distance_per_drive_km ?? 0) * 1000, distanceUnit);
-  const avgEfficiency = distanceUnit === 'mi'
-    ? (data.avg_efficiency_wh_km ?? 0) * KM_PER_MILE
-    : (data.avg_efficiency_wh_km ?? 0);
+  const avgEfficiency = convertEfficiencyFromSI(data.avg_efficiency_wh_km ?? 0, distanceUnit);
   const { hour12, isPM } = to12Hour(data.most_active_hour);
   const meridiem = isPM ? t('yearReview.pm', 'PM') : t('yearReview.am', 'AM');
 

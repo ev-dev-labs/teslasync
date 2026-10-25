@@ -4,13 +4,11 @@ import { MetricCard } from '@/components/data-display';
 import { safe } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 
 import { MetricBandSkeleton } from './helpers';
 import type { FleetAnalyticsQuery } from './constants';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-
-const KM_PER_MILE = 1.609344;
 
 export function HeroGauges({ query }: { query: FleetAnalyticsQuery }) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
@@ -36,7 +34,7 @@ export function HeroGauges({ query }: { query: FleetAnalyticsQuery }) {
   const gasSavings = totalDistKm * 0.085 * 1.5 - safe(data?.total_cost);
   const co2Saved = totalDistKm * 0.12;
   const avgEffWhPerKm = safe(data?.avg_efficiency_wh_km);
-  const avgEffDisplay = distanceUnit === 'mi' ? avgEffWhPerKm * KM_PER_MILE : avgEffWhPerKm;
+  const avgEffDisplay = convertEfficiencyFromSI(avgEffWhPerKm, distanceUnit);
 
   // A resolved-but-empty query (error, or an idle state that never loaded)
   // leaves `data` undefined. Show a neutral em dash in every tile rather than a

@@ -66,7 +66,7 @@ import { chartTokens, gaugeTone, typography, type NeonColor } from '@/lib/tokens
 import { cn } from '@/lib/cn';
 import type { ChargingSession } from '@/api/types';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
-import { convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertDistanceToSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -132,7 +132,7 @@ export default function EnergyPage() {
   const energyUnit = unitPrefs.energy;
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
   const toEfficiencyDisplay = useCallback(
-    (whPerM: number) => unitPrefs.distance === 'mi' ? whPerM * 1609.344 : whPerM * 1000,
+    (whPerM: number) => whPerM * convertDistanceToSI(1, unitPrefs.distance === 'mi' ? 'mi' : 'km'),
     [unitPrefs.distance],
   );
   const savedView = useSavedViewUrl();
@@ -305,10 +305,10 @@ export default function EnergyPage() {
     () =>
       dailyEnergy.map((d) => ({
         date: d.date,
-        efficiency: (d.efficiency_wh_per_m ?? 0) * (distanceUnit === 'mi' ? 1609.344 : 1000),
+        efficiency: toEfficiencyDisplay(d.efficiency_wh_per_m ?? 0),
         distance: convertDistanceFromSI(d.distance_m ?? 0, distanceUnit),
       })),
-    [dailyEnergy, distanceUnit],
+    [dailyEnergy, distanceUnit, toEfficiencyDisplay],
   );
 
   /* Consumption comes from the drive aggregate; recorded cost comes from
