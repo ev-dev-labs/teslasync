@@ -15,7 +15,6 @@
 package aiyir
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -25,26 +24,9 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
+	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
-
-// stubGuardSettings is a minimal in-memory guard.Settings used to
-// drive the off-mode contract test without a real DB.
-type stubGuardSettings struct {
-	mode string
-	on   map[string]bool
-}
-
-func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
-	if s.mode == "" {
-		return "off", nil
-	}
-	return s.mode, nil
-}
-
-func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
-	return s.on[id], nil
-}
 
 // TestYearInReviewAIOffUsesTemplateSlides is the load-bearing
 // off-mode contract proof for slice 0013. It mounts the AI YIR
@@ -65,10 +47,7 @@ func TestYearInReviewAIOffUsesTemplateSlides(t *testing.T) {
 	t.Parallel()
 
 	// --- off-mode AI route ---------------------------------------------
-	guardSettings := &stubGuardSettings{
-		mode: "off",
-		on:   map[string]bool{"yir-narration": true}, // toggle on; mode trumps it
-	}
+	guardSettings := apitest.NewGuardSettings("off", map[string]bool{"yir-narration": true})
 	g := guard.New(guardSettings)
 
 	router := chi.NewRouter()

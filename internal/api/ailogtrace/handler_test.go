@@ -11,7 +11,6 @@ package ailogtrace
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,22 +18,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"context"
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
+	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
 )
-
-type stubGuardSettings struct {
-	mode string
-	on   map[string]bool
-}
-
-func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
-	return s.mode, nil
-}
-
-func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
-	return s.on[id], nil
-}
 
 // TestLogTraceSummarizationAIOffShowsRawLogsOnly is the
 // load-bearing off-mode contract proof for slice 0045. It mounts
@@ -61,10 +49,7 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 func TestLogTraceSummarizationAIOffShowsRawLogsOnly(t *testing.T) {
 	t.Parallel()
 
-	guardSettings := &stubGuardSettings{
-		mode: "off",
-		on:   map[string]bool{"log-trace-summarization": true}, // toggle on; mode trumps it
-	}
+	guardSettings := apitest.NewGuardSettings("off", map[string]bool{"log-trace-summarization": true})
 	g := guard.New(guardSettings)
 
 	router := chi.NewRouter()

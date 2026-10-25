@@ -7,7 +7,6 @@ package aiperiodcmp
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,33 +16,15 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
+	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
 )
-
-type stubGuardSettings struct {
-	mode string
-	on   map[string]bool
-}
-
-func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
-	if s.mode == "" {
-		return "off", nil
-	}
-	return s.mode, nil
-}
-
-func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
-	return s.on[id], nil
-}
 
 // TestPeriodCompareNarrationAIOffShowsCardsOnly is the slice 0040 off-mode contract proof.
 // The name is pinned by Go and React verification commands, so keep it stable.
 func TestPeriodCompareNarrationAIOffShowsCardsOnly(t *testing.T) {
 	t.Parallel()
 
-	guardSettings := &stubGuardSettings{
-		mode: "off",
-		on:   map[string]bool{"period-compare-narration": true}, // toggle on; mode trumps it
-	}
+	guardSettings := apitest.NewGuardSettings("off", map[string]bool{"period-compare-narration": true})
 	g := guard.New(guardSettings)
 
 	router := chi.NewRouter()

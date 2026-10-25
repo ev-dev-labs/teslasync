@@ -22,7 +22,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
-	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // maxIterations leaves room for one retry while keeping one-shot anomaly
@@ -125,7 +125,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Empty subject is the open-mode audit value.
-	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
+	subject := httputil.ActorIdentity(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, anomalyexplanations.FeatureID)
 

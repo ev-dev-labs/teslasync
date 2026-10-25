@@ -4,7 +4,6 @@
 package aivoice
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,27 +12,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"context"
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
+	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
 	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 )
-
-type stubGuardSettings struct {
-	mode string
-	on   map[string]bool
-}
-
-func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
-	return s.mode, nil
-}
-
-func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
-	if s.on == nil {
-		return false, nil
-	}
-	return s.on[id], nil
-}
 
 // TestVoiceModeAIOffNoVoiceControlsOrStorage is the
 // load-bearing off-mode contract proof. It mounts the AI
@@ -62,10 +47,7 @@ func TestVoiceModeAIOffNoVoiceControlsOrStorage(t *testing.T) {
 	t.Parallel()
 
 	// --- off-mode AI route ---------------------------------------------
-	guardSettings := &stubGuardSettings{
-		mode: "off",
-		on:   map[string]bool{"voice-mode": true}, // toggle on; mode trumps it
-	}
+	guardSettings := apitest.NewGuardSettings("off", map[string]bool{"voice-mode": true})
 	g := guard.New(guardSettings)
 
 	router := chi.NewRouter()

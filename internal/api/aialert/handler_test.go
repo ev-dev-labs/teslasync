@@ -15,7 +15,6 @@
 package aialert
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -28,23 +27,8 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
+	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
 )
-
-type stubGuardSettings struct {
-	mode string
-	on   map[string]bool
-}
-
-func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
-	if s.mode == "" {
-		return "off", nil
-	}
-	return s.mode, nil
-}
-
-func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
-	return s.on[id], nil
-}
 
 // TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks is the
 // load-bearing off-mode contract proof for slice 0015. It mounts the
@@ -66,10 +50,7 @@ func TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks(t *testing.T) {
 	t.Parallel()
 
 	// --- off-mode AI route ---------------------------------------------
-	guardSettings := &stubGuardSettings{
-		mode: "off",
-		on:   map[string]bool{"nl-alert-builder": true}, // toggle on; mode trumps it
-	}
+	guardSettings := apitest.NewGuardSettings("off", map[string]bool{"nl-alert-builder": true})
 	g := guard.New(guardSettings)
 
 	router := chi.NewRouter()

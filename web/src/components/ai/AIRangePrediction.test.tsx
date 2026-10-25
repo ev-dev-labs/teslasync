@@ -1,3 +1,5 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
+import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 // Comprehensive unit tests for AIRangePrediction.
 //
 // This file elevates the ML2 range-prediction AI surface. It covers
@@ -33,11 +35,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
-import type { AppSettings } from '@/api/types'
 
 const { mockUseSettings } = vi.hoisted(() => ({
   mockUseSettings: vi.fn<() => { settings: AppSettings | undefined }>(),
 }))
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({ useSettings: mockUseSettings }))
 
@@ -45,36 +49,10 @@ import { AIRangePrediction, canPredictRange } from './AIRangePrediction'
 
 // A complete AppSettings with realistic non-AI defaults. Per-test cases
 // override `ai_mode` + `ai_features` to exercise the gate.
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-}
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
-}
-
 // enabled() is the common "feature fully on" settings state used by the
 // interaction tests.
 function enabled(mode: 'local' | 'cloud' = 'cloud') {
-  return settingsPayload({
+  return appSettingsPayload({
     ai_mode: mode,
     ai_features: { 'range-prediction-model': true },
   })
@@ -83,27 +61,8 @@ function enabled(mode: 'local' | 'cloud' = 'cloud') {
 // makeReadableStream constructs a ReadableStream<Uint8Array> from
 // text chunks — mirrors useAiStream.test.ts so the parser receives
 // byte-for-byte equivalent input.
-function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder()
-  let i = 0
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (i < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[i]))
-        i++
-      } else {
-        controller.close()
-      }
-    },
-  })
-}
-
 // sseFrame formats a single SSE event the way
 // internal/ai/stream/writer.go emits it.
-function sseFrame(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
-}
-
 // The action button's accessible name is the universal Helix CTA plus
 // the per-feature label ("Ask Helix · Train range model"), so this
 // regex locates it whether idle or streaming (aria-label is static).
@@ -149,7 +108,7 @@ describe('canPredictRange', () => {
 describe('AIRangePrediction — AI-off contract gate', () => {
   it('renders nothing when ai_mode=off even with the range-prediction-model toggle on', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'off',
         ai_features: { 'range-prediction-model': true },
       }),
@@ -163,7 +122,7 @@ describe('AIRangePrediction — AI-off contract gate', () => {
 
   it('renders nothing when ai_mode is non-off but the per-feature toggle is false', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'range-prediction-model': false },
       }),
@@ -177,7 +136,7 @@ describe('AIRangePrediction — AI-off contract gate', () => {
 
   it('renders nothing when the range-prediction-model flag is entirely absent from ai_features', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({ ai_mode: 'local', ai_features: {} }),
+      appSettingsPayload({ ai_mode: 'local', ai_features: {} }),
     )
 
     const { container } = render(<AIRangePrediction vehicleId={42} />)

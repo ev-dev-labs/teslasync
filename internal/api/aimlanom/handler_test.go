@@ -7,7 +7,6 @@
 package aimlanom
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -17,23 +16,8 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
+	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
 )
-
-type stubGuardSettings struct {
-	mode string
-	on   map[string]bool
-}
-
-func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
-	if s.mode == "" {
-		return "off", nil
-	}
-	return s.mode, nil
-}
-
-func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
-	return s.on[id], nil
-}
 
 // TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly is the
 // load-bearing off-mode contract proof for slice 0062. It mounts
@@ -57,10 +41,7 @@ func TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly(t *testing.T) {
 	t.Parallel()
 
 	// --- off-mode AI route ---------------------------------------------
-	guardSettings := &stubGuardSettings{
-		mode: "off",
-		on:   map[string]bool{"learned-per-vehicle-anomaly-baselines": true}, // toggle on; mode trumps it
-	}
+	guardSettings := apitest.NewGuardSettings("off", map[string]bool{"learned-per-vehicle-anomaly-baselines": true})
 	g := guard.New(guardSettings)
 
 	router := chi.NewRouter()

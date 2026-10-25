@@ -1,3 +1,5 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
+import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 // Vampire-drain explanation on-mode wiring test.
 //
 // Proves the Narrate button opens an SSE stream against
@@ -38,7 +40,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
 
-import type { AppSettings } from '@/api/types';
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -48,51 +52,6 @@ import { useSettings } from '@/hooks/useSettings';
 import { AIVampireDrainExplanation } from '@/components/ai/AIVampireDrainExplanation';
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>;
-
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-};
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } };
-}
-
-function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
-  let i = 0;
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (i < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[i]));
-        i++;
-      } else {
-        controller.close();
-      }
-    },
-  });
-}
-
-function sseFrame(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-}
 
 beforeEach(() => {
   mockUseSettings.mockReset();
@@ -111,7 +70,7 @@ afterEach(() => {
 describe('TestVampireDrainExplanationAIOnWiredCallsRoute (vampire-drain-explanation on-mode SPA wiring)', () => {
   it('TestVampireDrainExplanationAIOnWiredCallsRoute: clicking Narrate POSTs once to /api/v1/ai/charging/vampire-drain/explain and renders the first delta', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'vampire-drain-explanation': true },
       }),
@@ -187,7 +146,7 @@ describe('TestVampireDrainExplanationAIOnWiredCallsRoute (vampire-drain-explanat
 
   it('TestVampireDrainExplanationAIOnWiredCallsRoute: lookbackDays prop is forwarded in the request body when provided', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'vampire-drain-explanation': true },
       }),
@@ -217,7 +176,7 @@ describe('TestVampireDrainExplanationAIOnWiredCallsRoute (vampire-drain-explanat
 
   it('TestVampireDrainExplanationAIOnWiredCallsRoute: a second click while streaming is a no-op (double-submit guard)', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'vampire-drain-explanation': true },
       }),
@@ -269,7 +228,7 @@ describe('TestVampireDrainExplanationAIOnWiredCallsRoute (vampire-drain-explanat
     // and confirming the button is disabled while the gate is
     // open — same code path, different prop input.
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'vampire-drain-explanation': true },
       }),

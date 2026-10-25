@@ -1,3 +1,5 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
+import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 // Cross-rule conflict detection.
 
 // `TestCrossRuleConflictAIOffHidesConflictPanel` (the Vitest sibling
@@ -43,7 +45,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
-import type { AppSettings } from '@/api/types'
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -53,51 +57,6 @@ import { useSettings } from '@/hooks/useSettings'
 import { AICrossRuleConflictDetection } from '@/components/ai/AICrossRuleConflictDetection'
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
-
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-}
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
-}
-
-function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder()
-  let i = 0
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (i < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[i]))
-        i++
-      } else {
-        controller.close()
-      }
-    },
-  })
-}
-
-function sseFrame(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
-}
 
 beforeEach(() => {
   mockUseSettings.mockReset()
@@ -113,7 +72,7 @@ afterEach(() => {
 describe('TestCrossRuleConflictAIOffHidesConflictPanel (cross-rule-conflict-detection AI-off contract)', () => {
   it('TestCrossRuleConflictAIOffHidesConflictPanel: renders nothing when ai_mode=off even with the cross-rule-conflict-detection toggle on', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'off',
         ai_features: { 'cross-rule-conflict-detection': true },
       }),
@@ -131,7 +90,7 @@ describe('TestCrossRuleConflictAIOffHidesConflictPanel (cross-rule-conflict-dete
 
   it('TestCrossRuleConflictAIOffHidesConflictPanel: renders nothing when ai_mode is non-off but the cross-rule-conflict-detection toggle is false', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'cross-rule-conflict-detection': false },
       }),
@@ -148,7 +107,7 @@ describe('TestCrossRuleConflictAIOffHidesConflictPanel (cross-rule-conflict-dete
 
   it('TestCrossRuleConflictAIOffHidesConflictPanel: renders the section when ai_mode=cloud AND cross-rule-conflict-detection toggle is on (positive control)', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'cross-rule-conflict-detection': true },
       }),
@@ -171,7 +130,7 @@ describe('TestCrossRuleConflictAIOffHidesConflictPanel (cross-rule-conflict-dete
 describe('TestCrossRuleConflictDetectionAIOnWiredCallsRoute (cross-rule-conflict-detection on-mode SPA wiring)', () => {
   it('TestCrossRuleConflictDetectionAIOnWiredCallsRoute: clicking Detect POSTs once to /api/v1/ai/alerts/rules/conflicts and renders the first delta', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'cross-rule-conflict-detection': true },
       }),
@@ -236,7 +195,7 @@ describe('TestCrossRuleConflictDetectionAIOnWiredCallsRoute (cross-rule-conflict
 
   it('TestCrossRuleConflictDetectionAIOnWiredCallsRoute: detect button is disabled when fewer than 2 rules in scope (computed disabled, never literal)', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'cross-rule-conflict-detection': true },
       }),
@@ -251,7 +210,7 @@ describe('TestCrossRuleConflictDetectionAIOnWiredCallsRoute (cross-rule-conflict
 
   it('TestCrossRuleConflictDetectionAIOnWiredCallsRoute: a second click while streaming is a no-op (double-submit guard)', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'cross-rule-conflict-detection': true },
       }),
@@ -292,7 +251,7 @@ describe('TestCrossRuleConflictDetectionAIOnWiredCallsRoute (cross-rule-conflict
 
   it('TestCrossRuleConflictDetectionAIOnWiredCallsRoute: tool_result conflict envelope renders cards and Review rule {id} calls onSelectRule with the offending rule_id', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'cross-rule-conflict-detection': true },
       }),
@@ -400,7 +359,7 @@ describe('TestCrossRuleConflictDetectionAIOnWiredCallsRoute (cross-rule-conflict
 
   it('TestCrossRuleConflictDetectionAIOnWiredCallsRoute: empty conflict envelope surfaces the empty message and never invokes onSelectRule', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'cross-rule-conflict-detection': true },
       }),

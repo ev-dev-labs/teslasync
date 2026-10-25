@@ -17,7 +17,6 @@ package ainlsql
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -25,8 +24,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"context"
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
+	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
 )
 
 // TestNLSQLPlaygroundAIOffManualSQLWorks is the load-bearing
@@ -54,10 +55,7 @@ func TestNLSQLPlaygroundAIOffManualSQLWorks(t *testing.T) {
 	t.Parallel()
 
 	// --- off-mode AI route -----------------------------------------
-	guardSettings := &stubGuardSettings{
-		mode: "off",
-		on:   map[string]bool{"nl-sql-playground": true}, // toggle on; mode trumps it
-	}
+	guardSettings := apitest.NewGuardSettings("off", map[string]bool{"nl-sql-playground": true})
 	g := guard.New(guardSettings)
 
 	router := chi.NewRouter()

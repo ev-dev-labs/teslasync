@@ -1,3 +1,5 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
+import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 // Comprehensive co-located unit tests for AIMqttSseInspectorExplanations.
 //
 // This file elevates the MQTT/SSE inspector AI explainer surface. The
@@ -29,7 +31,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
-import type { AppSettings } from '@/api/types'
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -42,59 +46,14 @@ const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
 
 // A complete-enough AppSettings with realistic non-AI defaults. Per-test
 // cases override `ai_mode` + `ai_features` to exercise the gate.
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-}
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
-}
-
 // enabled() is the common "feature fully on" settings state used by the
 // interaction tests. `mode` defaults to 'cloud' but is overridable so a
 // single helper covers both non-off modes.
 function enabled(mode: 'cloud' | 'local' = 'cloud') {
-  return settingsPayload({
+  return appSettingsPayload({
     ai_mode: mode,
     ai_features: { 'mqtt-sse-inspector-explanations': true },
   })
-}
-
-function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder()
-  let i = 0
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (i < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[i]))
-        i++
-      } else {
-        controller.close()
-      }
-    },
-  })
-}
-
-function sseFrame(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
 }
 
 // The action button's accessible name is the universal Helix CTA plus
@@ -124,7 +83,7 @@ afterEach(() => {
 describe('AIMqttSseInspectorExplanations — AI-off contract gate', () => {
   it('renders nothing when ai_mode=off even with the mqtt-sse-inspector-explanations toggle on', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'off',
         ai_features: { 'mqtt-sse-inspector-explanations': true },
       }),
@@ -143,7 +102,7 @@ describe('AIMqttSseInspectorExplanations — AI-off contract gate', () => {
 
   it('renders nothing when ai_mode is non-off but the per-feature toggle is false', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'mqtt-sse-inspector-explanations': false },
       }),

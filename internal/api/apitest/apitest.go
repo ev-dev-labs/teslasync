@@ -1,6 +1,7 @@
 package apitest
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -18,6 +19,32 @@ type TestingT interface {
 	Helper()
 	Errorf(format string, args ...any)
 	Fatalf(format string, args ...any)
+}
+
+// GuardSettings is the package-neutral in-memory guard.Settings fixture.
+// It defaults to an unknown/empty mode being off and feature lookups being
+// false, preserving the guard's fail-closed behavior.
+type GuardSettings struct {
+	Mode     string
+	Features map[string]bool
+}
+
+func NewGuardSettings(mode string, features map[string]bool) *GuardSettings {
+	return &GuardSettings{Mode: mode, Features: features}
+}
+
+func (s *GuardSettings) AIMode(_ context.Context) (string, error) {
+	if s == nil || s.Mode == "" {
+		return "off", nil
+	}
+	return s.Mode, nil
+}
+
+func (s *GuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	if s == nil {
+		return false, nil
+	}
+	return s.Features[id], nil
 }
 
 // DoRequest performs a JSON request against handler and returns the recorder.

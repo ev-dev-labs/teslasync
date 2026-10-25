@@ -7,7 +7,6 @@ package aitempimpact
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,25 +16,8 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
+	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
 )
-
-// stubGuardSettings is a minimal in-memory guard.Settings used to
-// drive the off-mode contract test without a real DB.
-type stubGuardSettings struct {
-	mode string
-	on   map[string]bool
-}
-
-func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
-	if s.mode == "" {
-		return "off", nil
-	}
-	return s.mode, nil
-}
-
-func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
-	return s.on[id], nil
-}
 
 // TestCabinTemperatureNarrativeAIOffShowsChartsOnly pins the off-mode contract:
 // AI narration is hidden while deterministic temperature-impact analytics work.
@@ -43,10 +25,7 @@ func TestCabinTemperatureNarrativeAIOffShowsChartsOnly(t *testing.T) {
 	t.Parallel()
 
 	// --- off-mode AI route ---------------------------------------------
-	guardSettings := &stubGuardSettings{
-		mode: "off",
-		on:   map[string]bool{"cabin-temperature-impact-narrative": true}, // toggle on; mode trumps it
-	}
+	guardSettings := apitest.NewGuardSettings("off", map[string]bool{"cabin-temperature-impact-narrative": true})
 	g := guard.New(guardSettings)
 
 	router := chi.NewRouter()

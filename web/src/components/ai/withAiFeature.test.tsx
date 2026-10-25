@@ -1,3 +1,4 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
 // AI-off contract tests.
 //
 // Unit tests for `withAiFeature`. Verifies:
@@ -15,7 +16,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-import type { AppSettings } from '@/api/types';
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -25,31 +25,6 @@ import { useSettings } from '@/hooks/useSettings';
 import { withAiFeature } from './withAiFeature';
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>;
-
-function settingsPayload(partial: Partial<AppSettings>): { settings: AppSettings } {
-  const base: AppSettings = {
-    unit_of_length: 'km',
-    unit_of_temp: 'C',
-    unit_of_pressure: 'bar',
-    preferred_range: 'rated',
-    language: 'en',
-    base_cost_per_kwh: 0.12,
-    api_suspended: false,
-    theme: 'neon-cyan',
-    mode: 'dark',
-    custom_primary: '#00b4d8',
-    custom_accent: '#e63946',
-    gas_price_per_unit: 0,
-    gas_unit: 'gallon',
-    gas_efficiency_mpg: 25,
-    decimal_precision: 2,
-    quiet_hours_enabled: false,
-    quiet_hours_start: '22:00',
-    quiet_hours_end: '07:00',
-    alert_digest_mode: 'instant',
-  };
-  return { settings: { ...base, ...partial } };
-}
 
 function Inner({ label }: { label: string }) {
   return <span>chat-{label}</span>;
@@ -63,7 +38,7 @@ beforeEach(() => {
 describe('withAiFeature — render-gate behaviour', () => {
   it('renders null when settings have ai_mode=off', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({ ai_mode: 'off', ai_features: { 'chatbot-llm': true } }),
+      appSettingsPayload({ ai_mode: 'off', ai_features: { 'chatbot-llm': true } }),
     );
     const Wrapped = withAiFeature('chatbot-llm', Inner);
     const { container } = render(<Wrapped label="hi" />);
@@ -73,7 +48,7 @@ describe('withAiFeature — render-gate behaviour', () => {
 
   it('renders null when the per-feature flag is false even with mode=cloud', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({ ai_mode: 'cloud', ai_features: { 'chatbot-llm': false } }),
+      appSettingsPayload({ ai_mode: 'cloud', ai_features: { 'chatbot-llm': false } }),
     );
     const Wrapped = withAiFeature('chatbot-llm', Inner);
     const { container } = render(<Wrapped label="hi" />);
@@ -82,7 +57,7 @@ describe('withAiFeature — render-gate behaviour', () => {
 
   it('renders the inner component inside the marker wrapper when fully enabled', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({ ai_mode: 'local', ai_features: { 'chatbot-llm': true } }),
+      appSettingsPayload({ ai_mode: 'local', ai_features: { 'chatbot-llm': true } }),
     );
     const Wrapped = withAiFeature('chatbot-llm', Inner);
     render(<Wrapped label="hi" />);

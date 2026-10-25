@@ -1,7 +1,6 @@
 package aialertmsg
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,32 +8,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
+
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
-
-type stubGuardSettings struct {
-	mode string
-	on   map[string]bool
-}
-
-func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
-	if s.mode == "" {
-		return "off", nil
-	}
-	return s.mode, nil
-}
-
-func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
-	return s.on[id], nil
-}
 
 func TestAlertMessageTemplateAIOffReturns404(t *testing.T) {
 	t.Parallel()
 
-	g := guard.New(&stubGuardSettings{
-		mode: "off",
-		on:   map[string]bool{"alert-message-template-suggestion": true},
-	})
+	g := guard.New(apitest.NewGuardSettings("off", map[string]bool{"alert-message-template-suggestion": true}))
 
 	router := chi.NewRouter()
 	router.Route("/api/v1", func(r chi.Router) {

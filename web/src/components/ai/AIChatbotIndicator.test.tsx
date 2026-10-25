@@ -1,3 +1,4 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
 // Comprehensive unit tests for AIChatbotIndicator.
 //
 // The module has a single export — AIChatbotIndicator — which is the
@@ -26,10 +27,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
-import type { AppSettings } from '@/api/types'
 
 // A file-level mock takes precedence over the global useSettings stub
 // in src/test-setup.ts, letting each test drive ai_mode / ai_features.
+
+
+
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
 }))
@@ -41,35 +44,9 @@ const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
 
 // A complete AppSettings with realistic non-AI defaults; per-test cases
 // override ai_mode + ai_features to exercise the gate.
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-}
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
-}
-
 // enabled() is the "feature fully on" state used by the positive tests.
 function enabled(mode: 'local' | 'cloud' = 'cloud') {
-  return settingsPayload({
+  return appSettingsPayload({
     ai_mode: mode,
     ai_features: { 'chatbot-llm': true },
   })
@@ -87,7 +64,7 @@ beforeEach(() => {
 describe('AIChatbotIndicator — AI-off contract gate', () => {
   it('renders nothing when ai_mode=off even with the chatbot-llm toggle on', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({ ai_mode: 'off', ai_features: { 'chatbot-llm': true } }),
+      appSettingsPayload({ ai_mode: 'off', ai_features: { 'chatbot-llm': true } }),
     )
 
     const { container } = render(<AIChatbotIndicator />)
@@ -99,7 +76,7 @@ describe('AIChatbotIndicator — AI-off contract gate', () => {
 
   it('renders nothing when a non-off mode has the chatbot-llm toggle set to false', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({ ai_mode: 'cloud', ai_features: { 'chatbot-llm': false } }),
+      appSettingsPayload({ ai_mode: 'cloud', ai_features: { 'chatbot-llm': false } }),
     )
 
     const { container } = render(<AIChatbotIndicator />)
@@ -110,7 +87,7 @@ describe('AIChatbotIndicator — AI-off contract gate', () => {
 
   it('renders nothing when the chatbot-llm flag is entirely absent from ai_features', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({ ai_mode: 'local', ai_features: {} }),
+      appSettingsPayload({ ai_mode: 'local', ai_features: {} }),
     )
 
     const { container } = render(<AIChatbotIndicator />)
