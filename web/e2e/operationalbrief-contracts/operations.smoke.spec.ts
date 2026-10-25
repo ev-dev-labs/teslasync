@@ -49,6 +49,13 @@ async function readDownload(download: Download): Promise<string> {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+async function expectLocalizedLastSuccessfulImport(page: Page) {
+  const drawer = page.getByRole('dialog');
+  await expect(drawer.getByText('Aug 5, 2026, 07:00:00 AM', { exact: true })).toBeVisible();
+  await expect(drawer.locator('[title="2026-08-05T07:00:00.000Z"]')).toHaveCount(0);
+  await expect(drawer).not.toContainText('2026-08-05T07:00:00.000Z');
+}
+
 async function reviewDetails(page: Page, brief: Locator, title: string, details: readonly string[]) {
   const trigger = brief.getByRole('button', { name: 'Review details', exact: true });
   await trigger.scrollIntoViewIfNeeded();
@@ -313,7 +320,7 @@ for (const theme of ['light', 'dark'] as const) {
         await expectDisclosure(page, catalog, 'Fresh');
         await expectDisclosure(page, catalog, 'Global catalog · official periods');
         await catalog.getByRole('button', { name: 'Review details', exact: true }).click();
-        await expect(page.getByRole('dialog').getByTitle('2026-08-05T07:00:00.000Z')).toBeVisible();
+        await expectLocalizedLastSuccessfulImport(page);
         await page.keyboard.press('Escape');
         await expect(page.getByText('Latest import failed', { exact: true })).toBeVisible();
         await expect(page.getByText(failedLaterCatalog.latest_attempt!.error_detail!, { exact: true })).toBeVisible();
@@ -390,7 +397,7 @@ for (const theme of ['light', 'dark'] as const) {
         await expectMetric(catalog, 'normalized-tesla-records', '321');
         await expectMetric(catalog, 'official-period-artifacts', '5');
         await catalog.getByRole('button', { name: 'Review details', exact: true }).click();
-        await expect(page.getByRole('dialog').getByTitle('2026-08-05T07:00:00.000Z')).toBeVisible();
+        await expectLocalizedLastSuccessfulImport(page);
         await page.keyboard.press('Escape');
         await expect(page.getByText('Catalog refresh recommended', { exact: true })).toBeVisible();
         await expect(page.getByText('TSB catalog is not populated', { exact: true })).toHaveCount(0);

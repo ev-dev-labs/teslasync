@@ -126,9 +126,25 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   versus round 0's 32 failing / 168 passing / 3 skipped. The chart phase
   above has not yet been evaluated by CI. Exact graph:
   `r8-final-prepush-checks.json`.
-- Exact next step: push the verified chart phase, then commit the separately
-  verified operations/seasonal localized-date contracts. Next largest date
-  root is the day-ledger source/methodology contract: responsive 48/49 still
+- Chart phase pushed as `2d7cd8f906`; its CI graph is newly in flight.
+- Fix 8: operations drawers require the exact localized successful-import
+  timestamp `Aug 5, 2026, 07:00:00 AM` and reject its raw ISO text/title.
+  All eight focused service-report and real eight-day catalog-age cases
+  pass across both widths/themes. Source trust, official-period controls,
+  freshness/retention and recovery contracts remain intact.
+- Fix 9: seasonal coverage requires the real included-row metric (1), no
+  duplicate timezone metric, and exact first/last included dates formatted
+  in UTC from the fixture source. The drawer retains its UTC source scope,
+  metric label and all published values. All four cases pass, preserving
+  excluded/unknown/model-fit accounting, exact uncapped 1,000-row request,
+  focus restoration and geometry. The first diagnosis exposed one obsolete
+  prose caption; it is replaced by the actual row label plus exact count,
+  not by an unbound presence assertion.
+  Both test files pass affected ESLint; every browser wrapper reports zero
+  escapes. No production date, API, storage, i18n or baseline changed.
+  Evidence: `r9-catalog-date`, `r9-seasonal-final`, `r9-date-eslint`.
+- Exact next step: continue the day-ledger source/methodology contract:
+  responsive 48/49 still
   demands raw ISO day bounds and an old unavailable-source caption. Preserve
   request bounds, source provenance, refresh/retry, unknown states and
   inclusive/exclusive semantics while binding its assertions to the real
