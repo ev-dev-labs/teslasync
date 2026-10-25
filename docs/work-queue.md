@@ -58,10 +58,52 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   Reviewed both surfaces' 320px dark and 1440px light screenshots. Windows
   baselines remain untouched. Evidence: `hero-*` logs and browser screenshots
   in `web/test-results/` (not committed; later runs may replace them).
-- Next: repair sleep/departure/
-  energy-orchestrator zone disclosures and charge-departure duplicate
-  timestamps still need real semantic repairs; full replica and the
-  once-only reviewed Windows baselines have NOT run.
+- Completed results 4-8 (section 3 checks):
+  route registry/template freshness, route/scenario contracts and discovery
+  exit 0 (harness 24/24; discovery 2,094 tests in 89 files);
+  Go build and complete `go test -race ./...` exit 0;
+  accessibility 13/13 and Firefox/WebKit 6/6 pass;
+  browser performance exits 0 with 7 passed and 2 flaky (drives/FSD passed
+  on retry). Successful browser wrappers each report zero proxy escapes.
+  TypeScript and split-catalog check also exit 0. Logs:
+  `replica-contracts.log`, `go-build.log`, `go-test-race.log`,
+  `replica-a11y.log`, `replica-performance.log`, `replica-cross-browser.log`.
+- Completed result 9 (INCOMPLETE validation, not a suite pass): bounded
+  full Vitest attempt with four workers was stopped for handoff after
+  approximately 13 minutes. Its last captured completion markers cover
+  423 files / 21,508 tests with no completed-file failure markers; there
+  is NO final full-suite summary. See `full-vitest.log` and
+  `replica-partial-summary.json`. Do not treat this as full coverage.
+- Completed result 10 (INCOMPLETE validation, not a quality gate pass):
+  parallel local quality replica attempts hit repeated 240s operational
+  timeboxes. Shards 1,2,5,6,9,10,13,14 timed out (124); shards 3,7,11,15
+  were safely stopped; 4,8,12,16 never started. No shard completed its
+  wrapper proxy check; NONE is counted passing. All partial logs and
+  isolated artifacts are `quality-N.log` / `quality-N-results/` in the
+  evidence directory.
+- **Section 0b handoff at the requested ten-result boundary and repeated
+  replica-timeout stop condition.** Three verified source repair commits
+  are persisted. No worktrees were created. All session-owned Vitest/
+  Playwright/preview processes were stopped and checked absent; the
+  IDE-owned Playwright test-server remains user tooling. No Windows
+  baselines were regenerated. Full replica remains incomplete, so this
+  handoff push is NOT a successful part/phase gate.
+- Last observed checks before this handoff push (old `354deb1c1f` HEAD):
+  155 pass / 45 fail / 3 skipped. PR #202 is NOT green. After pulling this
+  handoff, inspect checks for the pushed repair HEAD rather than those
+  historical checks.
+- Exact resume: first collect fresh PR failures; then repair the semantic
+  timezone roots listed in "Exact next step" below and any genuine
+  remaining unit/browser roots. Finish the full unit run and all 16
+  quality shards with adequate bounded per-shard time (the 240s attempt
+  here was insufficient; do not change test timeouts/guards). Reuse
+  verified ancillary results only if no intervening changes affect them.
+  Run the section 3 gate, push, then use the CLEAN Windows mirror under
+  section 4 for reviewed old/new comparisons and ONE intended baseline
+  update. Continue until PR #202 green or the next required handoff.
+- Next: repair sleep/departure/energy-orchestrator timezone semantics and
+  charge-departure duplicate timestamps. Full replica remains incomplete;
+  the once-only reviewed Windows baseline update has NOT run.
 
 ## Merge-then-fix execution (2026-10-25)
 
@@ -200,11 +242,11 @@ are idle/released; no batch-owned preview/test process remains.
 
 | Part | Name | Status | Last commit / note | Next step |
 |---|---|---|---|---|
-| 1 | Time zone: follow setting everywhere, remove duplicates — TRACK A (`fix/post-merge-followups`) | in progress | Visibility-aware scanner contracts and TZ-6 pass; real visible timezone issues remain; merged startup is 404.1 KB > 400 KB | Fix listed roots, full current 266-route TZ-5 sweep, TZ-6/7 replica |
+| 1 | Time zone: follow setting everywhere, remove duplicates — TRACK A (`fix/post-merge-followups`) | in progress | `e71d532ee7` removes climate/vehicle captions; `54ade03061` restores startup to 399.5 KB; other semantic roots remain | Sleep/departure/orchestrator semantic repairs, duplicate instants, full 266-route TZ-5 sweep |
 | 2 | Dashboard widget redesign (119 widgets) — one active branch | done | Widget redesign merged at `248c9d13d5`; Track B worktree removed; Phase 4 dashboard scope repaired and verified. Recovery commits `823c8802c8`, `16bf49ebd1`, and `7b3fabbe7a` pushed. | Dashboard suite green; collect remaining PR/TZ failures and continue the one-track fix list |
 | 3 | Shared-pattern consolidation (whole codebase) | in progress | Shared modules merged via `b235484463`; remaining feature conversions adopted via `0f45d02e08` | Call sites marked `pending` in `docs/shared-patterns-state.md` remain a separate later task |
 | 4 | Remaining: product items (A) + security re-check (B) | in progress (verify) | branch commits `e0196914cd..f84aad0ce7` cover A1-A7 + security; A8 owner-decision recorded | Audit plan-vs-branch after Part 3; B re-run audits |
-| 5 | CI green on PR #202 | in progress | Not green; targeted unit repair batch passes, full replica incomplete | Inspect fresh HEAD checks, repair remaining groups, complete replica and Windows visual review |
+| 5 | CI green on PR #202 | in progress | Not green; hero matrix 34/34 and strict startup perf pass after current repairs; full replica in progress | Finish bounded replica inventory, preserve repairs, then remaining timezone roots and once-only reviewed Windows baselines |
 | 6 | Tailwind v3 -> v4 (`chore/tailwind-v4`, separate PR) | not started | 4 local commits, unpushed (pre-existing) | Only after Part 5 green |
 
 ## Part 1 steps (playbook items 1-8 + tests)
@@ -379,13 +421,34 @@ adoption percentage is claimed.
 
 ## Exact next step
 
-Track A and Track B are reconciled into one tree and the widget redesign is
-ancestor-merged. Dashboard recovery verification: 222 test files / 3828 tests
-passed; TypeScript passed; focused maintenance/catalog repairs passed.
-Next: commit and push the verified dashboard lint repair batch, then collect
-the remaining PR #202 failures and fix them by root cause.
-Only after CI is green: finish TZ-5/TZ-6/TZ-7, run the full replica, and
-proceed to Parts 3-6.
+Use the newest resume/handoff section at the top, not the historical recovery
+entries below. Current repairs: `e71d532ee7` (caption regressions),
+`54ade03061` (startup 399.5 KB), `9c6fbb98ec` (hero unknown/zero/readings and
+Details keyboard navigation, 34/34 E2E cases).
+
+Remaining semantic timezone roots must NOT be fixed by hiding or simply
+relabeling the UTC disclosures:
+- `useEnergy.ts:useSleepEfficiency` currently sends date-only start/end
+  without a timezone; SleepEfficiencyPage and its analysis clamp against
+  inclusive UTC days. Reconcile request/query boundaries with the shared
+  selected zone first, then fix RangeSourceCoverage/SleepMethodologyPanel
+  copy and format calendar dates with the shared calendar formatter.
+- `DepartureForecastPage` explicitly calls `useDateFormat('vehicle')`,
+  overriding the user's selected display mode, and provenance prose still
+  names UTC fallbacks. Model and display must share the selected effective
+  zone; preserve truthful fallback provenance without raw zone labels.
+- `home-energy/components/ScenarioControls.tsx` exposes peak hours as UTC.
+  Reconcile actual tariff/simulation hour semantics before changing labels.
+- `ChargeDepartureAlignmentPage` renders both source bounds (including
+  identical first/last instants) and AlignmentPairs timestamps; inspect the
+  guard's exact duplicate records. Keep evidence accessible once, through
+  the existing details surface, rather than dropping accounting information.
+
+Then rebuild mocks, finish TZ-5/6/7 and the full section 3 replica. Mirror was
+confirmed clean but has NOT been synced or used; after pushing, compare
+old/new Windows images and regenerate intended redesign/palette snapshots
+ONCE per section 4. Do not regenerate in Linux. Continue PR #202 checks;
+Parts 3-6 later adoption/migration work stays deferred as previously recorded.
 
 ## Recovery handoff (2026-10-23)
 
