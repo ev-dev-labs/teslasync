@@ -107,6 +107,23 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   Unknown-charger binding now passes; next observed assertion is obsolete
   detail-energy precision, followed by removed aggregate KPI expectations.
   Completed fixes this session: 7; final native baseline verification pending.
+- Fix 8 final proof: the one permitted native dependency restore and rebuild
+  both exit 0; `npm.cmd ls --depth=0` now exits 0. All SAME six committed
+  Windows shards pass again WITHOUT `--update-snapshots` (10/10 tests,
+  six proxy-escape counts 0). Mirror `git.exe status --short` is empty.
+  Baselines are committed/pushed at `bfecead853`; evidence
+  `windows-restored-dependency-build.log`, `windows-dependencies-final.json`,
+  `windows-verified-{1,5,10,14,39,56}.log`.
+- Current next step: finish the Unknown-charger contract. Correct native
+  source key and exact new detail readouts expose a REAL wide-card chart
+  overflow: SVG bottom 568.75 exceeds card bound 552.75. Fix shared
+  WidgetChartSummary height allocation (captions/legend currently added
+  outside a full-height chart), keeping the unchanged geometry guard.
+  Then remove raw requested-window instants from Locations/Parking display
+  using the selected-zone formatter, with unchanged API bounds.
+  Full CI for `bfecead853` is queued, not green (CI `40211130150`, Frontend
+  Quality Gates `40211129921`); the small currently registered graph is
+  not full-suite acceptance. Completed fixes this session: 8.
 
 ## Resume verification (2026-10-25, after `354deb1c1f`)
 
