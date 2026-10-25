@@ -1240,6 +1240,8 @@ const acceptedProducerProjections: readonly (readonly [string, number, number, s
   ["web/src/features/admin/components/continuation-admin-1/SchemaBreakdown.tsx", 4, 10, "d5dc5328ef20047570949c5b2dea86aa7b64c0f6bf7b7e53db0f6f13ce1e1752"],
   ["web/src/features/admin/components/continuation-admin-1/SchemaFingerprints.tsx", 4, 14, "b36bd595f23462b18615df67d4ac4eadb7d5a4e8e581bff1e3374c1d3db68d67"],
   ["web/src/features/admin/components/continuation-admin-1/SchemaKpis.tsx", 3, 20, "2f9be4640974a5a92f6526c6d2f9725d37c9d5a9dfecb619facaf6ad766ac1b4"],
+  ["web/src/features/admin/components/live-signal-inspector/LiveSignalKindBreakdown.tsx", 2, 11, "dec49354d67c66fcc383d2ad69ec3ff92835568a2b36cf3ce5d03747caa0de1a"],
+  ["web/src/features/admin/components/live-signal-inspector/LiveSignalSourceBreakdown.tsx", 2, 7, "2b4f40e6786bb865efebbc1b1bc688322820e490d1a48751c84740f74189a1bc"],
   ["web/src/features/admin/components/continuation-admin-1/SlowQuerySummary.tsx", 3, 29, "ec398240bfec61b78fd0e7459ab23d45064f7b1c8661712df8dd740c5846a598"],
   ["web/src/features/admin/components/continuation-admin-2/AuditExpandedDetail.tsx", 2, 8, "fe0788d9720d27326a268ec79bae90c1230c0acb2ad64159967face7565ab1e5"],
   ["web/src/features/admin/components/continuation-admin-3/CoverageCategory.tsx", 3, 13, "f9b0c18978ba4af0c62a46de49568196f4baaa8ba37169d31cc2e39152d995a4"],
@@ -1300,6 +1302,7 @@ const acceptedProducerProjections: readonly (readonly [string, number, number, s
   ["web/src/features/driving/hooks/useDrivesListPageCollections.ts", 0, 13, "1180144cfe175094329173133e5cc9de40d46a83810387b87892b6ee66192248"],
   ["web/src/features/driving/pages/DriveDetailPage.tsx", 2, 21, "208fd5482d6a6cc4260300c5e221b8282654ead034136ec1f5e8f958875209ae"],
   ["web/src/features/driving/pages/DriveScorePage.tsx", 0, 6, "e047613499fa7df26af26285cf4ff9c5bbeb419cf111e2aec2eddd8053c9ecfc"],
+  ["web/src/features/driving/pages/EnergyAnatomyPage.tsx", 3, 28, "689010e9863f195f8c7e74148a263d2f56c5de6fa78a020d3326a91456d867dd"],
   ["web/src/features/notifications/components/NotificationInboxDelivery.tsx", 2, 5, "e2ea33600b46a8343c4602ab0561762cb73d75b182e64925695b6204d6d37d53"],
   ["web/src/features/notifications/components/NotificationInboxDetails.tsx", 3, 19, "955b4cc728a1a38c62cd673c920eea116f2a93bf3fa24774094c77df1a0ee224"],
   ["web/src/features/settings/components/statstrip-privacy/PrivacyOperationalBrief.tsx", 2, 23, "b960f3fbc124f764ed2a9c2e5b39e70c20d44c2dbeb2aaa529988f8742e6af84"],
@@ -1483,9 +1486,9 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
 
   it('resolves only the exact three formerly missing titles without new suppressions', () => {
     expect(sourceHashes).toHaveLength(291)
-    expect(acceptedProducerProjections).toHaveLength(75)
-    expect(new Set(acceptedProducerProjections.map(([file]) => file)).size).toBe(75)
-    expect(acceptedProducerProjections.reduce((count, [, , calls]) => count + calls, 0)).toBe(1200)
+    expect(acceptedProducerProjections).toHaveLength(78)
+    expect(new Set(acceptedProducerProjections.map(([file]) => file)).size).toBe(78)
+    expect(acceptedProducerProjections.reduce((count, [, , calls]) => count + calls, 0)).toBe(1246)
     for (const [file] of acceptedProducerProjections) {
       expect(sourceHashes.some(([path]) => path === file), file).toBe(true)
     }
