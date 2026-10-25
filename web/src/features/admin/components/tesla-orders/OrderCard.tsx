@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * Tesla Orders — single order card.
  *
@@ -17,6 +16,7 @@ import { Icons } from '@/lib/icons';
  */
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Package, Calendar, Fingerprint, Sparkles } from 'lucide-react';
 
 import { GlassPanel, Badge, Text, Caption } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -47,7 +47,7 @@ function OrderCardImpl({ order }: OrderCardProps) {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <Icons.package
+          <Package
             className="h-4 w-4 shrink-0 text-[var(--text-muted)]"
             aria-hidden="true"
           />
@@ -77,7 +77,7 @@ function OrderCardImpl({ order }: OrderCardProps) {
 
         <div className="flex items-center justify-between gap-2">
           <Text as="dt" variant="caption" className="flex items-center gap-1">
-            <Icons.fingerprint className="h-3 w-3" aria-hidden="true" />
+            <Fingerprint className="h-3 w-3" aria-hidden="true" />
             {t('admin.teslaOrders.card.vin', 'VIN')}
           </Text>
           {order.vin ? (
@@ -93,7 +93,7 @@ function OrderCardImpl({ order }: OrderCardProps) {
 
         <div className="flex items-center justify-between gap-2">
           <Text as="dt" variant="caption" className="flex items-center gap-1">
-            <Icons.calendar className="h-3 w-3" aria-hidden="true" />
+            <Calendar className="h-3 w-3" aria-hidden="true" />
             {t('admin.teslaOrders.card.delivery', 'Delivery')}
           </Text>
           <Text as="dd" size="xs" color="primary" className="tabular-nums">
@@ -104,7 +104,7 @@ function OrderCardImpl({ order }: OrderCardProps) {
 
       {order.is_upgradable && (
         <div className="mt-auto flex items-center gap-1.5 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] px-2 py-1">
-          <Icons.sparkles className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+          <Sparkles className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
           <Caption>
             {t('admin.teslaOrders.card.upgradable', 'Upgrade available')}
           </Caption>

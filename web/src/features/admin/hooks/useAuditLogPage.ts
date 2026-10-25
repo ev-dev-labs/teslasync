@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
-import { hasSharedRangePreference, SHARED_RANGE_STORAGE_KEY, useRangeState } from '@/hooks/useRangeState';
+import { SHARED_RANGE_STORAGE_KEY, useRangeState } from '@/hooks/useRangeState';
 import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
 import { getDatePreset } from '@/lib/datePresets';
 import { formatDateTime as formatTimestamp } from '@/lib/dateFormat';
@@ -27,7 +27,17 @@ export function useAuditLogPage() {
   const workspaceRangeAvailable = getWorkspaceRouteScope(pathname).range;
   // No implicit seven-day restriction on a previously unbounded ledger.
   // The shared owner must adjudicate its default before enabling this route.
-  const hasSavedRange = hasSharedRangePreference(SHARED_RANGE_STORAGE_KEY);
+  let hasSavedRange = false;
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(SHARED_RANGE_STORAGE_KEY) ?? 'null');
+    if (saved && typeof saved === 'object' && 'version' in saved && saved.version === 2
+      && 'start' in saved && 'end' in saved && typeof saved.start === 'string' && typeof saved.end === 'string') {
+      hasSavedRange = /^\d{4}-\d{2}-\d{2}$/.test(saved.start) && /^\d{4}-\d{2}-\d{2}$/.test(saved.end)
+        && saved.start <= saved.end && Number.isFinite(Date.parse(saved.start)) && Number.isFinite(Date.parse(saved.end));
+    }
+  } catch {
+    // A denied or invalid preference cannot silently narrow the ledger.
+  }
   const from = searchParams.get('from') ?? '';
   const to = searchParams.get('to') ?? '';
   const scope = searchParams.get('time_scope');

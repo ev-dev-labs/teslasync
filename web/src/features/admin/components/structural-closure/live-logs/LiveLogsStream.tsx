@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { useMemo } from 'react';
+import { ScrollText } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { Badge, Button, Caption, DataTable, Text, type Column } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
@@ -112,7 +112,7 @@ export function LiveLogsStream({ controller }: Props) {
       <div ref={tableWrapRef}>
         {filteredEvents.length === 0 ? (
           <EmptyState
-            icon={<Icons.scrollText className="h-10 w-10" aria-hidden />}
+            icon={<ScrollText className="h-10 w-10" aria-hidden />}
             title={t('liveLogs.title', 'Live logs')}
             message={t(
               'liveLogs.empty.noEvents',

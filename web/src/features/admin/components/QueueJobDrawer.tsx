@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * QueueJobDrawer job-history panel.
  *
@@ -14,6 +13,7 @@ import { Icons } from '@/lib/icons';
  */
 
 import { useTranslation } from 'react-i18next'
+import { AlertTriangle } from 'lucide-react'
 
 import { Drawer } from '@/components/ui'
 import { Text, Caption } from '@/components/ui/Typography'
@@ -116,7 +116,7 @@ function QueueJobRow({ job }: QueueJobRowProps) {
           className="mt-2 flex items-start gap-2 rounded border border-rose-500/30 bg-rose-500/5 p-2"
           data-testid={`queue-job-error-${job.id}`}
         >
-          <Icons.warning className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden />
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden />
           <Text variant="error" className="break-words">{job.error}</Text>
         </div>
       ) : null}
@@ -174,7 +174,7 @@ export function QueueJobDrawer({
             className="flex items-start gap-3 rounded-md border border-rose-500/30 bg-rose-500/5 p-3"
             data-testid="queue-job-drawer-error"
           >
-            <Icons.warning className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden />
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden />
             <Text variant="error">
               {t(
                 'queueStatus.drawer.error',

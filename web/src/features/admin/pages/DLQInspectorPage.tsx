@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * DLQ Inspector Page — operator surface for the Phase-tracing
  * `/system/dlq*` routes.
@@ -18,6 +17,7 @@ import { Icons } from '@/lib/icons';
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { AlertOctagon, BarChart3, History } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { ConfirmDialog, Icon } from '@/components/ui';
@@ -161,7 +161,7 @@ export default function DLQInspectorPage() {
               <div className="min-w-0 xl:col-span-2">
                 <LayoutCard
                   title={t('admin.dlq.panels.entries', 'Dead-letter entries')}
-                  actions={<Icon icon={Icons.severityCritical} className={typography.color.muted} />}
+                  actions={<Icon icon={AlertOctagon} className={typography.color.muted} />}
                 >
                   {listState.fatalError ? (
                     <QueryError error={listState.fatalError} onRetry={() => list.refetch()} />
@@ -177,7 +177,7 @@ export default function DLQInspectorPage() {
 
               <LayoutCard
                 title={t('admin.dlq.panels.reasons', 'Failure reasons')}
-                actions={<Icon icon={Icons.analytics} className={typography.color.muted} />}
+                actions={<Icon icon={BarChart3} className={typography.color.muted} />}
               >
                 <ReasonBreakdown
                   rows={list.data?.entries ?? []}
@@ -195,7 +195,7 @@ export default function DLQInspectorPage() {
           <SectionErrorBoundary name="dlq-audit">
             <LayoutCard
               title={t('admin.dlq.panels.audit', 'Recent replay activity')}
-              actions={<Icon icon={Icons.history} className={typography.color.muted} />}
+              actions={<Icon icon={History} className={typography.color.muted} />}
             >
               {auditState.fatalError ? (
                 <QueryError error={auditState.fatalError} onRetry={() => audit.refetch()} />

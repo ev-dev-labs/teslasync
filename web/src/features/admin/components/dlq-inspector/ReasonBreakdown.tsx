@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * DLQ Inspector — failure-reason breakdown.
  *
@@ -14,6 +13,7 @@ import { Icons } from '@/lib/icons';
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ListX } from 'lucide-react';
 
 import { MetricBar } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
@@ -67,7 +67,7 @@ export function ReasonBreakdown({ rows, loading, error, onRetry }: ReasonBreakdo
   if (buckets.length === 0) {
     return (
       <EmptyState /* no-action: transient — surfaces only when the DLQ is empty, mirroring the entries table */
-        icon={<Icons.listX className="h-8 w-8" aria-hidden="true" />}
+        icon={<ListX className="h-8 w-8" aria-hidden="true" />}
         message={t('admin.dlq.reasons.empty', 'No failed ingests — nothing to break down.')}
       />
     );

@@ -1,5 +1,4 @@
-import { Icons } from '@/lib/icons';
-
+import { Activity, AlertTriangle, ArrowDownToLine, Database, Filter, ScrollText } from 'lucide-react';
 import { MetricCard } from '@/components/data-display';
 import { LOG_STREAM_MAX_EVENTS } from '@/api/hooks/useLogStream';
 import { LogConnectionBadge } from '../../continuation-admin-1/LogConnectionBadge';
@@ -18,7 +17,7 @@ export function LiveLogsSummary({ controller }: Props) {
     >
       <LogConnectionCard
         label={t('liveLogs.kpi.connection', 'Connection')}
-        icon={<Icons.activity className="h-4 w-4" aria-hidden />}
+        icon={<Activity className="h-4 w-4" aria-hidden />}
         color={statusColor}
       >
         <LogConnectionBadge
@@ -31,14 +30,14 @@ export function LiveLogsSummary({ controller }: Props) {
       <MetricCard
         label={t('liveLogs.kpi.visible', 'Visible')}
         value={fmtInt(filteredEvents.length)}
-        icon={<Icons.scrollText className="h-5 w-5" aria-hidden />}
+        icon={<ScrollText className="h-5 w-5" aria-hidden />}
         color="cyan"
         subtitle={t('liveLogs.kpi.visibleSub', 'After filters')}
       />
       <MetricCard
         label={t('liveLogs.kpi.buffered', 'Buffered')}
         value={fmtInt(stream.events.length)}
-        icon={<Icons.database className="h-5 w-5" aria-hidden />}
+        icon={<Database className="h-5 w-5" aria-hidden />}
         color="blue"
         subtitle={t('liveLogs.kpi.capacity', {
           max: fmtInt(LOG_STREAM_MAX_EVENTS),
@@ -48,21 +47,21 @@ export function LiveLogsSummary({ controller }: Props) {
       <MetricCard
         label={t('liveLogs.kpi.received', 'Received')}
         value={fmtInt(stream.totalReceived)}
-        icon={<Icons.arrowDownToLine className="h-5 w-5" aria-hidden />}
+        icon={<ArrowDownToLine className="h-5 w-5" aria-hidden />}
         color="green"
         subtitle={t('liveLogs.kpi.receivedSub', 'Since mount')}
       />
       <MetricCard
         label={t('liveLogs.kpi.drops', 'Server drops')}
         value={fmtInt(stream.drops)}
-        icon={<Icons.warning className="h-5 w-5" aria-hidden />}
+        icon={<AlertTriangle className="h-5 w-5" aria-hidden />}
         color={stream.drops > 0 ? 'red' : 'amber'}
         subtitle={t('liveLogs.kpi.dropsSub', 'Buffer overflow')}
       />
       <MetricCard
         label={t('liveLogs.kpi.minLevel', 'Min level')}
         value={levelLabel(level ?? 'info')}
-        icon={<Icons.filter className="h-5 w-5" aria-hidden />}
+        icon={<Filter className="h-5 w-5" aria-hidden />}
         color="purple"
         subtitle={t('liveLogs.kpi.minLevelSub', 'Server filter')}
       />

@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
+import { ShieldCheck, Clock, Activity, BarChart3 } from 'lucide-react';
 
 import { MetricCard } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
@@ -45,19 +45,19 @@ export function SummaryStatsRow({
       <MetricCard
         label={t('admin.security.stat.status', 'Current status')}
         value={isSecure ? t('admin.security.secure', 'Secure') : t('admin.security.unsecure', 'Unsecure')}
-        icon={<Icons.securityCheck className="h-5 w-5" aria-hidden="true" />}
+        icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
         color={isSecure ? 'green' : 'red'}
       />
       <MetricCard
         label={t('admin.security.stat.lastLock', 'Last lock change')}
         value={timeSince(lastLockChange, t)}
-        icon={<Icons.clock className="h-5 w-5" aria-hidden="true" />}
+        icon={<Clock className="h-5 w-5" aria-hidden="true" />}
         color="cyan"
       />
       <MetricCard
         label={t('admin.security.stat.sentryUptime', 'Sentry uptime')}
         value={`${fmtInt(sentryUptime)}%`}
-        icon={<Icons.activity className="h-5 w-5" aria-hidden="true" />}
+        icon={<Activity className="h-5 w-5" aria-hidden="true" />}
         color="blue"
       />
       <MetricCard
@@ -65,7 +65,7 @@ export function SummaryStatsRow({
         // fmtInt matches the Sentry Uptime card, adds locale thousands
         // separators for large histories, and coerces a non-finite count to 0.
         value={fmtInt(totalEvents)}
-        icon={<Icons.analytics className="h-5 w-5" aria-hidden="true" />}
+        icon={<BarChart3 className="h-5 w-5" aria-hidden="true" />}
         color="purple"
       />
     </div>

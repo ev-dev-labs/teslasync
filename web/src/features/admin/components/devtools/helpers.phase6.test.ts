@@ -1,7 +1,7 @@
-import { Icons } from '@/lib/icons';
 import { createElement, type ReactNode } from 'react'
 import { cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider, MutationObserver, onlineManager } from '@tanstack/react-query'
+import { Wrench } from 'lucide-react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import i18n from 'i18next'
 import { formatDateTime, formatRelative } from '@/lib/dateFormat'
@@ -281,7 +281,7 @@ describe('phase6 rejected request consumers', () => {
   ])('shows failure rather than success after a backend rejection: %s', async error => {
     requestMock.mockRejectedValueOnce(error)
     render(createElement(BackendTool, {
-      icon: Icons.maintenance, color: 'info', title: 'Synthetic backend', description: 'Synthetic',
+      icon: Wrench, color: 'info', title: 'Synthetic backend', description: 'Synthetic',
       endpoint: 'db-stats',
     }), { wrapper })
     fireEvent.click(screen.getByRole('button', { name: 'Run' }))
@@ -296,7 +296,7 @@ describe('phase6 rejected request consumers', () => {
     'shows an explicit fallback for a rejected value without a message: %s', async error => {
       requestMock.mockRejectedValueOnce(error)
       render(createElement(BackendTool, {
-        icon: Icons.maintenance, color: 'info', title: 'Synthetic backend', description: 'Synthetic',
+        icon: Wrench, color: 'info', title: 'Synthetic backend', description: 'Synthetic',
         endpoint: 'db-stats',
       }), { wrapper })
       fireEvent.click(screen.getByRole('button', { name: 'Run' }))
@@ -328,7 +328,7 @@ describe('phase6 rejected request consumers', () => {
     const transport = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('unexpected transport'))
     render(createElement('div', null,
       createElement(BackendTool, {
-        icon: Icons.maintenance, color: 'info', title: 'Synthetic backend', description: 'Synthetic',
+        icon: Wrench, color: 'info', title: 'Synthetic backend', description: 'Synthetic',
         endpoint: 'generate-keypair', method: 'POST',
       }),
       createElement(InfrastructureSection),

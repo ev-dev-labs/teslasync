@@ -1,7 +1,7 @@
-import { Icons } from '@/lib/icons';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UseQueryResult } from '@tanstack/react-query';
+import { History } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Text, Badge, DataTable, useSortToggle, type Column } from '@/components/ui';
 import { Skeleton, QueryError } from '@/components/feedback';
@@ -127,7 +127,7 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
   return (
     <GlassPanel className="min-w-0 p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <Icons.history className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('gas.historyTitle', 'Price history')}
       </PanelTitle>
 

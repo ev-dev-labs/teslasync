@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * Ingest X-Ray — KPI band.
  *
@@ -13,6 +12,7 @@ import { Icons } from '@/lib/icons';
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Activity, Clock, Gauge, Layers, Timer, TrendingUp } from 'lucide-react';
 
 import { MetricCard } from '@/components/data-display';
 
@@ -79,42 +79,42 @@ export function XRayHeader({
       <MetricCard
         label={t('admin.xray.stats.samples', 'Total samples')}
         value={ready ? fmtInt(data.total_samples ?? 0) : DASH}
-        icon={<Icons.activity className="h-5 w-5" />}
+        icon={<Activity className="h-5 w-5" />}
         color="cyan"
         subtitle={t('admin.xray.stats.samplesSub', 'within selected window')}
       />
       <MetricCard
         label={t('admin.xray.stats.fields', 'Distinct fields')}
         value={ready ? fmtInt(data.unique_fields ?? 0) : DASH}
-        icon={<Icons.layers className="h-5 w-5" />}
+        icon={<Layers className="h-5 w-5" />}
         color="blue"
         subtitle={t('admin.xray.stats.fieldsSub', 'unique signal names')}
       />
       <MetricCard
         label={t('admin.xray.stats.peak', 'Peak / bucket')}
         value={ready ? fmtInt(peak) : DASH}
-        icon={<Icons.trendUp className="h-5 w-5" />}
+        icon={<TrendingUp className="h-5 w-5" />}
         color="amber"
         subtitle={t('admin.xray.stats.peakSub', 'busiest interval')}
       />
       <MetricCard
         label={t('admin.xray.stats.avg', 'Avg / bucket')}
         value={ready ? fmtNumber(avg) : DASH}
-        icon={<Icons.speed className="h-5 w-5" />}
+        icon={<Gauge className="h-5 w-5" />}
         color="purple"
         subtitle={t('admin.xray.stats.avgSub', 'mean per interval')}
       />
       <MetricCard
         label={t('admin.xray.stats.window', 'Window')}
         value={t(`admin.xray.windowLabel.${windowSel}`, WINDOW_LABEL[windowSel] ?? windowSel)}
-        icon={<Icons.clock className="h-5 w-5" />}
+        icon={<Clock className="h-5 w-5" />}
         color="green"
         subtitle={t('admin.xray.stats.windowSub', 'observation horizon')}
       />
       <MetricCard
         label={t('admin.xray.stats.bucket', 'Bucket')}
         value={t(`admin.xray.bucketLabel.${bucketSel}`, BUCKET_LABEL[bucketSel] ?? bucketSel)}
-        icon={<Icons.timer className="h-5 w-5" />}
+        icon={<Timer className="h-5 w-5" />}
         color="cyan"
         subtitle={t('admin.xray.stats.bucketSub', 'aggregation interval')}
       />

@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { useMemo } from 'react';
+import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Badge, CopyButton, Caption, Text, type Column } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import type { AuditLogRow } from '@/types/admin-operator-confidence';
@@ -84,14 +84,14 @@ export function useAuditLogColumns(controller: Controller) {
           if (r.success === false)
             return (
               <Badge variant="danger">
-                <Icons.warning className="mr-1 inline h-3 w-3" aria-hidden="true" />
+                <AlertTriangle className="mr-1 inline h-3 w-3" aria-hidden="true" />
                 {t('admin.auditLog.statusFail', 'Fail')}
               </Badge>
             );
           if (r.success === true)
             return (
               <Badge variant="success">
-                <Icons.successFilled className="mr-1 inline h-3 w-3" aria-hidden="true" />
+                <CheckCircle2 className="mr-1 inline h-3 w-3" aria-hidden="true" />
                 {t('admin.auditLog.statusOk', 'OK')}
               </Badge>
             );

@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
+import { Clock, Trash2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Card, Badge, Button, IconBox, Text, Caption, Code } from '@/components/ui';
 import { formatDate } from '@/lib/dateFormat';
@@ -62,7 +62,7 @@ export function ApiKeyCard({
             )}
             {expired && (
               <Badge variant="danger" size="sm">
-                <Icons.error className="h-3 w-3" aria-hidden="true" />
+                <XCircle className="h-3 w-3" aria-hidden="true" />
                 {t('apiKeys.expired', 'Expired')}
               </Badge>
             )}
@@ -77,7 +77,7 @@ export function ApiKeyCard({
               onClick={() => onRevoke(apiKey.id)}
               loading={revoking}
               disabled={actionsDisabled}
-              icon={<Icons.error className="h-4 w-4" aria-hidden="true" />}
+              icon={<XCircle className="h-4 w-4" aria-hidden="true" />}
               aria-label={t('apiKeys.revokeAria', 'Revoke key {{name}}', { name: displayName })}
               title={actionsDisabledReason ?? t('apiKeys.revoke', 'Revoke')}
               className={cn(ICON_BTN, 'hover:bg-neon-amber/10 hover:text-amber-300')}
@@ -87,7 +87,7 @@ export function ApiKeyCard({
             variant="ghost"
             onClick={() => onDelete(apiKey)}
             disabled={actionsDisabled}
-            icon={<Icons.delete className="h-4 w-4" aria-hidden="true" />}
+            icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
             aria-label={t('apiKeys.deleteAria', 'Delete key {{name}}', { name: displayName })}
             title={actionsDisabledReason ?? t('apiKeys.delete', 'Delete')}
             className={cn(ICON_BTN, 'hover:bg-neon-red/10 hover:text-rose-300')}
@@ -97,7 +97,7 @@ export function ApiKeyCard({
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/[0.06] pt-2">
         <Caption className="inline-flex items-center gap-1">
-          <Icons.clock className="h-3 w-3" aria-hidden="true" />
+          <Clock className="h-3 w-3" aria-hidden="true" />
           {t('apiKeys.created', 'Created')} {formatDate(apiKey.createdAt)}
         </Caption>
         <Caption>

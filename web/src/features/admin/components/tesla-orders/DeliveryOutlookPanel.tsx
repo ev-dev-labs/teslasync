@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * Tesla Orders — delivery outlook.
  *
@@ -8,6 +7,7 @@ import { Icons } from '@/lib/icons';
  */
 import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CalendarClock } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { KVList, TimeStamp } from '@/components/data-display';
@@ -80,7 +80,7 @@ export function DeliveryOutlookPanel({
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <Icons.calendarClock className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+        <CalendarClock className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
         {t('admin.teslaOrders.panels.outlook', 'Delivery outlook')}
       </PanelTitle>
 

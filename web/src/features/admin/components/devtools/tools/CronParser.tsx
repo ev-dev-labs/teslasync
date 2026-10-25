@@ -1,6 +1,6 @@
-import { Icons } from '@/lib/icons';
 import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Timer } from 'lucide-react'
 import { Input, Button, Badge } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
 import { describeCron, getNextCronRuns, isValidCron } from '../helpers'
@@ -41,14 +41,14 @@ export function CronParserTool() {
   const applyPreset = useCallback((value: string) => setExpr(value), [])
 
   return (
-    <ToolCard icon={Icons.timer} color="green" title={t('devtools.utils.cron', 'Cron parser')} description={t('devtools.utils.cronDesc', 'Cron parser desc')}>
+    <ToolCard icon={Timer} color="green" title={t('devtools.utils.cron', 'Cron parser')} description={t('devtools.utils.cronDesc', 'Cron parser desc')}>
       <div className="space-y-3">
         <Input
           label={t('devtools.utils.cronExpression', 'Cron expression')}
           placeholder="*/5 * * * *"
           value={expr}
           onChange={(e) => setExpr(e.target.value)}
-          icon={<Icons.timer className="h-4 w-4" />}
+          icon={<Timer className="h-4 w-4" />}
         />
         <div className="flex flex-wrap gap-1">
           {presets.map((p) => (

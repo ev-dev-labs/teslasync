@@ -1,6 +1,6 @@
-import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
 import type { UseQueryResult } from '@tanstack/react-query';
+import { Activity, Fuel, Zap, Clock, PauseCircle } from 'lucide-react';
 
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, QueryError } from '@/components/feedback';
@@ -70,9 +70,9 @@ export function GasPriceKpiBand({ query }: GasPriceKpiBandProps) {
             subtitle={enabled ? t('gas.enabledShort', 'Auto-poll on') : t('gas.disabledShort', 'Auto-poll off')}
             icon={
               enabled ? (
-                <Icons.activity className="h-5 w-5" aria-hidden="true" />
+                <Activity className="h-5 w-5" aria-hidden="true" />
               ) : (
-                <Icons.pauseCircle className="h-5 w-5" aria-hidden="true" />
+                <PauseCircle className="h-5 w-5" aria-hidden="true" />
               )
             }
             color={enabled ? 'green' : 'amber'}
@@ -81,14 +81,14 @@ export function GasPriceKpiBand({ query }: GasPriceKpiBandProps) {
             label={t('gas.currentPrice', 'Current price')}
             value={price > 0 ? formatCurrency(price) : '—'}
             subtitle={t('gas.perUnit', 'per {{unit}}', { unit: unitLabel })}
-            icon={<Icons.fuel className="h-5 w-5" aria-hidden="true" />}
+            icon={<Fuel className="h-5 w-5" aria-hidden="true" />}
             color="amber"
           />
           <MetricCard
             label={t('gas.kwhEquivalent', 'kWh equivalent')}
             value={priceKwh > 0 ? formatCurrency(priceKwh) : '—'}
             subtitle={t('gas.perKwh', 'per kWh')}
-            icon={<Icons.charging className="h-5 w-5" aria-hidden="true" />}
+            icon={<Zap className="h-5 w-5" aria-hidden="true" />}
             color="cyan"
             help={{
               i18nKey: 'gas.kwhEquivalentHelp',
@@ -104,7 +104,7 @@ export function GasPriceKpiBand({ query }: GasPriceKpiBandProps) {
                 ? formatDateTime(lastPoll)
                 : t('gas.awaitingFirstPoll', 'Awaiting first poll')
             }
-            icon={<Icons.clock className="h-5 w-5" aria-hidden="true" />}
+            icon={<Clock className="h-5 w-5" aria-hidden="true" />}
             color="blue"
           />
         </>

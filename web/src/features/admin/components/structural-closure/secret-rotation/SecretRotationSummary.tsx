@@ -1,5 +1,4 @@
-import { Icons } from '@/lib/icons';
-
+import { ShieldCheck, AlertTriangle, CheckCircle2, Clock, History, CalendarClock } from 'lucide-react';
 import { MetricCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, QueryError } from '@/components/feedback';
@@ -34,35 +33,35 @@ export function SecretRotationSummary({ controller }: Props) {
               <MetricCard
                 label={t('admin.secretRotation.totalLabel', 'Tracked secrets')}
                 value={source.hasData ? fmtNumber(total) : '—'}
-                icon={<Icons.securityCheck className="h-5 w-5" />}
+                icon={<ShieldCheck className="h-5 w-5" />}
                 color="cyan"
                 subtitle={source.hasData ? t('admin.secretRotation.kindCount', '{{count}} kinds tracked', { count: distinctKinds }) : t('admin.secretRotation.noData', 'No data')}
               />
               <MetricCard
                 label={t('admin.secretRotation.okLabel', 'Healthy')}
                 value={source.hasData ? fmtNumber(counts.ok) : '—'}
-                icon={<Icons.successFilled className="h-5 w-5" />}
+                icon={<CheckCircle2 className="h-5 w-5" />}
                 color="green"
                 subtitle={t('admin.secretRotation.okSub', '{{pct}} of tracked', { pct: okPct })}
               />
               <MetricCard
                 label={t('admin.secretRotation.warnLabel', 'Rotate soon')}
                 value={source.hasData ? fmtNumber(counts.warn) : '—'}
-                icon={<Icons.clock className="h-5 w-5" />}
+                icon={<Clock className="h-5 w-5" />}
                 color="amber"
                 subtitle={t('admin.secretRotation.warnSub', 'Approaching threshold')}
               />
               <MetricCard
                 label={t('admin.secretRotation.criticalLabel', 'Overdue')}
                 value={source.hasData ? fmtNumber(counts.critical) : '—'}
-                icon={<Icons.warning className="h-5 w-5" />}
+                icon={<AlertTriangle className="h-5 w-5" />}
                 color="red"
                 subtitle={t('admin.secretRotation.criticalSub', 'Past critical threshold')}
               />
               <MetricCard
                 label={t('admin.secretRotation.oldestLabel', 'Oldest secret')}
                 value={oldest?.age_days != null ? t('admin.secretRotation.daysValue', '{{days}} d', { days: fmtNumber(oldest.age_days) }) : '—'}
-                icon={<Icons.history className="h-5 w-5" />}
+                icon={<History className="h-5 w-5" />}
                 color="purple"
                 subtitle={oldest ? rowLabel(oldest) : t('admin.secretRotation.noData', 'No data')}
               />
@@ -73,7 +72,7 @@ export function SecretRotationSummary({ controller }: Props) {
                     ? t('admin.secretRotation.daysValue', '{{days}} d', { days: fmtNumber(soonestExpiry.days_to_expiry) })
                     : '—'
                 }
-                icon={<Icons.calendarClock className="h-5 w-5" />}
+                icon={<CalendarClock className="h-5 w-5" />}
                 color={soonestExpiry && soonestExpiry.severity === 'critical' ? 'red' : 'blue'}
                 subtitle={soonestExpiry ? rowLabel(soonestExpiry) : t('admin.secretRotation.noExpiry', 'No expiry tracked')}
               />

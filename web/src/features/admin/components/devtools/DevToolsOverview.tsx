@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next'
+import { AlertTriangle, Car, Network, Radio, BookOpen } from 'lucide-react'
 import { MetricCard } from '@/components/data-display'
 import { TESLA_ENDPOINTS, TELEMETRY_FIELDS, REFERENCE_LINKS } from './constants'
 
@@ -62,35 +62,35 @@ export function DevToolsOverview({
         label={t('devtools.overview.telemetryErrors', 'Telemetry errors')}
         value={errorsUnknown ? placeholder : errors}
         subtitle={t('devtools.overview.affectedVins', 'affected VINs')}
-        icon={<Icons.warning className="h-5 w-5" aria-hidden="true" />}
+        icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
         color={telemetryTone}
       />
       <MetricCard
         label={t('devtools.overview.vehicles', 'Vehicles')}
         value={fleetUnknown ? placeholder : vehicles}
         subtitle={t('devtools.overview.inFleet', 'in fleet')}
-        icon={<Icons.vehicle className="h-5 w-5" aria-hidden="true" />}
+        icon={<Car className="h-5 w-5" aria-hidden="true" />}
         color="cyan"
       />
       <MetricCard
         label={t('devtools.overview.fleetEndpoints', 'Fleet API endpoints')}
         value={TESLA_ENDPOINTS.length}
         subtitle={t('devtools.overview.documented', 'documented')}
-        icon={<Icons.network className="h-5 w-5" aria-hidden="true" />}
+        icon={<Network className="h-5 w-5" aria-hidden="true" />}
         color="blue"
       />
       <MetricCard
         label={t('devtools.overview.telemetrySignals', 'Telemetry signals')}
         value={TELEMETRY_SIGNAL_COUNT}
         subtitle={t('devtools.overview.streamedFields', 'streamed fields')}
-        icon={<Icons.radio className="h-5 w-5" aria-hidden="true" />}
+        icon={<Radio className="h-5 w-5" aria-hidden="true" />}
         color="purple"
       />
       <MetricCard
         label={t('devtools.overview.referenceDocs', 'Reference docs')}
         value={REFERENCE_LINKS.length}
         subtitle={t('devtools.overview.externalLinks', 'external links')}
-        icon={<Icons.bookOpen className="h-5 w-5" aria-hidden="true" />}
+        icon={<BookOpen className="h-5 w-5" aria-hidden="true" />}
         color="amber"
       />
     </section>

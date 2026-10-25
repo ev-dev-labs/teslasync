@@ -1,5 +1,4 @@
-import { Icons } from '@/lib/icons';
-
+import { Shield } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { IconBox, Badge, HelperText } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -19,7 +18,7 @@ export function FleetAPIEndpointControls({ controller }: Props) {
         <LayoutCard title={t('fleetApi.controls.title', 'API endpoint controls')}>
           <div className="flex flex-wrap items-center gap-3">
             <IconBox color="cyan">
-              <Icons.security className="h-5 w-5" />
+              <Shield className="h-5 w-5" />
             </IconBox>
             <div className="min-w-0 flex-1">
               <HelperText className="mt-0.5">
@@ -43,7 +42,7 @@ export function FleetAPIEndpointControls({ controller }: Props) {
             <QueryError error={pollingState.fatalError} onRetry={() => pollingQuery.refetch()} />
           ) : !pollingKnown ? (
             <EmptyState
-              icon={<Icons.security className="h-8 w-8" />}
+              icon={<Shield className="h-8 w-8" />}
               message={t('fleetApi.controls.empty', 'Endpoint catalog unavailable')}
               description={t('fleetApi.controls.outdatedRuntime', 'This API server does not provide the Fleet route catalog. Update and restart the API service to manage routes; no settings can be changed here until it is available.')}
               action={{ label: t('fleetApi.controls.retry', 'Retry loading routes'), onClick: () => { void pollingQuery.refetch(); } }}

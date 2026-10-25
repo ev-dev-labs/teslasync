@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { useMemo } from 'react';
+import { Timer } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { DataTable, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { Code } from '@/components/ui';
@@ -108,7 +108,7 @@ export function SlowQueriesDetails({ controller }: Props) {
               ) : rows.length === 0 ? (
                 // no-action: pg_stat_statements is populated by Postgres itself; users cannot seed rows from the UI
                 <EmptyState
-                  icon={<Icons.timer className="h-8 w-8" />}
+                  icon={<Timer className="h-8 w-8" />}
                   title={t('admin.slowQueries.emptyTitle', 'No slow queries')}
                   message={t(
                     'admin.slowQueries.emptyMessage',

@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * Rate-limit status panel.
  *
@@ -14,6 +13,7 @@ import { Icons } from '@/lib/icons';
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { RefreshCw, AlertTriangle } from 'lucide-react'
 
 import { GlassPanel, Heading, Text, Caption } from '@/components/ui'
 import { MetricBar } from '@/components/data-display'
@@ -177,7 +177,7 @@ export function RateLimitStatusPanel({ testHookOverride }: RateLimitStatusPanelP
             <Caption className="mt-2 block">{updatedLabel}</Caption>
           ) : null}
         </div>
-        <IconButton icon={<Icons.refresh className="h-4 w-4" aria-hidden />} label={t('rateLimitStatus.refresh', 'Refresh')} onClick={() => {
+        <IconButton icon={<RefreshCw className="h-4 w-4" aria-hidden />} label={t('rateLimitStatus.refresh', 'Refresh')} onClick={() => {
             void refetch()
           }} busy={isFetching && !isLoading} disabled={isFetching} data-testid="rate-limit-refresh-button" />
       </div>
@@ -187,7 +187,7 @@ export function RateLimitStatusPanel({ testHookOverride }: RateLimitStatusPanelP
           className="mb-4 flex items-start gap-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3"
           data-testid="rate-limit-warning"
         >
-          <Icons.warning className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden />
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden />
           <div className="space-y-1">
             {warnings.map((warning) => (
               <Text key={warning} variant="bodySm">
@@ -209,7 +209,7 @@ export function RateLimitStatusPanel({ testHookOverride }: RateLimitStatusPanelP
           className="flex items-start gap-3 rounded-md border border-rose-500/30 bg-rose-500/5 p-3"
           data-testid="rate-limit-error"
         >
-          <Icons.warning className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden />
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden />
           <Text variant="error">
             {t(
               'rateLimitStatus.error',

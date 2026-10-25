@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next'
+import { RefreshCw } from 'lucide-react'
 
 import { PageLayout } from '@/components/layout'
 
@@ -77,7 +77,7 @@ export default function UsersPage() {
       : t('impersonation.users.kpi.idle', 'Idle')
 
   const actions = (
-    <IconButton icon={<Icons.refresh className={cn('h-4 w-4', refreshing && 'animate-spin')} aria-hidden="true" />} label={t('impersonation.users.refresh', 'Refresh')} onClick={onRefresh} disabled={refreshing} aria-label={t('impersonation.users.refresh', 'Refresh')} />
+    <IconButton icon={<RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} aria-hidden="true" />} label={t('impersonation.users.refresh', 'Refresh')} onClick={onRefresh} disabled={refreshing} aria-label={t('impersonation.users.refresh', 'Refresh')} />
   )
 
   return (

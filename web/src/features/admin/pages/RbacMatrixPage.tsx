@@ -1,6 +1,6 @@
-import { Icons } from '@/lib/icons';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Lock, RefreshCw, ShieldCheck, Unlock } from 'lucide-react';
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { Badge, Button, Card, Heading, HelperText, PanelTitle, IconButton } from '@/components/ui';
 import { AlertBanner, EmptyState, QueryError, TableSkeleton } from '@/components/feedback';
@@ -66,7 +66,7 @@ export default function RbacMatrixPage() {
           <Card padding="none" className="p-6" data-testid="rbac-open-mode">
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
-                <Icons.securityCheck className="h-5 w-5 text-cyan-300" aria-hidden />
+                <ShieldCheck className="h-5 w-5 text-cyan-300" aria-hidden />
                 <Heading level="section">{t('rbac.openMode.title', 'RBAC requires forward-auth mode')}</Heading>
               </div>
               <HelperText className="max-w-3xl">
@@ -140,7 +140,7 @@ export default function RbacMatrixPage() {
         <FadeIn>
           <RbacOperationalBrief payload={payload} source={briefState} />
           <Card padding="none" className="p-4 sm:p-5" data-testid="rbac-empty">
-            <EmptyState icon={<Icons.securityCheck className="h-8 w-8" aria-hidden />}
+            <EmptyState icon={<ShieldCheck className="h-8 w-8" aria-hidden />}
               title={t('rbac.empty.title', 'No roles configured')}
               action={{ label: t('rbac.actions.refresh', 'Refresh'), onClick: () => { void matrixQuery.refetch(); } }}
               message={t('rbac.empty.message',
@@ -160,14 +160,14 @@ export default function RbacMatrixPage() {
         {t('rbac.actions.cancel', 'Cancel')}
       </Button>
       <Button onClick={handleSave} disabled={upsert.isPending || dirtyCount === 0} data-testid="rbac-save-button">
-        <Icons.locked className="h-4 w-4" aria-hidden />
+        <Lock className="h-4 w-4" aria-hidden />
         {upsert.isPending ? t('rbac.actions.saving', 'Saving…') : t('rbac.actions.save', 'Save ({{count}})', { count: dirtyCount })}
       </Button>
     </div>
   ) : (
     <div className="flex flex-wrap items-center gap-2">
-      <IconButton icon={<Icons.refresh className="h-4 w-4" aria-hidden />} label={t('rbac.actions.refresh', 'Refresh')} busy={matrixQuery.isFetching} onClick={() => matrixQuery.refetch()} disabled={matrixQuery.isFetching} />
-      <IconButton icon={<Icons.unlocked className="h-4 w-4" aria-hidden />} label={t('rbac.actions.edit', 'Edit')} onClick={handleEnterEdit} data-testid="rbac-edit-button" />
+      <IconButton icon={<RefreshCw className="h-4 w-4" aria-hidden />} label={t('rbac.actions.refresh', 'Refresh')} busy={matrixQuery.isFetching} onClick={() => matrixQuery.refetch()} disabled={matrixQuery.isFetching} />
+      <IconButton icon={<Unlock className="h-4 w-4" aria-hidden />} label={t('rbac.actions.edit', 'Edit')} onClick={handleEnterEdit} data-testid="rbac-edit-button" />
     </div>
   );
 

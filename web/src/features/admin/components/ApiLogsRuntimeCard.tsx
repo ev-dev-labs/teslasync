@@ -1,5 +1,5 @@
-import type { LucideIcon } from '@/lib/icons';
 import { useId, type ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { GlassPanel, PanelTitle, Caption, MetricValue, MetricLabel } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
 

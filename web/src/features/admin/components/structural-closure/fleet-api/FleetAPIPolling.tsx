@@ -1,5 +1,4 @@
-import { Icons } from '@/lib/icons';
-
+import { AlertTriangle, Pause, Play } from 'lucide-react';
 import { GlassPanel, IconBox, Toggle, PanelTitle, Text, HelperText, Button } from '@/components/ui';
 import { Skeleton, QueryError, InlineCallout } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -18,7 +17,7 @@ export function FleetAPIPolling({ controller }: Props) {
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <IconBox color={pollingConfig?.auto_polling_enabled ? 'green' : 'blue'}>
-                  {pollingConfig?.auto_polling_enabled ? <Icons.play className="h-5 w-5" /> : <Icons.pause className="h-5 w-5" />}
+                  {pollingConfig?.auto_polling_enabled ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
                 </IconBox>
                 <div className="min-w-0">
                   <PanelTitle>{t('fleetApi.polling.title', 'Tesla API polling')}</PanelTitle>
@@ -44,11 +43,11 @@ export function FleetAPIPolling({ controller }: Props) {
             ) : !pollingConfig ? (
               <Text as="p" size="sm" color="secondary">{t('fleetApi.controls.empty', 'Endpoint settings are unavailable.')}</Text>
             ) : pollingConfig.auto_polling_enabled ? (
-              <InlineCallout variant="success" icon={<Icons.play />}>
+              <InlineCallout variant="success" icon={<Play />}>
                 {t('fleetApi.polling.activeNote', 'Only enabled routes selected for auto-polling participate. On-demand routes and commands remain independent.')}
               </InlineCallout>
             ) : (
-              <InlineCallout variant="info" icon={<Icons.pause />}>
+              <InlineCallout variant="info" icon={<Pause />}>
                 {t('fleetApi.polling.suspendedNote', 'Automatic Fleet API polling is off. Enabled endpoints still work on demand; token refresh continues.')}
               </InlineCallout>
             )}
@@ -56,7 +55,7 @@ export function FleetAPIPolling({ controller }: Props) {
               <QueryError error={settingsState.fatalError} onRetry={() => settingsQuery.refetch()} />
             ) : apiSuspended ? (
               <div className="flex flex-wrap items-center gap-3">
-                <InlineCallout variant="danger" icon={<Icons.warning />}>
+                <InlineCallout variant="danger" icon={<AlertTriangle />}>
                   {t('fleetApi.polling.emergencyNote', 'API actions were suspended previously; supported live requests and commands are blocked. Token refresh continues.')}
                 </InlineCallout>
                 <Button variant="secondary" size="sm" disabled={suspendMut.isPending}

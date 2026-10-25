@@ -1,6 +1,6 @@
-import { Icons } from '@/lib/icons';
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Info } from 'lucide-react'
 import { GlassPanel, Badge, IconBox, PanelTitle, Text, Label } from '@/components/ui'
 import { REGION_ZONE_KEYS, REGION_ZONE_FALLBACK } from './helpers'
 
@@ -32,7 +32,7 @@ export function RegionAboutPanel() {
     <GlassPanel className="h-full space-y-4 p-4 sm:p-5">
       <div className="flex items-center gap-3">
         <IconBox color="cyan" size="sm">
-          <Icons.info className="h-4 w-4" aria-hidden="true" />
+          <Info className="h-4 w-4" aria-hidden="true" />
         </IconBox>
         <PanelTitle>{t('region.about.title', 'About your region')}</PanelTitle>
       </div>

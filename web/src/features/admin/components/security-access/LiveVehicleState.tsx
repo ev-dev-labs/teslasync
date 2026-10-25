@@ -1,6 +1,18 @@
-import { Icons } from '@/lib/icons';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  Flashlight,
+  Lightbulb,
+  Signal,
+  Armchair,
+  Key,
+  Car,
+  Wrench,
+  Gauge,
+  Home,
+  Monitor,
+  CircleDot,
+} from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -61,70 +73,70 @@ function buildLiveSignals(ev: SecurityEvent | undefined, t: (k: string, fb: stri
     {
       key: 'hazards',
       label: t('admin.security.live.hazards', 'Hazards'),
-      icon: <Icons.flashlight className="h-5 w-5" />,
+      icon: <Flashlight className="h-5 w-5" />,
       value: boolLabel(ev.lightsHazardsActive, t),
       active: !!ev.lightsHazardsActive,
     },
     {
       key: 'highBeams',
       label: t('admin.security.live.highBeams', 'High beams'),
-      icon: <Icons.lightbulb className="h-5 w-5" />,
+      icon: <Lightbulb className="h-5 w-5" />,
       value: boolLabel(ev.lightsHighBeams, t),
       active: !!ev.lightsHighBeams,
     },
     {
       key: 'turnSignal',
       label: t('admin.security.live.turnSignal', 'Turn signal'),
-      icon: <Icons.signal className="h-5 w-5" />,
+      icon: <Signal className="h-5 w-5" />,
       value: asNonEmptyString(ev.lightsTurnSignal) ?? '—',
       active: stringSignalActive(ev.lightsTurnSignal),
     },
     {
       key: 'driverSeat',
       label: t('admin.security.live.driverSeat', 'Driver seat'),
-      icon: <Icons.cabin className="h-5 w-5" />,
+      icon: <Armchair className="h-5 w-5" />,
       value: ev.driverSeatOccupied == null ? '—' : ev.driverSeatOccupied ? t('admin.security.live.occupied', 'Occupied') : t('admin.security.live.empty', 'Empty'),
       active: !!ev.driverSeatOccupied,
     },
     {
       key: 'pairedKeys',
       label: t('admin.security.live.pairedKeys', 'Paired keys'),
-      icon: <Icons.key className="h-5 w-5" />,
+      icon: <Key className="h-5 w-5" />,
       value: ev.pairedPhoneKeyCount != null ? String(ev.pairedPhoneKeyCount) : '—',
       active: (ev.pairedPhoneKeyCount ?? 0) > 0,
     },
     {
       key: 'valetMode',
       label: t('admin.security.live.valetMode', 'Valet mode'),
-      icon: <Icons.vehicle className="h-5 w-5" />,
+      icon: <Car className="h-5 w-5" />,
       value: boolLabel(ev.valetModeEnabled, t),
       active: !!ev.valetModeEnabled,
     },
     {
       key: 'serviceMode',
       label: t('admin.security.live.serviceMode', 'Service mode'),
-      icon: <Icons.maintenance className="h-5 w-5" />,
+      icon: <Wrench className="h-5 w-5" />,
       value: boolLabel(ev.serviceMode, t),
       active: !!ev.serviceMode,
     },
     {
       key: 'speedLimit',
       label: t('admin.security.live.speedLimit', 'Speed limit'),
-      icon: <Icons.speed className="h-5 w-5" />,
+      icon: <Gauge className="h-5 w-5" />,
       value: speedLimit.value,
       active: speedLimit.active,
     },
     {
       key: 'homelinkDevices',
       label: t('admin.security.live.homelinkDevices', 'HomeLink devices'),
-      icon: <Icons.home className="h-5 w-5" />,
+      icon: <Home className="h-5 w-5" />,
       value: ev.homelinkDeviceCount != null ? String(ev.homelinkDeviceCount) : '—',
       active: (ev.homelinkDeviceCount ?? 0) > 0,
     },
     {
       key: 'centerDisplay',
       label: t('admin.security.live.centerDisplay', 'Center display'),
-      icon: <Icons.monitor className="h-5 w-5" />,
+      icon: <Monitor className="h-5 w-5" />,
       value: centerDisplay.value,
       active: centerDisplay.active,
     },
@@ -181,7 +193,7 @@ export function LiveVehicleState({ latest, sourceState, isLoading, error, onRetr
         // no-action: mirrors DigitalTwinPanel's 5s-poll latest-state query —
         // this panel self-heals once telemetry lands.
         <EmptyState
-          icon={<Icons.tirePressure className="h-8 w-8" aria-hidden="true" />}
+          icon={<CircleDot className="h-8 w-8" aria-hidden="true" />}
           message={t('admin.security.live.noData', 'No live state data available')}
         />
       )}

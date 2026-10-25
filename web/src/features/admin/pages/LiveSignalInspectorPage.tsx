@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * Live Signal Inspector Page — realtime per-vehicle signal viewer.
  *
@@ -14,6 +13,7 @@ import { Icons } from '@/lib/icons';
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Activity, RefreshCw, Radio } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, Caption, Icon, PanelTitle } from '@/components/ui';
@@ -76,7 +76,7 @@ export default function LiveSignalInspectorPage() {
     else void live.refetch();
   };
 
-  const noVehicleIcon = <Icon icon={Icons.radio} size="xl" className={typography.color.muted} />;
+  const noVehicleIcon = <Icon icon={Radio} size="xl" className={typography.color.muted} />;
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
@@ -104,7 +104,7 @@ export default function LiveSignalInspectorPage() {
         aria-label={t('admin.liveSignals.refresh', 'Refresh live snapshot')}
       >
         <Icon
-          icon={Icons.refresh}
+          icon={RefreshCw}
           className={cn('motion-reduce:animate-none', live.isFetching && !reduce && 'animate-spin')}
         />
       </Button>
@@ -184,7 +184,7 @@ export default function LiveSignalInspectorPage() {
         <SectionErrorBoundary name="live-signals-table">
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
-              <Icon icon={Icons.activity} className={typography.color.muted} />
+              <Icon icon={Activity} className={typography.color.muted} />
               {t('admin.liveSignals.panels.snapshot', 'Live snapshot')}
             </PanelTitle>
             <LiveSectionState

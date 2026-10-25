@@ -1,6 +1,6 @@
-import { Icons } from '@/lib/icons';
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Regex } from 'lucide-react'
 import { Input, Select, Badge, Textarea } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
 
@@ -73,10 +73,10 @@ export function RegexTesterTool() {
   )
 
   return (
-    <ToolCard icon={Icons.regex} color="red" title={t('devtools.utils.regex', 'Regex tester')} description={t('devtools.utils.regexDesc', 'Regex tester desc')}>
+    <ToolCard icon={Regex} color="red" title={t('devtools.utils.regex', 'Regex tester')} description={t('devtools.utils.regexDesc', 'Regex tester desc')}>
       <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
-          <Input label={t('devtools.utils.regexPattern', 'Pattern')} placeholder="\\d+" value={pattern} onChange={(e) => setPattern(e.target.value)} icon={<Icons.regex className="h-4 w-4" />} error={error ? t('devtools.utils.regexInvalidPattern', 'Invalid pattern') : undefined} />
+          <Input label={t('devtools.utils.regexPattern', 'Pattern')} placeholder="\\d+" value={pattern} onChange={(e) => setPattern(e.target.value)} icon={<Regex className="h-4 w-4" />} error={error ? t('devtools.utils.regexInvalidPattern', 'Invalid pattern') : undefined} />
           <Select label={t('devtools.utils.regexFlags', 'Flags')} options={flagOptions} value={flags} onChange={(e) => setFlags(e.target.value)} />
         </div>
         <Textarea label={t('devtools.utils.regexTestString', 'Test string')} rows={3} value={testStr} onChange={(e) => setTestStr(e.target.value)} placeholder={t('devtools.utils.regexTestStringPlaceholder', "Test string placeholder")} />

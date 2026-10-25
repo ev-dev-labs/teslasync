@@ -1,6 +1,6 @@
-import { Icons } from '@/lib/icons';
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Braces } from 'lucide-react'
 import { Textarea, CopyButton } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { ToolCard } from '../ToolCard'
@@ -42,7 +42,7 @@ export function JsonFormatterTool() {
 
   return (
     <ToolCard
-      icon={Icons.braces}
+      icon={Braces}
       color="green"
       title={t('devtools.utils.json', 'JSON formatter')}
       description={t('devtools.utils.jsonDesc', 'Validate and pretty-print JSON with 2-space indentation.')}

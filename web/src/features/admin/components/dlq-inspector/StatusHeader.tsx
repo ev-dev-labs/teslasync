@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * DLQ Inspector — status / KPI band.
  *
@@ -14,6 +13,7 @@ import { Icons } from '@/lib/icons';
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Ban, Database, Inbox, Power, ShieldCheck, Tags } from 'lucide-react';
 
 import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
@@ -72,35 +72,35 @@ export function StatusHeader({ data, loading, error }: StatusHeaderProps) {
         <StatCard
           label={t('admin.dlq.stats.total', 'Total entries')}
           value={num(count)}
-          icon={<Icons.inbox className="h-5 w-5" aria-hidden="true" />}
+          icon={<Inbox className="h-5 w-5" aria-hidden="true" />}
           sublabel={t('admin.dlq.stats.totalSub', 'in dead-letter queue')}
           loading={loading}
         />
         <StatCard
           label={t('admin.dlq.stats.replayable', 'Replayable')}
           value={num(replayable)}
-          icon={<Icons.securityCheck className="h-5 w-5" aria-hidden="true" />}
+          icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
           sublabel={t('admin.dlq.stats.replayableSub', 'parsed with source topic')}
           loading={loading}
         />
         <StatCard
           label={t('admin.dlq.stats.blocked', 'Blocked')}
           value={num(blocked)}
-          icon={<Icons.ban className="h-5 w-5" aria-hidden="true" />}
+          icon={<Ban className="h-5 w-5" aria-hidden="true" />}
           sublabel={t('admin.dlq.stats.blockedSub', 'no replay target')}
           loading={loading}
         />
         <StatCard
           label={t('admin.dlq.stats.reasons', 'Distinct reasons')}
           value={num(distinctReasons)}
-          icon={<Icons.tags className="h-5 w-5" aria-hidden="true" />}
+          icon={<Tags className="h-5 w-5" aria-hidden="true" />}
           sublabel={t('admin.dlq.stats.reasonsSub', 'unique failure causes')}
           loading={loading}
         />
         <StatCard
           label={t('admin.dlq.stats.payload', 'Total payload')}
           value={error ? dash : formatBytes(totalBytes)}
-          icon={<Icons.database className="h-5 w-5" aria-hidden="true" />}
+          icon={<Database className="h-5 w-5" aria-hidden="true" />}
           sublabel={t('admin.dlq.stats.payloadSub', 'raw bytes queued')}
           loading={loading}
         />
@@ -113,7 +113,7 @@ export function StatusHeader({ data, loading, error }: StatusHeaderProps) {
                 ? t('admin.dlq.stats.enabled', 'Enabled')
                 : t('admin.dlq.stats.disabled', 'Disabled')
           }
-          icon={<Icons.power className="h-5 w-5" aria-hidden="true" />}
+          icon={<Power className="h-5 w-5" aria-hidden="true" />}
           sublabel={t('admin.dlq.stats.replayModeSub', 'DLQ_REPLAY_ENABLED env')}
           loading={loading}
         />

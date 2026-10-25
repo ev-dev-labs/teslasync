@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
+import { ShieldCheck, UserCircle } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { Badge, Caption, HelperText } from '@/components/ui';
 import type { RbacMatrixSessionResponse } from '@/api/hooks/useRbacMatrix';
@@ -11,7 +11,7 @@ function EffectivePill({ payload }: { payload: RbacMatrixSessionResponse }) {
   return (
     <Badge variant={allowedCount === 0 ? 'neutral' : 'success'} data-testid="rbac-effective-pill"
       title={t('rbac.effective.tooltip', 'Permissions effective for your current roles')}>
-      <Icons.securityCheck className="h-3 w-3" aria-hidden />
+      <ShieldCheck className="h-3 w-3" aria-hidden />
       <span>{t('rbac.effective.count', '{{count}} / {{total}} effective', { count: allowedCount, total })}</span>
     </Badge>
   );
@@ -22,7 +22,7 @@ function MyRolesPill({ payload }: { payload: RbacMatrixSessionResponse }) {
   const roles = payload.my_roles ?? [];
   return (
     <Badge variant={roles.length === 0 ? 'neutral' : 'info'} data-testid="rbac-my-roles-pill">
-      <Icons.userCircle className="h-3 w-3" aria-hidden />
+      <UserCircle className="h-3 w-3" aria-hidden />
       {roles.length === 0 ? t('rbac.myRoles.none', 'No roles claimed')
         : t('rbac.myRoles.label', 'My roles: {{roles}}', { roles: roles.join(', ') })}
     </Badge>

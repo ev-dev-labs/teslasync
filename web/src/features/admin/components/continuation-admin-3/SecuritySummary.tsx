@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
+import { ShieldCheck, Clock, Activity, BarChart3 } from 'lucide-react';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -28,7 +28,7 @@ export function SecuritySummary({
           value={isSecure === null ? '—' : isSecure
             ? t('admin.security.secure', 'Secure')
             : t('admin.security.unsecure', 'Unsecure')}
-          icon={<Icons.securityCheck className="h-5 w-5" aria-hidden="true" />}
+          icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
           color={isSecure === null ? 'cyan' : isSecure ? 'green' : 'red'}
         />
       )}
@@ -43,19 +43,19 @@ export function SecuritySummary({
           <MetricCard
             label={t('admin.security.stat.lastLock', 'Last lock change')}
             value={timeSince(lastLockChange, t)}
-            icon={<Icons.clock className="h-5 w-5" aria-hidden="true" />}
+            icon={<Clock className="h-5 w-5" aria-hidden="true" />}
             color="cyan"
           />
           <MetricCard
             label={t('admin.security.stat.sentryUptime', 'Sentry uptime')}
             value={sentryUptime === null ? '—' : `${fmtInt(sentryUptime)}%`}
-            icon={<Icons.activity className="h-5 w-5" aria-hidden="true" />}
+            icon={<Activity className="h-5 w-5" aria-hidden="true" />}
             color="blue"
           />
           <MetricCard
             label={t('admin.security.stat.totalEvents', 'Total events')}
             value={totalEvents === null ? '—' : fmtInt(totalEvents)}
-            icon={<Icons.analytics className="h-5 w-5" aria-hidden="true" />}
+            icon={<BarChart3 className="h-5 w-5" aria-hidden="true" />}
             color="purple"
           />
         </>

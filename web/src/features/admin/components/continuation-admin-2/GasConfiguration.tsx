@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
+import { Play, Pause, Info } from 'lucide-react';
 import type { DataState } from '@/api/dataState';
 import type { GasPriceStatus } from '@/api/types';
 import { useToggleGasPrice, useUpdateGasPriceConfig } from '@/api/hooks/useSettings';
@@ -30,7 +30,7 @@ export function GasConfiguration({ source }: { source: DataState<GasPriceStatus>
                 content={t('gas.autoPollHelp', 'When on, TeslaSync fetches the latest US average gas price on the schedule below.')} />
             </div>
             <span className="inline-flex items-center gap-1.5">
-              {data?.enabled ? <Icons.play className="h-3.5 w-3.5 text-emerald-300" aria-hidden /> : <Icons.pause className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden />}
+              {data?.enabled ? <Play className="h-3.5 w-3.5 text-emerald-300" aria-hidden /> : <Pause className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden />}
               <Text variant="bodySm">{!data ? '—' : data.enabled ? t('gas.running', 'Running') : t('gas.stopped', 'Stopped')}</Text>
             </span>
           </div>
@@ -46,7 +46,7 @@ export function GasConfiguration({ source }: { source: DataState<GasPriceStatus>
             help={{ i18nKey: 'help.fields.settings.gasPricePollInterval', content: t('gas.pollIntervalHelp', 'How often the auto-poll fetches fresh prices.') }} />
         </FormSection>
         <div className="flex items-start gap-2">
-          <Icons.info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" aria-hidden />
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" aria-hidden />
           <Caption>{t('gas.source', 'Source: u.S. Energy information administration')}</Caption>
         </div>
       </AdminSourceContent>

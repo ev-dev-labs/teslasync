@@ -1,5 +1,4 @@
-import { Icons } from '@/lib/icons';
-
+import { CalendarClock, Gauge } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { Badge, Caption, Text } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
@@ -33,7 +32,7 @@ export function SecretRotationOutlook({ controller }: Props) {
               </DataStateNotice>
             ) : urgency.length === 0 ? (
               <EmptyState /* no-action: urgency derives from age vs per-kind critical threshold */
-                icon={<Icons.speed className="h-8 w-8" />}
+                icon={<Gauge className="h-8 w-8" />}
                 message={t('admin.secretRotation.noUrgency', 'No rotation ages to rank yet.')}
               />
             ) : (
@@ -75,7 +74,7 @@ export function SecretRotationOutlook({ controller }: Props) {
               </DataStateNotice>
             ) : expiryWatch.length === 0 ? (
               <EmptyState /* no-action: only credentials with a hard expiry (certs, tokens) populate this list */
-                icon={<Icons.calendarClock className="h-8 w-8" />}
+                icon={<CalendarClock className="h-8 w-8" />}
                 title={t('admin.secretRotation.noExpiryTitle', 'No expiring credentials')}
                 message={t(
                   'admin.secretRotation.noExpiryMessage',

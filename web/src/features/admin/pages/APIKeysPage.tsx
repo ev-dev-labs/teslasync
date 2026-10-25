@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * APIKeysPage — manage API keys for programmatic access to TeslaSync.
  *
@@ -10,6 +9,9 @@ import { Icons } from '@/lib/icons';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  Plus, Key, KeyRound, ShieldCheck, Info,
+} from 'lucide-react';
 
 import { PageLayout, LayoutCard, SourceContent } from '@/components/layout';
 import { Button, ConfirmDialog, Text, Caption, Icon } from '@/components/ui';
@@ -67,7 +69,7 @@ export default function APIKeysPage() {
   const emptyInventory = (
     // no-action: the page header owns Create key and its read-only guard; do not duplicate an unguarded write CTA here.
     <EmptyState
-      icon={<Icon icon={Icons.key} size="xl" className={typography.color.muted} />}
+      icon={<Icon icon={Key} size="xl" className={typography.color.muted} />}
       title={t('apiKeys.empty.title', 'No API keys')}
       message={t('apiKeys.empty.message', 'Create an API key to enable programmatic access to TeslaSync data and controls.')}
     />
@@ -75,7 +77,7 @@ export default function APIKeysPage() {
   const emptyPermissions = (
     // no-action: this is derived usage detail; the page header already offers guarded key creation.
     <EmptyState
-      icon={<Icon icon={Icons.keyRound} size="xl" className={typography.color.muted} />}
+      icon={<Icon icon={KeyRound} size="xl" className={typography.color.muted} />}
       message={t('apiKeys.accessLevelsEmpty', 'Permission usage appears once you create a key.')}
     />
   );
@@ -102,7 +104,7 @@ export default function APIKeysPage() {
         <Button
           variant="primary"
           size="sm"
-          icon={<Icon icon={Icons.add} />}
+          icon={<Icon icon={Plus} />}
           wrapLabel
           className="min-h-11 max-w-full md:min-h-9"
           onClick={() => { if (operationalMode.canWrite) setShowCreate(true); }}
@@ -138,7 +140,7 @@ export default function APIKeysPage() {
               title={t('apiKeys.keysPanel', 'Your API keys')}
               actions={
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <Icon icon={Icons.key} className={typography.color.muted} />
+                  <Icon icon={Key} className={typography.color.muted} />
                   {keysState.hasData && summary.total > 0 && (
                     <Caption>{t('apiKeys.count', '{{count}} total', { count: summary.total })}</Caption>
                   )}
@@ -194,7 +196,7 @@ export default function APIKeysPage() {
           <div className="min-w-0 space-y-4">
             <LayoutCard
               title={t('apiKeys.accessLevels', 'Access levels')}
-              actions={<Icon icon={Icons.keyRound} className={typography.color.muted} />}
+              actions={<Icon icon={KeyRound} className={typography.color.muted} />}
             >
               <SectionErrorBoundary name="APIKeysPermissions">
               {keysState.fatalError ? (
@@ -238,13 +240,13 @@ export default function APIKeysPage() {
 
             <LayoutCard
               title={t('apiKeys.guidance.title', 'About API keys')}
-              actions={<Icon icon={Icons.info} className={typography.color.muted} />}
+              actions={<Icon icon={Info} className={typography.color.muted} />}
             >
               <SectionErrorBoundary name="APIKeysGuidance">
               <ul className="space-y-2">
                 {guidancePoints.map((point, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <Icon icon={Icons.securityCheck} size="sm" className={`mt-0.5 ${typography.color.muted}`} />
+                    <Icon icon={ShieldCheck} size="sm" className={`mt-0.5 ${typography.color.muted}`} />
                     <Text as="span" variant="bodySm" className="min-w-0 break-words">{point}</Text>
                   </li>
                 ))}

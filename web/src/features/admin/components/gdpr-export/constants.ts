@@ -1,5 +1,4 @@
-import { Icons } from '@/lib/icons';
-
+import { CalendarClock, CalendarX, Clock, HardDriveDownload } from 'lucide-react';
 
 // Keep the existing barrel exports, but describe manifest events, never job states.
 export const STATUS_VARIANT = {
@@ -10,10 +9,10 @@ export const STATUS_VARIANT = {
 } as const;
 
 export const STATUS_ICON = {
-  created: Icons.clock,
-  downloaded: Icons.hardDriveDownload,
-  expires: Icons.calendarClock,
-  expired: Icons.calendarX,
+  created: Clock,
+  downloaded: HardDriveDownload,
+  expires: CalendarClock,
+  expired: CalendarX,
 } as const;
 
 export const STATUS_COLOR = {

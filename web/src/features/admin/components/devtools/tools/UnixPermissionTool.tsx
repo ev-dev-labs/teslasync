@@ -1,6 +1,6 @@
-import { Icons } from '@/lib/icons';
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Lock } from 'lucide-react'
 import { Input, Select, CopyButton } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { ToolCard } from '../ToolCard'
@@ -54,7 +54,7 @@ export function UnixPermissionTool() {
 
   return (
     <ToolCard
-      icon={Icons.locked}
+      icon={Lock}
       color="green"
       title={t('devtools.utils.unixPerm', 'Unix permissions')}
       description={t('devtools.utils.unixPermDesc', 'Convert an octal permission (e.g. 755) to rwx symbolic notation.')}
@@ -67,7 +67,7 @@ export function UnixPermissionTool() {
             inputMode="numeric"
             value={octal}
             onChange={(e) => setOctal(e.target.value)}
-            icon={<Icons.locked className="h-4 w-4" aria-hidden="true" />}
+            icon={<Lock className="h-4 w-4" aria-hidden="true" />}
           />
           <Select
             label={t('devtools.utils.unixPermPresets', 'Presets')}

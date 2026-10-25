@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
+import { Clock, GitCompare } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { Caption, Text } from '@/components/ui';
 import { SeverityBadge } from '@/components/data-display';
@@ -13,11 +13,11 @@ export function SchemaBreakdown({ state }: { state: SchemaSectionState }) {
   const { drift, isLoading, error, onRetry } = state;
   return (
     <LayoutCard title={t('admin.schemaDrift.breakdownTitle', 'Drift breakdown')}
-      actions={<Icons.gitCompare className="h-4 w-4 text-cyan-300" aria-hidden />}>
+      actions={<GitCompare className="h-4 w-4 text-cyan-300" aria-hidden />}>
       <Caption>{t('admin.schemaDrift.breakdownSub', 'Per-object comparison of current vs seed')}</Caption>
       {isLoading ? <Skeleton height={150} /> : error ? <QueryError error={error} onRetry={onRetry} /> : !drift ? (
         // no-action: the page header refreshes the shared schema query; this comparison has no independent recovery.
-        <EmptyState icon={<Icons.gitCompare className="h-8 w-8" aria-hidden />}
+        <EmptyState icon={<GitCompare className="h-8 w-8" aria-hidden />}
           message={t('admin.schemaDrift.breakdownEmpty', 'No comparison available yet.')} />
       ) : (
         <>
@@ -31,7 +31,7 @@ export function SchemaBreakdown({ state }: { state: SchemaSectionState }) {
           </ul>
           {drift.expected_generated_at && (
             <Caption className="mt-4 flex items-center gap-1.5 border-t border-[var(--border-subtle)] pt-3">
-              <Icons.clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
               {t('admin.schemaDrift.seedCaptured', 'Seed captured {{when}}', { when: formatRelativeTime(drift.expected_generated_at) })}
             </Caption>
           )}

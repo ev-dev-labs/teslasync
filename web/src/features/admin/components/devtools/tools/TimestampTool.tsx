@@ -1,7 +1,7 @@
-import { Icons } from '@/lib/icons';
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import type { ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Clock, Hash } from 'lucide-react'
 import { Input, Button } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
 import { getRelativeTime } from '../helpers'
@@ -95,7 +95,7 @@ export function TimestampTool() {
 
   return (
     <ToolCard
-      icon={Icons.clock}
+      icon={Clock}
       color="green"
       title={t('devtools.utils.timestamp', 'Timestamp')}
       description={t('devtools.utils.timestampDesc', 'Convert between Unix and ISO 8601 timestamps')}
@@ -106,7 +106,7 @@ export function TimestampTool() {
           role="group"
           aria-label={t('devtools.utils.timestampCurrent', 'Current time')}
         >
-          <Icons.clock className="h-4 w-4 text-neon-green" aria-hidden="true" />
+          <Clock className="h-4 w-4 text-neon-green" aria-hidden="true" />
           <div className="text-sm">
             <span className="font-mono text-[var(--text-primary)]">{fmtInt(nowUnix)}</span>
             <span className="mx-2 text-[var(--text-muted)]" aria-hidden="true">|</span>
@@ -129,7 +129,7 @@ export function TimestampTool() {
               placeholder="1700000000"
               value={unix}
               onChange={handleUnixChange}
-              icon={<Icons.hash className="h-4 w-4" aria-hidden="true" />}
+              icon={<Hash className="h-4 w-4" aria-hidden="true" />}
               inputMode="numeric"
             />
             {fromUnix.date && (
@@ -151,7 +151,7 @@ export function TimestampTool() {
               placeholder="2024-01-01T00:00:00Z"
               value={iso}
               onChange={handleIsoChange}
-              icon={<Icons.clock className="h-4 w-4" aria-hidden="true" />}
+              icon={<Clock className="h-4 w-4" aria-hidden="true" />}
             />
             {fromIso.date && (
               <div className="mt-1 space-y-0.5">

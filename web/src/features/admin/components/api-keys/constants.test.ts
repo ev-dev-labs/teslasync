@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { describe, it, expect } from 'vitest';
+import { Shield, ShieldAlert, Crown, Key } from 'lucide-react';
 import { neonColorMap } from '@/lib/tokens';
 import {
   PERMISSION_META,
@@ -38,7 +38,7 @@ describe('PERMISSION_META', () => {
 
   it('maps read → green Shield with read-only copy', () => {
     const m = PERMISSION_META.read;
-    expect(m.icon).toBe(Icons.security);
+    expect(m.icon).toBe(Shield);
     expect(m.color).toBe('green');
     expect(m.barColor).toBe('#10b981');
     expect(m.labelKey).toBe('apiKeys.perm.read');
@@ -49,7 +49,7 @@ describe('PERMISSION_META', () => {
 
   it('maps read-write → amber ShieldAlert with command copy', () => {
     const m = PERMISSION_META['read-write'];
-    expect(m.icon).toBe(Icons.securityAlert);
+    expect(m.icon).toBe(ShieldAlert);
     expect(m.color).toBe('amber');
     expect(m.barColor).toBe('#f59e0b');
     expect(m.labelKey).toBe('apiKeys.perm.readWrite');
@@ -60,7 +60,7 @@ describe('PERMISSION_META', () => {
 
   it('maps admin → purple Crown with full-access copy', () => {
     const m = PERMISSION_META.admin;
-    expect(m.icon).toBe(Icons.crown);
+    expect(m.icon).toBe(Crown);
     expect(m.color).toBe('purple');
     expect(m.barColor).toBe('#a855f7');
     expect(m.labelKey).toBe('apiKeys.perm.admin');
@@ -124,7 +124,7 @@ describe('PERMISSION_ORDER', () => {
 
 describe('KEY_ICON', () => {
   it('is the lucide Key glyph', () => {
-    expect(KEY_ICON).toBe(Icons.key);
+    expect(KEY_ICON).toBe(Key);
   });
 
   it('is a defined, renderable component reference', () => {
@@ -192,7 +192,7 @@ describe('permissionMeta — inherited Object.prototype keys never leak (regress
     const m = permissionMeta('constructor');
     expect(m).not.toBe(Object);
     expect(m).toBe(FALLBACK_PERMISSION_META);
-    expect(m.icon).toBe(Icons.security);
+    expect(m.icon).toBe(Shield);
   });
 
   it('does not treat "toString" as a real permission', () => {

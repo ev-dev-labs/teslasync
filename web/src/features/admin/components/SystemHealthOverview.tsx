@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * System page — health-at-a-glance KPI band.
  *
@@ -21,6 +20,7 @@ import { Icons } from '@/lib/icons';
  */
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Gauge, TrendingUp, ServerCog, Layers, CheckCircle2, AlertTriangle } from 'lucide-react'
 
 import { MetricCard } from '@/components/data-display'
 import { Skeleton } from '@/components/feedback'
@@ -148,14 +148,14 @@ export function SystemHealthOverview({ rateLimit, queue }: SystemHealthOverviewP
         label={t('system.overview.throttleBudgets', 'Throttle budgets')}
         value={hasRate ? fmtInt(scopes.length) : dash}
         subtitle={hasRate ? budgetSubtitle : t('system.overview.awaiting', 'Awaiting data')}
-        icon={<Icons.speed className="h-5 w-5" aria-hidden="true" />}
+        icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
         color={hasRate && scopes.length > 0 ? RATE_SEVERITY_COLOR[worstRateSeverity] : 'cyan'}
       />
       <MetricCard
         label={t('system.overview.peakUsage', 'Peak budget usage')}
         value={hasRate ? fmtPercent(peakUsagePct) : dash}
         subtitle={t('system.overview.peakUsageHint', 'Of the tightest window')}
-        icon={<Icons.trendUp className="h-5 w-5" aria-hidden="true" />}
+        icon={<TrendingUp className="h-5 w-5" aria-hidden="true" />}
         color={hasRate ? usageColor(peakUsagePct) : 'cyan'}
       />
       <MetricCard
@@ -164,28 +164,28 @@ export function SystemHealthOverview({ rateLimit, queue }: SystemHealthOverviewP
           hasQueue ? `${fmtInt(queueTotals.healthy)} / ${fmtInt(queueTotals.workerCount)}` : dash
         }
         subtitle={t('system.overview.activeWorkersHint', 'Reporting heartbeats')}
-        icon={<Icons.serverCog className="h-5 w-5" aria-hidden="true" />}
+        icon={<ServerCog className="h-5 w-5" aria-hidden="true" />}
         color={hasQueue ? workersColor : 'cyan'}
       />
       <MetricCard
         label={t('system.overview.backlog', 'Queue backlog')}
         value={hasQueue ? fmtInt(queueTotals.backlog) : dash}
         subtitle={t('system.overview.backlogHint', 'Pending + in progress')}
-        icon={<Icons.layers className="h-5 w-5" aria-hidden="true" />}
+        icon={<Layers className="h-5 w-5" aria-hidden="true" />}
         color="blue"
       />
       <MetricCard
         label={t('system.overview.succeeded', 'Succeeded 24h')}
         value={hasQueue ? fmtInt(queueTotals.succeeded) : dash}
         subtitle={t('system.overview.succeededHint', 'Jobs completed')}
-        icon={<Icons.successFilled className="h-5 w-5" aria-hidden="true" />}
+        icon={<CheckCircle2 className="h-5 w-5" aria-hidden="true" />}
         color="green"
       />
       <MetricCard
         label={t('system.overview.failed', 'Failed 24h')}
         value={hasQueue ? fmtInt(queueTotals.failed) : dash}
         subtitle={t('system.overview.failedHint', 'Terminal failures')}
-        icon={<Icons.warning className="h-5 w-5" aria-hidden="true" />}
+        icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
         color={hasQueue && queueTotals.failed > 0 ? 'red' : 'green'}
       />
     </div>

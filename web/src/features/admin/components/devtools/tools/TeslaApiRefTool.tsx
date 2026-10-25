@@ -1,6 +1,6 @@
-import { Icons } from '@/lib/icons';
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { BookOpen } from 'lucide-react'
 import { Input, Badge, DataTable, CopyButton, type Column } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
 import { TESLA_ENDPOINTS } from '../constants'
@@ -59,7 +59,7 @@ export function TeslaApiRefTool() {
   )
 
   return (
-    <ToolCard icon={Icons.bookOpen} color="cyan" title={t('devtools.utils.teslaApiRef', 'Tesla API ref')} description={t('devtools.utils.teslaApiRefDesc', 'Tesla API ref desc')}>
+    <ToolCard icon={BookOpen} color="cyan" title={t('devtools.utils.teslaApiRef', 'Tesla API ref')} description={t('devtools.utils.teslaApiRefDesc', 'Tesla API ref desc')}>
       <div className="space-y-3">
         <Input
           type="search"
@@ -67,7 +67,7 @@ export function TeslaApiRefTool() {
           placeholder={searchLabel}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          icon={<Icons.bookOpen aria-hidden="true" className="h-4 w-4" />}
+          icon={<BookOpen aria-hidden="true" className="h-4 w-4" />}
         />
         <DataTable
           tableId="admin:tesla-api-ref"

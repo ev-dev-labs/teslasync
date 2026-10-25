@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * BackendTool contract tests.
  *
@@ -26,6 +25,7 @@ import { Icons } from '@/lib/icons';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Wrench } from 'lucide-react'
 import type { ComponentProps } from 'react'
 
 vi.mock('@/api/client', () => ({
@@ -61,7 +61,7 @@ function renderTool(props?: Partial<ComponentProps<typeof BackendTool>>) {
   return render(
     <QueryClientProvider client={qc}>
       <BackendTool
-        icon={Icons.maintenance}
+        icon={Wrench}
         color="cyan"
         title="Flush Cache"
         description="Drops the Redis signal cache"

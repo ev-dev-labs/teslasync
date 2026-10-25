@@ -1,7 +1,7 @@
-import { Icons } from '@/lib/icons';
 import { describe, it, expect } from 'vitest';
 import { createElement } from 'react';
 import { render } from '@testing-library/react';
+import { Clock, HardDriveDownload, CalendarClock, CalendarX } from 'lucide-react';
 
 import { Badge } from '@/components/ui';
 import { Timeline } from '@/components/data-display';
@@ -77,10 +77,10 @@ describe('STATUS_ICON', () => {
 
   it('binds each status to its lucide glyph', () => {
     expect(STATUS_ICON).toEqual({
-      created: Icons.clock,
-      downloaded: Icons.hardDriveDownload,
-      expires: Icons.calendarClock,
-      expired: Icons.calendarX,
+      created: Clock,
+      downloaded: HardDriveDownload,
+      expires: CalendarClock,
+      expired: CalendarX,
     });
   });
 
@@ -101,8 +101,8 @@ describe('STATUS_ICON', () => {
 
   it('distinguishes queued from running by glyph even though they share a colour/variant', () => {
     // Creation and future expiry share neutral ink, not their glyphs/labels.
-    expect(STATUS_ICON.created).toBe(Icons.clock);
-    expect(STATUS_ICON.expires).toBe(Icons.calendarClock);
+    expect(STATUS_ICON.created).toBe(Clock);
+    expect(STATUS_ICON.expires).toBe(CalendarClock);
     expect(STATUS_ICON.created).not.toBe(STATUS_ICON.expires);
   });
 

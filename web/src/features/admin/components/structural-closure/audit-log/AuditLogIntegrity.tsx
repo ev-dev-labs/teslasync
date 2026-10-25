@@ -1,5 +1,4 @@
-import { Icons } from '@/lib/icons';
-
+import { ShieldCheck, ShieldAlert, ShieldQuestion } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { Badge, Button, Caption } from '@/components/ui';
 import { DataStateNotice, EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
@@ -60,17 +59,17 @@ export function AuditLogIntegrity({ controller }: Props) {
               <div className="space-y-3">
                 {verifyData.intact && hasCheckedRows ? (
                   <Badge variant="success" size="lg">
-                    <Icons.securityCheck className="mr-1 inline h-4 w-4" aria-hidden="true" />
+                    <ShieldCheck className="mr-1 inline h-4 w-4" aria-hidden="true" />
                     {t('admin.auditLog.chainIntact', 'Chain intact')}
                   </Badge>
                 ) : !verifyData.intact ? (
                   <Badge variant="danger" size="lg">
-                    <Icons.securityAlert className="mr-1 inline h-4 w-4" aria-hidden="true" />
+                    <ShieldAlert className="mr-1 inline h-4 w-4" aria-hidden="true" />
                     {t('admin.auditLog.chainBroken', 'Chain broken')}
                   </Badge>
                 ) : (
                   <Badge variant="neutral" size="lg">
-                    <Icons.shieldQuestion className="mr-1 inline h-4 w-4" aria-hidden="true" />
+                    <ShieldQuestion className="mr-1 inline h-4 w-4" aria-hidden="true" />
                     {t('admin.auditLog.noVerificationEvidence', 'No verification evidence')}
                   </Badge>
                 )}
@@ -104,7 +103,7 @@ export function AuditLogIntegrity({ controller }: Props) {
             ) : (
               <EmptyState
                 /* no-action: verification is an explicit, read-only operator action via the button above */
-                icon={<Icons.shieldQuestion className="h-8 w-8" />}
+                icon={<ShieldQuestion className="h-8 w-8" />}
                 message={t(
                   'admin.auditLog.boundedVerifyHint',
                   'Read-only GET re-derives at most 1,000 non-null row hashes, oldest first, from the server-selected lower bound (default: 30 days ago). It does not verify the full ledger or row adjacency.',

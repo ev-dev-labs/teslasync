@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * Feature Flags Page — operator surface for the typed feature-flag
  * registry mounted under the `system/flags*` API.
@@ -28,6 +27,7 @@ import { Icons } from '@/lib/icons';
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Flag, History, Layers, Plus } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { Button, Icon, Input, Modal, Text } from '@/components/ui';
@@ -130,7 +130,7 @@ export default function FeatureFlagsPage() {
       primaryAction={
         <Button
           variant="primary"
-          icon={<Icon icon={Icons.add} />}
+          icon={<Icon icon={Plus} />}
           onClick={handleCreate}
           wrapLabel
         >
@@ -154,7 +154,7 @@ export default function FeatureFlagsPage() {
           <SectionErrorBoundary name="flags-table">
             <div className="min-w-0 xl:col-span-2">
             <LayoutCard title={t('admin.flags.panels.registry', 'Registry')}
-              actions={<Icon icon={Icons.flag} className={typography.color.muted} />}>
+              actions={<Icon icon={Flag} className={typography.color.muted} />}>
               {flagsState.fatalError ? (
                 <QueryError
                   error={flagsState.fatalError}
@@ -175,7 +175,7 @@ export default function FeatureFlagsPage() {
 
           <SectionErrorBoundary name="flags-composition">
             <LayoutCard title={t('admin.flags.panels.composition', 'Value composition')}
-              actions={<Icon icon={Icons.layers} className={typography.color.muted} />}>
+              actions={<Icon icon={Layers} className={typography.color.muted} />}>
               <FlagCompositionPanel
                 flags={flagRows}
                 loading={flagsState.status === 'initial'}
@@ -191,7 +191,7 @@ export default function FeatureFlagsPage() {
       <FadeIn delay={0.2}>
         <SectionErrorBoundary name="flags-changes">
           <LayoutCard title={t('admin.flags.panels.changes', 'Recent changes')}
-            actions={<Icon icon={Icons.history} className={typography.color.muted} />}>
+            actions={<Icon icon={History} className={typography.color.muted} />}>
             {changesState.fatalError ? (
               <QueryError
                 error={changesState.fatalError}

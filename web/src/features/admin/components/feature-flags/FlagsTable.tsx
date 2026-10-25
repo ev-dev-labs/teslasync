@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * Feature Flags — main table.
  *
@@ -11,6 +10,7 @@ import { Icons } from '@/lib/icons';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { VisuallyHidden } from '@/components/a11y';
+import { Pencil, Trash2 } from 'lucide-react';
 
 import {
   DataTable,
@@ -136,11 +136,11 @@ export function FlagsTable({
         visibleOnMobile: true,
         render: (row) => (
           <div className="flex items-center gap-2">
-            <IconButton icon={<Icons.pencil className="h-3.5 w-3.5" aria-hidden="true" />} label={t('admin.flags.actions.edit', 'Edit')} onClick={() => onEdit(row)} aria-label={t('admin.flags.actions.editFlag', 'Edit flag {{key}}', {
+            <IconButton icon={<Pencil className="h-3.5 w-3.5" aria-hidden="true" />} label={t('admin.flags.actions.edit', 'Edit')} onClick={() => onEdit(row)} aria-label={t('admin.flags.actions.editFlag', 'Edit flag {{key}}', {
                 key: row.key,
               })} />
             {/* confirm-step: opens the delete-flag confirmation dialog */}
-            <IconButton icon={<Icons.delete className="h-3.5 w-3.5" aria-hidden="true" />} label={t('admin.flags.actions.delete', 'Delete')} onClick={() => onAskDelete(row)} aria-label={t('admin.flags.actions.deleteFlag', 'Delete flag {{key}}', {
+            <IconButton icon={<Trash2 className="h-3.5 w-3.5" aria-hidden="true" />} label={t('admin.flags.actions.delete', 'Delete')} onClick={() => onAskDelete(row)} aria-label={t('admin.flags.actions.deleteFlag', 'Delete flag {{key}}', {
                 key: row.key,
               })} />
           </div>

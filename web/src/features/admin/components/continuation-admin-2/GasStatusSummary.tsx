@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
+import { Activity, Fuel, Zap, Clock, PauseCircle } from 'lucide-react';
 import type { DataState } from '@/api/dataState';
 import type { GasPriceStatus } from '@/api/types';
 import { MetricCard } from '@/components/data-display';
@@ -25,19 +25,19 @@ export function GasStatusSummary({ source }: { source: DataState<GasPriceStatus>
           <MetricCard label={t('gas.status', 'Status')}
             value={data ? (data.enabled ? t('gas.running', 'Running') : t('gas.stopped', 'Stopped')) : '—'}
             subtitle={data ? (data.enabled ? t('gas.enabledShort', 'Auto-poll on') : t('gas.disabledShort', 'Auto-poll off')) : '—'}
-            icon={data?.enabled ? <Icons.activity className="h-5 w-5" aria-hidden /> : <Icons.pauseCircle className="h-5 w-5" aria-hidden />}
+            icon={data?.enabled ? <Activity className="h-5 w-5" aria-hidden /> : <PauseCircle className="h-5 w-5" aria-hidden />}
             color={data?.enabled ? 'green' : 'amber'} />
           <MetricCard label={t('gas.currentPrice', 'Current price')}
             value={data && data.current_price > 0 ? formatCurrency(data.current_price) : '—'}
-            subtitle={t('gas.perUnit', 'per {{unit}}', { unit })} icon={<Icons.fuel className="h-5 w-5" aria-hidden />} color="amber" />
+            subtitle={t('gas.perUnit', 'per {{unit}}', { unit })} icon={<Fuel className="h-5 w-5" aria-hidden />} color="amber" />
           <MetricCard label={t('gas.kwhEquivalent', 'kWh equivalent')}
             value={data && data.current_price_kwh_eq > 0 ? formatCurrency(data.current_price_kwh_eq) : '—'}
-            subtitle={t('gas.perKwh', 'per kWh')} icon={<Icons.charging className="h-5 w-5" aria-hidden />} color="cyan"
+            subtitle={t('gas.perKwh', 'per kWh')} icon={<Zap className="h-5 w-5" aria-hidden />} color="cyan"
             help={{ i18nKey: 'gas.kwhEquivalentHelp', defaultValue: 'Gasoline cost expressed as an equivalent price per kilowatt-hour for EV comparison.' }} />
           <MetricCard label={t('gas.lastPolled', 'Last polled')}
             value={!data ? '—' : hasPolled ? formatRelative(lastPoll) : t('gas.never', 'Never')}
             subtitle={!data ? '—' : hasPolled ? formatDateTime(lastPoll) : t('gas.awaitingFirstPoll', 'Awaiting first poll')}
-            icon={<Icons.clock className="h-5 w-5" aria-hidden />} color="blue" />
+            icon={<Clock className="h-5 w-5" aria-hidden />} color="blue" />
         </div>
       </AdminSourceContent>
     </section>

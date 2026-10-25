@@ -1,5 +1,4 @@
-import { Icons } from '@/lib/icons';
-
+import { ArrowDown, ArrowUp, Search } from 'lucide-react';
 import { Badge, PanelTitle, Caption, Button, Select } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { FleetEndpointTable } from '../../FleetEndpointTable';
@@ -50,7 +49,7 @@ export function FleetAPIRouteCatalog({ controller, pollingConfig }: Props) {
                     aria-label={sortDescending
                       ? t('fleetApi.controls.sortAscending', 'Sort ascending')
                       : t('fleetApi.controls.sortDescending', 'Sort descending')}>
-                    {sortDescending ? <Icons.arrowDown className="h-4 w-4" /> : <Icons.arrowUp className="h-4 w-4" />}
+                    {sortDescending ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
@@ -73,7 +72,7 @@ export function FleetAPIRouteCatalog({ controller, pollingConfig }: Props) {
               <div className="min-w-0 space-y-3">
                 {endpointGroups.length === 0 ? (
                   <EmptyState
-                    icon={<Icons.search className="h-8 w-8" />}
+                    icon={<Search className="h-8 w-8" />}
                     message={t('fleetApi.controls.noMatches', 'No API routes match that search.')}
                     action={{ label: t('fleetApi.controls.clearSearch', 'Clear search'), onClick: () => setSearch('') }}
                   />

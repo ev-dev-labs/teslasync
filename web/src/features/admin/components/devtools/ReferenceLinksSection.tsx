@@ -1,23 +1,16 @@
-import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next'
+import { BookOpen, Globe, ExternalLink, Radio } from 'lucide-react'
 import { GlassPanel, Text } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { VisuallyHidden } from '@/components/a11y'
 import { cn } from '@/lib/cn'
 import { ICON_COLOR_MAP, REFERENCE_LINKS } from './constants'
 
-const referenceIcon = (icon: string) => {
-  switch (icon) {
-    case 'globe': return Icons.globe
-    case 'externalLink': return Icons.externalLink
-    case 'radio': return Icons.radio
-    case 'bookOpen':
-    case 'Globe': return Icons.globe
-    case 'ExternalLink': return Icons.externalLink
-    case 'Radio': return Icons.radio
-    case 'BookOpen':
-    default: return Icons.bookOpen
-  }
+const ICON_MAP: Record<string, React.ElementType> = {
+  BookOpen,
+  Globe,
+  ExternalLink,
+  Radio,
 }
 
 /**
@@ -43,7 +36,7 @@ export function ReferenceLinksSection() {
       // no-action: REFERENCE_LINKS is a hardcoded module constant in ./constants.ts,
       // curated at build time — it is never empty in a running deployment.
       <EmptyState
-        icon={<Icons.bookOpen className="h-6 w-6" aria-hidden="true" />}
+        icon={<BookOpen className="h-6 w-6" aria-hidden="true" />}
         message={t('devtools.ref.empty', 'No reference links available')}
       />
     )
@@ -54,7 +47,7 @@ export function ReferenceLinksSection() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {links.map((link) => {
-        const Icon = referenceIcon(link.icon)
+        const Icon = ICON_MAP[link.icon] ?? BookOpen
         const label = t(link.title, link.label ?? link.title)
         return (
           <GlassPanel key={link.url ?? link.title} hover className="p-4">

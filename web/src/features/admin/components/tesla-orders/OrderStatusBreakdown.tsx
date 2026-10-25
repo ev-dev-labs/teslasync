@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * Tesla Orders — status breakdown.
  *
@@ -9,6 +8,7 @@ import { Icons } from '@/lib/icons';
  */
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PieChart } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Text, Caption, Badge } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -42,7 +42,7 @@ export function OrderStatusBreakdown({
   return (
     <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <Icons.pieChart className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <PieChart className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('admin.teslaOrders.panels.breakdown', 'Order status')}
       </PanelTitle>
 

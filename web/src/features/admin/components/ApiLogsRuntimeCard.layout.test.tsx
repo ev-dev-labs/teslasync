@@ -1,6 +1,6 @@
-import { Icons } from '@/lib/icons';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Activity } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiLogsRuntimeCard } from './ApiLogsRuntimeCard';
 
@@ -19,7 +19,7 @@ describe('runtime card layout', () => {
         <ApiLogsRuntimeCard
           title="Browser reports"
           scope="Last hour"
-          icon={Icons.activity}
+          icon={Activity}
           count="0"
           countLabel="Received reports"
           context="Summary time"

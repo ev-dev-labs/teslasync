@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * Operator "system budgets" dashboard.
  *
@@ -21,6 +20,7 @@ import { Icons } from '@/lib/icons';
 
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { RefreshCw } from 'lucide-react'
 
 import { PageLayout } from '@/components/layout'
 import { Button, SectionTitle } from '@/components/ui'
@@ -77,7 +77,7 @@ export default function SystemPage() {
       onClick={refreshAll}
       loading={refreshing}
       disabled={refreshing}
-      icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />}
+      icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
       data-testid="system-refresh-all"
     >
       {t('system.toolbar.refreshAll', 'Refresh all')}

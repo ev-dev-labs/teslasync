@@ -1,5 +1,6 @@
-import { Icons } from '@/lib/icons';
-
+import {
+  KeyRound, FileCode, Key, Globe, Shield, Link, Radio,
+} from 'lucide-react'
 
 /* ─── icon color map ──────────────────────────────────────────────────── */
 
@@ -135,13 +136,13 @@ export const TELEMETRY_FIELDS = [
 /* ─── onboarding steps ────────────────────────────────────────────────── */
 
 export const ONBOARDING_STEPS = [
-  { id: 'account', labelKey: 'devtools.onboarding.account.label', descKey: 'devtools.onboarding.account.desc', label: 'Tesla developer account', icon: Icons.keyRound, desc: 'Create a Tesla Developer account at developer.tesla.com' },
-  { id: 'application', labelKey: 'devtools.onboarding.application.label', descKey: 'devtools.onboarding.application.desc', label: 'Create application', icon: Icons.fileCode, desc: 'Register a new application in the Tesla Developer Portal' },
-  { id: 'keypair', labelKey: 'devtools.onboarding.keypair.label', descKey: 'devtools.onboarding.keypair.desc', label: 'Generate key pair', icon: Icons.key, desc: 'Generate an EC private/public key pair for Fleet API authentication' },
-  { id: 'register', labelKey: 'devtools.onboarding.register.label', descKey: 'devtools.onboarding.register.desc', label: 'Register partner', icon: Icons.globe, desc: 'Register as a Fleet API partner with your public key' },
-  { id: 'auth', labelKey: 'devtools.onboarding.auth.label', descKey: 'devtools.onboarding.auth.desc', label: 'Authorize account', icon: Icons.security, desc: 'Complete OAuth2 authorization to get API access tokens' },
-  { id: 'pair', labelKey: 'devtools.onboarding.pair.label', descKey: 'devtools.onboarding.pair.desc', label: 'Pair vehicle key', icon: Icons.link, desc: 'Pair your public key with each vehicle for command access' },
-  { id: 'telemetry', labelKey: 'devtools.onboarding.telemetry.label', descKey: 'devtools.onboarding.telemetry.desc', label: 'Fleet Telemetry', icon: Icons.radio, desc: 'Configure Fleet Telemetry streaming for real-time data' },
+  { id: 'account', labelKey: 'devtools.onboarding.account.label', descKey: 'devtools.onboarding.account.desc', label: 'Tesla developer account', icon: KeyRound, desc: 'Create a Tesla Developer account at developer.tesla.com' },
+  { id: 'application', labelKey: 'devtools.onboarding.application.label', descKey: 'devtools.onboarding.application.desc', label: 'Create application', icon: FileCode, desc: 'Register a new application in the Tesla Developer Portal' },
+  { id: 'keypair', labelKey: 'devtools.onboarding.keypair.label', descKey: 'devtools.onboarding.keypair.desc', label: 'Generate key pair', icon: Key, desc: 'Generate an EC private/public key pair for Fleet API authentication' },
+  { id: 'register', labelKey: 'devtools.onboarding.register.label', descKey: 'devtools.onboarding.register.desc', label: 'Register partner', icon: Globe, desc: 'Register as a Fleet API partner with your public key' },
+  { id: 'auth', labelKey: 'devtools.onboarding.auth.label', descKey: 'devtools.onboarding.auth.desc', label: 'Authorize account', icon: Shield, desc: 'Complete OAuth2 authorization to get API access tokens' },
+  { id: 'pair', labelKey: 'devtools.onboarding.pair.label', descKey: 'devtools.onboarding.pair.desc', label: 'Pair vehicle key', icon: Link, desc: 'Pair your public key with each vehicle for command access' },
+  { id: 'telemetry', labelKey: 'devtools.onboarding.telemetry.label', descKey: 'devtools.onboarding.telemetry.desc', label: 'Fleet Telemetry', icon: Radio, desc: 'Configure Fleet Telemetry streaming for real-time data' },
 ] as const
 
 /* ─── reference links ─────────────────────────────────────────────────── */
@@ -150,8 +151,8 @@ export const ONBOARDING_STEPS = [
 // `t(title, label)` so the card never shows a raw key when a translation is
 // absent (none of these keys ship in the locale bundles today).
 export const REFERENCE_LINKS = [
-  { title: 'devtools.ref.fleetOverview', label: 'Fleet API overview', url: 'https://developer.tesla.com/docs/fleet-api', icon: 'bookOpen' as const },
-  { title: 'devtools.ref.partnerEndpoints', label: 'Partner endpoints', url: 'https://developer.tesla.com/docs/fleet-api/endpoints/partner-endpoints#register', icon: 'globe' as const },
-  { title: 'devtools.ref.devPortal', label: 'Developer portal', url: 'https://developer.tesla.com', icon: 'externalLink' as const },
-  { title: 'devtools.ref.telemetryGuide', label: 'Fleet Telemetry guide', url: 'https://developer.tesla.com/docs/fleet-api/fleet-telemetry', icon: 'radio' as const },
+  { title: 'devtools.ref.fleetOverview', label: 'Fleet API overview', url: 'https://developer.tesla.com/docs/fleet-api', icon: 'BookOpen' as const },
+  { title: 'devtools.ref.partnerEndpoints', label: 'Partner endpoints', url: 'https://developer.tesla.com/docs/fleet-api/endpoints/partner-endpoints#register', icon: 'Globe' as const },
+  { title: 'devtools.ref.devPortal', label: 'Developer portal', url: 'https://developer.tesla.com', icon: 'ExternalLink' as const },
+  { title: 'devtools.ref.telemetryGuide', label: 'Fleet Telemetry guide', url: 'https://developer.tesla.com/docs/fleet-api/fleet-telemetry', icon: 'Radio' as const },
 ]

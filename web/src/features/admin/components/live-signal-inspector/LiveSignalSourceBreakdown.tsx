@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * Live Signal Inspector — source-layer breakdown.
  *
@@ -10,6 +9,7 @@ import { Icons } from '@/lib/icons';
  */
 import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Layers } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { SourceLayerBadge } from '@/components/data-display';
@@ -85,7 +85,7 @@ export function LiveSignalSourceBreakdown({
   return (
     <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <Icons.layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('admin.liveSignals.panels.sources', 'Source layers')}
       </PanelTitle>
 

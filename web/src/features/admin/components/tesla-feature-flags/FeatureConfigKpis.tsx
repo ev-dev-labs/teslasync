@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
+import { Flag, ToggleRight, ToggleLeft, Percent } from 'lucide-react';
 
 import { MetricCard } from '@/components/data-display';
 import { StatGridSkeleton } from '@/components/feedback';
@@ -55,25 +55,25 @@ export function FeatureConfigKpis({ summary, isLoading, error }: FeatureConfigKp
       <MetricCard
         label={t('featureConfig.kpi.total', 'Total features')}
         value={error ? UNKNOWN : fmtInt(total)}
-        icon={<Icons.flag className="h-5 w-5" aria-hidden="true" />}
+        icon={<Flag className="h-5 w-5" aria-hidden="true" />}
         color="blue"
       />
       <MetricCard
         label={t('featureConfig.kpi.enabled', 'Enabled')}
         value={error ? UNKNOWN : fmtInt(enabled)}
-        icon={<Icons.toggleRight className="h-5 w-5" aria-hidden="true" />}
+        icon={<ToggleRight className="h-5 w-5" aria-hidden="true" />}
         color="green"
       />
       <MetricCard
         label={t('featureConfig.kpi.disabled', 'Disabled')}
         value={error ? UNKNOWN : fmtInt(disabled)}
-        icon={<Icons.toggleLeft className="h-5 w-5" aria-hidden="true" />}
+        icon={<ToggleLeft className="h-5 w-5" aria-hidden="true" />}
         color="amber"
       />
       <MetricCard
         label={t('featureConfig.kpi.enabledRate', 'Enabled rate')}
         value={error ? UNKNOWN : fmtPercent(enabledRate)}
-        icon={<Icons.percent className="h-5 w-5" aria-hidden="true" />}
+        icon={<Percent className="h-5 w-5" aria-hidden="true" />}
         color="cyan"
       />
     </div>

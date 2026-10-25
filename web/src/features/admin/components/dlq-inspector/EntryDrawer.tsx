@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * DLQ Inspector — entry drawer.
  *
@@ -17,6 +16,7 @@ import { Icons } from '@/lib/icons';
  */
 import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Send } from 'lucide-react';
 
 import {
   Button,
@@ -234,7 +234,7 @@ export function EntryDrawer({
             variant="primary"
             disabled={replayDisabled}
             loading={replayInFlight}
-            icon={<Icons.send className="h-4 w-4" />}
+            icon={<Send className="h-4 w-4" />}
             onClick={onReplay}
           >
             {t('admin.dlq.drawer.replay', 'Replay')}

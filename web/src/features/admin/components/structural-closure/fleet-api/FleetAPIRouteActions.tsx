@@ -1,5 +1,4 @@
-import { Icons } from '@/lib/icons';
-
+import { Activity, Pause, Shield, Search } from 'lucide-react';
 import { Toggle, Text, Caption, Label, Input } from '@/components/ui';
 import type { useFleetAPIPage } from '../../../hooks/useFleetAPIPage';
 
@@ -14,15 +13,15 @@ export function FleetAPIRouteActions({ controller }: Props) {
           {pollingKnown && (
             <div className="grid gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-3 sm:grid-cols-3">
               <div className="flex items-center gap-2">
-                <Icons.security className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+                <Shield className="h-4 w-4 text-emerald-400" aria-hidden="true" />
                 <Text as="span" size="sm" weight="medium">{t('fleetApi.controls.accessSummary', '{{count}} routes available on demand', { count: enabledCount })}</Text>
               </div>
               <div className="flex items-center gap-2">
-                <Icons.activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 <Text as="span" size="sm" weight="medium">{t('fleetApi.controls.autoSummary', '{{count}} selected for auto-poll', { count: autoCount })}</Text>
               </div>
               <div className="flex items-center gap-2">
-                <Icons.pause className="h-4 w-4 text-amber-300" aria-hidden="true" />
+                <Pause className="h-4 w-4 text-amber-300" aria-hidden="true" />
                 <Text as="span" size="sm" weight="medium">{pollingConfig.auto_polling_enabled
                   ? t('fleetApi.controls.scheduleRunning', 'Schedule running')
                   : t('fleetApi.controls.schedulePaused', 'Schedule paused')}</Text>
@@ -52,7 +51,7 @@ export function FleetAPIRouteActions({ controller }: Props) {
           {pollingKnown && (
             <div className="flex flex-col gap-2">
               <div className="flex w-full items-center gap-2">
-                <Icons.search className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+                <Search className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
                 <div className="min-w-0 flex-1">
                   <Input value={search} onChange={(e) => { setSearch(e.target.value); if (e.target.value) setSelectedGroup('all'); }}
                     placeholder={t('fleetApi.controls.search', 'Search API routes')}

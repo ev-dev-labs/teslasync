@@ -18,7 +18,6 @@ import type { TelemetryError } from './types'
 import { ICON_COLOR_MAP, ONBOARDING_STEPS, TELEMETRY_FIELDS } from './constants'
 import { Icons } from '@/lib/icons';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { useLocalStorageSync } from '@/lib/useLocalStorageSync';
 
 function resultError(error: unknown, data?: Record<string, unknown>): string | undefined {
   return error ? getErrorMessage(error) : typeof data?.error === 'string' ? data.error : undefined
@@ -772,22 +771,18 @@ function OnboardingWorkflow() {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   const [currentStep, setCurrentStep] = useState(0)
-  const [completed, setCompleted] = useLocalStorageSync<Record<string, boolean>>(
-    'devtools-onboarding',
-    (raw) => {
-      if (!raw) return {};
-      try {
-        const parsed: unknown = JSON.parse(raw);
-        return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-          ? parsed as Record<string, boolean>
-          : {};
-      } catch {
-        return {};
-      }
-    },
-    (value) => JSON.stringify(value),
-    'onboarded',
-  )
+  const [completed, setCompleted] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('devtools-onboarding')
+      return saved ? (JSON.parse(saved) as Record<string, boolean>) : {}
+    } catch {
+      return {}
+    }
+  })
+
+  useEffect(() => {
+    localStorage.setItem('devtools-onboarding', JSON.stringify(completed))
+  }, [completed])
 
   const { data: keyStatus, error: keyStatusError } = useQuery({
     queryKey: ['devtools', 'public-key-status'],
@@ -816,7 +811,7 @@ function OnboardingWorkflow() {
   const StepIcon = step.icon
 
   const markComplete = () => {
-    setCompleted({ ...completed, [step.id]: true })
+    setCompleted((prev) => ({ ...prev, [step.id]: true }))
     if (currentStep < ONBOARDING_STEPS.length - 1) setCurrentStep(currentStep + 1)
   }
 

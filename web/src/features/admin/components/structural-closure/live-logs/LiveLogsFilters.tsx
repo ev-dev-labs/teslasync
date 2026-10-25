@@ -1,5 +1,4 @@
-import { Icons } from '@/lib/icons';
-
+import { Filter } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { Input, Select } from '@/components/ui';
 import { type LogStreamLevel } from '@/api/hooks/useLogStream';
@@ -15,7 +14,7 @@ export function LiveLogsFilters({ controller }: Props) {
 <div className="min-w-0" data-testid="livelogs-filters">
       <LayoutCard
         title={t('liveLogs.section.filters', 'Filters')}
-        actions={<Icons.filter className="h-4 w-4 text-cyan-300" aria-hidden />}
+        actions={<Filter className="h-4 w-4 text-cyan-300" aria-hidden />}
       >
       <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-4">
         <Select

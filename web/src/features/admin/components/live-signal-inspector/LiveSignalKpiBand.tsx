@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * Live Signal Inspector — KPI band.
  *
@@ -9,6 +8,7 @@ import { Icons } from '@/lib/icons';
  * disappears (design-language §8).
  */
 import { useTranslation } from 'react-i18next';
+import { Radio, Zap, Clock, Database, Hash, Timer } from 'lucide-react';
 
 import { MetricCard } from '@/components/data-display';
 import { formatAge, type LiveSignalStats } from './liveSignalStats';
@@ -30,40 +30,40 @@ export function LiveSignalKpiBand({ stats }: LiveSignalKpiBandProps) {
       <MetricCard
         label={t('admin.liveSignals.kpi.total', 'Total signals')}
         value={stats.total ?? 0}
-        icon={<Icons.radio className="h-5 w-5" aria-hidden="true" />}
+        icon={<Radio className="h-5 w-5" aria-hidden="true" />}
         color="cyan"
       />
       <MetricCard
         label={t('admin.liveSignals.kpi.live', 'Live · L1')}
         value={stats.live ?? 0}
-        icon={<Icons.charging className="h-5 w-5" aria-hidden="true" />}
+        icon={<Zap className="h-5 w-5" aria-hidden="true" />}
         color="green"
         subtitle={t('admin.liveSignals.kpi.liveHint', 'Fresh in-process')}
       />
       <MetricCard
         label={t('admin.liveSignals.kpi.stale', 'Stale')}
         value={stats.stale ?? 0}
-        icon={<Icons.clock className="h-5 w-5" aria-hidden="true" />}
+        icon={<Clock className="h-5 w-5" aria-hidden="true" />}
         color="amber"
         subtitle={t('admin.liveSignals.kpi.staleHint', 'Past 2-min window')}
       />
       <MetricCard
         label={t('admin.liveSignals.kpi.legacy', 'Legacy · L2')}
         value={stats.legacy ?? 0}
-        icon={<Icons.database className="h-5 w-5" aria-hidden="true" />}
+        icon={<Database className="h-5 w-5" aria-hidden="true" />}
         color="blue"
         subtitle={t('admin.liveSignals.kpi.legacyHint', 'Redis, unknown age')}
       />
       <MetricCard
         label={t('admin.liveSignals.kpi.numeric', 'Numeric fields')}
         value={stats.numeric ?? 0}
-        icon={<Icons.hash className="h-5 w-5" aria-hidden="true" />}
+        icon={<Hash className="h-5 w-5" aria-hidden="true" />}
         color="purple"
       />
       <MetricCard
         label={t('admin.liveSignals.kpi.freshest', 'Freshest')}
         value={formatAge(stats.freshestAgeMs)}
-        icon={<Icons.timer className="h-5 w-5" aria-hidden="true" />}
+        icon={<Timer className="h-5 w-5" aria-hidden="true" />}
         color="cyan"
         subtitle={t('admin.liveSignals.kpi.freshestHint', 'Newest value age')}
       />

@@ -1,7 +1,7 @@
-import { Icons } from '@/lib/icons';
 import { IconButton } from '@/components/ui/IconButton';
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Archive, Bug, CheckCircle, ExternalLink, PieChart, RefreshCw, RotateCcw, Workflow } from 'lucide-react'
 
 import {
   Button,
@@ -248,7 +248,7 @@ export default function FeedbackQueuePage() {
               className={cn(typography.role.caption, neonColorMap.cyan.text,
                 'inline-flex min-h-11 items-center gap-1 rounded-shape-sm underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] md:min-h-6')}
             >
-              <Icon icon={Icons.externalLink} size="xs" />
+              <Icon icon={ExternalLink} size="xs" />
               {t('feedback.queue.openIssue', 'Open issue')}
             </a>
           ) : (
@@ -294,7 +294,7 @@ export default function FeedbackQueuePage() {
           type="button"
           variant="secondary"
           size="sm"
-          icon={<Icon icon={Icons.success} />}
+          icon={<Icon icon={CheckCircle} />}
           loading={bulkTargetStatus === 'triaged'}
           title={writeBlockReason ?? undefined}
           disabled={manualActionsBlocked || rows.every((row) => row.status === 'triaged')}
@@ -306,7 +306,7 @@ export default function FeedbackQueuePage() {
           type="button"
           variant="secondary"
           size="sm"
-          icon={<Icon icon={Icons.archive} />}
+          icon={<Icon icon={Archive} />}
           loading={bulkTargetStatus === 'closed'}
           title={writeBlockReason ?? undefined}
           disabled={manualActionsBlocked || rows.every((row) => row.status === 'closed')}
@@ -318,7 +318,7 @@ export default function FeedbackQueuePage() {
           type="button"
           variant="ghost"
           size="sm"
-          icon={<Icon icon={Icons.undo} />}
+          icon={<Icon icon={RotateCcw} />}
           loading={bulkTargetStatus === 'new'}
           title={writeBlockReason ?? undefined}
           disabled={manualActionsBlocked || rows.every((row) => row.status === 'new')}
@@ -332,7 +332,7 @@ export default function FeedbackQueuePage() {
   )
 
   const actions = (
-    <IconButton icon={<Icon icon={Icons.refresh} />} label={t('common.refresh', 'Refresh')} onClick={handleRefreshAll} busy={isRefreshing} aria-label={t('common.refresh', 'Refresh')} />
+    <IconButton icon={<Icon icon={RefreshCw} />} label={t('common.refresh', 'Refresh')} onClick={handleRefreshAll} busy={isRefreshing} aria-label={t('common.refresh', 'Refresh')} />
   )
 
   return (
@@ -360,8 +360,8 @@ export default function FeedbackQueuePage() {
           <div className="min-w-0 xl:col-span-2">
             <FeedbackFacetPanel
               title={t('feedback.queue.triageProgress', 'Triage progress')}
-              icon={<Icon icon={Icons.workflow} className={typography.color.secondary} />}
-              emptyIcon={<Icon icon={Icons.workflow} size="xl" />}
+              icon={<Icon icon={Workflow} className={typography.color.secondary} />}
+              emptyIcon={<Icon icon={Workflow} size="xl" />}
               counts={[
                 { id: 'new', label: t('feedback.queue.status.new', 'New'), value: counts.new },
                 { id: 'triaged', label: t('feedback.queue.status.triaged', 'Triaged'), value: counts.triaged },
@@ -377,8 +377,8 @@ export default function FeedbackQueuePage() {
           </div>
           <FeedbackFacetPanel
             title={t('feedback.queue.categoryMix', 'Category mix')}
-            icon={<Icon icon={Icons.pieChart} className={typography.color.secondary} />}
-            emptyIcon={<Icon icon={Icons.pieChart} size="xl" />}
+            icon={<Icon icon={PieChart} className={typography.color.secondary} />}
+            emptyIcon={<Icon icon={PieChart} size="xl" />}
             counts={[
               { id: 'bug', label: t('feedback.category.bug', 'Bug report'), value: counts.bug },
               { id: 'feature', label: t('feedback.category.feature', 'Feature request'), value: counts.feature },
@@ -457,7 +457,7 @@ export default function FeedbackQueuePage() {
           ) : items.length === 0 ? (
             // no-action: feedback arrives by user submission, no admin CTA possible
             <EmptyState
-              icon={<Icon icon={Icons.bug} size="xl" />}
+              icon={<Icon icon={Bug} size="xl" />}
               title={statusFilter || categoryFilter
                 ? t('search.noResults.title', 'No results')
                 : t('feedback.queue.empty', 'No feedback yet')}

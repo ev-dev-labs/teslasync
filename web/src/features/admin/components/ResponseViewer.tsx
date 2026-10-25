@@ -1,6 +1,6 @@
-import { Icons } from '@/lib/icons';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { GlassPanel, Button as UiButton, CopyButton, Text } from '@/components/ui';
 import { Skeleton, EmptyState } from '@/components/feedback';
@@ -163,7 +163,7 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
         aria-expanded={open}
         className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
       >
-        <Icons.expand aria-hidden="true" className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
+        <ChevronDown aria-hidden="true" className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
         {t('playground.codeSnippet', 'Code snippet')}
       </UiButton>
       {open && (
@@ -226,7 +226,7 @@ function ResponseHeaders({ headers }: { headers: Record<string, string> }) {
         aria-expanded={open}
         className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
       >
-        <Icons.expand aria-hidden="true" className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
+        <ChevronDown aria-hidden="true" className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
         {t('playground.responseHeaders', 'Response headers')} ({entries.length})
       </UiButton>
       {open && (

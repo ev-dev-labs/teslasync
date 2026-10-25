@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
+import { Search, Info } from 'lucide-react';
 
 import { GlassPanel, Button, Input, PanelTitle, Caption, Text } from '@/components/ui';
 
@@ -48,7 +48,7 @@ export function GDPRLookupPanel({ idInput, onIdChange, onLookup }: GDPRLookupPan
               disabled={!trimmedId}
               className="min-h-11 sm:w-auto"
             >
-              <Icons.search className="mr-1 h-4 w-4" aria-hidden="true" />
+              <Search className="mr-1 h-4 w-4" aria-hidden="true" />
               {t('admin.gdprExport.lookupButton', 'Look up')}
             </Button>
           </div>
@@ -61,7 +61,7 @@ export function GDPRLookupPanel({ idInput, onIdChange, onLookup }: GDPRLookupPan
         </div>
 
         <div className="flex items-start gap-2 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
-          <Icons.info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
           <Text variant="bodySm">
             {t(
               'admin.gdprExport.lookupBlurb',

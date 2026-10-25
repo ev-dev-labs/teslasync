@@ -1,5 +1,5 @@
-import { Icons } from '@/lib/icons';
 import { useCallback } from 'react';
+import { History } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { Button, DataTable, Caption } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
@@ -84,7 +84,7 @@ export function AuditLogEntries({ controller }: Props) {
             ) : rows.length === 0 && !subsystemMissing ? (
               // no-action: filter controls live in the panel above; the message guides users to widen or clear them
               <EmptyState
-                icon={<Icons.history className="h-8 w-8" />}
+                icon={<History className="h-8 w-8" />}
                 title={t('admin.auditLog.emptyTitle', 'No audit entries')}
                 message={t(
                   'admin.auditLog.emptyMessage',

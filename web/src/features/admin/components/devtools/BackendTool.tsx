@@ -1,6 +1,6 @@
-import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next'
 import { useMutation } from '@tanstack/react-query'
+import { Play } from 'lucide-react'
 import { Button, Badge } from '@/components/ui'
 import { getErrorMessage } from '@/lib/errorMessage'
 import { ToolCard } from './ToolCard'
@@ -50,7 +50,7 @@ export function BackendTool({
           size="sm"
           loading={mutation.isPending}
           onClick={() => mutation.mutate()}
-          icon={<Icons.play className="h-3.5 w-3.5" />}
+          icon={<Play className="h-3.5 w-3.5" />}
         >
           {t('devtools.backendTool.run', 'Run')}
         </Button>

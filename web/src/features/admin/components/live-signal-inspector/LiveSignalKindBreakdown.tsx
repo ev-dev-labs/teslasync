@@ -1,4 +1,3 @@
-import { Icons } from '@/lib/icons';
 /**
  * Live Signal Inspector — value-kind breakdown.
  *
@@ -9,6 +8,7 @@ import { Icons } from '@/lib/icons';
  */
 import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { BarChart3 } from 'lucide-react';
 
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import {
@@ -74,7 +74,7 @@ export function LiveSignalKindBreakdown({
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <Icons.analytics className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('admin.liveSignals.panels.kinds', 'Signal kinds')}
       </PanelTitle>
 

@@ -1,5 +1,4 @@
-import { Icons } from '@/lib/icons';
-
+import { Pause, Play, Shield } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
@@ -33,14 +32,14 @@ export function FleetAPISummary({ controller }: Props) {
                   ? (apiSuspended ? t('fleetApi.status.suspended', 'Suspended') : pollingConfig.auto_polling_enabled
                     ? t('fleetApi.status.polling', 'Polling enabled') : t('fleetApi.status.onDemand', 'On demand only'))
                   : EM_DASH}
-                icon={apiStatusKnown && apiSuspended ? <Icons.pause className="h-5 w-5" /> : <Icons.play className="h-5 w-5" />}
+                icon={apiStatusKnown && apiSuspended ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
                 color={!apiStatusKnown || !pollingKnown ? 'blue' : apiSuspended ? 'red' : 'green'}
                 subtitle={t('fleetApi.kpis.apiStatusHint', 'Automatic Fleet API polling')}
               />
               <MetricCard
                 label={t('fleetApi.kpis.endpointsEnabled', 'Endpoints enabled')}
                 value={pollingKnown ? `${fmtInt(enabledCount)} / ${fmtInt(totalCount)}` : EM_DASH}
-                icon={<Icons.security className="h-5 w-5" />}
+                icon={<Shield className="h-5 w-5" />}
                 color="cyan"
                 subtitle={pollingKnown ? t('fleetApi.kpis.endpointsHint', '{{count}} selected for polling', { count: autoCount }) : EM_DASH}
               />
