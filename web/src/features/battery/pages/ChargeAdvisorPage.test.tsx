@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -404,7 +404,7 @@ describe('ChargeAdvisorPage', () => {
     const view = renderPage();
     expect(h.driveHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
     expect(h.chargingHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
-    expect(within(screen.getByTestId('charge-advisor-directory')).getByText('2026-06-03')).toBeInTheDocument();
+    expect(within(screen.getByTestId('charge-advisor-directory')).getByText('Jun 3, 2026')).toBeInTheDocument();
     const original = {...h.historyWindow};
     h.historyWindow = { start: '2026-05-10T15:42:19.125Z', end: '2026-05-20T15:42:19.125Z' };
     view.rerenderPage();
@@ -413,7 +413,7 @@ describe('ChargeAdvisorPage', () => {
     expect(screen.getByText('The planning window covers the next seven local days, starting tomorrow.')).toBeVisible();
     expect(h.driveHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
     expect(h.chargingHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
-    expect(within(screen.getByTestId('charge-advisor-directory')).getByText('2026-06-03')).toBeInTheDocument();
+    expect(within(screen.getByTestId('charge-advisor-directory')).getByText('Jun 3, 2026')).toBeInTheDocument();
     expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
     expectEveryShell();
   });
@@ -800,6 +800,19 @@ describe('ChargeAdvisorPage', () => {
     expect(h.chargingHook).toHaveBeenLastCalledWith('7', 1_000, h.historyWindow);
   });
 
+  it.each(['America/Los_Angeles', 'Asia/Tokyo'])('formats all seven scenario business dates without shifting their weekday in %s', async timeZone => {
+    h.timeZone = timeZone;
+    renderPage();
+    const days = screen.getByTestId('charge-advisor-directory').querySelectorAll('article');
+    expect(days).toHaveLength(7);
+    await waitFor(() => expect(within(days[0]!).getByText('Jun 3, 2026', { exact: true })).toBeVisible());
+    for (const [index, day] of [...days].entries()) {
+      expect(within(day).getByText(`Jun ${index + 3}, 2026`, { exact: true })).toBeVisible();
+      expect(within(day).getByText(['Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue'][index]!, { exact: true })).toBeVisible();
+      expect(day).not.toHaveTextContent(`2026-06-${String(index + 3).padStart(2, '0')}`);
+    }
+  });
+
   it('keeps all daily observations and seven-day scenarios while charging history initially loads', () => {
     h.charging = query(undefined, { isLoading: true, isSuccess: false });
     renderPage();
@@ -811,8 +824,8 @@ describe('ChargeAdvisorPage', () => {
     expect(within(scenarios).getAllByRole('row', { hidden: true })).toHaveLength(8);
     const directory = screen.getByTestId('charge-advisor-directory');
     expect(directory.querySelectorAll('article')).toHaveLength(7);
-    expect(within(directory).getByText('2026-06-03')).toBeInTheDocument();
-    expect(within(directory).getByText('2026-06-09')).toBeInTheDocument();
+    expect(within(directory).getByText('Jun 3, 2026')).toBeInTheDocument();
+    expect(within(directory).getByText('Jun 9, 2026')).toBeInTheDocument();
     expect(within(screen.getByTestId('charge-advisor-current')).getByText('Live signal')).toBeInTheDocument();
     expect(within(screen.getByTestId('charge-advisor-charging-profile')).queryByText('20.0 kWh'))
       .not.toBeInTheDocument();
@@ -985,8 +998,8 @@ describe('ChargeAdvisorPage', () => {
     expect(screen.getByText('Current state is stale')).toBeInTheDocument();
     expect(screen.getByText(/Included history window:.*Jun 2, 2026/)).toBeInTheDocument();
     const directory = within(screen.getByTestId('charge-advisor-directory'));
-    expect(directory.getByText('2026-06-03')).toBeInTheDocument();
-    expect(directory.getByText('2026-06-09')).toBeInTheDocument();
+    expect(directory.getByText('Jun 3, 2026')).toBeInTheDocument();
+    expect(directory.getByText('Jun 9, 2026')).toBeInTheDocument();
     expect(h.driveRefetch).not.toHaveBeenCalled();
     expect(h.chargingRefetch).not.toHaveBeenCalled();
     view.unmount();

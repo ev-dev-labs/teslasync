@@ -186,11 +186,31 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   unknown-vs-zero, cost/energy, source-ledger and drawer proofs; escapes=0.
   Affected ESLint passes; no production code or fixture response changed.
   Evidence: `r11-responsive26`, `r11-cost`.
-- Exact next step: finish charge-advisor's
-  supported-history cases still demand raw 2025-12-05 and directory day
-  keys (`r9-responsive20`); preserve exact source window and seven projected
-  business days using their actual localized displays. Continue the newest
-  head's remaining dashboard/catalogue roots and CI loop; no baseline
+- Fix 11 committed as `f6ab2f3f2b`; it will accompany the next coherent push.
+- Fix 12: the advisor directory really still rendered raw business-day
+  keys. It now uses the shared formatDayKey boundary without changing its
+  seven local dates, weekdays, daily assumptions, projections or ranking.
+  Both LA/Tokyo regressions fail before production repair; all 58 page
+  tests now pass after allowing the real entry animation to settle.
+  Existing exact-date assertions are localized, not removed.
+  Supported browser contracts require the entire exact Dec 5, 2025 –
+  Jun 2, 2026 history-window caption, reject raw date keys/redundant UTC,
+  and verify all seven exact projected dates alongside their actual SoC
+  values. All eight supported-history/live-zero/stale/recovery/reserve-floor
+  cases pass, escapes=0. Full unchanged lint, actual TypeScript/six-zero
+  source audit, 7,728 frozen tests and rebuilt mock bundle pass.
+  Source 75->77 lines, section 1->1, no charts/API/storage/catalog or
+  baseline changed. Evidence: `r12-advisor-date-red`, `r12-advisor-final-unit`,
+  `r12-advisor-gate`, `r12-advisor-audit`, `r12-advisor`, `r12-frozen`.
+- Head 55fe6605c6 at 19:09Z is **0 failing / 73 passing / 120 pending /
+  3 skipped**. It has not evaluated fixes 11/12; this is NOT a completed
+  improvement from the last final 28-failure graph.
+- Exact next step: repair notification activity's obsolete `(exclusive) ·
+  UTC` source-drawer contract (old responsive 30), preserving actual
+  localized half-open bounds and source-error/retention proofs rather than
+  deleting interval evidence. Then address genuine live-signal sparkline
+  overflow, missing fleet-posture brief, remaining sleep/home-energy
+  timezone semantics and any new completed CI roots. No baseline
   regeneration unless a new reviewed Windows visual failure requires it.
 
 ## Mandatory ten-fix handoff (2026-10-25 16:43Z)

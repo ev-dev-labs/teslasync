@@ -101,9 +101,10 @@ async function historicalEvidence(page: Page) {
       await reading(brief, `advisor-${source}-accounting-${index}`, count);
     }
   }
-  await expect(accounting).toContainText('2025-12-05');
-  await expect(accounting).toContainText('2026-06-02');
-  await expect(accounting).toContainText('UTC');
+  await expect(accounting.getByText('Included history window: Dec 5, 2025 – Jun 2, 2026.', { exact: true })).toBeVisible();
+  await expect(accounting).not.toContainText('2025-12-05');
+  await expect(accounting).not.toContainText('2026-06-02');
+  await expect(accounting).not.toContainText('UTC');
   // Scope to the two category subsections: the bare `.space-y-1` class also
   // matches the section header title block, which is not a category list.
   for (const [testId, expected] of [
@@ -173,7 +174,8 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(directory.locator('article')).toHaveCount(7);
       for (const [index, soc] of advisorMeanEndSoc.entries()) {
         const day = directory.locator('article').nth(index);
-        await expect(day).toContainText(`2026-06-${String(index + 3).padStart(2, '0')}`);
+        await expect(day.getByText(`Jun ${index + 3}, 2026`, { exact: true })).toBeVisible();
+        await expect(day).not.toContainText(`2026-06-${String(index + 3).padStart(2, '0')}`);
         await expect(day.getByText('Mean end SoC', { exact: true }).locator('..')).toContainText(soc);
         await expect(day.getByText('Calendar-day p75', { exact: true }).locator('..')).toContainText('0.00%');
       }
