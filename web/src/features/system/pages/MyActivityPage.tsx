@@ -84,11 +84,11 @@ function MyActivityContent() {
   // feed panel don't churn on every render while the query is pending (when
   // `data` is undefined, `data ?? []` would otherwise be a fresh array each time).
   const entries = useMemo(() => data ?? [], [data]);
-  const apiError = query.error instanceof ApiError ? query.error : null;
+  const apiError = state.fatalError instanceof ApiError ? state.fatalError : null;
   const featureDisabled = apiError?.status === 503;
   const unauthenticated = apiError?.status === 401;
   // Retained deployment failures warn without erasing data; identity gates still protect it.
-  const hardGate = (featureDisabled && !state.hasData) || unauthenticated;
+  const hardGate = !state.hasData && (featureDisabled || unauthenticated);
 
   const analytics = useMemo(
     () => deriveMyActivityAnalytics(entries, { start, end }),
@@ -131,7 +131,7 @@ function MyActivityContent() {
                 )}
               />
             ) : (
-              <ErrorDisplay error={query.error} />
+              <ErrorDisplay error={state.fatalError ?? error ?? new Error('Activity request failed')} />
             )}
           </GlassPanel>
         </FadeIn>
