@@ -225,6 +225,26 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   Evidence: `r38-milestones-red`, `r38-milestones-unit`, `r38-tsc`,
   `r38-eslint`, `r38-build`, `r39-milestones-route`, `r39-source-audit`,
   `r39-lint`, `r39-driving-hooks`.
+- Catalog receipt phase gate (22:07Z): the latest current-head graph is
+  **3 fail / 70 pass / 121 pending / 3 skip**. All three failing unit
+  shards share the same root: frozen catalog counts are exactly six low
+  after the six reviewed/translated Grafana timestamp descriptions.
+  No unrelated failing unit root was found in those logs. Used only the
+  sanctioned `i18n-trio-checkpoint.mjs --typed --checkpoint-catalog` and
+  combined generator: **41,893** used keys verified, other-language keys
+  preserved, original fixture exclusions/assertions unchanged. The seven
+  mechanically regenerated count/hash checkpoints now pass all actual
+  **7,728/7,728** frozen cases. Final actual TypeScript passes. No new
+  exception/baseline/allowlist or manual fingerprint edit.
+  Milestone work is committed as `3117522989`; **exact next:** commit the
+  seven receipt files and push both verified commits, refresh CI, then
+  implement full-range automation day grouping with a validated selected
+  timezone (current SQL hardcodes UTC; do not regroup a page in the UI).
+  Date-only bounds need a truthful contract; absolute header bounds must
+  remain exact. Existing shared `httputil/date_range.go` only implements
+  legacy UTC bounds, not zoned civil-day parsing. No backend edits yet.
+  Evidence: `r39-unit7-failed`, `r40-unit1-failed`, `r40-unit3-failed`,
+  `r40-catalog-checkpoint`, `r40-frozen-unit`, `r40-tsc`.
 
 ## CI-until-green continuation (2026-10-25, after `3ca29a42ad`)
 
