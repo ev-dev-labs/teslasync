@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
-	"sort"
 	"strconv"
 	"time"
 
@@ -16,6 +14,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	"github.com/ev-dev-labs/teslasync/internal/api/tou"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
@@ -86,7 +85,7 @@ func (h *Handler) Optimize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, ok := ratePlans[req.RatePlanID]; !ok {
+	if !tou.KnownPlan(req.RatePlanID) {
 		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("unknown rate plan: %s", req.RatePlanID))
 		return
 	}
@@ -210,121 +209,23 @@ func applyOptimizeRequestDefaults(req *optimizeRequest) {
 // and are intended to map to 400 Bad Request at the HTTP boundary.
 // Persistence and signal-store errors stay in the caller.
 func (h *Handler) computeSchedule(_ context.Context, req optimizeRequest, departBy time.Time, currentSOC int, now time.Time) (*optimizeResponse, error) {
-	plan, ok := ratePlans[req.RatePlanID]
-	if !ok {
-		return nil, fmt.Errorf("unknown rate plan: %s", req.RatePlanID)
-	}
-
-	if currentSOC >= req.TargetSOC {
-		return nil, fmt.Errorf("current SOC (%d%%) already meets target (%d%%)", currentSOC, req.TargetSOC)
-	}
-
-	kwhNeeded := float64(req.TargetSOC-currentSOC) / 100.0 * req.BatteryCapacity
-	chargeRateKW := float64(req.ChargerVoltage) * float64(req.MaxAmps) / 1000.0
-	// Add a conservative charging-loss margin.
-	kwhWithLoss := kwhNeeded * 1.10
-	durationHours := kwhWithLoss / chargeRateKW
-	durationCeilHours := int(math.Ceil(durationHours))
-
-	if durationCeilHours <= 0 {
-		durationCeilHours = 1
-	}
-
-	hoursUntilDepart := departBy.Sub(now).Hours()
-	if float64(durationCeilHours) > hoursUntilDepart {
-		return nil, fmt.Errorf(
-			"not enough time: need %.1f hours but only %.1f hours until departure",
-			durationHours, hoursUntilDepart,
-		)
-	}
-
-	seasonName := seasonForDate(plan, departBy)
-	season := plan.Seasons[seasonName]
-	rates := buildHourlyRates(season)
-
-	type candidate struct {
-		startHour    int
-		cost         float64
-		avgRateCents float64
-		tier         string
-	}
-
-	nowHour := now.Hour()
-
-	var candidates []candidate
-	for startH := 0; startH < 24; startH++ {
-		startTime := time.Date(departBy.Year(), departBy.Month(), departBy.Day(), startH, 0, 0, 0, departBy.Location())
-		if startTime.After(departBy) {
-			startTime = startTime.AddDate(0, 0, -1)
-		}
-		endTime := startTime.Add(time.Duration(durationCeilHours) * time.Hour)
-
-		if startTime.Before(now) || endTime.After(departBy) {
-			continue
-		}
-
-		cost, avgRate := costForWindow(rates, startH, durationCeilHours, kwhNeeded)
-
-		tierCounts := make(map[string]int)
-		for i := 0; i < durationCeilHours; i++ {
-			h := (startH + i) % 24
-			tierCounts[rates[h].Tier]++
-		}
-		dominantTier := "unknown"
-		maxCount := 0
-		for t, c := range tierCounts {
-			if c > maxCount {
-				dominantTier = t
-				maxCount = c
-			}
-		}
-
-		candidates = append(candidates, candidate{
-			startHour:    startH,
-			cost:         cost,
-			avgRateCents: avgRate,
-			tier:         dominantTier,
-		})
-	}
-
-	if len(candidates) == 0 {
-		return nil, fmt.Errorf("no valid charging window found before departure")
-	}
-
-	sort.Slice(candidates, func(i, j int) bool {
-		return candidates[i].cost < candidates[j].cost
+	result, err := tou.FindWindow(tou.WindowInput{
+		PlanID: req.RatePlanID, CurrentSOC: currentSOC, TargetSOC: req.TargetSOC,
+		Now: now, Deadline: departBy,
+		BatteryCapacityKWh: req.BatteryCapacity, ChargerVoltage: req.ChargerVoltage,
+		MaxAmps: req.MaxAmps, DeadlineLabel: "departure",
 	})
-
-	best := candidates[0]
-
-	chargeNowCost, _ := costForWindow(rates, nowHour, durationCeilHours, kwhNeeded)
-
-	savings := chargeNowCost - best.cost
-	savingsPct := 0.0
-	if chargeNowCost > 0 {
-		savingsPct = (savings / chargeNowCost) * 100.0
+	if err != nil {
+		return nil, err
 	}
-
-	bestStart := time.Date(departBy.Year(), departBy.Month(), departBy.Day(), best.startHour, 0, 0, 0, departBy.Location())
-	if bestStart.After(departBy) {
-		bestStart = bestStart.AddDate(0, 0, -1)
-	}
-	bestEnd := bestStart.Add(time.Duration(float64(time.Hour) * durationHours))
+	best := result.Best
 
 	var alternatives []chargeWindow
-	for i := 1; i < len(candidates) && len(alternatives) < 3; i++ {
-		c := candidates[i]
-		altStart := time.Date(departBy.Year(), departBy.Month(), departBy.Day(), c.startHour, 0, 0, 0, departBy.Location())
-		if altStart.After(departBy) {
-			altStart = altStart.AddDate(0, 0, -1)
-		}
-		altEnd := altStart.Add(time.Duration(float64(time.Hour) * durationHours))
+	for _, c := range result.Alternatives {
 		alternatives = append(alternatives, chargeWindow{
-			StartTime:    altStart,
-			EndTime:      altEnd,
-			RateCentsKWh: c.avgRateCents,
-			EstCost:      math.Round(c.cost*100) / 100,
-			RateTier:     tierLabel(c.tier),
+			StartTime: c.StartTime, EndTime: c.EndTime,
+			RateCentsKWh: c.AvgRateCents, EstCost: tou.Round2(c.Cost),
+			RateTier: tou.TierLabel(c.Tier),
 		})
 	}
 
@@ -332,23 +233,21 @@ func (h *Handler) computeSchedule(_ context.Context, req optimizeRequest, depart
 		// PlanID=0 — caller fills this in after persisting.
 		CurrentSOC:       currentSOC,
 		TargetSOC:        req.TargetSOC,
-		KWhNeeded:        math.Round(kwhNeeded*100) / 100,
-		EstDurationHours: math.Round(durationHours*10) / 10,
+		KWhNeeded:        tou.Round2(result.KWhNeeded),
+		EstDurationHours: tou.Round1(result.DurationHours),
 		Schedule: chargeWindow{
-			StartTime:    bestStart,
-			EndTime:      bestEnd,
-			RateCentsKWh: best.avgRateCents,
-			EstCost:      math.Round(best.cost*100) / 100,
-			RateTier:     tierLabel(best.tier),
+			StartTime: best.StartTime, EndTime: best.EndTime,
+			RateCentsKWh: best.AvgRateCents, EstCost: tou.Round2(best.Cost),
+			RateTier: tou.TierLabel(best.Tier),
 		},
 		Comparison: costComparison{
-			ChargeNowCost: math.Round(chargeNowCost*100) / 100,
-			OptimizedCost: math.Round(best.cost*100) / 100,
-			Savings:       math.Round(savings*100) / 100,
-			SavingsPct:    math.Round(savingsPct*10) / 10,
+			ChargeNowCost: tou.Round2(result.ChargeNowCost),
+			OptimizedCost: tou.Round2(result.OptimizedCost),
+			Savings:       tou.Round2(result.Savings),
+			SavingsPct:    tou.Round1(result.SavingsPct),
 		},
 		Alternatives: alternatives,
-		HourlyRates:  rates,
+		HourlyRates:  result.HourlyRates,
 	}, nil
 }
 
@@ -480,10 +379,9 @@ func (h *Handler) ListRatePlans(w http.ResponseWriter, r *http.Request) {
 		Utility string `json:"utility"`
 	}
 	var plans []ratePlanInfo
-	for _, p := range ratePlans {
+	for _, p := range tou.ListPlans() {
 		plans = append(plans, ratePlanInfo{ID: p.ID, Name: p.Name, Utility: p.Utility})
 	}
-	sort.Slice(plans, func(i, j int) bool { return plans[i].ID < plans[j].ID })
 	httpx.WriteJSON(w, http.StatusOK, plans)
 }
 
