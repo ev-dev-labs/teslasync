@@ -710,13 +710,18 @@ describe('ParkingAnalyticsPage', () => {
       startInstant: start, endInstantExclusive: end, timeZone: datePreferences.tz,
     });
     render(<ParkingMethodCaveats summary={summary} rangeStart={start} rangeEnd={end} />);
-    expect(screen.getByText(/as exact instants/)).toHaveTextContent(`${end} (exclusive)`);
+    const formatter = new Intl.DateTimeFormat('de-DE', {
+      timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short',
+    });
+    const localizedEdge = formatter.format(new Date(end));
+    const methodology = screen.getByText(/as exact instants/);
+    expect(methodology).toHaveTextContent(`${formatter.format(new Date(start))} (inclusive)`);
+    expect(methodology).toHaveTextContent(`${localizedEdge} (exclusive)`);
+    expect(methodology).not.toHaveTextContent(start);
+    expect(methodology).not.toHaveTextContent(end);
     expect(screen.queryByText(/UTC calendar dates/)).not.toBeInTheDocument();
     expect(screen.getByText(/Hour, weekday/)).toHaveTextContent('use your selected time zone');
     expect(screen.getByText(/Hour, weekday/)).not.toHaveTextContent('Europe/Berlin');
-    const localizedEdge = new Intl.DateTimeFormat('de-DE', {
-      timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short',
-    }).format(new Date(end));
     expect(screen.getByText(/right-censored/)).toHaveTextContent(localizedEdge);
   });
 });

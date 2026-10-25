@@ -837,6 +837,32 @@ describe('LocationsPage — current preview identity and saved dates', () => {
     expect(screen.queryByRole('combobox', { name: /vehicle/i })).not.toBeInTheDocument();
   });
 
+  it('formats requested instant bounds through the selected zone without changing request bounds', async () => {
+    rangeState.start = '2026-01-01';
+    rangeState.end = '2026-01-02';
+    const view = renderPage();
+    await waitFor(() => expect(kpiValue('Total visits')).toBe('46'));
+    act(() => view.client.setQueryData(['settings'], {
+      locale: 'en-US', tz_display_default: 'user', timezone_user: 'America/Los_Angeles',
+      decimal_precision: 2, unit_of_length: 'km', unit_of_temp: 'C', unit_of_pressure: 'bar',
+    }));
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Location summary details' });
+    for (const instant of ['2026-01-01T00:00:00Z', '2026-01-02T00:00:00Z']) {
+      const label = new Date(instant).toLocaleString('en-US', {
+        timeZone: 'America/Los_Angeles', year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+      expect(drawer).toHaveTextContent(label);
+      expect(drawer).not.toHaveTextContent(instant);
+    }
+    const requestPath = String(mockRequest.mock.calls[0]?.[0]);
+    const params = new URL(requestPath, 'http://teslasync.local').searchParams;
+    expect(params.get('from')).toBe('2026-01-01T00:00:00Z');
+    expect(params.get('to')).toBe('2026-01-02T00:00:00Z');
+    expect(drawer).toHaveTextContent('(exclusive)');
+  });
+
   it('formats last visits and the current page receipt through saved locale and timezone preferences', async () => {
     const timestamp = '2026-01-01T00:30:00Z';
     mockRequest.mockResolvedValue([{ ...makeLocations()[0], last_visited: timestamp }]);

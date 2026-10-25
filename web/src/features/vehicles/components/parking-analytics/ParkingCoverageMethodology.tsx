@@ -16,6 +16,7 @@ import { ParkingSectionBody } from './ParkingSectionBody';
 import type { ParkingSectionState } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { DataStatus } from '@/api/dataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { VehicleEvidenceBrief } from '../operationalbrief-n-z/VehicleEvidenceBrief';
 
 interface ParkingCoverageMethodologyProps {
@@ -40,6 +41,7 @@ export function ParkingCoverageMethodology({
 }: ParkingCoverageMethodologyProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const coverage = summary.coverage;
   const hasEvidence = hasSource && sourceStatus !== 'initial' && sourceStatus !== 'initialFailure';
   const hasCapEvidence = hasEvidence
@@ -88,7 +90,7 @@ export function ParkingCoverageMethodology({
           status={status === 'ok' && hasCapEvidence && coverage.possiblyCapped ? 'partial' : status}
           loading={state.isLoading}
           provenance={t('parking.briefSource', 'Drive-derived parking reconstruction')}
-          scope={t('parking.coverage.briefWindow', 'Requested instant window: {{start}} → {{end}} (exclusive)', { start: rangeStart, end: rangeEnd })}
+          scope={t('parking.coverage.briefWindow', 'Requested instant window: {{start}} → {{end}} (exclusive)', { start: formatDateTime(new Date(rangeStart)), end: formatDateTime(new Date(rangeEnd)) })}
           metrics={[
             { metricId: 'count', occurrenceId: 'returned', label: t('parking.coverage.returned', 'Records returned'), rawValue: hasEvidence ? coverage.recordsReturned : null },
             { metricId: 'count', occurrenceId: 'usable', label: t('parking.coverage.usable', 'Usable drives'), rawValue: hasEvidence ? coverage.validDrives : null },

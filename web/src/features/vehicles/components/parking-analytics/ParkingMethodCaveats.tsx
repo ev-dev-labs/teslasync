@@ -43,7 +43,7 @@ export function ParkingMethodCaveats({
           {t(
             'parking.coverage.utcWindow',
             'The server filters drive starts from {{start}} (inclusive) to {{end}} (exclusive) as exact instants; parking before the first returned drive cannot be reconstructed.',
-            { start: rangeStart, end: rangeEnd },
+            { start: formatDateTime(new Date(rangeStart)), end: formatDateTime(new Date(rangeEnd)) },
           )}
         </Text>
       </div>
