@@ -78,10 +78,6 @@ func KnownRatePlan(id string) bool {
 	return tou.KnownPlan(id)
 }
 
-func parseReadyBy(s string) (hour, min int, err error) {
-	return tou.ParseClock(s)
-}
-
 // NextReadyBy resolves a daily "HH:MM" ready-by time to the next future
 // occurrence after now.
 func NextReadyBy(readyBy string, now time.Time) (time.Time, error) {

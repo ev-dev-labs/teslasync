@@ -388,6 +388,6 @@ describe('useAlertMessagePreview', () => {
     await act(async () => {
       await expect(result.current.mutateAsync(previewBody)).rejects.toThrow(/render failed/);
     });
-    expect(result.current.isError).toBe(true);
+    await waitFor(() => expect(result.current.isError).toBe(true));
   });
 });

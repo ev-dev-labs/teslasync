@@ -41,13 +41,6 @@ type SLO = catalogparser.SLO
 // SLI is the good/valid event pair used to compute the SLO ratio.
 type SLI = catalogparser.SLI
 
-const requiredCatalogVersion = catalogparser.RequiredVersion
-
-var (
-	nameRE   = catalogparser.NameRE
-	windowRE = catalogparser.WindowRE
-)
-
 // LoadCatalog parses the catalog YAML at the given path. The accepted
 // format is the strict subset documented in slo/catalog.yaml — same
 // parser invariants as cmd/slogen.
@@ -83,18 +76,6 @@ func parseCatalog(text string) (*Catalog, error) {
 		return nil, err
 	}
 	return convertCatalog(parsed), nil
-}
-
-func stripComment(line string) string {
-	return catalogparser.StripComment(line)
-}
-
-func unquote(v string) string {
-	return catalogparser.Unquote(v)
-}
-
-func parseInlineArray(v string) ([]string, error) {
-	return catalogparser.ParseInlineArray(v)
 }
 
 func convertCatalog(c *catalogparser.Catalog) *Catalog {

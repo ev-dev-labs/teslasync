@@ -568,14 +568,6 @@ func parseScalar(v string, line int, field string) (string, error) {
 	return v, nil
 }
 
-func unquote(v string) string {
-	value, err := parseScalar(v, 0, "scalar")
-	if err == nil {
-		return value
-	}
-	return v
-}
-
 func leadingWhitespaceLen(line string) int {
 	i := 0
 	for i < len(line) && (line[i] == ' ' || line[i] == '\t') {

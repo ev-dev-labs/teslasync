@@ -35,13 +35,6 @@ type SLO = catalogparser.SLO
 
 type SLI = catalogparser.SLI
 
-const requiredVersion = catalogparser.RequiredVersion
-
-var (
-	nameRE   = catalogparser.NameRE
-	windowRE = catalogparser.WindowRE
-)
-
 func main() {
 	if len(os.Args) < 2 {
 		usage()
@@ -97,22 +90,6 @@ func validateCatalog(c *Catalog) error {
 	return catalogparser.Validate(c)
 }
 
-func validateSLO(idx int, s SLO) error {
-	return catalogparser.ValidateSLO(idx, s)
-}
-
 func parseCatalog(text string) (*Catalog, error) {
 	return catalogparser.Parse(text)
-}
-
-func stripComment(line string) string {
-	return catalogparser.StripComment(line)
-}
-
-func unquote(v string) string {
-	return catalogparser.Unquote(v)
-}
-
-func parseInlineArray(v string) ([]string, error) {
-	return catalogparser.ParseInlineArray(v)
 }
