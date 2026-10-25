@@ -109,7 +109,7 @@ const roots: readonly RootCase[] = [
       { title: 'Recorded driving exposure', metrics: [
         { key: 'exposure', label: 'Exposure distance', value: distance, context: '12 drives' },
         { key: 'duration', label: 'Time behind the wheel', value: /^2(?:\.00)?\s*h$/ },
-        { key: 'night', label: 'Distance of trips starting overnight (UTC)', value: /^16\.09\s*km$/, context: '10.00%' },
+        { key: 'night', label: 'Distance of trips starting overnight', value: /^16\.09\s*km$/, context: '10.00%' },
         missing('percentile', 'Peer percentile'),
       ] },
       { title: 'Policy-based premium model', metrics: [
@@ -251,7 +251,7 @@ async function setup(
       await fixture(page, api, '/driver-attribution/ghost-drives', { vehicle_id: 7, scanned: 80, ghosts: [] }, window);
       break;
     case 'insurance-telematics':
-      await fixture(page, api, '/insurance-telematics', insuranceReport, window);
+      await fixture(page, api, '/insurance-telematics', insuranceReport, { ...window, timezone: 'UTC' });
       break;
     case 'jurisdiction-compliance':
       await fixture(page, api, '/jurisdiction-compliance', complianceReport, window);

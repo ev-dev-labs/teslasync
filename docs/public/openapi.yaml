@@ -1535,6 +1535,47 @@ paths:
           $ref: "#/components/responses/InternalError"
 
   # ─── Analytics ──────────────────────────────────────────────────────
+  /insurance-telematics:
+    get:
+      operationId: getInsuranceRiskProfile
+      summary: Get the selected-clock insurance risk profile
+      description: |
+        Scores completed-drive evidence over the existing rolling UTC instant
+        window. Optional timezone changes overnight trip-start classification
+        and Sunday-start calendar-week trend grouping, not stored timestamps
+        or eligibility bounds. The night_distance_m field remains the full
+        distance of trips starting at or after 22:00 or before 05:00 in that
+        clock; it is not measured distance traveled overnight. Omitting timezone
+        preserves UTC behavior. The limited risk-summary checksum now uses a
+        v2 canonical prefix and includes timezone, not the complete evidence.
+      tags: [Analytics]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: window_days
+          in: query
+          schema:
+            type: integer
+            default: 90
+            maximum: 1095
+        - name: timezone
+          in: query
+          description: IANA location; defaults to UTC. Unknown zones and Local are rejected.
+          schema:
+            type: string
+            default: UTC
+      responses:
+        "200":
+          description: Existing risk profile plus its effective timezone; trend bucket_start remains an absolute instant
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /analytics/sleep:
     get:
       operationId: getSleepAnalytics

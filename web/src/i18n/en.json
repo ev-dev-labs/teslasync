@@ -36904,8 +36904,8 @@
         "scoreHint": "0 = best, 100 = worst",
         "severity": "Severity index",
         "severityHint": "Expected claim size driver",
-        "overnightTripDistance": "Distance of trips starting overnight (UTC)",
-        "overnightTripDistanceHint": "Trip-start proxy: full distance of completed trips starting at or after 22:00 or before 05:00 UTC. Includes distance outside the band on qualifying trips and excludes distance inside the band on other trips; neither an upper nor a lower bound on actual night distance. Actual night-distance measurement requires owned model support for distance within time bands."
+        "overnightTripDistance": "Distance of trips starting overnight",
+        "overnightTripDistanceHint": "Trip-start proxy: full distance of completed trips starting at or after 22:00 or before 05:00 in the selected clock. Includes distance outside the band on qualifying trips and excludes distance inside the band on other trips; neither an upper nor a lower bound on actual night distance. Actual night-distance measurement requires owned model support for distance within time bands."
       },
       "subtitle": "Actuarial frequency × severity underwriting built from your own measured driving, with a premium simulation and ranked improvement levers.",
       "summary": {
@@ -36946,7 +36946,7 @@
       },
       "checksum": {
         "title": "Risk-summary checksum",
-        "subtitle": "A limited SHA-256 checksum of the vehicle ID, window bounds, risk score, frequency, severity and loss-cost indices, and ordered factor codes and observed rates at fixed precision. It does not verify identity or hash the complete evidence packet: raw exposure, other factor details, policy, premium, trend and evidence are not included. Matching checksums do not establish that the complete datasets are identical.",
+        "subtitle": "A limited SHA-256 checksum of the vehicle ID, window bounds, selected timezone, risk score, frequency, severity and loss-cost indices, and ordered factor codes and observed rates at fixed precision. It does not verify identity or hash the complete evidence packet: raw exposure, other factor details, policy, premium, trend and evidence are not included. Matching checksums do not establish that the complete datasets are identical.",
         "empty": "A risk-summary checksum is produced once a profile has been computed.",
         "hash": "Limited risk-summary checksum (SHA-256)"
       }

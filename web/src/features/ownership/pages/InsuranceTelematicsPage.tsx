@@ -94,7 +94,7 @@ export default function InsuranceTelematicsPage() {
 
   usePageTitle(t('ownership.insurance.title', 'Insurance telematics studio'));
 
-  const riskQuery = useInsuranceRiskProfile(vehicleId, windowDays);
+  const riskQuery = useInsuranceRiskProfile(vehicleId, windowDays, tz);
   const { data } = riskQuery;
   const currentScope = useRef({ vehicleId, policyId: data?.policy?.id, revision: 0 });
   if (currentScope.current.vehicleId !== vehicleId) currentScope.current.revision += 1;
@@ -445,7 +445,7 @@ export default function InsuranceTelematicsPage() {
           <OwnershipBrief
             title={t('ownership.insurance.brief.title', 'Modelled underwriting indices')}
             description={t('ownership.insurance.summary.subtitle', 'Exposure-normalised risk over the selected window.')}
-            scope={<>{t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}{' · '}{tz}</>}
+            scope={t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
             source={riskQuery} enabled={vehicleId != null}
             window={data?.window}
             metrics={[
@@ -493,7 +493,7 @@ export default function InsuranceTelematicsPage() {
             <OwnershipBrief
               title={t('ownership.insurance.exposureBrief.title', 'Recorded driving exposure')}
               description={t('ownership.insurance.summary.subtitle', 'Exposure-normalised risk over the selected window.')}
-              scope={<>{t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}{' · '}{tz}</>}
+              scope={t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
               source={riskQuery} enabled={vehicleId != null}
               window={data?.window}
               metrics={[
@@ -514,13 +514,13 @@ export default function InsuranceTelematicsPage() {
                 },
                 {
                   occurrenceId: 'night', metricId: 'distance',
-                  label: t('ownership.insurance.stat.overnightTripDistance', 'Distance of trips starting overnight (UTC)'),
+                  label: t('ownership.insurance.stat.overnightTripDistance', 'Distance of trips starting overnight'),
                   rawValue: data?.night_distance_m,
                   display: specialistDisplay(units.formatDistance),
                   context: (
                     <>
                       {t('ownership.insurance.stat.overnightTripDistanceHint',
-                        'Trip-start proxy: full distance of completed trips starting at or after 22:00 or before 05:00 UTC. Includes distance outside the band on qualifying trips and excludes distance inside the band on other trips; neither an upper nor a lower bound on actual night distance. Actual night-distance measurement requires owned model support for distance within time bands.')}
+                        'Trip-start proxy: full distance of completed trips starting at or after 22:00 or before 05:00 in the selected clock. Includes distance outside the band on qualifying trips and excludes distance inside the band on other trips; neither an upper nor a lower bound on actual night distance. Actual night-distance measurement requires owned model support for distance within time bands.')}
                       {data && data.exposure_distance_m > 0
                         ? <> · {formatPct((data.night_distance_m / data.exposure_distance_m) * 100)}</>
                         : null}
@@ -567,7 +567,7 @@ export default function InsuranceTelematicsPage() {
           <OwnershipBrief
             title={t('ownership.insurance.premiumBrief.title', 'Policy-based premium model')}
             description={t('ownership.insurance.notice.body', 'The premium simulation applies your policy’s own stated maximum telematics discount to a loss-cost index derived from measured exposure. It is an internal negotiation aid, never an insurer quote.')}
-            scope={<>{t('ownership.insurance.premiumBrief.scope', 'Stored policy and selected risk window; annual amounts retain the recorded currency')}{' · '}{tz}</>}
+            scope={t('ownership.insurance.premiumBrief.scope', 'Stored policy and selected risk window; annual amounts retain the recorded currency')}
             source={riskQuery} enabled={vehicleId != null}
             window={data?.window}
             metrics={[
@@ -608,7 +608,7 @@ export default function InsuranceTelematicsPage() {
             <OwnershipBrief
               title={t('ownership.insurance.costBrief.title', 'Policy loss and distance costs')}
               description={t('ownership.insurance.costBrief.description', 'Expected loss is modelled; deductible and cost per 1000 m retain the policy denomination and fixed distance basis.')}
-              scope={<>{t('ownership.insurance.premiumBrief.scope', 'Stored policy and selected risk window; annual amounts retain the recorded currency')}{' · '}{tz}</>}
+              scope={t('ownership.insurance.premiumBrief.scope', 'Stored policy and selected risk window; annual amounts retain the recorded currency')}
               source={riskQuery} enabled={vehicleId != null}
               window={data?.window}
               metrics={[
@@ -645,7 +645,7 @@ export default function InsuranceTelematicsPage() {
                     to: policy.coverage_end
                       ? formatDate(policy.coverage_end)
                       : t('ownership.insurance.policy.openEnded', 'open-ended'),
-                  })}{' · '}{tz}
+                  })}
                 </Text>
               </div>
               {/* confirm-step: handleRemove asks in the shared ConfirmDialog before removing */}
@@ -820,7 +820,7 @@ export default function InsuranceTelematicsPage() {
             title={t('ownership.insurance.trend.chart', 'Rolling risk score')}
             metadata={{
               rangeLabel: data?.window
-                ? `${formatDateTime(data.window.from)} → ${formatDateTime(data.window.to)} · ${tz}`
+                ? `${formatDateTime(data.window.from)} → ${formatDateTime(data.window.to)}`
                 : tz,
             }}
             ariaLabel={t(
@@ -932,7 +932,7 @@ export default function InsuranceTelematicsPage() {
           sourceEnabled={vehicleId != null}
           description={t(
             'ownership.insurance.checksum.subtitle',
-            'A limited SHA-256 checksum of the vehicle ID, window bounds, risk score, frequency, severity and loss-cost indices, and ordered factor codes and observed rates at fixed precision. It does not verify identity or hash the complete evidence packet: raw exposure, other factor details, policy, premium, trend and evidence are not included. Matching checksums do not establish that the complete datasets are identical.',
+            'A limited SHA-256 checksum of the vehicle ID, window bounds, selected timezone, risk score, frequency, severity and loss-cost indices, and ordered factor codes and observed rates at fixed precision. It does not verify identity or hash the complete evidence packet: raw exposure, other factor details, policy, premium, trend and evidence are not included. Matching checksums do not establish that the complete datasets are identical.',
           )}
           empty={!data?.evidence_packet_hash}
           emptyMessage={t(

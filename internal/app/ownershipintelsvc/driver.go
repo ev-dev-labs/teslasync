@@ -389,7 +389,7 @@ func (a *clusterAccumulator) add(drive port.DriveRecord, fingerprint domain.Driv
 	if drive.PeakPowerW != nil && *drive.PeakPowerW > a.peakPowerW {
 		a.peakPowerW = *drive.PeakPowerW
 	}
-	if isNight(drive.StartedAt) {
+	if isNight(drive.StartedAt.UTC()) {
 		a.nightDistance += distance
 	}
 	a.cohesionSum += own

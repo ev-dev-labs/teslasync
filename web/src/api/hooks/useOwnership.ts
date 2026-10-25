@@ -73,8 +73,8 @@ const SUBSCRIPTION = '/subscription-roi';
 
 export const ownershipKeys = {
   all: ['ownership-intel'] as const,
-  insurance: (vehicleId: number | null, windowDays: number) =>
-    [...ownershipKeys.all, 'insurance', vehicleId, windowDays] as const,
+  insurance: (vehicleId: number | null, windowDays: number, timezone = 'UTC') =>
+    [...ownershipKeys.all, 'insurance', vehicleId, windowDays, timezone] as const,
   tariffs: (limit: number, offset: number) =>
     [...ownershipKeys.all, 'tariffs', limit, offset] as const,
   invoices: (vehicleId: number | null, limit: number, offset: number) =>
@@ -144,10 +144,10 @@ function useVehicleQuery<T>(key: readonly unknown[], path: string, vehicleId: nu
 // 1. Insurance telematics
 // ---------------------------------------------------------------------------
 
-export function useInsuranceRiskProfile(vehicleId: number | null, windowDays = 90) {
+export function useInsuranceRiskProfile(vehicleId: number | null, windowDays = 90, timezone?: string) {
   return useVehicleQuery<InsuranceRiskProfile>(
-    ownershipKeys.insurance(vehicleId, windowDays),
-    `${INSURANCE}${query({ vehicle_id: vehicleId ?? undefined, window_days: windowDays })}`,
+    ownershipKeys.insurance(vehicleId, windowDays, timezone),
+    `${INSURANCE}${query({ vehicle_id: vehicleId ?? undefined, window_days: windowDays, timezone })}`,
     vehicleId,
   );
 }

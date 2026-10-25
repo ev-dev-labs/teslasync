@@ -56,7 +56,7 @@ export const warrantyReport: WarrantyOverview = {
   evidence_bundle_hash: 'recorded-warranty-digest', quality, evidence,
 };
 export const insuranceReport: InsuranceRiskProfile = {
-  vehicle_id: 7, window: recordedWindow, policy: {
+  vehicle_id: 7, timezone: 'UTC', window: recordedWindow, policy: {
     id: 401, vehicle_id: 7, insurer: 'Recorded insurer', policy_ref: 'POLICY-401',
     currency: 'USD', annual_premium_minor: 120000, deductible_minor: 50000,
     coverage_start: '2026-01-01T00:00:00.000Z', coverage_end: '2027-01-01T00:00:00.000Z',

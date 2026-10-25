@@ -34,7 +34,7 @@ const (
 	// industryLossRatio converts written premium into expected incurred loss.
 	// It is an explicit, disclosed assumption — never inferred from the data.
 	industryLossRatio = 0.62
-	// nightStartHour and nightEndHour bound trip starts in UTC, not distance
+	// nightStartHour and nightEndHour bound selected-clock trip starts, not distance
 	// actually travelled during the overnight band.
 	nightStartHour = 22
 	nightEndHour   = 5
@@ -81,11 +81,11 @@ var riskFactorSpecs = []riskFactorSpec{
 		effort:    0.5,
 	},
 	{
-		code: "night_exposure", label: "Distance share of trips starting overnight (UTC)",
+		code: "night_exposure", label: "Distance share of trips starting overnight",
 		rateUnit: "fraction", baseline: 0.10, weight: 0.12,
 		direction: domain.DirectionHigherIsWorse, frequency: true,
-		narrative: "Trip-start proxy: full distance of completed trips starting at or after 22:00 or before 05:00 UTC, divided by total exposure distance. Includes distance outside the band on qualifying trips and excludes distance inside the band on other trips; this is neither an upper nor a lower bound on actual night distance. Actual night-distance measurement requires owned model support for distance within time bands.",
-		lever:     "Review recurring departures in the 22:00–05:00 UTC band; shifting a trip start changes this proxy, not necessarily actual night distance.",
+		narrative: "Trip-start proxy: full distance of completed trips starting at or after 22:00 or before 05:00 in the selected clock, divided by total exposure distance. Includes distance outside the band on qualifying trips and excludes distance inside the band on other trips; this is neither an upper nor a lower bound on actual night distance. Actual night-distance measurement requires owned model support for distance within time bands.",
+		lever:     "Review recurring departures in the selected clock's 22:00–05:00 band; shifting a trip start changes this proxy, not necessarily actual night distance.",
 		effort:    1.0,
 	},
 	{
@@ -142,9 +142,17 @@ func (s *Service) InsuranceRiskProfile(
 	subject string,
 	vehicleID int64,
 	windowDays int,
+	timezone string,
 ) (*domain.InsuranceRiskProfile, error) {
 	if vehicleID <= 0 {
 		return nil, fmt.Errorf("%w: vehicle_id must be positive", ErrInvalidInput)
+	}
+	if timezone == "" {
+		timezone = "UTC"
+	}
+	location, err := time.LoadLocation(timezone)
+	if err != nil || timezone == "Local" {
+		return nil, fmt.Errorf("%w: timezone must be a valid IANA location", ErrInvalidInput)
 	}
 	window := s.window(windowDays)
 	drives, err := s.source.ListDrives(ctx, vehicleID, window.From, window.To)
@@ -158,6 +166,7 @@ func (s *Service) InsuranceRiskProfile(
 
 	profile := &domain.InsuranceRiskProfile{
 		VehicleID: vehicleID,
+		Timezone:  timezone,
 		Window:    window,
 		Factors:   []domain.RiskFactor{},
 		Trend:     []domain.RiskTrendPoint{},
@@ -182,7 +191,7 @@ func (s *Service) InsuranceRiskProfile(
 		return profile, nil
 	}
 
-	observation := observeRisk(usable)
+	observation := observeRisk(usable, location)
 	profile.ExposureDistanceM = observation.values["_distance_m"]
 	profile.ExposureDurationS = int64(observation.values["_duration_s"])
 	profile.DriveCount = len(usable)
@@ -246,7 +255,7 @@ func (s *Service) InsuranceRiskProfile(
 	profile.RiskGrade = gradeLossCost(profile.LossCostIndex)
 	// A risk score is not a percentile without a comparison population.
 	profile.PeerPercentile = nil
-	profile.Trend = riskTrend(usable, window)
+	profile.Trend = riskTrend(usable, window, location)
 	profile.Levers = riskLevers(scored, profile, policyRecord)
 	if policyRecord != nil {
 		profile.Premium = simulatePremium(*policyRecord, profile)
@@ -312,7 +321,7 @@ func usableDrives(drives []port.DriveRecord) []port.DriveRecord {
 	return usable
 }
 
-func observeRisk(drives []port.DriveRecord) riskObservation {
+func observeRisk(drives []port.DriveRecord, location *time.Location) riskObservation {
 	observation := riskObservation{
 		values:      map[string]float64{},
 		exposurePct: map[string]float64{},
@@ -359,7 +368,7 @@ func observeRisk(drives []port.DriveRecord) riskObservation {
 			urbanDistance += distance
 			urbanDrives++
 		}
-		if isNight(drive.StartedAt) {
+		if isNight(drive.StartedAt.In(location)) {
 			nightDistance += distance
 			nightDrives++
 		}
@@ -429,7 +438,7 @@ func observeRisk(drives []port.DriveRecord) riskObservation {
 }
 
 func isNight(at time.Time) bool {
-	hour := at.UTC().Hour()
+	hour := at.Hour()
 	return hour >= nightStartHour || hour < nightEndHour
 }
 
@@ -461,15 +470,16 @@ func gradeLossCost(lossCost float64) domain.RiskGrade {
 	}
 }
 
-func riskTrend(drives []port.DriveRecord, window domain.Window) []domain.RiskTrendPoint {
+func riskTrend(drives []port.DriveRecord, window domain.Window, location *time.Location) []domain.RiskTrendPoint {
 	if len(drives) == 0 {
 		return []domain.RiskTrendPoint{}
 	}
 	buckets := map[time.Time][]port.DriveRecord{}
 	order := []time.Time{}
 	for _, drive := range drives {
-		start := drive.StartedAt.UTC().Truncate(24 * time.Hour)
-		start = start.AddDate(0, 0, -int(start.Weekday()))
+		local := drive.StartedAt.In(location)
+		start := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, location).
+			AddDate(0, 0, -int(local.Weekday())).UTC()
 		if _, seen := buckets[start]; !seen {
 			order = append(order, start)
 		}
@@ -480,7 +490,7 @@ func riskTrend(drives []port.DriveRecord, window domain.Window) []domain.RiskTre
 	points := make([]domain.RiskTrendPoint, 0, len(order))
 	for _, start := range order {
 		bucket := buckets[start]
-		observation := observeRisk(bucket)
+		observation := observeRisk(bucket, location)
 		raw := 0.0
 		frequencyRaw, severityRaw := 0.0, 0.0
 		for _, spec := range riskFactorSpecs {
@@ -606,12 +616,12 @@ func simulatePremium(policy port.PolicyRecord, profile *domain.InsuranceRiskProf
 
 // insuranceDigest is a limited risk-summary checksum, not verified identity or a
 // hash of the complete evidence packet. It covers vehicle ID, UTC window bounds,
-// four risk indices (six decimal places), and ordered factor codes/observed rates
+// the selected timezone, four risk indices (six decimal places), and ordered factor codes/observed rates
 // (eight decimal places). Raw exposure, other factor details, policy, premium,
 // trend, evidence and remaining window facts are outside its scope.
 func insuranceDigest(vehicleID int64, window domain.Window, profile *domain.InsuranceRiskProfile) string {
 	hasher := sha256.New()
-	fmt.Fprintf(hasher, "v1|%d|%s|%s|", vehicleID, window.From.UTC().Format(time.RFC3339), window.To.UTC().Format(time.RFC3339))
+	fmt.Fprintf(hasher, "v2|%d|%s|%s|%s|", vehicleID, window.From.UTC().Format(time.RFC3339), window.To.UTC().Format(time.RFC3339), profile.Timezone)
 	fmt.Fprintf(hasher, "%.6f|%.6f|%.6f|%.6f|", profile.RiskScore, profile.FrequencyIndex, profile.SeverityIndex, profile.LossCostIndex)
 	for _, factor := range profile.Factors {
 		fmt.Fprintf(hasher, "%s=%.8f;", factor.Code, factor.ObservedRate)

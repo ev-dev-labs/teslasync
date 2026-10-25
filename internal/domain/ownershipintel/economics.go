@@ -111,6 +111,7 @@ type RiskLever struct {
 // InsuranceRiskProfile is the full underwriting answer for one vehicle.
 type InsuranceRiskProfile struct {
 	VehicleID          int64              `json:"vehicle_id"`
+	Timezone           string             `json:"timezone"`
 	Window             Window             `json:"window"`
 	Policy             *InsurancePolicy   `json:"policy"`
 	ExposureDistanceM  float64            `json:"exposure_distance_m"`

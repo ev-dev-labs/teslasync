@@ -6,6 +6,33 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
 ## Continuation after `98e23bed33` (2026-10-25)
 
+- Insurance phase gate (23:04Z, after pushed sleep `98cbb1a1b2`):
+  seven boundary cases reproduced UTC-only trip-start attribution.
+  The shared selected clock now owns the typed hook/cache/query, service
+  overnight classification and Sunday-start trend weeks. Legacy callers
+  without timezone still use UTC; invalid/Local zones fail before I/O.
+  Added response `timezone`, documented the additive query contract and
+  v2 limited-checksum canonicalization including that zone. Driver
+  fingerprints explicitly retain their existing UTC policy despite sharing
+  the night-band helper. The full-trip-distance proxy and every limitation
+  remain; no measured-night-distance claim, storage or schema change.
+  Service/source-window conservation, weekly boundaries and classifier
+  tests pass `-race`; the real handler package compiles (no package tests).
+  Actual TypeScript, six zero source-audit categories, hook routing, full
+  unchanged lint, affected ESLint, hermetic build, **123/123** affected
+  units and **7,728/7,728** frozen cases pass. The native insurance
+  full-operand contract passes **4/4** and the unchanged five-width route
+  guard passes **5/5**, each with zero proxy escapes. Typed native fixtures
+  validate the new exact query and full response; all raw operands and
+  proxy caveats remain checked. Page lines 975/975, section markers 12/12.
+  **Exact next after push:** all named queued semantic timezone roots are
+  now repaired. Refresh `gh pr checks 202`, obtain actual failed logs and
+  artifacts for any failures, group roots and fix them. If only pending,
+  wait five minutes between checks without rerunning full local quality.
+  Latest sleep-head graph **50 pass / 143 pending / 3 skipped**, incomplete,
+  not green. Evidence: `r62-insurance-red`, `r65-insurance-go`,
+  `r66-insurance-*`, `r67-insurance-route`, `r67-insurance-native`.
+  No Windows mirror or baseline changes.
 - Sleep-efficiency phase gate (22:53Z): export repair is pushed as
   `4922899147`. Sleep now sends the shared header's actual half-open
   instants rather than date-only UTC bounds. Its exact coverage window

@@ -133,6 +133,7 @@ export interface RiskLever {
 
 export interface InsuranceRiskProfile {
   vehicle_id: number;
+  timezone: string;
   window: OwnershipWindow;
   policy: InsurancePolicy | null;
   exposure_distance_m: number;
