@@ -70,9 +70,22 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   shards 1/5/10/14/56 differ only in the intended compact quick-navigation
   tiles (including forced colors); shard 39 differs only in semantic
   battery-bar palette. Approved for one-time targeted regeneration.
-- Current next step: push fixes 4-5, then repair the largest remaining
-  dashboard acceptance group and semantic timezone roots; inspect current
-  CI failure logs as jobs finish. Completed fixes this session: 5.
+- Fixes 4-5 pushed at `d2c6d9f212`; round 2 has begun (first observation
+  36 pending / 4 pass / 2 skipped; incomplete job graph, not a final count).
+- Fix 6: exact charge observer contracts now require the production
+  20-session chart key/request rather than the obsolete 10-session key.
+  Kept all same-widget/boundary/vehicle/list/full-wire invariants and every
+  negative mutation test; real native observer suite passes 13/13 with
+  proxy escapes=0. Affected ESLint and actual TypeScript exit 0.
+  Evidence: `fix-6-query-binding.log`, `fix-6-eslint.log`, `fix-6-tsc.log`.
+- Windows mirror synced cleanly to pushed `d2c6d9f212`. Its build passes
+  using native `npm.cmd` (plain `npm` resolves to a PowerShell script blocked
+  by the machine's existing execution policy; no policy changed and no
+  dependencies installed). Reviewed-shard regeneration is next.
+- Current next step: regenerate reviewed Windows shards one at a time,
+  then repair the largest remaining dashboard acceptance group and semantic
+  timezone roots; inspect current CI failure logs as jobs finish.
+  Completed fixes this session: 6.
 
 ## Resume verification (2026-10-25, after `354deb1c1f`)
 

@@ -49,7 +49,7 @@ export interface CatalogueChargeQueryBinding {
 export function assertCatalogueChargeQueryBinding(binding: CatalogueChargeQueryBinding,
   widgetId: string, kind: 'chart' | 'detail', source: Record<string, unknown>) {
   assertCatalogueQueryScope(binding, widgetId,
-    kind === 'chart' ? ['charging', 7, 'session-chart-10'] : ['charging-session', 701]);
+    kind === 'chart' ? ['charging', 7, 'session-chart-20'] : ['charging-session', 701]);
   const sessions = kind === 'chart' ? binding.data : [binding.data];
   if (!Array.isArray(sessions) || sessions.length !== 1 || !object(sessions[0])) {
     throw new Error('Native source observer must preserve the original single session');
@@ -91,7 +91,7 @@ export function assertCatalogueQueryScope(binding: CatalogueChargeQueryBinding,
 export async function renderedChargeBinding(panel: Locator, widgetId: string, kind: 'chart' | 'detail') {
   return renderedCatalogueQueryBinding(panel, widgetId,
     kind === 'chart' ? 'Charge sessions' : 'Charge session detail',
-    kind === 'chart' ? ['charging', 7, 'session-chart-10'] : ['charging-session', 701],
+    kind === 'chart' ? ['charging', 7, 'session-chart-20'] : ['charging-session', 701],
     kind === 'detail' ? ['charging-sessions', 'vehicle', '7'] : undefined);
 }
 
