@@ -4,6 +4,25 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
+## Merge-then-fix execution (2026-10-25)
+
+- Prep: recovered the existing Zod 4.6.7 manifest/lockfile upgrade for the
+  Security Scan finding (Zod 3.25.76; fixed version reported as 4.6.6).
+  Adapted geofence lazy localized validation to Zod 4 error callbacks and
+  preserved the alert place-ID validation message. TypeScript, focused
+  schemas (82/82), ESLint, and split-catalog check pass. Full replica is
+  deferred to the combined validation phase requested for this operation.
+- Next: merge `origin/feat/shared-patterns`, regenerate verified i18n
+  checkpoints, typecheck, commit and push; then merge `origin/feat/chart-palette`.
+- Combined failure groups to investigate after merging: branch-only
+  vehicle-hero-readings/route-layout regressions (~53 reported; attribution
+  must be re-established rather than trusting the branch handoff), remaining
+  inline feature conversions (18 reported), existing responsive/timezone
+  failures, Security Scan, Windows visual diffs, and any new merge failures.
+- Shared-pattern call sites marked `pending` in
+  `docs/shared-patterns-state.md` remain a separate later adoption task.
+- No Windows baselines have been regenerated in this session.
+
 Last updated: 2026-10-23 by Copilot recovery session.
 Branch HEAD: reconcile at handoff; two widget-track recovery commits were
 pushed, followed by the dashboard Phase 4 repair batch. The Track B
