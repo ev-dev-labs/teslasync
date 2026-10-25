@@ -37,7 +37,7 @@ export default function DepartureForecastPage() {
 
   const { vehicleId, vehicle } = useSelectedVehicle();
   const { settings } = useSettings();
-  const { locale, tz: timeZone } = useDateFormat('vehicle');
+  const { locale, tz: timeZone } = useDateFormat();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(
     vehicleIdStr,
@@ -82,17 +82,25 @@ export default function DepartureForecastPage() {
     vehicleTimeZone && vehicleTimeZone !== 'UTC' && isValidTimezone(vehicleTimeZone),
   );
   const savedUserZone = settings.timezone_user?.trim();
+  const displayMode = settings.tz_display_default === 'user' || settings.tz_display_default === 'utc'
+    ? settings.tz_display_default
+    : 'vehicle';
+  const fallbackSource = savedUserZone && isValidTimezone(savedUserZone)
+    ? t('departure.method.zoneSavedUser', 'saved user timezone')
+    : t('departure.method.zoneBrowser', 'browser timezone');
   const timeZoneProvenance = [
     t('departure.method.effectiveZone', 'The model follows your selected time zone.'),
-    usesVehicleMetadata
-      ? t('departure.method.zoneMetadata', 'Source: selected vehicle timezone metadata.')
-      : t('departure.method.zoneFallback', 'Source: shared vehicle-mode fallback ({{source}}); vehicle timezone metadata is missing, invalid, or UTC.', {
-          source: savedUserZone && isValidTimezone(savedUserZone)
-            ? t('departure.method.zoneSavedUser', 'saved user timezone')
-            : t('departure.method.zoneBrowser', 'browser timezone, or UTC if unavailable'),
-        }),
+    displayMode === 'utc'
+      ? t('departure.method.zoneFixed', 'Source: fixed reference display setting.')
+      : displayMode === 'user'
+        ? t('departure.method.zoneUser', 'Source: shared user display setting ({{source}}).', { source: fallbackSource })
+        : usesVehicleMetadata
+          ? t('departure.method.zoneMetadata', 'Source: selected vehicle timezone metadata.')
+          : t('departure.method.zoneFallback', 'Source: shared vehicle-mode fallback ({{source}}); vehicle timezone metadata is unavailable or unsuitable.', {
+              source: fallbackSource,
+            }),
     timeZone.trim() !== modelTimeZone
-      ? t('departure.method.zoneInvalid', 'The selected time zone is missing or invalid; this model uses UTC without changing shared settings.')
+      ? t('departure.method.zoneInvalid', 'The selected time zone is missing or invalid; this model uses the fixed reference clock without changing shared settings.')
       : '',
   ].filter(Boolean).join(' ');
 
@@ -102,7 +110,7 @@ export default function DepartureForecastPage() {
       query={drivesQuery}
       subtitle={t(
         'departure.subtitle',
-        'Vehicle-timezone departure patterns from returned drive starts, expressed as modeled likelihood estimates',
+        'Departure patterns from returned drive starts in your selected time zone, expressed as modeled likelihood estimates',
       )}
     >
       {hasCachedData && state.isRefreshBlocked && !state.refreshError && (

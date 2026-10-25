@@ -39,12 +39,40 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   audit: six counts 0, TypeScript passes; complete lint chain exits 0.
   Evidence: `fix-1-3-unit.log`, `fix-1-axis-browser.log`,
   `fix-1-audit.log`, `fix-1-3-lint.log`.
+- Fixes 4-5 verified: departure forecast now consumes the shared selected
+  display zone rather than forcing vehicle mode; user/fixed/vehicle
+  provenance stays truthful and model weekday/evidence agree in conflicting
+  Tokyo/Los Angeles cases. Charge-departure source history bounds/counts
+  move into the existing Review details drawer; identical bounds render
+  once, and retained-source recovery links remain usable there.
+  Departure/model tests pass 61/61. Related/frozen run initially passed
+  8,001 tests with one stale card-face assertion failing; the corrected
+  drawer/recovery suite then passed 9/9. All frozen catalog suites passed.
+  Actual TypeScript and affected ESLint exit 0. Both unchanged 1280px route
+  guard cases pass, tzIso/tzZones/tzDupes=0, wrapper proxy escapes=0.
+  Mock build initially failed its catalog check while generators were
+  updating inputs; serial catalog check and rebuild both exit 0 afterward.
+  Source line counts 190->198, 303->308, 126->126, 119->119, 78->83;
+  panel/chart reference counts unchanged (0/3/0/3/0). Driving and charging
+  hook paths all match router registrations. Sanctioned generators also
+  refresh the CostBreakdown producer receipt missed in the first commit.
+  Evidence: `fix-4-departure-unit.log`, `fix-4-5-targeted-unit.log`,
+  `fix-5-alignment-final.log`, `fix-4-5-mock-final.log`,
+  `fix-4-5-tsc.log`, `fix-4-5-eslint.log`, `fix-4-5-browser.log`.
+  All five actual seven-category production audits report six counts 0
+  and TypeScript pass; full existing lint/audit chain exits 0
+  (`fix-4-5-audits.log`, `fix-4-5-full-lint.log`).
+- Round 1 at `2f6aba7b3d` is IN FLIGHT: 1 fail / 43 pass / 146 pending /
+  3 skipped, not a final reduction from round 0. First observed failure:
+  Windows visual shard 1/64; no snapshots changed yet.
 - Windows mirror again confirmed clean; downloaded ONLY failing visual
-  artifacts (1,5,10,14,39,56/64). They have not been reviewed or regenerated.
-- Current next step: finish departure forecast's selected-zone semantics
-  and provenance (in progress), then other semantic timezone roots and
-  dashboard acceptance groups. Push verified fixes and continue the next
-  fix while CI runs. Completed fixes this session: 3.
+  artifacts (1,5,10,14,39,56/64). All six old/new pairs reviewed: dashboard
+  shards 1/5/10/14/56 differ only in the intended compact quick-navigation
+  tiles (including forced colors); shard 39 differs only in semantic
+  battery-bar palette. Approved for one-time targeted regeneration.
+- Current next step: push fixes 4-5, then repair the largest remaining
+  dashboard acceptance group and semantic timezone roots; inspect current
+  CI failure logs as jobs finish. Completed fixes this session: 5.
 
 ## Resume verification (2026-10-25, after `354deb1c1f`)
 

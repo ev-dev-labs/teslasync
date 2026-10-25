@@ -87,7 +87,7 @@ export function AlignmentPairs({ pairs, loading, available, missingReason }: Pro
       <Text as="p" variant="caption" className="mb-3">
         {t(
           'chargeDepartureAlignment.modernization.detailsScope',
-          'All loaded pairs, newest first. “Well matched” means no model flag was triggered, not proof of intent. Already-full dwell is inferred from charge-end SoC, not continuous parked measurements. Dates use your browser timezone.',
+          'All loaded pairs, newest first. “Well matched” means no model flag was triggered, not proof of intent. Already-full dwell is inferred from charge-end SoC, not continuous parked measurements. Dates use your selected time zone.',
         )}
       </Text>
       {loading ? <Skeleton height={180} /> : rows.length === 0 ? (

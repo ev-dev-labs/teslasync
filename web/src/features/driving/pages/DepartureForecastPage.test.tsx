@@ -33,7 +33,7 @@ const h = vi.hoisted(() => ({
   locale: 'en-US',
   vehicleTimezone: null as string | null,
   userTimezone: 'Asia/Tokyo',
-  displayMode: 'user',
+  displayMode: 'vehicle',
   useSharedTimezone: false,
 }));
 
@@ -275,7 +275,7 @@ beforeEach(() => {
   h.locale = 'en-US';
   h.vehicleTimezone = null;
   h.userTimezone = 'Asia/Tokyo';
-  h.displayMode = 'user';
+  h.displayMode = 'vehicle';
   h.useSharedTimezone = false;
   h.history = query({ data: weekdayCommute(12) });
   vi.spyOn(Date, 'now').mockReturnValue(FROZEN_NOW);
@@ -439,7 +439,7 @@ describe('DepartureForecastPage', () => {
     }
   });
 
-  it.each([null, 'UTC'])('discloses the shared saved-user fallback for vehicle metadata %s without overriding UTC semantics', (metadata) => {
+  it.each([null, 'UTC'])('honors the fixed display setting instead of the vehicle fallback for metadata %s', (metadata) => {
     h.useSharedTimezone = true;
     h.vehicleTimezone = metadata;
     h.locale = 'de-DE';
@@ -450,24 +450,53 @@ describe('DepartureForecastPage', () => {
     const method = screen.getByTestId('departure-methodology');
     expect(method).toHaveTextContent('The model follows your selected time zone.');
     expect(method).not.toHaveTextContent('Asia/Kolkata');
-    expect(method).toHaveTextContent('shared vehicle-mode fallback (saved user timezone)');
-    expect(method).toHaveTextContent('vehicle timezone metadata is missing, invalid, or UTC');
+    expect(method).toHaveTextContent('Source: fixed reference display setting.');
+    expect(method).not.toHaveTextContent('vehicle-mode fallback');
+    expect(method).not.toHaveTextContent(/\bUTC\b/);
     expect(method.querySelector('time')).toHaveTextContent(
-      departureDateTime(FROZEN_NOW, 'de-DE', 'Asia/Kolkata'),
+      departureDateTime(FROZEN_NOW, 'de-DE', 'UTC'),
     );
     const kpis = screen.getByTestId('departure-kpis');
     assertOperationalBriefDisclosure(kpis, 'The model follows your selected time zone.', { contains: true });
-    assertOperationalBriefDisclosure(kpis, 'shared vehicle-mode fallback (saved user timezone)', { contains: true });
-    assertOperationalBriefDisclosure(kpis, 'vehicle timezone metadata is missing, invalid, or UTC', { contains: true });
+    assertOperationalBriefDisclosure(kpis, 'Source: fixed reference display setting.', { contains: true });
+    assertOperationalBriefDisclosure(kpis, 'vehicle-mode fallback', { contains: true, absent: true });
     fireEvent.click(within(kpis).getByRole('button', { name: 'Review details' }));
     const kpisDrawer = screen.getByRole('dialog');
     expect(kpisDrawer.querySelector('time')).toHaveTextContent(
-      departureDateTime(FROZEN_NOW, 'de-DE', 'Asia/Kolkata'),
+      departureDateTime(FROZEN_NOW, 'de-DE', 'UTC'),
     );
     fireEvent.keyDown(kpisDrawer, { key: 'Escape' });
-    expect(h.timezoneHook).toHaveBeenCalledWith('vehicle');
+    expect(h.timezoneHook).toHaveBeenCalledWith('utc');
     expect(h.vehicleTimezone).toBe(metadata);
     expect(h.displayMode).toBe('utc');
+    expectEverySection();
+  });
+
+  it.each([
+    ['Asia/Tokyo', 'Tuesday', 'Monday'],
+    ['America/Los_Angeles', 'Monday', 'Tuesday'],
+  ])('uses the selected user zone %s for both model days and displayed evidence', (zone, supportedDay, unsupportedDay) => {
+    h.useSharedTimezone = true;
+    h.displayMode = 'user';
+    h.userTimezone = zone;
+    h.vehicleTimezone = zone === 'Asia/Tokyo' ? 'America/Los_Angeles' : 'Asia/Tokyo';
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-01-06T01:00:00Z'));
+    const drives = [driveAt('2026-01-06T00:30:00Z')];
+    const original = structuredClone(drives);
+    h.history = query({ data: drives });
+    renderPage();
+    const method = screen.getByTestId('departure-methodology');
+    expect(method).toHaveTextContent('Source: shared user display setting (saved user timezone).');
+    expect(method).not.toHaveTextContent('vehicle timezone metadata');
+    expect(method).not.toHaveTextContent(zone);
+    expect(method.querySelector('time')).toHaveTextContent(
+      departureDateTime(Date.parse('2026-01-06T01:00:00Z'), h.locale, zone),
+    );
+    const weekdays = within(screen.getByTestId('departure-weekday-routines'));
+    expect(within(weekdays.getByText(supportedDay).closest('li')!).getByText('Supported')).toBeInTheDocument();
+    expect(within(weekdays.getByText(unsupportedDay).closest('li')!).getByText('Unsupported')).toBeInTheDocument();
+    expect(h.timezoneHook).toHaveBeenCalledWith('user');
+    expect(drives).toEqual(original);
     expectEverySection();
   });
 
@@ -492,10 +521,10 @@ describe('DepartureForecastPage', () => {
     h.userTimezone = '';
     renderPage();
     const method = screen.getByTestId('departure-methodology');
-    expect(method).toHaveTextContent('shared vehicle-mode fallback (browser timezone, or UTC if unavailable)');
+    expect(method).toHaveTextContent('shared vehicle-mode fallback (browser timezone)');
     expect(method).toHaveTextContent('The model follows your selected time zone.');
     const kpis = screen.getByTestId('departure-kpis');
-    assertOperationalBriefDisclosure(kpis, 'shared vehicle-mode fallback (browser timezone, or UTC if unavailable)', { contains: true });
+    assertOperationalBriefDisclosure(kpis, 'shared vehicle-mode fallback (browser timezone)', { contains: true });
     assertOperationalBriefDisclosure(kpis, 'The model follows your selected time zone.', { contains: true });
     expect(h.userTimezone).toBe('');
   });
@@ -511,11 +540,11 @@ describe('DepartureForecastPage', () => {
     const method = screen.getByTestId('departure-methodology');
     expect(method).toHaveTextContent('The model follows your selected time zone.');
     expect(method).toHaveTextContent('shared vehicle-mode fallback (saved user timezone)');
-    expect(method).toHaveTextContent('vehicle timezone metadata is missing, invalid, or UTC');
+    expect(method).toHaveTextContent('vehicle timezone metadata is unavailable or unsuitable');
     if (zone === '') {
-      expect(method).toHaveTextContent('this model uses UTC without changing shared settings');
+      expect(method).toHaveTextContent('this model uses the fixed reference clock without changing shared settings');
     } else {
-      expect(method).not.toHaveTextContent('this model uses UTC without changing shared settings');
+      expect(method).not.toHaveTextContent('this model uses the fixed reference clock without changing shared settings');
     }
     expect(method).not.toHaveTextContent('Not/AZone');
     expect(method.querySelector('time')).toHaveTextContent(
@@ -541,12 +570,12 @@ describe('DepartureForecastPage', () => {
     renderPage();
     const method = screen.getByTestId('departure-methodology');
     expect(method).toHaveTextContent('The model follows your selected time zone.');
-    expect(method).toHaveTextContent('shared vehicle-mode fallback (browser timezone, or UTC if unavailable)');
+    expect(method).toHaveTextContent('shared vehicle-mode fallback (browser timezone)');
     expect(method).not.toHaveTextContent('saved user timezone');
     expect(method).not.toHaveTextContent('Not/AZone');
     const kpis = screen.getByTestId('departure-kpis');
     assertOperationalBriefDisclosure(kpis, 'The model follows your selected time zone.', { contains: true });
-    assertOperationalBriefDisclosure(kpis, 'shared vehicle-mode fallback (browser timezone, or UTC if unavailable)', { contains: true });
+    assertOperationalBriefDisclosure(kpis, 'shared vehicle-mode fallback (browser timezone)', { contains: true });
     expect(h.userTimezone).toBe('Not/AZone');
   });
 

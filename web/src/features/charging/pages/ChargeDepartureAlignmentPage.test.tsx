@@ -334,7 +334,7 @@ describe('Charge departure page contract adoption', () => {
     expect(within(history).getByText('1 records loaded', { selector: 'dd' })).toBeInTheDocument();
     expect(history).toHaveTextContent('Observed charge-end timestamps');
     expect(history).toHaveTextContent('Observed drive-start timestamps');
-    expect(history).toHaveTextContent('1 valid timestamps');
+    expect(history).toHaveTextContent('valid timestamp count: 1');
     expect(history).toHaveTextContent(formatDateTime('2026-09-01T09:00:00Z', {
       locale: 'en-US', tz: 'UTC', clock: { second: '2-digit' },
     }));

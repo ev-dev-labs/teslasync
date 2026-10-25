@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { OperationalBrief, type OperationalBriefMetric, type StatStripProps } from '@/components/data-display';
 import { Badge, Text } from '@/components/ui';
@@ -8,12 +9,13 @@ interface Props extends StatStripProps {
   description?: string;
   sourceStatus?: string;
   metricTones?: Readonly<Record<string, OperationalBriefMetric['tone']>>;
+  scopeDetails?: ReactNode;
 }
 
 /** Charging summaries retain their independent source periods and specialist displays. */
 export function ChargingSummaryBrief({
   metrics, period, preferences, title, id, testId, loading = false, retained = false, variant = 'embedded',
-  secondary, footer, emptyContent, className, comparisonLabel, description, sourceStatus, periodHeaderId, metricTones,
+  secondary, footer, emptyContent, className, comparisonLabel, description, sourceStatus, periodHeaderId, metricTones, scopeDetails,
 }: Props) {
   const { t } = useTranslation();
   const { formatDateRange, formatDateTime } = useDateFormat();
@@ -55,7 +57,10 @@ export function ChargingSummaryBrief({
         metrics={metricTones
           ? operationalMetrics.map(metric => ({ ...metric, tone: metricTones[metric.key] }))
           : operationalMetrics}
-        scope={<Badge variant="neutral" size="sm">{period.label}</Badge>}
+        scope={<>
+          <Badge variant="neutral" size="sm">{period.label}</Badge>
+          {scopeDetails != null && <div className="w-full">{scopeDetails}</div>}
+        </>}
         freshness={periodBounds ? <Text as="span" variant="caption">{periodBounds}</Text> : undefined}
         provenance={context ?? period.label}
         narrative={{

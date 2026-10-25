@@ -210,11 +210,13 @@
       "title": "Methodology and limitations",
       "windowBody": "The model filters the newest rows returned by /drives to an absolute {{days}}-day lookback. A {{limit}}-row response can be capped and is not guaranteed lifetime history.",
       "windowTitle": "Returned evidence window",
-      "zoneBrowser": "browser timezone, or UTC if unavailable",
-      "zoneFallback": "Source: shared vehicle-mode fallback ({{source}}); vehicle timezone metadata is missing, invalid, or UTC.",
-      "zoneInvalid": "The selected time zone is missing or invalid; this model uses UTC without changing shared settings.",
+      "zoneBrowser": "browser timezone",
+      "zoneFallback": "Source: shared vehicle-mode fallback ({{source}}); vehicle timezone metadata is unavailable or unsuitable.",
+      "zoneFixed": "Source: fixed reference display setting.",
+      "zoneInvalid": "The selected time zone is missing or invalid; this model uses the fixed reference clock without changing shared settings.",
       "zoneMetadata": "Source: selected vehicle timezone metadata.",
-      "zoneSavedUser": "saved user timezone"
+      "zoneSavedUser": "saved user timezone",
+      "zoneUser": "Source: shared user display setting ({{source}})."
     },
     "next24": {
       "aria": "Hourly and cumulative modeled departure likelihood across the next 24 vehicle-timezone hour boundaries",
@@ -297,7 +299,7 @@
       "selectVehicleKpi": "Select a vehicle above to load departure evidence.",
       "thinEvidence": "{{band}}: estimates remain descriptive, and the illustrative planning marker is unavailable."
     },
-    "subtitle": "Vehicle-timezone departure patterns from returned drive starts, expressed as modeled likelihood estimates",
+    "subtitle": "Departure patterns from returned drive starts in your selected time zone, expressed as modeled likelihood estimates",
     "time": {
       "inHours": "in {{count}} h",
       "inHoursMinutes": "in {{hours}} h {{minutes}} min",

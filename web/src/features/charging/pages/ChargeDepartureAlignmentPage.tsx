@@ -196,7 +196,12 @@ export default function ChargeDepartureAlignmentPage() {
                     count == null ? { replace: { count: '—' } } : { count },
                   )}</Caption>
                   <Caption as="dd">{boundsLabel}: {bounds != null
-                    ? t('chargeDepartureAlignment.modernization.bounds', '{{first}} → {{last}} ({{count}} valid timestamps)', {
+                    ? bounds.first === bounds.last
+                      ? t('chargeDepartureAlignment.modernization.singleBound', '{{when}} (valid timestamp count: {{count}})', {
+                        when: instantLabel(bounds.first),
+                        count: bounds.count,
+                      })
+                      : t('chargeDepartureAlignment.modernization.bounds', '{{first}} → {{last}} ({{count}} valid timestamps)', {
                       first: instantLabel(bounds.first),
                       last: instantLabel(bounds.last),
                       count: bounds.count,

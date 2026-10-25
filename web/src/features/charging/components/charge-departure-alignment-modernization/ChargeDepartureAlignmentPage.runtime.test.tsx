@@ -186,16 +186,18 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     expect(stats[3]?.querySelector('[data-operational-value]')).toHaveTextContent('15');
     expect(result.container.querySelector('[data-layout-reference]')).toHaveClass('w-full', 'min-w-0');
     expect(result.container.querySelector('[data-period-kind]')).toHaveAttribute('data-period-kind', 'unknown');
-    expect(result.container.querySelector('[data-alignment-bounds="charging-history"]'))
-      .toHaveTextContent(instantLabel(charges[0]!.ended_at!));
-    expect(result.container.querySelector('[data-alignment-bounds="drive-history"]'))
-      .toHaveTextContent('15 valid timestamps');
+    expect(result.container.querySelector('[data-alignment-bounds="charging-history"]')).toBeNull();
+    expect(result.container.querySelector('[data-alignment-bounds="drive-history"]')).toBeNull();
     expect(figure()).toBeInTheDocument();
     expect(screen.getByTestId('alignment-search')).toHaveTextContent('existing=kept');
     expect(screen.getByTestId('alignment-search')).toHaveTextContent('hidden_charge-departure-alignment=margin');
     expect(screen.queryByRole('combobox', { name: /Vehicle|Date range|Time range/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
     const details = screen.getByRole('dialog', { name: 'Charge departure alignment metrics details' });
+    expect(details.querySelector('[data-alignment-bounds="charging-history"]'))
+      .toHaveTextContent(instantLabel(charges[0]!.ended_at!));
+    expect(details.querySelector('[data-alignment-bounds="drive-history"]'))
+      .toHaveTextContent('15 valid timestamps');
     expect(within(details).getByRole('group', { name: 'Misaligned Rate' }))
       .toHaveTextContent('15 of 15 paired sessions');
     expect(within(details).getByRole('group', { name: 'Paired Sessions' }))
@@ -220,6 +222,25 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     const provenanceContext = within(calculationDetails).getByText('Data sources', { exact: true }).closest('div');
     if (!provenanceContext) throw new Error('Missing calculation provenance context');
     expect(within(provenanceContext).getByText(historyScope, { exact: true })).toBeInTheDocument();
+  });
+
+  it('keeps single-instant source bounds once in the existing details drawer', () => {
+    source.sessions = { ...source.sessions, data: [charges[0]!] };
+    source.drives = { ...source.drives, data: [drives[0]!] };
+    const { container } = mountPage();
+    expect(container.querySelector('[data-alignment-bounds]')).toBeNull();
+    expect(screen.getByRole('table', { name: 'Recent Pairs' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
+    const details = screen.getByRole('dialog');
+    for (const [id, iso] of [
+      ['charging-history', charges[0]!.ended_at!],
+      ['drive-history', drives[0]!.startTs],
+    ]) {
+      const context = details.querySelector(`[data-alignment-bounds="${id}"]`);
+      expect(context).toHaveTextContent('valid timestamp count: 1');
+      expect(context?.textContent?.split(instantLabel(iso))).toHaveLength(2);
+      expect(context).not.toHaveTextContent('→');
+    }
   });
 
   it('keeps all loaded pairs reachable beyond the original twelve and every field in desktop columns', () => {
@@ -342,7 +363,7 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     expect(pairsHeading()).toBeInTheDocument();
     expect(screen.queryByText('sensitive backend detail')).not.toBeInTheDocument();
     const healthyId = id === 'charging-history' ? 'drive-history' : 'charging-history';
-    expect(result.container.querySelector(`[data-alignment-bounds="${healthyId}"]`)).toHaveTextContent('15 records loaded');
+    expect(details.querySelector(`[data-alignment-bounds="${healthyId}"]`)).toHaveTextContent('15 records loaded');
     fireEvent.click(within(sourcePanel(result.container, id)).getByRole('button', { name: 'Retry' }));
     expect(id === 'charging-history' ? source.chargeRetry : source.driveRetry).toHaveBeenCalledTimes(1);
     expect(id === 'charging-history' ? source.driveRetry : source.chargeRetry).not.toHaveBeenCalled();

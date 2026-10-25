@@ -685,7 +685,7 @@
   {
     "file": "web/src/features/dashboard/widgets/CostBreakdownWidget.tsx",
     "calls": 14,
-    "sha256": "59a4689748656b4161f98b7a70030ea1ff51932afa8f0cc05bdde0fd6cfc6acd"
+    "sha256": "18a38de57831c884c0a1d582cb09f3ea334a6c0cfef2c9b83ecb124a6ec0a412"
   },
   {
     "file": "web/src/features/dashboard/widgets/DashboardStatsWidget.tsx",
