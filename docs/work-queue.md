@@ -53,9 +53,22 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   period-total/header allocation, speed-profile/regen readout precision,
   coach recommendation vs old score, and missing telemetry readout/geometry.
   The separate wide-dynamics distribution and motor-history cases also remain.
-  Current next step: fix the independently identified toast timer lifetime,
-  then continue those precise widget and date-contract groups. Full-suite
+  Continue those precise widget and date-contract groups. Full-suite
   validation remains exclusively CI-owned; inspect the next pushed head.
+- Fix 2: ToastProvider now owns dismissal timers in its effect lifetime,
+  including dismissal, five-toast eviction and unmount cleanup. Absolute
+  deadlines prevent newer toasts extending existing lifetimes and survive
+  StrictMode effect replay. Three new lifecycle assertions fail before
+  the fix; all 41 Toast/actual admin BackupRestore tests now pass.
+  Actual TypeScript and the entire existing lint chain pass. The source
+  audit honestly reports the two unchanged pre-existing raw buttons and
+  zero in its other five violation categories; no markup was changed.
+  Source lines 238->244, no panel/chart/API/hook/baseline changes.
+  Evidence: `r5-toast-red`, `r5-toast-page-unit`, `r5-toast-audit`, `r5-lint`.
+  Next step: restore real compact drive telemetry and wide distribution,
+  bound CostForecast's chart, then fix the remaining exact readout/date
+  contracts. At 6092735f15 CI is still in flight: 0 fail/14 pass/176 pending/
+  3 skipped; do not count pending jobs as an improvement from round 0.
 
 ## Mandatory ten-fix handoff (2026-10-25 16:43Z)
 
