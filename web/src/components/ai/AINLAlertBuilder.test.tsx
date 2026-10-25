@@ -42,8 +42,6 @@ import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
-import { deriveDataState } from '@/api/dataState'
-
 // File-level mock wins over the global useSettings stub registered in
 // src/test-setup.ts (which defaults ai_mode='off'). Each test drives
 // the render gate explicitly via mockUseSettings.mockReturnValue.

@@ -10,8 +10,6 @@ import {
 // which is useless for asserting the hasMore / not-intersecting / empty-batch
 // branches — so each test installs this stub via vi.stubGlobal and drives the
 // callback by hand.
-type Emit = Array<Partial<IntersectionObserverEntry>>
-
 function Harness({ onLoadMore, hasMore }: { onLoadMore: () => void; hasMore: boolean }) {
   const ref = useInfiniteScroll(onLoadMore, hasMore)
   return <div data-testid="sentinel" ref={ref} />

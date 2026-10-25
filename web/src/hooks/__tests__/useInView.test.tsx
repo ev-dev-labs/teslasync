@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, renderHook, act, screen } from '@testing-library/react';
 import { useInView, type UseInViewOptions } from '../useInView';
 import {

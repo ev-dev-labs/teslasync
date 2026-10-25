@@ -46,11 +46,6 @@ import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
-import { deriveDataState } from '@/api/dataState'
-
-
-
-
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
 }))
