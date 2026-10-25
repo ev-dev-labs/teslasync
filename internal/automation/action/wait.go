@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -59,7 +60,7 @@ func DecodeWaitSpec(raw json.RawMessage) (*WaitConfig, error) {
 		return nil, fmt.Errorf("expected type \"wait\", got %q", cfg.Type)
 	}
 
-	if cfg.DurationSeconds <= 0 {
+	if validation.ValidatePositiveID(int64(cfg.DurationSeconds)) != nil {
 		return nil, fmt.Errorf("duration_seconds must be positive, got %d", cfg.DurationSeconds)
 	}
 

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -211,7 +212,7 @@ func (t *GeofenceTrigger) OnPositionUpdate(ctx context.Context, vehicleID int64,
 		placeID := ga.Trigger.PlaceID
 		dwellMinutes := ga.Trigger.DwellMinutes
 
-		if placeID <= 0 {
+		if validation.ValidatePositiveID(placeID) != nil {
 			t.autoDisableGeofence(ctx, ga.Automation.ID, "geofence place_id is required")
 			continue
 		}

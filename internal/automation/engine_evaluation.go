@@ -13,6 +13,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/automation/condition"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 // ── Condition Evaluation ───────────────────────────────────────────────
@@ -280,13 +281,13 @@ func vehicleStateSignalValue(state *vehiclemodel.VehicleState, signal string) (a
 
 func compareConditionSignal(actual any, c *models.AutomationStepConditionSignal) (bool, string) {
 	if c.Op == "in" {
-		if c.ValueText == nil || strings.TrimSpace(*c.ValueText) == "" {
+		if c.ValueText == nil || validation.TrimSpace(*c.ValueText) == "" {
 			return false, fmt.Sprintf("%s in requires a nonempty value list", c.Signal)
 		}
 		actualNum, numeric := numberValue(actual)
 		matched := false
 		for _, part := range strings.Split(*c.ValueText, ",") {
-			item := strings.TrimSpace(part)
+			item := validation.TrimSpace(part)
 			if item == "" {
 				return false, fmt.Sprintf("%s in contains an empty value", c.Signal)
 			}

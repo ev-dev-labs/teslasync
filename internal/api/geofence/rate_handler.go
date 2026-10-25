@@ -16,6 +16,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 
 	"github.com/rs/zerolog/log"
@@ -354,7 +355,7 @@ func (h *Handler) CreateRate(w http.ResponseWriter, r *http.Request) {
 		apperror.Write(w, r, apperror.ErrMissingField.WithMessage("rate_per_wh and effective_from are required"))
 		return
 	}
-	currency := strings.ToUpper(strings.TrimSpace(req.Currency))
+	currency := strings.ToUpper(validation.TrimSpace(req.Currency))
 	if err := validateRateRequestFields(*req.RatePerWh, currency, *req.EffectiveFrom, req.EffectiveTo); err != nil {
 		apperror.Write(w, r, apperror.ErrGeofenceRateInvalid.WithMessage(err.Error()))
 		return
@@ -435,7 +436,7 @@ func (h *Handler) DeleteRate(w http.ResponseWriter, r *http.Request) {
 // timestamps or an inverted/empty [from, to) window.
 func parseApplyScope(r *http.Request, geofenceID, rateID int64) (systemmodel.GeofenceRateApplyScope, error) {
 	scope := systemmodel.GeofenceRateApplyScope{GeofenceID: geofenceID, RateID: rateID}
-	if v := strings.TrimSpace(r.URL.Query().Get("from")); v != "" {
+	if v := validation.TrimSpace(r.URL.Query().Get("from")); v != "" {
 		t, err := time.Parse(time.RFC3339, v)
 		if err != nil {
 			return scope, fmt.Errorf("invalid from: %w", err)
@@ -443,7 +444,7 @@ func parseApplyScope(r *http.Request, geofenceID, rateID int64) (systemmodel.Geo
 		t = t.UTC()
 		scope.From = &t
 	}
-	if v := strings.TrimSpace(r.URL.Query().Get("to")); v != "" {
+	if v := validation.TrimSpace(r.URL.Query().Get("to")); v != "" {
 		t, err := time.Parse(time.RFC3339, v)
 		if err != nil {
 			return scope, fmt.Errorf("invalid to: %w", err)

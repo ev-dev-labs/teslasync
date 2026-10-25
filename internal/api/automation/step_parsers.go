@@ -3,10 +3,10 @@ package automation
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	dbauto "github.com/ev-dev-labs/teslasync/internal/database/automation"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 func automationStepWrites(req *createAutomationRequest) ([]dbauto.AutomationStepWrite, error) {
@@ -34,8 +34,8 @@ func automationStepPayloadModel(step automationTypedStep) (any, error) {
 	switch p := step.Payload.(type) {
 	case automationTriggerSignalDTO:
 		return &models.AutomationStepTriggerSignal{
-			Signal:    strings.TrimSpace(p.Signal),
-			Op:        strings.TrimSpace(p.Op),
+			Signal:    validation.TrimSpace(p.Signal),
+			Op:        validation.TrimSpace(p.Op),
 			ValueText: p.ValueText,
 			ValueNum:  p.ValueNum,
 			ValueBool: p.ValueBool,
@@ -43,21 +43,21 @@ func automationStepPayloadModel(step automationTypedStep) (any, error) {
 	case automationTriggerGeofenceDTO:
 		return &models.AutomationStepTriggerGeofence{
 			PlaceID: p.PlaceID,
-			Event:   strings.TrimSpace(p.Event),
+			Event:   validation.TrimSpace(p.Event),
 		}, nil
 	case automationTriggerScheduleDTO:
 		return &models.AutomationStepTriggerSchedule{
-			CronExpr: strings.TrimSpace(p.CronExpr),
-			Timezone: strings.TrimSpace(p.Timezone),
+			CronExpr: validation.TrimSpace(p.CronExpr),
+			Timezone: validation.TrimSpace(p.Timezone),
 		}, nil
 	case automationTriggerEventDTO:
 		return &models.AutomationStepTriggerEvent{
-			EventType: strings.TrimSpace(p.EventType),
+			EventType: validation.TrimSpace(p.EventType),
 		}, nil
 	case automationConditionSignalDTO:
 		return &models.AutomationStepConditionSignal{
-			Signal:    strings.TrimSpace(p.Signal),
-			Op:        strings.TrimSpace(p.Op),
+			Signal:    validation.TrimSpace(p.Signal),
+			Op:        validation.TrimSpace(p.Op),
 			ValueText: p.ValueText,
 			ValueNum:  p.ValueNum,
 			ValueBool: p.ValueBool,
@@ -73,7 +73,7 @@ func automationStepPayloadModel(step automationTypedStep) (any, error) {
 		if err != nil {
 			return nil, fmt.Errorf("end_time: %w", err)
 		}
-		timezone := strings.TrimSpace(p.Timezone)
+		timezone := validation.TrimSpace(p.Timezone)
 		if timezone == "" {
 			timezone = "UTC"
 		}
@@ -90,12 +90,12 @@ func automationStepPayloadModel(step automationTypedStep) (any, error) {
 	case automationConditionGeofenceDTO:
 		return &models.AutomationStepConditionGeofence{
 			PlaceID: p.PlaceID,
-			State:   strings.TrimSpace(p.State),
+			State:   validation.TrimSpace(p.State),
 		}, nil
 	case automationConditionOtherAutomationDTO:
 		return &models.AutomationStepConditionOtherAutomation{
 			OtherAutomationID: p.OtherAutomationID,
-			State:             strings.TrimSpace(p.State),
+			State:             validation.TrimSpace(p.State),
 		}, nil
 	case automationActionCommandDTO:
 		params := p.CommandParams
@@ -103,7 +103,7 @@ func automationStepPayloadModel(step automationTypedStep) (any, error) {
 			params = json.RawMessage(`{}`)
 		}
 		return &models.AutomationAction{
-			CommandName:   strings.TrimSpace(p.CommandName),
+			CommandName:   validation.TrimSpace(p.CommandName),
 			CommandParams: params,
 		}, nil
 	case automationActionNotifyDTO:
@@ -113,7 +113,7 @@ func automationStepPayloadModel(step automationTypedStep) (any, error) {
 		}, nil
 	case automationActionSetSettingDTO:
 		return &models.AutomationStepActionSetSetting{
-			SettingKey: strings.TrimSpace(p.SettingKey),
+			SettingKey: validation.TrimSpace(p.SettingKey),
 			ValueText:  p.ValueText,
 			ValueNum:   p.ValueNum,
 			ValueBool:  p.ValueBool,

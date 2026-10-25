@@ -26,7 +26,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
-	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
@@ -118,7 +118,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if body.VehicleID <= 0 {
+	if err := validation.ValidateVehicleID(body.VehicleID); err != nil {
 		writeError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
 		return
 	}
@@ -143,7 +143,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Empty subject is the open-mode audit value ("anonymous").
-	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
+	subject := httputil.ActorIdentity(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, nlalertbuilder.FeatureID)
 

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -24,6 +23,8 @@ import (
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 // AutomationHandler handles automation CRUD HTTP requests.
@@ -179,42 +180,14 @@ func insertAuditLog(db *database.DB, ctx context.Context, e auditEntry) {
 	}
 }
 
-func actorFromRequest(r *http.Request, headerName string) string {
-	if r == nil || headerName == "" {
-		return ""
-	}
-	return strings.TrimSpace(r.Header.Get(headerName))
-}
-
-func clientIP(r *http.Request) string {
-	if r == nil {
-		return ""
-	}
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if i := strings.IndexByte(xff, ','); i >= 0 {
-			xff = xff[:i]
-		}
-		if ip := strings.TrimSpace(xff); ip != "" {
-			return ip
-		}
-	}
-	if r.RemoteAddr == "" {
-		return ""
-	}
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		return host
-	}
-	return r.RemoteAddr
-}
-
 func logAuditFromRequest(db *database.DB, r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
 	insertAuditLog(db, r.Context(), auditEntry{
-		Actor:      actorFromRequest(r, headerName),
+		Actor:      httputil.ActorIdentity(r, headerName),
 		Action:     action,
 		EntityType: resource,
 		EntityID:   entityID,
 		Detail:     detail,
-		IP:         clientIP(r),
+		IP:         httputil.ClientIP(r, httputil.ClientIPOptions{TrustXForwardedFor: true}),
 		UserAgent:  r.UserAgent(),
 	})
 }
@@ -281,7 +254,7 @@ func (h *AutomationHandler) GetPreset(w http.ResponseWriter, r *http.Request) {
 // automations — use the /re-enable endpoint instead.
 func (h *AutomationHandler) Toggle(w http.ResponseWriter, r *http.Request) {
 	id, err := urlParamInt64(r, "id")
-	if err != nil || id <= 0 {
+	if err != nil || validation.ValidatePositiveID(id) != nil {
 		writeError(w, http.StatusBadRequest, "invalid automation ID")
 		return
 	}
@@ -339,7 +312,7 @@ func (h *AutomationHandler) Toggle(w http.ResponseWriter, r *http.Request) {
 // resetting the consecutive failure counter.
 func (h *AutomationHandler) ReEnable(w http.ResponseWriter, r *http.Request) {
 	id, err := urlParamInt64(r, "id")
-	if err != nil || id <= 0 {
+	if err != nil || validation.ValidatePositiveID(id) != nil {
 		writeError(w, http.StatusBadRequest, "invalid automation ID")
 		return
 	}
@@ -437,7 +410,7 @@ func (h *AutomationHandler) UndoLast(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id, err := urlParamInt64(r, "id")
-	if err != nil || id <= 0 {
+	if err != nil || validation.ValidatePositiveID(id) != nil {
 		writeError(w, http.StatusBadRequest, "invalid automation ID")
 		return
 	}
@@ -711,7 +684,7 @@ func automationPayloadStepID(payload any) (int64, bool) {
 	if err != nil {
 		return 0, false
 	}
-	if err := json.Unmarshal(raw, &row); err != nil || row.StepID <= 0 {
+	if err := json.Unmarshal(raw, &row); err != nil || validation.ValidatePositiveID(row.StepID) != nil {
 		return 0, false
 	}
 	return row.StepID, true
@@ -1211,7 +1184,7 @@ func buildExportEnvelope(automations []automationPortable) automationExportEnvel
 //	GET /automations/{id}/export
 func (h *AutomationHandler) ExportOne(w http.ResponseWriter, r *http.Request) {
 	id, err := urlParamInt64(r, "id")
-	if err != nil || id <= 0 {
+	if err != nil || validation.ValidatePositiveID(id) != nil {
 		writeError(w, http.StatusBadRequest, "invalid automation ID")
 		return
 	}
@@ -1367,7 +1340,7 @@ func (h *AutomationHandler) importSingle(
 	r *http.Request, index int, def automationPortable,
 ) (*importedAutomation, *importError) {
 	req, err := validateAutomationPortable(def)
-	name := strings.TrimSpace(def.Name)
+	name := validation.TrimSpace(def.Name)
 	mkErr := func(msg string) *importError {
 		return &importError{Index: index, Name: name, Error: msg}
 	}

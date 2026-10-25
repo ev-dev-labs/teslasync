@@ -21,6 +21,7 @@ import (
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -149,7 +150,7 @@ func parseAlertListFilters(r *http.Request) (dbnotif.NotificationLogFilters, err
 	seenSeverities := make(map[string]struct{})
 	for _, value := range query["severity"] {
 		for _, severity := range strings.Split(value, ",") {
-			severity = strings.ToLower(strings.TrimSpace(severity))
+			severity = strings.ToLower(validation.TrimSpace(severity))
 			if severity == "" {
 				continue
 			}
@@ -172,12 +173,12 @@ func parseAlertListFilters(r *http.Request) (dbnotif.NotificationLogFilters, err
 	seenVehicleIDs := make(map[int64]struct{})
 	for _, value := range query["vehicle_id"] {
 		for _, rawID := range strings.Split(value, ",") {
-			rawID = strings.TrimSpace(rawID)
+			rawID = validation.TrimSpace(rawID)
 			if rawID == "" {
 				continue
 			}
 			vehicleID, err := strconv.ParseInt(rawID, 10, 64)
-			if err != nil || vehicleID <= 0 {
+			if err != nil || validation.ValidateVehicleID(vehicleID) != nil {
 				return filters, fmt.Errorf("invalid vehicle_id %q", rawID)
 			}
 			if _, exists := seenVehicleIDs[vehicleID]; exists {
@@ -189,7 +190,7 @@ func parseAlertListFilters(r *http.Request) (dbnotif.NotificationLogFilters, err
 	}
 
 	parseRangeTime := func(name string, inclusiveDateEnd bool) (time.Time, error) {
-		raw := strings.TrimSpace(query.Get(name))
+		raw := validation.TrimSpace(query.Get(name))
 		if raw == "" {
 			return time.Time{}, nil
 		}
@@ -219,8 +220,8 @@ func parseAlertListFilters(r *http.Request) (dbnotif.NotificationLogFilters, err
 		return filters, fmt.Errorf("invalid date range: from must not be after to")
 	}
 
-	beforeCreatedAt := strings.TrimSpace(query.Get("before_created_at"))
-	beforeID := strings.TrimSpace(query.Get("before_id"))
+	beforeCreatedAt := validation.TrimSpace(query.Get("before_created_at"))
+	beforeID := validation.TrimSpace(query.Get("before_id"))
 	if (beforeCreatedAt == "") != (beforeID == "") {
 		return filters, fmt.Errorf("before_created_at and before_id must be provided together")
 	}
@@ -230,13 +231,13 @@ func parseAlertListFilters(r *http.Request) (dbnotif.NotificationLogFilters, err
 			return filters, fmt.Errorf("invalid before_created_at: must be an RFC3339 timestamp")
 		}
 		filters.BeforeID, err = strconv.ParseInt(beforeID, 10, 64)
-		if err != nil || filters.BeforeID <= 0 {
+		if err != nil || validation.ValidatePositiveID(filters.BeforeID) != nil {
 			return filters, fmt.Errorf("invalid before_id %q", beforeID)
 		}
 	}
 
 	parseOptionalBool := func(name string) (*bool, error) {
-		raw := strings.TrimSpace(query.Get(name))
+		raw := validation.TrimSpace(query.Get(name))
 		if raw == "" {
 			return nil, nil
 		}

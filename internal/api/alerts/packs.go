@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/alertpacks"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/rs/zerolog/log"
@@ -98,7 +99,7 @@ func (h *AlertHandler) RemovePack(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	id, err := urlParamInt64(r, "installationID")
-	if err != nil || id <= 0 {
+	if err != nil || validation.ValidatePositiveID(id) != nil {
 		writeError(w, http.StatusBadRequest, "invalid installation ID")
 		return
 	}
@@ -115,7 +116,7 @@ func (h *AlertHandler) RemovePack(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, ruleID := range req.DeleteRuleIDs {
-		if ruleID <= 0 {
+		if validation.ValidatePositiveID(ruleID) != nil {
 			writeError(w, http.StatusBadRequest, "rule IDs must be positive")
 			return
 		}

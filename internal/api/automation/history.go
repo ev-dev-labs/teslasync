@@ -11,6 +11,7 @@ import (
 
 	dbauto "github.com/ev-dev-labs/teslasync/internal/database/automation"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 	"go.opentelemetry.io/otel"
 )
 
@@ -73,7 +74,7 @@ func (h *AutomationHandler) ListAutomationHistory(w http.ResponseWriter, r *http
 	ctx, span := otel.Tracer("api").Start(r.Context(), "api.automation.history_by_rule")
 	defer span.End()
 	id, err := urlParamInt64(r, "id")
-	if err != nil || id <= 0 {
+	if err != nil || validation.ValidatePositiveID(id) != nil {
 		span.RecordError(fmt.Errorf("invalid automation ID"))
 		writeError(w, http.StatusBadRequest, "invalid automation ID")
 		return
@@ -145,7 +146,7 @@ func (h *AutomationHandler) GetHistoryDetail(w http.ResponseWriter, r *http.Requ
 	ctx, span := otel.Tracer("api").Start(r.Context(), "api.automation.history_detail")
 	defer span.End()
 	historyID, err := urlParamInt64(r, "historyId")
-	if err != nil || historyID <= 0 {
+	if err != nil || validation.ValidatePositiveID(historyID) != nil {
 		span.RecordError(fmt.Errorf("invalid history ID"))
 		writeError(w, http.StatusBadRequest, "invalid history ID")
 		return
