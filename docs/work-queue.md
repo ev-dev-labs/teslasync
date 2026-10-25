@@ -4,6 +4,33 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
+## Resume verification (2026-10-25, after `354deb1c1f`)
+
+- Section 0: fetched/pulled the expected branch; working tree clean. Stopped
+  the idle CLI from the clean prior handoff; the IDE-owned Playwright test
+  server is user tooling and was not stopped. Windows mirror confirmation:
+  `git.exe -C D:/repos/teslasync status --short` returned no output.
+- Completed result 1: removed redundant zone-name captions from both
+  ClimateControlPage charts and vehicle-detail RecentDrivesSection. Actual
+  dates still use the selected zone through the existing shared formatter;
+  no hooks, API contracts, storage, sections, or calculations changed.
+  Regression tests failed before (2 failures/100 tests), then passed
+  (100/100). TypeScript, focused ESLint and both seven-category audits pass
+  (six violation counts each: 0). Source lines 1602 -> 1600 and 131 -> 130;
+  panel/chart counts unchanged at 14 and 1. Mock build rebuilt; actual
+  `/climate`, `/climate-control`, `/vehicles/7` guard runs at 1280px pass
+  3/3, each with tzIso/tzZones/tzDupes=0; wrapper proxy escapes=0.
+- Evidence for this resume:
+  `/home/atul/.copilot/session-state/d279d214-3d92-4a65-b124-08c71e983561/files/`.
+  Caption regression/build/audit/browser logs use `timezone-*` and
+  `e2e-build-caption.log`.
+- Next: reconcile hero E2E coverage with the approved one-gauge redesign
+  without dropping unknown/zero/value, navigation or responsive coverage.
+  Startup-budget repair is independently in progress. Sleep/departure/
+  energy-orchestrator zone disclosures and charge-departure duplicate
+  timestamps still need real semantic repairs; full replica and the
+  once-only reviewed Windows baselines have NOT run.
+
 ## Merge-then-fix execution (2026-10-25)
 
 - Prep: recovered the existing Zod 4.6.7 manifest/lockfile upgrade for the

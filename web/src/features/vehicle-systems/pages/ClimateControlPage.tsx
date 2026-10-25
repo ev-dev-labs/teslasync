@@ -1396,7 +1396,6 @@ export default function ClimateControlPage() {
         label={t('widget.climateHistory.title', 'Climate history')}>
           {/* Temperature history */}
           <LayoutCard title={t('climate.history.title', 'Temperature history')}>
-            <Caption>{tz}</Caption>
             <ClimateSourceBoundary state={historyState} label={historyLabel}>
             {historyLoading ? (
               <Skeleton height={300} />
@@ -1476,7 +1475,6 @@ export default function ClimateControlPage() {
       <ClimateRenderGroup id="climate-hvac-history" size="half" delay={0.25}>
           {/* AC state & fan speed history */}
           <LayoutCard title={t('climate.page.acStateFanSpeed', 'AC state & fan speed')}>
-            <Caption>{tz}</Caption>
             <ClimateSourceBoundary state={historyState} label={historyLabel}>
             {historyLoading ? (
               <Skeleton height={300} />
