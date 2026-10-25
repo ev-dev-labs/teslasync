@@ -624,7 +624,7 @@ export const DashboardGrid = memo(function DashboardGrid({
             variant="ghost"
             size="sm"
             onClick={() => setFullscreenWidget(widget.id)}
-            className="h-7 w-7 p-0 rounded-lg bg-[var(--surface-overlay)]
+            className="mx-0.5 h-11 w-11 p-0 rounded-lg bg-[var(--surface-overlay)]
               text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--surface-overlay)]
               opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity
               pointer-events-none group-hover:pointer-events-auto focus-visible:pointer-events-auto"

@@ -88,6 +88,27 @@ function renderWithProviders(ui: React.ReactNode, route = '/page') {
   );
 }
 
+it('lets a bounded host shrink its viewport without changing auto-height chart defaults', () => {
+  const data = [{ energy: 1000 }];
+  const dataColumns = [{ key: 'energy', label: 'Energy (Wh)' }];
+  const bounded = renderWithProviders(
+    <EmbeddedChart title="Solar production" ariaLabel="Bounded solar history"
+      viewportClassName="min-h-0 sm:min-h-0" data={data} dataColumns={dataColumns}>
+      <div>Measured plot</div>
+    </EmbeddedChart>,
+  );
+  expect(screen.getByRole('img', { name: 'Bounded solar history' })).toHaveClass('min-h-0', 'sm:min-h-0');
+  bounded.unmount();
+  renderWithProviders(
+    <EmbeddedChart title="Solar production" ariaLabel="Auto-height solar history" data={data} dataColumns={dataColumns}>
+      <div>Measured plot</div>
+    </EmbeddedChart>,
+  );
+  expect(screen.getByRole('img', { name: 'Auto-height solar history' })).toHaveClass(
+    'min-h-[var(--chart-height-mobile)]', 'sm:min-h-[var(--chart-height-desktop)]',
+  );
+});
+
 /**
  * Tiny consumer that probes the context state and exposes it via
  * `data-*` attributes — saves us from setting up a real Recharts

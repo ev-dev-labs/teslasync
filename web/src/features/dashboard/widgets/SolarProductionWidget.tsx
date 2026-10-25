@@ -219,6 +219,7 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
     >
       {hasData ? (
         <div className="flex h-full min-h-0 flex-col">
+          <div className="shrink-0">
           <WidgetBigNumber
             value={todayKwh == null ? null : fmtNumber(todayKwh, 1)}
             unit={unitPrefs.energy}
@@ -226,8 +227,11 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
             subtitle={avgKwh == null ? undefined : `${t('widget.solarProduction.avg', 'Daily avg')} ${fmtNumber(avgKwh, 1)} ${unitPrefs.energy}`}
             animated={false}
           />
+          </div>
           <div className="mt-2 min-h-0 flex-1">
             <EmbeddedChart
+              className="h-full min-h-0"
+              viewportClassName="min-h-0 sm:min-h-0"
               title={t('widget.solarProduction.title', 'Solar production')}
               ariaLabel={t('widget.solarProduction.chartLabel', 'Daily solar production over the last 30 days')}
               data={chartData}

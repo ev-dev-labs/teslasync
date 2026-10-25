@@ -4,6 +4,73 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
+## Continuation after `98e23bed33` (2026-10-25)
+
+- The latest user clarification supersedes the historical handoff below:
+  ordinary failing tests, commands and CI checks NEVER trigger stopping.
+  Only two consecutive malformed/garbled tool calls trigger that rule.
+  Continue debugging unattended; section 0b still governs usage exhaustion.
+- Section 0 completed on the clean expected branch. Preserved IDE-owned
+  Copilot, Playwright and TypeScript processes; no orphan runner found.
+  At 20:17Z the graph was **16 fail / 181 pass / 2 pending / 3 skipped**,
+  still incomplete (`r20-checks.json`). Unit shard 1 actually passed
+  342 files / 5,726 tests (4 skipped), then artifact upload failed with
+  CreateArtifact ECONNRESET. Do not change tests/workflows for that failure.
+- Signal fixture WIP is now exercised: four signal/tire width/theme cases,
+  four related charging-strategy cases, six negative/positive pressure guard
+  cases and 75 affected widget unit cases pass; proxy escapes=0.
+  The old guard incorrectly expected a tire observer on the intentional
+  five-row LiveSignals redesign. It now proves all six actual telemetry
+  observers and the two real pressure surfaces: latest diagram + history.
+  Exact vehicle/window keys, full original wire fields/nulls/order, Pa
+  equality and observation instant remain checked. The unchanged native
+  observer walker is preserved. Native geometry exposed zero-width pressure
+  values on narrow cards; bounded diagram width restores all four values
+  without bringing back removed wheel labels. Evidence: `r19-unit`,
+  `r19-category`, `r20-native` and paired native JSON artifacts.
+- Energy's old order-dependent guard rejected the intended headline-before-
+  chart hierarchy. The replacement measures the entire headline/stat group,
+  accepts either nonoverlapping order and retains the original one-pixel
+  tolerance; negative geometry tests reject overlapping allocations.
+  This exposes a REAL SolarProduction clipping bug (226px), not a reason
+  to weaken chart bounds. Its headline/chart allocation repair is in local
+  verification. Native fleet content likewise replaces removed taxonomy/
+  details with exact verified fraction, meter and definition rows; header
+  checks exposed the real 28px Expand target against the existing 44px
+  requirement. Its shared-grid fix is also in verification.
+- Actual TypeScript, full unchanged lint and affected ESLint passed before
+  the latest solar/grid edits; 75 solar/grid/shell unit cases pass afterward.
+  **Next:** finish focused solar/fleet browser checks and shared header
+  geometry, rerun final checks, commit/push this phase, then fix responsive
+  7/9/10/11 and 50–58 roots from bounded logs. Downloaded responsive-13's
+  exact artifact; no Windows baselines changed. All evidence is under
+  `files/ci-rounds-20261025/` in the session directory.
+- Verified phase gate (20:37Z): signal/tire 4/4, charging-strategy 4/4,
+  fleet/energy 8/8 and seven native guard cases pass; every wrapper reports
+  escapes=0. The original 44px Expand requirement and 8px peer gap are
+  retained in the real shared-grid control. Header checks now inspect its
+  actual in-header position, excluding only the target itself from peers
+  and retaining rightmost freshness; hover first enters the widget normally.
+  All eight header viewport/theme cases and all 121 widgets in each of six
+  min/default/large view/edit configurations pass unchanged.
+- Solar and wall-connector real headline/chart overflow is fixed without
+  hiding content. The shared `viewportClassName` capability allows bounded
+  energy plots to shrink while preserving auto-height defaults; its new
+  regression failed before implementation. Four chart/energy suites pass
+  87 cases, the solar/grid/shell group passes 75, and the final nine-suite
+  receipt/chart/connector gate passes **7,781/7,781** (including all 7,728
+  frozen cases). Actual TypeScript, six zero audit categories for each
+  production source, all four hook domains, full unchanged lint and the
+  hermetic build pass. Receipt generators verify unchanged translation
+  calls and mechanically refresh only existing Grid/Energy checkpoints.
+  All source line counts/sections are preserved; no baseline changes.
+  Evidence: `r20-shared-header`, `r21-confirmed`, `r21-confirmed-unit`,
+  `r21-final-lint`, `r21-*-audit`, `r21-checkpoint` and build logs.
+  **Next after push:** inspect the new CI graph and the remaining exact
+  responsive-7 telemetry precision, responsive-9/10 catalogue precision,
+  responsive-11 vehicle request fixtures, and responsive-50–58 route-source
+  failures; do not restart the completed signal WIP or update baselines.
+
 ## CI-until-green continuation (2026-10-25, after `3ca29a42ad`)
 
 - Section 0: fetched/switched/pulled the expected branch; worktree clean.

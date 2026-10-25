@@ -214,6 +214,7 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
                   { key: 'energy', label: `${t('widget.energyStats.dailyUsage', 'Daily usage')} (${unitPrefs.energy})` },
                 ]}
                 className="h-full min-h-0"
+                viewportClassName="min-h-0 sm:min-h-0"
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>

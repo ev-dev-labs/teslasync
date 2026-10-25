@@ -12,9 +12,11 @@ export function recordCatalogueChargeHistorySources(page: Page) {
   const state = { pending: new Set<Promise<void>>(), responses: [] as Array<{ url: string; body: unknown }>, errors: [] as string[] };
   records.set(page, state);
   page.on('response', response => {
+    const pathname = new URL(response.url()).pathname;
     if (!['/api/v1/charging', '/api/v1/charging-sessions', '/api/v1/charging/701',
       '/api/v1/settings', '/api/v1/vehicles', '/api/v1/drives',
-      '/api/v1/tire-pressure/latest'].includes(new URL(response.url()).pathname)) return;
+      '/api/v1/tire-pressure/latest', '/api/v1/tire-pressure'].includes(pathname)
+      && !/^\/api\/v1\/signals\/\d+\/(?:live|[^/]+\/history)$/.test(pathname)) return;
     const task = (async () => {
       if (!response.ok()) throw new Error(`Charge source HTTP ${response.status()}: ${response.url()}`);
       state.responses.push({ url: response.url(), body: await response.json() });

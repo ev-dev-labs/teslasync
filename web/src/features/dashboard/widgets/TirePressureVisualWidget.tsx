@@ -113,7 +113,7 @@ export default function TirePressureVisualWidget({ vehicleId }: WidgetProps) {
     >
       {tireData ? (
         <div className="flex h-full min-w-0 flex-col justify-center gap-2">
-          <div className="grid grid-cols-[minmax(0,1fr)_minmax(112px,320px)_minmax(0,1fr)] items-center gap-1">
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(112px,min(320px,calc(100%_-_6rem)))_minmax(0,1fr)] items-center gap-1">
             <div className="flex min-w-0 flex-col gap-10 text-end">
               <Text as="span" variant="body" className={VARIANT_STYLE[tires[0].variant].text}>{formatPressure(tires[0].value)}</Text>
               <Text as="span" variant="body" className={VARIANT_STYLE[tires[2].variant].text}>{formatPressure(tires[2].value)}</Text>

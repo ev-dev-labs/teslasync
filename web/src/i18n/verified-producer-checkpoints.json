@@ -595,7 +595,7 @@
   {
     "file": "web/src/features/dashboard/components/DashboardGrid.tsx",
     "calls": 7,
-    "sha256": "931c535e3ce22b97bc971fd79ca4d66e254b8d7c3986d24bb2a5b7054aa8e028"
+    "sha256": "16be499e9d0f37bdce601175c1d51f0b99a01b9de8f41245ae3c017d35464b56"
   },
   {
     "file": "web/src/features/dashboard/components/KioskSettingsModal.tsx",
@@ -715,7 +715,7 @@
   {
     "file": "web/src/features/dashboard/widgets/EnergyStatsWidget.tsx",
     "calls": 15,
-    "sha256": "c17dd054015ee278efaf99786ff1ced6d96c237366dd0957cd0370ab0c863640"
+    "sha256": "cdb2565ec5b27045ccd2c4aad5f6fa820d781a171d4cf0bb6dbb3ad7f2c08f7f"
   },
   {
     "file": "web/src/features/dashboard/widgets/FleetStatsBarWidget.tsx",

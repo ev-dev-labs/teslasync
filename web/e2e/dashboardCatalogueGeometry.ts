@@ -6,6 +6,10 @@ import type { WidgetSize } from '../src/features/dashboard/widgets/types';
 import { observeCatalogueAxisRendering } from './dashboardCatalogueAxisDiagnostic';
 import { assertCatalogueFullBounds } from './dashboardCatalogueBounds';
 
+export function catalogueVerticalGap(a: { y: number; height: number }, b: { y: number; height: number }) {
+  return Math.max(a.y - b.y - b.height, b.y - a.y - a.height);
+}
+
 export async function installCataloguePhotoSource(page: Page, svgFallback: boolean) {
   const path = process.env.E2E_CATALOGUE_PHOTO
     ?? resolve(process.cwd(), 'e2e', 'fixtures', 'dashboard-catalogue-model-y-white.png');

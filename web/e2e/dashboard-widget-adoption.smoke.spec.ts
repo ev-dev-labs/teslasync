@@ -22,7 +22,7 @@ import { assertCatalogueCountReference } from './dashboardCatalogueCountReferenc
 import { assertCataloguePressureParity } from './dashboardCataloguePressureParity';
 import { assertCatalogueHeaderCollision } from './dashboardCatalogueHeaderCollision';
 import { compactDrivingReadings, drivingReadings } from './dashboardCatalogueDrivingFixtures';
-import { assertCatalogueAffectedAxes, assertCatalogueAllocation, assertSpeedProfileTickBounds, assertTwinWheelAndPhotoGeometry, installCataloguePhotoSource } from './dashboardCatalogueGeometry';
+import { assertCatalogueAffectedAxes, assertCatalogueAllocation, assertSpeedProfileTickBounds, assertTwinWheelAndPhotoGeometry, catalogueVerticalGap, installCataloguePhotoSource } from './dashboardCatalogueGeometry';
 import {
   assertRemainingContent, geometrySourceIDs, installRemainingCatalogueSources,
   remainingBatches, remainingCompactReadings, remainingReadings,
@@ -380,7 +380,7 @@ for (const [batch, ids] of Object.entries(batches)) {
             height: element.getBoundingClientRect().height,
           }));
           if (batch.startsWith('catalogue-')) await assertRemainingContent(panel, widget.widgetId, width, test.info());
-          if (widget.widgetId === 'live-signals') {
+          if (widget.widgetId === 'tire-pressure-history') {
             await assertCataloguePressureParity(page, panel, width, theme, test.info());
           }
           if (widget.widgetId === 'fleet-posture') {
@@ -516,10 +516,10 @@ for (const [batch, ids] of Object.entries(batches)) {
           if (width === 1440 && widget.widgetId === 'energy-stats') {
             await expect.poll(async () => {
               const chartBounds = await panel.locator('svg.recharts-surface').boundingBox();
-              const metricBounds = await panel.getByText('Total used', { exact: true }).boundingBox();
+              const metricBounds = await panel.getByText('Total used', { exact: true }).locator('xpath=../..').boundingBox();
               if (!chartBounds || !metricBounds) throw new Error('Energy chart and summary must both render');
-              return chartBounds.y + chartBounds.height - metricBounds.y;
-            }, { message: 'Energy chart must not overlap summary metrics' }).toBeLessThanOrEqual(1);
+              return catalogueVerticalGap(chartBounds, metricBounds);
+            }, { message: 'Energy chart must not overlap summary metrics' }).toBeGreaterThanOrEqual(-1);
           }
           check(reading.height, widget.widgetId).toBeGreaterThan(60);
           check(reading.scrollWidth, `${widget.widgetId}: ${JSON.stringify(reading)}`)

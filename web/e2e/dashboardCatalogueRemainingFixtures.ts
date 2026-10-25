@@ -9,6 +9,8 @@ import { catalogueSystemSources } from './dashboardCatalogueSystemSources';
 import { fulfillApiFixture, resolveApiFixture, type MockApiController } from './mockApi';
 import { assertCatalogueYAxisTickBounds } from './dashboardCatalogueGeometry';
 import { expectBriefDetails } from './operationalbrief-contracts/disclosure.helpers';
+import { assertCatalogueQueryScope, catalogueRecordedSources, renderedCatalogueQueryBinding } from './dashboardCatalogueChargeHistory';
+import { assertCataloguePostureContent } from './dashboardCatalogueHeaderCollision';
 
 export const remainingBatches = {
   'catalogue-analytics-totals': ['fleet-stats', 'fleet-stats-bar', 'weekly-summary-card', 'weekly-digest',
@@ -72,8 +74,8 @@ export const remainingReadings: Record<string, RegExp> = {
   'media-now-playing': /Catalogue evening drive/,
   'media-history': /Catalogue evening drive/,
   'onboarding-checklist': /Connect your Tesla/i,
-  'fleet-posture': /Verified\s*1\/1/,
-  'quick-nav': /Trip history/,
+  'fleet-posture': /Verified\s*1\s*\/\s*1/,
+  'quick-nav': /Drives/,
   'audit-log': /Catalogue settings updated/,
   'backup-monitor': /2\.0(?:0)?\s*MB/,
   'export-status': /Running/,
@@ -84,7 +86,7 @@ export const remainingReadings: Record<string, RegExp> = {
   'tire-pressure-visual': /2\.80/,
   // Deliberately demands real history. Do not inject the frontend-only
   // timestamp alias: the actual tire-pressure handler emits created_at.
-  'tire-pressure-history': /2\.80/,
+  'tire-pressure-history': /2\.85/,
 };
 
 export const remainingCompactReadings: Record<string, RegExp> = {
@@ -387,6 +389,27 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
     }
   }
   if (id === 'live-signals') {
+    const state = catalogueRecordedSources(panel.page());
+    await Promise.all([...state.pending]);
+    expect(state.errors).toEqual([]);
+    const bindings = [];
+    for (const [path, key] of [
+      ['/signals/7/live', ['live-signals', 7]],
+      ...['BatteryLevel', 'ACChargingPower', 'InsideTemp', 'OutsideTemp', 'RatedRange']
+        .map(name => [`/signals/7/${name}/history`, ['signal-history', 7, name, 1]] as const),
+    ] as const) {
+      const response = state.responses.find(item => new URL(item.url).pathname === `/api/v1${path}`);
+      if (!response) throw new Error(`Missing actually served telemetry source: ${path}`);
+      const params = new URL(response.url).searchParams;
+      expect([...params.entries()]).toEqual(path.endsWith('/history') ? [['hours', '1']] : []);
+      const binding = await renderedCatalogueQueryBinding(panel, 'review-live-signals', 'Live signals', key);
+      assertCatalogueQueryScope(binding, 'review-live-signals', key);
+      const source = record(response.body) && record(response.body.data) ? response.body.data : response.body;
+      if (!record(source)) throw new Error(`Missing telemetry object: ${path}`);
+      expect(binding.data, 'Each native telemetry observer must preserve every original source field/null').toMatchObject(source);
+      bindings.push({ response, binding });
+    }
+    await writeFile(info.outputPath('live-signals-native-observers.json'), JSON.stringify(bindings, null, 2));
     const readings = [
       ['BatteryLevel', /^BatteryLevel\s*72\s*%$/],
       ['ACChargingPower', /^ACChargingPower\s*11\.0\s*kW$/],
@@ -403,8 +426,9 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
     }
   }
   if (id === 'live-signal-sparklines') {
-    await expect(panel.getByRole('img', { name: 'Trending up', exact: true })).toHaveCount(1);
-    await expect(panel.getByRole('img', { name: 'Trending up', exact: true })).toBeVisible();
+    await expect(panel.getByRole('img', { name: 'Increasing', exact: true })).toHaveCount(1);
+    await expect(panel.getByRole('img', { name: 'Increasing', exact: true })).toBeVisible();
+    await expect(panel.getByRole('img', { name: 'Stable', exact: true })).toHaveCount(2);
     await expect(panel.getByRole('img', { name: 'Battery Level trend', exact: true })).toBeVisible();
     await expect(panel.getByRole('img', { name: 'Battery Level trend', exact: true })
       .locator('polyline').first()).toHaveAttribute('points', /^0,20 \S+ \S+ 56,0$/);
@@ -417,8 +441,19 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
     await expect(panel.getByTestId('fsd-weekly-distance')).not.toContainText('0.00');
   }
   if (id === 'fleet-posture') {
-    await expect(panel.getByRole('listitem').filter({ hasText: /^Verified\s*1\/1$/ })).toHaveCount(1);
-    await expect(panel.getByTestId('fleet-posture-announcement')).toContainText('All 1 vehicles verified from current telemetry.');
+    await assertCataloguePostureContent(panel);
+  }
+  if (id === 'quick-nav') {
+    const navigation = panel.getByRole('navigation', { name: 'Quick navigation', exact: true });
+    await expect(navigation.getByRole('link')).toHaveCount(4);
+    for (const [name, href] of [
+      ['Drives', '/drives'], ['Charging', '/charging'],
+      ['Analytics', '/analytics'], ['Battery health', '/battery'],
+    ]) {
+      const link = navigation.getByRole('link', { name, exact: true });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute('href', href);
+    }
   }
   if (id === 'version-info' && width === 1440) {
     await expect(panel).toContainText(/Build date\s*—/);

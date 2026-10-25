@@ -238,6 +238,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
         stats={[]}
         chart={
           <div className="flex h-full min-h-0 flex-col gap-2">
+            <div className="shrink-0">
             <WidgetBigNumber
               value={todayEnergy == null ? null : fmt(todayEnergy)}
               unit={todayEnergy == null ? undefined : unitPrefs.energy}
@@ -245,8 +246,11 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
               align="start"
               animated={false}
             />
+            </div>
             <div className="min-h-0 flex-1">
             <EmbeddedChart
+            className="h-full min-h-0"
+            viewportClassName="min-h-0 sm:min-h-0"
             title={t('widget.wallConnector.title', 'Wall connector')}
             ariaLabel={t(
               'widget.wallConnector.chartLabel',
