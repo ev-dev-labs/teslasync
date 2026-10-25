@@ -320,6 +320,30 @@ describe('VehicleHeroWidget — vehicle resolution', () => {
 });
 
 describe('VehicleHeroWidget — After layout', () => {
+  it.each([null, Number.NaN])('announces unavailable range and temperatures (%s) without numeric meters', (value) => {
+    setup({ state: makeQuery({ data: makeStateData({
+      ratedRangeM: value, insideTemp: value, outsideTemp: value,
+    }) }) });
+    renderWidget(<VehicleHeroWidget size={STANDARD} />);
+    for (const label of ['Range', 'Inside', 'Outside']) {
+      expect(screen.getByRole('group', { name: label, exact: true }))
+        .toHaveAccessibleDescription('Unknown');
+      expect(screen.queryByRole('meter', { name: label, exact: true })).not.toBeInTheDocument();
+    }
+  });
+
+  it('keeps genuine zero range and temperatures readable without fabricated scales', () => {
+    setup({ state: makeQuery({ data: makeStateData({
+      ratedRangeM: 0, insideTemp: 0, outsideTemp: 0,
+    }) }) });
+    renderWidget(<VehicleHeroWidget size={STANDARD} />);
+    for (const label of ['Range', 'Inside', 'Outside']) {
+      const reading = screen.getByRole('group', { name: label, exact: true });
+      expect(reading).toHaveTextContent(label === 'Range' ? '0 km' : '0°C');
+      expect(reading).not.toHaveAccessibleDescription('Unknown');
+    }
+  });
+
   it('announces an unknown battery without publishing an empty numeric meter', () => {
     setup({ state: makeQuery({ data: makeStateData({ batteryLevel: null }) }) });
     renderWidget(<VehicleHeroWidget size={STANDARD} />);

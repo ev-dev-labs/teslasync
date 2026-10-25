@@ -48,11 +48,18 @@ const ChargeDoneAt = memo(function ChargeDoneAt({ etaHours }: { etaHours: number
   );
 });
 
-function Chip({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
+function Chip({ icon, label, description, children }: {
+  icon?: ReactNode; label?: string; description?: string; children: ReactNode;
+}) {
   return (
-    <span className="inline-flex min-w-0 items-center gap-1.5 rounded-pill border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2.5 py-1 text-xs text-[var(--text-secondary)]">
+    <span
+      role={label ? 'group' : undefined}
+      aria-label={label}
+      aria-description={description}
+      className="inline-flex min-w-0 items-center gap-1.5 rounded-pill border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2.5 py-1 text-xs text-[var(--text-secondary)]"
+    >
       {icon}
-      <span className="min-w-0 break-words">{children}</span>
+      <span className="min-w-0 break-words">{label && <>{label}{' '}</>}{children}</span>
     </span>
   );
 }
@@ -71,6 +78,8 @@ function tempChipText(
 
 export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const unknownReading = t('hero.unknownStatus', 'Unknown');
+  const rangeLabel = t('hero.range', 'Range');
   const { fmtNumber } = useNumberFormatting();
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
   const vehicle = vehicleId
@@ -235,7 +244,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
       </span>
       <Link
         to={`/vehicles/${vehicle.id}`}
-        className="shrink-0 font-medium text-[var(--text-primary)]"
+        className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center font-medium text-[var(--text-primary)]"
       >
         {t('hero.details', 'Details')} <span aria-hidden="true">→</span>
       </Link>
@@ -283,7 +292,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
                 title={t('hero.unknownHelp', 'No current, verified telemetry backs an operational state for this vehicle.')}
               >
                 <HelpCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                {t('hero.unknownStatus', 'Unknown')}
+                {unknownReading}
               </span>
             ) : (
               <StatusBadge status={status} size="sm" showDot />
@@ -299,9 +308,9 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
               decimals={0}
               animated={false}
             />
-            <div className="text-right">
+            <div role="group" aria-label={rangeLabel} aria-description={rangeDisplay == null ? unknownReading : undefined} className="text-right">
               <Text as="p" size="sm" color="secondary">
-                {t('hero.range', 'Range')}
+                {rangeLabel}
               </Text>
               <p className="text-xl font-semibold tabular-nums text-[var(--text-primary)]">
                 {rangeDisplay != null ? fmtNumber(rangeDisplay, 0) : '—'}
@@ -327,7 +336,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
             <div
               role={batteryLevel != null ? 'meter' : 'group'}
               aria-label={t('hero.battery', 'Battery')}
-              aria-description={batteryLevel == null ? t('hero.unknownStatus', 'Unknown') : undefined}
+              aria-description={batteryLevel == null ? unknownReading : undefined}
               aria-valuenow={batteryLevel != null ? Math.round(batteryLevel) : undefined}
               aria-valuemin={batteryLevel != null ? 0 : undefined}
               aria-valuemax={batteryLevel != null ? 100 : undefined}
@@ -391,14 +400,18 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
                     : t('common.off', 'Off')}
               </span>
             </Chip>
-            <Chip>
-              {t('hero.inside', 'Inside')}{' '}
+            <Chip
+              label={t('hero.inside', 'Inside')}
+              description={state?.inside_temp == null || !Number.isFinite(state.inside_temp) ? unknownReading : undefined}
+            >
               <span className="font-semibold text-[var(--text-primary)]">
                 {tempChipText(state?.inside_temp, toTemperatureDisplay, tempUnit, (v, d) => fmtNumber(v, d))}
               </span>
             </Chip>
-            <Chip>
-              {t('hero.outside', 'Outside')}{' '}
+            <Chip
+              label={t('hero.outside', 'Outside')}
+              description={state?.outside_temp == null || !Number.isFinite(state.outside_temp) ? unknownReading : undefined}
+            >
               <span className="font-semibold text-[var(--text-primary)]">
                 {tempChipText(state?.outside_temp, toTemperatureDisplay, tempUnit, (v, d) => fmtNumber(v, d))}
               </span>

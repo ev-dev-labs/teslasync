@@ -81,6 +81,10 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
   ({ vehicle, vehicleState, photoUrl, dataState, observation, verifiedFields, className, ...props }, ref) => {
     const { fmtNumber } = useNumberFormatting();
     const { t } = useTranslation();
+    const unknownReading = t('common.unknown', 'Unknown');
+    const rangeLabel = t('vehicleHero.gauge.range', 'Range');
+    const insideLabel = t('vehicleHero.gauge.inside', 'Inside');
+    const outsideLabel = t('vehicleHero.gauge.outside', 'Outside');
     const { unitPrefs } = useUnits();
     const { formatRelative, formatDateTime } = useDateFormat();
     const [, setObservationTick] = useState(0);
@@ -183,7 +187,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
                 <Text as="span" variant="bodySm" color="secondary">
                   {streamFreshness === 'stale'
                     ? t('freshness.stale', 'Stale')
-                    : t('common.unknown', 'Unknown')}
+                    : unknownReading}
                 </Text>
               ) : null}
               {dataState?.isRefreshBlocked ? (
@@ -236,9 +240,9 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
                   size={110}
                 />
               </div>
-              <div className="mb-0 shrink-0 text-right">
+              <div role="group" aria-label={rangeLabel} aria-description={rangeDisplay == null ? unknownReading : undefined} className="mb-0 shrink-0 text-right">
                 <Text as="p" size="sm" color="secondary">
-                  {t('vehicleHero.gauge.range', 'Range')}
+                  {rangeLabel}
                 </Text>
                 <Text as="p" size="2xl" weight="bold" color="primary" mono className="tabular-nums">
                   {rangeDisplay ?? '—'}
@@ -270,11 +274,11 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
                   {t('vehicleHero.stat.power', 'Power')} {fmtNumber(powerDisplay, 2)} kW
                 </span>
               )}
-              <span className="inline-flex min-h-9 items-center rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
-                {t('vehicleHero.gauge.inside', 'Inside')} {insideTempDisplay != null ? `${fmtNumber(insideTempDisplay, 0)}${temperatureLabel}` : '—'}
+              <span role="group" aria-label={insideLabel} aria-description={insideTempDisplay == null ? unknownReading : undefined} className="inline-flex min-h-9 items-center rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
+                {insideLabel} {insideTempDisplay != null ? `${fmtNumber(insideTempDisplay, 0)}${temperatureLabel}` : '—'}
               </span>
-              <span className="inline-flex min-h-9 items-center rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
-                {t('vehicleHero.gauge.outside', 'Outside')} {outsideTempDisplay != null ? `${fmtNumber(outsideTempDisplay, 0)}${temperatureLabel}` : '—'}
+              <span role="group" aria-label={outsideLabel} aria-description={outsideTempDisplay == null ? unknownReading : undefined} className="inline-flex min-h-9 items-center rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-sm text-[var(--text-primary)]">
+                {outsideLabel} {outsideTempDisplay != null ? `${fmtNumber(outsideTempDisplay, 0)}${temperatureLabel}` : '—'}
               </span>
             </div>
           </>

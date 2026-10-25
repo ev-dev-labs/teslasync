@@ -39,9 +39,26 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   Catalog-locality suite passes 132/132, including the new exact locality
   regression. Full lint/audit chain and TypeScript exit 0. Evidence:
   `startup-final-*`, `startup-hooks-contract.log`, `catalog-locality-final.log`.
-- Next: reconcile hero E2E coverage with the approved one-gauge redesign
-  without dropping unknown/zero/value, navigation or responsive coverage.
-  Startup-budget repair is independently in progress. Sleep/departure/
+- Completed result 3: reconciled hero E2E against the already committed
+  compact redesign (one meaningful battery meter, textual range/temperature
+  chips, Details navigation). No production readings/actions were removed.
+  Added named accessible groups and explicit Unknown descriptions for
+  missing/non-finite range/temperature readings in BOTH hero surfaces, and
+  a real 44px hit target for the widget Details link. Added six fail-before/
+  pass-after unit regressions; complete hero suites pass 53/53.
+  E2E retains every unknown/zero/regen case, theme and viewport; validates
+  actual SI-derived numbers and signed power on the shared card (compact
+  dashboard intentionally has no power chip), rejects invented meters/
+  obsolete quick actions, and now activates Details by keyboard and checks
+  the rendered destination. Complete matrix passes 34/34, proxy escapes=0.
+  Explicit null/empty detail-endpoint fixtures preserve strict API matching
+  during the newly tested navigation; no matcher was loosened.
+  TypeScript, focused ESLint, both seven-category audits and full lint pass.
+  Source lines 417 -> 430 and 310 -> 314; shell/panel counts unchanged.
+  Reviewed both surfaces' 320px dark and 1440px light screenshots. Windows
+  baselines remain untouched. Evidence: `hero-*` logs and browser screenshots
+  in `web/test-results/` (not committed; later runs may replace them).
+- Next: repair sleep/departure/
   energy-orchestrator zone disclosures and charge-departure duplicate
   timestamps still need real semantic repairs; full replica and the
   once-only reviewed Windows baselines have NOT run.

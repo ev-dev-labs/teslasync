@@ -79,6 +79,26 @@ function renderCard(props: Partial<VehicleHeroCardProps> = {}) {
 }
 
 describe('VehicleHeroCard redesigned contract', () => {
+  it.each([null, Number.NaN])('announces unavailable range and temperatures (%s) without numeric meters', (value) => {
+    renderCard({ vehicleState: makeState({
+      rated_range: value, inside_temp: value, outside_temp: value,
+    }) });
+    for (const label of ['Range', 'Inside', 'Outside']) {
+      expect(screen.getByRole('group', { name: label, exact: true }))
+        .toHaveAccessibleDescription('Unknown');
+      expect(screen.queryByRole('meter', { name: label, exact: true })).not.toBeInTheDocument();
+    }
+  });
+
+  it('keeps genuine zero range and temperatures readable without fabricated scales', () => {
+    renderCard({ vehicleState: makeState({ rated_range: 0, inside_temp: 0, outside_temp: 0 }) });
+    for (const label of ['Range', 'Inside', 'Outside']) {
+      const reading = screen.getByRole('group', { name: label, exact: true });
+      expect(reading).toHaveTextContent(label === 'Range' ? '0km' : '0°C');
+      expect(reading).not.toHaveAccessibleDescription('Unknown');
+    }
+  });
+
   it('matches the compact After layout: identity, battery, range, chips, and details footer', () => {
     renderCard({ verifiedFields: ['state', 'battery_level', 'rated_range'] });
     expect(screen.getByRole('heading', { name: 'Aurora' })).toBeInTheDocument();
