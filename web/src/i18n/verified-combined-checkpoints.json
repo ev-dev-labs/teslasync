@@ -111,7 +111,7 @@
     {
       "file": "web/src/features/admin/components/continuation-admin-1/SchemaKpis.tsx",
       "calls": 31,
-      "sha256": "afcfec55549f98ba1eae5a575343337b9dfbafde7701a6525a787849d850382c"
+      "sha256": "cdb2a398bc2158d98e394e2eeb4e33f08f175d4df469c755b27244c893d31379"
     },
     {
       "file": "web/src/features/admin/components/continuation-admin-3/CoverageCategory.tsx",
@@ -121,22 +121,22 @@
     {
       "file": "web/src/features/admin/components/devtools/FleetApiSection.tsx",
       "calls": 135,
-      "sha256": "7da244e26643847c9cc712802c129aa1f87fed7d70e65b48d23898671343dff2"
+      "sha256": "0bb5f205e11d7bf1286a88d494fb23f06f8b1564d04c8b172c14959f5eb7354a"
     },
     {
       "file": "web/src/features/admin/components/devtools/FleetTelemetryHealth.tsx",
       "calls": 33,
-      "sha256": "e2fa55f37eb1200ec402e4bd2a2923e2025f9851dcf724dbeb9c763703d6ab40"
+      "sha256": "638a9d0da023d0ebbf1f0d4d2fbdcb51ee74413c8157934ab67cd9ef8dd5170e"
     },
     {
       "file": "web/src/features/admin/components/devtools/InfrastructureSection.tsx",
       "calls": 15,
-      "sha256": "f1dddc4805bf944cbd79a22674418c891f35439849e1a2bc2f45287e309c7696"
+      "sha256": "adeacdeb8c998708d665ec974e4580235ba52fbf91e7b517f882e674e6a5cde6"
     },
     {
       "file": "web/src/features/admin/components/dlq-inspector/EntryDrawer.tsx",
       "calls": 29,
-      "sha256": "90c4748ffff61a2d2d21b68e5bd43f3de292478b6bd5bc0ff3cae5d06f542010"
+      "sha256": "80cfd1acd88d504c86b8cd6d738ee800341213046ff172a6a383a418ea15481d"
     },
     {
       "file": "web/src/features/admin/components/feature-flags/FlagCompositionPanel.tsx",
@@ -151,17 +151,17 @@
     {
       "file": "web/src/features/admin/components/gdpr-export/GDPRDownloadPanel.tsx",
       "calls": 8,
-      "sha256": "e6a76303c930a58c447f246030b62c5408d7fbce6c48cf775c9088aab1d391ae"
+      "sha256": "18548da94190145700836620a6c34fa6a88cee41bded46c66e16e65ca44c8eb7"
     },
     {
       "file": "web/src/features/admin/components/gdpr-export/GDPRLifecyclePanel.tsx",
       "calls": 6,
-      "sha256": "71b058e3b11e01eb6baf58185c43918841d146c501a15d61de2df9b514d29153"
+      "sha256": "5cea3a2c72fb10d4016681b4469273ad635bc069d3f6c5949775aaa0681cbabd"
     },
     {
       "file": "web/src/features/admin/components/gdpr-export/GDPRLookupPanel.tsx",
       "calls": 6,
-      "sha256": "8f6293d8175f2ff2ee513b85b3d59373f2910b4fa424d50a0747aacc95727a67"
+      "sha256": "809c75d218acec9e832f617a2b4c6d29fbaffe7096cd8f1249c3ca2c1e466176"
     },
     {
       "file": "web/src/features/admin/components/statstrip-coverage-flags-secrets/SecretRotationOperationalBrief.tsx",
@@ -171,7 +171,7 @@
     {
       "file": "web/src/features/admin/pages/RedisSignalViewerPage.tsx",
       "calls": 79,
-      "sha256": "b491c2b0ef3a5c699002f783c9b8f30d9bd2d2bb7ac6bafc2142a3e250b8c496"
+      "sha256": "4374da5448e942cb004a46977e7c056de261238cc5c0d4a7f5c04ebe1701c93b"
     },
     {
       "file": "web/src/features/admin/components/statstrip-performance-storage/DiskForecastSummary.tsx",
@@ -181,37 +181,37 @@
     {
       "file": "web/src/features/admin/pages/DiskForecastPage.tsx",
       "calls": 52,
-      "sha256": "fec810e86cc825ff86725ab941641c97356d591d3dbb9b1c0d6a3dfe137269d9"
+      "sha256": "e8c5f041368c5cb0b5f900e42f3341e1faa6ab6093e977f910042310b2a9cbc5"
     },
     {
       "file": "web/src/features/admin/components/structural-closure/audit-log/auditLogColumns.tsx",
       "calls": 10,
-      "sha256": "b6b61085ae83e2c8a13be8d3602c56c43879e39f5c036903af0c8bcfc7cdc715"
+      "sha256": "30fa85bec619b9957439c8541defe15e02a5b1a11249bb4c2656d0d3543868ff"
     },
     {
       "file": "web/src/features/admin/components/structural-closure/audit-log/AuditLogIntegrity.tsx",
       "calls": 23,
-      "sha256": "86de0dbac21d1a7ddae14aaaa80780a8b650c2b6c9cbf36bf00a30f28f329a1b"
+      "sha256": "33f24b2a33fc2d432be0d7029d28fe6ec8c92a6af8d916d01c0ccc81568aaffb"
     },
     {
       "file": "web/src/features/admin/components/structural-closure/secret-rotation/SecretRotationOutlook.tsx",
       "calls": 12,
-      "sha256": "25a085100cfda960576ab906ce037e45938335817aea5ec50f5f555ea6fcda76"
+      "sha256": "5325defa77ebb65c5370a398910cda7cbce01a6d3e030ddf509744c1dd6570e9"
     },
     {
       "file": "web/src/features/admin/pages/DevToolsPage.tsx",
       "calls": 17,
-      "sha256": "dad3d4e7140f51d48bd04e6bd304bf68d583e921f1dcda61dc684bc481178f88"
+      "sha256": "31a59cc3e578ea91fddbbc76fc0edef2fe10e63f8579e1bdc24f5fa11b5a4bb4"
     },
     {
       "file": "web/src/features/admin/pages/FleetTelemetryCoveragePage.tsx",
       "calls": 31,
-      "sha256": "3dc598ff30cf7f1ae2ab7994d9efae6692fa8b07d96b9194cf3ed5f2b1b3612e"
+      "sha256": "d4c78466990a197221ab3c532b8d88d2caedb1fb5ee5b70160b11fd56daf9eb8"
     },
     {
       "file": "web/src/features/admin/pages/GDPRExportPage.tsx",
       "calls": 30,
-      "sha256": "91f029da150aa323f37e45a80d94b1c7c89e1f90c04942bfb685b0ffcd834521"
+      "sha256": "fea9aa7c204b22983291fc052ad02ceedd8062c0d2932574bf55d44c5e8b8e1e"
     },
     {
       "file": "web/src/features/admin/pages/SecretRotationPage.tsx",
