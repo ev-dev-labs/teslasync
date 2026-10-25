@@ -20,6 +20,7 @@ import { FadeIn } from '@/components/motion';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 
 import type { ChartDataPoint } from './constants';
+import { CHART_COLORS, COLOR, CHART_NEUTRAL } from '@/lib/colors';
 
 interface PowerOutputChartProps {
   data: ChartDataPoint[];
@@ -70,8 +71,8 @@ export function PowerOutputChart({ data, loading = false }: PowerOutputChartProp
       >
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={rows}>
-            {areaGradient('dtPwrMaxGrad', '#8b5cf6')}
-            {areaGradient('dtPwrMinGrad', '#ef4444')}
+            {areaGradient('dtPwrMaxGrad', CHART_COLORS[6])}
+            {areaGradient('dtPwrMinGrad', COLOR.BAD)}
             <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
             <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
             <YAxis
@@ -89,7 +90,7 @@ export function PowerOutputChart({ data, loading = false }: PowerOutputChartProp
               {...AREA_DEFAULTS}
               dataKey="powerMax"
               name={t('drivetrain.powerMax', 'Peak Power (kW)')}
-              stroke="#8b5cf6"
+              stroke={CHART_COLORS[6]}
               fill="url(#dtPwrMaxGrad)"
               hide={hidden.isHidden('powerMax')}
             />
@@ -97,11 +98,11 @@ export function PowerOutputChart({ data, loading = false }: PowerOutputChartProp
               {...AREA_DEFAULTS}
               dataKey="powerMin"
               name={t('drivetrain.powerMin', 'Regen Power (kW)')}
-              stroke="#ef4444"
+              stroke={COLOR.BAD}
               fill="url(#dtPwrMinGrad)"
               hide={hidden.isHidden('powerMin')}
             />
-            <ReferenceLine y={0} stroke="#64748b" strokeDasharray="2 2" />
+            <ReferenceLine y={0} stroke={CHART_NEUTRAL} strokeDasharray="2 2" />
           </AreaChart>
         </ResponsiveContainer>
       </ChartContainer>

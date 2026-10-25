@@ -21,6 +21,7 @@ import { driveAverageSpeed, driveBattery } from '../components/driveGridMetrics'
 import { DRIVE_VALUE_COLUMNS, compactDriveValueSelection, driveColumnValue, driveValueKey, parseDriveValueSelections, type DriveValueColumn } from '../components/driveGridValues';
 import { COLLECTIONS, FSD_FILTERS, TREND_METRICS, type Collection, type FsdFilter } from '../components/drives-orchestrator/drivesListConstants';
 import type { useDrivesListPageData } from './useDrivesListPageData';
+import { COLOR, DATA_VISUAL_COLORS } from '@/lib/colors';
 
 export function useDrivesListPageFilters(data: ReturnType<typeof useDrivesListPageData>) {
   const {
@@ -423,23 +424,23 @@ export function useDrivesListPageFilters(data: ReturnType<typeof useDrivesListPa
   [dateFilteredDrives, tz]);
 
   const trendMetricsConfig: MetricSwitcherMetric<{ date: string; value: number }>[] = useMemo(() => [
-    { key: 'drives',     label: t('drives.metric.drives', 'Drives'),         chart: 'bar',  color: '#0891b2', accent: 'cyan',
+    { key: 'drives',     label: t('drives.metric.drives', 'Drives'),         chart: 'bar',  color: DATA_VISUAL_COLORS.info, accent: 'cyan',
       formatValue: (v) => fmtInt(v),
       formatTick: (v) => fmtInt(v) },
-    { key: 'distance',   label: t('drives.metric.distance', 'Distance'),     chart: 'bar',  color: '#10b981', accent: 'green',
+    { key: 'distance',   label: t('drives.metric.distance', 'Distance'),     chart: 'bar',  color: COLOR.GOOD, accent: 'green',
       getValue: (p) => toDistanceDisplay(p.value),
       formatValue: (v) => `${fmtNumber(v)} ${distanceUnit}`,
       formatTick: (v) => fmtNumber(v) },
-    { key: 'score',      label: t('drives.metric.grade', 'Efficiency grade'), chart: 'line', color: '#a855f7', accent: 'purple',
+    { key: 'score',      label: t('drives.metric.grade', 'Efficiency grade'), chart: 'line', color: DATA_VISUAL_COLORS.purple, accent: 'purple',
       formatValue: (v) => gradeFromNumeric(v).label,
       // Numeric ticks for the score axis — letter grades on the axis
       // would make every tick read "B" / "C" / "—", obscuring the trend.
       formatTick: (v) => fmtNumber(v) },
-    { key: 'efficiency', label: t('drives.metric.efficiency', 'Efficiency'), chart: 'line', color: '#f59e0b', accent: 'amber',
+    { key: 'efficiency', label: t('drives.metric.efficiency', 'Efficiency'), chart: 'line', color: COLOR.WARN, accent: 'amber',
       getValue: (p) => toEfficiencyDisplay(p.value),
       formatValue: (v) => `${fmtInt(v)} ${efficiencyUnit}`,
       formatTick: (v) => fmtInt(v) },
-    { key: 'cost',       label: t('drives.metric.cost', 'Cost'),             chart: 'bar',  color: '#ef4444', accent: 'red',
+    { key: 'cost',       label: t('drives.metric.cost', 'Cost'),             chart: 'bar',  color: COLOR.BAD, accent: 'red',
       getValue: (p) => costPerKwh != null ? (p.value / 1_000) * costPerKwh : null,
       formatValue: (v) => formatCurrency(v),
       // Compact axis label so the Y-axis doesn't show "$0.0833" on each tick.

@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useMemo, useCallback, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Terminal, CheckCircle, XCircle, Clock } from 'lucide-react';
@@ -27,14 +28,14 @@ interface StatusVisual {
 }
 
 const STATUS_MAP: Record<string, StatusVisual> = {
-  success: { icon: <CheckCircle className="h-3.5 w-3.5" />, color: '#22c55e', severity: 'info' },
-  failed:  { icon: <XCircle className="h-3.5 w-3.5" />,     color: '#ef4444', severity: 'critical' },
-  pending: { icon: <Clock className="h-3.5 w-3.5" />,       color: '#f59e0b', severity: 'warning' },
+  success: { icon: <CheckCircle className="h-3.5 w-3.5" />, color: palette.COLOR.GOOD, severity: 'info' },
+  failed:  { icon: <XCircle className="h-3.5 w-3.5" />,     color: palette.COLOR.BAD, severity: 'critical' },
+  pending: { icon: <Clock className="h-3.5 w-3.5" />,       color: palette.COLOR.WARN, severity: 'warning' },
 };
 
 const DEFAULT_STATUS: StatusVisual = {
   icon: <Terminal className="h-3.5 w-3.5" />,
-  color: '#6b7280',
+  color: palette.CHART_NEUTRAL,
   severity: 'info',
 };
 

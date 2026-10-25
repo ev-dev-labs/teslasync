@@ -12,6 +12,7 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { COLOR } from '@/lib/colors';
 
 /** Average consumption (Wh/km, SI) that maps to a perfect 100 score. */
 const SCORE_REFERENCE_WH_KM = 250;
@@ -32,9 +33,9 @@ export function driveScoreFromEfficiency(whPerKm: number): number {
 
 /** Gauge accent for a score band: green (great) → amber (ok) → red (poor). */
 export function scoreColor(score: number): string {
-  if (score > 75) return '#10b981';
-  if (score > 50) return '#f59e0b';
-  return '#ef4444';
+  if (score > 75) return COLOR.GOOD;
+  if (score > 50) return COLOR.WARN;
+  return COLOR.BAD;
 }
 
 /**

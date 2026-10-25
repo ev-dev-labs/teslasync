@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
@@ -102,7 +103,7 @@ export function VehiclePaintPicker({
                   >
                     <path
                       d="M4 8.5l2.5 2.5L12 5"
-                      stroke={p.id === 'pearl-white' ? '#000000' : '#ffffff'}
+                      stroke={p.id === 'pearl-white' ? palette.DATA_VISUAL_COLORS.canvasInk : palette.DATA_VISUAL_COLORS.canvasWhite}
                       strokeWidth="2.2"
                       strokeLinecap="round"
                       strokeLinejoin="round"

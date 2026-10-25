@@ -128,9 +128,9 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={batteryChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" fontSize={12} />
-                <YAxis stroke="rgba(255,255,255,0.4)" fontSize={12} domain={[0, 100]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+                <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={12} />
+                <YAxis stroke="var(--text-muted)" fontSize={12} domain={[0, 100]} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="value" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -160,9 +160,9 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
                   <AreaChart data={driveChartData}>
                     {areaGradient('driveTrendDistGrad', CHART_COLORS[0])}
                     {areaGradient('driveTrendDurGrad', CHART_COLORS[1])}
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                    <XAxis dataKey="date" stroke="rgba(255,255,255,0.4)" fontSize={11} />
-                    <YAxis stroke="rgba(255,255,255,0.4)" fontSize={11} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+                    <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} />
+                    <YAxis stroke="var(--text-muted)" fontSize={11} />
                     <Tooltip content={<ChartTooltip />} />
                     <ChartLegend />
                     <Area

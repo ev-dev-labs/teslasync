@@ -14,6 +14,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetDetailCard, WidgetStatGrid, type DetailEntry, type StatGridItem } from './shared';
+import { COLOR, DATA_VISUAL_COLORS, CHART_NEUTRAL } from '@/lib/colors';
 
 export type Severity = 'info' | 'warning' | 'critical';
 
@@ -38,23 +39,23 @@ export interface SafetyClassification {
  *  lane departure → generic state update. Pure and i18n-free. */
 export function classifySnapshot(snap: Record<string, unknown>): SafetyClassification {
   if (snap.automatic_emergency_braking_off === true) {
-    return { type: 'aeb', icon: <AlertOctagon className="h-3.5 w-3.5" />, color: '#ef4444', severity: 'critical' };
+    return { type: 'aeb', icon: <AlertOctagon className="h-3.5 w-3.5" />, color: COLOR.BAD, severity: 'critical' };
   }
   if (!/unknown$/i.test(cleanSafetyEnum(snap.forward_collision_warning, 'forward_collision_warning')) &&
     isSafetyEnumActive(snap.forward_collision_warning, 'forward_collision_warning')) {
-    return { type: 'fcw', icon: <ShieldAlert className="h-3.5 w-3.5" />, color: '#f59e0b', severity: 'warning' };
+    return { type: 'fcw', icon: <ShieldAlert className="h-3.5 w-3.5" />, color: COLOR.WARN, severity: 'warning' };
   }
   if (!/unknown$/i.test(cleanSafetyEnum(snap.lane_departure_avoidance, 'lane_departure_avoidance')) &&
     isSafetyEnumActive(snap.lane_departure_avoidance, 'lane_departure_avoidance')) {
-    return { type: 'lane', icon: <Navigation className="h-3.5 w-3.5" />, color: '#3b82f6', severity: 'warning' };
+    return { type: 'lane', icon: <Navigation className="h-3.5 w-3.5" />, color: DATA_VISUAL_COLORS.blue, severity: 'warning' };
   }
   if (snap.blind_spot_collision_warning === true) {
-    return { type: 'bsw', icon: <CarFront className="h-3.5 w-3.5" />, color: '#f59e0b', severity: 'warning' };
+    return { type: 'bsw', icon: <CarFront className="h-3.5 w-3.5" />, color: COLOR.WARN, severity: 'warning' };
   }
   if (snap.emergency_lane_departure_avoidance === true) {
-    return { type: 'elda', icon: <AlertTriangle className="h-3.5 w-3.5" />, color: '#ef4444', severity: 'critical' };
+    return { type: 'elda', icon: <AlertTriangle className="h-3.5 w-3.5" />, color: COLOR.BAD, severity: 'critical' };
   }
-  return { type: 'general', icon: <AlertOctagon className="h-3.5 w-3.5" />, color: '#6b7280', severity: 'info' };
+  return { type: 'general', icon: <AlertOctagon className="h-3.5 w-3.5" />, color: CHART_NEUTRAL, severity: 'info' };
 }
 
 /** i18n title for a classified event. FCW / lane events append the cleaned enum

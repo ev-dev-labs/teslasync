@@ -5,6 +5,7 @@ import './leafletGlobal';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import { COLOR, DATA_VISUAL_COLORS } from '@/lib/colors';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -17,7 +18,7 @@ export interface ClusterPoint {
   lng: number;
   /** Optional HTML string rendered into the marker's bound popup. */
   popupHtml?: string;
-  /** Override the default marker color (CSS color, e.g. '#22d3ee'). */
+  /** Override the default marker color (CSS color, e.g. palette.DATA_VISUAL_COLORS.info). */
   color?: string;
   /** Optional plain-text label used for accessibility / aria-label. */
   ariaLabel?: string;
@@ -37,7 +38,7 @@ export interface MarkerClusterProps {
    * legend-aligned bubbles without re-deriving the points externally.
    */
   iconCreateFunction?: (count: number, children: ClusterPoint[]) => L.DivIcon;
-  /** Default marker color when point.color is unset. Default '#22d3ee'. */
+  /** Default marker color when point.color is unset. Default palette.DATA_VISUAL_COLORS.info. */
   defaultColor?: string;
   /** Marker click handler — receives the original point. */
   onMarkerClick?: (point: ClusterPoint) => void;
@@ -66,21 +67,21 @@ function defaultIconCreate(count: number, overrideColor?: string): L.DivIcon {
   if (overrideColor) {
     bg = overrideColor;
   } else if (count >= 100) {
-    bg = 'rgba(244, 63, 94, 0.85)'; // rose
+    bg = `${COLOR.BAD}d9`; // rose
   } else if (count >= 25) {
-    bg = 'rgba(251, 191, 36, 0.85)'; // amber
+    bg = `${COLOR.WARN}d9`; // amber
   } else if (count >= 10) {
-    bg = 'rgba(168, 85, 247, 0.85)'; // purple
+    bg = `${DATA_VISUAL_COLORS.purple}d9`; // purple
   } else {
-    bg = 'rgba(34, 211, 238, 0.85)'; // cyan
+    bg = `${DATA_VISUAL_COLORS.info}d9`; // cyan
   }
   const html = `
     <div style="
       width:36px;height:36px;border-radius:9999px;
       display:flex;align-items:center;justify-content:center;
       background:${bg};
-      border:2px solid rgba(255,255,255,0.85);
-      color:#0b1020;font-weight:700;font-size:12px;
+      border:2px solid ${DATA_VISUAL_COLORS.canvasWhite};
+      color:${DATA_VISUAL_COLORS.canvasInk};font-weight:700;font-size:12px;
       backdrop-filter:blur(4px);
     ">${count}</div>
   `;
@@ -100,7 +101,7 @@ function makeDotIcon(color: string): L.DivIcon {
     popupAnchor: [0, -8],
     html: `
       <div style="width:16px;height:16px;border-radius:50%;
-        background:${color};border:2px solid rgba(255,255,255,0.9);"></div>
+        background:${color};border:2px solid ${DATA_VISUAL_COLORS.canvasWhite};"></div>
     `,
   });
 }
@@ -120,7 +121,7 @@ export function MarkerCluster({
   maxClusterRadius = 50,
   disableClusteringAtZoom = 18,
   iconCreateFunction,
-  defaultColor = '#22d3ee',
+  defaultColor = DATA_VISUAL_COLORS.info,
   onMarkerClick,
   getClusterColor,
 }: MarkerClusterProps) {

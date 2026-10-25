@@ -22,6 +22,7 @@ import { sleepStateLabel } from './labels';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
 import type { SleepEfficiencySectionProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { CHART_COLORS } from '@/lib/colors';
 
 interface DestinationDatum extends ChartDataRow {
   state: string;
@@ -116,7 +117,7 @@ export function TransitionDestinationChart({
                     'sleep.transitionChart.count',
                     'Transition count',
                   )}
-                  fill="#00f0ff"
+                  fill={CHART_COLORS[0]}
                   radius={[4, 4, 0, 0]}
                 />
               </BarChart>

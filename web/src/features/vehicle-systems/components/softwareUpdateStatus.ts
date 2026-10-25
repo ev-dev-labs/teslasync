@@ -14,6 +14,7 @@ import { CheckCircle, Download, ArrowUpCircle, Clock } from 'lucide-react';
 
 import type { NeonColor } from '@/lib/tokens';
 import type { BadgeProps } from '@/components/ui';
+import { COLOR, DATA_VISUAL_COLORS, CHART_NEUTRAL } from '@/lib/colors';
 
 export type UpdateStatusKey =
   | 'installed'
@@ -36,7 +37,7 @@ export interface UpdateStatusMeta {
 export const UPDATE_STATUS: Record<UpdateStatusKey, UpdateStatusMeta> = {
   installed: {
     color: 'green',
-    hex: '#10b981',
+    hex: COLOR.GOOD,
     icon: CheckCircle,
     badgeVariant: 'success',
     labelKey: 'softwareUpdates.status.installed',
@@ -44,7 +45,7 @@ export const UPDATE_STATUS: Record<UpdateStatusKey, UpdateStatusMeta> = {
   },
   installing: {
     color: 'cyan',
-    hex: '#06b6d4',
+    hex: DATA_VISUAL_COLORS.info,
     icon: Download,
     badgeVariant: 'info',
     labelKey: 'softwareUpdates.status.installing',
@@ -52,7 +53,7 @@ export const UPDATE_STATUS: Record<UpdateStatusKey, UpdateStatusMeta> = {
   },
   downloading: {
     color: 'cyan',
-    hex: '#22d3ee',
+    hex: DATA_VISUAL_COLORS.info,
     icon: Download,
     badgeVariant: 'info',
     labelKey: 'softwareUpdates.status.downloading',
@@ -60,7 +61,7 @@ export const UPDATE_STATUS: Record<UpdateStatusKey, UpdateStatusMeta> = {
   },
   available: {
     color: 'amber',
-    hex: '#f59e0b',
+    hex: COLOR.WARN,
     icon: ArrowUpCircle,
     badgeVariant: 'warning',
     labelKey: 'softwareUpdates.status.available',
@@ -68,7 +69,7 @@ export const UPDATE_STATUS: Record<UpdateStatusKey, UpdateStatusMeta> = {
   },
   scheduled: {
     color: 'blue',
-    hex: '#64748b',
+    hex: CHART_NEUTRAL,
     icon: Clock,
     badgeVariant: 'neutral',
     labelKey: 'softwareUpdates.status.scheduled',

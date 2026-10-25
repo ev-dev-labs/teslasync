@@ -6107,7 +6107,7 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "theme.chartPalette.neonHelp",
-    "Bright cyan/magenta — best when colour vision is unimpaired."
+    "The same calm palette in a violet-led order."
   ],
   [
     "featureConfig.errorTitle",
@@ -18993,7 +18993,7 @@ function assertTranslatorOrigin(call: ts.CallExpression, tree: ts.SourceFile, fi
 describe('authorized exact canonical catalog recovery attempt3', () => {
   it('resolves all 1921 static pairs through installed i18next and normal generated resources', async () => {
     expect(authorizedCanonicalAdditions).toHaveLength(1921)
-    expect(createHash('sha256').update(JSON.stringify(authorizedCanonicalAdditions)).digest('hex')).toBe('5d1f0a21567e6deed09a957890554ba37f67f7b65ef324cb447449de50e5e660')
+    expect(createHash('sha256').update(JSON.stringify(authorizedCanonicalAdditions)).digest('hex')).toBe("77f07cd0962ab40a656e796e4e9312f31145b97ca0ae0cb85ec2ae36dd6107a3")
     const english = createInstance()
     await english.init({ lng: 'en', fallbackLng: 'en', fallbackNS: 'translation',
       resources: { en: { translation: catalog } }, interpolation: { escapeValue: false } })
@@ -19023,7 +19023,7 @@ describe('authorized exact canonical catalog recovery attempt3', () => {
     ].map(([key]) => JSON.stringify(key.split('.'))))
     const predecessor = entries.filter(([path]) => !exactAdded.has(JSON.stringify(path)))
     expect(predecessor).toHaveLength(31128)
-    expect(createHash('sha256').update(JSON.stringify(predecessor)).digest('hex')).toBe("514094fadfb57f41b01eb2b3eca73bb6c6be2736cd354daf1ed018598adbd747")
+    expect(createHash('sha256').update(JSON.stringify(predecessor)).digest('hex')).toBe("9438138c29b91193e63960bdead8b60e16c109e8866c888cc1e3a496f914b579")
     expect(entries).toHaveLength(33160)
     expect(preservedResolutions).toHaveLength(28)
     for (const [key, value] of preservedResolutions) expect(nested(catalog, key), key).toBe(value)

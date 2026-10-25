@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useTranslation } from 'react-i18next';
 import { OperationalBrief, MetricBar, type StatMetric } from '@/components/data-display';
 import { Caption, Text } from '@/components/ui';
@@ -32,9 +33,9 @@ export function YearSavingsBrief({ data, period, retained }: { data: YearReview;
       metrics={operationalMetrics} scope={period.label} provenance={t('yearReview.title', 'Year in review')} />
     <Caption>{t('yearReview.vsGas', 'vs. driving a gas car')}</Caption>
     <div className="space-y-3">
-      <MetricBar value={gasEquiv} max={barMax} color="#fb7185"
+      <MetricBar value={gasEquiv} max={barMax} color={palette.COLOR.BAD}
         label={t('yearReview.gasCost', 'Gas would cost')} sublabel={formatMetric('currency', gasEquiv, preferences).text} />
-      <MetricBar value={electric} max={barMax} color="#34d399"
+      <MetricBar value={electric} max={barMax} color={palette.COLOR.GOOD}
         label={t('yearReview.electricCost', 'Electric cost')} sublabel={formatMetric('currency', electric, preferences).text} />
     </div>
     <Text as="p" variant="bodySm">

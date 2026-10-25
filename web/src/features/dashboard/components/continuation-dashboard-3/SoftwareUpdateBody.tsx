@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useTranslation } from 'react-i18next';
 import { Download, CheckCircle2, Clock } from 'lucide-react';
 import { Caption, Text } from '@/components/ui';
@@ -49,7 +50,7 @@ export function SoftwareUpdateBody({
             <MetricBar
               value={downloadPct}
               max={100}
-              color="#22d3ee"
+              color={palette.DATA_VISUAL_COLORS.info}
               label={t('widget.downloading', 'Downloading')}
               sublabel={`${fmtNumber(downloadPct)}%`}
             />
@@ -58,7 +59,7 @@ export function SoftwareUpdateBody({
             <MetricBar
               value={installPct}
               max={100}
-              color="#a78bfa"
+              color={palette.DATA_VISUAL_COLORS.purple}
               label={t('widget.installing', 'Installing')}
               sublabel={`${fmtNumber(installPct)}%`}
             />

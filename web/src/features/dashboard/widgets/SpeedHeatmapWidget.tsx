@@ -92,7 +92,7 @@ export function lerpColor(a: [number, number, number], b: [number, number, numbe
 
 export function speedToColor(speed: number, maxSpeed: number): string {
   if (!Number.isFinite(speed) || !Number.isFinite(maxSpeed) || speed <= 0 || maxSpeed <= 0) {
-    return 'rgba(255,255,255,0.03)';
+    return 'color-mix(in srgb, var(--text-primary) 3%, transparent)';
   }
   const t = Math.max(0, Math.min(speed / maxSpeed, 1));
   const opacity = 0.06 + 0.94 * t;

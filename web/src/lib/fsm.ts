@@ -1,4 +1,5 @@
 /** FSM state display configurations for frontend rendering. */
+import { CHART_SEMANTIC } from './colors'
 
 export interface StateConfig {
   label: string;
@@ -9,12 +10,12 @@ export interface StateConfig {
 
 // Vehicle lifecycle states
 export const vehicleStates: Record<string, StateConfig> = {
-  unknown: { label: 'Unknown', color: '#6b7280', variant: 'neutral' },
-  online: { label: 'Online', color: '#22c55e', variant: 'success' },
-  asleep: { label: 'Asleep', color: '#a855f7', variant: 'info' },
-  driving: { label: 'Driving', color: '#3b82f6', variant: 'info' },
-  charging: { label: 'Charging', color: '#f59e0b', variant: 'warning' },
-  offline: { label: 'Offline', color: '#ef4444', variant: 'danger' },
+  unknown: { label: 'Unknown', color: CHART_SEMANTIC.vehicle.unknown, variant: 'neutral' },
+  online: { label: 'Online', color: CHART_SEMANTIC.vehicle.online, variant: 'success' },
+  asleep: { label: 'Asleep', color: CHART_SEMANTIC.vehicle.asleep, variant: 'info' },
+  driving: { label: 'Driving', color: CHART_SEMANTIC.vehicle.driving, variant: 'info' },
+  charging: { label: 'Charging', color: CHART_SEMANTIC.vehicle.charging, variant: 'warning' },
+  offline: { label: 'Offline', color: CHART_SEMANTIC.vehicle.offline, variant: 'neutral' },
 };
 
 // Charging session states

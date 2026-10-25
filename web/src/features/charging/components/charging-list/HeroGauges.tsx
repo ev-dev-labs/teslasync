@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useTranslation } from 'react-i18next';
 import { GlassPanel } from '@/components/ui';
 import { ThresholdBar } from '@/components/charts';
@@ -50,19 +51,19 @@ export function HeroGauges({ stats }: HeroGaugesProps) {
     {
       from: 0,
       to: AC_CHARGE_KW,
-      color: '#38bdf88c',
+      color: palette.DATA_VISUAL_COLORS.info + "8c",
       label: t('charging.gauges.band.ac', 'AC'),
     },
     {
       from: AC_CHARGE_KW,
       to: DC_FAST_KW,
-      color: '#a855f78c',
+      color: palette.DATA_VISUAL_COLORS.purple + "8c",
       label: t('charging.gauges.band.dcFast', 'DC fast'),
     },
     {
       from: DC_FAST_KW,
       to: PEAK_CHARGE_KW,
-      color: '#10b9818c',
+      color: palette.COLOR.GOOD + "8c",
       label: t('charging.gauges.band.supercharge', 'Supercharge'),
     },
   ];

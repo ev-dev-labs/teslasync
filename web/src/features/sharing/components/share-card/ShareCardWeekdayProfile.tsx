@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,8 +19,8 @@ import { ChartCard } from '@/components/layout';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
-const COUNT_COLOR = '#a78bfa';
-const DISTANCE_COLOR = '#22d3ee';
+const COUNT_COLOR = palette.DATA_VISUAL_COLORS.purple;
+const DISTANCE_COLOR = palette.DATA_VISUAL_COLORS.info;
 
 export function ShareCardWeekdayProfile({
   analysis,

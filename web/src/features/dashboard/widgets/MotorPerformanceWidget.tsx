@@ -10,13 +10,14 @@ import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertTempFromSI } from '@/lib/unitConversion';
+import { COLOR } from '@/lib/colors';
 
 const LIVE_REFRESH_MS = 5_000;
 
 export function torqueColor(nm: number): string {
-  if (Math.abs(nm) < 200) return '#10b981';
-  if (Math.abs(nm) < 400) return '#f59e0b';
-  return '#ef4444';
+  if (Math.abs(nm) < 200) return COLOR.GOOD;
+  if (Math.abs(nm) < 400) return COLOR.WARN;
+  return COLOR.BAD;
 }
 
 export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps) {

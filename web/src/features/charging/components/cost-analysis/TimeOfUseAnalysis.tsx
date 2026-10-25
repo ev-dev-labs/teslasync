@@ -12,6 +12,7 @@ import {
 import { CostSection } from './CostSection';
 import type { HourBucket, TouInsights } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { CHART_COLORS, CHART_SEMANTIC } from '@/lib/colors';
 
 /** Utility time-of-use rate period for an hour-of-day bucket. */
 export type TouPeriod = 'peak' | 'mid-peak' | 'off-peak';
@@ -24,9 +25,9 @@ export type TouPeriod = 'peak' | 'mid-peak' | 'off-peak';
  * as dynamic values, which is the documented inline-style exception.
  */
 export const TOU_PERIOD_COLORS: Record<TouPeriod, string> = {
-  peak: '#ef4444',
-  'mid-peak': '#22d3ee',
-  'off-peak': '#10b981',
+  peak: CHART_COLORS[5],
+  'mid-peak': CHART_COLORS[0],
+  'off-peak': CHART_SEMANTIC.vehicle.online,
 };
 
 /**

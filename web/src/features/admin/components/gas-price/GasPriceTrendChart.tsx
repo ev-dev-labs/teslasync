@@ -21,6 +21,7 @@ import { useChartPalette } from '@/hooks/useChartPalette';
 import { useFormatting } from '@/hooks/useFormatting';
 import { formatDate } from '@/lib/dateFormat';
 import type { GasPriceHistory } from '@/api/types';
+import { COLOR } from '@/lib/colors';
 
 interface GasPriceTrendChartProps {
   query: UseQueryResult<GasPriceHistory[], Error>;
@@ -37,7 +38,7 @@ export function GasPriceTrendChart({ query }: GasPriceTrendChartProps) {
   const { t } = useTranslation();
   const palette = useChartPalette();
   const { formatCurrency } = useFormatting();
-  const color = palette[3] ?? palette[0] ?? '#f59e0b';
+  const color = palette[3] ?? palette[0] ?? COLOR.WARN;
 
   const { data, isLoading, isError, error, refetch } = query;
 

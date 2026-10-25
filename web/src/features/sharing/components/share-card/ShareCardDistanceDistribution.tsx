@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -17,7 +18,7 @@ import { ChartCard } from '@/components/layout';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
-const BAR_COLOR = '#22d3ee';
+const BAR_COLOR = palette.DATA_VISUAL_COLORS.info;
 
 export function ShareCardDistanceDistribution({
   analysis,

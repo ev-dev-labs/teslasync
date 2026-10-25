@@ -16,8 +16,19 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   conflicts. Combined/catalog checkpoint and split generators ran against
   the merged LF sources; all seven frozen suites pass (7,728/7,728).
   `npx tsc --noEmit` exits 0. Shared modules are retained.
-- Next: commit/push the shared merge, then merge `origin/feat/chart-palette`,
-  regenerate and verify again before combined repairs.
+- Shared merge committed and pushed as `b235484463`.
+- Palette merge: `origin/feat/chart-palette` at `96ad7e99d1` integrated
+  after shared patterns. One DriveStatCards conflict resolved with the
+  shared energy conversion AND new `COLOR.GOOD` token. Preserved both
+  branches' behavior. Aligned 12 case-only fallback discrepancies to the
+  catalog; verified and regenerated 13 producer checkpoints, combined and
+  catalog fingerprints. Extended the catalog generator to verify and
+  regenerate the canonical fixture digest when approved copy changes;
+  updated the neon-help copy fixture to the intended palette wording.
+  No hash was hand-edited. TypeScript exits 0; eight palette/frozen suites
+  pass (7,782/7,782).
+- Next: commit/push palette merge, close drafts #205/#204, remove only
+  clean/pushed shared/colors worktrees, then repair the combined failures.
 - Combined failure groups to investigate after merging: branch-only
   vehicle-hero-readings/route-layout regressions (~53 reported; attribution
   must be re-established rather than trusting the branch handoff), remaining

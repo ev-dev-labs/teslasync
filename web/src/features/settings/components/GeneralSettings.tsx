@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AppSettings } from '@/api/types'
@@ -48,8 +49,8 @@ const DEFAULT_FORM: AppSettings = {
   api_suspended: false,
   theme: 'neon-cyan',
   mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
+  custom_primary: palette.DATA_VISUAL_COLORS.info,
+  custom_accent: palette.COLOR.BAD,
   gas_price_per_unit: 3.50,
   gas_unit: 'gallon',
   gas_efficiency_mpg: 25,

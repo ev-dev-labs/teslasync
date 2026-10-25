@@ -12,6 +12,7 @@ import { useFormatting } from '@/hooks/useFormatting';
 import type { CostForecastData } from '@/types/charging';
 import { CostSection } from './CostSection';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { COLOR } from '@/lib/colors';
 
 interface ForecastDetailsProps {
   forecastData: CostForecastData | undefined;
@@ -92,8 +93,8 @@ export function ForecastDetails({ forecastData, isLoading, error, onRetry }: For
                     outerRadius={75}
                     dataKey="value"
                   >
-                    <Cell fill="#22c55e" />
-                    <Cell fill="#f59e0b" />
+                    <Cell fill={COLOR.GOOD} />
+                    <Cell fill={COLOR.WARN} />
                   </Pie>
                   <Tooltip content={<ChartTooltip />} />
                 </PieChart>

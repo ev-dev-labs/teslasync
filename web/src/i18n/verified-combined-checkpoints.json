@@ -80,6 +80,7 @@
     "web/src/features/notifications/components/InboxBody.tsx",
     "web/src/features/power-user/pages/SqlPlaygroundPage.tsx",
     "web/src/features/service-intelligence/components/WarrantyPanel.tsx",
+    "web/src/features/settings/components/AppearanceSettings.tsx",
     "web/src/features/settings/components/QuietHoursPanel.tsx",
     "web/src/features/settings/components/sessions/SessionsTable.tsx",
     "web/src/features/sharing/pages/SharedSessionReport.tsx",
@@ -306,7 +307,7 @@
     {
       "file": "web/src/features/dashboard/widgets/BackupHistoryWidget.tsx",
       "calls": 8,
-      "sha256": "4bab711765f3363fded61f9b80867dbf78533a1fc03f4a69348c8434a68fdf56"
+      "sha256": "dfc6649d6e68a1c4bba717bfb6bfebcd5bd7edfd94882d044f08cd9e64434add"
     },
     {
       "file": "web/src/features/dashboard/widgets/ChargeCostTrackerWidget.tsx",
@@ -504,6 +505,11 @@
       "sha256": "4f4777a04743d5252478218022e2fa01e6ccf676e925b1114da07c42c825512f"
     },
     {
+      "file": "web/src/features/settings/components/AppearanceSettings.tsx",
+      "calls": 58,
+      "sha256": "4a792246ccc65713c01dd07a12d8b48e3214f73a9828c3fbd86b6869f68869b6"
+    },
+    {
       "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
       "calls": 45,
       "sha256": "675d4aeede3d186f7a137ec13e3565d163279f577e29f4b3a824fe014f0328e3"
@@ -556,7 +562,7 @@
     {
       "file": "web/src/features/telemetry/components/SignalLogBreakdownPanel.tsx",
       "calls": 11,
-      "sha256": "3bd28d4f93cd6ed579d50914a24c86927d3e3e566e96b3694f7da1e68198ee98"
+      "sha256": "6927c3bc393185d7ec20e9cea3ac573c17fc18e63e4f7bf773df5814928832f9"
     },
     {
       "file": "web/src/features/telemetry/components/statstrip-correlation/CorrelationStatStrip.tsx",

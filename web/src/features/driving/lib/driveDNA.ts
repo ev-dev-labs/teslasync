@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 /**
  * Drive DNA analytical model.
  *
@@ -739,7 +740,7 @@ function buildGenome(
 
   const haloColor =
     stats.regenEmissionShare == null
-      ? 'hsl(210, 30%, 16%)'
+      ? palette.DATA_VISUAL_COLORS.canvasMidnight
       : `hsl(${Math.round(190 - stats.regenEmissionShare * 40)}, 40%, 16%)`;
 
   return {

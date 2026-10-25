@@ -38,9 +38,7 @@ export function AppearanceSettings() {
     (settings?.time_format_default as TimeFormatId | undefined) ?? 'relative'
 
   // Chart palette default (). Drives the reactive
-  // `useChartPalette()` hook so consumers re-render with the new colours
-  // when the user toggles between the CB-safe Okabe-Ito default and the
-  // stylistic neon palette.
+  // `useChartPalette()` hook without changing the UI accent preset.
   const chartPalette: ChartPaletteId =
     (settings?.chart_palette as ChartPaletteId | undefined) ?? 'cb_safe'
 
@@ -86,10 +84,10 @@ export function AppearanceSettings() {
     },
     {
       id: 'neon',
-      label: t('theme.chartPalette.neon', 'Stylistic neon'),
+      label: t('theme.chartPalette.neon', 'Alternate order'),
       help: t(
         'theme.chartPalette.neonHelp',
-        'Bright cyan/magenta — best when colour vision is unimpaired.',
+        'The same calm palette in a violet-led order.',
       ),
       swatches: CHART_COLORS_NEON,
     },
@@ -97,7 +95,7 @@ export function AppearanceSettings() {
 
   const timeFormatChoices: { id: TimeFormatId; label: string; help: string }[] = [
     { id: 'relative', label: t('theme.timeFormat.relative', 'Relative (2h ago)'), help: t('theme.timeFormat.relativeHelp', 'Best for recent activity feeds') },
-    { id: 'absolute', label: t('theme.timeFormat.absolute', 'Absolute (nov 12, 13:42)'), help: t('theme.timeFormat.absoluteHelp', 'Best for trip planning and event correlation') },
+    { id: 'absolute', label: t('theme.timeFormat.absolute', 'Absolute (Nov 12, 13:42)'), help: t('theme.timeFormat.absoluteHelp', 'Best for trip planning and event correlation') },
   ]
 
   const densityChoices: { id: DensityId; label: string; help: string }[] = [
@@ -362,7 +360,7 @@ export function AppearanceSettings() {
                 <HelperText id="statusbar-icon-only-help" className={cn(!statusBarPrefs.enabled && 'opacity-50')}>
                   {t(
                     'theme.statusBar.iconOnlyHelp',
-                    'Hide labels at all widths. Lower-priority tools move into More on constrained screens.',
+                    'Hide labels at all widths. Lower-priority tools move into more on constrained screens.',
                   )}
                 </HelperText>
               </div>

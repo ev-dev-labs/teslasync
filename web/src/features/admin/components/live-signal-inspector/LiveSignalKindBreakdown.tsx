@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 /**
  * Live Signal Inspector — value-kind breakdown.
  *
@@ -124,7 +125,7 @@ export function LiveSignalKindBreakdown({
               />
               <Tooltip
                 content={<ChartTooltip />}
-                cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                cursor={{ fill: palette.DATA_VISUAL_COLORS.glassWash }}
               />
               <Bar
                 dataKey="value"

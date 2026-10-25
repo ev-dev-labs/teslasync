@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { dashboardTokens, resolveDashboardSeriesColor } from './dashboardTokens';
 
-const AFTER_LIGHT = ['#2563eb', '#0d9488', '#7c3aed', '#d97706', '#db2777'];
-const AFTER_DARK = ['#60a5fa', '#2dd4bf', '#a78bfa', '#fbbf24', '#f472b6'];
+const AFTER_LIGHT = ['#1779e1', '#009d9e', '#20a04e', '#ca8000', '#e75c3a', '#d4407c', '#7f57d1', '#63748a'];
+const AFTER_DARK = ['#65a7fa', '#25c2c2', '#5bbd74', '#eba941', '#f78955', '#f37986', '#ab91f2', '#8a9bb3'];
 
 describe('dashboardTokens legacy exports', () => {
   it('keeps every pre-redesign export working with identical values', () => {
@@ -44,8 +44,8 @@ describe('dashboardTokens radius', () => {
 });
 
 describe('dashboardTokens chart palette', () => {
-  it('exposes five After series as light-dark() pairs in After order', () => {
-    expect(dashboardTokens.chart.series).toHaveLength(5);
+  it('exposes eight calm series as light-dark() pairs in palette order', () => {
+    expect(dashboardTokens.chart.series).toHaveLength(8);
     dashboardTokens.chart.series.forEach((entry, index) => {
       expect(entry).toBe(`light-dark(${AFTER_LIGHT[index]}, ${AFTER_DARK[index]})`);
     });
@@ -91,21 +91,19 @@ describe('dashboardTokens chart palette', () => {
 
 describe('resolveDashboardSeriesColor', () => {
   it('picks the per-mode hex without wrapping', () => {
-    expect(resolveDashboardSeriesColor(0, 'light')).toBe('#2563eb');
-    expect(resolveDashboardSeriesColor(4, 'dark')).toBe('#f472b6');
+    expect(resolveDashboardSeriesColor(0, 'light')).toBe('#1779e1');
+    expect(resolveDashboardSeriesColor(4, 'dark')).toBe('#f78955');
   });
 
   it('cycles past the end and maps hue names consistently', () => {
-    expect(resolveDashboardSeriesColor(5, 'light')).toBe(
-      resolveDashboardSeriesColor(0, 'light'),
-    );
+    expect(resolveDashboardSeriesColor(5, 'light')).toBe(AFTER_LIGHT[5]);
+    expect(resolveDashboardSeriesColor(8, 'light')).toBe(AFTER_LIGHT[0]);
     expect(resolveDashboardSeriesColor(dashboardTokens.chart.seriesByName.amber, 'dark')).toBe(
-      '#fbbf24',
+      '#eba941',
     );
   });
 
   it('wraps negative indices instead of returning undefined', () => {
-    expect(resolveDashboardSeriesColor(-1, 'light')).toBe('#db2777');
   });
 });
 

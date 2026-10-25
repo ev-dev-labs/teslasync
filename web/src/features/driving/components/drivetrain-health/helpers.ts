@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { HEALTH_COLOR, type HealthStatus } from './constants';
 
 export function healthBadgeVariant(
@@ -42,7 +43,7 @@ function classifyTempSeverity(
 }
 
 /** Neutral swatch for an unrankable ("unknown") reading. */
-const TEMP_UNKNOWN_COLOR = '#6b7280';
+const TEMP_UNKNOWN_COLOR = palette.CHART_NEUTRAL;
 
 const SEVERITY_COLOR: Record<TempSeverity, string> = {
   unknown: TEMP_UNKNOWN_COLOR,

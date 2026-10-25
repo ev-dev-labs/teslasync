@@ -101,10 +101,10 @@ export function DriveScore({ drive }: { drive: DriveLike }) {
 
   const breakdown = useMemo(
     () => [
-      { key: 'efficiency', label: t('driveScore.efficiency', 'Efficiency'), value: score.efficiency, max: 40, color: '#00f0ff' },
-      { key: 'speed', label: t('driveScore.speedDiscipline', 'Speed Discipline'), value: score.speed, max: 20, color: '#a855f7' },
-      { key: 'range', label: t('driveScore.rangePreservation', 'Range Preservation'), value: score.range, max: 20, color: '#10b981' },
-      { key: 'trip', label: t('driveScore.tripLength', 'Trip Length'), value: score.trip, max: 20, color: '#f59e0b' },
+      { key: 'efficiency', label: t('driveScore.efficiency', 'Efficiency'), value: score.efficiency, max: 40, color: COLOR.CYAN },
+      { key: 'speed', label: t('driveScore.speedDiscipline', 'Speed Discipline'), value: score.speed, max: 20, color: COLOR.PURPLE },
+      { key: 'range', label: t('driveScore.rangePreservation', 'Range Preservation'), value: score.range, max: 20, color: COLOR.GOOD },
+      { key: 'trip', label: t('driveScore.tripLength', 'Trip Length'), value: score.trip, max: 20, color: COLOR.WARN },
     ],
     [t, score.efficiency, score.speed, score.range, score.trip],
   )

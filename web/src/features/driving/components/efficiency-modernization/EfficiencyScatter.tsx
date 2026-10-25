@@ -5,6 +5,7 @@ import {
 } from '@/components/charts';
 import { EfficiencyChart } from './EfficiencyChart';
 import type { DrivesPresentation } from './types';
+import { CHART_COLORS } from '@/lib/colors';
 
 /** Two original, independent scatter identities; no combined or synthesized series. */
 export function EfficiencyScatter({ model, source, units, kind }: DrivesPresentation & { kind: 'speed' | 'temperature' }) {
@@ -35,7 +36,7 @@ export function EfficiencyScatter({ model, source, units, kind }: DrivesPresenta
         <YAxis dataKey="efficiency" name={efficiencyUnit} unit={` ${efficiencyUnit}`}
           tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
         <Tooltip content={<ChartTooltip />} />
-        <Scatter data={data} fill={isSpeed ? '#f59e0b' : '#a855f7'} fillOpacity={0.6} />
+        <Scatter data={data} fill={isSpeed ? CHART_COLORS[3] : CHART_COLORS[6]} fillOpacity={0.6} />
       </ScatterChart>
     </ResponsiveContainer>
   </EfficiencyChart>;

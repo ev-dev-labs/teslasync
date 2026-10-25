@@ -20,9 +20,9 @@
 // Run via: `node scripts/auditChartPalette.mjs`
 // `npm run audit:palette`
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { converter } from 'culori';
 import ts from 'typescript';
 
@@ -30,6 +30,21 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const COLORS_SRC = join(__dirname, '..', 'src', 'lib', 'colors.ts');
 
 const PALETTE_NAMES = ['CHART_COLORS_CB_SAFE', 'CHART_COLORS_NEON'];
+
+export const HARD_COLOR_EXCEPTIONS = Object.freeze({
+  'src/components/ui/themePresets.ts': 'Theme/accent preset definitions',
+  'src/components/ui/ThemeProvider.tsx': 'Theme/accent provider definitions',
+  'src/components/vehicles/VehicleTwin.tsx': 'Kept widget — exact preserved vehicle illustration paint',
+  'src/components/data-display/TeslaCarViz.tsx': 'Tesla car illustration paint',
+  'src/features/admin/components/devtools/tools/ColorConverter.tsx': 'Color converter dev-tool input/output',
+  'src/features/notifications/components/channels/channelMeta.ts': 'Third-party notification brand colors',
+});
+
+export const HARD_COLOR_TOKEN_MODULES = Object.freeze([
+  'src/lib/colors.ts',
+  'src/lib/tokens.ts',
+  'src/features/dashboard/lib/dashboardTokens.ts',
+]);
 
 export function readCanonicalPalettes(source) {
   const file = ts.createSourceFile(COLORS_SRC, source, ts.ScriptTarget.Latest, true);
@@ -64,6 +79,7 @@ export function readCanonicalPalettes(source) {
 
 const MIN_DELTA_L = 0.1;
 const MIN_DELTA_H_DEG = 30;
+const MIN_DELTA_E = 0.12;
 
 const okl = converter('oklch');
 
@@ -102,6 +118,64 @@ function check(palette, logger) {
   return failed;
 }
 
+function isVisualColorLiteral(text) {
+  return /^#[\da-f]{3}(?:[\da-f]{3})?(?:[\da-f]{2})?$/i.test(text.trim())
+    || /^(?:rgb|rgba|hsl|hsla)\s*\(/i.test(text.trim());
+}
+
+/** Find resolved color literals in chart/data-visual source, excluding comments. */
+export function findVisualColorLiterals(source, fileName = 'visual.tsx') {
+  const file = ts.createSourceFile(
+    fileName,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    fileName.endsWith('.ts') ? ts.ScriptKind.TS : ts.ScriptKind.TSX,
+  );
+  const hits = [];
+  const visit = (node) => {
+    if (ts.isStringLiteral(node) && isVisualColorLiteral(node.text)) {
+      hits.push({ position: node.getStart(file), value: node.text });
+    }
+    if (ts.isNoSubstitutionTemplateLiteral(node) && isVisualColorLiteral(node.text)) {
+      hits.push({ position: node.getStart(file), value: node.text });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return hits;
+}
+
+export function isProductionPaletteFile(relativePath) {
+  const normalized = relativePath.replaceAll('\\', '/');
+  if (!/\.(?:ts|tsx)$/.test(normalized)) return false;
+  if (/(?:^|\/)(?:__tests__|tests)(?:\/|$)/.test(normalized)) return false;
+  if (/\.(?:test|spec|stories|story)\.[cm]?tsx?$/.test(normalized)) return false;
+  return true;
+}
+
+export function shouldScanPaletteFile(relativePath) {
+  const normalized = relativePath.replaceAll('\\', '/');
+  if (!isProductionPaletteFile(normalized)) return false;
+  if (HARD_COLOR_TOKEN_MODULES.includes(normalized)) return false;
+  return !Object.hasOwn(HARD_COLOR_EXCEPTIONS, normalized);
+}
+
+function walk(root, predicate) {
+  const files = [];
+  for (const entry of readdirSync(root)) {
+    const full = join(root, entry);
+    const stat = statSync(full);
+    if (stat.isDirectory()) files.push(...walk(full, predicate));
+    else if (predicate(full)) files.push(full);
+  }
+  return files;
+}
+
+function lineOf(source, position) {
+  return source.slice(0, position).split('\n').length;
+}
+
 export function auditCanonicalPalettes(source, logger = console) {
   let palettes;
   try {
@@ -122,7 +196,26 @@ export function auditCanonicalPalettes(source, logger = console) {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   try {
-    process.exitCode = auditCanonicalPalettes(readFileSync(COLORS_SRC, 'utf8'));
+    const paletteExit = auditCanonicalPalettes(readFileSync(COLORS_SRC, 'utf8'));
+    const webRoot = join(__dirname, '..');
+    let visualFailures = 0;
+    const broadRoots = [
+      join(webRoot, 'src', 'features'),
+      join(webRoot, 'src', 'components'),
+    ];
+    for (const root of broadRoots) {
+      for (const file of walk(root, candidate => /\.(?:ts|tsx)$/.test(candidate))) {
+        const source = readFileSync(file, 'utf8');
+        const relativePath = relative(webRoot, file);
+        if (!shouldScanPaletteFile(relativePath)) continue;
+        for (const hit of findVisualColorLiterals(source, file)) {
+          console.error(`hard-coded visual color: ${join(relative(webRoot, file))}:${lineOf(source, hit.position)} ${hit.value}`);
+          visualFailures += 1;
+        }
+      }
+    }
+    if (visualFailures === 0) console.log('OK - no hard-coded visual colors outside the token modules.');
+    process.exitCode = paletteExit || visualFailures > 0 ? 1 : 0;
   } catch (err) {
     console.error(`drift guard: cannot read ${COLORS_SRC}: ${err.message}`);
     process.exitCode = 1;

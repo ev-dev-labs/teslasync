@@ -13,7 +13,7 @@ export interface TimelineItemProps {
   subtitle?: string
   /** Relative or absolute timestamp label (e.g. `2m ago`). */
   time: string
-  /** Hex accent for the icon swatch (e.g. `#00f0ff`). When omitted the swatch
+  /** Hex accent for the icon swatch (e.g. palette.DATA_VISUAL_COLORS.info). When omitted the swatch
    *  falls back to a neutral theme surface rather than an invalid colour. */
   color?: string
   /** Hides the trailing connector line for the last row in a feed. */

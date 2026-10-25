@@ -3354,8 +3354,8 @@
       "cbSafeHelp": "Okabe-Ito palette — distinguishable for all CVD types.",
       "help": "Defaults to the Okabe-Ito palette so series remain distinguishable for the ~8% of users with red-green colour vision deficiency.",
       "label": "Chart palette",
-      "neon": "Stylistic neon",
-      "neonHelp": "Bright cyan/magenta — best when colour vision is unimpaired."
+      "neon": "Alternate order",
+      "neonHelp": "The same calm palette in a violet-led order."
     },
     "density": {
       "comfortable": "Comfortable",

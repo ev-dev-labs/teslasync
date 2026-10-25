@@ -7,13 +7,14 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, EmbeddedChart,
 } from '@/components/charts';
 import type { StartLevelBucket } from './helpers';
+import { CHART_COLORS } from '@/lib/colors';
 
 interface BatteryLevelChartProps {
   data: StartLevelBucket[];
 }
 
 // Hoisted so the recharts <Bar> never receives a fresh literal each render.
-const BAR_COLOR = '#f59e0b';
+const BAR_COLOR = CHART_COLORS[3];
 const BAR_RADIUS: [number, number, number, number] = [4, 4, 0, 0];
 
 export function BatteryLevelChart({ data }: BatteryLevelChartProps) {
@@ -34,13 +35,13 @@ export function BatteryLevelChart({ data }: BatteryLevelChartProps) {
     <GlassPanel className="flex h-full flex-col p-5">
       <PanelTitle className="mb-2 flex items-center gap-2">
         <BatteryCharging className="h-4 w-4 text-neon-amber" aria-hidden="true" />
-        {t('charging.charts.batteryLevelAtStart', 'Battery Level at Charge Start')}
+        {t('charging.charts.batteryLevelAtStart', "Battery level at charge start")}
       </PanelTitle>
       <Text as="p" variant="caption" className="mb-4">
         {t('charging.charts.batteryLevelHint', 'How low do you typically go before charging?')}
       </Text>
       <EmbeddedChart
-        title={t('charging.charts.batteryLevelAtStart', 'Battery Level at Charge Start')}
+        title={t('charging.charts.batteryLevelAtStart', "Battery level at charge start")}
         ariaLabel={t(
           'charging.charts.batteryLevelAria',
           'Charging sessions by starting battery level',

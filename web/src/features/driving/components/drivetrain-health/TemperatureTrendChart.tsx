@@ -21,6 +21,7 @@ import { useUnits } from '@/hooks/useUnits';
 
 import type { ChartDataPoint } from './constants';
 import { convertTempFromSI } from '@/lib/unitConversion';
+import { CHART_COLORS, COLOR } from '@/lib/colors';
 
 interface TemperatureTrendChartProps {
   data: ChartDataPoint[];
@@ -72,7 +73,7 @@ export function TemperatureTrendChart({ data, loading = false }: TemperatureTren
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData}>
             <defs>
-              <ChartGradient id="dtTempGrad" color="#06b6d4" />
+              <ChartGradient id="dtTempGrad" color={CHART_COLORS[1]} />
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
             <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
@@ -91,26 +92,26 @@ export function TemperatureTrendChart({ data, loading = false }: TemperatureTren
               {...AREA_DEFAULTS}
               dataKey="outsideTemp"
               name={t('drivetrain.outsideTemp', 'Outside Temp')}
-              stroke="#06b6d4"
-              dot={{ r: 3, fill: '#06b6d4' }}
+              stroke={CHART_COLORS[1]}
+              dot={{ r: 3, fill: CHART_COLORS[1] }}
             />
             <ReferenceLine
               y={warmZone}
-              stroke="#f59e0b"
+              stroke={COLOR.WARN}
               strokeDasharray="4 4"
               label={{
                 value: t('drivetrain.warmZone', 'Warm Zone'),
-                fill: '#f59e0b',
+                fill: COLOR.WARN,
                 fontSize: 10,
               }}
             />
             <ReferenceLine
               y={freezing}
-              stroke="#06b6d4"
+              stroke={CHART_COLORS[1]}
               strokeDasharray="4 4"
               label={{
                 value: t('drivetrain.freezing', 'Freezing'),
-                fill: '#06b6d4',
+                fill: CHART_COLORS[1],
                 fontSize: 10,
               }}
             />

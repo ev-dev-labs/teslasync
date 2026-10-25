@@ -12,6 +12,7 @@ import { knownNumber } from '@/api/dataState';
 import { cn } from '@/lib/cn';
 import type { VehicleComparisonEntry } from '@/types/analytics';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { DATA_VISUAL_COLORS } from '@/lib/colors';
 
 /** Backend `vehicle_comparison[].distance` is SI kilometres; efficiency is Wh/km. */
 const METERS_PER_KM = 1000;
@@ -97,7 +98,7 @@ export function FleetComparisonPanel({
                 label={r.name}
                 value={r.distance}
                 max={maxDistance}
-                color={palette[i % palette.length] ?? '#22d3ee'}
+                color={palette[i % palette.length] ?? DATA_VISUAL_COLORS.info}
                 sublabel={`${r.distance == null ? '—' : fmtInt(r.distance)} ${distanceUnit} · ${r.efficiency == null ? '—' : fmtNumber(r.efficiency)} ${efficiencyUnit}`}
               />
             </li>

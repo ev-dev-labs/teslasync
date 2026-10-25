@@ -17,6 +17,7 @@ import { convertTempFromSI } from '@/lib/unitConversion';
 import { WidgetBigNumber } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { CHART_COLORS, COLOR } from '@/lib/colors';
 
 interface MotorHistoryDatum extends ChartDataRow {
   time: string;
@@ -246,7 +247,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                       yAxisId="temp"
                       y1={dangerThreshold}
                       y2={tempMax}
-                      fill="#ef4444"
+                      fill={COLOR.BAD}
                       fillOpacity={0.1}
                     />
                     <ChartLegend />
@@ -254,7 +255,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                       yAxisId="torque"
                       type="monotone"
                       dataKey="torque"
-                      stroke="#f59e0b"
+                      stroke={CHART_COLORS[3]}
                       strokeWidth={2}
                       dot={false}
                       connectNulls={false}
@@ -265,7 +266,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                       yAxisId="temp"
                       type="monotone"
                       dataKey="temperature"
-                      stroke="#06b6d4"
+                      stroke={CHART_COLORS[1]}
                       strokeWidth={2}
                       dot={false}
                       connectNulls={false}

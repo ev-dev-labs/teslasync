@@ -26,10 +26,10 @@ export const RECOMMENDED_RANGE_KPA = { low: 240, high: 280 } as const;
 const KPA_PER_BAR = 100;
 
 const TIRE_COLORS = {
-  fl: CHART_COLORS[1] ?? '#06b6d4',
-  fr: CHART_COLORS[2] ?? '#3b82f6',
-  rl: CHART_COLORS[3] ?? '#f59e0b',
-  rr: CHART_COLORS[4] ?? '#22c55e',
+  fl: CHART_COLORS[1],
+  fr: CHART_COLORS[2],
+  rl: CHART_COLORS[3],
+  rr: CHART_COLORS[4],
 } as const;
 
 export interface ChartDatum extends ChartDataRow {

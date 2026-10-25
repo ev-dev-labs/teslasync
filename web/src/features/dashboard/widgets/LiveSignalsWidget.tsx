@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Radio } from 'lucide-react';
 import { Text } from '@/components/ui';
-import { Sparkline, NEON_COLORS } from '@/components/charts';
+import { Sparkline, CHART_COLORS } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSignalHistory, useVehicleLiveSignals, type VehicleLiveSignal } from '@/api/hooks/useTelemetry';
@@ -73,7 +73,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
       .map((point) => finiteNumber(point.value))
       .filter((point): point is number => point != null);
 
-    return { name, formatted, points, color: NEON_COLORS[index % NEON_COLORS.length] };
+    return { name, formatted, points, color: CHART_COLORS[index % CHART_COLORS.length] };
   }), [signals, fmtNumber, formatPower, formatTemperature, formatDistance, historyQueries]);
 
   const handleRefresh = () => {

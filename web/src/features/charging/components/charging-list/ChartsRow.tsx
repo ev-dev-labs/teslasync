@@ -11,6 +11,7 @@ import {
 
 import type { EnergyTrendPoint, ChargerBreakdownEntry, CostByTypeEntry } from './helpers';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { CHART_COLORS } from '@/lib/colors';
 
 interface ChartsRowProps {
   energyTrend: EnergyTrendPoint[];
@@ -42,10 +43,10 @@ export function ChartsRow({ energyTrend, chargerBreakdown, costByType }: ChartsR
         <GlassPanel className="p-6">
           <h3 className="section-title mb-4 flex items-center gap-2">
             <Calendar className="h-4 w-4 text-neon-cyan" aria-hidden="true" />
-            {t('charging.charts.energyCostTrend', 'Energy & Cost Trend')}
+            {t('charging.charts.energyCostTrend', "Energy & cost trend")}
           </h3>
           <EmbeddedChart
-            title={t('charging.charts.energyCostTrend', 'Energy & Cost Trend')}
+            title={t('charging.charts.energyCostTrend', "Energy & cost trend")}
             ariaLabel={t(
               'charging.charts.energyCostTrendAria',
               'Charging energy and cost trend',
@@ -70,15 +71,15 @@ export function ChartsRow({ energyTrend, chargerBreakdown, costByType }: ChartsR
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trend}>
                   <defs>
-                    <ChartGradient id="eGrad" color="#10b981" />
+                    <ChartGradient id="eGrad" color={CHART_COLORS[2]} />
                   </defs>
                   {chartGrid}
                   <XAxis dataKey="date" tick={axisTickSm} />
                   <YAxis tick={axisTickSm} />
                   <Tooltip content={<ChartTooltip />} />
                   <ChartLegend />
-                  <Area {...AREA_DEFAULTS} dataKey="energy" name={energySeriesName} stroke="#10b981" fill="url(#eGrad)" hide={hiddenSeries?.isHidden('energy')} />
-                  <Area {...AREA_DEFAULTS} dataKey="cost" name={costSeriesName} stroke="#f59e0b" fill="transparent" strokeWidth={1.5} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('cost')} />
+                  <Area {...AREA_DEFAULTS} dataKey="energy" name={energySeriesName} stroke={CHART_COLORS[2]} fill="url(#eGrad)" hide={hiddenSeries?.isHidden('energy')} />
+                  <Area {...AREA_DEFAULTS} dataKey="cost" name={costSeriesName} stroke={CHART_COLORS[3]} fill="transparent" strokeWidth={1.5} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('cost')} />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -91,11 +92,11 @@ export function ChartsRow({ energyTrend, chargerBreakdown, costByType }: ChartsR
         <GlassPanel className="p-6">
           <h3 className="section-title mb-4 flex items-center gap-2">
             <Plug className="h-4 w-4 text-neon-purple" aria-hidden="true" />
-            {t('charging.charts.chargerBreakdown', 'Charger Breakdown')}
+            {t('charging.charts.chargerBreakdown', "Charger breakdown")}
           </h3>
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
               <EmbeddedChart
-                title={t('charging.charts.chargerBreakdown', 'Charger Breakdown')}
+                title={t('charging.charts.chargerBreakdown', "Charger breakdown")}
                 ariaLabel={t(
                   'charging.charts.chargerBreakdownAria',
                   'Charging sessions by charger type',
