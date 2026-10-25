@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * TeslaFeatureFlagsPage — first-class page for the Tesla account feature-config
  * surface (feature flags returned by Tesla's `/users/feature_config`). Promoted
@@ -15,7 +16,6 @@
 
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { Icon, HelperText, IconButton } from '@/components/ui';
@@ -60,7 +60,7 @@ export default function TeslaFeatureFlagsPage() {
 
   const actions = (
     <div className="flex min-w-0 flex-col items-start gap-2">
-      <IconButton icon={<Icon icon={RefreshCw} />} label={t('featureConfig.refresh', 'Refresh')} onClick={() => canWrite && !refresh.isPending && refresh.mutate()} busy={refresh.isPending} disabled={!canWrite || refresh.isPending} aria-describedby={writeBlockReason ? 'tesla-feature-refresh-reason' : undefined} />
+      <IconButton icon={<Icon icon={Icons.refresh} />} label={t('featureConfig.refresh', 'Refresh')} onClick={() => canWrite && !refresh.isPending && refresh.mutate()} busy={refresh.isPending} disabled={!canWrite || refresh.isPending} aria-describedby={writeBlockReason ? 'tesla-feature-refresh-reason' : undefined} />
       {writeBlockReason && (
         <HelperText id="tesla-feature-refresh-reason">{writeBlockReason}</HelperText>
       )}

@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus } from 'lucide-react';
 import { Modal, Button, Input, Select, Checkbox, GlassPanel, CopyButton, MaskedValue, Text, HelperText } from '@/components/ui';
 import { FormSection } from '@/components/forms';
 import { useCreateApiKey } from '@/api/hooks/useAdmin';
@@ -147,7 +147,7 @@ function CreateApiKeyDialog({ onClose }: { onClose: () => void }) {
             <Button
               variant="primary"
               size="sm"
-              icon={<Plus className="h-3.5 w-3.5" aria-hidden="true" />}
+              icon={<Icons.add className="h-3.5 w-3.5" aria-hidden="true" />}
               onClick={handleGenerate}
               disabled={!name.trim()}
               loading={createMut.isPending}

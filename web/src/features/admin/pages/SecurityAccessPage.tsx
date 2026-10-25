@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ShieldAlert } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { AlertBanner, DataStateNotice } from '@/components/feedback';
@@ -150,7 +150,7 @@ export default function SecurityAccessPage() {
         <FadeIn>
           <AlertBanner
             variant="warning"
-            icon={<ShieldAlert className="h-5 w-5" aria-hidden="true" />}
+            icon={<Icons.securityAlert className="h-5 w-5" aria-hidden="true" />}
             title={t('admin.security.alertTitle', 'Vehicle may not be secure')}
           >
             {t('admin.security.alert', 'Check lock, door, and window status.')}

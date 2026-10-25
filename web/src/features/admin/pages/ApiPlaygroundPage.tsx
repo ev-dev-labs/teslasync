@@ -1,7 +1,7 @@
+import { Icons } from '@/lib/icons';
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, RefreshCw } from 'lucide-react';
 import yaml from 'js-yaml';
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { Card, Button, Icon, Text } from '@/components/ui';
@@ -129,7 +129,7 @@ export default function ApiPlaygroundPage() {
       secondaryActions={
         <Button variant="ghost" onClick={() => refetchSpec()} loading={specQuery.isFetching}
           className="min-h-11 min-w-11 md:min-h-10 md:min-w-10"
-          aria-label={t('playground.refresh', 'Reload API spec')} icon={<Icon icon={RefreshCw} />} />
+          aria-label={t('playground.refresh', 'Reload API spec')} icon={<Icon icon={Icons.refresh} />} />
       }
       query={specQuery}
       dataSources={[{ id: 'openapi-spec', label: t('playground.spec', 'API spec'), query: specQuery }]}
@@ -163,7 +163,7 @@ export default function ApiPlaygroundPage() {
               ) : specState.fatalError ? (
                 <div className="p-4"><QueryError error={specState.fatalError} onRetry={() => refetchSpec()} resourceName={t('playground.spec', 'API spec')} /></div>
               ) : allEndpoints.length === 0 ? (
-                <EmptyState icon={<Icon icon={BookOpen} size="xl" />}
+                <EmptyState icon={<Icon icon={Icons.bookOpen} size="xl" />}
                   action={{ label: t('playground.refresh', 'Reload API spec'), onClick: () => { void refetchSpec(); } }}
                   message={t('playground.noEndpoints', 'No endpoints found in the API spec')} />
               ) : <EndpointSidebar endpoints={allEndpoints} selected={selected} onSelect={handleSelect} />}
@@ -173,7 +173,7 @@ export default function ApiPlaygroundPage() {
             {!selected ? (
               <LayoutCard title={t('playground.workspace', 'Request workspace')}>
                 {/* no-action: the adjacent endpoint explorer owns selection; do not auto-select or execute an arbitrary endpoint. */}
-                <EmptyState icon={<Icon icon={BookOpen} size="xl" />}
+                <EmptyState icon={<Icon icon={Icons.bookOpen} size="xl" />}
                   message={t("playground.selectExplorerEndpoint", 'Select an endpoint from the explorer to start testing')} />
                 {allEndpoints.length > 0 && <Text as="p" variant="caption" className="mt-2 text-center">
                   {t('playground.endpointCount', '{{count}} endpoints available', { count: allEndpoints.length })}

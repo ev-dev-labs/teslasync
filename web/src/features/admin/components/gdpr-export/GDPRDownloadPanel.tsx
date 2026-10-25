@@ -1,5 +1,5 @@
+import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
-import { HardDriveDownload } from 'lucide-react';
 
 import { BUTTON_BASE, BUTTON_VARIANTS, GlassPanel, Icon, PanelTitle, Caption, Text } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
@@ -70,7 +70,7 @@ export function GDPRDownloadPanel({
               'min-h-11 min-w-11 w-full max-w-full whitespace-normal px-4 py-2 sm:w-auto',
             )}
           >
-            <Icon icon={HardDriveDownload} />
+            <Icon icon={Icons.hardDriveDownload} />
             <span className="min-w-0 break-words">
               {t('admin.gdprExport.downloadButton', 'Download bundle')}
             </span>

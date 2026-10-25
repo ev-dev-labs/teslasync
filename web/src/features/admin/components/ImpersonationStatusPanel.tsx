@@ -1,5 +1,5 @@
+import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next'
-import { UserCheck, UserX, ShieldAlert, ShieldCheck, AlertTriangle } from 'lucide-react'
 
 import { GlassPanel, PanelTitle, Code } from '@/components/ui'
 import { KVList, DateTime } from '@/components/data-display'
@@ -35,7 +35,7 @@ export function ImpersonationStatusPanel({
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Icons.securityCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('impersonation.status.title', 'Session status')}
       </PanelTitle>
 
@@ -51,7 +51,7 @@ export function ImpersonationStatusPanel({
       ) : isError && !status ? (
         <InlineCallout
           variant="danger"
-          icon={<AlertTriangle />}
+          icon={<Icons.warning />}
           testId="impersonation-status-error"
         >
           {t(
@@ -60,7 +60,7 @@ export function ImpersonationStatusPanel({
           )}
         </InlineCallout>
       ) : status?.mode === 'open' ? (
-        <InlineCallout variant="warning" icon={<ShieldAlert />} testId="impersonation-status-open">
+        <InlineCallout variant="warning" icon={<Icons.securityAlert />} testId="impersonation-status-open">
           {t(
             'impersonation.status.open',
             'Forward-auth is disabled, so impersonation is unavailable on this install.',
@@ -70,7 +70,7 @@ export function ImpersonationStatusPanel({
         <div className="space-y-4">
           <InlineCallout
             variant="success"
-            icon={<UserCheck />}
+            icon={<Icons.userCheck />}
             testId="impersonation-status-active"
           >
             {t(
@@ -96,7 +96,7 @@ export function ImpersonationStatusPanel({
           />
         </div>
       ) : (
-        <InlineCallout variant="info" icon={<UserX />} testId="impersonation-status-inactive">
+        <InlineCallout variant="info" icon={<Icons.userX />} testId="impersonation-status-inactive">
           {t(
             'impersonation.status.inactive',
             'You are not impersonating anyone. Pick a subject from the table to start a support session.',

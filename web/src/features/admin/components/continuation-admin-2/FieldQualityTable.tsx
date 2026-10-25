@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Gauge } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { Text, Caption, Badge, DataTable, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { SeverityBadge } from '@/components/data-display';
@@ -104,7 +104,7 @@ export function FieldQualityTable({ fields, loading, error, onRetry }: SectionSt
       description={t('admin.dataQuality.tableSubtitle', 'Worst-scoring fields first. Coverage is the share of this field’s rows carrying a normalization version.')}>
       <SectionErrorBoundary name="data-quality-fields">
         {error ? <QueryError error={error} onRetry={onRetry} /> : loading && rows.length === 0 ? <Skeleton height={240} />
-          : rows.length === 0 ? <EmptyState icon={<Gauge className="h-8 w-8" />} title={t('admin.dataQuality.fieldsEmptyTitle', 'No field scores')}
+          : rows.length === 0 ? <EmptyState icon={<Icons.speed className="h-8 w-8" />} title={t('admin.dataQuality.fieldsEmptyTitle', 'No field scores')}
             action={{ label: t('common.refresh', 'Refresh'), onClick: onRetry }}
             message={t('admin.dataQuality.fieldsEmptyMessage', 'No signal fields were persisted during this scoring window.')} />
             : <DataTable tableId={TABLE_ID} caption={t('admin.dataQuality.tableTitle', 'Per-field quality and provenance')}

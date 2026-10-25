@@ -1,7 +1,7 @@
+import { Icons } from '@/lib/icons';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { TrendingUp } from 'lucide-react';
 
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import {
@@ -55,7 +55,7 @@ export function GasPriceTrendChart({ query }: GasPriceTrendChartProps) {
   return (
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Icons.trendUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('gas.priceTrend', 'Price trend')}
       </PanelTitle>
 

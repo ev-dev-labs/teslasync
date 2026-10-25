@@ -1,5 +1,5 @@
+import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ShieldCheck, Database, Columns3, KeyRound } from 'lucide-react';
 import { OperationalBrief, SeverityBadge, type OperationalAttention } from '@/components/data-display';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import type { StatMetric } from '@/components/data-display/stat-reference';
@@ -20,13 +20,13 @@ export function SchemaKpis({ state, isDrifted, retained = false }: {
   const deltas = [
     { key: 'tables', label: t('admin.schemaDrift.tableDelta', 'Tables Δ'),
       delta: drift?.table_count_delta, current: drift?.current?.table_count, expected: drift?.expected?.table_count,
-      icon: <Database className="h-4 w-4 text-cyan-300" aria-hidden /> },
+      icon: <Icons.database className="h-4 w-4 text-cyan-300" aria-hidden /> },
     { key: 'columns', label: t('admin.schemaDrift.columnDelta', 'Columns Δ'),
       delta: drift?.column_count_delta, current: drift?.current?.column_count, expected: drift?.expected?.column_count,
-      icon: <Columns3 className="h-4 w-4 text-emerald-300" aria-hidden /> },
+      icon: <Icons.columns3 className="h-4 w-4 text-emerald-300" aria-hidden /> },
     { key: 'indexes', label: t('admin.schemaDrift.indexDelta', 'Indexes Δ'),
       delta: drift?.index_count_delta, current: drift?.current?.index_count, expected: drift?.expected?.index_count,
-      icon: <KeyRound className="h-4 w-4 text-amber-300" aria-hidden /> },
+      icon: <Icons.keyRound className="h-4 w-4 text-amber-300" aria-hidden /> },
   ];
   const metrics: StatMetric[] = [
     {
@@ -38,8 +38,8 @@ export function SchemaKpis({ state, isDrifted, retained = false }: {
         : t('admin.schemaDrift.statusClean', 'No drift')) : null,
       context: <div className="flex items-center gap-2">
         {drift && (isDrifted
-          ? <AlertTriangle className="h-4 w-4 text-amber-300" aria-hidden />
-          : <ShieldCheck className="h-4 w-4 text-emerald-300" aria-hidden />)}
+          ? <Icons.warning className="h-4 w-4 text-amber-300" aria-hidden />
+          : <Icons.securityCheck className="h-4 w-4 text-emerald-300" aria-hidden />)}
         <span>{hint}</span>
       </div>,
     },

@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BarChart3 } from 'lucide-react';
 
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import {
@@ -53,7 +53,7 @@ export function FeatureConfigComposition({
   return (
     <GlassPanel className="h-full p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <BarChart3 className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+        <Icons.analytics className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('featureConfig.composition', 'Enabled vs disabled by type')}
       </PanelTitle>
 

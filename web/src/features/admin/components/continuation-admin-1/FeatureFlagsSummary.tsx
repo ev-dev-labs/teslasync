@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Braces, Flag, History, ToggleRight, Trash2, Users } from 'lucide-react';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
 import type { FeatureFlagChange, FeatureFlagEntry } from '@/types/admin-diagnostics';
@@ -33,17 +33,17 @@ export function FeatureFlagsSummary({
       className="grid min-w-0 grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6"
     >
       <SummaryMetric label={t('admin.flags.stats.total', 'Total flags')}
-        value={flags?.length ?? '—'} icon={<Flag className="h-5 w-5" aria-hidden />} loading={flagsLoading} />
+        value={flags?.length ?? '—'} icon={<Icons.flag className="h-5 w-5" aria-hidden />} loading={flagsLoading} />
       <SummaryMetric label={t('admin.flags.stats.boolean', 'Boolean toggles')}
-        value={booleanCount ?? '—'} icon={<ToggleRight className="h-5 w-5" aria-hidden />} color="green" loading={flagsLoading} />
+        value={booleanCount ?? '—'} icon={<Icons.toggleRight className="h-5 w-5" aria-hidden />} color="green" loading={flagsLoading} />
       <SummaryMetric label={t('admin.flags.stats.structured', 'Structured')}
-        value={structuredCount ?? '—'} icon={<Braces className="h-5 w-5" aria-hidden />} color="purple" loading={flagsLoading} />
+        value={structuredCount ?? '—'} icon={<Icons.braces className="h-5 w-5" aria-hidden />} color="purple" loading={flagsLoading} />
       <SummaryMetric label={t('admin.flags.stats.changes', 'Recent changes')}
-        value={changes?.length ?? '—'} icon={<History className="h-5 w-5" aria-hidden />} color="cyan" loading={changesLoading} />
+        value={changes?.length ?? '—'} icon={<Icons.history className="h-5 w-5" aria-hidden />} color="cyan" loading={changesLoading} />
       <SummaryMetric label={t('admin.flags.stats.deletes', 'Deletes')}
-        value={deletes ?? '—'} icon={<Trash2 className="h-5 w-5" aria-hidden />} color="red" loading={changesLoading} />
+        value={deletes ?? '—'} icon={<Icons.delete className="h-5 w-5" aria-hidden />} color="red" loading={changesLoading} />
       <SummaryMetric label={t('admin.flags.stats.actors', 'Contributors')}
-        value={actors ?? '—'} icon={<Users className="h-5 w-5" aria-hidden />} color="blue" loading={changesLoading} />
+        value={actors ?? '—'} icon={<Icons.users className="h-5 w-5" aria-hidden />} color="blue" loading={changesLoading} />
     </section>
   );
 }

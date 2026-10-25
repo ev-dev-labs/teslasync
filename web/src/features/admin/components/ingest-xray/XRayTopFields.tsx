@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * Ingest X-Ray — top fields by sample volume.
  *
@@ -8,7 +9,6 @@
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ListTree } from 'lucide-react';
 
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
@@ -59,7 +59,7 @@ export function XRayTopFields({
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <ListTree className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+        <Icons.signalTree className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('admin.xray.topFields.title', 'Top fields by volume')}
       </PanelTitle>
 
@@ -71,7 +71,7 @@ export function XRayTopFields({
         <EmptyState
           /* no-action: transient — surfaces before a vehicle is picked or when
              the window contains no samples. The toolbar / banner is the CTA. */
-          icon={<ListTree className="h-8 w-8" />}
+          icon={<Icons.signalTree className="h-8 w-8" />}
           message={t(
             'admin.xray.topFields.empty',
             'No field activity in this window yet.',

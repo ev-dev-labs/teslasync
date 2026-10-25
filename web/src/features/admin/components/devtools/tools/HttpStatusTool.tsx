@@ -1,7 +1,7 @@
+import { Icons } from '@/lib/icons';
 import { useState, useMemo, useCallback } from 'react'
 import type { ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Network } from 'lucide-react'
 import { Input, Badge, DataTable, useSortToggle, type Column } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
 import { HTTP_CODES } from '../constants'
@@ -75,7 +75,7 @@ export function HttpStatusTool() {
 
   return (
     <ToolCard
-      icon={Network}
+      icon={Icons.network}
       color="amber"
       title={t('devtools.utils.httpStatus', 'HTTP status')}
       description={t('devtools.utils.httpStatusDesc', 'Reference for HTTP response status codes')}
@@ -86,7 +86,7 @@ export function HttpStatusTool() {
           placeholder={t('devtools.utils.httpStatusSearchPlaceholder', 'Search codes')}
           value={search}
           onChange={handleSearch}
-          icon={<Network className="h-4 w-4" aria-hidden="true" />}
+          icon={<Icons.network className="h-4 w-4" aria-hidden="true" />}
         />
         <DataTable
           tableId="admin:http-status-codes"

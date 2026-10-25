@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Server } from 'lucide-react'
 import {
   GlassPanel,
   Badge,
@@ -69,7 +69,7 @@ export function RegionEndpointPanel({
   return (
     <GlassPanel className="h-full space-y-4 p-4 sm:p-5">
       <div className="flex items-center gap-3">
-        <Icon icon={Server} size="md" />
+        <Icon icon={Icons.server} size="md" />
         <div className="min-w-0">
           <PanelTitle>{t('region.endpoint.title', 'Fleet API endpoint')}</PanelTitle>
           <Text as="p" variant="caption">
@@ -102,7 +102,7 @@ export function RegionEndpointPanel({
       ) : !configured ? (
         <div className="space-y-3">
           <EmptyState
-            icon={<Icon icon={Server} size="xl" />}
+            icon={<Icon icon={Icons.server} size="xl" />}
             title={t('region.empty.title', 'No region on record')}
             message={t(
               'region.empty.message',

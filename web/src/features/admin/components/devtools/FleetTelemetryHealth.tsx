@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, AlertCircle, RefreshCw } from 'lucide-react'
 import { Badge, Button as UiButton, DataTable, type Column } from '@/components/ui'
 import { TimeStamp } from '@/components/data-display'
 import { Skeleton, QueryError, StaleRefreshWarning, DataStateNotice } from '@/components/feedback'
@@ -104,7 +104,7 @@ export function FleetTelemetryHealth() {
     <div className="space-y-4">
       {/* Error VINs Summary */}
       <ToolCard
-        icon={AlertTriangle}
+        icon={Icons.warning}
         color="red"
         title={t('devtools.health.errorVinsTitle', 'Error VINs')}
         description={t('devtools.health.errorVinsDesc', 'Vehicles with fleet telemetry configuration errors')}
@@ -143,7 +143,7 @@ export function FleetTelemetryHealth() {
               size="sm"
               loading={refreshVINs.isPending}
               onClick={() => refreshVINs.mutate()}
-              icon={<RefreshCw className="h-3.5 w-3.5" />}
+              icon={<Icons.refresh className="h-3.5 w-3.5" />}
             >
               {t('devtools.health.refreshVins', 'Refresh from Tesla')}
             </UiButton>
@@ -193,7 +193,7 @@ export function FleetTelemetryHealth() {
 
       {/* Error Log Table */}
       <ToolCard
-        icon={AlertCircle}
+        icon={Icons.alertCircle}
         color="amber"
         title={t('devtools.health.errorLogTitle', 'Error log')}
         description={t('devtools.health.errorLogDesc', 'Detailed fleet telemetry error history')}
@@ -211,7 +211,7 @@ export function FleetTelemetryHealth() {
               size="sm"
               loading={refreshErrors.isPending}
               onClick={() => refreshErrors.mutate()}
-              icon={<RefreshCw className="h-3.5 w-3.5" />}
+              icon={<Icons.refresh className="h-3.5 w-3.5" />}
             >
               {t('devtools.health.refreshErrors', 'Refresh from Tesla')}
             </UiButton>

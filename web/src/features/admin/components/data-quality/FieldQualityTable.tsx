@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * Per-field quality table for the Data Quality page.
  *
@@ -11,7 +12,6 @@
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Gauge } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Caption, Text, Badge, DataTable, type Column } from '@/components/ui';
 import { SeverityBadge } from '@/components/data-display';
@@ -193,7 +193,7 @@ export function FieldQualityTable({ fields, loading, error, onRetry }: FieldQual
         ) : rows.length === 0 ? (
           // no-action: fields populate this view by ingesting telemetry; not a user-actionable surface
           <EmptyState
-            icon={<Gauge className="h-8 w-8" />}
+            icon={<Icons.speed className="h-8 w-8" />}
             title={t('admin.dataQuality.fieldsEmptyTitle', 'No field scores')}
             message={t(
               'admin.dataQuality.fieldsEmptyMessage',

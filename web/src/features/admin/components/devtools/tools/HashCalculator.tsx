@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Hash } from 'lucide-react'
 import { Button, Textarea, CopyButton } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
 
@@ -55,7 +55,7 @@ export function HashCalculatorTool() {
   }, [inputVal, t])
 
   return (
-    <ToolCard icon={Hash} color="red" title={t('devtools.utils.hash', 'Hash calculator')} description={t('devtools.utils.hashDesc', 'Hash calculator desc')}>
+    <ToolCard icon={Icons.hash} color="red" title={t('devtools.utils.hash', 'Hash calculator')} description={t('devtools.utils.hashDesc', 'Hash calculator desc')}>
       <div className="space-y-3">
         <Textarea
           id={HASH_INPUT_ID}
@@ -76,7 +76,7 @@ export function HashCalculatorTool() {
           loading={computing}
           disabled={inputVal.length === 0}
           onClick={() => void compute()}
-          icon={<Hash className="h-3.5 w-3.5" />}
+          icon={<Icons.hash className="h-3.5 w-3.5" />}
         >
           {t('devtools.utils.computeSha256', 'Compute SHA256')}
         </Button>

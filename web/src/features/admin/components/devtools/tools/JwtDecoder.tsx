@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { KeyRound } from 'lucide-react'
 import { Textarea } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
 import { ResultPanel } from '../ResultPanel'
@@ -63,7 +63,7 @@ export function JwtDecoderTool() {
   const decoded = useMemo(() => decodeJwt(jwt), [jwt])
 
   return (
-    <ToolCard icon={KeyRound} color="purple" title={t('devtools.utils.jwt', 'JWT decoder')} description={t('devtools.utils.jwtDesc', 'JWT decoder desc')}>
+    <ToolCard icon={Icons.keyRound} color="purple" title={t('devtools.utils.jwt', 'JWT decoder')} description={t('devtools.utils.jwtDesc', 'JWT decoder desc')}>
       <div className="space-y-3">
         <Textarea
           label={t('devtools.utils.jwtInput', 'JWT input')}

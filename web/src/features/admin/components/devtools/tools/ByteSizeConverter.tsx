@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { HardDrive } from 'lucide-react'
 import { Input, Select } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { cn } from '@/lib/cn'
@@ -51,7 +51,7 @@ export function ByteSizeConverterTool() {
 
   return (
     <ToolCard
-      icon={HardDrive}
+      icon={Icons.hardDrive}
       color="cyan"
       title={t('devtools.utils.byteSize', 'Byte size')}
       description={t('devtools.utils.byteSizeDesc', 'Convert a value between B, KB, MB, GB, and TB.')}
@@ -64,7 +64,7 @@ export function ByteSizeConverterTool() {
             inputMode="decimal"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            icon={<HardDrive className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icons.hardDrive className="h-4 w-4" aria-hidden="true" />}
           />
           <Select label={t('devtools.utils.byteSizeUnit', 'Unit')} options={UNIT_OPTIONS} value={unit} onChange={(e) => setUnit(e.target.value)} />
         </div>

@@ -1,5 +1,5 @@
+import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
-import { Layers } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { Text, Badge, Caption } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
@@ -19,7 +19,7 @@ export function NormalizationVersionPanel({ normalization, loading, error, onRet
       description={t('admin.dataQuality.versionsSubtitle', 'Row counts per normalization contract version over the scoring window.')}>
       <SectionErrorBoundary name="data-quality-versions">
         {error ? <QueryError error={error} onRetry={onRetry} /> : loading && buckets.length === 0 ? <Skeleton height={180} />
-          : buckets.length === 0 ? <EmptyState icon={<Layers className="h-8 w-8" />}
+          : buckets.length === 0 ? <EmptyState icon={<Icons.layers className="h-8 w-8" />}
             action={{ label: t('common.refresh', 'Refresh'), onClick: onRetry }}
             title={t('admin.dataQuality.versionsEmptyTitle', 'No version evidence')}
             message={t('admin.dataQuality.versionsEmptyMessage', 'No signal rows were persisted in this window, so no normalization version could be observed.')} />

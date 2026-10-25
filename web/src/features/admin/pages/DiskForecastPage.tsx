@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * Disk Forecast page.
  *
@@ -15,9 +16,6 @@
  */
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Database, TrendingUp, Gauge,
-} from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { Badge, DataTable, Icon, type Column } from '@/components/ui';
@@ -433,7 +431,7 @@ export default function DiskForecastPage() {
               <Text as="p" variant="bodySm" color="secondary">{unmeasuredMessage}</Text>
             ) : growthLeaders.length === 0 ? (
               <EmptyState /* no-action: growth appears once tables accrue daily deltas */
-                icon={<Icon icon={TrendingUp} size="xl" />}
+                icon={<Icon icon={Icons.trendUp} size="xl" />}
                 message={t('admin.diskForecast.noGrowth', 'No measurable daily growth yet.')}
               />
             ) : (
@@ -462,7 +460,7 @@ export default function DiskForecastPage() {
               <Text as="p" variant="bodySm" color="secondary">{unmeasuredMessage}</Text>
             ) : quotaWatch.length === 0 ? (
               <EmptyState /* no-action: the source has supplied no quota estimate */
-                icon={<Icon icon={Gauge} size="xl" />}
+                icon={<Icon icon={Icons.speed} size="xl" />}
                 title={t('admin.diskForecast.noQuotaTitle', 'No quota estimate available')}
                 message={t(
                   'admin.diskForecast.noQuotaMessage',
@@ -506,7 +504,7 @@ export default function DiskForecastPage() {
                 <Text as="p" variant="bodySm" color="secondary">{unmeasuredMessage}</Text>
               ) : rows.length === 0 ? (
                 <EmptyState /* no-action: hypertable inventory is TimescaleDB system state; not user-creatable */
-                  icon={<Icon icon={Database} size="xl" />}
+                  icon={<Icon icon={Icons.database} size="xl" />}
                   title={t('admin.diskForecast.emptyTitle', 'No hypertables')}
                   message={t(
                     'admin.diskForecast.emptyMessage',

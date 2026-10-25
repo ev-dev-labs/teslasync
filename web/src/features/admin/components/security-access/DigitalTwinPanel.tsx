@@ -1,5 +1,5 @@
+import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
-import { Car } from 'lucide-react';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { VehicleTwin } from '@/components/vehicles';
@@ -31,7 +31,7 @@ export function DigitalTwinPanel({
   return (
     <GlassPanel className={className} padding="md">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <Car className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Icons.vehicle className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('admin.security.twin.title', 'Digital twin')}
       </PanelTitle>
       {error ? (
@@ -52,7 +52,7 @@ export function DigitalTwinPanel({
         // no-action: latest state streams on a 5s poll — this gap is
         // transient and closes once telemetry arrives; no manual refresh needed.
         <EmptyState
-          icon={<Car className="h-8 w-8" aria-hidden="true" />}
+          icon={<Icons.vehicle className="h-8 w-8" aria-hidden="true" />}
           message={t('admin.security.twin.noData', 'No live vehicle state available yet')}
         />
       )}

@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock } from 'lucide-react';
 
 import { GlassPanel, Icon, PanelTitle } from '@/components/ui';
 import { Timeline } from '@/components/data-display';
@@ -103,7 +103,7 @@ export function GDPRLifecyclePanel({
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)} aria-busy={showLoading}>
       <PanelTitle className="mb-4 flex items-center gap-2">
-        <Icon icon={Clock} className={typography.color.muted} />
+        <Icon icon={Icons.clock} className={typography.color.muted} />
         {label}
       </PanelTitle>
       {showLoading ? (
@@ -119,7 +119,7 @@ export function GDPRLifecyclePanel({
         // no-action: like GDPRArtifactDetails, this is derived purely from
         // the parent's `artifact` prop — use the lookup input above.
         <EmptyState
-          icon={<Icon icon={Clock} size="xl" />}
+          icon={<Icon icon={Icons.clock} size="xl" />}
           message={t('admin.gdprExport.lifecycleEmpty', 'No lifecycle events recorded yet.')}
         />
       )}

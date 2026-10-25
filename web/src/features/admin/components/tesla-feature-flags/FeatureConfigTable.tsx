@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ListChecks, Search, Flag } from 'lucide-react';
 
 import { GlassPanel, Badge, Input, Select, DataTable, PanelTitle, Caption, Code, useSortToggle, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { EmptyState, QueryError, TableSkeleton } from '@/components/feedback';
@@ -164,7 +164,7 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
     <GlassPanel className="min-w-0 p-4 sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <ListChecks className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+          <Icons.checklist className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('featureConfig.tableTitle', 'Feature flags')}
         </PanelTitle>
         {safeEntries.length > 0 && (
@@ -184,7 +184,7 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
       ) : safeEntries.length === 0 ? (
         <EmptyState
           /* no-action: transient — nothing synced from Tesla yet; the header Refresh CTA owns recovery */
-          icon={<Flag className="h-10 w-10" aria-hidden="true" />}
+          icon={<Icons.flag className="h-10 w-10" aria-hidden="true" />}
           message={t('featureConfig.noData', 'No feature config data yet. Click Refresh to fetch from Tesla.')}
         />
       ) : (
@@ -193,7 +193,7 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
             <div className="sm:flex-1">
               <Input
                 type="search"
-                icon={<Search className="h-4 w-4" aria-hidden="true" />}
+                icon={<Icons.search className="h-4 w-4" aria-hidden="true" />}
                 placeholder={t('featureConfig.searchPlaceholder', 'Search features…')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}

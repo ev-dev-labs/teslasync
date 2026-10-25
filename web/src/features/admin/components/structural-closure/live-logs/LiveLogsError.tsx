@@ -1,4 +1,5 @@
-import { AlertTriangle } from 'lucide-react';
+import { Icons } from '@/lib/icons';
+
 import { Card, MetricLabel, Text } from '@/components/ui';
 import type { useLiveLogsPage } from '../../../hooks/useLiveLogsPage';
 
@@ -13,7 +14,7 @@ export function LiveLogsError({ controller }: Props) {
       data-testid="livelogs-error"
     >
       <div className="flex items-start gap-3">
-        <AlertTriangle
+        <Icons.warning
           className="h-5 w-5 shrink-0 text-rose-300"
           aria-hidden
         />

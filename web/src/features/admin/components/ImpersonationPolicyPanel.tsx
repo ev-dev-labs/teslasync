@@ -1,13 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  ScrollText,
-  ClipboardList,
-  Timer,
-  KeyRound,
-  ShieldCheck,
-  LogOut,
-} from 'lucide-react'
 
 import { GlassPanel, PanelTitle, Text } from '@/components/ui'
 
@@ -36,7 +29,7 @@ export function ImpersonationPolicyPanel() {
     () => [
       {
         id: 'audit',
-        icon: <ClipboardList />,
+        icon: <Icons.clipboardList />,
         title: t('impersonation.policy.audit.title', 'Every session is audit-logged'),
         body: t(
           'impersonation.policy.audit.body',
@@ -45,7 +38,7 @@ export function ImpersonationPolicyPanel() {
       },
       {
         id: 'ttl',
-        icon: <Timer />,
+        icon: <Icons.timer />,
         title: t('impersonation.policy.ttl.title', '15-minute time limit'),
         body: t(
           'impersonation.policy.ttl.body',
@@ -54,7 +47,7 @@ export function ImpersonationPolicyPanel() {
       },
       {
         id: 'sudo',
-        icon: <KeyRound />,
+        icon: <Icons.keyRound />,
         title: t('impersonation.policy.sudo.title', 'Step-up auth to start'),
         body: t(
           'impersonation.policy.sudo.body',
@@ -63,7 +56,7 @@ export function ImpersonationPolicyPanel() {
       },
       {
         id: 'forwardAuth',
-        icon: <ShieldCheck />,
+        icon: <Icons.securityCheck />,
         title: t('impersonation.policy.forwardAuth.title', 'Forward-auth required'),
         body: t(
           'impersonation.policy.forwardAuth.body',
@@ -72,7 +65,7 @@ export function ImpersonationPolicyPanel() {
       },
       {
         id: 'exit',
-        icon: <LogOut />,
+        icon: <Icons.logOut />,
         title: t('impersonation.policy.exit.title', 'End it any time'),
         body: t(
           'impersonation.policy.exit.body',
@@ -86,7 +79,7 @@ export function ImpersonationPolicyPanel() {
   return (
     <GlassPanel className="p-4 sm:p-5" data-testid="impersonation-policy-panel">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <ScrollText className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Icons.scrollText className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('impersonation.policy.title', 'How impersonation works')}
       </PanelTitle>
 

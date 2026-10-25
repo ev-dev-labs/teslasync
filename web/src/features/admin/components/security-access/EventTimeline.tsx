@@ -1,14 +1,7 @@
+import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { typography, neonColorMap } from '@/lib/tokens';
-import {
-  Lock,
-  Unlock,
-  ShieldCheck,
-  ShieldAlert,
-  DoorClosed,
-  DoorOpen,
-} from 'lucide-react';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError, DataStateNotice } from '@/components/feedback';
@@ -30,16 +23,16 @@ function timelineIcon(ev: TimelineEvent) {
   switch (ev.kind) {
     case 'lock':
       return ev.variant === 'positive'
-        ? <Lock className="h-4 w-4" />
-        : <Unlock className="h-4 w-4" />;
+        ? <Icons.locked className="h-4 w-4" />
+        : <Icons.unlocked className="h-4 w-4" />;
     case 'sentry':
       return ev.variant === 'positive'
-        ? <ShieldCheck className="h-4 w-4" />
-        : <ShieldAlert className="h-4 w-4" />;
+        ? <Icons.securityCheck className="h-4 w-4" />
+        : <Icons.securityAlert className="h-4 w-4" />;
     case 'door':
       return ev.variant === 'positive'
-        ? <DoorClosed className="h-4 w-4" />
-        : <DoorOpen className="h-4 w-4" />;
+        ? <Icons.doorClosed className="h-4 w-4" />
+        : <Icons.doorOpen className="h-4 w-4" />;
     default:
       // Defensive: an unrecognised kind (e.g. a future backend enum) renders
       // no glyph rather than an empty broken chip.

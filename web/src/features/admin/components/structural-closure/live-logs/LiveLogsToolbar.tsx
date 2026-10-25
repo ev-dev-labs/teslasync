@@ -1,4 +1,5 @@
-import { Download, Pause, Play, RefreshCw, Trash2 } from 'lucide-react';
+import { Icons } from '@/lib/icons';
+
 import { Button, Toggle, IconButton } from '@/components/ui';
 import type { useLiveLogsPage } from '../../../hooks/useLiveLogsPage';
 
@@ -22,9 +23,9 @@ export function LiveLogsToolbar({ controller }: Props) {
         onClick={() => setPaused((p) => !p)}
         icon={
           paused ? (
-            <Play className="h-4 w-4" aria-hidden />
+            <Icons.play className="h-4 w-4" aria-hidden />
           ) : (
-            <Pause className="h-4 w-4" aria-hidden />
+            <Icons.pause className="h-4 w-4" aria-hidden />
           )
         }
         data-testid="livelogs-pause-button"
@@ -33,13 +34,13 @@ export function LiveLogsToolbar({ controller }: Props) {
           ? t('liveLogs.controls.resume', 'Resume')
           : t('liveLogs.controls.pause', 'Pause')}
       </Button>
-      <IconButton icon={<Trash2 className="h-4 w-4" aria-hidden />} label={t('liveLogs.controls.clear', 'Clear buffer')} onClick={handleClear} data-testid="livelogs-clear-button" confirm={{ title: t('confirm.clearStream.title', 'Clear the stream?'), message: t('confirm.clearStream.message', 'This removes the lines shown so far. New lines keep arriving.') }} />
-      <IconButton icon={<Download className="h-4 w-4" aria-hidden />} label={t('liveLogs.controls.download', 'Download visible (.txt)')} onClick={handleDownload} disabled={filteredEvents.length === 0} data-testid="livelogs-download-button" />
+      <IconButton icon={<Icons.delete className="h-4 w-4" aria-hidden />} label={t('liveLogs.controls.clear', 'Clear buffer')} onClick={handleClear} data-testid="livelogs-clear-button" confirm={{ title: t('confirm.clearStream.title', 'Clear the stream?'), message: t('confirm.clearStream.message', 'This removes the lines shown so far. New lines keep arriving.') }} />
+      <IconButton icon={<Icons.download className="h-4 w-4" aria-hidden />} label={t('liveLogs.controls.download', 'Download visible (.txt)')} onClick={handleDownload} disabled={filteredEvents.length === 0} data-testid="livelogs-download-button" />
       <Button
         variant="ghost"
         size="sm"
         onClick={handleReconnect}
-        icon={<RefreshCw className="h-4 w-4" aria-hidden />}
+        icon={<Icons.refresh className="h-4 w-4" aria-hidden />}
         data-testid="livelogs-reconnect-button"
       >
         {t('liveLogs.controls.reconnect', 'Reconnect')}

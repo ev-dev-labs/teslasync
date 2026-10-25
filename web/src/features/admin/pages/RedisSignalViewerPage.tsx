@@ -1,14 +1,7 @@
+import { Icons } from '@/lib/icons';
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
-import {
-  Database,
-  Layers,
-  RefreshCw,
-  Search,
-  Server,
-  Trash2,
-} from 'lucide-react'
 
 import { PageLayout, LayoutCard } from '@/components/layout'
 import {
@@ -396,7 +389,7 @@ export default function RedisSignalViewerPage() {
         onChange={setAutoRefresh}
       />
       {selectedVehicleId !== null && <FreshnessDotAuto query={signalQuery} />}
-      <IconButton icon={<Icon icon={RefreshCw} className={isFetching ? 'animate-spin motion-reduce:animate-none' : undefined} />} label={t('redis.refresh', 'Refresh')} onClick={() => refetch()} disabled={selectedVehicleId === null || isFetching} aria-label={t('redis.refresh', 'Refresh')} />
+      <IconButton icon={<Icon icon={Icons.refresh} className={isFetching ? 'animate-spin motion-reduce:animate-none' : undefined} />} label={t('redis.refresh', 'Refresh')} onClick={() => refetch()} disabled={selectedVehicleId === null || isFetching} aria-label={t('redis.refresh', 'Refresh')} />
     </div>
   )
 
@@ -437,7 +430,7 @@ export default function RedisSignalViewerPage() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder={t('redis.searchPlaceholder', 'Filter signals…')}
-                    icon={<Icon icon={Search} />}
+                    icon={<Icon icon={Icons.search} />}
                     className="min-h-11 sm:w-56 md:min-h-10"
                   />
                 </div>
@@ -458,7 +451,7 @@ export default function RedisSignalViewerPage() {
             <div className="mt-4">
               {selectedVehicleId === null ? (
                 <EmptyState /* no-action: transient empty state — surfaces when no vehicle is selected; no specific recovery action available */
-                  icon={<Database className="h-10 w-10" />}
+                  icon={<Icons.database className="h-10 w-10" />}
                   message={t('redis.selectPrompt', 'Select a vehicle to view its cached Redis signals')}
                 />
               ) : initialNotice ? (
@@ -481,7 +474,7 @@ export default function RedisSignalViewerPage() {
                   />
                 ) : (
                   <EmptyState /* no-action: transient empty state — surfaces when the filter excludes every row; clearing the filter recovers */
-                    icon={<Search className="h-10 w-10" />}
+                    icon={<Icons.search className="h-10 w-10" />}
                     message={t('redis.noMatch', 'No signals match the current filter')}
                   />
                 )
@@ -515,7 +508,7 @@ export default function RedisSignalViewerPage() {
               <div className="mt-3">
                 {selectedVehicleId === null ? (
                   <EmptyState /* no-action: transient — no vehicle selected yet */
-                    icon={<Server className="h-8 w-8" />}
+                    icon={<Icons.server className="h-8 w-8" />}
                     message={t('redis.diagSelect', 'Select a vehicle to inspect its cache state')}
                   />
                 ) : fatalError ? (
@@ -549,7 +542,7 @@ export default function RedisSignalViewerPage() {
                   />
                 ) : (
                   <EmptyState /* no-action: backend predates the meta block; nothing to configure */
-                    icon={<Server className="h-8 w-8" />}
+                    icon={<Icons.server className="h-8 w-8" />}
                     message={t('redis.diagUnavailable', 'Cache diagnostics are unavailable for this vehicle')}
                   />
                 )}
@@ -564,7 +557,7 @@ export default function RedisSignalViewerPage() {
               <div className="mt-3">
                 {selectedVehicleId === null ? (
                   <EmptyState /* no-action: transient — no vehicle selected yet */
-                    icon={<Layers className="h-8 w-8" />}
+                    icon={<Icons.layers className="h-8 w-8" />}
                     message={t('redis.catSelect', 'Select a vehicle to see its signal category mix')}
                   />
                 ) : initialNotice ? (
@@ -579,7 +572,7 @@ export default function RedisSignalViewerPage() {
                   <QueryError error={fatalError} onRetry={() => refetch()} resourceName={t('redis.resourceName', 'Redis signals')} />
                 ) : rows.length === 0 ? (
                   <EmptyState /* no-action: transient — no categorized signals cached */
-                    icon={<Layers className="h-8 w-8" />}
+                    icon={<Icons.layers className="h-8 w-8" />}
                     message={t('redis.catEmpty', 'No categorized signals to summarize')}
                   />
                 ) : (
@@ -619,7 +612,7 @@ export default function RedisSignalViewerPage() {
                   className="justify-center"
                   title={t('redis.purgeButtonTitle', "Delete this vehicle's cached signals from Redis (L2). The in-process L1 cache on each pod stays put and refills from new telemetry.")}
                 >
-                  <Icon icon={Trash2} />
+                  <Icon icon={Icons.delete} />
                   {t('redis.purgeButton', 'Purge Redis (L2)')}
                 </Button>
                 <Button
@@ -631,7 +624,7 @@ export default function RedisSignalViewerPage() {
                   className="justify-center"
                   title={t('redis.purgeAllButtonTitle', 'Delete every vehicle:*:signals HSET in Redis (L2). Requires typed confirmation.')}
                 >
-                  <Icon icon={Trash2} />
+                  <Icon icon={Icons.delete} />
                   {t('redis.purgeAllButton', 'Purge all Redis')}
                 </Button>
               </div>

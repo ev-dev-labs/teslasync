@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useState, useMemo, useCallback, type ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Car } from 'lucide-react'
 import { Input } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
 import { VIN_MANUFACTURERS, VIN_MODELS, VIN_DRIVE, VIN_YEAR, VIN_PLANT } from '../constants'
@@ -57,7 +57,7 @@ export function VinDecoderTool() {
       : undefined
 
   return (
-    <ToolCard icon={Car} color="cyan" title={t('devtools.utils.vin', 'VIN decoder')} description={t('devtools.utils.vinDesc', 'VIN decoder desc')}>
+    <ToolCard icon={Icons.vehicle} color="cyan" title={t('devtools.utils.vin', 'VIN decoder')} description={t('devtools.utils.vinDesc', 'VIN decoder desc')}>
       <div className="space-y-3">
         <Input
           label={t('devtools.utils.vinInput', 'VIN')}
@@ -65,7 +65,7 @@ export function VinDecoderTool() {
           value={vin}
           onChange={handleChange}
           hint={hint}
-          icon={<Car className="h-4 w-4" aria-hidden="true" />}
+          icon={<Icons.vehicle className="h-4 w-4" aria-hidden="true" />}
         />
         {decoded && (
           <dl

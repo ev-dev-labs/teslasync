@@ -1,9 +1,9 @@
+import { Icons } from '@/lib/icons';
 /**
  * Schema fingerprints, object-count comparisons and operator interpretation.
  * Queries and remediation remain read-only; refresh never replaces retained evidence.
  */
 import { useTranslation } from 'react-i18next';
-import { RefreshCw } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
 import { Button, Icon } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
@@ -45,7 +45,7 @@ export default function SchemaDriftPage() {
           className="min-h-11 min-w-11 md:min-h-10 md:min-w-10"
           aria-busy={query.isFetching}
           aria-label={t('common.refresh', 'Refresh')} title={t('common.refresh', 'Refresh')}>
-          <Icon icon={RefreshCw} className={cn(query.isFetching && 'animate-spin motion-reduce:animate-none')} />
+          <Icon icon={Icons.refresh} className={cn(query.isFetching && 'animate-spin motion-reduce:animate-none')} />
         </Button>
       }
       query={subsystemMissing ? undefined : query}

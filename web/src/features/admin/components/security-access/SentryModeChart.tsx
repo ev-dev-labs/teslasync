@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { DataStateNotice } from '@/components/feedback';
@@ -53,7 +53,7 @@ export function SentryModeChart({ sentryBuckets, sourceState, isLoading, error, 
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <Activity className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+        <Icons.activity className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('admin.security.sentryChart', 'Sentry mode activity')}
       </PanelTitle>
       {sourceState?.status === 'stale' && <DataStateNotice state="stale" />}

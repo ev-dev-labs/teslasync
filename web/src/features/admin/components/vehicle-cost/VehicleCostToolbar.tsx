@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * Toolbar for the Vehicle Ingest Cost page — window preset picker + manual
  * refresh. Mounted in `PageContainer`'s `actions` slot so it sits beside the
@@ -5,7 +6,6 @@
  */
 import { useCallback, useMemo, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw } from 'lucide-react';
 
 import { Button, Select, Caption } from '@/components/ui';
 import { WINDOW_OPTIONS } from './constants';
@@ -61,7 +61,7 @@ export function VehicleCostToolbar({
         aria-busy={refreshing || undefined}
         aria-label={t('admin.vehicleCost.refresh', 'Refresh vehicle cost data')}
       >
-        <RefreshCw
+        <Icons.refresh
           className={refreshing ? 'h-4 w-4 animate-spin' : 'h-4 w-4'}
           aria-hidden="true"
         />

@@ -1,5 +1,5 @@
+import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, Fingerprint, ListChecks, ShieldCheck } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { Text } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
@@ -11,14 +11,14 @@ export function SchemaGuidance({ state, isDrifted }: { state: SchemaSectionState
   const { drift, isLoading, error, onRetry } = state;
   return (
     <LayoutCard title={t('admin.schemaDrift.guidanceTitle', 'What this means')}
-      actions={<ListChecks className="h-4 w-4 text-cyan-300" aria-hidden />}>
+      actions={<Icons.checklist className="h-4 w-4 text-cyan-300" aria-hidden />}>
       {isLoading ? <Skeleton height={72} /> : error ? <QueryError error={error} onRetry={onRetry} /> : !drift ? (
         // no-action: seed capture requires an external API restart; the page header already refreshes the shared evidence.
-        <EmptyState icon={<Fingerprint className="h-8 w-8" aria-hidden />}
+        <EmptyState icon={<Icons.fingerprint className="h-8 w-8" aria-hidden />}
           message={t('admin.schemaDrift.guidanceEmpty', 'Restart the API to capture a seed fingerprint, then drift interpretation appears here.')} />
       ) : isDrifted ? <DriftedGuidance drift={drift} /> : (
         <div className="flex items-start gap-3">
-          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden />
+          <Icons.securityCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden />
           <div className="min-w-0 max-w-3xl">
             <Text as="p" variant="body">
               {t('admin.schemaDrift.cleanBody', 'The live schema matches the recorded seed fingerprint. Migrations and the seed are in sync — no action required.')}
@@ -49,7 +49,7 @@ function DriftedGuidance({ drift }: { drift: SchemaDrift }) {
   ].every(delta => delta != null && Number.isFinite(delta));
   return (
     <div className="flex items-start gap-3">
-      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden />
+      <Icons.warning className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden />
       <div className="min-w-0 max-w-3xl space-y-3">
         <Text as="p" variant="body">
           {changes.length > 0

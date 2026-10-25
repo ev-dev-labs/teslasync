@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useState, useMemo, useCallback, type ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'lucide-react'
 import { Button, Textarea, CopyButton } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
 
@@ -49,7 +49,7 @@ export function UrlEncoderTool() {
   const selectDecode = useCallback(() => setMode('decode'), [])
 
   return (
-    <ToolCard icon={Link} color="cyan" title={t('devtools.utils.url', 'URL encoder')} description={t('devtools.utils.urlDesc', 'URL encoder desc')}>
+    <ToolCard icon={Icons.link} color="cyan" title={t('devtools.utils.url', 'URL encoder')} description={t('devtools.utils.urlDesc', 'URL encoder desc')}>
       <div className="space-y-3">
         <div className="flex gap-2" role="group" aria-label={t('devtools.url.modeGroup', 'Encoding mode')}>
           <Button

@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * Full-width per-vehicle breakdown table for the Vehicle Ingest Cost page.
  *
@@ -8,7 +9,6 @@
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Wallet } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Caption, Text, DataTable, type Column } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError, SectionErrorBoundary } from '@/components/feedback';
@@ -117,7 +117,7 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
         ) : vehicleRows.length === 0 ? (
           // no-action: vehicles populate this view by ingesting telemetry; not a user-actionable surface
           <EmptyState
-            icon={<Wallet className="h-8 w-8" />}
+            icon={<Icons.wallet className="h-8 w-8" />}
             title={t('admin.vehicleCost.emptyTitle', 'No vehicle cost data')}
             message={t(
               'admin.vehicleCost.emptyMessage',

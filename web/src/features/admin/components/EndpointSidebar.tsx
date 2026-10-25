@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button as UiButton, Input as UiInput, Text } from '@/components/ui';
 
@@ -96,7 +96,7 @@ function TagGroup({
         aria-expanded={open}
         className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-left hover:!bg-white/[0.03]"
       >
-        <ChevronDown
+        <Icons.expand
           aria-hidden="true"
           className={cn(
             'h-3 w-3 text-[var(--text-muted)] transition-transform duration-normal',
@@ -180,7 +180,7 @@ export default function EndpointSidebar({ endpoints, selected, onSelect }: Endpo
           onChange={e => setSearch(e.target.value)}
           placeholder={t('playground.search', 'Search endpoints...')}
           aria-label={t('playground.search', 'Search endpoints...')}
-          icon={<Search className="h-3.5 w-3.5" aria-hidden="true" />}
+          icon={<Icons.search className="h-3.5 w-3.5" aria-hidden="true" />}
           className="!text-xs !py-1.5 !bg-white/[0.03]"
         />
       </div>

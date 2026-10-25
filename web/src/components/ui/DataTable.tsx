@@ -144,6 +144,7 @@ export function isOpaqueRowKey(key: string): boolean {
 export interface Column<T> {
   key: string
   header: string
+  headerTestId?: string
   render: (row: T) => ReactNode
   /** Canonical export value for computed or component-rendered cells. */
   exportValue?: (row: T) => CsvCellValue
@@ -182,6 +183,8 @@ export interface PaginationConfig {
 }
 
 interface DataTableProps<T> {
+  /** Optional caller-owned test identifier for the table frame. */
+  testId?: string
   /** Opt-in below 640px of allocated container width; the same table pipeline owns both surfaces. */
   mobilePresentation?: MobileDataTablePresentation<T>
   /** Remove the outer frame when the enclosing panel already owns the surface. */
@@ -193,6 +196,8 @@ interface DataTableProps<T> {
   /** Loaded candidates independent of caller-owned search/conditions. */
   filterData?: T[]
   keyExtractor: (row: T) => RowKey
+  /** Optional caller-owned test identifier for a native body row. */
+  getRowTestId?: (row: T) => string | undefined
   sortKey?: string
   sortDir?: 'asc' | 'desc'
   onSort?: (key: string) => void
@@ -449,6 +454,7 @@ function alignClass(align?: 'left' | 'center' | 'right'): string {
  *  All advanced props are optional — passing only `columns` + `data` gives the
  *  same lightweight behavior as the base table. */
 export function DataTable<T>({
+  testId,
   mobilePresentation,
   variant = 'standalone',
   columns,
@@ -456,6 +462,7 @@ export function DataTable<T>({
   enableValueFilters = false,
   filterData,
   keyExtractor,
+  getRowTestId,
   sortKey,
   sortDir,
   onSort,
@@ -1096,6 +1103,7 @@ export function DataTable<T>({
     const rows: ReactNode[] = [
       <tr
         key={`row:${reconciliationKey}`}
+        data-testid={getRowTestId?.(row)}
         className={trClass}
         data-selected={selected ? 'true' : undefined}
         data-expanded={expanded ? 'true' : undefined}
@@ -1361,6 +1369,7 @@ export function DataTable<T>({
       'space-y-0 overflow-visible p-0',
       mobilePresentation && 'mgr-host',
     )}
+      data-testid={testId}
       data-grid-frame="" data-grid-variant={variant}>
       {/* Toolbar row (selection bulk-bar + columns picker + export) */}
       {showToolbar && (
@@ -1523,6 +1532,7 @@ export function DataTable<T>({
                   <th
                     key={col.key}
                     scope="col"
+                    data-testid={col.headerTestId}
                     aria-label={col.header || undefined}
                     draggable={headerReorderEnabled || undefined}
                     onDragStart={headerReorderEnabled ? (e) => handleHeaderDragStart(col.key, e) : undefined}

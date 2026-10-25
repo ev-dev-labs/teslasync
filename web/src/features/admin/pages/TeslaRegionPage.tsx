@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 import { IconButton } from '@/components/ui/IconButton';
 /**
  * TeslaRegionPage — Tesla account Region & Fleet API endpoint surface.
@@ -10,7 +11,6 @@ import { IconButton } from '@/components/ui/IconButton';
  */
 
 import { useTranslation } from 'react-i18next'
-import { RefreshCw } from 'lucide-react'
 import { PageLayout } from '@/components/layout'
 import { Icon } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
@@ -64,7 +64,7 @@ export default function TeslaRegionPage() {
           : null
 
   const actions = (
-    <IconButton icon={<Icon icon={RefreshCw} size="sm" />} label={t('region.refresh', 'Refresh')} onClick={refresh} busy={regionRefresh.isPending} disabled={regionRefresh.isPending || !canWrite} />
+    <IconButton icon={<Icon icon={Icons.refresh} size="sm" />} label={t('region.refresh', 'Refresh')} onClick={refresh} busy={regionRefresh.isPending} disabled={regionRefresh.isPending || !canWrite} />
   )
 
   return (

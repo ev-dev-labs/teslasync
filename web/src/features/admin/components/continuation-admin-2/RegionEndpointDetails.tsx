@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Server } from 'lucide-react';
 import type { RegionEndpointPanelProps } from '../tesla-region/RegionEndpointPanel';
 import { LayoutCard } from '@/components/layout';
 import { Badge, Text, Code, Label, CopyButton, Button, ErrorText, HelperText, Icon } from '@/components/ui';
@@ -23,7 +23,7 @@ export function RegionEndpointDetails(props: RegionEndpointPanelProps) {
         : props.isLoading || props.isInitial ? <div className="space-y-3"><Skeleton height={64} /><Skeleton lines={5} height={16} /></div>
         : props.isError ? <QueryError error={props.error} onRetry={props.onRetry} resourceName={t('region.resource', 'Region')} />
         : !configured ? <div className="space-y-3">
-          <EmptyState icon={<Icon icon={Server} size="xl" />} title={t('region.empty.title', 'No region on record')}
+          <EmptyState icon={<Icon icon={Icons.server} size="xl" />} title={t('region.empty.title', 'No region on record')}
             message={t('region.empty.message', 'TeslaSync has not resolved your account region yet. Refresh to fetch it from Tesla.')}
             action={{ label: t('region.refresh', 'Refresh'), onClick: props.onRefresh, disabled: props.refreshDisabled || props.isRefreshing, loading: props.isRefreshing }}
           />

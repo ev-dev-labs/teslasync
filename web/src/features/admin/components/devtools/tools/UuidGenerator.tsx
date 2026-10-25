@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Fingerprint, RefreshCw } from 'lucide-react'
 import { Button, CopyButton } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
 import { safeRandomUUID } from '@/lib/safeUUID'
@@ -20,9 +20,9 @@ export function UuidGeneratorTool() {
   }, [])
 
   return (
-    <ToolCard icon={Fingerprint} color="purple" title={t('devtools.utils.uuid', 'UUID generator')} description={t('devtools.utils.uuidDesc', 'UUID generator desc')}>
+    <ToolCard icon={Icons.fingerprint} color="purple" title={t('devtools.utils.uuid', 'UUID generator')} description={t('devtools.utils.uuidDesc', 'UUID generator desc')}>
       <div className="space-y-3">
-        <Button variant="primary" size="sm" onClick={generate} icon={<RefreshCw className="h-3.5 w-3.5" />}>
+        <Button variant="primary" size="sm" onClick={generate} icon={<Icons.refresh className="h-3.5 w-3.5" />}>
           {t('devtools.utils.uuidGenerate', 'Generate')}
         </Button>
         {uuids.length > 0 ? (

@@ -1,5 +1,5 @@
+import { Icons } from '@/lib/icons';
 import { describe, it, expect } from 'vitest'
-import { KeyRound, FileCode, Key, Globe, Shield, Link, Radio } from 'lucide-react'
 import {
   ICON_COLOR_MAP,
   VIN_MANUFACTURERS,
@@ -308,7 +308,7 @@ describe('ONBOARDING_STEPS', () => {
 
   it('binds each step to its renderable lucide icon', () => {
     const icons = ONBOARDING_STEPS.map((s) => s.icon)
-    expect(icons).toEqual([KeyRound, FileCode, Key, Globe, Shield, Link, Radio])
+    expect(icons).toEqual([Icons.keyRound, Icons.fileCode, Icons.key, Icons.globe, Icons.security, Icons.link, Icons.radio])
     for (const step of ONBOARDING_STEPS) {
       expect(['object', 'function']).toContain(typeof step.icon)
     }
@@ -323,8 +323,8 @@ describe('ONBOARDING_STEPS', () => {
 })
 
 describe('REFERENCE_LINKS (mirrors ReferenceLinksSection)', () => {
-  // ReferenceLinksSection resolves `ICON_MAP[link.icon] ?? BookOpen`.
-  const KNOWN_ICONS = ['BookOpen', 'Globe', 'ExternalLink', 'Radio']
+  // ReferenceLinksSection resolves link.icon through the shared concept registry.
+  const KNOWN_ICONS = ['bookOpen', 'globe', 'externalLink', 'radio']
 
   it('every url is a unique https link — url is the React key', () => {
     const urls = REFERENCE_LINKS.map((l) => l.url)

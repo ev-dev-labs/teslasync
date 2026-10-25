@@ -1,4 +1,5 @@
-import { AlertTriangle, ArrowUpRight } from 'lucide-react';
+import { Icons } from '@/lib/icons';
+
 import { useTranslation } from 'react-i18next';
 import type { ErrorStats } from '@/api/types';
 import type { DataState } from '@/api/dataState';
@@ -6,6 +7,7 @@ import { Badge, Button, Caption, Text } from '@/components/ui';
 import { DateTime } from '@/components/data-display';
 import { PrefetchLink } from '@/components/layout';
 import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { ROUTE_REGISTRY } from '@/lib/routeRegistry';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { ApiLogsRuntimeCard } from './ApiLogsRuntimeCard';
 import { ApiLogsRuntimeList } from './ApiLogsRuntimeList';
@@ -22,12 +24,13 @@ export function ApiLogsBackendErrors({ data, state, loading, onRetry }: ApiLogsB
   const { fmtInt } = useNumberFormatting();
   const rows = Object.entries(data?.by_code ?? {}).sort((a, b) => b[1].count - a[1].count);
   const title = t('apiLogs.backendErrors', 'Backend runtime errors');
+  const systemStatusPath = ROUTE_REGISTRY.find((route) => route.name === 'SystemStatus')?.path ?? '/system-status';
 
   return (
     <ApiLogsRuntimeCard
       title={title}
       scope={t('apiLogs.backendScope', 'Since the current API process started; independent of API call filters.')}
-      icon={AlertTriangle}
+      icon={Icons.warning}
       count={data?.total_errors != null ? fmtInt(data.total_errors) : '—'}
       countLabel={t('apiLogs.runtime.recordedErrors', 'Recorded errors')}
       loading={loading && !data}
@@ -89,11 +92,11 @@ export function ApiLogsBackendErrors({ data, state, loading, onRetry }: ApiLogsB
         </Text>
       )}
       <PrefetchLink
-        to="/system-status"
+        to={systemStatusPath}
         className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
       >
         <Text variant="bodySm">{t('apiLogs.runtime.systemHealth', 'Inspect system health')}</Text>
-        <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+        <Icons.drillThrough className="h-4 w-4" aria-hidden="true" />
       </PrefetchLink>
     </ApiLogsRuntimeCard>
   );

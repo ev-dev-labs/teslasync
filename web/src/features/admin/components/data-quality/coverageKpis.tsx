@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * KPI card model for the Data Quality coverage band.
  *
@@ -7,14 +8,6 @@
  * percentage becomes the localized "Unknown" label, never `0.0%`.
  */
 import { type ReactNode, useMemo } from 'react';
-import {
-  AlertOctagon,
-  BadgeCheck,
-  Database,
-  FileQuestion,
-  ShieldCheck,
-  Tag,
-} from 'lucide-react';
 
 import { type NeonColor } from '@/lib/tokens';
 
@@ -69,7 +62,7 @@ export function useCoverageKpis(
         key: 'total',
         label: t('admin.dataQuality.kpiTotal', 'Samples in window'),
         value: fmtInt(total),
-        icon: <Database className="h-5 w-5" />,
+        icon: <Icons.database className="h-5 w-5" />,
         color: 'cyan',
         subtitle: t('admin.dataQuality.windowSub', 'Window: {{mins}} min', {
           mins: fmtInt(windowMins ?? 0),
@@ -79,7 +72,7 @@ export function useCoverageKpis(
         key: 'versioned',
         label: t('admin.dataQuality.kpiVersioned', 'Version-attested'),
         value: fmtInt(versioned),
-        icon: <BadgeCheck className="h-5 w-5" />,
+        icon: <Icons.badgeCheck className="h-5 w-5" />,
         color: 'green',
         subtitle: t(
           'admin.dataQuality.kpiVersionedSub',
@@ -90,7 +83,7 @@ export function useCoverageKpis(
         key: 'unversioned',
         label: t('admin.dataQuality.kpiUnversioned', 'Unattested'),
         value: fmtInt(unversioned),
-        icon: <FileQuestion className="h-5 w-5" />,
+        icon: <Icons.fileQuestion className="h-5 w-5" />,
         color: unversioned > 0 ? 'amber' : 'green',
         subtitle: t(
           'admin.dataQuality.kpiUnversionedSub',
@@ -102,7 +95,7 @@ export function useCoverageKpis(
         label: t('admin.dataQuality.kpiCoverage', 'Attested coverage'),
         // Null coverage renders the explicit "Unknown" label. Never 0 %.
         value: coverageText ?? t('admin.dataQuality.unknown', 'Unknown'),
-        icon: <ShieldCheck className="h-5 w-5" />,
+        icon: <Icons.securityCheck className="h-5 w-5" />,
         color: TRUST_COLOR[trust],
         subtitle:
           coverageText == null
@@ -122,7 +115,7 @@ export function useCoverageKpis(
           requiredVersion == null
             ? t('admin.dataQuality.unknown', 'Unknown')
             : `v${requiredVersion}`,
-        icon: <Tag className="h-5 w-5" />,
+        icon: <Icons.tag className="h-5 w-5" />,
         color: 'purple',
         subtitle: t(
           'admin.dataQuality.kpiRequiredVersionSub',
@@ -133,7 +126,7 @@ export function useCoverageKpis(
         key: 'critical',
         label: t('admin.dataQuality.kpiCriticalFields', 'Critical fields'),
         value: fmtInt(criticalFields),
-        icon: <AlertOctagon className="h-5 w-5" />,
+        icon: <Icons.severityCritical className="h-5 w-5" />,
         color: criticalFields > 0 ? 'red' : 'green',
         subtitle: t('admin.dataQuality.kpiCriticalFieldsSub', 'Composite score below 50'),
       },

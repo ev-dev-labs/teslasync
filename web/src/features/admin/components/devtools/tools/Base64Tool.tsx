@@ -1,7 +1,7 @@
+import { Icons } from '@/lib/icons';
 import { useState, useMemo, useCallback } from 'react'
 import type { ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Braces } from 'lucide-react'
 import { Button, Textarea, CopyButton } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
 
@@ -57,7 +57,7 @@ export function Base64Tool() {
 
   return (
     <ToolCard
-      icon={Braces}
+      icon={Icons.braces}
       color="amber"
       title={t('devtools.utils.base64', 'Base64')}
       description={t('devtools.utils.base64Desc', 'Encode and decode Base64 text')}

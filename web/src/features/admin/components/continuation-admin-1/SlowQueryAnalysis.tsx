@@ -1,5 +1,5 @@
+import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
-import { HardDrive } from 'lucide-react';
 import { ChartCard, LayoutCard } from '@/components/layout';
 import { Text, Code } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
@@ -63,12 +63,12 @@ export function SlowQueryAnalysis({
         )}
       </div>
       <LayoutCard title={t('admin.slowQueries.cacheTitle', 'Cache efficiency')}
-        actions={<HardDrive className="h-4 w-4 text-cyan-300" aria-hidden />}>
+        actions={<Icons.hardDrive className="h-4 w-4 text-cyan-300" aria-hidden />}>
         {loading ? <Skeleton height={260} /> : error ? <QueryError error={error} onRetry={onRetry} /> : subsystemMissing ? (
           <DataStateNotice state="unsupported" />
         ) : cacheLeaders.length === 0 ? (
           // no-action: queries without shared-buffer activity have no cache ratio; the UI cannot create Postgres buffer statistics.
-          <EmptyState icon={<HardDrive className="h-8 w-8" aria-hidden />}
+          <EmptyState icon={<Icons.hardDrive className="h-8 w-8" aria-hidden />}
             message={t('admin.slowQueries.noCache', 'No shared-buffer statistics available for these queries.')} />
         ) : (
           <div className="space-y-3">

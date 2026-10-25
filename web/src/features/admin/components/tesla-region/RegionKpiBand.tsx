@@ -1,5 +1,5 @@
+import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next'
-import { Globe, PlugZap, ShieldCheck, Clock } from 'lucide-react'
 import { MetricCard } from '@/components/data-display'
 import { StatGridSkeleton } from '@/components/feedback'
 import { useDateFormat } from '@/hooks/useDateFormat'
@@ -53,28 +53,28 @@ export function RegionKpiBand({
         label={t('region.kpi.region', 'Region')}
         value={regionValue}
         subtitle={regionSubtitle}
-        icon={<Globe className="h-5 w-5" aria-hidden="true" />}
+        icon={<Icons.globe className="h-5 w-5" aria-hidden="true" />}
         color="cyan"
       />
       <MetricCard
         label={t('region.kpi.status', 'Endpoint')}
         value={statusValue}
         subtitle={t('region.kpi.source', 'Tesla Fleet API')}
-        icon={<PlugZap className="h-5 w-5" aria-hidden="true" />}
+        icon={<Icons.plugZap className="h-5 w-5" aria-hidden="true" />}
         color={configured ? 'green' : 'amber'}
       />
       <MetricCard
         label={t('region.kpi.protocol', 'Protocol')}
         value={protocolValue}
         subtitle={t('region.kpi.protocolHint', 'Secure transport')}
-        icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
+        icon={<Icons.securityCheck className="h-5 w-5" aria-hidden="true" />}
         color="blue"
       />
       <MetricCard
         label={t('region.kpi.synced', 'Last synced')}
         value={syncedValue}
         subtitle={t('region.kpi.syncedHint', 'From Tesla account')}
-        icon={<Clock className="h-5 w-5" aria-hidden="true" />}
+        icon={<Icons.clock className="h-5 w-5" aria-hidden="true" />}
         color="purple"
       />
     </div>

@@ -1,5 +1,5 @@
+import { Icons } from '@/lib/icons';
 import { useMemo } from 'react';
-import { ShieldCheck } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { Badge, DataTable, Caption, Text, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
@@ -125,7 +125,7 @@ export function SecretRotationDetails({ controller }: Props) {
               ) : items.length === 0 ? (
                 // no-action: rotation events are recorded automatically by the rotation tracker; no user action seeds them
                 <EmptyState
-                  icon={<ShieldCheck className="h-8 w-8" />}
+                  icon={<Icons.securityCheck className="h-8 w-8" />}
                   title={t('admin.secretRotation.emptyTitle', 'No tracked secrets')}
                   message={t(
                     'admin.secretRotation.emptyMessage',

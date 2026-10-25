@@ -1,5 +1,5 @@
+import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
-import { Flame } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { Caption } from '@/components/ui';
 import { MetricBar, KVList } from '@/components/data-display';
@@ -21,14 +21,14 @@ export function VehicleCostTalkers({ talkers, totalRows, loading, error, onRetry
     : null;
   return (
     <LayoutCard title={t('admin.vehicleCost.topTalkersTitle', 'Top talkers')}
-      actions={<Flame className="h-4 w-4 text-amber-300" aria-hidden />}>
+      actions={<Icons.flame className="h-4 w-4 text-amber-300" aria-hidden />}>
       <Caption>{t('admin.vehicleCost.topTalkersSubtitle', 'Share of total rows ingested')}</Caption>
       {error ? <QueryError error={error} onRetry={onRetry} /> : loading && items.length === 0 ? (
         <div className="space-y-3" role="status" aria-busy="true" aria-label={t('common.loading', 'Loading')}>
           {Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} height={40} />)}
         </div>
       ) : items.length === 0 ? (
-        <EmptyState icon={<Flame className="h-8 w-8" aria-hidden />}
+        <EmptyState icon={<Icons.flame className="h-8 w-8" aria-hidden />}
           message={t('admin.vehicleCost.topTalkersEmpty', 'No vehicles have ingested signals yet.')}
           action={{ label: t('common.retry', 'Retry'), onClick: onRetry }} />
       ) : max == null ? (

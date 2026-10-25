@@ -1,4 +1,5 @@
-import { Bug } from 'lucide-react';
+import { Icons } from '@/lib/icons';
+
 import { useTranslation } from 'react-i18next';
 import { useWebErrorsSummary } from '@/api/hooks/useAdmin';
 import { Badge, Button, Caption, Text } from '@/components/ui';
@@ -27,7 +28,7 @@ export function ApiLogsFrontendErrors() {
     <ApiLogsRuntimeCard
       title={title}
       scope={scope}
-      icon={Bug}
+      icon={Icons.bug}
       count={data?.total != null ? fmtInt(data.total) : '—'}
       countLabel={t('apiLogs.frontendErrors.reportedBy', 'reported by browser sessions')}
       loading={isLoading && !data}

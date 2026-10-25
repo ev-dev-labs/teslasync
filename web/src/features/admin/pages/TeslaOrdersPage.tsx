@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * TeslaOrdersPage — first-class page for the Tesla "Active Orders" surface
  * (vehicle orders + delivery tracking pulled from the owner's Tesla account).
@@ -12,7 +13,6 @@
  */
 import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw, ShoppingCart, LayoutGrid, ListOrdered } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { Icon, IconButton } from '@/components/ui';
@@ -83,7 +83,7 @@ export default function TeslaOrdersPage() {
     });
   };
 
-  const emptyIcon = <Icon icon={ShoppingCart} size="xl" />;
+  const emptyIcon = <Icon icon={Icons.shoppingCart} size="xl" />;
   const emptyMessage = fetchedAt
     ? t('admin.teslaOrders.empty.synced', 'No active orders found on this Tesla account.')
     : t(
@@ -97,7 +97,7 @@ export default function TeslaOrdersPage() {
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
-      <IconButton icon={<Icon icon={RefreshCw} size="sm" />} label={t('admin.teslaOrders.refresh', 'Refresh')} onClick={refreshOrders} busy={ordersRefresh.isPending} disabled={ordersRefresh.isPending} />
+      <IconButton icon={<Icon icon={Icons.refresh} size="sm" />} label={t('admin.teslaOrders.refresh', 'Refresh')} onClick={refreshOrders} busy={ordersRefresh.isPending} disabled={ordersRefresh.isPending} />
     </div>
   );
 
@@ -152,7 +152,7 @@ export default function TeslaOrdersPage() {
       <FadeIn delay={0.2}>
         <SectionErrorBoundary name="tesla-orders-board">
           <LayoutCard title={t('admin.teslaOrders.panels.board', 'Orders')}
-            actions={<Icon icon={LayoutGrid} className={typography.color.muted} />}>
+            actions={<Icon icon={Icons.layoutGrid} className={typography.color.muted} />}>
             <OrdersSectionState
               status={status}
               error={ordersState.fatalError}
@@ -173,7 +173,7 @@ export default function TeslaOrdersPage() {
       <FadeIn delay={0.3}>
         <SectionErrorBoundary name="tesla-orders-table">
           <LayoutCard title={t('admin.teslaOrders.panels.details', 'Order details')}
-            actions={<Icon icon={ListOrdered} className={typography.color.muted} />}>
+            actions={<Icon icon={Icons.sessionQueue} className={typography.color.muted} />}>
             <OrdersSectionState
               status={status}
               error={ordersState.fatalError}

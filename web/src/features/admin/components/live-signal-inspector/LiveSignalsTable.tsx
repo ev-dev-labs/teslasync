@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * Live Signal Inspector — snapshot table.
  *
@@ -9,7 +10,6 @@
  */
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search } from 'lucide-react';
 
 import {
   DataTable,
@@ -180,7 +180,7 @@ export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
   return (
     <div className="min-w-0 space-y-4">
       <div className="relative max-w-md">
-        <Search
+        <Icons.search
           className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]"
           aria-hidden="true"
         />

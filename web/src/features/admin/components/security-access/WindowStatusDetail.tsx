@@ -1,5 +1,5 @@
+import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
-import { AppWindow } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { Skeleton, QueryError } from '@/components/feedback';
@@ -51,7 +51,7 @@ export function WindowStatusDetail({ latest, isLoading, error, onRetry, classNam
             return (
               <StatusTile
                 key={win.key}
-                icon={<AppWindow className="h-5 w-5" />}
+                icon={<Icons.appWindow className="h-5 w-5" />}
                 tone={windowTone(state)}
                 label={t(win.i18nKey, win.fallback)}
                 value={t(`admin.security.windowState.${state.toLowerCase()}`, state)}

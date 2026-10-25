@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * Vehicle Ingest Cost page.
  *
@@ -22,8 +23,6 @@
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
@@ -97,7 +96,7 @@ export default function VehicleCostPage() {
     <Button variant="ghost" className="min-h-11 min-w-11 md:min-h-10" onClick={retry}
       disabled={query.isFetching || !rangeSupported} aria-busy={query.isFetching || undefined}
       aria-label={t('admin.vehicleCost.refresh', 'Refresh vehicle cost data')}>
-      <RefreshCw className={query.isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />
+      <Icons.refresh className={query.isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />
     </Button>
   );
 

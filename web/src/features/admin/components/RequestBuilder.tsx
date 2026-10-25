@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useState, useEffect, useCallback, useMemo, useId } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Send, AlertTriangle } from 'lucide-react';
 import { GlassPanel, Button as UiButton, Input as UiInput, Textarea as UiTextarea, Text, HelperText } from '@/components/ui';
 import { MethodBadge } from './EndpointSidebar';
 import { parameterMismatch, schemaMismatch, type PlaygroundEndpoint } from './continuation-admin-1/playgroundSpec';
@@ -113,7 +113,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
           disabled={loading}
           className="shrink-0"
         >
-          <Send className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+          <Icons.send className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
           {loading ? t('playground.sending', 'Sending...') : t('playground.send', 'Send')}
         </UiButton>
       </div>
@@ -121,7 +121,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
       {/* Destructive action confirmation */}
       {confirmOpen && (
         <div role="alert" className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
-          <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" aria-hidden="true" />
+          <Icons.warning className="h-4 w-4 text-amber-400 shrink-0" aria-hidden="true" />
           <Text size="xs" className="flex-1 text-amber-300">
             {t('playground.confirmDestructive', 'This is a {{method}} request. Are you sure you want to send it?', { method: endpoint.method })}
           </Text>

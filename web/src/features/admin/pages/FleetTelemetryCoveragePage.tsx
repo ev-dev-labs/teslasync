@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * FleetTelemetryCoveragePage — modern-ui redesign.
  *
@@ -30,10 +31,6 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  AlertTriangle,
-  RefreshCw,
-} from 'lucide-react'
 
 import { PageLayout, LayoutCard, Masonry } from '@/components/layout'
 import { GlassPanel, Badge, Input, PanelTitle, Text, Caption } from '@/components/ui'
@@ -131,7 +128,7 @@ export default function FleetTelemetryCoveragePage({
       query={query}
       dataSources={[{ id: 'fleet-telemetry-coverage', label: t('coverage.pageTitle', 'Fleet Telemetry coverage'), query }]}
       secondaryActions={
-        <IconButton icon={<RefreshCw className="h-4 w-4" aria-hidden />} label={t('coverage.refresh', 'Refresh')} onClick={() => {
+        <IconButton icon={<Icons.refresh className="h-4 w-4" aria-hidden />} label={t('coverage.refresh', 'Refresh')} onClick={() => {
             void refetch()
           }} busy={isFetching && !isLoading} disabled={isFetching} data-testid="coverage-refresh-button" />
       }
@@ -283,7 +280,7 @@ export default function FleetTelemetryCoveragePage({
             data-testid="coverage-orphans-panel"
           >
             <div className="mb-3 flex items-start gap-2">
-              <AlertTriangle
+              <Icons.warning
                 className={cn('mt-0.5 h-4 w-4 shrink-0', severityTokens.warn.fg)}
                 aria-hidden
               />

@@ -1,4 +1,6 @@
-import { Shield, ShieldAlert, Crown, Key, type LucideIcon } from 'lucide-react';
+import type { LucideIcon } from '@/lib/icons';
+import { Icons } from '@/lib/icons';
+
 import type { NeonColor } from '@/lib/tokens';
 import type { APIKey } from '@/types/admin';
 
@@ -27,7 +29,7 @@ export interface PermissionMeta {
  */
 export const PERMISSION_META: Record<ApiKeyPermission, PermissionMeta> = {
   read: {
-    icon: Shield,
+    icon: Icons.security,
     color: 'green',
     barColor: '#10b981',
     labelKey: 'apiKeys.perm.read',
@@ -36,7 +38,7 @@ export const PERMISSION_META: Record<ApiKeyPermission, PermissionMeta> = {
     descFallback: 'Read-only access to fleet data.',
   },
   'read-write': {
-    icon: ShieldAlert,
+    icon: Icons.securityAlert,
     color: 'amber',
     barColor: '#f59e0b',
     labelKey: 'apiKeys.perm.readWrite',
@@ -45,7 +47,7 @@ export const PERMISSION_META: Record<ApiKeyPermission, PermissionMeta> = {
     descFallback: 'Read data and send vehicle commands.',
   },
   admin: {
-    icon: Crown,
+    icon: Icons.crown,
     color: 'purple',
     barColor: '#a855f7',
     labelKey: 'apiKeys.perm.admin',
@@ -62,7 +64,7 @@ export const FALLBACK_PERMISSION_META: PermissionMeta = PERMISSION_META.read;
 export const PERMISSION_ORDER: ApiKeyPermission[] = ['read', 'read-write', 'admin'];
 
 /** Icon for the key card + empty state — kept here so the barrel stays lean. */
-export const KEY_ICON: LucideIcon = Key;
+export const KEY_ICON: LucideIcon = Icons.key;
 
 /**
  * Resolve an API-supplied permission string to its presentation metadata,

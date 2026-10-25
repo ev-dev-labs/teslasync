@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * Hero visual for the Vehicle Ingest Cost page — a horizontal bar chart of
  * estimated ingest bytes per vehicle, largest consumer first. The single
@@ -10,7 +11,6 @@
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BarChart3 } from 'lucide-react';
 
 import {
   Bar,
@@ -60,7 +60,7 @@ export function CostByVehicleChart({ bars, loading, error, onRetry }: CostByVehi
   return (
     <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Icons.analytics className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('admin.vehicleCost.chartTitle', 'Ingest cost by vehicle')}
       </PanelTitle>
       <EmbeddedChart

@@ -1,4 +1,5 @@
-import { Search, X as XIcon } from 'lucide-react';
+import { Icons } from '@/lib/icons';
+
 import { LayoutCard } from '@/components/layout';
 import { Button, Caption, Input, Select, IconButton } from '@/components/ui';
 import type { useAuditLogPage } from '../../../hooks/useAuditLogPage';
@@ -83,14 +84,14 @@ export function AuditLogFilters({ controller }: Props) {
               />
               <div className="flex items-end gap-2 sm:col-span-2 3xl:col-span-1">
                 {/* not-destructive: resets the log filters only; nothing is lost */}
-                <IconButton icon={<XIcon className="h-4 w-4" aria-hidden="true" />} label={t('admin.auditLog.resetFilters', 'Reset')} onClick={handleReset} />
+                <IconButton icon={<Icons.close className="h-4 w-4" aria-hidden="true" />} label={t('admin.auditLog.resetFilters', 'Reset')} onClick={handleReset} />
                 <Button
                   variant="primary"
                   size="md"
                   className="min-h-11"
                   onClick={() => logQuery.refetch()}
                 >
-                  <Search className="mr-1 h-4 w-4" aria-hidden="true" />
+                  <Icons.search className="mr-1 h-4 w-4" aria-hidden="true" />
                   {t('admin.auditLog.applyFilters', 'Search')}
                 </Button>
               </div>

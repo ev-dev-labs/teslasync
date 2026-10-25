@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Fingerprint } from 'lucide-react';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import { Card, CopyButton, PanelTitle, Caption, Code, Text, ErrorText, HelperText } from '@/components/ui';
 import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
@@ -14,7 +14,7 @@ export function SchemaFingerprints({ state }: { state: SchemaSectionState }) {
   const { drift, isLoading, error, onRetry } = state;
   return (
     <LayoutCard title={t('admin.schemaDrift.fingerprintTitle', 'Schema fingerprints')}
-      actions={<Fingerprint className="h-4 w-4 text-cyan-300" aria-hidden />}>
+      actions={<Icons.fingerprint className="h-4 w-4 text-cyan-300" aria-hidden />}>
       <Caption>{t('admin.schemaDrift.fingerprintSub', 'SHA-256 of the live schema versus the captured seed')}</Caption>
       {error ? <QueryError error={error} onRetry={onRetry} /> : (
         <SourceContent
@@ -30,7 +30,7 @@ export function SchemaFingerprints({ state }: { state: SchemaSectionState }) {
           }
           emptyContent={
             <EmptyState
-              icon={<Fingerprint className="h-8 w-8" aria-hidden />}
+              icon={<Icons.fingerprint className="h-8 w-8" aria-hidden />}
               title={t('admin.schemaDrift.emptyTitle', 'No fingerprint available')}
               message={t('admin.schemaDrift.emptyMessage', 'The schema fingerprint has not been computed yet. Restart the API to capture a seed fingerprint.')}
               action={{ label: t('common.refresh', 'Refresh'), onClick: onRetry }}

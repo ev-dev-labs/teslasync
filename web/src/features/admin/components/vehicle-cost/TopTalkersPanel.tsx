@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * Top-talkers side panel for the Vehicle Ingest Cost page.
  *
@@ -7,7 +8,6 @@
  * disproportionate to the rest of the fleet. Owns loading / empty / error.
  */
 import { useTranslation } from 'react-i18next';
-import { Flame } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Caption } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
@@ -46,7 +46,7 @@ export function TopTalkersPanel({
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-1 flex items-center gap-2">
-        <Flame className="h-4 w-4 text-amber-300" aria-hidden="true" />
+        <Icons.flame className="h-4 w-4 text-amber-300" aria-hidden="true" />
         {t('admin.vehicleCost.topTalkersTitle', 'Top talkers')}
       </PanelTitle>
       <Caption className="mb-3 block">
@@ -67,7 +67,7 @@ export function TopTalkersPanel({
         </div>
       ) : items.length === 0 ? (
         <EmptyState
-          icon={<Flame className="h-8 w-8" aria-hidden="true" />}
+          icon={<Icons.flame className="h-8 w-8" aria-hidden="true" />}
           message={t('admin.vehicleCost.topTalkersEmpty', 'No vehicles have ingested signals yet.')}
           action={{ label: t('common.retry', 'Retry'), onClick: onRetry }}
         />

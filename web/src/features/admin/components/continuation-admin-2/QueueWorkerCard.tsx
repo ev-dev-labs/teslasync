@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight } from 'lucide-react';
 import type { QueueStat, QueueHeartbeatSeverity } from '@/api/types';
 import { Button, Text, Caption } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
@@ -32,7 +32,7 @@ export function QueueWorkerCard({ stat, onOpen }: { stat: QueueStat; onOpen: (wo
         </div>
         <div className="flex items-center gap-1">
           <Text variant="caption" className={TONE[stat.heartbeat_severity]} data-testid={`queue-severity-${stat.worker}`}>{t(`queueStatus.severity.${stat.heartbeat_severity}`, stat.heartbeat_severity)}</Text>
-          <ChevronRight className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
+          <Icons.next className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
         </div>
       </div>
       <div className="mt-3"><MetricBar value={total} max={total > 0 ? total : 1} color={COLOR[stat.heartbeat_severity]} label={t('queueStatus.queueDepth', 'Queue depth')}

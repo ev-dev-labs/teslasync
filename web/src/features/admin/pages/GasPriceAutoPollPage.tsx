@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * GasPriceAutoPollPage — first-class page for the EIA gas-price auto-poll
  * surface (Integrations sidebar group): summary, price trend, configuration
@@ -8,7 +9,6 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import { Zap } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { Button, Caption, Icon } from '@/components/ui';
@@ -45,7 +45,7 @@ export default function GasPriceAutoPollPage() {
       size="sm"
       wrapLabel
       className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-      icon={<Icon icon={Zap} />}
+      icon={<Icon icon={Icons.charging} />}
       loading={pollMut.isPending}
       disabled={!canWrite}
       title={writeBlockReason ?? undefined}

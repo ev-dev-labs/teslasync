@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import type React from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, Database, ServerCrash, Radio, Zap } from 'lucide-react'
 
 import { GlassPanel, Badge, Button, BUTTON_BASE, BUTTON_VARIANTS, Heading, Text, Code } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
@@ -72,7 +72,7 @@ export function RedisDiagnosticEmptyState({
     return (
       <DiagnosticBanner
         tone="danger"
-        icon={<ServerCrash className="h-6 w-6" />}
+        icon={<Icons.serverCrash className="h-6 w-6" />}
         title={t('redis.diagnostic.cacheNotWired.title', 'Redis cache is not configured')}
         body={t(
           'redis.diagnostic.cacheNotWired.body',
@@ -94,7 +94,7 @@ export function RedisDiagnosticEmptyState({
     return (
       <DiagnosticBanner
         tone="danger"
-        icon={<ServerCrash className="h-6 w-6" />}
+        icon={<Icons.serverCrash className="h-6 w-6" />}
         title={t('redis.diagnostic.unreachable.title', 'Redis is unreachable')}
         body={t(
           'redis.diagnostic.unreachable.body',
@@ -110,7 +110,7 @@ export function RedisDiagnosticEmptyState({
     return (
       <DiagnosticBanner
         tone="warning"
-        icon={<AlertTriangle className="h-6 w-6" />}
+        icon={<Icons.warning className="h-6 w-6" />}
         title={t('redis.diagnostic.requestFailed.title', 'Could not load Redis signals')}
         body={t(
           'redis.diagnostic.requestFailed.body',
@@ -127,11 +127,11 @@ export function RedisDiagnosticEmptyState({
     return (
       <DiagnosticBanner
         tone="warning"
-        icon={<AlertTriangle className="h-6 w-6" />}
+        icon={<Icons.warning className="h-6 w-6" />}
         title={t('redis.diagnostic.networkError.title', 'Cannot reach the API server')}
         body={t(
           'redis.diagnostic.networkError.body',
-          'The browser failed to fetch /api/v1/dev-tools/redis-signals. Check that the API server is running, the proxy/ingress is healthy, and there are no CORS or network errors in DevTools.',
+          'The browser failed to reach the Redis Signals API. Check that the API server is running, the proxy/ingress is healthy, and there are no CORS or network errors in DevTools.',
         )}
         meta={meta}
       />
@@ -142,7 +142,7 @@ export function RedisDiagnosticEmptyState({
     // Backend doesn't expose meta yet — fall back to the legacy generic message.
     return (
       <EmptyState /* no-action: pre-meta backend rollback fallback — meta-aware diagnostic banner replaces this when meta is present */
-        icon={<Database className="h-10 w-10" />}
+        icon={<Icons.database className="h-10 w-10" />}
         message={t('redis.noSignals', 'No signals cached for this vehicle')}
       />
     )
@@ -153,7 +153,7 @@ export function RedisDiagnosticEmptyState({
     return (
       <DiagnosticBanner
         tone="danger"
-        icon={<ServerCrash className="h-6 w-6" />}
+        icon={<Icons.serverCrash className="h-6 w-6" />}
         title={t('redis.diagnostic.modeLocal.title', 'Redis L2 writes are disabled')}
         body={t(
           'redis.diagnostic.modeLocal.body',
@@ -171,7 +171,7 @@ export function RedisDiagnosticEmptyState({
     return (
       <DiagnosticBanner
         tone="warning"
-        icon={<AlertTriangle className="h-6 w-6" />}
+        icon={<Icons.warning className="h-6 w-6" />}
         title={t('redis.diagnostic.mirrorBroken.title', 'L2 mirror is failing')}
         body={t(
           'redis.diagnostic.mirrorBroken.body',
@@ -194,7 +194,7 @@ export function RedisDiagnosticEmptyState({
     return (
       <DiagnosticBanner
         tone="info"
-        icon={<Zap className="h-6 w-6" />}
+        icon={<Icons.charging className="h-6 w-6" />}
         title={t('redis.diagnostic.noTelemetry.title', 'No recent telemetry for this vehicle')}
         body={
           lastSeenL1
@@ -219,7 +219,7 @@ export function RedisDiagnosticEmptyState({
   return (
     <DiagnosticBanner
       tone="neutral"
-      icon={<Radio className="h-6 w-6" />}
+      icon={<Icons.radio className="h-6 w-6" />}
       title={t('redis.diagnostic.empty.title', 'No signals cached for this vehicle')}
       body={t(
         'redis.diagnostic.empty.body',

@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * Fleet-total KPI band for the Vehicle Ingest Cost page.
  *
@@ -8,7 +9,6 @@
  */
 import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Database, HardDrive, Gauge, AlertTriangle, Car, Layers } from 'lucide-react';
 
 import { GlassPanel } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
@@ -65,7 +65,7 @@ export function FleetCostKpis({
         // inherit the user's fractional display precision (`fmtNumber`'s
         // default, e.g. rendering a count as "1,234,567.00").
         value: fmtInt(rows),
-        icon: <Database className="h-5 w-5" />,
+        icon: <Icons.database className="h-5 w-5" />,
         color: 'cyan',
         subtitle: t('admin.vehicleCost.windowSub', 'Window: {{days}}d', { days: windowDays }),
       },
@@ -73,7 +73,7 @@ export function FleetCostKpis({
         key: 'bytes',
         label: t('admin.vehicleCost.totalBytes', 'Total bytes (est.)'),
         value: formatBytes(bytes),
-        icon: <HardDrive className="h-5 w-5" />,
+        icon: <Icons.hardDrive className="h-5 w-5" />,
         color: 'blue',
         subtitle: t('admin.vehicleCost.bytesSub', '96 bytes/row average'),
       },
@@ -81,7 +81,7 @@ export function FleetCostKpis({
         key: 'rate',
         label: t('admin.vehicleCost.totalRate', 'Rate (rows/min, 24h)'),
         value: fmtNumber(rate),
-        icon: <Gauge className="h-5 w-5" />,
+        icon: <Icons.speed className="h-5 w-5" />,
         color: 'green',
         subtitle: t('admin.vehicleCost.rateSub', 'Across all vehicles'),
       },
@@ -89,7 +89,7 @@ export function FleetCostKpis({
         key: 'failures',
         label: t('admin.vehicleCost.totalFailures', 'DLQ failures (24h)'),
         value: fmtInt(failures),
-        icon: <AlertTriangle className="h-5 w-5" />,
+        icon: <Icons.warning className="h-5 w-5" />,
         color: failures > 0 ? 'red' : 'green',
         subtitle: t('admin.vehicleCost.failuresSub', 'Codec or writer rejections'),
       },
@@ -97,7 +97,7 @@ export function FleetCostKpis({
         key: 'vehicles',
         label: t('admin.vehicleCost.vehiclesTracked', 'Vehicles tracked'),
         value: fmtInt(vehicleCount),
-        icon: <Car className="h-5 w-5" />,
+        icon: <Icons.vehicle className="h-5 w-5" />,
         color: 'purple',
         subtitle: t('admin.vehicleCost.vehiclesSub', 'Ingesting in window'),
       },
@@ -105,7 +105,7 @@ export function FleetCostKpis({
         key: 'avg',
         label: t('admin.vehicleCost.avgRows', 'Avg rows / vehicle'),
         value: fmtInt(avgRowsPerVehicle(rows, vehicleCount)),
-        icon: <Layers className="h-5 w-5" />,
+        icon: <Icons.layers className="h-5 w-5" />,
         color: 'cyan',
         subtitle: t('admin.vehicleCost.avgSub', 'Fleet baseline'),
       },

@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * GDPR Export Page — admin observability surface.
  *
@@ -14,7 +15,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { HardDriveDownload, RefreshCw } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, Icon } from '@/components/ui';
@@ -148,7 +148,7 @@ export default function GDPRExportPage() {
       aria-label={t('admin.gdprExport.manifestRefresh', 'Refresh artifact manifest')}
       className="min-h-11 min-w-11 shrink-0"
     >
-      <Icon icon={RefreshCw} />
+      <Icon icon={Icons.refresh} />
     </Button>
   );
 
@@ -187,7 +187,7 @@ export default function GDPRExportPage() {
             <GlassPanel className="p-4 sm:p-5">
               {/* no-action: the artifact-ID lookup input is immediately above; this empty state only renders before submission */}
               <EmptyState
-                icon={<Icon icon={HardDriveDownload} size="xl" />}
+                icon={<Icon icon={Icons.hardDriveDownload} size="xl" />}
                 title={t('admin.gdprExport.emptyTitle', 'No artifact selected')}
                 message={t(
                   'admin.gdprExport.manifestEmptyMessage',

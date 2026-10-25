@@ -1,9 +1,7 @@
+import { Icons } from '@/lib/icons';
 import { IconButton } from '@/components/ui/IconButton';
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Globe, Radio, Server, Wrench, BookOpen, RefreshCw, AlertCircle,
-} from 'lucide-react'
 import { PageLayout } from '@/components/layout'
 import { TabNav, Icon } from '@/components/ui'
 import { AlertBanner, StaleRefreshWarning } from '@/components/feedback'
@@ -61,17 +59,17 @@ export default function DevToolsPage() {
 
   const tabs = useMemo(
     () => [
-      { key: 'fleet-api', label: t('devtools.tab.fleetApi', 'Fleet API'), icon: <Icon icon={Globe} /> },
-      { key: 'telemetry', label: t('devtools.tab.telemetry', 'Telemetry'), icon: <Icon icon={Radio} /> },
-      { key: 'infrastructure', label: t('devtools.tab.infrastructure', 'Infrastructure'), icon: <Icon icon={Server} /> },
-      { key: 'utilities', label: t('devtools.tab.utilities', 'Utilities'), icon: <Icon icon={Wrench} /> },
-      { key: 'reference', label: t('devtools.tab.reference', 'Reference'), icon: <Icon icon={BookOpen} /> },
+      { key: 'fleet-api', label: t('devtools.tab.fleetApi', 'Fleet API'), icon: <Icon icon={Icons.globe} /> },
+      { key: 'telemetry', label: t('devtools.tab.telemetry', 'Telemetry'), icon: <Icon icon={Icons.radio} /> },
+      { key: 'infrastructure', label: t('devtools.tab.infrastructure', 'Infrastructure'), icon: <Icon icon={Icons.server} /> },
+      { key: 'utilities', label: t('devtools.tab.utilities', 'Utilities'), icon: <Icon icon={Icons.maintenance} /> },
+      { key: 'reference', label: t('devtools.tab.reference', 'Reference'), icon: <Icon icon={Icons.bookOpen} /> },
     ],
     [t],
   )
 
   const actions = (
-    <IconButton icon={<Icon icon={RefreshCw} />} label={t('common.refresh', 'Refresh')} onClick={refreshOverview} busy={overviewFetching} aria-label={t('devtools.refreshStatus', 'Refresh developer tools status')} />
+    <IconButton icon={<Icon icon={Icons.refresh} />} label={t('common.refresh', 'Refresh')} onClick={refreshOverview} busy={overviewFetching} aria-label={t('devtools.refreshStatus', 'Refresh developer tools status')} />
   )
 
   return (
@@ -83,7 +81,7 @@ export default function DevToolsPage() {
     >
       <div className="min-w-0 space-y-6">
         {overviewError && (
-          <AlertBanner variant="danger" icon={<Icon icon={AlertCircle} size="lg" />}>
+          <AlertBanner variant="danger" icon={<Icon icon={Icons.alertCircle} size="lg" />}>
             {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(overviewError)}
           </AlertBanner>
         )}

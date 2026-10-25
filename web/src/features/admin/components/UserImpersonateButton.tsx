@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { UserCog } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useStartImpersonation } from '@/api/hooks/useImpersonation'
@@ -60,7 +60,7 @@ export function UserImpersonateButton({ subject, disabled }: UserImpersonateButt
         onClick={handleClick}
         disabled={disabled || startMut.isPending}
         loading={startMut.isPending}
-        icon={<UserCog className="h-4 w-4" aria-hidden />}
+        icon={<Icons.userCog className="h-4 w-4" aria-hidden />}
         data-testid={`user-impersonate-button-${subject}`}
         aria-label={t('impersonation.button.aria', 'Impersonate {{subject}}', { subject })}
       >

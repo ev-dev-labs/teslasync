@@ -1,10 +1,10 @@
+import { Icons } from '@/lib/icons';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ShieldCheck } from 'lucide-react';
-import { Checkbox, Table, Text, Caption } from '@/components/ui';
+import { Checkbox, DataTable, Text, Caption, type Column } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
-import type { RbacMatrixSessionResponse, RbacRole } from '@/api/hooks/useRbacMatrix';
+import type { RbacMatrixSessionResponse, RbacPermission, RbacRole } from '@/api/hooks/useRbacMatrix';
 import { permsByCategory, type MatrixDraft } from './rbacPresentation';
 
 interface MatrixCellProps {
@@ -54,12 +54,66 @@ export function RbacMatrixGrid({ payload, draft, editing, onToggle }: RbacMatrix
   const grouped = useMemo(() => permsByCategory(payload.permissions ?? []), [payload.permissions]);
   const orderedCategories = (payload.categories?.length ? payload.categories : Array.from(grouped.keys()))
     .filter((cat) => (grouped.get(cat)?.length ?? 0) > 0);
+  const orderedPermissions = useMemo<RbacPermission[]>(
+    () => orderedCategories.flatMap((category) => grouped.get(category) ?? []),
+    [grouped, orderedCategories],
+  );
+  const firstPermissionByCategory = useMemo(
+    () => new Map(orderedCategories.map((category) => [
+      category,
+      (grouped.get(category)?.[0]?.id ?? ''),
+    ])),
+    [grouped, orderedCategories],
+  );
+  const columns = useMemo<Column<RbacPermission>[]>(
+    () => [
+      {
+        key: 'permission',
+        header: t('rbac.permissionColumn', 'Permission'),
+        className: 'sticky start-0 z-[1] min-w-44',
+        render: (permission) => (
+          <div className="space-y-1">
+            {firstPermissionByCategory.get(permission.category) === permission.id && (
+              <span
+                role="rowheader"
+                {...({ scope: 'rowgroup' } as { scope: string })}
+                data-testid={`rbac-category-row-${permission.category}`}
+              >
+                <Text variant="label" className="block rounded-md bg-[var(--surface-2)] px-2 py-1 tracking-widest">
+                  {t(`rbac.category.${permission.category}`, permission.category)}
+                </Text>
+              </span>
+            )}
+            <Text as="span" variant="body">{permission.name}</Text>
+            <Caption>{permission.id}</Caption>
+          </div>
+        ),
+      },
+      ...roles.map<Column<RbacPermission>>((role: RbacRole) => ({
+        key: role.id,
+        header: role.name,
+        headerTestId: `rbac-col-${role.id}`,
+        align: 'center',
+        className: 'min-w-20 text-center',
+        render: (permission) => (
+          <MatrixCell
+            roleID={role.id}
+            permID={permission.id}
+            allowed={draft.cells[role.id]?.[permission.id] ?? false}
+            editing={editing}
+            onToggle={onToggle}
+          />
+        ),
+      })),
+    ],
+    [draft, editing, firstPermissionByCategory, onToggle, roles, t],
+  );
 
   if (roles.length === 0 || orderedCategories.length === 0) {
     return (
       // no-action: the owning page already refreshes the matrix; this grid cannot create provider roles or permissions.
       <EmptyState
-        icon={<ShieldCheck className="h-8 w-8" aria-hidden />}
+        icon={<Icons.securityCheck className="h-8 w-8" aria-hidden />}
         message={t('rbac.matrix.empty', 'No permissions to display for the current roles.')}
       />
     );
@@ -67,61 +121,18 @@ export function RbacMatrixGrid({ payload, draft, editing, onToggle }: RbacMatrix
 
   return (
     <div className="min-w-0" data-testid="rbac-matrix-scroll">
-      <Table aria-label={t('rbac.matrix.aria', 'Role permission matrix')} data-testid="rbac-matrix-grid">
-        <thead>
-          <tr>
-            <th scope="col" className="sticky start-0 z-[1] min-w-44 bg-[var(--surface-2)]">
-              <Text variant="label">{t('rbac.permissionColumn', 'Permission')}</Text>
-            </th>
-            {roles.map((role: RbacRole) => (
-              <th
-                key={role.id}
-                scope="col"
-                data-testid={`rbac-col-${role.id}`}
-                className="min-w-20 text-center"
-              >
-                <Text variant="label" className="break-words" title={role.name}>{role.name}</Text>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        {orderedCategories.map((cat) => {
-          const items = grouped.get(cat) ?? [];
-          return (
-            <tbody key={`cat-${cat}`}>
-              <tr>
-                <th
-                  scope="rowgroup"
-                  colSpan={roles.length + 1}
-                  data-testid={`rbac-category-row-${cat}`}
-                  className="bg-[var(--surface-2)]"
-                >
-                  <Text variant="label" className="tracking-widest">{t(`rbac.category.${cat}`, cat)}</Text>
-                </th>
-              </tr>
-              {items.map((perm) => (
-                <tr key={perm.id} data-testid={`rbac-row-${perm.id}`}>
-                  <th scope="row" className="sticky start-0 z-[1] bg-[var(--surface-2)]">
-                    <Text as="span" variant="body">{perm.name}</Text>
-                    <Caption>{perm.id}</Caption>
-                  </th>
-                  {roles.map((role: RbacRole) => (
-                    <td key={role.id} className="text-center">
-                      <MatrixCell
-                        roleID={role.id}
-                        permID={perm.id}
-                        allowed={draft.cells[role.id]?.[perm.id] ?? false}
-                        editing={editing}
-                        onToggle={onToggle}
-                      />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          );
-        })}
-      </Table>
+      <DataTable<RbacPermission>
+        testId="rbac-matrix-grid"
+        tableId="admin:rbac-matrix"
+        name={t('rbac.matrix.aria', 'Role permission matrix')}
+        caption={t('rbac.matrix.aria', 'Role permission matrix')}
+        variant="embedded"
+        data={orderedPermissions}
+        keyExtractor={(permission) => permission.id}
+        getRowTestId={(permission) => `rbac-row-${permission.id}`}
+        mobileColumns={['permission']}
+        columns={columns}
+      />
     </div>
   );
 }

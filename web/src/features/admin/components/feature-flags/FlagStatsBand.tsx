@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * Feature Flags — summary KPI band.
  *
@@ -12,7 +13,6 @@
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Braces, Flag, History, ToggleRight, Trash2, Users } from 'lucide-react';
 
 import { MetricCard } from '@/components/data-display';
 import { QueryError, Skeleton } from '@/components/feedback';
@@ -98,36 +98,36 @@ export function FlagStatsBand({
       <MetricCard
         label={t('admin.flags.stats.total', 'Total flags')}
         value={stats.total}
-        icon={<Flag className="h-5 w-5" />}
+        icon={<Icons.flag className="h-5 w-5" />}
       />
       <MetricCard
         label={t('admin.flags.stats.boolean', 'Boolean toggles')}
         value={stats.booleanCount}
-        icon={<ToggleRight className="h-5 w-5" />}
+        icon={<Icons.toggleRight className="h-5 w-5" />}
         color="green"
       />
       <MetricCard
         label={t('admin.flags.stats.structured', 'Structured')}
         value={stats.structuredCount}
-        icon={<Braces className="h-5 w-5" />}
+        icon={<Icons.braces className="h-5 w-5" />}
         color="purple"
       />
       <MetricCard
         label={t('admin.flags.stats.changes', 'Recent changes')}
         value={stats.changeCount}
-        icon={<History className="h-5 w-5" />}
+        icon={<Icons.history className="h-5 w-5" />}
         color="cyan"
       />
       <MetricCard
         label={t('admin.flags.stats.deletes', 'Deletes')}
         value={stats.deleteCount}
-        icon={<Trash2 className="h-5 w-5" />}
+        icon={<Icons.delete className="h-5 w-5" />}
         color="red"
       />
       <MetricCard
         label={t('admin.flags.stats.actors', 'Contributors')}
         value={stats.actorCount}
-        icon={<Users className="h-5 w-5" />}
+        icon={<Icons.users className="h-5 w-5" />}
         color="blue"
       />
     </section>

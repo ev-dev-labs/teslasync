@@ -1,4 +1,5 @@
-import { Activity, Globe, Link as LinkIcon } from 'lucide-react';
+import { Icons } from '@/lib/icons';
+
 import { LayoutCard } from '@/components/layout';
 import { GlassPanel, IconBox, Text, Label, Code } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -15,7 +16,7 @@ export function FleetAPIConfiguredEndpoints({ controller }: Props) {
         <LayoutCard title={t('fleetApi.configured.title', 'API endpoints')}>
           <div className="flex flex-wrap items-center gap-3">
             <IconBox color="blue">
-              <Globe className="h-5 w-5" />
+              <Icons.globe className="h-5 w-5" />
             </IconBox>
             <div className="min-w-0 flex-1">
               {versionLabel && (
@@ -33,7 +34,7 @@ export function FleetAPIConfiguredEndpoints({ controller }: Props) {
           ) : !hasConfiguredEndpoints ? (
             // no-action: endpoint URLs are deployment-managed and appear after configuration plus restart.
             <EmptyState
-              icon={<Activity className="h-8 w-8 opacity-40" />}
+              icon={<Icons.activity className="h-8 w-8 opacity-40" />}
               title={t('fleetApi.configured.emptyTitle', 'Endpoint metadata unavailable')}
               message={t(
                 'fleetApi.configured.emptyMessage',
@@ -48,7 +49,7 @@ export function FleetAPIConfiguredEndpoints({ controller }: Props) {
           ) : (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <LinkIcon className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+                <Icons.link className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
                 <Label>{t('fleetApi.configured.heading', 'Configured endpoints')}</Label>
               </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-4">

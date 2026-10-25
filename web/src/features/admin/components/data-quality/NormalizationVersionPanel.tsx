@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * Normalization-version distribution for the Data Quality page.
  *
@@ -11,7 +12,6 @@
  * the sanctioned dynamic-value exception.
  */
 import { useTranslation } from 'react-i18next';
-import { Layers } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Caption, Text, Badge } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError, SectionErrorBoundary } from '@/components/feedback';
@@ -57,7 +57,7 @@ export function NormalizationVersionPanel({
         ) : buckets.length === 0 ? (
           // no-action: buckets appear once telemetry lands; not a user-actionable surface
           <EmptyState
-            icon={<Layers className="h-8 w-8" />}
+            icon={<Icons.layers className="h-8 w-8" />}
             title={t('admin.dataQuality.versionsEmptyTitle', 'No version evidence')}
             message={t(
               'admin.dataQuality.versionsEmptyMessage',

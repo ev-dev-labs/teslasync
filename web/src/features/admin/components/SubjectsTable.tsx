@@ -1,6 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Users, Search, ShieldOff } from 'lucide-react'
 
 import {
   GlassPanel,
@@ -120,7 +120,7 @@ export function SubjectsTable({
     <GlassPanel className="min-w-0 p-4 sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Icons.users className="h-4 w-4 text-cyan-300" aria-hidden="true" />
           {t('impersonation.users.tableTitle', 'Active subjects')}
         </PanelTitle>
         {showSubjectList && (
@@ -134,7 +134,7 @@ export function SubjectsTable({
       </div>
 
       {open ? (
-        <InlineCallout variant="warning" icon={<ShieldOff />} testId="users-page-open-mode">
+        <InlineCallout variant="warning" icon={<Icons.securityOff />} testId="users-page-open-mode">
           {t(
             'impersonation.users.openMode',
             'Impersonation requires forward-auth mode. This install is in open mode, so per-user identity is not available.',
@@ -149,7 +149,7 @@ export function SubjectsTable({
       ) : !hasSubjects ? (
         <EmptyState
           /* no-action: there is no admin remediation for "no other subjects active" — the user must wait for someone else to sign in */
-          icon={<Users className="h-10 w-10" aria-hidden="true" />}
+          icon={<Icons.users className="h-10 w-10" aria-hidden="true" />}
           title={t('impersonation.users.emptyTitle', 'No other subjects')}
           message={t(
             'impersonation.users.emptyMessage',
@@ -160,7 +160,7 @@ export function SubjectsTable({
         <div className="space-y-4" data-testid="users-page-list">
           <Input
             type="search"
-            icon={<Search className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icons.search className="h-4 w-4" aria-hidden="true" />}
             placeholder={t('impersonation.users.searchPlaceholder', 'Search subjects…')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}

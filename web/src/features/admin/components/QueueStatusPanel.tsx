@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * Operator-facing view of the background worker fleet.
  *
@@ -18,7 +19,6 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { RefreshCw, AlertTriangle, ChevronRight } from 'lucide-react'
 
 import { GlassPanel, Button } from '@/components/ui'
 import { Heading, Text, Caption } from '@/components/ui/Typography'
@@ -122,7 +122,7 @@ function WorkerCard({ stat, onOpen }: WorkerCardProps) {
           >
             {severityLabel}
           </Text>
-          <ChevronRight
+          <Icons.next
             className="h-4 w-4 text-[var(--text-muted)]"
             aria-hidden
           />
@@ -230,7 +230,7 @@ export function QueueStatusPanel({ testHookOverride }: QueueStatusPanelProps = {
             <Caption className="mt-2 block">{updatedLabel}</Caption>
           ) : null}
         </div>
-        <IconButton icon={<RefreshCw className="h-4 w-4" aria-hidden />} label={t('queueStatus.refresh', 'Refresh')} onClick={() => {
+        <IconButton icon={<Icons.refresh className="h-4 w-4" aria-hidden />} label={t('queueStatus.refresh', 'Refresh')} onClick={() => {
             void refetch()
           }} busy={isFetching && !isLoading} disabled={isFetching} data-testid="queue-refresh-button" />
       </div>
@@ -266,7 +266,7 @@ export function QueueStatusPanel({ testHookOverride }: QueueStatusPanelProps = {
           className="flex items-start gap-3 rounded-md border border-rose-500/30 bg-rose-500/5 p-3"
           data-testid="queue-error"
         >
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden />
+          <Icons.warning className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden />
           <Text variant="error">
             {t(
               'queueStatus.error',

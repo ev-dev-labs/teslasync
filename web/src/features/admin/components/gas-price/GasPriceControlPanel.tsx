@@ -1,7 +1,7 @@
+import { Icons } from '@/lib/icons';
 import { useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { Settings2, Play, Pause, Info } from 'lucide-react';
 
 import {
   GlassPanel,
@@ -52,7 +52,7 @@ export function GasPriceControlPanel({ query }: GasPriceControlPanelProps) {
   return (
     <GlassPanel role="region" aria-labelledby={titleId} className="flex h-full flex-col p-4 sm:p-5">
       <PanelTitle id={titleId} className="mb-3 flex items-center gap-2">
-        <Settings2 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Icons.settingsAlt className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('gas.config', 'Configuration')}
       </PanelTitle>
 
@@ -88,9 +88,9 @@ export function GasPriceControlPanel({ query }: GasPriceControlPanelProps) {
               </div>
               <span className="inline-flex items-center gap-1.5">
                 {enabled ? (
-                  <Play className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
+                  <Icons.play className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
                 ) : (
-                  <Pause className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+                  <Icons.pause className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
                 )}
                 <Text
                   variant="bodySm"
@@ -114,7 +114,7 @@ export function GasPriceControlPanel({ query }: GasPriceControlPanelProps) {
           />
 
           <div className="mt-auto flex items-start gap-2 pt-1">
-            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+            <Icons.info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
             <Caption>{t('gas.source', 'Source: u.S. Energy information administration')}</Caption>
           </div>
         </div>

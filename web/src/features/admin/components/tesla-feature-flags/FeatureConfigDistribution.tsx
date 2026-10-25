@@ -1,5 +1,5 @@
+import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
-import { PieChart as PieChartIcon } from 'lucide-react';
 
 import { GlassPanel, Badge, PanelTitle, Caption } from '@/components/ui';
 import { LinearGauge } from '@/components/charts';
@@ -49,7 +49,7 @@ export function FeatureConfigDistribution({
   return (
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <PieChartIcon className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+        <Icons.pieChart className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('featureConfig.distribution', 'Distribution')}
       </PanelTitle>
 
@@ -60,7 +60,7 @@ export function FeatureConfigDistribution({
       ) : total === 0 ? (
         <EmptyState
           /* no-action: transient — no feature-config synced yet; the header Refresh CTA owns recovery */
-          icon={<PieChartIcon className="h-8 w-8" aria-hidden="true" />}
+          icon={<Icons.pieChart className="h-8 w-8" aria-hidden="true" />}
           message={t('featureConfig.noDistribution', 'No feature data to summarise yet.')}
         />
       ) : (

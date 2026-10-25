@@ -1,5 +1,5 @@
+import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
-import { Lock, Eye, DoorOpen, Car, Home, UserCheck, Activity } from 'lucide-react';
 
 import { cn } from '@/lib/cn';
 import { MetricCard } from '@/components/data-display';
@@ -51,49 +51,49 @@ export function SecurityStatistics({
           <MetricCard
             label={t('admin.security.stats.lockEvents', 'Lock/unlock events')}
             value={securityStats.lockEvents ?? 0}
-            icon={<Lock className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icons.locked className="h-4 w-4" aria-hidden="true" />}
             color="green"
           />
           <MetricCard
             label={t('admin.security.stats.sentryUptime', 'Sentry uptime')}
             value={`${fmtInt(sentryUptime)}%`}
-            icon={<Eye className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icons.show className="h-4 w-4" aria-hidden="true" />}
             color="blue"
           />
           <MetricCard
             label={t('admin.security.stats.doorOpens', 'Door open events')}
             value={securityStats.doorOpenCount ?? 0}
-            icon={<DoorOpen className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icons.doorOpen className="h-4 w-4" aria-hidden="true" />}
             color="amber"
           />
           <MetricCard
             label={t('admin.security.stats.windowOpens', 'Window open events')}
             value={securityStats.windowOpenCount ?? 0}
-            icon={<Car className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icons.vehicle className="h-4 w-4" aria-hidden="true" />}
             color="amber"
           />
           <MetricCard
             label={t('admin.security.stats.homelink', 'HomeLink detections')}
             value={securityStats.homelinkCount ?? 0}
-            icon={<Home className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icons.home className="h-4 w-4" aria-hidden="true" />}
             color="purple"
           />
           <MetricCard
             label={t('admin.security.stats.guestMode', 'Guest mode usage')}
             value={securityStats.guestCount ?? 0}
-            icon={<UserCheck className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icons.userCheck className="h-4 w-4" aria-hidden="true" />}
             color="amber"
           />
           <MetricCard
             label={t('admin.security.stats.totalEvents', 'Total events')}
             value={securityStats.total ?? 0}
-            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icons.activity className="h-4 w-4" aria-hidden="true" />}
             color="cyan"
           />
         </div>
       ) : (
         <EmptyState
-          icon={<Activity className="h-8 w-8" aria-hidden="true" />}
+          icon={<Icons.activity className="h-8 w-8" aria-hidden="true" />}
           message={t(
             'admin.security.statsEmpty',
             'No security events are available in this history window.',

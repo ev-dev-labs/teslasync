@@ -1,9 +1,6 @@
+import { Icons } from '@/lib/icons';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  FileText,
-  Layers, RefreshCw,
-} from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import {
@@ -265,7 +262,7 @@ export default function ApiLogsPage() {
       query={logsQuery}
       busy={logsQuery.isFetching}
       secondaryActions={
-        <IconButton icon={<Icon icon={RefreshCw} />} label={t('common.refresh', 'Refresh')} onClick={() => { void refetchLogs(); void refetchStats(); void refetchRuntime(); }} disabled={logsQuery.isFetching || statsQuery.isFetching || runtimeQuery.isFetching} />
+        <IconButton icon={<Icon icon={Icons.refresh} />} label={t('common.refresh', 'Refresh')} onClick={() => { void refetchLogs(); void refetchStats(); void refetchRuntime(); }} disabled={logsQuery.isFetching || statsQuery.isFetching || runtimeQuery.isFetching} />
       }
     >
       {/* 1 — KPI band: full-width responsive metric grid */}
@@ -291,7 +288,7 @@ export default function ApiLogsPage() {
             {/* By Service — quick-pick filter list with counts */}
             <GlassPanel className="p-3 sm:p-4">
               <div className="mb-2 flex items-center gap-2">
-                <Icon icon={Layers} className={typography.color.muted} />
+                <Icon icon={Icons.layers} className={typography.color.muted} />
                 <PanelTitle>{t('apiLogs.byService', 'By service')}</PanelTitle>
               </div>
               <StaleRefreshWarning state={statsState} label={t('apiLogs.byService', 'By service')} hideRetry />
@@ -317,7 +314,7 @@ export default function ApiLogsPage() {
               ) : serviceRows.length === 0 ? (
                 // no-action: the header's View settings controls this window; no service rows exist yet.
                 <EmptyState
-                  icon={<Layers className="h-8 w-8" aria-hidden="true" />}
+                  icon={<Icons.layers className="h-8 w-8" aria-hidden="true" />}
                   message={t('apiLogs.noServices', 'No service activity yet')}
                 />
               ) : (
@@ -446,7 +443,7 @@ export default function ApiLogsPage() {
               </div>
             ) : logs.length === 0 ? (
               <EmptyState
-                icon={<FileText className="h-10 w-10" aria-hidden="true" />}
+                icon={<Icons.fileText className="h-10 w-10" aria-hidden="true" />}
                 title={t('apiLogs.noLogsTitle', 'No API call logs')}
                 message={hasFilters
                   ? t('apiLogs.adjustFilters', 'Try adjusting your filters')

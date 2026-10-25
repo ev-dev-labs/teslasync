@@ -1,3 +1,4 @@
+import { Icons } from '@/lib/icons';
 /**
  * Ingest X-Ray Page — per-vehicle telemetry diagnostic surface.
  *
@@ -20,7 +21,6 @@
  */
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Info, RefreshCw } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { Button, GlassPanel, Icon, Text } from '@/components/ui';
@@ -100,7 +100,7 @@ export default function IngestXRayPage() {
         disabled={noVehicle || xray.isFetching}
         aria-label={t('admin.xray.actions.refresh', 'Refresh ingest x-ray')}
       >
-        <Icon icon={RefreshCw} />
+        <Icon icon={Icons.refresh} />
       </Button>
     </div>
   );
@@ -149,7 +149,7 @@ export default function IngestXRayPage() {
       {noVehicle && vehiclesState.hasData && (
         <AlertBanner
           variant="info"
-          icon={<Icon icon={Info} size="lg" />}
+          icon={<Icon icon={Icons.info} size="lg" />}
           title={t('admin.xray.noVehicle.title', 'Select a vehicle')}
         >
           {t(
