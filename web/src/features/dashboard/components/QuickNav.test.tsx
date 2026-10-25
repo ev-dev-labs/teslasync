@@ -25,6 +25,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { COLOR, DATA_VISUAL_COLORS } from '@/lib/colors'
 
 const { tSpy } = vi.hoisted(() => ({ tSpy: vi.fn() }))
 
@@ -43,7 +44,7 @@ const EXPECTED = [
     labelKey: 'nav.drives',
     desc: 'Trip history',
     descKey: 'nav.drivesDesc',
-    color: '#00f0ff',
+    color: DATA_VISUAL_COLORS.info,
   },
   {
     href: '/charging',
@@ -51,7 +52,7 @@ const EXPECTED = [
     labelKey: 'nav.charging',
     desc: 'Sessions & costs',
     descKey: 'nav.chargingDesc',
-    color: '#10b981',
+    color: COLOR.GOOD,
   },
   {
     href: '/analytics',
@@ -59,7 +60,7 @@ const EXPECTED = [
     labelKey: 'nav.analytics',
     desc: 'Fleet insights',
     descKey: 'nav.analyticsDesc',
-    color: '#a855f7',
+    color: DATA_VISUAL_COLORS.purple,
   },
   {
     href: '/battery',
@@ -67,7 +68,7 @@ const EXPECTED = [
     labelKey: 'nav.battery',
     desc: 'Health & degradation',
     descKey: 'nav.batteryDesc',
-    color: '#f59e0b',
+    color: COLOR.WARN,
   },
 ] as const
 

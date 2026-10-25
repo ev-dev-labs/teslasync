@@ -214,7 +214,7 @@ describe('deriveEvent', () => {
     );
     expect(d.title).toBe('Door open: FrontLeftOpen');
     expect(d.severity).toBe('warning');
-    expect(d.color).toBe('#f59e0b');
+    expect(d.color).toBe(COLOR.WARN);
   });
 
   it('routes the door-open title through i18n with interpolation', () => {
@@ -229,7 +229,7 @@ describe('deriveEvent', () => {
     const d = deriveEvent(makeEvent({ sentry_mode: 'Armed' }), asT(makeT()));
     expect(d.title).toBe('Sentry mode activated');
     expect(d.severity).toBe('info');
-    expect(d.color).toBe('#06b6d4');
+    expect(d.color).toBe(DATA_VISUAL_COLORS.info);
   });
 
   it('REGRESSION: treats the enum string "Off" as deactivated, not activated', () => {
@@ -237,7 +237,7 @@ describe('deriveEvent', () => {
     expect(d.title).toBe('Sentry mode deactivated');
     // The old truthy test rendered "activated" here — this is the bug fix.
     expect(d.title).not.toBe('Sentry mode activated');
-    expect(d.color).toBe('#6b7280');
+    expect(d.color).toBe(CHART_NEUTRAL);
   });
 
   it('treats the full "SentryModeStateOff" enum token as deactivated too', () => {
@@ -258,19 +258,19 @@ describe('deriveEvent', () => {
     const locked = deriveEvent(makeEvent({ locked: true }), asT(makeT()));
     expect(locked.title).toBe('Vehicle locked');
     expect(locked.severity).toBe('info');
-    expect(locked.color).toBe('#22c55e');
+    expect(locked.color).toBe(COLOR.GOOD);
 
     const unlocked = deriveEvent(makeEvent({ locked: false }), asT(makeT()));
     expect(unlocked.title).toBe('Vehicle unlocked');
     expect(unlocked.severity).toBe('critical');
-    expect(unlocked.color).toBe('#ef4444');
+    expect(unlocked.color).toBe(COLOR.BAD);
   });
 
   it('defaults to a neutral security-updated descriptor when nothing is set', () => {
     const d = deriveEvent(makeEvent(), asT(makeT()));
     expect(d.title).toBe('Security state updated');
     expect(d.severity).toBe('info');
-    expect(d.color).toBe('#8b5cf6');
+    expect(d.color).toBe(DATA_VISUAL_COLORS.purple);
   });
 
   it('builds a compact lock + sentry subtitle joined with a middot', () => {
@@ -448,3 +448,4 @@ describe('SentryEventLogWidget — populated', () => {
     expect(container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThanOrEqual(3);
   });
 });
+import { COLOR, DATA_VISUAL_COLORS, CHART_NEUTRAL } from '@/lib/colors';

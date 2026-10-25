@@ -1,3 +1,4 @@
+import { COLOR, DATA_VISUAL_COLORS, CHART_NEUTRAL } from '@/lib/colors'
 import { describe, expect, it } from 'vitest'
 
 import type { FeedbackCategory, FeedbackStatus } from '@/api/types'
@@ -42,9 +43,9 @@ describe('STATUS_COLORS', () => {
 
   it('pins the documented palette (regression guard on the design tokens)', () => {
     expect(STATUS_COLORS).toEqual({
-      new: '#f59e0b',
-      triaged: '#10b981',
-      closed: '#64748b',
+      new: COLOR.WARN,
+      triaged: COLOR.GOOD,
+      closed: CHART_NEUTRAL,
     })
   })
 
@@ -55,7 +56,7 @@ describe('STATUS_COLORS', () => {
       mutable.new = '#000000'
     }).toThrow()
     // The rejected write must not have altered the value.
-    expect(STATUS_COLORS.new).toBe('#f59e0b')
+    expect(STATUS_COLORS.new).toBe(COLOR.WARN)
   })
 })
 
@@ -75,9 +76,9 @@ describe('CATEGORY_COLORS', () => {
 
   it('pins the documented palette', () => {
     expect(CATEGORY_COLORS).toEqual({
-      bug: '#f43f5e',
-      feature: '#22d3ee',
-      other: '#a78bfa',
+      bug: COLOR.BAD,
+      feature: DATA_VISUAL_COLORS.info,
+      other: DATA_VISUAL_COLORS.purple,
     })
   })
 

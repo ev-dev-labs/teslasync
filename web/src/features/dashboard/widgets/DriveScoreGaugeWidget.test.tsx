@@ -71,11 +71,11 @@ beforeEach(() => {
 
 describe('scoreColor', () => {
   it('uses the four score tiers and non-finite fallback', () => {
-    expect(scoreColor(80)).toBe('#10b981');
-    expect(scoreColor(60)).toBe('#22d3ee');
-    expect(scoreColor(40)).toBe('#f59e0b');
-    expect(scoreColor(39)).toBe('#ef4444');
-    expect(scoreColor(Number.NaN)).toBe('#ef4444');
+    expect(scoreColor(80)).toBe(COLOR.GOOD);
+    expect(scoreColor(60)).toBe(COLOR.CYAN);
+    expect(scoreColor(40)).toBe(COLOR.WARN);
+    expect(scoreColor(39)).toBe(COLOR.BAD);
+    expect(scoreColor(Number.NaN)).toBe(COLOR.BAD);
   });
 });
 
@@ -153,3 +153,4 @@ it('prefers the explicit vehicle and uses the first vehicle otherwise', () => {
   renderWidget(STANDARD);
   expect(mockUseDriveScore).toHaveBeenCalledWith('7');
 });
+import { COLOR } from '@/lib/colors';

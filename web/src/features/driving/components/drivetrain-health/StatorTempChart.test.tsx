@@ -40,6 +40,7 @@
  * so the threshold conversion is genuinely exercised. Network is never touched
  * (this component has no data source of its own).
  */
+import { CHART_COLORS, COLOR } from '@/lib/colors';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -275,15 +276,15 @@ describe('StatorTempChart — populated trace', () => {
 
     const [front, rearLeft, rearRight] = series;
     expect(front).toHaveAttribute('data-key', 'stator');
-    expect(front).toHaveAttribute('data-stroke', '#ef4444');
+    expect(front).toHaveAttribute('data-stroke', COLOR.BAD);
     expect(front.getAttribute('data-name')).toContain('Stator Temp');
 
     expect(rearLeft).toHaveAttribute('data-key', 'statorRel');
-    expect(rearLeft).toHaveAttribute('data-stroke', '#a855f7');
+    expect(rearLeft).toHaveAttribute('data-stroke', CHART_COLORS[6]);
     expect(rearLeft.getAttribute('data-name')).toContain('Rear-Left');
 
     expect(rearRight).toHaveAttribute('data-key', 'statorRer');
-    expect(rearRight).toHaveAttribute('data-stroke', '#06b6d4');
+    expect(rearRight).toHaveAttribute('data-stroke', CHART_COLORS[1]);
     expect(rearRight.getAttribute('data-name')).toContain('Rear-Right');
   });
 
@@ -335,11 +336,11 @@ describe('StatorTempChart — reference thresholds & unit preference', () => {
     const [normal, warm] = readReferenceLines();
     expect(normal).toHaveAttribute('data-y', '60');
     expect(normal).toHaveAttribute('data-label', 'Normal');
-    expect(normal).toHaveAttribute('data-stroke', '#4ade80');
+    expect(normal).toHaveAttribute('data-stroke', COLOR.GOOD);
 
     expect(warm).toHaveAttribute('data-y', '80');
     expect(warm).toHaveAttribute('data-label', 'Warm');
-    expect(warm).toHaveAttribute('data-stroke', '#fbbf24');
+    expect(warm).toHaveAttribute('data-stroke', COLOR.WARN);
   });
 
   it('converts the thresholds to °F so they stay aligned with an imperial trace', () => {

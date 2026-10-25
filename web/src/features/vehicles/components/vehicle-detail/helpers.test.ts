@@ -15,6 +15,7 @@
  *     telemetry instead of the muted "no data" grey.
  */
 import { describe, it, expect } from 'vitest'
+import { COLOR } from '@/lib/colors'
 import type { VehicleState } from '@/api/types'
 import {
   deriveStatus,
@@ -100,26 +101,26 @@ describe('statusVariant (re-exported)', () => {
 
 describe('batteryColor', () => {
   it('returns green above 60 %', () => {
-    expect(batteryColor(100)).toBe('#10b981')
-    expect(batteryColor(61)).toBe('#10b981')
+    expect(batteryColor(100)).toBe(COLOR.GOOD)
+    expect(batteryColor(61)).toBe(COLOR.GOOD)
   })
 
   it('returns amber across the 25–60 % band (60 boundary is amber)', () => {
-    expect(batteryColor(60)).toBe('#f59e0b')
-    expect(batteryColor(26)).toBe('#f59e0b')
+    expect(batteryColor(60)).toBe(COLOR.WARN)
+    expect(batteryColor(26)).toBe(COLOR.WARN)
   })
 
   it('returns red at or below 25 %', () => {
-    expect(batteryColor(25)).toBe('#ef4444')
-    expect(batteryColor(0)).toBe('#ef4444')
+    expect(batteryColor(25)).toBe(COLOR.BAD)
+    expect(batteryColor(0)).toBe(COLOR.BAD)
   })
 
   it('returns muted grey for a non-finite / missing level instead of red', () => {
     // Regression: an unknown SoC used to hit the red "critical" branch and
     // paint a dead-looking gauge on partial telemetry.
-    expect(batteryColor(Number.NaN)).toBe('#6b7280')
-    expect(batteryColor(Number.POSITIVE_INFINITY)).toBe('#6b7280')
-    expect(batteryColor(undefined as unknown as number)).toBe('#6b7280')
+    expect(batteryColor(Number.NaN)).toBe(COLOR.MUTED)
+    expect(batteryColor(Number.POSITIVE_INFINITY)).toBe(COLOR.MUTED)
+    expect(batteryColor(undefined as unknown as number)).toBe(COLOR.MUTED)
   })
 })
 

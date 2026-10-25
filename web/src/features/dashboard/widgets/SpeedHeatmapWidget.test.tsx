@@ -271,7 +271,7 @@ describe('buildHeatmap', () => {
 // ── Pure helper: speedToColor ────────────────────────────────────────────────
 
 describe('speedToColor', () => {
-  const EMPTY = 'rgba(255,255,255,0.03)';
+  const EMPTY = 'color-mix(in srgb, var(--text-primary) 3%, transparent)';
 
   it('returns the transparent empty-cell sentinel for non-positive inputs', () => {
     expect(speedToColor(0, 10)).toBe(EMPTY);

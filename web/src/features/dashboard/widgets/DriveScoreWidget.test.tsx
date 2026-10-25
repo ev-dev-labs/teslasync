@@ -185,12 +185,12 @@ describe('driveScoreFromEfficiency', () => {
 // ── scoreColor (pure) ────────────────────────────────────────────────────────
 describe('scoreColor', () => {
   it('selects green / amber / red by band with the correct boundaries', () => {
-    expect(scoreColor(100)).toBe('#10b981'); // green
-    expect(scoreColor(76)).toBe('#10b981');
-    expect(scoreColor(75)).toBe('#f59e0b'); // boundary is strict >75 → amber
-    expect(scoreColor(51)).toBe('#f59e0b');
-    expect(scoreColor(50)).toBe('#ef4444'); // boundary is strict >50 → red
-    expect(scoreColor(0)).toBe('#ef4444');
+    expect(scoreColor(100)).toBe(COLOR.GOOD); // green
+    expect(scoreColor(76)).toBe(COLOR.GOOD);
+    expect(scoreColor(75)).toBe(COLOR.WARN); // boundary is strict >75 → amber
+    expect(scoreColor(51)).toBe(COLOR.WARN);
+    expect(scoreColor(50)).toBe(COLOR.BAD); // boundary is strict >50 → red
+    expect(scoreColor(0)).toBe(COLOR.BAD);
   });
 });
 
@@ -304,3 +304,4 @@ describe('DriveScoreWidget', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });
+import { COLOR } from '@/lib/colors';

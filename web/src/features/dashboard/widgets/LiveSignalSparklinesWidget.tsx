@@ -7,7 +7,7 @@ import { Caption, Text } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSignals, useSignalGaps, useSignalHistory } from '@/api/hooks/useTelemetry';
 
-import { CHART_COLORS, CHART_SEMANTIC } from '@/lib/colors';
+import { CHART_COLORS } from '@/lib/colors';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -30,15 +30,13 @@ const DEFAULT_SIGNALS = [
   'PackCurrent',
 ];
 
-// Six visually distinct series colours. NEON_COLORS is [cyan, emerald, purple,
-// amber, indigo, red, …]; index directly so the assignments match the comments
-// (previously NEON_COLORS[1]/[2] were mislabelled "purple"/"amber", which made
-// index 1 and index 3 both resolve to emerald palette.COLOR.GOOD — a duplicate colour).
+// Categorical signals need distinct teal/violet/amber/green/blue/rose marks,
+// not vehicle-state colors that may resolve to the same blue.
 export const SIGNAL_COLORS = [
-  CHART_SEMANTIC.vehicle.driving,
-  CHART_SEMANTIC.vehicle.asleep,
-  CHART_SEMANTIC.vehicle.charging,
-  CHART_SEMANTIC.vehicle.online,
+  CHART_COLORS[1],
+  CHART_COLORS[6],
+  CHART_COLORS[3],
+  CHART_COLORS[2],
   CHART_COLORS[0],
   CHART_COLORS[5],
 ];

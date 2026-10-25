@@ -21,6 +21,7 @@
  * follows the repo's existing `helpers.test.ts` convention (plain Vitest, no
  * RTL / MSW needed).
  */
+import { COLOR, DATA_VISUAL_COLORS } from '@/lib/colors';
 import { describe, it, expect } from 'vitest';
 import type { MotorSnapshot } from '@/api/types';
 import {
@@ -30,10 +31,10 @@ import {
   computeMotorStats,
 } from '../helpers';
 
-const GREEN = '#22c55e';
-const BLUE = '#3b82f6';
-const YELLOW = '#eab308';
-const RED = '#ef4444';
+const GREEN = COLOR.GOOD;
+const BLUE = DATA_VISUAL_COLORS.blue;
+const YELLOW = COLOR.WARN;
+const RED = COLOR.BAD;
 
 /** Build a fully-typed MotorSnapshot; all telemetry defaults to null/absent. */
 function makeSnapshot(overrides: Partial<MotorSnapshot> = {}): MotorSnapshot {

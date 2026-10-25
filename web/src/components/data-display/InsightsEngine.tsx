@@ -2,7 +2,7 @@
 // @ts-nocheck -- legacy API types; will be rewired in a later phase
 import { useMemo } from 'react'
 import {
-  Lightbulb, ArrowRight, DollarSign,
+  Lightbulb, ArrowRight, DollarSign, TrendingUp, TrendingDown,
   Battery, BatteryCharging, Zap, Shield, Car, Clock, Leaf,
 } from 'lucide-react'
 import { GlassPanel } from '@/components/ui'
@@ -50,6 +50,8 @@ const SEVERITY_BORDER: Record<Severity, string> = {
 }
 
 const TREND_ICON: Record<Trend, { Icon: React.ElementType; color: string }> = {
+  up:      { Icon: TrendingUp,    color: COLOR.GOOD },
+  down:    { Icon: TrendingDown,  color: COLOR.BAD },
   neutral: { Icon: ArrowRight,    color: 'var(--text-secondary)' },
 }
 

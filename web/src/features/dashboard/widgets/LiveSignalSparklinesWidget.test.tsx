@@ -45,6 +45,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { CHART_COLORS } from '@/lib/colors';
 
 // i18n passthrough: honour the English fallback so every copy assertion is real.
 vi.mock('react-i18next', () => ({
@@ -227,14 +228,14 @@ describe('SIGNAL_COLORS palette', () => {
     expect(new Set(SIGNAL_COLORS).size).toBe(6);
   });
 
-  it('matches the documented cyan/purple/amber/emerald/blue/rose order', () => {
+  it('matches the canonical teal/violet/amber/green/blue/rose order', () => {
     expect(SIGNAL_COLORS).toEqual([
-      '#91bbc0',
-      '#b5a8c9',
-      '#cfb481',
-      '#10b981',
-      '#3b82f6',
-      '#f43f5e',
+      CHART_COLORS[1],
+      CHART_COLORS[6],
+      CHART_COLORS[3],
+      CHART_COLORS[2],
+      CHART_COLORS[0],
+      CHART_COLORS[5],
     ]);
   });
 });

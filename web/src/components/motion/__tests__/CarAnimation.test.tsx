@@ -26,6 +26,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
+import { COLOR } from '@/lib/colors'
 
 const { reducedMotionMock } = vi.hoisted(() => ({
   reducedMotionMock: vi.fn<() => boolean | null>(() => false),
@@ -90,9 +91,9 @@ vi.mock('framer-motion', async () => {
 
 import { CarAnimation, ChargingBolt, BatteryFillAnimation, WheelSpin } from '../CarAnimation'
 
-const GOOD = '#10b981'
-const WARN = '#f59e0b'
-const BAD = '#ef4444'
+const GOOD = COLOR.GOOD
+const WARN = COLOR.WARN
+const BAD = COLOR.BAD
 
 /** Parse a `data-animate` blob back into the original animate object. */
 function animateOf(el: Element | null) {
@@ -211,6 +212,13 @@ describe('BatteryFillAnimation', () => {
 
     const { container: lo } = render(<BatteryFillAnimation level={12} />)
     expect(fillRect(lo)).toHaveAttribute('fill', BAD)
+    cleanup()
+
+    for (const [level, color] of [[60, GOOD], [59.999, WARN], [30, WARN], [29.999, BAD]] as const) {
+      const { container } = render(<BatteryFillAnimation level={level} />)
+      expect(fillRect(container)).toHaveAttribute('fill', color)
+      cleanup()
+    }
   })
 
   it('maps level to fill width inside the fixed 0–48 viewBox (0 → empty, 100 → full 38)', () => {

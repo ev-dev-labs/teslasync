@@ -561,8 +561,8 @@ describe('GeofenceWidget — map', () => {
     const circles = screen.getAllByTestId('fence-circle');
     expect(circles).toHaveLength(2);
     const colors = circles.map((c) => c.getAttribute('data-color'));
-    expect(colors).toContain('#22c55e'); // inside → green
-    expect(colors).toContain('#6b7280'); // outside → grey
+    expect(colors).toContain(CHART_SEMANTIC.vehicle.online); // inside → green
+    expect(colors).toContain(CHART_NEUTRAL); // outside → grey
 
     expect(screen.getByTestId('vehicle-marker')).toHaveAttribute(
       'data-pos',
@@ -600,3 +600,4 @@ describe('GeofenceWidget — a11y', () => {
     expect(container.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 });
+import { CHART_SEMANTIC, CHART_NEUTRAL } from '@/lib/colors';

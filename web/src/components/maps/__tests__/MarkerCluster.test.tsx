@@ -8,6 +8,7 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import L from 'leaflet';
+import { COLOR, DATA_VISUAL_COLORS } from '@/lib/colors';
 
 interface CapturedMarker {
   latLng: [number, number];
@@ -155,10 +156,14 @@ describe('MarkerCluster', () => {
   });
 
   it.each([
-    [1, 'rgba(34, 211, 238, 0.85)'],
-    [10, 'rgba(168, 85, 247, 0.85)'],
-    [25, 'rgba(251, 191, 36, 0.85)'],
-    [100, 'rgba(244, 63, 94, 0.85)'],
+    [1, `${DATA_VISUAL_COLORS.info}d9`],
+    [9, `${DATA_VISUAL_COLORS.info}d9`],
+    [10, `${DATA_VISUAL_COLORS.purple}d9`],
+    [24, `${DATA_VISUAL_COLORS.purple}d9`],
+    [25, `${COLOR.WARN}d9`],
+    [99, `${COLOR.WARN}d9`],
+    [100, `${COLOR.BAD}d9`],
+    [101, `${COLOR.BAD}d9`],
   ] as const)('keeps count %i and its paint without a cluster glow', (count, color) => {
     render(<MarkerCluster points={[{ id: 1, lat: 1, lng: 2 }]} />);
     const group = shared.lastGroup!;
@@ -170,6 +175,8 @@ describe('MarkerCluster', () => {
     html.innerHTML = String(icon.options.html);
     expect(html.textContent?.trim()).toBe(String(count));
     expect(icon.options.html).toContain(`background:${color}`);
+    expect(icon.options.html).toContain(`border:2px solid ${DATA_VISUAL_COLORS.canvasWhite}`);
+    expect(icon.options.html).toContain(`color:${DATA_VISUAL_COLORS.canvasInk}`);
     expect(icon.options.html).toContain('font-weight:700;font-size:12px');
     expect(icon.options.html).not.toMatch(/box-shadow|text-shadow|drop-shadow/);
   });

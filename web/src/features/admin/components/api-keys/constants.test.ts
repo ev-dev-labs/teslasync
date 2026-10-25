@@ -1,3 +1,4 @@
+import { COLOR, DATA_VISUAL_COLORS } from '@/lib/colors';
 import { describe, it, expect } from 'vitest';
 import { Shield, ShieldAlert, Crown, Key } from 'lucide-react';
 import { neonColorMap } from '@/lib/tokens';
@@ -40,7 +41,7 @@ describe('PERMISSION_META', () => {
     const m = PERMISSION_META.read;
     expect(m.icon).toBe(Shield);
     expect(m.color).toBe('green');
-    expect(m.barColor).toBe('#10b981');
+    expect(m.barColor).toBe(COLOR.GOOD);
     expect(m.labelKey).toBe('apiKeys.perm.read');
     expect(m.labelFallback).toBe('Read');
     expect(m.descKey).toBe('apiKeys.perm.readDesc');
@@ -51,7 +52,7 @@ describe('PERMISSION_META', () => {
     const m = PERMISSION_META['read-write'];
     expect(m.icon).toBe(ShieldAlert);
     expect(m.color).toBe('amber');
-    expect(m.barColor).toBe('#f59e0b');
+    expect(m.barColor).toBe(COLOR.WARN);
     expect(m.labelKey).toBe('apiKeys.perm.readWrite');
     expect(m.labelFallback).toBe('Read-write');
     expect(m.descKey).toBe('apiKeys.perm.readWriteDesc');
@@ -62,7 +63,7 @@ describe('PERMISSION_META', () => {
     const m = PERMISSION_META.admin;
     expect(m.icon).toBe(Crown);
     expect(m.color).toBe('purple');
-    expect(m.barColor).toBe('#a855f7');
+    expect(m.barColor).toBe(DATA_VISUAL_COLORS.purple);
     expect(m.labelKey).toBe('apiKeys.perm.admin');
     expect(m.labelFallback).toBe('Admin');
     expect(m.descKey).toBe('apiKeys.perm.adminDesc');

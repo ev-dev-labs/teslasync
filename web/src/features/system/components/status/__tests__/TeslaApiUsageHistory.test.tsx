@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors'
+import { CHART_COLORS_CB_SAFE, CHART_COLORS_DARK, CHART_COLORS_NEON, CHART_COLORS_NEON_DARK } from '@/lib/colors'
 import { themePresets } from '@/components/ui/themePresets'
 import { resolveChartPalette } from '@/hooks/useChartPalette'
 import { TeslaApiUsageHistory, toUtcUsageRange } from '../TeslaApiUsageHistory'
@@ -134,20 +134,25 @@ describe('Tesla usage selected history', () => {
       expect(trend.data).toEqual([{ bucket_start: point.bucket_start, signals: 1, commands: 1, data_requests: 1, wakes: 1 }])
       for (const chart of [distribution, trend]) expect(chart.exportData).toEqual(chart.data)
     }
-    verify(CHART_COLORS_CB_SAFE)
+    verify(CHART_COLORS_DARK)
     appearance.palette = 'neon'
     rerender(<TeslaApiUsageHistory />)
-    verify(CHART_COLORS_NEON)
+    verify(CHART_COLORS_NEON_DARK)
     appearance.modeId = 'github-light'
     rerender(<TeslaApiUsageHistory />)
     const lightPalette = resolveChartPalette('neon', {
       theme, mode: themePresets.find(mode => mode.id === 'github-light')!,
     })
-    expect(lightPalette).not.toEqual(CHART_COLORS_NEON)
+    expect(lightPalette).toEqual(CHART_COLORS_NEON)
+    expect(lightPalette).not.toEqual(CHART_COLORS_NEON_DARK)
     verify(lightPalette)
     appearance.modeId = 'dark'
     rerender(<TeslaApiUsageHistory />)
-    verify(CHART_COLORS_NEON)
+    verify(CHART_COLORS_NEON_DARK)
+    appearance.palette = 'cb_safe'
+    appearance.modeId = 'github-light'
+    rerender(<TeslaApiUsageHistory />)
+    verify(CHART_COLORS_CB_SAFE)
   })
   it.each([
     { points: [point], expected: '1 observed bucket' },
@@ -174,10 +179,10 @@ describe('Tesla usage selected history', () => {
     render(<TeslaApiUsageHistory />)
     const distribution = chartContainer.mock.calls[0][0]
     expect(distribution.data).toEqual([
-      { category: 'Streaming signals', usd: cost, color: CHART_COLORS_CB_SAFE[0] },
-      { category: 'Commands', usd: cost, color: CHART_COLORS_CB_SAFE[1] },
-      { category: 'Data requests', usd: cost, color: CHART_COLORS_CB_SAFE[2] },
-      { category: 'Wakes', usd: cost, color: CHART_COLORS_CB_SAFE[3] },
+      { category: 'Streaming signals', usd: cost, color: CHART_COLORS_DARK[0] },
+      { category: 'Commands', usd: cost, color: CHART_COLORS_DARK[1] },
+      { category: 'Data requests', usd: cost, color: CHART_COLORS_DARK[2] },
+      { category: 'Wakes', usd: cost, color: CHART_COLORS_DARK[3] },
     ])
     expect(distribution.exportData).toEqual(distribution.data)
   })
@@ -218,7 +223,7 @@ describe('Tesla usage selected history', () => {
       error: null, loading: false, empty: false, exportable: true,
       exportFilename: 'tesla-usage-distribution',
       ariaLabel: expect.any(String),
-      data: expect.arrayContaining([{ category: 'Commands', usd: 1, color: CHART_COLORS_CB_SAFE[1] }]),
+      data: expect.arrayContaining([{ category: 'Commands', usd: 1, color: CHART_COLORS_DARK[1] }]),
       dataColumns: [{ key: 'category', label: 'Billable category' }, { key: 'usd', label: 'Estimated USD', format: expect.any(Function) }],
     })
     expect(retainedCharts[1]).toMatchObject({

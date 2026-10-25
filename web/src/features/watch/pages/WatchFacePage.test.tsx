@@ -24,6 +24,7 @@
  * off) comes from the global stub in src/test-setup.ts. No real network.
  */
 
+import { DATA_VISUAL_COLORS } from '@/lib/colors'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -708,7 +709,7 @@ describe('WatchPWAMeta', () => {
     const { unmount } = render(<WatchPWAMeta />)
 
     expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe(
-      '#000000',
+      DATA_VISUAL_COLORS.canvasInk,
     )
     expect(
       document.querySelector('meta[name="apple-mobile-web-app-capable"]')?.getAttribute('content'),

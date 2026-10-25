@@ -21,6 +21,7 @@
  * `role="status"` + copy are genuinely exercised. This component has no data
  * source of its own, so the network is never touched.
  */
+import { CHART_COLORS } from '@/lib/colors';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -147,7 +148,7 @@ describe('BatteryLevelChart — populated', () => {
     // The hardcoded "Sessions" literal is now routed through t() — the mock
     // resolves the English fallback, proving the string is translatable.
     expect(series).toHaveAttribute('data-name', 'Sessions');
-    expect(series).toHaveAttribute('data-fill', '#f59e0b');
+    expect(series).toHaveAttribute('data-fill', CHART_COLORS[3]);
     expect(series).toHaveAttribute('data-radius', '[4,4,0,0]');
     expect(screen.getByTestId('x-axis')).toHaveAttribute('data-key', 'range');
   });

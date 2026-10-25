@@ -26,6 +26,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { COLOR } from '@/lib/colors';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -375,11 +376,11 @@ describe('pressureStatus — threshold bucketing (Pa)', () => {
 
 describe('pressureColor + statusVariant — kept consistent with pressureStatus', () => {
   it('colours normal green, soft-warning amber, and critical red', () => {
-    expect(pressureColor(300_000)).toBe('#10b981');
-    expect(pressureColor(230_000)).toBe('#f59e0b');
-    expect(pressureColor(370_000)).toBe('#f59e0b');
-    expect(pressureColor(150_000)).toBe('#ef4444');
-    expect(pressureColor(450_000)).toBe('#ef4444');
+    expect(pressureColor(300_000)).toBe(COLOR.GOOD);
+    expect(pressureColor(230_000)).toBe(COLOR.WARN);
+    expect(pressureColor(370_000)).toBe(COLOR.WARN);
+    expect(pressureColor(150_000)).toBe(COLOR.BAD);
+    expect(pressureColor(450_000)).toBe(COLOR.BAD);
   });
 
   it('maps each status to the matching Badge variant', () => {

@@ -21,6 +21,7 @@
  * The three records and HealthStatus must never drift apart, so a dedicated
  * case asserts they share one key set.
  */
+import { COLOR } from '@/lib/colors';
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { isValidElement } from 'react';
@@ -98,9 +99,9 @@ describe('HEALTH_COLOR', () => {
     expect(cr).toBeGreaterThan(cb);
 
     expect(HEALTH_COLOR).toEqual({
-      good: '#10b981',
-      warning: '#f59e0b',
-      critical: '#ef4444',
+      good: COLOR.GOOD,
+      warning: COLOR.WARN,
+      critical: COLOR.BAD,
     });
   });
 });

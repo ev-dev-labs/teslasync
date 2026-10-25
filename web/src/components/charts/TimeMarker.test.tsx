@@ -15,6 +15,7 @@ import { render } from '@testing-library/react';
 import { ReferenceLine, LineChart, Line, XAxis, YAxis } from 'recharts';
 import { TimeMarker, severityTokens, type TimeMarkerProps } from './TimeMarker';
 import { severityTokens as canonicalSeverityTokens } from '@/lib/tokens';
+import { COLOR } from '@/lib/colors';
 
 // The subset of recharts ReferenceLine props that TimeMarker drives.
 interface RefLineLabel {
@@ -47,14 +48,12 @@ function markerProps(props: TimeMarkerProps): RefLineProps {
   return (el as ReactElement).props as RefLineProps;
 }
 
-// Canonical stroke palette — mirrors SEVERITY_STROKE inside the source. Pinned
-// here (rather than imported) so the test locks the exact hex the component
-// promises for each normalized severity.
+// Severity marks retain their semantic roles independently of chart themes.
 const STROKE = {
-  info: '#0ea5e9',
-  warn: '#f59e0b',
-  critical: '#ef4444',
-  success: '#10b981',
+  info: COLOR.CYAN,
+  warn: COLOR.WARN,
+  critical: COLOR.BAD,
+  success: COLOR.GOOD,
 } as const;
 
 describe('TimeMarker — rendered element + defaults', () => {

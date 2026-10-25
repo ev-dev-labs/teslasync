@@ -45,6 +45,7 @@
  *                  control per section that invokes onRetry.
  */
 
+import { COLOR } from '@/lib/colors';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within, fireEvent, cleanup } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -251,7 +252,7 @@ describe('ForecastDetails — breakdown donut', () => {
     expect(pie).toHaveAttribute('data-outer', '75');
 
     const cells = within(bd).getAllByTestId('cell');
-    expect(cells.map((c) => c.getAttribute('data-fill'))).toEqual(['#22c55e', '#f59e0b']);
+    expect(cells.map((c) => c.getAttribute('data-fill'))).toEqual([COLOR.GOOD, COLOR.WARN]);
 
     // The donut is a labelled image region, not an unlabelled graphic.
     const donut = within(bd).getByRole('img');

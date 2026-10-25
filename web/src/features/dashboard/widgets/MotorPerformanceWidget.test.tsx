@@ -169,8 +169,9 @@ describe('MotorPerformanceWidget redesign', () => {
   });
 
   it('retains neutral status color separation in the torque helper', () => {
-    expect(torqueColor(150)).toBe('#10b981');
-    expect(torqueColor(250)).toBe('#f59e0b');
-    expect(torqueColor(500)).toBe('#ef4444');
+    expect(torqueColor(150)).toBe(COLOR.GOOD);
+    expect(torqueColor(250)).toBe(COLOR.WARN);
+    expect(torqueColor(500)).toBe(COLOR.BAD);
   });
 });
+import { COLOR } from '@/lib/colors';

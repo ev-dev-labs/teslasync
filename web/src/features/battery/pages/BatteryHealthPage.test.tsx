@@ -22,6 +22,7 @@
  * web/package.json) — interactions use fireEvent, consistent with the other
  * slice tests.
  */
+import { COLOR } from '@/lib/colors';
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
@@ -408,11 +409,11 @@ describe('BatteryHealthPage · pure helpers', () => {
   });
 
   it('degradationColor thresholds green ≤5, amber ≤15, red above', () => {
-    expect(degradationColor(3)).toBe('#10b981');
-    expect(degradationColor(5)).toBe('#10b981');
-    expect(degradationColor(5.1)).toBe('#f59e0b');
-    expect(degradationColor(15)).toBe('#f59e0b');
-    expect(degradationColor(15.1)).toBe('#ef4444');
+    expect(degradationColor(3)).toBe(COLOR.GOOD);
+    expect(degradationColor(5)).toBe(COLOR.GOOD);
+    expect(degradationColor(5.1)).toBe(COLOR.WARN);
+    expect(degradationColor(15)).toBe(COLOR.WARN);
+    expect(degradationColor(15.1)).toBe(COLOR.BAD);
   });
 
   it('buildInsights branches on SoH band (excellent / good / concern)', () => {
@@ -472,8 +473,8 @@ describe('BatteryHealthPage · pure helpers', () => {
     expect(mix?.dcCount).toBe(1);
     expect(mix?.totalSessions).toBe(3);
     // AC = 30 + 40 = 70 kWh, DC = 50 kWh.
-    expect(mix?.pieData[0]).toEqual({ name: 'AC', value: 70, fill: '#10b981' });
-    expect(mix?.pieData[1]).toEqual({ name: 'DC', value: 50, fill: '#f59e0b' });
+    expect(mix?.pieData[0]).toEqual({ name: 'AC', value: 70, fill: COLOR.GOOD });
+    expect(mix?.pieData[1]).toEqual({ name: 'DC', value: 50, fill: COLOR.WARN });
 
     // Regression guard: 20 AC sessions × 60 kWh = 1200 kWh. The previous
     // `+(fmtNumber(x, 1))` path turned "1,200.0" into NaN once totals crossed
@@ -852,9 +853,9 @@ describe('BatteryHealthPage · design-system consistency', () => {
       expect(healthTone(soh)).toBe(expected);
     }
     for (const pct of [0, 5, 5.1, 15, 15.1, 40]) {
-      const expected = degradationColor(pct) === '#10b981'
+      const expected = degradationColor(pct) === COLOR.GOOD
         ? gaugeTone.success
-        : degradationColor(pct) === '#f59e0b'
+        : degradationColor(pct) === COLOR.WARN
           ? gaugeTone.warning
           : gaugeTone.danger;
       expect(gaugeTone[degradationTone(pct)]).toBe(expected);

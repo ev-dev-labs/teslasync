@@ -215,9 +215,14 @@ describe('WidgetChartSummary — legend (dark-mode pairs)', () => {
     expect(dots).toHaveLength(2);
     const first = dots[0].getAttribute('style') ?? '';
     const second = dots[1].getAttribute('style') ?? '';
+    const expectedColors = chartTokens.series.slice(0, 2).map(color => {
+      const swatch = document.createElement('span');
+      swatch.style.backgroundColor = color;
+      return swatch.style.backgroundColor;
+    });
     expect(first).toContain('light-dark(');
-    expect(first).toContain('56, 94, 126');
-    expect(first).toContain('145, 180, 210');
+    expect((dots[0] as HTMLElement).style.backgroundColor).toBe(expectedColors[0]);
+    expect((dots[1] as HTMLElement).style.backgroundColor).toBe(expectedColors[1]);
     expect(second).toContain('light-dark(');
     expect(second).not.toBe(first);
     expect(chartTokens.series).toHaveLength(8);

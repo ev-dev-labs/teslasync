@@ -151,7 +151,7 @@ if (typeof window.matchMedia !== 'function') {
 import ScienceLabPage from './ScienceLabPage';
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { deriveDataState } from '@/api/dataState';
-import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors';
+import { CHART_COLORS_DARK, CHART_COLORS_NEON_DARK } from '@/lib/colors';
 import * as operationalMetrics from '@/hooks/useOperationalMetrics';
 import type {
   ScienceElectrochem,
@@ -600,7 +600,7 @@ describe('ScienceLabPage', () => {
     ];
     const paths = charts.map((chart) => chart.querySelector('.recharts-area-curve'));
     for (const path of paths) {
-      expect(path).toHaveAttribute('stroke', CHART_COLORS_CB_SAFE[0]);
+      expect(path).toHaveAttribute('stroke', CHART_COLORS_DARK[0]);
     }
     const originalPaths = paths.map((path) => path?.getAttribute('d'));
 
@@ -608,7 +608,7 @@ describe('ScienceLabPage', () => {
     fireEvent.click(screen.getByTestId('header-science-range'));
     for (const [index, chart] of charts.entries()) {
       const path = chart.querySelector('.recharts-area-curve');
-      expect(path).toHaveAttribute('stroke', CHART_COLORS_NEON[0]);
+      expect(path).toHaveAttribute('stroke', CHART_COLORS_NEON_DARK[0]);
       expect(path).toHaveAttribute('d', originalPaths[index]!);
     }
     expect(settingsMock.chart_palette).toBe('neon');

@@ -23,6 +23,7 @@
  * act() churn even though StatusDistribution renders no motion itself.
  */
 
+import { COLOR } from '@/lib/colors'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
@@ -98,7 +99,7 @@ describe('StatusDistribution', () => {
     const segs = getSegments()
     expect(segs).toHaveLength(3)
     expect(segs[0].style.width).toBe('50%')
-    expect(segs[0]).toHaveStyle({ backgroundColor: '#f59e0b' })
+    expect(segs[0]).toHaveStyle({ backgroundColor: COLOR.WARN })
     expect(screen.getByTitle('New: 5 (50.00%)')).toHaveTextContent('5 · 50.00%')
     expect(screen.getByTitle('Closed: 2 (20.00%)')).toHaveTextContent('2 · 20.00%')
   })

@@ -28,6 +28,7 @@
  * default, and `useUnits` is stubbed with a mutable distance preference so a
  * single test can flip km→mi. No network is touched.
  */
+import { COLOR } from '@/lib/colors'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
@@ -242,13 +243,13 @@ describe('BatteryRangeCharts — battery overview panel', () => {
     const { rerender } = render(
       <BatteryRangeCharts state={makeState({ battery_level: 70 })} drives={[]} />,
     )
-    expect(screen.getByTestId('linear-gauge').dataset.color).toBe('#10b981')
+    expect(screen.getByTestId('linear-gauge').dataset.color).toBe(COLOR.GOOD)
 
     rerender(<BatteryRangeCharts state={makeState({ battery_level: 40 })} drives={[]} />)
-    expect(screen.getByTestId('linear-gauge').dataset.color).toBe('#f59e0b')
+    expect(screen.getByTestId('linear-gauge').dataset.color).toBe(COLOR.WARN)
 
     rerender(<BatteryRangeCharts state={makeState({ battery_level: 10 })} drives={[]} />)
-    expect(screen.getByTestId('linear-gauge').dataset.color).toBe('#ef4444')
+    expect(screen.getByTestId('linear-gauge').dataset.color).toBe(COLOR.BAD)
   })
 
   it('splits the bar chart into Current / Remaining that sum to 100', () => {

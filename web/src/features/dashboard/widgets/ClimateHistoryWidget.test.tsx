@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { CHART_COLORS } from '@/lib/colors';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -126,8 +127,8 @@ describe('ClimateHistoryWidget redesign', () => {
       { time: '2026-07-01T01:00:00Z', inside: 21, outside: 11 },
       { time: '2026-07-01T02:00:00Z', inside: 22, outside: 12 },
     ]);
-    expect(cap.lines.inside).toMatchObject({ stroke: '#91b4d2', dot: false, connectNulls: false });
-    expect(cap.lines.outside).toMatchObject({ stroke: '#c0a384', dot: false, connectNulls: false });
+    expect(cap.lines.inside).toMatchObject({ stroke: CHART_COLORS[0], dot: false, connectNulls: false });
+    expect(cap.lines.outside).toMatchObject({ stroke: CHART_COLORS[1], dot: false, connectNulls: false });
     expect(screen.getByText('Inside').closest('li')?.querySelector('[aria-hidden="true"]')).not.toBeNull();
     expect(screen.getByText('Outside').closest('li')?.querySelector('[aria-hidden="true"]')).not.toBeNull();
     expect(screen.queryByText('Cabin')).toBeNull();

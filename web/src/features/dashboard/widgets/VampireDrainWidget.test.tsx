@@ -2,6 +2,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { VampireDrainEvent, VampireDrainStats, VampireDrainWatch } from '@/types/energy';
+import { STATUS_COLORS } from '@/lib/colors';
 import VampireDrainWidget, {
   buildDrainBarData,
   getDrainStatus,
@@ -169,9 +170,9 @@ describe('Vampire drain helpers', () => {
   });
 
   it('uses valid status colors only for finite values', () => {
-    expect(drainColor(0)).toBe('#10b981');
-    expect(drainColor(1.5)).toBe('#f59e0b');
-    expect(drainColor(3)).toBe('#ef4444');
+    expect(drainColor(0)).toBe(STATUS_COLORS.good);
+    expect(drainColor(1.5)).toBe(STATUS_COLORS.warning);
+    expect(drainColor(3)).toBe(STATUS_COLORS.critical);
     expect(drainColor(Number.NaN)).toBe('var(--text-muted)');
   });
 

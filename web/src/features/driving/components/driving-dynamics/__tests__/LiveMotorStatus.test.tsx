@@ -148,7 +148,7 @@ describe('LiveMotorStatus — empty / awaiting-source state', () => {
     renderPanel(null)
 
     // Panel title is ALWAYS shown (never hide the whole section).
-    expect(screen.getByRole('heading', { name: 'Live Motor Status' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Live motor status' })).toBeInTheDocument()
     expect(screen.getByRole('status')).toBeInTheDocument()
     expect(screen.getByText('Awaiting live motor data')).toBeInTheDocument()
     // None of the readouts render in the empty branch.
@@ -159,7 +159,7 @@ describe('LiveMotorStatus — empty / awaiting-source state', () => {
   it('renders the panel-level empty state when the snapshot is undefined', () => {
     renderPanel(undefined)
 
-    expect(screen.getByRole('heading', { name: 'Live Motor Status' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Live motor status' })).toBeInTheDocument()
     expect(screen.getByText('Awaiting live motor data')).toBeInTheDocument()
     expect(screen.queryByText('Motor')).toBeNull()
   })
@@ -167,7 +167,7 @@ describe('LiveMotorStatus — empty / awaiting-source state', () => {
   it('renders a powertrain skeleton — not the empty state — while the first load is in flight', () => {
     renderPanel(undefined, { isLoading: true })
 
-    expect(screen.getByRole('heading', { name: 'Live Motor Status' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Live motor status' })).toBeInTheDocument()
     expect(
       screen.getByRole('status', { name: 'Loading motor telemetry…' }),
     ).toHaveAttribute('aria-busy', 'true')
@@ -177,7 +177,7 @@ describe('LiveMotorStatus — empty / awaiting-source state', () => {
   it('surfaces a failed first load instead of a silent blank panel', () => {
     renderPanel(undefined, { isError: true })
 
-    expect(screen.getByRole('heading', { name: 'Live Motor Status' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Live motor status' })).toBeInTheDocument()
     expect(screen.queryByText('Awaiting live motor data')).toBeNull()
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
   })
@@ -314,19 +314,19 @@ describe('LiveMotorStatus — shift state', () => {
   it('colour-codes Drive as success and exposes a descriptive accessible name', () => {
     renderPanel(snapshot({ shift_state: 'D', torque_nm_front: 10 }))
 
-    const badge = screen.getByLabelText('Shift State: D')
+    const badge = screen.getByLabelText('Shift state: D')
     expect(badge).toBeInTheDocument()
     expect(badge).toHaveTextContent('D')
     // Drive is visually distinguished via the shared, theme-aware success variant.
     expect(badge.className).toContain(BADGE_VARIANTS.success)
     // The caption below the chip labels it for sighted users.
-    expect(screen.getByText('Shift State')).toBeInTheDocument()
+    expect(screen.getByText('Shift state')).toBeInTheDocument()
   })
 
   it('falls back to Unknown (neutral variant) when shift_state is null', () => {
     renderPanel(snapshot({ shift_state: null, torque_nm_front: 10 }))
 
-    const badge = screen.getByLabelText('Shift State: Unknown')
+    const badge = screen.getByLabelText('Shift state: Unknown')
     expect(badge).toBeInTheDocument()
     expect(badge).toHaveTextContent('Unknown')
     // Neutral, NOT the success variant reserved for Drive. Asserted against the

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { COLOR, CHART_NEUTRAL } from '@/lib/colors';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -30,10 +31,10 @@ import type { WidgetProps, WidgetSize } from './types';
 const mockVehicles = vi.mocked(useVehicles);
 const mockLatest = vi.mocked(useLatestTirePressure);
 
-const GREEN = '#22c55e';
-const AMBER = '#f59e0b';
-const RED = '#ef4444';
-const GREY = '#6b7280';
+const GREEN = COLOR.GOOD;
+const AMBER = COLOR.WARN;
+const RED = COLOR.BAD;
+const GREY = CHART_NEUTRAL;
 
 function queryResult(over: Record<string, unknown> = {}): never {
   return {

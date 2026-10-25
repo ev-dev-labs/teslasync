@@ -30,6 +30,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { CHART_SEMANTIC, CHART_NEUTRAL } from '@/lib/colors';
 import type { WidgetProps } from './types';
 
 // ── i18n stub: return the fallback string, interpolating {{var}} options ──
@@ -198,18 +199,18 @@ describe('buildSegments (utility)', () => {
 
 describe('stateColor (utility)', () => {
   it('maps each known state to its palette colour, case-insensitively', () => {
-    expect(stateColor('driving')).toBe('#22d3ee');
-    expect(stateColor('CHARGING')).toBe('#22c55e');
-    expect(stateColor('Asleep')).toBe('#a855f7');
-    expect(stateColor('idle')).toBe('#f59e0b');
-    expect(stateColor('offline')).toBe('#ef4444');
+    expect(stateColor('driving')).toBe(CHART_SEMANTIC.vehicle.driving);
+    expect(stateColor('CHARGING')).toBe(CHART_SEMANTIC.vehicle.charging);
+    expect(stateColor('Asleep')).toBe(CHART_SEMANTIC.vehicle.asleep);
+    expect(stateColor('idle')).toBe(CHART_SEMANTIC.vehicle.charging);
+    expect(stateColor('offline')).toBe(CHART_SEMANTIC.vehicle.offline);
   });
 
   it('falls back to neutral grey for unknown or absent states (no throw)', () => {
-    expect(stateColor('teleporting')).toBe('#6b7280');
-    expect(stateColor('')).toBe('#6b7280');
-    expect(stateColor(undefined)).toBe('#6b7280');
-    expect(stateColor(null)).toBe('#6b7280');
+    expect(stateColor('teleporting')).toBe(CHART_NEUTRAL);
+    expect(stateColor('')).toBe(CHART_NEUTRAL);
+    expect(stateColor(undefined)).toBe(CHART_NEUTRAL);
+    expect(stateColor(null)).toBe(CHART_NEUTRAL);
   });
 });
 

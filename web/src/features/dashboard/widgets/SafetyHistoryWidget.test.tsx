@@ -218,28 +218,28 @@ describe('classifySnapshot', () => {
   it('classifies each dominant safety field with the right type/colour/severity', () => {
     expect(classifySnapshot({ automatic_emergency_braking_off: true })).toMatchObject({
       type: 'aeb',
-      color: '#ef4444',
+      color: COLOR.BAD,
       severity: 'critical',
     });
     expect(
       classifySnapshot({ forward_collision_warning: 'ForwardCollisionSensitivityLate' }),
-    ).toMatchObject({ type: 'fcw', color: '#f59e0b', severity: 'warning' });
+    ).toMatchObject({ type: 'fcw', color: COLOR.WARN, severity: 'warning' });
     expect(
       classifySnapshot({ lane_departure_avoidance: 'LaneAssistLevelWarning' }),
-    ).toMatchObject({ type: 'lane', color: '#3b82f6', severity: 'warning' });
+    ).toMatchObject({ type: 'lane', color: DATA_VISUAL_COLORS.blue, severity: 'warning' });
     expect(classifySnapshot({ blind_spot_collision_warning: true })).toMatchObject({
       type: 'bsw',
       severity: 'warning',
     });
     expect(
       classifySnapshot({ emergency_lane_departure_avoidance: true }),
-    ).toMatchObject({ type: 'elda', color: '#ef4444', severity: 'critical' });
+    ).toMatchObject({ type: 'elda', color: COLOR.BAD, severity: 'critical' });
   });
 
   it('falls back to a neutral "general" event for an empty snapshot', () => {
     const cls = classifySnapshot({});
     expect(cls.type).toBe('general');
-    expect(cls.color).toBe('#6b7280');
+    expect(cls.color).toBe(CHART_NEUTRAL);
     expect(cls.severity).toBe('info');
   });
 
@@ -500,3 +500,4 @@ describe('SafetyHistoryWidget — refresh wiring', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });
+import { COLOR, DATA_VISUAL_COLORS, CHART_NEUTRAL } from '@/lib/colors';

@@ -87,14 +87,14 @@ describe('ROUTE_EFF_COLORS', () => {
     }
   });
 
-  it('encodes accent hues: avg reads cyan, mostDriven reads purple', () => {
+  it('encodes categorical accent hues: avg reads rose, mostDriven reads orange', () => {
     for (const theme of THEMES) {
       const avg = rgb(themeStops(ROUTE_EFF_COLORS.avg)[theme]);
-      expect(avg.g).toBeGreaterThan(avg.r);
-      expect(avg.b).toBeGreaterThan(avg.r);
+      expect(avg.r).toBeGreaterThan(avg.g);
+      expect(avg.b).toBeGreaterThan(avg.g);
 
       const mostDriven = rgb(themeStops(ROUTE_EFF_COLORS.mostDriven)[theme]);
-      expect(mostDriven.b).toBeGreaterThan(mostDriven.g);
+      expect(mostDriven.g).toBeGreaterThan(mostDriven.b);
       expect(mostDriven.r).toBeGreaterThan(mostDriven.g);
     }
   });

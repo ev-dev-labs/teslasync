@@ -48,6 +48,7 @@
  *  10. DELEGATE  — forecastData + query state are handed to <ForecastDetails>.
  */
 
+import { CHART_COLORS } from '@/lib/colors';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, within, fireEvent, cleanup } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -373,7 +374,7 @@ describe('CostForecastSection — series wiring', () => {
     const forecastLine = within(chart).getByTestId('line');
     expect(forecastLine).toHaveAttribute('data-key', 'forecast');
     expect(forecastLine).toHaveAttribute('data-name', 'Projected Cost');
-    expect(forecastLine).toHaveAttribute('data-stroke', '#a855f7');
+    expect(forecastLine).toHaveAttribute('data-stroke', CHART_COLORS[6]);
   });
 
   it('renders the cost/kWh trend line from the historical rows', () => {
@@ -385,7 +386,7 @@ describe('CostForecastSection — series wiring', () => {
     const trend = screen.getByTestId('line-chart');
     const line = within(trend).getByTestId('line');
     expect(line).toHaveAttribute('data-key', 'cost_per_kwh');
-    expect(line).toHaveAttribute('data-stroke', '#06b6d4');
+    expect(line).toHaveAttribute('data-stroke', CHART_COLORS[1]);
     expect(line).toHaveAttribute('data-name', '$/kWh');
   });
 });

@@ -36,6 +36,7 @@
  * module evaluates because FadeIn → useMotionPreference → framer-motion's
  * useReducedMotion reaches for it under jsdom.
  */
+import { COLOR, CHART_NEUTRAL } from '@/lib/colors';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { TempSensor } from './constants';
@@ -223,10 +224,10 @@ describe('TemperatureGauges — populated (metric / °C)', () => {
     const { container } = renderGauges({ sensors: fourSensors() });
 
     const strokes = circleStrokes(container);
-    expect(strokes).toContain('#10b981'); // front: good
-    expect(strokes).toContain('#f59e0b'); // inverter: warning
-    expect(strokes).toContain('#ef4444'); // battery: critical
-    expect(strokes).toContain('#6b7280'); // rear: null → grey
+    expect(strokes).toContain(COLOR.GOOD); // front: good
+    expect(strokes).toContain(COLOR.WARN); // inverter: warning
+    expect(strokes).toContain(COLOR.BAD); // battery: critical
+    expect(strokes).toContain(CHART_NEUTRAL); // rear: null → grey
   });
 });
 
@@ -245,7 +246,7 @@ describe('TemperatureGauges — Fahrenheit boundary', () => {
     expect(screen.getByText('131.00')).toBeInTheDocument();
 
     // Severity is computed on the SI values, so the battery arc stays critical.
-    expect(circleStrokes(container)).toContain('#ef4444');
+    expect(circleStrokes(container)).toContain(COLOR.BAD);
   });
 });
 
@@ -267,6 +268,6 @@ describe('TemperatureGauges — null safety', () => {
     expect(screen.getByText('0.00 – 60.00°C')).toBeInTheDocument();
     expect(screen.getByText('0.00')).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).toBeNull();
-    expect(circleStrokes(container)).toContain('#6b7280');
+    expect(circleStrokes(container)).toContain(CHART_NEUTRAL);
   });
 });

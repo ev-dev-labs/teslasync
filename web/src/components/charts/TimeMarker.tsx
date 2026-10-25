@@ -2,6 +2,8 @@ import { ReferenceLine } from '@/components/charts';
 import { normalizeSeverity, type Severity } from '@/lib/tokens';
 import { COLOR } from '@/lib/colors';
 
+export { severityTokens } from '@/lib/tokens';
+
 /**
  * TimeMarker — vertical reference line on a time-series chart marking the
  * timestamp of an alert (or any other point-in-time event).

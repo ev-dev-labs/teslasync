@@ -266,8 +266,8 @@ describe('ReasonBreakdown — reason bucketing', () => {
     expect(bars).toHaveLength(9);
     expect(chartTokens.series).toHaveLength(8);
     expect(bars.map((bar) => bar.color)).toEqual([...chartTokens.series, chartTokens.series[0]]);
-    expect(bars[0].color).toBe('light-dark(#385e7e, #91b4d2)'); // series[0]
-    expect(bars[8].color).toBe('light-dark(#385e7e, #91b4d2)'); // series[8 % 8] === series[0]
+    expect(bars[0].color).toBe(chartTokens.series[0]);
+    expect(bars[8].color).toBe(chartTokens.series[0]); // series[8 % 8] === series[0]
     expect(bars[0].color).toBe(bars[8].color);
     expect(bars[0].color).not.toBe(bars[1].color);
   });

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import { VehiclePaintPicker } from '../VehiclePaintPicker';
 import { PAINT_PALETTE_LIST } from '@/lib/vehicleColors';
+import { DATA_VISUAL_COLORS } from '@/lib/colors';
 
 describe('VehiclePaintPicker', () => {
   beforeEach(() => {
@@ -90,9 +91,9 @@ describe('VehiclePaintPicker', () => {
       });
       expect(radio.className).not.toMatch(/shadow(?!-none(?:\s|$))|scale-|cyan-/);
     });
-    expect(radios[0].querySelector('path')).toHaveAttribute('stroke', '#000000');
+    expect(radios[0].querySelector('path')).toHaveAttribute('stroke', DATA_VISUAL_COLORS.canvasInk);
     fireEvent.click(radios[3]);
-    expect(radios[3].querySelector('path')).toHaveAttribute('stroke', '#ffffff');
+    expect(radios[3].querySelector('path')).toHaveAttribute('stroke', DATA_VISUAL_COLORS.canvasWhite);
   });
 
   it('keeps vehicle preferences isolated and follows updated inference after clearing', () => {
