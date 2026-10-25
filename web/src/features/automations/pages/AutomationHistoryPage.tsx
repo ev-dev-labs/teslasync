@@ -10,6 +10,7 @@ import { useAutomations, useAutomationHistoryPage } from '@/api/hooks/useAutomat
 import type { AutomationHistoryStatus } from '@/api/types';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useDataState } from '@/hooks/useDataState';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
@@ -25,6 +26,7 @@ const STATUSES: AutomationHistoryStatus[] = [
 
 export default function AutomationHistoryPage() {
   const { t } = useTranslation();
+  const { tz } = useDateFormat();
   usePageTitle(t('automations.historyPage.title', 'Automation history'));
   const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'automations.history.range',
@@ -40,7 +42,7 @@ export default function AutomationHistoryPage() {
   const page = Number.isSafeInteger(pageRaw) && pageRaw > 0 ? pageRaw : 1;
   const query = useAutomationHistoryPage({
     page, pageSize: PAGE_SIZE, automationId, status,
-    since: startInstant, until: endInstantExclusive,
+    since: startInstant, until: endInstantExclusive, timezone: tz,
   });
   const automations = useAutomations();
   const historyState = useDataState({ ...query, data: query.data ?? undefined });

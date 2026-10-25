@@ -3,6 +3,7 @@ package automation
 import (
 	"encoding/json"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +15,42 @@ type historyStatsRow struct {
 	total, succeeded, failed, partial, durationRuns int
 	avgDuration                                     float64
 	err                                             error
+}
+
+func TestHistoryTrendQuery(t *testing.T) {
+	since := time.Date(2026, 3, 8, 8, 0, 0, 0, time.UTC)
+	before := time.Date(2026, 3, 9, 7, 0, 0, 0, time.UTC)
+	for _, tt := range []struct {
+		name      string
+		filter    HistoryFilter
+		parameter string
+		args      []any
+	}{
+		{"legacy default", HistoryFilter{}, "$1", []any{"UTC"}},
+		{"selected western clock", HistoryFilter{Timezone: "America/Los_Angeles"}, "$1", []any{"America/Los_Angeles"}},
+		{"selected eastern clock", HistoryFilter{Timezone: "Asia/Tokyo"}, "$1", []any{"Asia/Tokyo"}},
+		{"all exact filters", HistoryFilter{AutomationID: 42, Status: "failed", Since: since, Before: before, Timezone: "America/Los_Angeles"}, "$5", []any{int64(42), "failed", since, before, "America/Los_Angeles"}},
+		{"zone is never SQL", HistoryFilter{Timezone: "UTC'; DROP TABLE automation_history; --"}, "$1", []any{"UTC'; DROP TABLE automation_history; --"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			query, args := historyTrendQuery(tt.filter)
+			if !reflect.DeepEqual(args, tt.args) {
+				t.Fatalf("args = %#v, want %#v", args, tt.args)
+			}
+			if !strings.Contains(query, "triggered_at AT TIME ZONE "+tt.parameter+", 'YYYY-MM-DD'") ||
+				!strings.Contains(query, "GROUP BY day, status ORDER BY day, status") {
+				t.Fatalf("trend must group selected-zone days and statuses: %s", query)
+			}
+			where, _ := buildHistoryWhere(tt.filter)
+			if !strings.Contains(query, "FROM automation_history"+where) {
+				t.Fatalf("trend lost full-range filters: %s", query)
+			}
+			if strings.Contains(query, "LIMIT") || strings.Contains(query, "OFFSET") ||
+				(tt.filter.Timezone != "" && strings.Contains(query, tt.filter.Timezone)) {
+				t.Fatalf("trend interpolated a zone or paginated aggregate rows: %s", query)
+			}
+		})
+	}
 }
 
 func (r historyStatsRow) Scan(dest ...any) error {

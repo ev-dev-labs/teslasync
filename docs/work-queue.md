@@ -246,6 +246,41 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   Evidence: `r39-unit7-failed`, `r40-unit1-failed`, `r40-unit3-failed`,
   `r40-catalog-checkpoint`, `r40-frozen-unit`, `r40-tsc`.
 
+- Automation-history phase gate (22:19Z): `a1723ab9c5` is pushed; latest
+  incomplete graph is **45 pass / 148 pending / 3 skip**, with no failures
+  observed yet. Both history endpoints now accept optional validated
+  `timezone` for the full-range SQL daily aggregate, bound as a parameter
+  after the existing filters. Default remains UTC. Contract decision:
+  legacy date-only bounds retain UTC semantics; RFC3339 bounds remain exact,
+  including the header's selected-zone/DST instants. The new parameter
+  changes grouping only, never stored timestamps, list rows or summary
+  populations. OpenAPI documents both routes and resolves every new
+  parameter/response reference; no generated OpenAPI client exists here.
+  The page threads the effective shared clock through the typed hook and
+  cache key. Returned civil day keys use the shared day-key formatter;
+  the chart truthfully says daily execution counts, without shifting keys
+  or hiding the previous UTC-only model. Mounted page/hook tests prove a
+  zone-only change refetches/rekeys while preserving original bounds and
+  source bytes. Backend parser/query tests cover DST bounds, both sides of
+  UTC, invalid zones, parameter binding and unpaginated aggregate filters.
+  Both affected Go packages pass with `-race`; **101/101** frontend units,
+  **4/4** native width/theme contracts and **5/5** unchanged route guards
+  pass, proxy escapes=0. Actual TypeScript, six zero source-audit counts,
+  full unchanged lint, affected ESLint, hook routing and hermetic build
+  pass. Sanctioned catalog generators verify 41,893 keys and preserve
+  other languages; all **7,728/7,728** strict frozen cases pass after
+  mechanically accounting for the one verified translation addition.
+  Source preservation: page 205/207, trend 71/68; panel/chart counts remain
+  1/1 in both. No schema, storage, Windows mirror or baseline change.
+  Evidence: `r42-automation-go`, `r42-automation-unit`, `r42-tsc`,
+  `r43-catalog-checkpoint`, `r43-frozen-unit`, `r43-automation-audit`,
+  `r43-automation-hooks`, `r43-lint`, `r43-eslint`, `r43-build`,
+  `r44-history-browser`, `r44-history-route`, `r44-checks`.
+  **Exact next:** commit/push this verified phase, refresh the current-head
+  CI graph, then fix selected-calendar utilization accounting. Continue
+  data-export bounds, sleep-efficiency accounting and insurance overnight
+  grouping afterward; use real failing CI artifacts for any Windows work.
+
 ## CI-until-green continuation (2026-10-25, after `3ca29a42ad`)
 
 - Section 0: fetched/switched/pulled the expected branch; worktree clean.

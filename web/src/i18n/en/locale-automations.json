@@ -833,6 +833,7 @@
         "truncated": "Only part of this history is shown.",
         "unavailable": "History availability is unknown."
       },
+      "daily": "Daily execution counts",
       "detail": "Execution details",
       "detailUnavailable": "Execution details are unavailable.",
       "duration": "Average duration",
@@ -2091,9 +2092,6 @@
       "generateButton": "Narrate impact",
       "title": "Narrate the cabin-temperature impact"
     }
-  },
-  "teslaUsage": {
-    "daily": "Daily (UTC)"
   },
   "timeMachine": {
     "ageFresh": "Fresh"

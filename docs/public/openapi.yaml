@@ -1255,6 +1255,63 @@ paths:
                       format: date-time
         "500":
           $ref: "#/components/responses/InternalError"
+  /automations/history:
+    get:
+      operationId: listAutomationHistory
+      summary: List execution history across all automation rules
+      description: |
+        Returns paginated executions plus summary and daily trend aggregates over
+        the entire filtered range, independent of pagination. The optional IANA
+        timezone controls trend day keys only; stored timestamps and filter
+        instants are unchanged. Without a timezone, day keys retain UTC semantics.
+      tags: [Automations]
+      parameters:
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+        - $ref: "#/components/parameters/automationHistoryStatus"
+        - $ref: "#/components/parameters/automationHistorySince"
+        - $ref: "#/components/parameters/automationHistoryUntil"
+        - $ref: "#/components/parameters/automationHistoryTimezone"
+      responses:
+        "200":
+          $ref: "#/components/responses/AutomationHistory"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /automations/{id}/history:
+    get:
+      operationId: listAutomationRuleHistory
+      summary: List execution history for one automation rule
+      description: |
+        Uses the same bounds, timezone and full-range aggregate semantics as
+        /automations/history, restricted to the specified rule.
+      tags: [Automations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+        - $ref: "#/components/parameters/automationHistoryStatus"
+        - $ref: "#/components/parameters/automationHistorySince"
+        - $ref: "#/components/parameters/automationHistoryUntil"
+        - $ref: "#/components/parameters/automationHistoryTimezone"
+      responses:
+        "200":
+          $ref: "#/components/responses/AutomationHistory"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   # ─── Alerts ─────────────────────────────────────────────────────────
   /alerts:
     get:
@@ -5339,6 +5396,39 @@ paths:
 # ═══════════════════════════════════════════════════════════════════════
 components:
   parameters:
+    automationHistoryTimezone:
+      name: timezone
+      in: query
+      description: |
+        IANA timezone used for full-range daily trend grouping. Does not change
+        timestamps or since/until bounds. Unknown zones and server-local "Local"
+        are rejected with HTTP 400.
+      schema:
+        type: string
+        default: UTC
+        example: America/Los_Angeles
+    automationHistorySince:
+      name: since
+      in: query
+      description: Inclusive RFC3339 instant, or legacy date-only UTC midnight.
+      schema:
+        type: string
+        example: "2026-03-08T08:00:00Z"
+    automationHistoryUntil:
+      name: until
+      in: query
+      description: |
+        Exclusive RFC3339 instant. A legacy date-only value includes that entire
+        UTC date, independent of timezone. Must be after since when both exist.
+      schema:
+        type: string
+        example: "2026-03-09T07:00:00Z"
+    automationHistoryStatus:
+      name: status
+      in: query
+      description: Restrict executions and both aggregates to this status.
+      schema:
+        type: string
     vehicleID:
       name: vehicleID
       in: path
@@ -5440,6 +5530,42 @@ components:
                 maxLength: 1000
 
   responses:
+    AutomationHistory:
+      description: Execution page and unpaginated summary and daily trend
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [items, total, limit, offset, summary, trend]
+            properties:
+              items:
+                type: array
+                items:
+                  type: object
+              total:
+                type: integer
+              limit:
+                type: integer
+              offset:
+                type: integer
+              summary:
+                type: object
+                description: Aggregate statistics across the complete filtered range.
+              trend:
+                type: array
+                items:
+                  type: object
+                  required: [day, status, count]
+                  properties:
+                    day:
+                      type: string
+                      format: date
+                      description: Civil date in the requested timezone, not a UTC timestamp.
+                    status:
+                      type: string
+                    count:
+                      type: integer
+                      minimum: 0
     BadRequest:
       description: Bad request - validation error
       content:

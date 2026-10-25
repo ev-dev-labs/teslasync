@@ -174,6 +174,8 @@ export interface AutomationHistoryPageFilters {
   status?: AutomationHistoryStatus;
   since?: string;
   until?: string;
+  /** IANA zone for server-side daily trend buckets; bounds remain absolute. */
+  timezone?: string;
 }
 
 /** Fail closed: a missing server envelope must never masquerade as empty history. */
@@ -210,9 +212,9 @@ function assertHistoryPage(value: unknown): AutomationHistoryListResponse {
 }
 
 export function useAutomationHistoryPage(filters: AutomationHistoryPageFilters) {
-  const { page, pageSize, automationId, status, since, until } = filters;
+  const { page, pageSize, automationId, status, since, until, timezone } = filters;
   return useQuery({
-    queryKey: ['automation-history', 'page', page, pageSize, automationId, status, since, until],
+    queryKey: ['automation-history', 'page', page, pageSize, automationId, status, since, until, timezone ?? 'UTC'],
     queryFn: ({ signal }) => {
       const params = new URLSearchParams({
         limit: String(pageSize),
@@ -221,6 +223,7 @@ export function useAutomationHistoryPage(filters: AutomationHistoryPageFilters) 
       if (status) params.set('status', status);
       if (since) params.set('since', since);
       if (until) params.set('until', until);
+      if (timezone) params.set('timezone', timezone);
       // The global endpoint does not accept automation_id; the per-automation
       // endpoint uses the same paginated response and applies that filter in SQL.
       const path = automationId != null
