@@ -62,7 +62,7 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
 
   const axisWidth = useMeasuredAxisWidth({
     labels: chartData.map(d => (d.energy == null ? '—' : `${fmt(d.energy)} ${unitPrefs.energy}`)),
-    fontSize: 10, minWidth: 40, padding: 20, enabled: !isCompact,
+    fontSize: 10, minWidth: 40, padding: 32, enabled: !isCompact,
   });
 
   // Summary totals only known readings: measured zero remains zero and
@@ -149,7 +149,7 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
               <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
                 {chartGrid}
                 <XAxis dataKey="started_at" tick={axisTickSm} tickLine={false} axisLine={false} tickFormatter={(v: string) => formatDateShort(v)} />
-                <YAxis tick={axisTickSm} tickLine={false} axisLine={false} width={axisWidth} tickFormatter={(v: number) => `${fmt(v)} ${unitPrefs.energy}`} />
+                <YAxis tick={{ ...axisTickSm, width: undefined }} tickLine={false} axisLine={false} width={axisWidth} tickFormatter={(v: number) => `${fmt(v)} ${unitPrefs.energy}`} />
                 <Tooltip content={<ChartTooltip />} formatter={(value: number, _name: string, props: { payload?: { type?: string } }) => [
                   knownNumber(value) == null ? '—' : `${fmt(value)} ${unitPrefs.energy}`,
                   t(`widget.chargeHistory.type.${props.payload?.type ?? 'unknown'}`, props.payload?.type === 'supercharger' ? 'Supercharger' : props.payload?.type === 'dcFast' ? 'DC fast' : props.payload?.type === 'acHome' ? 'Home' : 'Unknown'),

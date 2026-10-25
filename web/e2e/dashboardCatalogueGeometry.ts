@@ -89,7 +89,10 @@ export async function assertCatalogueYAxisTickBounds(
         const axisIndex = indexes[axisKind]++;
         return [...axis.querySelectorAll('.recharts-cartesian-axis-tick-value')].map(tick => {
           const box = tick.getBoundingClientRect();
+          const style = getComputedStyle(tick);
           return { text: tick.textContent, left: box.left, right: box.right,
+            font: style.font, availableWidth: tick.getAttribute('width'),
+            lines: [...tick.querySelectorAll('tspan')].map(line => line.textContent),
             top: box.top, bottom: box.bottom, height: box.height,
             chartLeft: bounds.left, chartRight: bounds.right,
             chartTop: bounds.top, chartBottom: bounds.bottom,
@@ -178,6 +181,13 @@ export async function assertCatalogueAffectedAxes(
       status: 'bounds-passed', axisStatus: 'not-applicable',
       expectedAxes: 0, actualAxes: 0, reason, size,
     }, null, 2));
+    return;
+  } else if (widgetId === 'climate-history') {
+    await expect(panel.locator('.recharts-line-curve')).toHaveCount(2);
+    for (const curve of await panel.locator('.recharts-line-curve').all()) {
+      expect(await curve.getAttribute('d'), 'Both native temperature series retain real source points').toMatch(/^M.+/);
+    }
+    await assertCatalogueYAxisTickBounds(panel, widgetId, info, 0);
     return;
   }
   if (reason) {

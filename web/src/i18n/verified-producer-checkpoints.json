@@ -595,7 +595,7 @@
   {
     "file": "web/src/features/dashboard/components/DashboardGrid.tsx",
     "calls": 7,
-    "sha256": "16be499e9d0f37bdce601175c1d51f0b99a01b9de8f41245ae3c017d35464b56"
+    "sha256": "1fa898c8d39e73aad667201787987f254ad896038019388841599ed46b0bfde5"
   },
   {
     "file": "web/src/features/dashboard/components/KioskSettingsModal.tsx",

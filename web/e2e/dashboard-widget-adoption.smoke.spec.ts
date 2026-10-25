@@ -398,24 +398,27 @@ for (const [batch, ids] of Object.entries(batches)) {
           }
           if (widget.widgetId === 'fleet-stats-bar') {
             await expect(panel.getByText('1', { exact: true })).toHaveCount(2);
-            // Captions live in the details drawer (same contract as the
-            // widget unit test): open it, assert, then close so later
-            // widgets capture without the overlay.
-            await panel.getByRole('button', { name: 'Review details' }).click();
-            const drawer = page.getByRole('dialog', { name: 'Fleet summary details' });
-            await expect(drawer.getByText('1 online', { exact: true })).toBeVisible();
-            await expect(drawer.getByText('100.00%', { exact: true })).toBeVisible();
-            await expect(drawer).not.toContainText(/\bno change\b/i);
+            const totals = panel.getByTestId('fleet-stats-bar');
+            for (const [label, value] of [
+              ['Vehicles', /^Vehicles\s*1$/],
+              ['online', /^online\s*1$/],
+              ['Distance (30d)', /^Distance \(30d\)\s*300\s*km$/],
+              ['Energy (30d)', /^Energy \(30d\)\s*42\.0\s*kWh$/],
+            ] as const) {
+              const metric = totals.getByText(label, { exact: true }).locator('xpath=../..');
+              await expect(metric).toBeVisible();
+              await expect(metric).toHaveText(value);
+            }
+            await expect(panel.getByRole('button', { name: 'Review details' })).toHaveCount(0);
+            await expect(totals).not.toContainText(/\bno change\b/i);
             const labels = await panel.locator('[aria-label], [aria-valuetext]').evaluateAll(elements =>
               elements.map(element => ({
                 label: element.getAttribute('aria-label'), valueText: element.getAttribute('aria-valuetext'),
               })));
             expect(JSON.stringify(labels), 'Current fleet counts must not announce invented comparison').not.toMatch(/\bno change\b/i);
             await writeFile(test.info().outputPath('fleet-current-caption-contract.json'), JSON.stringify({
-              currentCount: 1, currentOnlinePercentage: 100, text: await drawer.textContent(), labels,
+              currentCount: 1, currentOnlineCount: 1, text: await totals.textContent(), labels,
             }, null, 2));
-            await page.keyboard.press('Escape');
-            await expect(drawer).toHaveCount(0);
           }
           const expected = (width === 390 ? remainingCompactReadings[widget.widgetId]
             ?? compactVehicleReadings[widget.widgetId] ?? compactDrivingReadings[widget.widgetId] : undefined)

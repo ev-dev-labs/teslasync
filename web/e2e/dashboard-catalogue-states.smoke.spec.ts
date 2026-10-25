@@ -195,8 +195,9 @@ for (const theme of ['light', 'dark'] as const) {
             await expect(panel).toContainText('4.00');
             await expect(panel).toContainText('—');
           } else {
-            await expect(panel).toContainText('150.00');
-            await expect(panel).toContainText('kW');
+            await expect(panel).toContainText(/Power\s*150\.0\s*kW/);
+            await expect(panel).toContainText(/Voltage\s*400\s*V/);
+            await expect(panel).toContainText(/Current\s*375\s*A/);
           }
           await expect(panel.getByRole('alert')).toHaveCount(0);
           await captureCataloguePanel(page, panel, test.info(), `extreme-${id}-${width}-${theme}.png`);

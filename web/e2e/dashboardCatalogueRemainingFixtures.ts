@@ -8,7 +8,6 @@ import { catalogueOperationalSources } from './dashboardCatalogueOperationalSour
 import { catalogueSystemSources } from './dashboardCatalogueSystemSources';
 import { fulfillApiFixture, resolveApiFixture, type MockApiController } from './mockApi';
 import { assertCatalogueYAxisTickBounds } from './dashboardCatalogueGeometry';
-import { expectBriefDetails } from './operationalbrief-contracts/disclosure.helpers';
 import { assertCatalogueQueryScope, catalogueRecordedSources, renderedCatalogueQueryBinding } from './dashboardCatalogueChargeHistory';
 import { assertCataloguePostureContent } from './dashboardCatalogueHeaderCollision';
 
@@ -33,27 +32,27 @@ export const remainingBatches = {
 
 export const remainingReadings: Record<string, RegExp> = {
   'alert-feed': /Catalogue battery threshold/,
-  'notification-stats': /90\.00/,
-  'fleet-stats': /300\.00/,
-  'fleet-stats-bar': /300\.00/,
+  'notification-stats': /Delivery rate\s*90\.0%/,
+  'fleet-stats': /Distance \(30d\)\s*300\s*km/,
+  'fleet-stats-bar': /Distance \(30d\)\s*300\s*km/,
   'weekly-summary-card': /42\.00/,
-  'weekly-digest': /42\.00/,
-  'fsd-weekly': /No metric values are available yet\./,
+  'weekly-digest': /Distance\s*last week 21 km\s*42\s*km\s*100\.00%/,
+  'fsd-weekly': /Reported FSD\s*—/,
   'monthly-mileage': /123/,
-  'lifetime-stats': /1,234\.00/,
-  'mileage-stats': /10\.00/,
-  'state-timeline': /66\.67/,
+  'lifetime-stats': /Total distance\s*1,234\s*km/,
+  'mileage-stats': /Daily avg\s*10\s*km/,
+  'state-timeline': /driving\s*2h 0m · 67%/,
   'anomaly-detector': /Catalogue cabin temperature exceeded baseline/,
   'fsm-distribution': /driving/i,
-  'year-review': /1,234\.00/,
-  'analytics-summary': /300\.00/,
+  'year-review': /Total distance\s*1,234\s*km/,
+  'analytics-summary': /Distance \(30d\)\s*300\s*km/,
   'recently-unlocked-achievements': /Catalogue first trip/,
   'automation-status': /Catalogue cabin routine/,
   'automation-history': /Catalogue cabin routine/,
-  'charge-status': /72\.00%/,
-  'charge-status-live': /72\.00%/,
+  'charge-status': /Not charging\s*72%/,
+  'charge-status-live': /Not charging\s*72%/,
   'charge-history': /42\.00/,
-  'charge-session-chart': /42\.00/,
+  'charge-session-chart': /Added \(kWh\)/,
   'charge-cost-tracker': /\$6\.72/,
   'charging-schedule': /80%/,
   'charging-optimizer': /80\.00%/,
@@ -61,16 +60,16 @@ export const remainingReadings: Record<string, RegExp> = {
   'supercharger-history': /\$12\.00/,
   'charge-plans': /80\.00%/,
   'next-charge-decision': /Catalogue low-rate window starts soon/,
-  'charging-session-detail': /42\.00/,
+  'charging-session-detail': /Energy added\s*42\.0\s*kWh/,
   'climate-status': /21\s*°?C/,
   'climate-control-panel': /21\s*°?C/,
   'weather-at-car': /18\s*°?C/,
-  'climate-history': /21\.00/,
+  'climate-history': /Cabin \(°C\)/,
   'command-quick-actions': /Lock/,
   'command-history': /Flash Lights/i,
   'location-favorites': /Catalogue home/,
   'geofence-status': /Catalogue home/,
-  'destination-eta': /12\.00/,
+  'destination-eta': /ETA\s*12\s*min/,
   'media-now-playing': /Catalogue evening drive/,
   'media-history': /Catalogue evening drive/,
   'onboarding-checklist': /Connect your Tesla/i,
@@ -93,12 +92,17 @@ export const remainingCompactReadings: Record<string, RegExp> = {
   'uptime-monitor': /Services healthy\s*4\/4/,
   'anomaly-detector': /1 active/,
   'automation-status': /1\/1/,
-  'automation-history': /100\.00/,
+  'automation-history': /Succeeded\s*1\.3\s*s/,
+  'mileage-stats': /10\s*km\/day/,
+  'state-timeline': /driving\s*67%/,
+  'year-review': /1,234\s*km/,
+  'climate-history': /Cabin\s*21\s*°C/,
   'charging-optimizer': /01:00|1:00/,
+  'charging-session-detail': /kWh added\s*42\.0/,
   'audit-log': /Events \(24h\)\s*2/,
   'backup-monitor': /Just now/i,
   'export-status': /Active exports\s*2/,
-  'location-favorites': /Home/,
+  'location-favorites': /Catalogue home/,
 };
 
 export const geometrySourceIDs = new Set(['location-map', 'position-heatmap']);
@@ -341,8 +345,11 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
     await panel.getByRole('button', { name: 'Restart checklist', exact: true }).click();
     await expect(panel.getByTestId('checklist-task-connect-vehicle')).toHaveAttribute('data-complete', 'true');
   }
-  if (id === 'location-favorites' && width === 390) {
-    await expect(panel.getByRole('img', { name: 'Home', exact: true })).toBeVisible();
+  if (id === 'location-favorites') {
+    const home = panel.getByRole('listitem').filter({ hasText: 'Catalogue home' });
+    await expect(home).toHaveCount(1);
+    await expect(home).toBeVisible();
+    await expect(home).toContainText('8 visits');
   }
   if (id === 'export-status' && width === 1440) {
     await expect(panel.getByText('Running', { exact: true })).toHaveCount(2);
@@ -367,7 +374,8 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
       }
     } else {
       await expect(panel.locator('svg.recharts-surface')).toHaveCount(0);
-      await expect(panel).toContainText(/Total\s*42\.00\s*kWh\s*Avg\s*42\.00\s*kWh/);
+      await expect(panel).toContainText(/Total\s*42\.00\s*kWh/);
+      await expect(panel.getByText('Avg', { exact: true })).toHaveCount(0);
     }
   }
   if (id === 'command-quick-actions') {
@@ -386,6 +394,31 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
     if (width === 1440) {
       await expect(progress).toHaveAttribute('aria-valuenow', '25');
       await expect(progress).toHaveAttribute('aria-valuemax', '100');
+    }
+  }
+  if (id === 'climate-history') {
+    if (width === 390) {
+      await expect(panel.getByText('Cabin', { exact: true }).locator('..')).toHaveText(/^Cabin\s*21\s*°C$/);
+      await expect(panel.getByText('Outside', { exact: true }).locator('..')).toHaveText(/^Outside\s*18\s*°C$/);
+    } else {
+      const table = panel.getByRole('table', { name: 'Climate history — data table', exact: true });
+      await expect(table.getByRole('columnheader')).toHaveText(['Time', 'Cabin (°C)', 'Outside (°C)']);
+      const rows = table.getByRole('row');
+      await expect(rows).toHaveCount(3);
+      await expect(rows.nth(1).getByRole('cell').nth(1)).toHaveText('20');
+      await expect(rows.nth(1).getByRole('cell').nth(2)).toHaveText('18');
+      await expect(rows.nth(2).getByRole('cell').nth(1)).toHaveText('21');
+      await expect(rows.nth(2).getByRole('cell').nth(2)).toHaveText('18');
+    }
+  }
+  if (id === 'state-timeline') {
+    await expect(panel.getByRole('img', { name: 'driving: 2h 0m, 67%; parked: 1h 0m, 33%', exact: true }))
+      .toBeVisible();
+    if (width === 1440) {
+      await expect(panel).toContainText('66.67%');
+      await expect(panel).toContainText('33.33%');
+    } else {
+      await expect(panel).toContainText(/parked\s*33%/);
     }
   }
   if (id === 'live-signals') {
@@ -435,10 +468,20 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
   }
   if (id === 'fsd-weekly') {
     const weekly = panel.getByTestId('fsd-weekly-distance');
-    await expect(weekly).toContainText('No metric values are available yet.');
-    await expect(weekly.locator('[data-operational-metric]')).toHaveCount(0);
-    await expectBriefDetails(panel.page(), weekly, ['Unmeasured is not zero']);
-    await expect(panel.getByTestId('fsd-weekly-distance')).not.toContainText('0.00');
+    await expect(weekly).toHaveText(/^Reported FSD\s*—$/);
+    await expect(weekly).not.toContainText(/\d/);
+    const help = panel.getByRole('button', { name: 'More info about FSD this week', exact: true });
+    await help.focus();
+    const explanation = panel.getByRole('tooltip', { name: /Unmeasured is not zero/ });
+    await expect(explanation).toBeVisible();
+    await expect.poll(() => explanation.evaluate(node => getComputedStyle(node).opacity)).toBe('1');
+    await panel.page().keyboard.press('Escape');
+    await help.blur();
+    if (width === 1440) {
+      for (const [name, href] of [['FSD insights', '/fsd'], ['Weekly digest', '/weekly-digest']]) {
+        await expect(panel.getByRole('link', { name, exact: true })).toHaveAttribute('href', href);
+      }
+    }
   }
   if (id === 'fleet-posture') {
     await assertCataloguePostureContent(panel);

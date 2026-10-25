@@ -70,6 +70,58 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   responsive-7 telemetry precision, responsive-9/10 catalogue precision,
   responsive-11 vehicle request fixtures, and responsive-50–58 route-source
   failures; do not restart the completed signal WIP or update baselines.
+- Next phase (21:08Z, WIP): `e53cd34633` is pushed. Exact redesigned
+  analytics, automation, climate, location and extreme electrical readouts
+  replace obsolete precision/drawer contracts without removing source
+  proofs. Native climate checks retain both curves, full table values and
+  all chart bounds while requiring its intentional zero visible Y axes.
+  Totals/evidence/climate/maps and extreme checks are exercised; charging
+  is still in verification. Its full numeric/unit tick wrap/clipping is
+  repaired, exposing an obsolete full-timestamp axis expectation against
+  the actual shared short-date formatter. Preserve original source instant,
+  locale/vehicle-zone, native observer and tooltip/table proofs when
+  adapting that contract. No ordinary failure is a stopping condition.
+- Reviewed Windows 1/10 diff artifacts: changes are unintended header/body
+  displacement from the 44px Expand target, NOT a palette change.
+  Negative vertical margins preserve the original header allocation and
+  the actual 44px target; all eight header cases and 121 widgets in each
+  of six unchanged geometry configurations pass, escapes=0. No baselines
+  updated. The other three current Windows failures are also dashboard
+  variants (390/1440 light and forced colors); reevaluate after this fix.
+  Latest incomplete graph: **9 fail / 119 pass / 69 pending / 3 skipped**.
+  Source audits for Grid/ChargeHistory report six zero counts plus actual
+  TypeScript pass; full unchanged lint passes. Existing Grid receipt
+  generators ran successfully, but the attempted frozen selector selected
+  only ChargeHistory's three tests; do NOT claim the frozen gate yet.
+  **Exact next:** finish charge date-context proof, run the actual
+  `src/i18n/` frozen suites, lint and commit/push this coherent phase.
+  Then supply the typed `/mileage/daily` (366-day) and
+  `/drive-dynamics/latest` vehicle sources for responsive 11/12, and
+  continue route timezone roots. Evidence: `r22`–`r26` in the existing
+  session CI directory.
+- Precision/header phase gate (21:12Z): charging now passes **4/4** with
+  zero escapes. Short axis/table days and full timestamp tooltips each
+  derive from the original served instant, locale and vehicle zone. Added
+  a real recent-charge observer proof retaining full source fields/nulls/
+  order; the two other charging observers and original AC category/bar
+  proofs remain. Totals, evidence, climate, maps and automation groups each
+  pass 4/4; extreme telemetry passes 4/4 (150.0kW, 400V, 375A). All seven
+  actual frozen suites pass **7,728/7,728**, affected six widget suites
+  pass 93 cases, and actual source audits/TypeScript/full lint/affected
+  ESLint and both API hook domains pass. Source lengths/sections unchanged:
+  Grid 772/772, ChargeHistory 173/173, chart/panel counts 2/2 and 1/1.
+  No baseline updates; Windows dashboard displacement is a code bug fixed
+  by the preserved-height 44px target, not an intended snapshot change.
+- Vehicle source WIP is separately preserved in
+  `dashboardCatalogueVehicleFixtures.ts`: exact typed daily-mileage and
+  live dynamics fixtures validate native vehicle/range/zone query keys.
+  Its eight-case run now has **4 pass / 4 fail**, escapes=0: missing
+  requests are resolved, exposing an obsolete wide VehicleHero `heading`
+  assertion for Aurora. Finish that native contract before committing the
+  fixture. Pre-push incomplete CI: **11 fail / 139 pass / 48 pending /
+  3 skipped** (`r28-checks.json`). Continue semantic route timezone roots
+  afterward. The historical Phase-48 methodology path in instructions is
+  absent on this branch; no API/model/unit-definition change was made.
 
 ## CI-until-green continuation (2026-10-25, after `3ca29a42ad`)
 
