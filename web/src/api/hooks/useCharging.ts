@@ -8,6 +8,7 @@ import { validateAnalyticalHistory } from '@/lib/analyticalHistory';
 import { STALE_TIMES, INTERVALS } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
 import type {
   ChargingSession,
   CostForecastData,
@@ -136,7 +137,7 @@ function thermalTelemetryRows(rows: ChargeTelemetryResponse[] | null): ChargeTel
     ac_charging_energy_in_wh: 'ac_charging_energy_in_wh' in row
       ? row.ac_charging_energy_in_wh ?? null
       : 'dc_charging_energy_in_wh' in row ? null
-      : row.energy_added == null ? null : row.energy_added * 1000,
+      : row.energy_added == null ? null : row.energy_added / convertEnergyFromSI(1, 'kWh'),
     dc_charging_energy_in_wh: row.dc_charging_energy_in_wh ?? null,
     // Heater state is not a power measurement. Unsupported power stays unknown.
     battery_heater_power_w: row.battery_heater_power_w ?? null,

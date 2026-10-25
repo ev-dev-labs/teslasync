@@ -7,6 +7,7 @@ import { STALE_TIMES } from '@/lib/constants';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
 import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, WeeklyDigestData, MonthlyMileageBucket, MonthlyMileageResponse, DailyMileageBucket, DailyMileageResponse, TcoLedgerResponse, TcoLedgerCreate, TcoLedgerEntry } from '@/types/analytics';
 import { FSD_DEFAULT_PERIOD_DAYS, type FsdInsights } from '@/types/fsd';
 import type { FleetAnalytics } from '@/api/types';
@@ -29,6 +30,10 @@ export const analyticsKeys = {
   fsdInsights: (scope: QueryScope) => ['analytics', 'fsd', ...scopeKey(scope)] as const,
 };
 
+function legacyEnergyToWh(value: number | null | undefined): number {
+  return value == null ? 0 : value / convertEnergyFromSI(1, 'kWh');
+}
+
 export function useAnalyticsSummary(days = 30) {
   return useQuery({
     queryKey: analyticsKeys.summary(days),
@@ -37,7 +42,7 @@ export function useAnalyticsSummary(days = 30) {
     // once at the boundary so every consumer reads canonical units.
     select: (data) => ({
       ...data,
-      totalEnergyWh: (data.total_energy_kwh ?? 0) * 1000,
+      totalEnergyWh: legacyEnergyToWh(data.total_energy_kwh),
     }),
   });
 }
@@ -240,8 +245,8 @@ export function useWeeklyDigest(vehicleId: string) {
     // once at the boundary so every consumer reads canonical units.
     select: (data) => ({
       ...data,
-      energyWh: (data.energy_kwh ?? 0) * 1000,
-      prevEnergyWh: (data.prev_energy_kwh ?? 0) * 1000,
+      energyWh: legacyEnergyToWh(data.energy_kwh),
+      prevEnergyWh: legacyEnergyToWh(data.prev_energy_kwh),
     }),
   });
 }

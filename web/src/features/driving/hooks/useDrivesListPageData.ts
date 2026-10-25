@@ -16,7 +16,7 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { calendarRangeToInstants } from '@/lib/dateRange';
 import type { Drive } from '@/types/driving';
 import type { DriveFsdInsight } from '@/types/fsd';
-import { convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI, convertPowerFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI, convertPowerFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { isAllTimeRange } from '@/lib/datePresets';
 import { priorPeriod, shiftDayKey } from '@/lib/drivesAggregation';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -165,7 +165,7 @@ export function useDrivesListPageData() {
     [unitPrefs.power],
   );
   const toEfficiencyDisplay = useCallback(
-    (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm,
+    (whPerKm: number) => convertEfficiencyFromSI(whPerKm, unitPrefs.distance),
     [unitPrefs.distance],
   );
   const { formatEnergyCost, costPerKwh, formatCurrency } = useFormatting();
