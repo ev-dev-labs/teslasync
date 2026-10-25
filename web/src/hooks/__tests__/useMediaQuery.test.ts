@@ -15,74 +15,21 @@
  * shared `afterEach` wipes it to keep the no-matchMedia branch honest.
  */
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
 import { useMediaQuery, useIsMobile, useIsCoarsePointer } from '../useMediaQuery';
+import { patchMatchMedia } from '@/test/setup';
 
-type ChangeListener = (event: MediaQueryListEvent) => void;
-
-interface FakeMediaQueryList {
-  matches: boolean;
-  media: string;
-  onchange: null;
-  addEventListener: ReturnType<typeof vi.fn>;
-  removeEventListener: ReturnType<typeof vi.fn>;
-  addListener: ReturnType<typeof vi.fn>;
-  removeListener: ReturnType<typeof vi.fn>;
-  dispatchEvent: ReturnType<typeof vi.fn>;
-}
-
-/**
- * Install a controllable `window.matchMedia` fake.
- *
- * @param resolve decides `matches` per call. Receives the query and a
- *   monotonically increasing call index so a test can simulate a resize
- *   between the initial render read and the effect read (different values
- *   on successive calls for the same query).
- */
 function installMatchMedia(resolve: (query: string, callIndex: number) => boolean) {
-  const instances: FakeMediaQueryList[] = [];
-  const listenersByQuery = new Map<string, Set<ChangeListener>>();
-  let callIndex = 0;
-
-  const spy = vi.fn((query: string): FakeMediaQueryList => {
-    const listeners = listenersByQuery.get(query) ?? new Set<ChangeListener>();
-    listenersByQuery.set(query, listeners);
-    const mql: FakeMediaQueryList = {
-      matches: resolve(query, callIndex++),
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn((type: string, cb: ChangeListener) => {
-        if (type === 'change') listeners.add(cb);
-      }),
-      removeEventListener: vi.fn((type: string, cb: ChangeListener) => {
-        if (type === 'change') listeners.delete(cb);
-      }),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(() => true),
-    };
-    instances.push(mql);
-    return mql;
-  });
-
-  Object.defineProperty(window, 'matchMedia', {
-    configurable: true,
-    writable: true,
-    value: spy,
-  });
-
+  let callIndex = 0
+  const controller = patchMatchMedia((query) => resolve(query, callIndex++))
   return {
-    spy,
-    instances,
-    lastFor: (query: string) => [...instances].reverse().find((m) => m.media === query),
-    fire: (query: string, matches: boolean) => {
-      listenersByQuery
-        .get(query)
-        ?.forEach((cb) => cb({ matches, media: query } as MediaQueryListEvent));
-    },
-  };
+    spy: controller.spy,
+    instances: controller.instances,
+    lastFor: controller.lastFor,
+    fire: controller.fire,
+  }
 }
 
 afterEach(() => {

@@ -15,6 +15,7 @@ import { useMediaQuery, useIsCoarsePointer, useIsMobile } from '@/hooks/useMedia
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { patchMatchMedia } from '@/test/setup';
 
 // Stylesheet contract for the merged sidenav shell: vitest stubs `?raw`
 // CSS imports to an empty string, so read the source file directly (the
@@ -68,41 +69,6 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
-
-function patchMatchMedia(matches: (q: string) => boolean) {
-  const listeners = new Map<string, Set<(e: MediaQueryListEvent) => void>>();
-  const factory = (query: string): MediaQueryList => {
-    const set = listeners.get(query) ?? new Set();
-    listeners.set(query, set);
-    const mql: MediaQueryList = {
-      matches: matches(query),
-      media: query,
-      onchange: null,
-      addEventListener: (type, listener) => {
-        if (type === 'change') set.add(listener as (e: MediaQueryListEvent) => void);
-      },
-      removeEventListener: (type, listener) => {
-        if (type === 'change') set.delete(listener as (e: MediaQueryListEvent) => void);
-      },
-      addListener: () => {},
-      removeListener: () => {},
-      dispatchEvent: () => true,
-    } as MediaQueryList;
-    return mql;
-  };
-  Object.defineProperty(window, 'matchMedia', {
-    configurable: true,
-    writable: true,
-    value: vi.fn(factory),
-  });
-  return {
-    fire: (query: string, next: boolean) => {
-      const set = listeners.get(query);
-      if (!set) return;
-      set.forEach((cb) => cb({ matches: next, media: query } as MediaQueryListEvent));
-    },
-  };
-}
 
 describe('mobile.viewport :: shared primitives at 375px', () => {
   it('Modal renders as a bottom sheet on mobile (no sm:rounded clipping)', () => {

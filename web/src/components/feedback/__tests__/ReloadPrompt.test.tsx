@@ -85,13 +85,6 @@ vi.mock('@/hooks/usePwaUpdate', () => ({
   }),
 }))
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: unknown) =>
-      typeof fallback === 'string' ? fallback : key,
-  }),
-}))
-
 beforeEach(() => {
   purgeMock.mockClear()
   bus.unsubscribe.mockClear()

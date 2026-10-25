@@ -23,6 +23,8 @@
  * `patchMatchMedia()`.
  */
 import '@testing-library/jest-dom'
+import { vi } from 'vitest'
+import type { Mock } from 'vitest'
 
 // A minimal structural view of an object we can hang browser globals off of:
 // `globalThis` in real use, or a throwaway fake target in unit tests.
@@ -34,6 +36,7 @@ type GlobalLike = Record<string, unknown>
  * mounts synchronously under test rather than staying invisible forever.
  */
 export class MockIntersectionObserver implements IntersectionObserver {
+  static readonly instances: MockIntersectionObserver[] = []
   readonly root: Element | Document | null
   readonly rootMargin: string
   readonly thresholds: ReadonlyArray<number>
@@ -41,13 +44,18 @@ export class MockIntersectionObserver implements IntersectionObserver {
   readonly observed = new Set<Element>()
 
   constructor(
-    private readonly callback: IntersectionObserverCallback,
+    protected readonly callback: IntersectionObserverCallback,
     options?: IntersectionObserverInit,
   ) {
     this.root = options?.root ?? null
     this.rootMargin = options?.rootMargin ?? '0px'
     const threshold = options?.threshold
     this.thresholds = Array.isArray(threshold) ? threshold : [threshold ?? 0]
+    MockIntersectionObserver.instances.push(this)
+  }
+
+  static reset(): void {
+    MockIntersectionObserver.instances.length = 0
   }
 
   observe(target: Element): void {
@@ -74,6 +82,91 @@ export class MockIntersectionObserver implements IntersectionObserver {
 
   takeRecords(): IntersectionObserverEntry[] {
     return []
+  }
+
+  /** Synchronously deliver a controlled set of entries to this observer. */
+  emit(entries: Array<Partial<IntersectionObserverEntry>>): void {
+    const delivered = entries.map((entry) => ({
+      target: entry.target ?? document.createElement('div'),
+      isIntersecting: entry.isIntersecting ?? false,
+      intersectionRatio: entry.intersectionRatio ?? (entry.isIntersecting ? 1 : 0),
+      boundingClientRect: entry.boundingClientRect ?? new DOMRect(),
+      intersectionRect: entry.intersectionRect ?? new DOMRect(),
+      rootBounds: entry.rootBounds ?? null,
+      time: entry.time ?? 0,
+    })) as IntersectionObserverEntry[]
+    this.callback(delivered, this)
+  }
+}
+
+/**
+ * Intersection observer that never fires on `observe()`. Call `emit()` to
+ * deliver a precise state transition, ideal for hooks and components that
+ * need visibility branches to be asserted independently.
+ */
+export class MockControlledIntersectionObserver implements IntersectionObserver {
+  static readonly instances: MockControlledIntersectionObserver[] = []
+  readonly root: Element | Document | null
+  readonly rootMargin: string
+  readonly thresholds: ReadonlyArray<number>
+  readonly observed = new Set<Element>()
+  disconnectCount = 0
+  readonly options?: IntersectionObserverInit
+  readonly cb: IntersectionObserverCallback
+  get disconnected(): boolean {
+    return this.disconnectCount > 0
+  }
+
+  constructor(
+    private readonly callback: IntersectionObserverCallback,
+    options?: IntersectionObserverInit,
+  ) {
+    this.cb = callback
+    this.options = options
+    this.root = options?.root ?? null
+    this.rootMargin = options?.rootMargin ?? '0px'
+    const threshold = options?.threshold
+    this.thresholds = Array.isArray(threshold) ? threshold : [threshold ?? 0]
+    MockControlledIntersectionObserver.instances.push(this)
+  }
+
+  static reset(): void {
+    MockControlledIntersectionObserver.instances.length = 0
+  }
+
+  static latest(): MockControlledIntersectionObserver | undefined {
+    const list = MockControlledIntersectionObserver.instances
+    return list[list.length - 1]
+  }
+
+  observe = vi.fn((target: Element): void => {
+    this.observed.add(target)
+  })
+
+  unobserve = vi.fn((target: Element): void => {
+    this.observed.delete(target)
+  })
+
+  disconnect = vi.fn((): void => {
+    this.observed.clear()
+    this.disconnectCount += 1
+  })
+
+  takeRecords(): IntersectionObserverEntry[] {
+    return []
+  }
+
+  emit(entries: Array<Partial<IntersectionObserverEntry>>): void {
+    const delivered = entries.map((entry) => ({
+      target: entry.target ?? document.createElement('div'),
+      isIntersecting: entry.isIntersecting ?? false,
+      intersectionRatio: entry.intersectionRatio ?? (entry.isIntersecting ? 1 : 0),
+      boundingClientRect: entry.boundingClientRect ?? new DOMRect(),
+      intersectionRect: entry.intersectionRect ?? new DOMRect(),
+      rootBounds: entry.rootBounds ?? null,
+      time: entry.time ?? 0,
+    })) as IntersectionObserverEntry[]
+    this.callback(delivered, this)
   }
 }
 
@@ -231,6 +324,12 @@ export interface MatchMediaController {
   fire: (query: string, matches: boolean) => void
   /** Restore the previous `window.matchMedia` (or remove the stub). */
   restore: () => void
+  /** The factory installed as `window.matchMedia`, exposed for call assertions. */
+  spy: Mock<(query: string) => MediaQueryList>
+  /** Every MediaQueryList created by this patch. */
+  instances: MediaQueryList[]
+  /** Return the newest instance for a media query. */
+  lastFor: (query: string) => MediaQueryList | undefined
 }
 
 /**
@@ -245,6 +344,7 @@ export function patchMatchMedia(
   const listeners = new Map<string, Set<(event: MediaQueryListEvent) => void>>()
   const instances = new Map<string, Set<MediaQueryList>>()
   const currentMatches = new Map<string, boolean>()
+  const allInstances: MediaQueryList[] = []
 
   const factory = (query: string): MediaQueryList => {
     const set = listeners.get(query) ?? new Set<(event: MediaQueryListEvent) => void>()
@@ -255,25 +355,27 @@ export function patchMatchMedia(
       matches: currentMatches.get(query) ?? matches(query),
       media: query,
       onchange: null,
-      addEventListener: (type: string, listener: (event: MediaQueryListEvent) => void) => {
+      addEventListener: vi.fn((type: string, listener: (event: MediaQueryListEvent) => void) => {
         if (type === 'change') set.add(listener)
-      },
-      removeEventListener: (type: string, listener: (event: MediaQueryListEvent) => void) => {
+      }),
+      removeEventListener: vi.fn((type: string, listener: (event: MediaQueryListEvent) => void) => {
         if (type === 'change') set.delete(listener)
-      },
-      addListener: (listener: (event: MediaQueryListEvent) => void) => set.add(listener),
-      removeListener: (listener: (event: MediaQueryListEvent) => void) => set.delete(listener),
-      dispatchEvent: () => true,
+      }),
+      addListener: vi.fn((listener: (event: MediaQueryListEvent) => void) => set.add(listener)),
+      removeListener: vi.fn((listener: (event: MediaQueryListEvent) => void) => set.delete(listener)),
+      dispatchEvent: vi.fn(() => true),
     }
     queryInstances.add(mql as unknown as MediaQueryList)
+    allInstances.push(mql as unknown as MediaQueryList)
     return mql as unknown as MediaQueryList
   }
 
   const previous = Object.getOwnPropertyDescriptor(win, 'matchMedia')
+  const spy = vi.fn(factory)
   Object.defineProperty(win, 'matchMedia', {
     configurable: true,
     writable: true,
-    value: factory,
+    value: spy,
   })
 
   return {
@@ -293,6 +395,14 @@ export function patchMatchMedia(
     restore: () => {
       if (previous) Object.defineProperty(win, 'matchMedia', previous)
       else Reflect.deleteProperty(win, 'matchMedia')
+    },
+    spy,
+    instances: allInstances,
+    lastFor: (query) => {
+      const candidates = instances.get(query)
+      if (!candidates) return undefined
+      const list = Array.from(candidates)
+      return list[list.length - 1]
     },
   }
 }
@@ -492,6 +602,7 @@ export class MockServiceWorkerRegistration {
   active: ServiceWorker | null = null
   waiting: ServiceWorker | null = null
   installing: ServiceWorker | null = null
+  private readonly showNotificationImpl: () => Promise<void>
 
   addEventListener(): void {}
   removeEventListener(): void {}
@@ -508,23 +619,36 @@ export class MockServiceWorkerRegistration {
   async unregister(): Promise<boolean> {
     return true
   }
-  async showNotification(): Promise<void> {}
+  constructor(options: { showNotification?: () => Promise<void> } = {}) {
+    this.showNotificationImpl = options.showNotification ?? (async () => {})
+  }
+  async showNotification(): Promise<void> {
+    await this.showNotificationImpl()
+  }
   async getNotifications(): Promise<readonly Notification[]> {
     return []
   }
 }
 
+export interface ServiceWorkerLifecycleOptions {
+  showNotification?: () => Promise<void>
+  postMessage?: (message: unknown, transfer?: Transferable[]) => void
+  getRegistration?: () => Promise<unknown>
+  getRegistrations?: () => Promise<unknown[]>
+  register?: () => Promise<unknown>
+  controlled?: boolean
+}
+
 export class MockServiceWorkerLifecycle {
   readonly registration: MockServiceWorkerRegistration
-  readonly controller = {
-    postMessage: (_message: unknown, _transfer?: Transferable[]) => {},
-  } as unknown as ServiceWorker
+  readonly controller: ServiceWorker
 
   private readonly containerListeners = new Set<(event: Event) => void>()
   private readonly messageListeners = new Set<(event: MessageEvent) => void>()
   private readonly registrations: MockServiceWorkerRegistration[] = []
   readyResolve!: () => void
   readonly ready: Promise<ServiceWorkerRegistration>
+  private readonly options: ServiceWorkerLifecycleOptions
 
   readonly container = {
     get controller() {
@@ -532,9 +656,21 @@ export class MockServiceWorkerLifecycle {
     },
     containerController: null as ServiceWorker | null,
     ready: undefined as Promise<ServiceWorkerRegistration> | undefined,
-    register: async () => this.registration,
-    getRegistration: async () => this.registration,
-    getRegistrations: async () => this.registrations,
+    register: async () => (
+      this.options.register
+        ? await this.options.register()
+        : this.registration
+    ) as ServiceWorkerRegistration,
+    getRegistration: async () => (
+      this.options.getRegistration
+        ? await this.options.getRegistration()
+        : this.registration
+    ) as ServiceWorkerRegistration | undefined,
+    getRegistrations: async () => (
+      this.options.getRegistrations
+        ? await this.options.getRegistrations()
+        : this.registrations
+    ) as ServiceWorkerRegistration[],
     addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
       if (type === 'controllerchange') {
         this.containerListeners.add(listener as (event: Event) => void)
@@ -554,8 +690,15 @@ export class MockServiceWorkerLifecycle {
     startMessages: () => undefined,
   }
 
-  constructor() {
-    this.registration = new MockServiceWorkerRegistration()
+  constructor(options: ServiceWorkerLifecycleOptions = {}) {
+    this.options = options
+    this.registration = new MockServiceWorkerRegistration({
+      showNotification: options.showNotification,
+    })
+    const postMessage = options.postMessage ?? (() => {})
+    this.controller = {
+      postMessage,
+    } as unknown as ServiceWorker
     this.registrations.push(this.registration)
     this.ready = new Promise<ServiceWorkerRegistration>((resolve) => {
       this.readyResolve = () => resolve(this.registration as unknown as ServiceWorkerRegistration)
@@ -597,9 +740,15 @@ export interface ServiceWorkerLifecycleController {
 
 export function patchServiceWorkerLifecycle(
   nav: Navigator = navigator,
+  options: ServiceWorkerLifecycleOptions = {},
 ): ServiceWorkerLifecycleController {
-  const lifecycle = new MockServiceWorkerLifecycle()
+  const lifecycle = new MockServiceWorkerLifecycle(options)
   const previous = Object.getOwnPropertyDescriptor(nav, 'serviceWorker')
+  if (options.postMessage || options.showNotification) {
+    lifecycle.container.containerController = lifecycle.controller
+    lifecycle.registration.active = lifecycle.controller
+    lifecycle.readyResolve()
+  }
   Object.defineProperty(nav, 'serviceWorker', {
     configurable: true,
     writable: true,

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
+import { patchMatchMedia } from '@/test/setup'
 
 import { detectInstallCapability, isIosPlatform, usePwaInstall } from '../usePwaInstall'
 
@@ -95,20 +96,7 @@ describe('usePwaInstall', () => {
   }
 
   function stubMatchMedia(matches: boolean) {
-    Object.defineProperty(window, 'matchMedia', {
-      configurable: true,
-      writable: true,
-      value: vi.fn((query: string) => ({
-        matches,
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-      })),
-    })
+    return patchMatchMedia(() => matches)
   }
 
   function fireBeforeInstallPrompt(outcome: 'accepted' | 'dismissed' = 'accepted') {

@@ -81,19 +81,6 @@ vi.mock('@/hooks/usePwaUpdate', () => ({
   }),
 }))
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: unknown, vars?: Record<string, unknown>) => {
-      const str = typeof fallback === 'string' ? fallback : key
-      if (vars == null) return str
-      return Object.entries(vars).reduce<string>(
-        (acc, [k, v]) => acc.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v)),
-        str,
-      )
-    },
-  }),
-}))
-
 /**
  * Every element that would speak the offline transition to a screen reader:
  * an ARIA live region that is actually live (`aria-live` other than `off`,

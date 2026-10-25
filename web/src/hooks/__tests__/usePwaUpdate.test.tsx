@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
+import { patchServiceWorkerLifecycle } from '@/test/setup'
 
 /**
  * Update lifecycle (PWA-03) and the API-contract handshake (PWA-04).
@@ -65,19 +66,7 @@ import {
 import { APP_VERSION, BUILD_ID } from '@/sw/buildContract'
 
 const controllerPostMessage = vi.fn()
-
-function stubServiceWorkerController() {
-  Object.defineProperty(navigator, 'serviceWorker', {
-    configurable: true,
-    writable: true,
-    value: {
-      controller: { postMessage: controllerPostMessage },
-      getRegistration: vi.fn(async () => harness.registration),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    },
-  })
-}
+let restoreServiceWorker: (() => void) | undefined
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -91,13 +80,19 @@ beforeEach(() => {
   harness.bootVersion = APP_VERSION
   harness.latestVersion = APP_VERSION
   controllerPostMessage.mockClear()
-  stubServiceWorkerController()
+  restoreServiceWorker?.()
+  restoreServiceWorker = patchServiceWorkerLifecycle(navigator, {
+    postMessage: controllerPostMessage,
+    getRegistration: async () => harness.registration as unknown,
+  }).restore
   Object.defineProperty(document, 'hidden', { configurable: true, value: false })
 })
 
 afterEach(() => {
   vi.useRealTimers()
   vi.restoreAllMocks()
+  restoreServiceWorker?.()
+  restoreServiceWorker = undefined
 })
 
 describe('detection', () => {
