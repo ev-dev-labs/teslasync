@@ -4,6 +4,48 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
+## CI-driven continuation (2026-10-25, after `ec53fca3b5`)
+
+- User strategy override is now reflected in playbook section 3: local
+  TypeScript/lint and related unit/E2E specs ONLY; CI owns full validation.
+  No full local quality suite or replica. Timeouts require inspection and
+  smaller runs, not another identical run or an early stop.
+- Section 0: expected branch fetched/pulled; clean at `ec53fca3b5`.
+  Removed an empty stale `.git/index.lock` only after confirming no git
+  process owned it. Existing CLI is this session's parent; IDE-owned
+  headless Copilot and Playwright test-server remain user tooling.
+- Round 0: **42 failing / 158 passing / 3 skipped** checks at `ec53fca3b5`.
+  CI run `40198967208`: one stale statistics source assertion causes unit
+  shard 1/8, coverage and aggregate failures. CodeQL reports two test-only
+  incomplete-escaping/sanitization patterns. Quality run `40198967056`:
+  dashboard acceptance/design mismatches, real cost-chart clipping,
+  timezone violations on 23 routes, and six failing Windows visual shards
+  (1,5,10,14,39,56 out of 64). No baseline update has run.
+- Evidence:
+  `/home/atul/.copilot/session-state/d279d214-3d92-4a65-b124-08c71e983561/files/ci-rounds-20261025/`.
+  `round-0-checks.json`, `ci-failed.log`, `quality-failed.log`,
+  `quality-failure-summary.json`, `codeql-check.json`,
+  `codeql-annotations.json`. Read bounded summaries, not entire logs.
+- Fixes 1-3 verified: cost breakdown's full-height headline no longer takes
+  the chart's allocated height (wrapped in a content-sized, non-shrinking
+  flex item); added containment regression. All eight signed/eight-decimal
+  axis geometry scenarios pass unchanged, wrapper proxy escapes=0.
+  Updated the statistics source contract to require the canonical shared
+  efficiency conversion already used by production, not inline legacy
+  multiplication. Removed CodeQL-triggering incomplete regex escaping in
+  the pair-table test using exact accessible names, and strengthened the
+  watch privacy assertion with case-insensitive matching and no script DOM.
+  Five targeted suites: 121/121 tests. Actual seven-category production
+  audit: six counts 0, TypeScript passes; complete lint chain exits 0.
+  Evidence: `fix-1-3-unit.log`, `fix-1-axis-browser.log`,
+  `fix-1-audit.log`, `fix-1-3-lint.log`.
+- Windows mirror again confirmed clean; downloaded ONLY failing visual
+  artifacts (1,5,10,14,39,56/64). They have not been reviewed or regenerated.
+- Current next step: finish departure forecast's selected-zone semantics
+  and provenance (in progress), then other semantic timezone roots and
+  dashboard acceptance groups. Push verified fixes and continue the next
+  fix while CI runs. Completed fixes this session: 3.
+
 ## Resume verification (2026-10-25, after `354deb1c1f`)
 
 - Section 0: fetched/pulled the expected branch; working tree clean. Stopped

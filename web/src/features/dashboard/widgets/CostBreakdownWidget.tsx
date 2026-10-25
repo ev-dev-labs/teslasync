@@ -212,12 +212,14 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
       onRefresh={handleRefresh}
     >
         <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
+          <div className="shrink-0">
           <WidgetBigNumber
             value={totalCost == null ? null : formatAmount(totalCost)}
             label={t('widget.costBreakdown.lifetimeCost', 'Lifetime charging cost')}
             delta={savingsDelta}
             animated={false}
           />
+          </div>
           <div className="min-h-0 flex-1 grid grid-cols-1">
           <EmbeddedChart
             title={t('widget.costBreakdown.title', 'Cost breakdown')}

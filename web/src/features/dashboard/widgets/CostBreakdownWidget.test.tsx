@@ -146,6 +146,14 @@ describe('CostBreakdownWidget — After card', () => {
     ]);
   });
 
+  it('sizes the headline independently of the remaining chart space', () => {
+    renderWidget(2);
+    const headline = screen.getByText('$238.00').closest('.h-full');
+    expect(headline?.parentElement).toHaveClass('shrink-0');
+    expect(headline?.parentElement?.parentElement).toHaveClass('flex-col', 'min-h-0');
+    expect(screen.getByTestId('cost-pie')).toBeInTheDocument();
+  });
+
   it('uses a bar fallback without fabricating allocations for unknown or negative readings', () => {
     analytics.cost.mockReturnValue(query({
       data: makeData({

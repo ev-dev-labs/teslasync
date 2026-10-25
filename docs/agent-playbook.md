@@ -57,6 +57,9 @@ to resume without redoing work.
   to avoid excessive CI runs).
 - Append one line to `docs/progress-log.md` every 30 minutes:
   `time | agent | part/step | done since last entry | blockers`.
+- After every ten completed fixes, commit verified work, update the work
+  queue with the exact next step, push, and hand off to a fresh session.
+  Validation attempts are not completed fixes.
 - When your session or usage is about to end: stop starting new tasks,
   finish or safely stop the current one, commit (exact paths; WIP commits
   named `wip: <part/task> - <what's incomplete>`), remove worktrees you
@@ -163,40 +166,41 @@ branches) into main or this branch.
 
 ---
 
-## 3. Verification: local CI replica (before every push)
+## 3. Verification: targeted locally, full suite in CI
 
 Workflow: `.github/workflows/frontend-quality.yml`. All browser tests run
 against a hermetic mock build with NO backend (none runs in this WSL
 environment, which matches CI).
 
-From `~/repos/teslasync/web` (bash):
+Local checks are targeted only: TypeScript, lint, and the unit/browser
+specifications related to the current change. NEVER run the full quality
+suite or a full local CI replica. CI owns full-suite validation.
+
+From `~/repos/teslasync/web` (bash), build once after source changes and
+reuse that hermetic build for individual specs or small related groups:
 
 ```
 E2E_MOCKS=1 npm run e2e:build
 export E2E_MOCKS=1 E2E_REUSE_BUILD=1 CI=true TZ=UTC
-npm run e2e:quality -- --shard=N/16          # all 16 shards
-npm run e2e:a11y -- --shard=1/1
-npm run e2e:performance -- --shard=1/1
-npm run e2e -- --project=firefox-smoke
-npm run e2e -- --project=webkit-smoke
+timeout 20m npm run e2e -- --project=chromium-smoke e2e/<related>.spec.ts > <session-log> 2>&1
+npx tsc --noEmit
+npm run lint
+npm test -- <related-test-files>
 ```
 
 Rebuild with `e2e:build` after source changes. A shard passes only if the
 tests pass AND the wrapper reports no proxy/network escape error.
 
-Also run: `node scripts/generate-route-registry.mjs --check`;
-`go run ./cmd/routetemplategen --check` (repo root); `npm run e2e:routes`;
-`npm run e2e:contract`; `npm run e2e:scenario-contract`; `npm run e2e:list`;
-`npx tsc --noEmit`; `npm run lint` (with all audits);
-`node scripts/split-i18n-catalog.mjs --check`; `npm run build`; the full
-Vitest suite; `go build ./...` and `go test ./...`.
+Push verified fixes, then inspect `gh pr checks 202` and download failing
+logs with `gh run view <id> --log-failed` to session files. Download failure
+artifacts when logs are insufficient. Group failures by root cause and
+fix the biggest group first. Track failing counts before/after every round
+in the work queue. While CI runs, work on the next fix instead of waiting.
+Repeat until every PR check passes.
 
-During a part, run the relevant subset per task; run the full replica
-before each push at a part step or phase gate.
-
-After pushing: `gh pr checks <pr> --watch`. On failure:
-`gh run view <id> --log-failed`, reproduce locally, fix the real cause,
-push, repeat.
+A timeout means the run was too big or hung: inspect its log and split it
+smaller. Never retry the same oversized run or treat repeated timeouts as
+a reason to stop. Never wait more than 15 minutes without new output.
 
 ---
 
@@ -220,6 +224,11 @@ push, repeat.
   3. Run via Windows PowerShell, e.g.:
      `powershell.exe -NoProfile -Command "cd D:\repos\teslasync\web; $env:E2E_MOCKS='1'; npm run e2e:build; $env:E2E_REUSE_BUILD='1'; $env:CI='true'; $env:TZ='UTC'; npm run e2e:visual -- --shard=N/10 --workers=2"`
      (add `--update-snapshots` only for intended, reviewed differences).
+     Use the failing Windows visual shards from CI and download their diff
+     artifacts first. Confirm each diff is an intended redesign/palette
+     change, not a bug. Regenerate only those shards, one at a time, with
+     `timeout 20m`; use the actual CI shard denominator, not the illustrative
+     `N/10` above. Fix code instead when a diff reveals a bug.
      If the mirror's node_modules is out of date, run
      `powershell.exe -NoProfile -Command "cd D:\repos\teslasync\web; npm ci --legacy-peer-deps"` once.
   4. Copy only the changed snapshot files from

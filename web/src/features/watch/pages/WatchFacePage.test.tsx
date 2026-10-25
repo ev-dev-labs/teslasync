@@ -569,7 +569,8 @@ describe('WatchFacePage', () => {
     expect(details).toHaveAttribute('aria-expanded', 'false')
     fireEvent.click(details)
     expect(screen.getByRole('region', { name: 'Learn more' })).toHaveTextContent('Status: HTTP 500')
-    expect(document.body.textContent).not.toMatch(/private-key|private-vin|private-code|private stack|<script>/)
+    expect(document.body.textContent).not.toMatch(/private-key|private-vin|private-code|private stack|<script>/i)
+    expect(document.querySelector('script')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(refetch).toHaveBeenCalledTimes(1)
 

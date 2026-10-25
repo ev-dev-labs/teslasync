@@ -231,7 +231,7 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
       'SoC drift', 'Already-full dwell (min)', 'Pairing signals', 'Charge ID', 'Drive ID',
     ];
     for (const header of expected) {
-      expect(within(table).getByRole('columnheader', { name: new RegExp(header.replace(/[()]/g, '\\$&')) })).toBeInTheDocument();
+      expect(within(table).getByRole('columnheader', { name: header, exact: true })).toBeInTheDocument();
     }
     expect(within(table).getAllByRole('row')).toHaveLength(13);
     expect(within(table).getByText('charge-14')).toBeInTheDocument();
