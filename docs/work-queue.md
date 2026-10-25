@@ -143,6 +143,43 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   not a completed graph or green. Evidence: `r28-grid-unit`,
   `r31-vehicle`, `r31-vehicle-unit`, `r31-fixture-audit`, `r31-eslint`.
 
+- Home-energy WIP (21:37Z): `c1ceae7e71` is pushed. Eleven new pure
+  selected-zone/DST regressions first failed against UTC production; all
+  91 affected unit cases and five unchanged route guards now pass after
+  using shared numeric zoned parts, wall-time conversion and civil-day
+  helpers. Tariffs/departures and both historical/projected forecast
+  clocks follow `useDateFormat()`; KPI bounds use the same setting, with
+  exact Tokyo and Los Angeles DST/locale assertions. UTC wire instants,
+  absolute slot durations/24-hour horizons and measured values remain.
+  Persisted v1 numeric clock-hour assumptions retain their values and now
+  follow the active display setting; there is no second stored zone or
+  settings migration. Catalog/fallbacks are synchronized. Actual
+  TypeScript, full unchanged lint, six zero directory audit categories,
+  energy-hook routing and the hermetic build pass. **Exact next:** finish
+  native supported browser contracts after adding explicit UTC arguments
+  to their original seeded-clock expectations, run the new forecast-memo
+  rerender regression/affected ESLint, then commit/push this coherent
+  phase. Latest graph is 8 pending/2 skip, not green. No baseline changes.
+- Home-energy phase gate (21:42Z): all **92/92** affected units now pass,
+  including mounted tariff/departure and both forecast-memo zone-change
+  regressions with unchanged scenario/source bytes and absolute instants.
+  Native supported browser contracts pass **8/8** after explicitly threading
+  their original seeded UTC clock through expectations; canonical exported
+  plans retain the original shape. The unchanged responsive/timezone guard
+  passes **5/5**, and both wrappers report zero proxy escapes. Final actual
+  TypeScript and affected ESLint pass. Full unchanged lint, directory audit,
+  energy-hook verification and build passed on the final production code.
+  Source lengths/section counts remain intact: KPI 127/127, controls
+  207/207, vehicle controls 125/125, hook 346/351, defaults 155/161,
+  forecasts 218/218; the page still renders all ten original sections.
+  **Exact next after push:** inspect current CI, then trace and fix the
+  remaining signal-entropy/TCO/schema-description roots before the larger
+  utilization/export/sleep/insurance/automation calendar models. Latest
+  current-head CI is still queued (8 pending/2 skip); no green claim.
+  Evidence: `r32-local-clock-red`, `r32-home-route`, `r32-home-audit`,
+  `r32-lint`, `r33-home-supported`, `r33-eslint`, `r35-home-unit`,
+  `r35-tsc`, `r35-eslint`. No Windows mirror or baseline changes.
+
 ## CI-until-green continuation (2026-10-25, after `3ca29a42ad`)
 
 - Section 0: fetched/switched/pulled the expected branch; worktree clean.

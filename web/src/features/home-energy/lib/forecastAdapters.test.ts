@@ -32,8 +32,25 @@ function buildSyntheticDay(dateIso: string, peakWh: number): TeslaEnergyHistoryE
 }
 
 describe('buildSolarForecast', () => {
+  it.each([
+    ['2026-03-07T08:00:00Z', '2026-03-08T08:00:00Z', [0, 100, 300, 400, 500, 600]],
+    ['2026-10-31T07:00:00Z', '2026-11-01T07:00:00Z', [0, 100, 100, 200, 300, 400]],
+  ] as const)('matches historical local clock buckets across DST from %s', (historyStart, startTimeIso, expected) => {
+    const history = Array.from({ length: 24 }, (_, hour) => entry({
+      timestamp: new Date(Date.parse(historyStart) + hour * 3_600_000).toISOString(),
+      solar_energy_wh: hour * 100,
+    }));
+    const original = JSON.stringify(history);
+    const forecast = buildSolarForecast(history, {
+      timezone: 'America/Los_Angeles', startTimeIso, slotMinutes: 60, horizonSlots: expected.length,
+    });
+    expect(forecast.seriesW).toEqual(expected);
+    expect(forecast.sourceSampleCount).toBe(24);
+    expect(JSON.stringify(history)).toBe(original);
+  });
+
   it('returns zero confidence and an all-quiet series when no history is available', () => {
-    const result = buildSolarForecast([], { startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 8 });
+    const result = buildSolarForecast([], { timezone: 'UTC', startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 8 });
     expect(result.confidence).toBe(0);
     expect(result.quality).toBe('none');
     expect(result.seriesW).toHaveLength(8);
@@ -44,14 +61,14 @@ describe('buildSolarForecast', () => {
 
   it('never throws on malformed / null entries and ignores them', () => {
     const bad = [null, undefined, {}, { timestamp: 'not-a-date' }, entry({ timestamp: '2024-06-01T12:00:00.000Z', solar_energy_wh: -5 })] as unknown as TeslaEnergyHistoryEntry[];
-    expect(() => buildSolarForecast(bad, { startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 4 })).not.toThrow();
-    const result = buildSolarForecast(bad, { startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 4 });
+    expect(() => buildSolarForecast(bad, { timezone: 'UTC', startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 4 })).not.toThrow();
+    const result = buildSolarForecast(bad, { timezone: 'UTC', startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 4 });
     expect(result.sourceSampleCount).toBe(0);
   });
 
   it('derives a plausible midday-peaking solar curve from a full day of samples with high confidence', () => {
     const day = buildSyntheticDay('2024-06-01T00:00:00.000Z', 6000);
-    const result = buildSolarForecast(day, { startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 96 });
+    const result = buildSolarForecast(day, { timezone: 'UTC', startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 96 });
 
     expect(result.quality).toBe('high');
     expect(result.confidence).toBeGreaterThan(0.7);
@@ -65,8 +82,8 @@ describe('buildSolarForecast', () => {
 
   it('tiles the day-shape forward across a multi-day horizon deterministically', () => {
     const day = buildSyntheticDay('2024-06-01T00:00:00.000Z', 5000);
-    const first = buildSolarForecast(day, { startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 192 });
-    const second = buildSolarForecast(day, { startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 192 });
+    const first = buildSolarForecast(day, { timezone: 'UTC', startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 192 });
+    const second = buildSolarForecast(day, { timezone: 'UTC', startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 192 });
     expect(first.seriesW).toEqual(second.seriesW);
     // Same time-of-day 24h later (96 slots at 15-min) must repeat the shape.
     expect(first.seriesW[10]).toBeCloseTo(first.seriesW[10 + 96], 6);
@@ -77,7 +94,7 @@ describe('buildSolarForecast', () => {
       entry({ timestamp: '2024-06-01T12:00:00.000Z', solar_energy_wh: 500 }),
       entry({ timestamp: '2024-06-01T12:05:00.000Z', solar_energy_wh: 500 }),
     ];
-    const result = buildSolarForecast(sparse, { startTimeIso: '2024-06-01T12:00:00.000Z', slotMinutes: 15, horizonSlots: 4 });
+    const result = buildSolarForecast(sparse, { timezone: 'UTC', startTimeIso: '2024-06-01T12:00:00.000Z', slotMinutes: 15, horizonSlots: 4 });
     // Every slot should inherit the one sampled value since it's the only data point in the day.
     expect(result.seriesW.every((w) => w > 0)).toBe(true);
     expect(result.quality).toBe('low');
@@ -85,7 +102,7 @@ describe('buildSolarForecast', () => {
 });
 
 describe('buildLoadForecast', () => {
-  const options = { startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 4 };
+  const options = { timezone: 'UTC', startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 4 };
 
   it.each([null, undefined, []])('does not invent a measured load series from missing history (%j)', (history) => {
     expect(buildLoadForecast(history, options)).toMatchObject({
@@ -134,7 +151,7 @@ describe('buildLoadForecast', () => {
 
   it('reads consumer_energy_wh independently of the solar field', () => {
     const day = buildSyntheticDay('2024-06-01T00:00:00.000Z', 6000);
-    const result = buildLoadForecast(day, { startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 4 });
+    const result = buildLoadForecast(day, { timezone: 'UTC', startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 4 });
     expect(result.seriesW.every((w) => Math.abs(w - 200) < 1)).toBe(true);
   });
 });

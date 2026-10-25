@@ -105,8 +105,10 @@ export function expectedHomePlan(
 ) {
   const horizonSlots = Math.max(1, Math.round(scenario.horizonHours * 60 / scenario.slotMinutes));
   const options = { startTimeIso, slotMinutes: scenario.slotMinutes, horizonSlots };
-  const solar = buildSolarForecast(history, options);
-  const load = buildLoadForecast(history, options);
+  const timezone = 'UTC';
+  const forecastOptions = { ...options, timezone };
+  const solar = buildSolarForecast(history, forecastOptions);
+  const load = buildLoadForecast(history, forecastOptions);
   const assumption = scenario.vehicleAssumptions['7'] ?? DEFAULT_VEHICLE_ASSUMPTION;
   const input: OrchestrationInput = {
     ...options,
@@ -115,10 +117,10 @@ export function expectedHomePlan(
       targetSocPct: assumption.targetSocPct, usableCapacityWh: assumption.usableCapacityWh,
       maxChargePowerW: assumption.maxChargePowerW, priority: assumption.priority,
       departureSlot: assumption.hasDeadline
-        ? defaultDepartureSlot(assumption.departureHour, startTimeIso, scenario.slotMinutes, horizonSlots) : null,
+        ? defaultDepartureSlot(assumption.departureHour, startTimeIso, scenario.slotMinutes, horizonSlots, timezone) : null,
     }],
     solarForecastW: solar.seriesW, loadForecastW: load.seriesW,
-    tariff: buildTariffSeries(scenario.tariff, startTimeIso, scenario.slotMinutes, horizonSlots),
+    tariff: buildTariffSeries(scenario.tariff, startTimeIso, scenario.slotMinutes, horizonSlots, timezone),
     powerwall: scenario.powerwall.enabled ? {
       capacityWh: scenario.powerwall.capacityWh,
       currentSocPct: homeLiveStatus.percentage_charged ?? 50,

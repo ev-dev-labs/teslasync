@@ -13,6 +13,9 @@
  */
 
 import type { TariffSlot } from './types';
+import { zonedDateParts } from '@/lib/dateFormat';
+import { addCivilDays, civilDateInTimeZone } from '@/lib/dateRange';
+import { zonedWallTimeToUtc } from '@/lib/dateConvert';
 
 export const DEFAULT_SLOT_MINUTES = 15;
 export const DEFAULT_HORIZON_HOURS = 24;
@@ -23,7 +26,7 @@ export interface TariffScenario {
   importPeakPerKwh: number;
   importOffPeakPerKwh: number;
   exportPerKwh: number;
-  /** Peak window start hour, 0–23 (UTC — see module caveat). */
+  /** Peak window start hour, 0–23 in the selected display clock. */
   peakStartHour: number;
   /** Peak window end hour, 0–23, exclusive. May be `<= peakStartHour` to model an overnight-wrapping window. */
   peakEndHour: number;
@@ -71,7 +74,7 @@ export interface VehicleAssumption {
   /** Usable pack capacity, watt-hours — no sanctioned endpoint returns this reliably, so it is user-editable. */
   usableCapacityWh: number;
   maxChargePowerW: number;
-  /** Departure hour of day, 0–23 (UTC — see module caveat). */
+  /** Departure hour of day, 0–23 in the selected display clock. */
   departureHour: number;
   /** Whether the deadline is enforced at all (`false` = purely opportunistic charging). */
   hasDeadline: boolean;
@@ -92,23 +95,17 @@ function clampHour(h: number): number {
   return Math.min(23, Math.max(0, n));
 }
 
-function utcHourOfSlot(startTimeIso: string, slotMinutes: number, slotIndex: number): number {
-  const startMs = Date.parse(startTimeIso);
-  const baseMs = Number.isFinite(startMs) ? startMs : 0;
-  const ms = baseMs + slotIndex * slotMinutes * 60_000;
-  return new Date(ms).getUTCHours();
-}
-
 /**
  * Expands a two-rate tariff scenario into a per-slot `TariffSlot[]` for the
- * given horizon. Peak/off-peak is decided by UTC hour-of-day (documented
- * simplification — see the module doc comment).
+ * given horizon. Clock-hour boundaries follow the selected zone while slot
+ * instants and durations stay absolute across daylight-saving transitions.
  */
 export function buildTariffSeries(
   scenario: TariffScenario,
   startTimeIso: string,
   slotMinutes: number,
   horizonSlots: number,
+  timezone: string,
 ): TariffSlot[] {
   const n = horizonSlots > 0 ? Math.floor(horizonSlots) : 0;
   const sm = slotMinutes > 0 ? slotMinutes : DEFAULT_SLOT_MINUTES;
@@ -118,10 +115,12 @@ export function buildTariffSeries(
   const importPeak = Math.max(0, scenario.importPeakPerKwh);
   const importOffPeak = Math.max(0, scenario.importOffPeakPerKwh);
   const exportPrice = Math.max(0, scenario.exportPerKwh);
+  const startMs = Date.parse(startTimeIso);
+  const baseMs = Number.isFinite(startMs) ? startMs : 0;
 
   const out: TariffSlot[] = new Array(n);
   for (let t = 0; t < n; t++) {
-    const hour = utcHourOfSlot(startTimeIso, sm, t);
+    const hour = zonedDateParts(baseMs + t * sm * 60_000, timezone)?.hour ?? 0;
     const isPeak = wraps ? hour >= peakStart || hour < peakEnd : hour >= peakStart && hour < peakEnd;
     out[t] = {
       importPricePerKwh: isPeak ? importPeak : importOffPeak,
@@ -141,15 +140,22 @@ export function defaultDepartureSlot(
   startTimeIso: string,
   slotMinutes: number,
   horizonSlots: number,
+  timezone: string,
 ): number | null {
   const sm = slotMinutes > 0 ? slotMinutes : DEFAULT_SLOT_MINUTES;
   const startMs = Date.parse(startTimeIso);
   if (!Number.isFinite(startMs)) return null;
   const hour = clampHour(departureHour);
-  const start = new Date(startMs);
-  const candidateMs = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate(), hour, 0, 0, 0);
-  let deltaMs = candidateMs - startMs;
-  if (deltaMs < 0) deltaMs += 24 * 3_600_000;
+  if (!zonedDateParts(startMs, timezone)) return null;
+  const day = civilDateInTimeZone(new Date(startMs), timezone);
+  const wallTime = `${String(hour).padStart(2, '0')}:00`;
+  let candidate = zonedWallTimeToUtc(`${day}T${wallTime}`, timezone);
+  if (!candidate) return null;
+  if (candidate.getTime() < startMs) {
+    candidate = zonedWallTimeToUtc(`${addCivilDays(day, 1)}T${wallTime}`, timezone);
+  }
+  if (!candidate) return null;
+  const deltaMs = candidate.getTime() - startMs;
   const slot = Math.round(deltaMs / (sm * 60_000));
   return slot >= 0 && slot <= horizonSlots ? slot : null;
 }

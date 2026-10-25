@@ -25,7 +25,7 @@ export function KpiSummary({ result, startTimeIso, horizonHours, loading, unavai
   const { t } = useTranslation();
   const { formatEnergy, formatPower } = useUnits();
   const { formatCurrency } = useFormatting();
-  const { formatDateTime } = useDateFormat('utc');
+  const { formatDateTime } = useDateFormat();
 
   const readyCount = result.vehicles.filter((v) => v.readinessAchieved).length;
   const totalUnmetWh = result.vehicles.reduce((sum, v) => sum + v.unmetWh, 0);
@@ -119,7 +119,7 @@ export function KpiSummary({ result, startTimeIso, horizonHours, loading, unavai
     statusLabel={statusLabel}
     statusTone={unavailable ? 'danger' : paused || stale || incomplete ? 'warning' : 'neutral'}
     scope={periodLabel}
-    freshness={t('homeEnergy.brief.interval', '{{minutes}}-minute modeled slots · UTC · source coverage not established', {
+    freshness={t('homeEnergy.brief.interval', '{{minutes}}-minute modeled slots · source coverage not established', {
       minutes: Number.isFinite(slotMinutes) ? fmtNumber(slotMinutes) : '—',
     })}
     provenance={t('homeEnergy.quality.provenanceAssumed', 'Assumed (user-editable): tariff rates, grid/panel import-export limits, Powerwall specification, and per-vehicle target SoC, capacity, charge power, and departure time. TeslaSync has no endpoint that reports these as measured fact.')}

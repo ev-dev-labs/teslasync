@@ -31,6 +31,7 @@ describe('household load input contract', () => {
     }));
     const originalHistory = structuredClone(history);
     const forecast = buildLoadForecast(history, {
+      timezone: 'UTC',
       startTimeIso: history[0].timestamp,
       slotMinutes: 15,
       horizonSlots: 1,

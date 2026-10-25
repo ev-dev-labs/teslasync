@@ -16,11 +16,13 @@ describe('home-energy source and business policy preservation', () => {
       'useVehicles()', 'useFleetStates(vehicles)', 'useTeslaEnergySites()',
       'useTeslaEnergySiteInfo(siteId)', 'useTeslaEnergyLiveStatus(siteId)',
       "useTeslaEnergyHistory(siteId, 'day')", 'optimizeHomeEnergy(input)',
-      'buildVehicleInputs(vehicles, fleetStatesQuery.data, scenario, startTimeIso)',
-      'buildTariffSeries(scenario.tariff, startTimeIso, scenario.slotMinutes, horizonSlots)',
+      'buildVehicleInputs(vehicles, fleetStatesQuery.data, scenario, startTimeIso, tz)',
+      'buildTariffSeries(scenario.tariff, startTimeIso, scenario.slotMinutes, horizonSlots, tz)',
       'commitPreviousPlan(plan)', 'v.slots.map((s) => s.slotIndex)',
       'previousPlan: scenario.previousPlan',
     ]) expect(hook).toContain(binding);
+    expect(hook).toContain('const { tz } = useDateFormat();');
+    expect(hook.match(/timezone: tz/g)).toHaveLength(2);
     expect(hook).toContain('return 50;');
     expect(hook).not.toMatch(/\bfetch\s*\(|\brequest\s*[<(]|\/api\/v1\//);
   });

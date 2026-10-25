@@ -133,7 +133,7 @@ describe('whole-home presentation preservation', () => {
     assertOperationalBriefDisclosure(brief,
       'Planning horizon: Jan 1, 2026, 12:00 AM — Jan 1, 2026, 06:00 AM (end exclusive)', { contains: true });
     assertOperationalBriefDisclosure(brief,
-      '30.00-minute modeled slots · UTC · source coverage not established', { contains: true });
+      '30.00-minute modeled slots · source coverage not established', { contains: true });
     const quality = screen.getByTestId('home-energy-forecast-quality');
     fireEvent.click(within(quality).getByRole('button', { name: 'Review details' }));
     const qualityDrawer = screen.getByRole('dialog', { name: 'Assumptions & forecast quality details' });

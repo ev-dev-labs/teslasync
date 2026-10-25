@@ -14,6 +14,7 @@
 import { useMemo, useState } from 'react';
 import type { FreshnessQuery } from '@/components/data-display';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { combineDataStates, deriveDataState, type DataState } from '@/api/dataState';
 import { useVehicles, useFleetStates, summariseFleetStates, type FleetStateEntry } from '@/api/hooks/useVehicles';
 import {
@@ -79,13 +80,14 @@ function buildVehicleInputs(
   fleetStates: FleetStateEntry[] | undefined,
   scenario: OrchestrationScenario,
   startTimeIso: string,
+  timezone: string,
 ): VehicleInput[] {
   return vehicles.map((v): VehicleInput => {
     const id = String(v.id);
     const fleetEntry = fleetStates?.find((f) => f.vehicle.id === v.id);
     const assumption = scenario.vehicleAssumptions[id] ?? DEFAULT_VEHICLE_ASSUMPTION;
     const departureSlot = assumption.hasDeadline
-      ? defaultDepartureSlot(assumption.departureHour, startTimeIso, scenario.slotMinutes, horizonSlotsFor(scenario))
+      ? defaultDepartureSlot(assumption.departureHour, startTimeIso, scenario.slotMinutes, horizonSlotsFor(scenario), timezone)
       : null;
     const priority: Priority = assumption.priority;
     return {
@@ -139,6 +141,7 @@ export interface HomeEnergyOrchestration {
  */
 export function useHomeEnergyOrchestration(): HomeEnergyOrchestration {
   const [startTimeIso, setStartTimeIso] = useState(() => new Date().toISOString());
+  const { tz } = useDateFormat();
 
   const vehiclesQuery = useVehicles();
   const vehicles = vehiclesQuery.data ?? [];
@@ -162,30 +165,32 @@ export function useHomeEnergyOrchestration(): HomeEnergyOrchestration {
   const solarForecast = useMemo(
     () =>
       buildSolarForecast(historyQuery.data, {
+        timezone: tz,
         startTimeIso,
         slotMinutes: scenario.slotMinutes,
         horizonSlots,
       }),
-    [historyQuery.data, startTimeIso, scenario.slotMinutes, horizonSlots],
+    [historyQuery.data, startTimeIso, scenario.slotMinutes, horizonSlots, tz],
   );
   const loadForecast = useMemo(
     () =>
       buildLoadForecast(historyQuery.data, {
+        timezone: tz,
         startTimeIso,
         slotMinutes: scenario.slotMinutes,
         horizonSlots,
       }),
-    [historyQuery.data, startTimeIso, scenario.slotMinutes, horizonSlots],
+    [historyQuery.data, startTimeIso, scenario.slotMinutes, horizonSlots, tz],
   );
 
   const tariff = useMemo(
-    () => buildTariffSeries(scenario.tariff, startTimeIso, scenario.slotMinutes, horizonSlots),
-    [scenario.tariff, startTimeIso, scenario.slotMinutes, horizonSlots],
+    () => buildTariffSeries(scenario.tariff, startTimeIso, scenario.slotMinutes, horizonSlots, tz),
+    [scenario.tariff, startTimeIso, scenario.slotMinutes, horizonSlots, tz],
   );
 
   const vehicleInputs = useMemo(
-    () => buildVehicleInputs(vehicles, fleetStatesQuery.data, scenario, startTimeIso),
-    [vehicles, fleetStatesQuery.data, scenario, startTimeIso],
+    () => buildVehicleInputs(vehicles, fleetStatesQuery.data, scenario, startTimeIso, tz),
+    [vehicles, fleetStatesQuery.data, scenario, startTimeIso, tz],
   );
 
   const powerwallInput = useMemo(() => {

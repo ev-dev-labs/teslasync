@@ -109,7 +109,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
             onChange={(n) => updateScenario({ tariff: { ...scenario.tariff, exportPerKwh: n } })}
           />
           <Slider
-            label={t('homeEnergy.scenario.peakStart', 'Peak window start (UTC hour)')}
+            label={t('homeEnergy.scenario.peakStart', 'Peak window start (hour)')}
             min={0}
             max={23}
             step={1}
@@ -118,7 +118,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
             onChange={(n) => updateScenario({ tariff: { ...scenario.tariff, peakStartHour: n } })}
           />
           <Slider
-            label={t('homeEnergy.scenario.peakEnd', 'Peak window end (UTC hour)')}
+            label={t('homeEnergy.scenario.peakEnd', 'Peak window end (hour)')}
             min={0}
             max={23}
             step={1}
