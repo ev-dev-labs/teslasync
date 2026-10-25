@@ -6,14 +6,14 @@ The chart palette is independent of the user's UI accent preset.
 
 | Series | Hue | Light hex | Dark hex | OKLCH light |
 |---|---|---|---|---|
-| Blue | Driving / primary | `#398ad6` | `#67aaed` | `oklch(0.62 0.14 250)` |
-| Teal | Parked / home | `#18a7a1` | `#52bfb9` | `oklch(0.66 0.11 190)` |
-| Green | Online / healthy data | `#4fa866` | `#73bb83` | `oklch(0.66 0.13 150)` |
-| Amber | Charging / caution data | `#b8790e` | `#e7b369` | `oklch(0.75 0.13 75)` |
-| Orange | Alternative category | `#e57255` | `#ee8f63` | `oklch(0.68 0.15 45)` |
-| Rose | Alternative category | `#cd6199` | `#e98092` | `oklch(0.64 0.15 10)` |
-| Violet | Asleep / secondary category | `#876cca` | `#a48fe1` | `oklch(0.60 0.14 295)` |
-| Slate | Offline / neutral | `#748192` | `#8c9aab` | `oklch(0.60 0.03 255)` |
+| Blue | Driving / primary | `#1779e1` | `#65a7fa` | `oklch(0.58 0.18 255)` / `oklch(0.72 0.14 255)` |
+| Teal | Parked / home | `#009d9e` | `#25c2c2` | `oklch(0.62 0.13 195)` / `oklch(0.74 0.12 195)` |
+| Green | Online / healthy data | `#20a04e` | `#5bbd74` | `oklch(0.62 0.16 150)` / `oklch(0.72 0.14 150)` |
+| Amber | Charging / caution data | `#ca8000` | `#eba941` | `oklch(0.66 0.16 75)` / `oklch(0.78 0.14 75)` |
+| Orange | Alternative category | `#e75c3a` | `#f78955` | `oklch(0.65 0.18 35)` / `oklch(0.74 0.15 45)` |
+| Rose | Alternative category | `#d4407c` | `#f37986` | `oklch(0.60 0.19 0)` / `oklch(0.72 0.15 15)` |
+| Violet | Asleep / secondary category | `#7f57d1` | `#ab91f2` | `oklch(0.56 0.18 295)` / `oklch(0.72 0.14 295)` |
+| Slate | Offline / neutral | `#63748a` | `#8a9bb3` | `oklch(0.552 0.04 255)` / `oklch(0.685 0.04 255)` |
 
 ## Scales and semantics
 
@@ -28,13 +28,13 @@ The chart palette is independent of the user's UI accent preset.
 
 | Meaning | Light color | Dark color |
 |---|---:|---:|
-| Driving | `#398ad6` | `#67aaed` |
-| Charging | `#b8790e` | `#e7b369` |
-| Parked | `#18a7a1` | `#52bfb9` |
-| Online | `#4fa866` | `#73bb83` |
-| Asleep | `#876cca` | `#a48fe1` |
-| Offline / unknown | `#748192` | `#8c9aab` |
-| Solar | `#b8790e` | `#e7b369` |
+| Driving | `#1779e1` | `#65a7fa` |
+| Charging | `#ca8000` | `#eba941` |
+| Parked | `#009d9e` | `#25c2c2` |
+| Online | `#20a04e` | `#5bbd74` |
+| Asleep | `#7f57d1` | `#ab91f2` |
+| Offline / unknown | `#63748a` | `#8a9bb3` |
+| Solar | `#ca8000` | `#eba941` |
 | Battery | Violet | Violet-dark |
 | Grid | Rose | Rose-dark |
 | Home | Teal | Teal-dark |

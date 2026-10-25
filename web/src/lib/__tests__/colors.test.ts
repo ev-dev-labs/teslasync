@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
+import { converter, wcagContrast } from 'culori'
 import type { ColorTheme, ModeTheme } from '@/components/ui/ThemeProvider'
 import { useTheme } from '@/components/ui/ThemeProvider'
+import { converter, wcagContrast } from 'culori'
 
 // The palette hook reads the active theme via useTheme(). Mock the provider
 // module so we can drive buildChartPalette with deterministic theme/mode
@@ -17,6 +19,8 @@ import {
   CHART_COLORS,
   CHART_COLORS_CB_SAFE,
   CHART_COLORS_NEON,
+  CHART_COLORS_DARK,
+  CHART_COLORS_DARK,
   CHARGER_COLORS,
   STATUS_COLORS,
   BATTERY_COLORS,
@@ -95,16 +99,16 @@ describe('static chart palettes', () => {
     expect(CHART_COLORS).toBe(CHART_COLORS_CB_SAFE)
   })
 
-  it('CB-safe palette has 8 distinct restrained hex colors starting with blue', () => {
+  it('CB-safe palette has 8 distinct vivid hex colors starting with blue', () => {
     expect(CHART_COLORS_CB_SAFE).toHaveLength(8)
-    expect(CHART_COLORS_CB_SAFE[0]).toBe('#398ad6')
+    expect(CHART_COLORS_CB_SAFE[0]).toBe('#1779e1')
     CHART_COLORS_CB_SAFE.forEach((c) => expect(c).toMatch(HEX6))
     expect(new Set(CHART_COLORS_CB_SAFE).size).toBe(8)
   })
 
   it('neon preference retains 8 distinct restrained hex colors led by cyan', () => {
     expect(CHART_COLORS_NEON).toHaveLength(8)
-    expect(CHART_COLORS_NEON[0]).toBe('#876cca')
+    expect(CHART_COLORS_NEON[0]).toBe('#7f57d1')
     CHART_COLORS_NEON.forEach((c) => expect(c).toMatch(HEX6))
     expect(new Set(CHART_COLORS_NEON).size).toBe(8)
   })
@@ -112,6 +116,34 @@ describe('static chart palettes', () => {
   it('the two palettes are different arrays', () => {
     expect(CHART_COLORS_NEON).not.toBe(CHART_COLORS_CB_SAFE)
     expect(CHART_COLORS_NEON).not.toEqual(CHART_COLORS_CB_SAFE)
+  })
+
+  it('meets light surface contrast, dark chroma limits, and adjacent distinctness', () => {
+    const oklch = converter('oklch')
+    for (const [index, color] of CHART_COLORS_CB_SAFE.entries()) {
+      expect(wcagContrast(color, '#ffffff')).toBeGreaterThanOrEqual(3)
+      const light = oklch(color)
+      expect(light?.l ?? 0).toBeGreaterThanOrEqual(0.55)
+      expect(light?.l ?? 1).toBeLessThanOrEqual(0.72)
+      expect(light?.c ?? 1).toBeLessThanOrEqual(0.20)
+
+      const dark = oklch(CHART_COLORS_DARK[index])
+      expect(dark?.l ?? 0).toBeGreaterThanOrEqual(0.68)
+      expect(dark?.l ?? 1).toBeLessThanOrEqual(0.78)
+      expect(dark?.c ?? 1).toBeLessThanOrEqual(0.17)
+    }
+    for (const palette of [CHART_COLORS_CB_SAFE, CHART_COLORS_DARK]) {
+      for (let index = 0; index < palette.length - 1; index++) {
+        const a = oklch(palette[index])
+        const b = oklch(palette[index + 1])
+        const lightness = Math.abs((a?.l ?? 0) - (b?.l ?? 0))
+        const ah = a?.h ?? 0
+        const bh = b?.h ?? 0
+        let hue = Math.abs(ah - bh)
+        if (hue > 180) hue = 360 - hue
+        expect(lightness >= 0.10 || hue >= 30).toBe(true)
+      }
+    }
   })
 })
 

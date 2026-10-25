@@ -67,17 +67,17 @@ export const dashboardTokens = {
   /** Shared calm categorical chart palette, kept separate from UI accents. */
   chart: {
     series: [
-      'light-dark(#398ad6, #67aaed)',
-      'light-dark(#009e98, #52bfb9)',
-      'light-dark(#459f5d, #73bb83)',
-      'light-dark(#b8790e, #e7b369)',
-      'light-dark(#e57255, #ee8f63)',
-      'light-dark(#cd6199, #e98092)',
-      'light-dark(#876cca, #a48fe1)',
-      'light-dark(#748192, #8c9aab)',
+      'light-dark(#1779e1, #65a7fa)',
+      'light-dark(#009d9e, #25c2c2)',
+      'light-dark(#20a04e, #5bbd74)',
+      'light-dark(#ca8000, #eba941)',
+      'light-dark(#e75c3a, #f78955)',
+      'light-dark(#d4407c, #f37986)',
+      'light-dark(#7f57d1, #ab91f2)',
+      'light-dark(#63748a, #8a9bb3)',
     ],
-    seriesLight: [palette.DATA_VISUAL_COLORS.blue, '#009e98', palette.COLOR.GOOD, palette.COLOR.WARN, '#e57255', palette.COLOR.BAD, palette.DATA_VISUAL_COLORS.purple, palette.CHART_NEUTRAL],
-    seriesDark: ['#67aaed', '#52bfb9', '#73bb83', '#e7b369', '#ee8f63', '#e98092', '#a48fe1', '#8c9aab'],
+    seriesLight: palette.CHART_COLORS_CB_SAFE,
+    seriesDark: palette.CHART_COLORS_DARK,
     /** Series index by hue name, so widgets pick color by meaning not slot. */
     seriesByName: {
       blue: 0,

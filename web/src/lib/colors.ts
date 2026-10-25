@@ -82,90 +82,90 @@ export function resolveMapRendererColor(input: string, context: HTMLElement): st
  * distinguishability for common CVD, while text/axes still use text tokens.
  */
 export const CHART_COLORS_CB_SAFE = [
-  '#398ad6', // blue
-  '#009e98', // teal
-  '#459f5d', // green
-  '#b8790e', // amber
-  '#e57255', // orange
-  '#cd6199', // rose
-  '#876cca', // violet
-  '#748192', // slate
+  '#1779e1', // blue
+  '#009d9e', // teal
+  '#20a04e', // green
+  '#ca8000', // amber
+  '#e75c3a', // orange
+  '#d4407c', // rose
+  '#7f57d1', // violet
+  '#63748a', // slate
 ] as const
 
 /** Persisted legacy "neon" choice is now the same calm second order, never neon. */
 export const CHART_COLORS_NEON = [
-  '#876cca', // violet
-  '#398ad6', // blue
-  '#009e98', // teal
-  '#459f5d', // green
-  '#b8790e', // amber
-  '#e57255', // orange
-  '#cd6199', // rose
-  '#748192', // slate
+  '#7f57d1', // violet
+  '#1779e1', // blue
+  '#009d9e', // teal
+  '#20a04e', // green
+  '#ca8000', // amber
+  '#e75c3a', // orange
+  '#d4407c', // rose
+  '#63748a', // slate
 ] as const
 
 export const CHART_COLORS_DARK = [
-  '#67aaed',
-  '#52bfb9',
-  '#73bb83',
-  '#e7b369',
-  '#ee8f63',
-  '#e98092',
-  '#a48fe1',
-  '#8c9aab',
+  '#65a7fa',
+  '#25c2c2',
+  '#5bbd74',
+  '#eba941',
+  '#f78955',
+  '#f37986',
+  '#ab91f2',
+  '#8a9bb3',
 ] as const
 
 export const CHART_COLORS_NEON_DARK = [
-  '#a48fe1',
-  '#67aaed',
-  '#52bfb9',
-  '#73bb83',
-  '#e7b369',
-  '#ee8f63',
-  '#e98092',
-  '#8c9aab',
+  '#ab91f2',
+  '#65a7fa',
+  '#25c2c2',
+  '#5bbd74',
+  '#eba941',
+  '#f78955',
+  '#f37986',
+  '#8a9bb3',
 ] as const
 
 export const CHART_SEQUENTIAL = [
-  '#d4e7fc',
-  '#a2c8f0',
-  '#73a9e1',
-  '#398ad6',
-  '#006ac0',
-  '#004c9f',
+  '#e7eef8',
+  '#a9c7ee',
+  '#5c9bdc',
+  '#1779e1',
+  '#125db0',
+  '#0b3d78',
 ] as const
 
 export const CHART_SEQUENTIAL_DARK = [
-  '#1e3a5f',
-  '#26527b',
-  '#326d9e',
-  '#398ad6',
-  '#67aaed',
-  '#a2c8f0',
+  '#17304f',
+  '#224b70',
+  '#2d6696',
+  '#1779e1',
+  '#65a7fa',
+  '#b0cdf8',
 ] as const
 
 export const CHART_DIVERGING = [
-  '#398ad6',
-  '#73a9e1',
-  '#d4e7fc',
+  '#125db0',
+  '#1779e1',
+  '#5c9bdc',
   '#edf0f3',
-  '#f2cf8f',
-  '#df6850',
-  '#bd4e67',
+  '#ca8000',
+  '#e75c3a',
+  '#d4407c',
 ] as const
 
 export const CHART_DIVERGING_DARK = [
-  '#67aaed',
-  '#398ad6',
-  '#26527b',
-  '#8c9aab',
-  '#b8790e',
-  '#ee8f63',
-  '#e98092',
+  '#65a7fa',
+  '#1779e1',
+  '#224b70',
+  '#8a9bb3',
+  '#eba941',
+  '#f78955',
+  '#f37986',
 ] as const
 
-export const CHART_NEUTRAL = '#748192'
-export const CHART_NEUTRAL_DARK = '#8c9aab'
+export const CHART_NEUTRAL = '#63748a'
+export const CHART_NEUTRAL_DARK = '#8a9bb3'
 
 export const CHART_SEMANTIC = {
   vehicle: {
@@ -218,13 +218,13 @@ export const CHARGER_COLORS: Record<string, string> = {
 /* ── Semantic Color Constants ── */
 
 export const COLOR = {
-  GOOD: '#459f5d',
-  WARN: '#b8790e',
-  BAD: '#cd6199',
-  CYAN: '#398ad6',
-  PURPLE: '#876cca',
-  MUTED: '#748192',
-  DARK: '#748192',
+  GOOD: CHART_COLORS_CB_SAFE[2],
+  WARN: CHART_COLORS_CB_SAFE[3],
+  BAD: CHART_COLORS_CB_SAFE[5],
+  CYAN: CHART_COLORS_CB_SAFE[0],
+  PURPLE: CHART_COLORS_CB_SAFE[6],
+  MUTED: CHART_COLORS_CB_SAFE[7],
+  DARK: CHART_COLORS_CB_SAFE[7],
 } as const
 
 /** Traffic-light status indicator colors */

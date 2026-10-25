@@ -2,7 +2,7 @@
 // @ts-nocheck -- legacy API types; will be rewired in a later phase
 import { useMemo } from 'react'
 import {
-  Lightbulb, TrendingUp, TrendingDown, ArrowRight, DollarSign,
+  Lightbulb, ArrowRight, DollarSign,
   Battery, BatteryCharging, Zap, Shield, Car, Clock, Leaf,
 } from 'lucide-react'
 import { GlassPanel } from '@/components/ui'
