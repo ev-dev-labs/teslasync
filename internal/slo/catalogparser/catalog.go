@@ -336,6 +336,44 @@ func Validate(c *Catalog) error {
 	return nil
 }
 
+// ValidateRuntime applies the runtime catalog invariants. It is intentionally
+// less restrictive than Validate because runtime consumers historically did
+// not require code-generation-only fields such as description and owner.
+func ValidateRuntime(c *Catalog) error {
+	if c == nil {
+		return fmt.Errorf("catalog is required")
+	}
+	if c.Version != RequiredVersion {
+		return fmt.Errorf("version: got %d want %d", c.Version, RequiredVersion)
+	}
+	if len(c.SLOs) == 0 {
+		return fmt.Errorf("slos: at least one entry required")
+	}
+	seen := make(map[string]struct{}, len(c.SLOs))
+	for i, s := range c.SLOs {
+		if !NameRE.MatchString(s.Name) {
+			return fmt.Errorf("slos[%d].name: %q must match %s", i, s.Name, NameRE)
+		}
+		if s.SLI.GoodEvents == "" || s.SLI.ValidEvents == "" {
+			return fmt.Errorf("slos[%d] (%s).sli: good_events and valid_events required", i, s.Name)
+		}
+		if s.Objective <= 0 || s.Objective >= 100 {
+			return fmt.Errorf("slos[%d] (%s).objective: %v must be in (0, 100)", i, s.Name, s.Objective)
+		}
+		if !WindowRE.MatchString(s.Window) {
+			return fmt.Errorf("slos[%d] (%s).window: %q must match %s", i, s.Name, s.Window, WindowRE)
+		}
+		if s.FastBurnSeverity != "" && s.FastBurnSeverity != "page" && s.FastBurnSeverity != "ticket" {
+			return fmt.Errorf("slos[%d] (%s).fast_burn_severity: %q must be page or ticket", i, s.Name, s.FastBurnSeverity)
+		}
+		if _, dup := seen[s.Name]; dup {
+			return fmt.Errorf("slos[%d].name: %q duplicates earlier entry", i, s.Name)
+		}
+		seen[s.Name] = struct{}{}
+	}
+	return nil
+}
+
 func ValidateSLO(idx int, s SLO) error {
 	tag := func(field string) string {
 		return fmt.Sprintf("slos[%d] (line %d).%s", idx, s.Line, field)
