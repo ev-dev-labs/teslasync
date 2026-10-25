@@ -2,13 +2,11 @@ import { expect, type Page } from '@playwright/test';
 import {
   fulfillApiFixture, type ApiRequestRecord, type MockApiController,
 } from '../mockApi';
-import { sleepTransitionOnly, sleepWithDwell } from './battery.fixtures';
+import { sleepTransitionOnly, sleepWindowParams, sleepWithDwell } from './battery.fixtures';
 
 export const sleepRetentionPath = '/sleep-efficiency?from=2026-08-04&to=2026-08-06';
 export const sleepRetentionEndpoint = '/api/v1/analytics/sleep';
-export const sleepRetentionParams = {
-  vehicle_id: '7', days: '3', start: '2026-08-04', end: '2026-08-06',
-} as const;
+export const sleepRetentionParams = sleepWindowParams;
 
 type ResponsePhase = 'initial' | 'failed-refresh' | 'recovered';
 
@@ -26,7 +24,7 @@ export async function installSleepRetentionSource(page: Page, mocks: MockApiCont
     const request = route.request();
     const url = new URL(request.url());
     expect(request.method(), 'sleep source is a read-only GET').toBe('GET');
-    expect(Object.fromEntries(url.searchParams), 'exact vehicle and inclusive calendar scope')
+    expect(Object.fromEntries(url.searchParams), 'exact vehicle and half-open selected-calendar instants')
       .toEqual(sleepRetentionParams);
     expect([...url.searchParams.keys()], 'no duplicate or additional query parameters').toHaveLength(4);
     const requestPhase = phase;

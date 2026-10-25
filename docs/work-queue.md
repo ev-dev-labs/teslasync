@@ -6,6 +6,28 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
 ## Continuation after `98e23bed33` (2026-10-25)
 
+- CI contract follow-up (23:26Z, after pushed insurance `e5174b3521`):
+  actual CI has two observed failing roots: responsive-21's native sleep
+  fixtures still pinned date-only bounds, and responsive-38's home-energy
+  evidence still required the intentionally removed redundant UTC caption.
+  All three sleep request sites now share the exact four-parameter fixture
+  with `2026-08-04T00:00:00.000Z` inclusive start and
+  `2026-08-07T00:00:00.000Z` exclusive end. Vehicle/days, duplicate-key
+  rejection, full reading/provenance checks and retained-source retry ledger
+  remain strict. Planning keeps every modeled value, limitation, focus and
+  geometry check, and its exact 24-hour half-open interval proof; it now
+  also rejects the old duplicate UTC phrase.
+  Final targeted browser gates pass **17/17 sleep + 4/4 planning**, both
+  escapes=0; actual TypeScript, full unchanged lint, affected ESLint and six
+  zero fixture-source audit categories pass. No production/page, catalog,
+  baseline, workflow, tolerance or skip changes. Evidence: `r70-responsive21`,
+  `r74-responsive38`, `r73-sleep-native`, `r74-sleep-audit`,
+  `r75-lint`, `r77-home-native`, `r77-tsc`, `r77-eslint`.
+  Latest pre-push graph **124 pass / 70 pending / 2 fail / 3 skipped**;
+  the two observed failure roots are repaired locally, not yet CI-confirmed.
+  **Exact next:** push this verified test-contract phase, refresh actual
+  current-head checks and logs, then continue the CI green loop. If only
+  pending, wait five minutes between checks; do not rerun full local quality.
 - Insurance phase gate (23:04Z, after pushed sleep `98cbb1a1b2`):
   seven boundary cases reproduced UTC-only trip-start attribution.
   The shared selected clock now owns the typed hook/cache/query, service

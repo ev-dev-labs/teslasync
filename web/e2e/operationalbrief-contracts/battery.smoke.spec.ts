@@ -13,7 +13,7 @@ import {
   capacitySessions, careDrives, careSessions, cells, energyStats, equalCells, healthFixture, installBatteryEndpoint,
   installExistingBatterySources, installExistingEnergySources, ledgerDrive, missingHealth, noBrickCells, park, passport,
   passportVerification, powerLive, range, selectedEnergySession,
-  sleepTransitionOnly, sleepWithDwell, sleepZeroAsleep, solarAdvice, split, trailingHistoryWindow,
+  sleepTransitionOnly, sleepWindowParams, sleepWithDwell, sleepZeroAsleep, solarAdvice, split, trailingHistoryWindow,
   trailingWeekWindow, vehicleFlow,
 } from './battery.fixtures';
 
@@ -426,9 +426,7 @@ for (const theme of ['light', 'dark'] as const) {
     ] as const) {
       test(`sleep ${name} ${width} ${theme}`, async ({ page }) => {
         const mocks = await setup(page, theme, width, sleepPath);
-        await installBatteryEndpoint(page, mocks, '/analytics/sleep', fixture, {
-          vehicle_id: '7', days: '3', start: '2026-08-04', end: '2026-08-06',
-        });
+        await installBatteryEndpoint(page, mocks, '/analytics/sleep', fixture, sleepWindowParams);
         const diagnostics = monitorPage(page);
         await ready(page, mocks, sleepPath, theme);
         const summary = band(page, 'sleep-efficiency-evidence');
@@ -600,9 +598,7 @@ test('sleep source refresh holds published values until success without inventin
   await page.route(url => url.pathname === '/api/v1/analytics/sleep', async route => {
     expect(route.request().method()).toBe('GET');
     const params = new URL(route.request().url()).searchParams;
-    expect(Object.fromEntries(params)).toEqual({
-      vehicle_id: '7', days: '3', start: '2026-08-04', end: '2026-08-06',
-    });
+    expect(Object.fromEntries(params)).toEqual(sleepWindowParams);
     reads++;
     if (hold) await held;
     await fulfillApiFixture(route, mocks, { json: response });
