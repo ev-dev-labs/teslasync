@@ -2,7 +2,8 @@ import { expect, type Locator, type Page, type TestInfo } from '@playwright/test
 import { writeFile } from 'node:fs/promises';
 import type { MapConfig } from '../src/api/types';
 import type { FsdInsightsPeriod, FsdInsightsTotals } from '../src/types/fsd';
-import { catalogueAnalyticsSources, installCatalogueRoutes, type CatalogueSources } from './dashboardCatalogueRemainingSources';
+import type { SignalHistoryResponse } from '../src/types/telemetry';
+import { catalogueAnalyticsSources, catalogueWire, installCatalogueRoutes, type CatalogueSources } from './dashboardCatalogueRemainingSources';
 import { catalogueOperationalSources } from './dashboardCatalogueOperationalSources';
 import { catalogueSystemSources } from './dashboardCatalogueSystemSources';
 import { fulfillApiFixture, resolveApiFixture, type MockApiController } from './mockApi';
@@ -78,8 +79,8 @@ export const remainingReadings: Record<string, RegExp> = {
   'export-status': /Running/,
   'version-info': /catalogue-2026\.10/,
   'dashboard-stats': /Widgets placed\s*5(?![\d.])/,
-  'live-signals': /21\.00/,
-  'live-signal-sparklines': /72\.00/,
+  'live-signals': /InsideTemp\s*21\.0\s*°C/,
+  'live-signal-sparklines': /Battery Level\s*72\.0%/,
   'tire-pressure-visual': /2\.80/,
   // Deliberately demands real history. Do not inject the frontend-only
   // timestamp alias: the actual tire-pressure handler emits created_at.
@@ -114,18 +115,51 @@ export async function installRemainingCatalogueSources(page: Page, mocks: MockAp
     '/alerts/rules': [],
     '/notifications/channels': [],
   };
-  // The signals fixture also feeds ChargingSchedule, without dropping Soc.
+  const numericSignals = {
+    BatteryLevel: { unit: '%', values: [69, 70, 71, 72] },
+    ACChargingPower: { unit: 'W', values: [8000, 9000, 10000, 11000] },
+    InsideTemp: { unit: '°C', values: [21, 21, 21, 21] },
+    OutsideTemp: { unit: '°C', values: [18, 18, 18, 18] },
+    RatedRange: { unit: 'm', values: [380000, 390000, 400000, 410000] },
+  };
+  const liveSignals = {
+    Soc: { value: 72, timestamp: now },
+    ChargeLimitSoc: { value: 80, timestamp: now },
+    ScheduledChargingMode: { value: 'StartAt', timestamp: now },
+    ScheduledChargingPending: { value: true, timestamp: now },
+    ScheduledChargingStartTime: { value: now, timestamp: now },
+    ...Object.fromEntries(Object.entries(numericSignals).map(([name, { values }]) => [
+      name, { value: values[values.length - 1], timestamp: now },
+    ])),
+  };
+  sources['/signals/7/available'] = {
+    count: 1 + Object.keys(numericSignals).length,
+    signals: [
+      { name: 'Soc', unit: '%', type: 'float' },
+      ...Object.entries(numericSignals).map(([name, { unit }]) => ({ name, unit, type: 'float' })),
+    ],
+  };
   sources['/signals/7/live'] = {
-    vehicle_id: 7, count: 5, at: now,
-    signals: {
-      Soc: { value: 72, timestamp: now },
-      ChargeLimitSoc: { value: 80, timestamp: now },
-      ScheduledChargingMode: { value: 'StartAt', timestamp: now },
-      ScheduledChargingPending: { value: true, timestamp: now },
-      ScheduledChargingStartTime: { value: now, timestamp: now },
-    },
+    vehicle_id: 7, count: Object.keys(liveSignals).length, at: now, signals: liveSignals,
   };
   await installCatalogueRoutes(page, mocks, sources);
+  for (const [signal, { values }] of Object.entries(numericSignals)) {
+    const history = catalogueWire({
+      vehicleId: 7, signal,
+      from: new Date(Date.parse(now) - 3_600_000).toISOString(),
+      to: now, count: values.length,
+      data: values.map((value, index) => ({
+        ts: new Date(Date.parse(now) - (values.length - 1 - index) * 900_000).toISOString(),
+        kind: 'ValueKindDouble', value, ingest_origin: null, source_emitted_at: null,
+        received_at: null, normalization_version: null,
+      })),
+    } satisfies SignalHistoryResponse);
+    await page.route(url => url.pathname === `/api/v1/signals/7/${signal}/history`, route => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      expect([...new URL(route.request().url()).searchParams.entries()]).toEqual([['hours', '1']]);
+      return fulfillApiFixture(route, mocks, { json: history });
+    });
+  }
   await page.route('https://tile.openstreetmap.org/**', route => {
     if (!/\/\d+\/\d+\/\d+\.png$/.test(new URL(route.request().url()).pathname)) {
       throw new Error(`Unexpected catalogue tile request: ${route.request().url()}`);
@@ -352,10 +386,28 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
       await expect(progress).toHaveAttribute('aria-valuemax', '100');
     }
   }
+  if (id === 'live-signals') {
+    const readings = [
+      ['BatteryLevel', /^BatteryLevel\s*72\s*%$/],
+      ['ACChargingPower', /^ACChargingPower\s*11\.0\s*kW$/],
+      ['InsideTemp', /^InsideTemp\s*21\.0\s*°C$/],
+      ['OutsideTemp', /^OutsideTemp\s*18\.0\s*°C$/],
+      ['RatedRange', /^RatedRange\s*410\.0\s*km$/],
+    ] as const;
+    for (const [name, reading] of readings) {
+      const row = panel.getByRole('listitem').filter({ hasText: new RegExp(`^${name}`) });
+      await expect(row).toHaveText(reading);
+      const sparkline = row.getByRole('img', { name: `${name} trend`, exact: true });
+      await expect(sparkline).toBeVisible();
+      await expect(sparkline.locator('polyline').first()).toHaveAttribute('points', /^(?:\S+\s+){3}\S+$/);
+    }
+  }
   if (id === 'live-signal-sparklines') {
-    await expect(panel.getByRole('img', { name: 'Increasing', exact: true })).toHaveCount(1);
-    await expect(panel.getByRole('img', { name: 'Increasing', exact: true })).toBeVisible();
-    await expect(panel.getByRole('img', { name: /Soc trend/i })).toBeVisible();
+    await expect(panel.getByRole('img', { name: 'Trending up', exact: true })).toHaveCount(1);
+    await expect(panel.getByRole('img', { name: 'Trending up', exact: true })).toBeVisible();
+    await expect(panel.getByRole('img', { name: 'Battery Level trend', exact: true })).toBeVisible();
+    await expect(panel.getByRole('img', { name: 'Battery Level trend', exact: true })
+      .locator('polyline').first()).toHaveAttribute('points', /^0,20 \S+ \S+ 56,0$/);
   }
   if (id === 'fsd-weekly') {
     const weekly = panel.getByTestId('fsd-weekly-distance');

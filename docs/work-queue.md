@@ -262,10 +262,60 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   changed. Both 390/1440px cases and affected ESLint pass; proxy escapes=0.
   Evidence: `r15-fleet-browser`, `r15-fleet-final-browser` diagnostic
   logs, `r15-fleet-native-browser` and `r15-fleet-eslint`.
-- Exact next step: repair the related signal catalogue's precise unmatched
-  history requests (`r16-signals-before`), then remaining sleep/home-energy
-  timezone semantics and new completed CI roots. No baseline regeneration
-  unless a new reviewed Windows visual failure requires it.
+- Fixes 14/15 pushed through `7fbfb8a4cc`.
+
+### Required consecutive-failure handoff (2026-10-25 19:41Z)
+
+- The latest user's stop condition fired: two consecutive bounded browser
+  tool calls failed (`355` signal catalogue, `356` workspace catalogue).
+  Stopped starting implementation work; preserve the incomplete fixture
+  repair in an explicitly named WIP commit, update state, push and hand off
+  under section 0b. This is not a completed fix or an all-green claim.
+- Last verified implementation head is `7fbfb8a4cc`, including notification
+  interval provenance, full-row signal history recovery and the native
+  fleet layout contracts described above.
+- **WIP, verify first:** `web/e2e/dashboardCatalogueRemainingFixtures.ts`.
+  The related signal/tire group originally failed all four width/theme
+  cases because five actual one-hour history requests were unmatched:
+  BatteryLevel, ACChargingPower, InsideTemp, OutsideTemp and RatedRange.
+  The WIP supplies those precise typed SI sources, exact hours=1 request
+  checks, matching current/available values, and native value/curve
+  assertions. It preserves Soc and charging-schedule settings. No generic
+  unmatched-request exemption or production API change was added.
+  A missing catalogueWire import caused the first repair attempt to fail;
+  that import is now corrected. Affected ESLint and actual frontend
+  TypeScript pass, but TypeScript does not cover these browser-only files.
+- The subsequent single 390px/light signal case now stops at the unchanged
+  `dashboardCatalogueChargeHistory.ts:152` source-observer guard:
+  `Exactly one source component must own the exact charge observer key`,
+  expected one binding, got zero. Wrapper proxy escapes=0. Diagnose the
+  exact observer owner/key and saved native artifacts; do not remove the
+  guard, ignore request parameters or count this case as passing.
+  Evidence: `r16-signals-before`, `r16-signals-final` (missing-import
+  diagnosis), `r16-signals-focused` and their isolated result directories,
+  plus `r16-signals-eslint` and `r16-tsc`.
+- The separately diagnosed 390px/light workspace case still requires an
+  obsolete Verified listitem in `assertRemainingContent`'s fleet-posture
+  branch. The actual widget uses WidgetBigNumber and a native definition
+  list, as proved by the passing fix-15 layout cases. Update that contract
+  to require the exact native verified fraction, coverage and real vehicle
+  evidence, rather than restoring the deleted taxonomy/listitem chrome.
+  Evidence: `r17-workspace-before`; escapes=0, case is NOT passing.
+- Pre-handoff-push graph for `7fbfb8a4cc` at 19:41Z:
+  **0 failing / 26 passing / 164 pending / 3 skipped**. It is incomplete,
+  not an improvement from the last completed 28-failure graph and not
+  green. `r17-handoff-checks.json` preserves the exact observation; the
+  WIP/documentation push will have a new graph.
+- All owned Bash/browser/build commands are completed; no running helper
+  or created worktree remains. IDE-owned tools were preserved. Windows
+  mirror/baselines, workflows and tolerances are unchanged.
+- Exact next step: verify/fix the WIP signal source-observer binding first,
+  then replace the workspace catalogue's obsolete native selectors.
+  Run the four signal/tire and four workspace cases with retries=0,
+  timeout 20m and zero proxy escapes; also check the charging-strategy
+  consumers of the shared signal fixture. Reuse the existing hermetic
+  build unless production changes. Resume fresh PR checks, address actual
+  remaining sleep/home-energy/CI roots and continue until green.
 
 ## Mandatory ten-fix handoff (2026-10-25 16:43Z)
 
