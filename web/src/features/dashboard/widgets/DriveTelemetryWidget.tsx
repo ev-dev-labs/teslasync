@@ -1,15 +1,17 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartAnimation, useThemeChartPalette, EmbeddedChart, ChartLegend, type ChartDataRow } from '@/components/charts';
+import { ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartAnimation, axisTickSm, useMeasuredAxisWidth, useThemeChartPalette, EmbeddedChart, ChartLegend, type ChartDataRow } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, Skeleton } from '@/components/feedback';
 import { SourceContent } from '@/components/layout';
+import { VisuallyHidden } from '@/components/a11y';
 import { useDrives, useDriveTelemetry } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { convertSpeedFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 import { WidgetShell } from './WidgetShell';
 import { WidgetChartSummary } from './shared';
@@ -28,6 +30,7 @@ interface ChartDatum extends ChartDataRow {
 export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { formatTime } = useDateFormat();
+  const { fmtNumber } = useNumberFormatting();
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
@@ -118,12 +121,44 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
     });
   }, [telemetry, unitPrefs.speed, unitPrefs.power, formatTime]);
 
+  const axisLabels = useMemo(() => [0, ...chartData.flatMap(point => [point.speed, point.power])]
+    .filter((value): value is number => value != null)
+    .map(value => fmtNumber(value, 0)), [chartData, fmtNumber]);
+  const axisWidth = useMeasuredAxisWidth({
+    labels: axisLabels, fontSize: 10, minWidth: 40, padding: 20, enabled: !isCompact,
+  });
+  const lastPoint = chartData[chartData.length - 1];
+  const compactStats = [
+    {
+      label: t('widget.driveTelemetry.speed', 'Speed'),
+      value: lastPoint?.speed == null ? null : fmtNumber(lastPoint.speed, 0),
+      unit: unitPrefs.speed,
+    },
+    {
+      label: t('widget.driveTelemetry.powerLabel', 'Power'),
+      value: lastPoint?.power == null ? null : fmtNumber(lastPoint.power, (unitPrefs.power ?? 'kW') === 'kW' ? 1 : 0),
+      unit: unitPrefs.power ?? 'kW',
+    },
+  ];
+  const telemetrySourceProps = {
+    state: sourceBoundaryState(telemetryTrust, chartData.length > 0),
+    label: t('widget.driveTelemetry.title', 'Drive telemetry'),
+    emptyMessage: t('widget.driveTelemetry.noTelemetry', 'No telemetry for this drive'),
+    loadingContent: <div className="flex h-full min-h-0 flex-col gap-2">
+      <Skeleton className="min-h-8 flex-1" />
+      <VisuallyHidden>{t('widget.driveTelemetry.telemetryLoading', 'Loading drive telemetry')}</VisuallyHidden>
+    </div>,
+    errorMessage: t('widget.driveTelemetry.telemetryError', 'Drive telemetry unavailable'),
+    error: telemetryTrust.fatalError,
+    retainedMessage: t('widget.driveTelemetry.telemetryRetained', 'Previously loaded drive telemetry remains visible while this source recovers.'),
+    errorRecovery: { onRetry: () => { void refetch(); } },
+  };
+
   const chart = useMemo(() => {
     if (chartData.length === 0) return null;
     return (
       <EmbeddedChart
-        height={80}
-        mobileHeight={80}
+        className="h-full min-h-0"
         title={t('widget.driveTelemetry.title', 'Drive telemetry')}
         ariaLabel={t(
           'widget.driveTelemetry.chartAria',
@@ -150,13 +185,21 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
           />
           <YAxis
             yAxisId="speed"
-            hide
+            tick={axisTickSm}
+            width={axisWidth}
+            tickFormatter={(value: number) => fmtNumber(value, 0)}
+            tickLine={false}
+            axisLine={false}
             domain={[0, 'dataMax + 10']}
           />
           <YAxis
             yAxisId="power"
             orientation="right"
-            hide
+            tick={axisTickSm}
+            width={axisWidth}
+            tickFormatter={(value: number) => fmtNumber(value, 0)}
+            tickLine={false}
+            axisLine={false}
           />
           <Tooltip content={<ChartTooltip />} />
           <ChartLegend />
@@ -185,10 +228,20 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
         )}
       </EmbeddedChart>
     );
-  }, [chartData, isCompact, unitPrefs.speed, unitPrefs.power, t, palette]);
+  }, [chartData, isCompact, unitPrefs.speed, unitPrefs.power, t, palette, axisWidth, fmtNumber]);
 
   // Compact layout
   if (isCompact) {
+    const summary = (
+      <WidgetChartSummary
+        stats={compactStats}
+        chart={null}
+        compact
+        isEmpty={!latestDrive}
+        emptyMessage={t('widget.driveTelemetry.empty', 'No recent drives')}
+        emptyIcon={<Activity className="h-5 w-5" />}
+      />
+    );
     return (
       <WidgetShell
         title={t('widget.driveTelemetry.title', 'Drive telemetry')}
@@ -201,14 +254,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
         isError={combinedIsError}
         onRefresh={handleRefresh}
       >
-        <WidgetChartSummary
-          stats={[]}
-          chart={null}
-          compact
-          isEmpty={!latestDrive}
-          emptyMessage={t('widget.driveTelemetry.empty', 'No recent drives')}
-          emptyIcon={<Activity className="h-5 w-5" />}
-        />
+        {latestDrive ? <SourceContent {...telemetrySourceProps}>{summary}</SourceContent> : summary}
       </WidgetShell>
     );
   }
@@ -229,36 +275,19 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
       onRefresh={handleRefresh}
     >
       {latestDrive ? (
-        <div className="flex min-h-full flex-col">
-          <p className="break-words px-0 pb-1 text-sm text-[var(--text-secondary)]">
+        <div className="flex h-full min-h-0 flex-col">
+          <p className="shrink-0 break-words px-0 pb-1 text-sm text-[var(--text-secondary)]">
             {t('widget.driveTelemetry.lastDrive', 'Last drive')}
             {latestDrive.startAddress && ` · ${latestDrive.startAddress}`}
             {latestDrive.endAddress && ` → ${latestDrive.endAddress}`}
           </p>
 
           {/* Chart area */}
-          <div className="flex-1 min-h-40">
-            <SourceContent
-              state={sourceBoundaryState(telemetryTrust, chartData.length > 0)}
-              label={t('widget.driveTelemetry.title', 'Drive telemetry')}
-              emptyMessage={t('widget.driveTelemetry.noTelemetry', 'No telemetry for this drive')}
-              loadingContent={<EmptyState /* no-action: loading placeholder; the widget header already owns source refresh */
-                icon={<Activity className="h-5 w-5" />}
-                message={t('widget.driveTelemetry.telemetryLoading', 'Loading drive telemetry')}
-                className="py-4"
-              />}
-              errorMessage={t('widget.driveTelemetry.telemetryError', 'Drive telemetry unavailable')}
-              error={telemetryTrust.fatalError}
-              retainedMessage={t('widget.driveTelemetry.telemetryRetained', 'Previously loaded drive telemetry remains visible while this source recovers.')}
-              errorRecovery={{ onRetry: () => { void refetch(); } }}
-            >
+          <div className="flex min-h-0 flex-1 flex-col">
+            <SourceContent {...telemetrySourceProps}>
               <WidgetChartSummary
                 stats={[]}
                 chart={chart}
-                legend={[
-                  { label: `${t('widget.driveTelemetry.speed', 'Speed')} (${unitPrefs.speed})`, color: palette.series[0] },
-                  { label: `${t('widget.driveTelemetry.powerLabel', 'Power')} (${unitPrefs.power ?? 'kW'})`, color: palette.series[1] },
-                ]}
               />
             </SourceContent>
           </div>

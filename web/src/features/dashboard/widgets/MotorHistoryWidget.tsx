@@ -77,7 +77,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
     () => buildChartData(data, toTemperatureDisplay),
     [data, toTemperatureDisplay],
   );
-  const hasData = chartData.some((row) => row.temperature != null);
+  const hasData = chartData.some((row) => row.temperature != null || row.torque != null);
   const isCompact = size.cols <= 1;
   const peak = useMemo(() => {
     const values = chartData
@@ -98,10 +98,9 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
   const rangeLabel = presetId === '7d'
     ? t('widget.motorHistory.last7Days', '7 days')
     : `${formatDateShort(`${start}T00:00:00`)} – ${formatDateShort(`${end}T00:00:00`)}`;
-  const temperatureLabels = useMemo(() => chartData
+  const tempMin = useMemo(() => Math.min(dangerThreshold, ...chartData
     .map((row) => row.temperature)
-    .filter((value): value is number => value != null && Number.isFinite(value))
-    .map((value) => `${fmt(value)}°`), [chartData, fmt]);
+    .filter((value): value is number => value != null)), [chartData, dangerThreshold]);
   const torqueLabels = useMemo(() => [0, ...chartData.map((row) => row.torque)]
     .filter((value): value is number => value != null && Number.isFinite(value))
     .map((value) => fmt(value)), [chartData, fmt]);
@@ -166,8 +165,8 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
       icon={<Cog className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
       {...shellProps}
     >
-      <div className="flex min-h-0 min-w-0 flex-col">
-        <div className="flex min-w-0 items-end justify-between gap-3">
+      <div className="flex h-full min-h-0 min-w-0 flex-col">
+        <div className="flex min-w-0 shrink-0 items-end justify-between gap-3">
           <WidgetBigNumber
             value={peak == null ? null : fmt(peak, 0)}
             unit={tempUnit}
@@ -187,7 +186,8 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
         </div>
 
         {!hasData ? noData : (
-          <div className="mt-2 min-h-0 flex-1">
+          <div className="mt-2 flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1">
             <EmbeddedChart
               title={t('widget.motorHistory.title', 'Motor history')}
               ariaLabel={t(
@@ -197,9 +197,11 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
               data={chartData}
               dataColumns={[
                 { key: 'time', label: t('widget.motorHistory.time', 'Time'), format: (value) => formatDateTime(String(value ?? '')) },
-                { key: 'temperature', label: `${t('widget.motorHistory.statorTemp', 'Stator')} (${tempUnit})` },
+                { key: 'temperature', label: `${t('widget.motorHistory.statorTemp', 'Stator')} (${tempUnit})`, format: value => value == null ? '—' : fmt(Number(value)) },
+                { key: 'torque', label: `${t('widget.motorHistory.torque', 'Torque')} (N·m)`, format: value => value == null ? '—' : fmt(Number(value)) },
               ]}
               chartKey="dashboard-motor-history"
+              className="h-full min-h-0"
             >
               {({ hiddenSeries }) => (
                 <ResponsiveContainer width="100%" height="100%">
@@ -227,7 +229,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                       tickLine={false}
                       axisLine={false}
                       width={statorWidth}
-                      domain={[Math.min(...temperatureLabels.map((value) => Number(value.replace('°', ''))).filter(Number.isFinite), dangerThreshold), tempMax]}
+                      domain={[tempMin, tempMax]}
                       tickFormatter={(value: number) => `${fmt(value)}°`}
                     />
                     <YAxis
@@ -238,9 +240,11 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                     <Tooltip
                       content={<ChartTooltip />}
                       labelFormatter={(value: string) => formatDateTime(value)}
-                      formatter={(value: number) => [
-                        `${fmt(value, 0)} ${tempUnit}`,
-                        t('widget.motorHistory.statorTemp', 'Stator'),
+                      formatter={(value: number, name: string | number) => [
+                        name === t('widget.motorHistory.torque', 'Torque')
+                          ? `${fmt(value)} N·m`
+                          : `${fmt(value)} ${tempUnit}`,
+                        name,
                       ]}
                     />
                     <ReferenceArea
@@ -277,7 +281,8 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                 </ResponsiveContainer>
               )}
             </EmbeddedChart>
-            <div className="mt-1 text-xs text-[var(--text-muted)]">
+            </div>
+            <div className="mt-1 shrink-0 text-xs text-[var(--text-muted)]">
               {t(
                 'widget.motorHistory.dangerThreshold',
                 'Danger zone above {{value}} {{unit}}',

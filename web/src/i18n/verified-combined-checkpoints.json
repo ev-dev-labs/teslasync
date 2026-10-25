@@ -366,8 +366,8 @@
     },
     {
       "file": "web/src/features/dashboard/widgets/DrivingDynamicsWidget.tsx",
-      "calls": 11,
-      "sha256": "c95ca2481a62b0354613bb38368963cc7a1d28f218de0546e392bc64dba47a40"
+      "calls": 20,
+      "sha256": "5b45e42ba824f974a01e06a9e5cc784d2f289d284709d439ee96707bfe859518"
     },
     {
       "file": "web/src/features/dashboard/widgets/EnergyStatsWidget.tsx",

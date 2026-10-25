@@ -138,6 +138,14 @@ export async function assertSpeedProfileTickBounds(panel: Locator, info: TestInf
   const ticks = await assertCatalogueYAxisTickBounds(panel, 'speed-profile', info, 2);
   expect(ticks.filter(tick => tick.text?.includes('%')).length).toBeGreaterThan(2);
   expect(ticks.filter(tick => !tick.text?.includes('%')).length).toBeGreaterThan(2);
+  const curve = panel.locator('.recharts-line-curve');
+  await expect(curve).toHaveCount(1);
+  expect(await curve.getAttribute('d'), 'Average power must plot real source points').toMatch(/^M.+/);
+  const table = panel.getByRole('table', { name: 'Speed profile — data table', exact: true });
+  await expect(table.getByRole('columnheader', { name: 'Average power (kW)', exact: true })).toHaveCount(1);
+  for (const value of ['3.00', '9.60', '20%', '80%']) {
+    await expect(table.getByRole('cell', { name: value, exact: true })).toHaveCount(1);
+  }
 }
 
 const affectedAxisIDs = new Set([

@@ -6,6 +6,10 @@ import type {
 } from '../src/types/driving';
 import { fulfillApiFixture, mockDrive, type MockApiController } from './mockApi';
 
+export const compactDrivingReadings: Record<string, RegExp> = {
+  'drive-telemetry': /Speed\s*65\s*km\/h\s*Power\s*9\.6\s*kW/,
+};
+
 export const drivingReadings: Record<string, RegExp> = {
   'recent-drives': /(?:Home|Office|17\.40)/,
   'drive-score': /100\/100[\s\S]*241\s*Wh\/km\s*Avg\b/,
@@ -14,12 +18,12 @@ export const drivingReadings: Record<string, RegExp> = {
   'drive-efficiency-chart': /241\.38/,
   'speed-heatmap': /64\.80/,
   'driving-dynamics': /Style\s*Smooth(?=\s*(?:Accel|$))/,
-  'speed-profile': /57\.60/,
-  'regen-efficiency': /20\.00%/,
+  'speed-profile': /Sweet spot\s*58\s*km\/h/,
+  'regen-efficiency': /20%\s*Energy recovered\s*Total recovered\s*0\.84\s*kWh\s*Drive energy\s*4\.20\s*kWh/,
   'route-efficiency': /(?:Home|Office|160)/,
-  'driving-coach': /92/,
+  'driving-coach': /efficiency\s*Maintain smooth acceleration\./,
   'trip-summary': /Review journey/,
-  'drive-telemetry': /17\.40/,
+  'drive-telemetry': /Last drive\s*· Home\s*→ Office[\s\S]*Speed \(km\/h\)[\s\S]*Power \(kW\)/,
 };
 
 export async function installCatalogueDrivingSources(page: Page, mocks: MockApiController) {

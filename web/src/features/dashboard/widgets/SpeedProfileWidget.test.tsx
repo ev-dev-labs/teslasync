@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { SpeedBucket, SpeedProfileData } from '@/types/driving';
+import type { ReactNode } from 'react';
 import SpeedProfileWidget, { formatBucketLabel } from './SpeedProfileWidget';
 
 const { useSpeedProfileMock, useVehiclesMock, useUnitsMock, useRangeStateMock } = vi.hoisted(() => ({
@@ -34,7 +35,12 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
-  return { ...actual, ...chartTestDoubles };
+  return {
+    ...actual, ...chartTestDoubles,
+    ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
+    ComposedChart: ({ data }: { data: readonly Record<string, unknown>[] }) =>
+      <pre data-testid="speed-profile-data">{JSON.stringify(data)}</pre>,
+  };
 });
 
 function data(overrides: Partial<SpeedProfileData> = {}): SpeedProfileData {
@@ -83,7 +89,7 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('SpeedProfileWidget redesign', () => {
-  it('renders one sweet-spot headline and a frequency bar chart, with no average-power line or metric duplication', () => {
+  it('renders one sweet-spot headline and the sourced frequency/power chart without metric duplication', () => {
     useSpeedProfileMock.mockReturnValue(query({
       data: data({
         distribution: [
@@ -101,6 +107,25 @@ describe('SpeedProfileWidget redesign', () => {
     expect(screen.getAllByText('km/h').length).toBeGreaterThan(0);
     expect(screen.queryByText('Lowest power range')).not.toBeInTheDocument();
     expect(screen.queryByText('Peak freq')).not.toBeInTheDocument();
+    expect(screen.getByText('Observed speed samples · average power is not energy efficiency')).toBeInTheDocument();
+    const rows = JSON.parse(screen.getByTestId('speed-profile-data').textContent ?? '[]');
+    expect(rows.map((row: { frequency: number; power: number }) => [row.frequency, row.power])).toEqual([[75, 20], [25, 9]]);
+  });
+
+  it('preserves signed SI watts, missing power and the selected power unit', () => {
+    useUnitsMock.mockReturnValue({ unitPrefs: { speed: 'km/h', power: 'W' } });
+    useSpeedProfileMock.mockReturnValue(query({
+      data: data({
+        distribution: [
+          bucket({ speed_bucket: '15-30', readings: 1, avg_power_w: -3000 }),
+          bucket({ speed_bucket: '45-60', readings: 1 }),
+        ],
+      }),
+    }));
+    renderWidget();
+    const rows = JSON.parse(screen.getByTestId('speed-profile-data').textContent ?? '[]');
+    expect(rows.map((row: { frequency: number; power: number | null }) => [row.frequency, row.power]))
+      .toEqual([[50, -3000], [50, null]]);
   });
 
   it('uses the API optimal speed as the headline when available', () => {

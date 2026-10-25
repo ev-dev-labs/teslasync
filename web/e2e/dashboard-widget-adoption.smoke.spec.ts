@@ -21,7 +21,7 @@ import { assertCatalogueChargeCategories, assertCatalogueChargeHistory, recordCa
 import { assertCatalogueCountReference } from './dashboardCatalogueCountReference';
 import { assertCataloguePressureParity } from './dashboardCataloguePressureParity';
 import { assertCatalogueHeaderCollision } from './dashboardCatalogueHeaderCollision';
-import { drivingReadings } from './dashboardCatalogueDrivingFixtures';
+import { compactDrivingReadings, drivingReadings } from './dashboardCatalogueDrivingFixtures';
 import { assertCatalogueAffectedAxes, assertCatalogueAllocation, assertSpeedProfileTickBounds, assertTwinWheelAndPhotoGeometry, installCataloguePhotoSource } from './dashboardCatalogueGeometry';
 import {
   assertRemainingContent, geometrySourceIDs, installRemainingCatalogueSources,
@@ -83,7 +83,7 @@ const readings: Record<string, RegExp> = {
   'energy-site-info': /13\.50\s*kWh/,
   'wall-connector': /14\.0/,
   'cost-breakdown': /\$110\.00/,
-  'cost-forecast': /\$120/,
+  'cost-forecast': /(?:Next 2 months\s*\$250\.00|\$250\.00\s*Next 2 months)/,
   'security-status': /Locked/,
   'door-window-status': /Closed/,
   'sentry-event-log': /Sentry mode activated/,
@@ -417,7 +417,8 @@ for (const [batch, ids] of Object.entries(batches)) {
             await page.keyboard.press('Escape');
             await expect(drawer).toHaveCount(0);
           }
-          const expected = (width === 390 ? remainingCompactReadings[widget.widgetId] ?? compactVehicleReadings[widget.widgetId] : undefined)
+          const expected = (width === 390 ? remainingCompactReadings[widget.widgetId]
+            ?? compactVehicleReadings[widget.widgetId] ?? compactDrivingReadings[widget.widgetId] : undefined)
             ?? readings[widget.widgetId];
           const geometryContract = geometrySourceIDs.has(widget.widgetId);
           if (!expected && !geometryContract) throw new Error(`Missing sourced reading assertion: ${widget.widgetId}`);
@@ -448,12 +449,17 @@ for (const [batch, ids] of Object.entries(batches)) {
             await expect(panel).toContainText('Torque');
             await expect(panel).toContainText('Stator');
             await expect(panel).toContainText('65.00');
+            const table = panel.getByRole('table', { name: 'Motor history — data table', exact: true });
+            await expect(table.getByRole('columnheader', { name: 'Torque (N·m)', exact: true })).toHaveCount(1);
+            await expect(table.getByRole('cell', { name: '240.00', exact: true })).toHaveCount(1);
+            await expect(table.getByRole('cell', { name: '180.00', exact: true })).toHaveCount(1);
+            await expect(table.getByRole('cell', { name: '65.00', exact: true })).toHaveCount(2);
             for (const curve of await panel.locator('.recharts-line-curve').all()) {
               expect(await curve.getAttribute('d'), 'Motor torque/temperature curve must contain real points').toMatch(/^M.+/);
             }
-            if (widget.widgetId === 'driving-dynamics' && width === 1440) {
-              await expect(panel).toContainText(/Accel\s*0\.30\s*g\s*Brake\s*0\.40\s*g\s*Lateral\s*0\.20\s*g/);
-            }
+          }
+          if (widget.widgetId === 'driving-dynamics' && width === 1440) {
+            await expect(panel).toContainText(/Accel\s*0\.30\s*g\s*Brake\s*0\.40\s*g\s*Lateral\s*0\.20\s*g/);
           }
           if (batch.startsWith('vehicle-twin')) {
             if (widget.widgetId === 'vehicle-twin') {

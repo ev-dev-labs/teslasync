@@ -21,8 +21,13 @@ vi.mock('@/components/charts', async () => ({
   useThemeChartPalette: () => ({ series: ['#2563eb', '#0d9488'] }),
   ResponsiveContainer: ({ children }: { children: React.ReactElement }) =>
     <div data-testid="chart-container">{children}</div>,
-  EmbeddedChart: ({ data }: { data: readonly Record<string, unknown>[] }) =>
-    <pre data-testid="telemetry-chart-data">{JSON.stringify(data)}</pre>,
+  EmbeddedChart: ({ data, dataColumns }: {
+    data: readonly Record<string, unknown>[];
+    dataColumns: readonly { key: string; label: string }[];
+  }) => <div>
+    <pre data-testid="telemetry-chart-data">{JSON.stringify(data)}</pre>
+    {dataColumns.map(column => <span key={column.key}>{column.label}</span>)}
+  </div>,
 }));
 
 import React from 'react';
@@ -121,6 +126,38 @@ describe('DriveTelemetryWidget redesign', () => {
     expect(screen.getByRole('heading', { name: 'Drive telemetry', level: 3 })).toBeVisible();
     expect(screen.queryByTestId('telemetry-chart-data')).not.toBeInTheDocument();
     expect(screen.queryByText('Distance')).not.toBeInTheDocument();
+    expect(screen.getByText('Speed')).toBeInTheDocument();
+    expect(screen.getByText('Power')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(2);
+  });
+
+  it('shows the latest measured speed and signed power in the compact body', () => {
+    mocks.telemetry.mockReturnValue(query([samples[0]], mocks.retryTelemetry));
+    mount({ cols: 1, rows: 2 });
+    expect(screen.getByText('36')).toHaveTextContent('36km/h');
+    expect(screen.getByText('-1.0')).toHaveTextContent('-1.0kW');
+    expect(screen.queryByTestId('telemetry-chart-data')).not.toBeInTheDocument();
+  });
+
+  it('exposes compact telemetry recovery rather than rendering an empty body', () => {
+    mocks.telemetry.mockReturnValue(query(undefined, mocks.retryTelemetry, new Error('telemetry failed')));
+    mount({ cols: 1, rows: 2 });
+    expect(screen.getByText('Drive telemetry unavailable')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(mocks.retryTelemetry).toHaveBeenCalledTimes(1);
+    expect(mocks.retryDrives).not.toHaveBeenCalled();
+  });
+
+  it('announces compact telemetry loading without fabricating measured values', () => {
+    mocks.telemetry.mockReturnValue({
+      ...query(undefined, mocks.retryTelemetry), isLoading: true, isFetching: true,
+    });
+    mount({ cols: 1, rows: 2 });
+    expect(screen.getByRole('status', { name: 'Loading Drive telemetry' }))
+      .toHaveTextContent('Loading drive telemetry');
+    expect(screen.queryByText('Speed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Power')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('telemetry-chart-data')).not.toBeInTheDocument();
   });
 
   it('renders honest empty and drives-error states', () => {

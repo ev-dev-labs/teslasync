@@ -69,6 +69,72 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   bound CostForecast's chart, then fix the remaining exact readout/date
   contracts. At 6092735f15 CI is still in flight: 0 fail/14 pass/176 pending/
   3 skipped; do not count pending jobs as an improvement from round 0.
+- Fix 3: CostForecast now reserves content-sized headline height and bounds
+  its chart allocation. The exact browser headline binds $250.00 to the
+  complete two-month horizon (120+130), not the obsolete first-month $120.
+  All nine existing unit cases and all four energy adoption cases pass,
+  including unchanged allocation/Y-axis guards and zero proxy escapes.
+  Actual TypeScript, affected ESLint and all six source-audit counts pass.
+  Source lines 236->238 and the chart frame is retained.
+  Evidence: `r6-cost-unit`, `r6-cost-build`, `r6-cost-audit`, `r6-cost-eslint`,
+  `r6-energy`. Related telemetry changes share the same adoption file and
+  are being verified before the next coherent commit/push.
+- Fixes 4-7 are verified:
+  (4) DriveTelemetry has real latest speed/power, null/loading/error/recovery
+  states and two numeric axes; preserves its interactive series control.
+  (5) Wide dynamics restores the genuine independent source, correctly
+  counting signed G magnitudes in 12 bins rather than treating raw G readings
+  as counts. Narrow layouts keep that request disabled; refresh/recovery
+  and retained samples stay independent of the measured style/peaks.
+  (6) SpeedProfile restores measured SI-watt average power beside sample
+  frequency, with null/signed/unit conversion, a true second axis/curve,
+  exact 3.00/9.60 kW source rows and 20%/80% frequency rows. Existing catalog
+  aria copy already promises both; the caption explicitly rejects an
+  energy-efficiency inference. Preserve interactive series hiding, not
+  a static-key waiver.
+  (7) MotorHistory bounds both real curves and caption, includes torque in
+  its accessible table/tooltips, retains torque-only history and calculates
+  its temperature domain from numbers, never localized tick strings.
+- Current browser evidence: driving 4/4, wide dynamics 4/4, motor 8/8 pass,
+  plus two strict power-curve/table checks; every wrapper reports escapes=0.
+  All 80 tests in six affected suites passed; the added telemetry loading
+  case also passes in its final 9-test suite. All 7,728 frozen receipts pass.
+  Four actual source audits show six zero counts and TypeScript pass; both
+  driving and vehicle hook domains match registered routes.
+  Native heatmap proof now reconciles all 168 accessible rows, 167 unknown
+  speeds and the one exact 64.80 km/h (1 drive) SVG cell, preserving the
+  deliberately caption-free design and the original complete wire record.
+  Source lines/shells/charts: Cost 236->238/2->2/1->1;
+  telemetry 275->304/2->2/1->1;
+  dynamics 146->221/1->1/0->1; speed 321->361/2->2/1->1;
+  motor 292->297/2->2/1->1. Nothing was removed or waived.
+- Final gate passes: shared VisuallyHidden and real interactive legend/hide
+  wiring satisfy the unchanged guards. The entire existing lint chain,
+  18 final telemetry/speed unit cases, 7,728 frozen tests and rebuilt hermetic
+  mock bundle pass. The two final wide driving browser cases also pass,
+  with exact measured power/table/axis proofs and zero proxy escapes.
+  Both final source audits report all six counts zero and actual TypeScript
+  pass. No guard, suppression, tolerance or baseline changed.
+  Evidence: `r8-final-gate`, `r8-final-driving`, `r8-final-telemetry-audit`,
+  `r8-final-speed-audit`, `r8-final-widget-unit`,
+  `r8-source-audits`, `r8-receipts-build`, `r8-driving`, `r8-wide-dynamics`,
+  `r8-motor`, `r8-power-source`, `r8-shared-loading-validation`.
+- Head 3206414200 at 18:25Z: **27 failing / 171 passing / 1 pending /
+  3 skipped**; frontend coverage merge passes. This graph is not final and
+  does not include the unpushed chart phase.
+- That head's completed graph is **28 failing / 172 passing / 3 skipped**,
+  versus round 0's 32 failing / 168 passing / 3 skipped. The chart phase
+  above has not yet been evaluated by CI. Exact graph:
+  `r8-final-prepush-checks.json`.
+- Exact next step: push the verified chart phase, then commit the separately
+  verified operations/seasonal localized-date contracts. Next largest date
+  root is the day-ledger source/methodology contract: responsive 48/49 still
+  demands raw ISO day bounds and an old unavailable-source caption. Preserve
+  request bounds, source provenance, refresh/retry, unknown states and
+  inclusive/exclusive semantics while binding its assertions to the real
+  selected-zone display. Charge-advisor raw 2025-12-05 is another confirmed
+  obsolete date assertion (`r9-responsive20`). Inspect actual nonzero route
+  guard diagnostics, not the passing tail of responsive 49.
 
 ## Mandatory ten-fix handoff (2026-10-25 16:43Z)
 

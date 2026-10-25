@@ -700,12 +700,12 @@
   {
     "file": "web/src/features/dashboard/widgets/DriveTelemetryWidget.tsx",
     "calls": 19,
-    "sha256": "8e9363d7537ce9a775eb39bbd7ec48af8a75692306ddff685e2377c48cfbb9ed"
+    "sha256": "b8a54d8f067712af711483edc48e6ea70967ae96cb3ead750a31833790120a73"
   },
   {
     "file": "web/src/features/dashboard/widgets/DrivingDynamicsWidget.tsx",
-    "calls": 11,
-    "sha256": "c95ca2481a62b0354613bb38368963cc7a1d28f218de0546e392bc64dba47a40"
+    "calls": 20,
+    "sha256": "5b45e42ba824f974a01e06a9e5cc784d2f289d284709d439ee96707bfe859518"
   },
   {
     "file": "web/src/features/dashboard/widgets/EnergyFlowWidget.tsx",
@@ -739,8 +739,8 @@
   },
   {
     "file": "web/src/features/dashboard/widgets/MotorHistoryWidget.tsx",
-    "calls": 16,
-    "sha256": "055476689e3519a5c1dfd65b6ad9a153daa63396d4724cd8e1b603f53fcda98e"
+    "calls": 17,
+    "sha256": "eed3c0b5275478eaaa738c4d1da3123d7ea80e160d60671e96e75265bbb976ed"
   },
   {
     "file": "web/src/features/dashboard/widgets/MQTTStatusWidget.tsx",

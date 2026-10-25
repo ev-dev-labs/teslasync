@@ -8,6 +8,7 @@ const state = vi.hoisted(() => ({
   history: [] as MotorSnapshot[],
   query: { data: [] as MotorSnapshot[], isLoading: false, isFetching: false, isStale: false, isError: false, dataUpdatedAt: 1000, isPending: false },
   temperature: '°C',
+  locale: 'en-US',
   range: { start: '2026-05-04', end: '2026-05-10', startInstant: '2026-05-04T00:00:00Z', endInstantExclusive: '2026-05-11T00:00:00Z', presetId: '7d' },
 }));
 
@@ -36,7 +37,9 @@ vi.mock('@/hooks/useDateFormat', () => ({
 }));
 vi.mock('@/hooks/useNumberFormatting', () => ({
   useNumberFormatting: () => ({
-    fmtNumber: (value: unknown, decimals = 0) => typeof value === 'number' && Number.isFinite(value) ? value.toFixed(decimals) : '—',
+    fmtNumber: (value: unknown, decimals = 2) => typeof value === 'number' && Number.isFinite(value)
+      ? new Intl.NumberFormat(state.locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(value)
+      : '—',
   }),
 }));
 vi.mock('react-i18next', () => ({
@@ -63,7 +66,9 @@ vi.mock('@/components/charts', () => {
       />
     ),
     XAxis: () => <div />,
-    YAxis: () => <div />,
+    YAxis: ({ yAxisId, domain }: { yAxisId?: string; domain?: readonly unknown[] }) => (
+      <div data-testid={`motor-axis-${yAxisId}`} data-domain={JSON.stringify(domain)} />
+    ),
     Tooltip: () => <div />,
     ReferenceArea: (props: Record<string, unknown>) => (
       <div data-testid="danger-area" data-y1={String(props.y1)} />
@@ -120,6 +125,7 @@ function renderWidget(size = { cols: 2, rows: 4 }) {
 beforeEach(() => {
   state.history = [];
   state.temperature = '°C';
+  state.locale = 'en-US';
   state.query = { ...state.query, isLoading: false, isFetching: false, isStale: false, isError: false, dataUpdatedAt: 1000, isPending: false };
 });
 
@@ -172,5 +178,21 @@ describe('MotorHistoryWidget', () => {
     expect(rows[0].temperature).toBe(40);
     expect(rows[1].temperature).toBeNull();
     expect(screen.getByTestId('motor-line')).toHaveAttribute('data-key', 'temperature');
+  });
+
+  it('retains genuine torque-only history without inventing a temperature', () => {
+    state.history = [snapshot({ di_torque: -240 })];
+    renderWidget();
+    const rows = JSON.parse(screen.getByTestId('motor-chart').getAttribute('data-rows') ?? '[]') as { torque: number; temperature: number | null }[];
+    expect(rows.map(row => [row.torque, row.temperature])).toEqual([[-240, null]]);
+    expect(screen.getByText('Awaiting temperature reading')).toBeInTheDocument();
+    expect(screen.queryByText('No motor history')).not.toBeInTheDocument();
+  });
+
+  it('keeps the numeric temperature domain independent of localized tick strings', () => {
+    state.locale = 'de-DE';
+    state.history = [snapshot({ di_stator_temp: 65.5, di_torque: 240 })];
+    renderWidget();
+    expect(screen.getByTestId('motor-axis-temp')).toHaveAttribute('data-domain', '[65.5,130]');
   });
 });

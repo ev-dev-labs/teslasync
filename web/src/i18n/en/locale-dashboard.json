@@ -3318,8 +3318,14 @@
     "drivingDynamics": {
       "accel": "Accel",
       "brake": "Brake",
+      "distribution": "G-force distribution",
+      "distributionAria": "Distribution of observed acceleration magnitudes",
+      "distributionEmpty": "No acceleration samples yet",
+      "distributionError": "Acceleration distribution unavailable",
+      "gForce": "G-force",
       "lateral": "Lateral",
       "noData": "No dynamics data",
+      "samples": "Samples",
       "severity": {
         "aggressive": "Aggressive",
         "normal": "Normal",
@@ -3898,9 +3904,11 @@
       "title": "Speed heatmap"
     },
     "speedProfile": {
+      "averagePower": "Average power",
       "chartAria": "Speed frequency and average power by speed range",
       "frequency": "Frequency",
       "noData": "No speed data",
+      "sampleScope": "Observed speed samples · average power is not energy efficiency",
       "speedRange": "Speed range",
       "sweetSpot": "Sweet spot",
       "title": "Speed profile"

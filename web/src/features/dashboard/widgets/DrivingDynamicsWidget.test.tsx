@@ -24,13 +24,21 @@ vi.hoisted(() => {
   }
 });
 
-const { dynamicsQuery, vehiclesQuery } = vi.hoisted(() => ({
+const { dynamicsQuery, vehiclesQuery, distributionQuery } = vi.hoisted(() => ({
   dynamicsQuery: vi.fn(),
   vehiclesQuery: vi.fn(),
+  distributionQuery: vi.fn(),
 }));
 
 vi.mock("@/api/hooks/useDriving", () => ({
   useDrivingDynamics: (vehicleId?: string) => dynamicsQuery(vehicleId),
+  useAccelerationDistribution: (vehicleId?: string) => distributionQuery(vehicleId),
+}));
+
+vi.mock("@/components/charts", async () => ({
+  ...await vi.importActual<typeof import("@/components/charts")>("@/components/charts"),
+  EmbeddedChart: ({ data }: { data: readonly Record<string, unknown>[] }) =>
+    <pre data-testid="dynamics-histogram">{JSON.stringify(data)}</pre>,
 }));
 
 vi.mock("@/api/hooks/useVehicles", () => ({
@@ -84,6 +92,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vehiclesQuery.mockReturnValue({ data: [{ id: 42 }] });
   dynamicsQuery.mockReturnValue(makeQuery());
+  distributionQuery.mockReturnValue(makeQuery({ data: { values: [0.05, 0.1, 0.15, 0.2, 0.3] } }));
 });
 
 afterEach(cleanup);
@@ -108,6 +117,7 @@ describe("DrivingDynamicsWidget redesign", () => {
     expect(screen.queryByText("Top 30%")).not.toBeInTheDocument();
     expect(screen.queryByText(/Hard-brake/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/G-force distribution/i)).not.toBeInTheDocument();
+    expect(distributionQuery).toHaveBeenCalledWith(undefined);
   });
 
   it("keeps compact layout content-sized and does not show three stats", () => {
@@ -201,5 +211,62 @@ describe("DrivingDynamicsWidget redesign", () => {
     renderWidget(2);
     fireEvent.click(screen.getByRole("button", { name: /refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("bins real signed acceleration magnitudes and preserves every finite observation", () => {
+    dynamicsQuery.mockReturnValue(makeQuery({ data: makeDynamics() }));
+    distributionQuery.mockReturnValue(makeQuery({
+      data: { values: [-0.05, 0.05, -0.1, 0.1, 1.2, 2, null, NaN, Infinity] },
+    }));
+    renderWidget(3);
+    const bins = JSON.parse(screen.getByTestId("dynamics-histogram").textContent ?? "[]") as { range: string; count: number }[];
+    expect(bins).toHaveLength(12);
+    expect(bins.filter(bin => bin.count > 0)).toEqual([
+      { range: "0.0-0.1", count: 2 },
+      { range: "0.1-0.2", count: 2 },
+      { range: "1.1+", count: 2 },
+    ]);
+    expect(bins.reduce((sum, bin) => sum + bin.count, 0)).toBe(6);
+    expect(distributionQuery).toHaveBeenCalledWith("42");
+    expect(screen.getByText("Smooth")).toBeVisible();
+  });
+
+  it("keeps measured dynamics visible when the independent distribution is empty or fails", () => {
+    dynamicsQuery.mockReturnValue(makeQuery({ data: makeDynamics() }));
+    distributionQuery.mockReturnValue(makeQuery({ data: { values: [] } }));
+    const empty = renderWidget(3);
+    expect(screen.getByText("No acceleration samples yet")).toBeInTheDocument();
+    expect(screen.getByText("Smooth")).toBeVisible();
+    expect(screen.queryByTestId("dynamics-histogram")).not.toBeInTheDocument();
+    empty.unmount();
+    const retry = vi.fn();
+    distributionQuery.mockReturnValue(makeQuery({ error: new Error("distribution down"), isError: true, refetch: retry }));
+    renderWidget(3);
+    expect(screen.getByText("Smooth")).toBeVisible();
+    expect(screen.getByText("Acceleration distribution unavailable")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains histogram observations during a background distribution failure", () => {
+    dynamicsQuery.mockReturnValue(makeQuery({ data: makeDynamics() }));
+    distributionQuery.mockReturnValue(makeQuery({
+      data: { values: [0.05] }, error: new Error("refresh failed"), isError: true,
+    }));
+    renderWidget(3);
+    expect(screen.getByTestId("dynamics-histogram")).toHaveTextContent('"count":1');
+    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+    expect(screen.getByText("Smooth")).toBeVisible();
+  });
+
+  it("refreshes both sources from the one wide-widget freshness control", () => {
+    const retryDynamics = vi.fn();
+    const retryDistribution = vi.fn();
+    dynamicsQuery.mockReturnValue(makeQuery({ data: makeDynamics(), refetch: retryDynamics }));
+    distributionQuery.mockReturnValue(makeQuery({ data: { values: [0.1] }, refetch: retryDistribution }));
+    renderWidget(3);
+    fireEvent.click(screen.getByRole("button", { name: /refresh/i }));
+    expect(retryDynamics).toHaveBeenCalledTimes(1);
+    expect(retryDistribution).toHaveBeenCalledTimes(1);
   });
 });

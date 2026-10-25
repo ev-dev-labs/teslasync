@@ -151,12 +151,14 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <div className="flex h-full min-w-0 flex-col gap-2">
-        <WidgetBigNumber
-          value={nextCost == null ? null : formatCurrency(nextCost)}
-          subtitle={t('widget.costForecast.nextPeriod', 'Next {{count}} months', { count: forecastMonths.length || 6 })}
-          animated={false}
-        />
+      <div className="flex h-full min-h-0 min-w-0 flex-col gap-2">
+        <div className="shrink-0">
+          <WidgetBigNumber
+            value={nextCost == null ? null : formatCurrency(nextCost)}
+            subtitle={t('widget.costForecast.nextPeriod', 'Next {{count}} months', { count: forecastMonths.length || 6 })}
+            animated={false}
+          />
+        </div>
         <div className="min-h-0 flex-1">
           <EmbeddedChart
             title={t('widget.costForecast.title', 'Cost forecast')}

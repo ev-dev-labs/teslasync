@@ -11,6 +11,7 @@ export const compactVehicleReadings: Record<string, RegExp> = {
   // Compact contracts expose counts, not the product names shown in expanded cards.
   subscriptions: /active\s*1/,
   'vehicle-upgrades': /available\s*1/,
+  'motor-history': /Peak stator temp\s*65\s*°C/,
 };
 
 export const vehicleReadings: Record<string, RegExp> = {
@@ -23,7 +24,7 @@ export const vehicleReadings: Record<string, RegExp> = {
   'odometer-counter': /32,100/,
   'drivetrain-health': /(?:Healthy|65)/,
   'motor-performance': /240/,
-  'motor-history': /240/,
+  'motor-history': /240\.00/,
   'vehicle-specs': /Long Range/,
   'watch-summary': /72/,
   'maintenance-tracker': /Review tire rotation/,
