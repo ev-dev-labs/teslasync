@@ -249,12 +249,23 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   `r14-signal-hooks`, `r14-frozen`, `r14-overflow-final`.
 - At 19:34Z, bc841f3b79 is **0 failing / 79 passing / 115 pending /
   3 skipped**, still incomplete rather than green.
-- Exact next step: commit the separately verified native fleet-posture
-  layout contracts (both widths pass in `r15-fleet-native-browser`).
-  Then repair the related signal catalogue's precise unmatched history
-  requests (`r16-signals-before`), remaining sleep/home-energy timezone
-  semantics and new completed CI roots. No baseline regeneration unless
-  a new reviewed Windows visual failure requires it.
+- Fix 14 committed as `b4c9429ef2`.
+- Fix 15: the dashboard layout contract still selected the removed
+  fixed FleetOperationsBrief/taxonomy instead of the redesigned widget.
+  Both widths now require the real fleet-posture widget, exact verified
+  1/1 headline, native 100% meter bounds/text, Aurora's native definition
+  row and live-state/active labels, and its exact polite announcement.
+  The old fixed brief, taxonomy and workflow chrome must remain absent.
+  The browser clock is tied to the fixture batch's own `now`, not today's
+  wall clock: the fixed August observation correctly becomes unverified
+  in October otherwise. No response payload or production trust logic was
+  changed. Both 390/1440px cases and affected ESLint pass; proxy escapes=0.
+  Evidence: `r15-fleet-browser`, `r15-fleet-final-browser` diagnostic
+  logs, `r15-fleet-native-browser` and `r15-fleet-eslint`.
+- Exact next step: repair the related signal catalogue's precise unmatched
+  history requests (`r16-signals-before`), then remaining sleep/home-energy
+  timezone semantics and new completed CI roots. No baseline regeneration
+  unless a new reviewed Windows visual failure requires it.
 
 ## Mandatory ten-fix handoff (2026-10-25 16:43Z)
 

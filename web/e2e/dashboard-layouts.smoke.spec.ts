@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { assertMockApiComplete, expectThemeApplied, fulfillApiMock, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
+import { assertMockApiComplete, expectThemeApplied, fulfillApiMock, installApiMocks, resolveApiFixture, seedBrowserState, waitForHarnessReady } from './mockApi'
 
 for (const theme of ['dark', 'light'] as const) {
   for (const width of [390, 1440]) {
@@ -157,6 +157,10 @@ test('mobile New Layout creates populated Operations Desk without mixing templat
 
 for (const width of [390, 1440]) {
   test(`new dashboards show fleet posture in the ${width}px widget grid without a fixed brief`, async ({ page }, testInfo) => {
+    const batch = resolveApiFixture('/vehicles/states?ids=7', 'GET', 'populated')
+    expect(batch.matched).toBe(true)
+    const { now } = (batch.body as { data: { now: string } }).data
+    await page.clock.setFixedTime(new Date(now))
     await page.setViewportSize({ width, height: 900 })
     await seedBrowserState(page, 'dark', '/', { preserveDashboardState: true })
     const mockApi = await installApiMocks(page)
@@ -164,9 +168,25 @@ for (const width of [390, 1440]) {
     await waitForHarnessReady(page, mockApi)
 
     const grid = page.getByRole('region', { name: 'Dashboard widgets' })
-    const posture = grid.getByTestId('fleet-operations-brief')
+    const posture = grid.getByTestId('fleet-posture')
     await expect(posture).toBeVisible()
-    await expect(grid.getByTestId('fleet-posture-taxonomy')).toBeVisible()
+    const verified = posture.getByText('Verified', { exact: true }).locator('..')
+    await expect(verified).toHaveText(/^Verified\s*1\s*\/\s*1$/)
+    const coverage = posture.getByRole('meter', { name: 'Coverage', exact: true })
+    await expect(coverage).toHaveAttribute('aria-valuenow', '100')
+    await expect(coverage).toHaveAttribute('aria-valuemin', '0')
+    await expect(coverage).toHaveAttribute('aria-valuemax', '100')
+    await expect(coverage).toHaveAttribute('aria-valuetext', '100%')
+    await expect(posture.getByText('Coverage 100%', { exact: true })).toBeVisible()
+    const vehicle = posture.locator('dt').filter({ hasText: /^Aurora/ }).locator('..')
+    await expect(vehicle).toHaveCount(1)
+    await expect(vehicle.getByText('online · telemetry live', { exact: true })).toBeVisible()
+    await expect(vehicle.getByText('Active', { exact: true })).toBeVisible()
+    const announcement = posture.getByTestId('fleet-posture-announcement')
+    await expect(announcement).toHaveAttribute('aria-live', 'polite')
+    await expect(announcement).toHaveText('All 1 vehicles verified from current telemetry.')
+    await expect(grid.getByTestId('fleet-posture-taxonomy')).toHaveCount(0)
+    await expect(page.getByTestId('fleet-operations-brief')).toHaveCount(0)
     await posture.screenshot({
       path: testInfo.outputPath(`fleet-posture-widget-${width}.png`),
       animations: 'disabled',
