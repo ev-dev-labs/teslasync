@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
+
 	"github.com/jackc/pgx/v5"
 )
 
@@ -216,8 +218,8 @@ func TestClientIP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.name == "nil request" {
-				if got := clientIP(nil); got != "" {
-					t.Fatalf("clientIP(nil) = %q, want empty", got)
+				if got := httputil.ClientIP(nil, httputil.ClientIPOptions{TrustXForwardedFor: true}); got != "" {
+					t.Fatalf("ClientIP(nil) = %q, want empty", got)
 				}
 				return
 			}
@@ -226,8 +228,8 @@ func TestClientIP(t *testing.T) {
 			if tt.xff != "" {
 				req.Header.Set("X-Forwarded-For", tt.xff)
 			}
-			if got := clientIP(req); got != tt.want {
-				t.Fatalf("clientIP = %q, want %q", got, tt.want)
+			if got := httputil.ClientIP(req, httputil.ClientIPOptions{TrustXForwardedFor: true}); got != tt.want {
+				t.Fatalf("ClientIP = %q, want %q", got, tt.want)
 			}
 		})
 	}

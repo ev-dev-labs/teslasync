@@ -13,7 +13,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
@@ -28,6 +27,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -277,13 +277,6 @@ func (h *GuardHandler) now() time.Time {
 	return time.Now().UTC()
 }
 
-func actorFromRequest(r *http.Request, headerName string) string {
-	if r == nil || headerName == "" {
-		return ""
-	}
-	return strings.TrimSpace(r.Header.Get(headerName))
-}
-
 // parseVehicleID extracts the {vehicleID} chi path parameter as a
 // positive int64. Writes the appropriate 4xx and returns ok=false on
 // any malformed input.
@@ -440,7 +433,7 @@ func (h *GuardHandler) Acknowledge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// In open mode, store the empty actor instead of inventing an identity.
-	actor := actorFromRequest(r, h.authHdr)
+	actor := httputil.ActorIdentity(r, h.authHdr)
 
 	updated, err := h.repo.Acknowledge(ctx, vehicleID, eventID, actor)
 	if errors.Is(err, systemdb.ErrGuardEventNotFound) {

@@ -310,7 +310,7 @@ func TestHandler_Status(t *testing.T) {
 		},
 		{
 			name: "successful zero quote",
-			in: worker.GasPriceStatus{LastPollTime: lastPoll, CurrentPriceUnit: &gallon},
+			in:   worker.GasPriceStatus{LastPollTime: lastPoll, CurrentPriceUnit: &gallon},
 		},
 	}
 

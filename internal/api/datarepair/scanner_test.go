@@ -99,42 +99,42 @@ func TestScannerScanMaterializesSuggestionsAndAnomalies(t *testing.T) {
 		cases: cases,
 		sourceFactory: func(database.DBTX) (scanReportBuilder, scanAnomalySource) {
 			return func(context.Context, diagnosisOptions) (*systemmodel.SessionRepairReport, error) {
-					return &systemmodel.SessionRepairReport{
-						DriveSuggestions: []systemmodel.SessionRepairSuggestion{{
-							Kind:       systemmodel.SessionRepairKindDrive,
-							SessionID:  11,
-							VehicleID:  3,
-							Rule:       systemmodel.SessionRepairRuleDriveOpenParkObserved,
-							Confidence: systemmodel.SessionRepairConfidenceHigh,
-							StartedAt:  started,
-							ContradictingEvidence: systemmodel.SessionRepairEvidence{
-								Ts:     contradiction,
-								Source: systemmodel.SessionRepairSourceDriveTelemetry,
-								Field:  "gear",
-								Value:  "P",
-							},
-							SuggestedEndedAt: suggested,
-							EvidenceGapS:     60,
-							Applicable:       true,
-						}},
-						ChargingSuggestions: []systemmodel.SessionRepairSuggestion{},
-					}, nil
-				}, fakeScanAnomalySource{result: datarepairdb.AnomalyScanResult{
-					Truncated: true,
-					Anomalies: []datarepairdb.Anomaly{{
-						Kind:       datarepairdb.AnomalyKindCharging,
-						Rule:       datarepairdb.RuleNegativeEnergyAddedWh,
-						Confidence: datarepairdb.AnomalyConfidenceHigh,
+				return &systemmodel.SessionRepairReport{
+					DriveSuggestions: []systemmodel.SessionRepairSuggestion{{
+						Kind:       systemmodel.SessionRepairKindDrive,
+						SessionID:  11,
 						VehicleID:  3,
-						SessionID:  29,
+						Rule:       systemmodel.SessionRepairRuleDriveOpenParkObserved,
+						Confidence: systemmodel.SessionRepairConfidenceHigh,
 						StartedAt:  started,
-						EndedAt:    &contradiction,
-						Facts: datarepairdb.AnomalyFacts{
-							NegativeField: "total_energy_added_wh",
-							NegativeValue: &negative,
+						ContradictingEvidence: systemmodel.SessionRepairEvidence{
+							Ts:     contradiction,
+							Source: systemmodel.SessionRepairSourceDriveTelemetry,
+							Field:  "gear",
+							Value:  "P",
 						},
+						SuggestedEndedAt: suggested,
+						EvidenceGapS:     60,
+						Applicable:       true,
 					}},
-				}}
+					ChargingSuggestions: []systemmodel.SessionRepairSuggestion{},
+				}, nil
+			}, fakeScanAnomalySource{result: datarepairdb.AnomalyScanResult{
+				Truncated: true,
+				Anomalies: []datarepairdb.Anomaly{{
+					Kind:       datarepairdb.AnomalyKindCharging,
+					Rule:       datarepairdb.RuleNegativeEnergyAddedWh,
+					Confidence: datarepairdb.AnomalyConfidenceHigh,
+					VehicleID:  3,
+					SessionID:  29,
+					StartedAt:  started,
+					EndedAt:    &contradiction,
+					Facts: datarepairdb.AnomalyFacts{
+						NegativeField: "total_energy_added_wh",
+						NegativeValue: &negative,
+					},
+				}},
+			}}
 		},
 		withLock: acquiredScanLock,
 		now:      func() time.Time { return now },

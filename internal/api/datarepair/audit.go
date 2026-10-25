@@ -3,13 +3,13 @@ package datarepair
 import (
 	"context"
 	"errors"
-	"net"
 	"net/http"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // Audit trail for data-repair mutations.
@@ -120,15 +120,12 @@ func insertAuditLog(tx database.DBTX, ctx context.Context, now time.Time, e audi
 	return err
 }
 
-// actorFromRequest resolves the HTTP operator identity from the configured
+// normalizeHTTPActor resolves the HTTP operator identity from the configured
 // ForwardAuth header. Open-mode requests still receive a durable, non-empty
 // attribution rather than violating actor constraints or masquerading as a
 // scheduled system action.
-func actorFromRequest(r *http.Request, headerName string) string {
-	actor := ""
-	if r != nil && headerName != "" {
-		actor = strings.TrimSpace(r.Header.Get(headerName))
-	}
+func normalizeHTTPActor(r *http.Request, headerName string) string {
+	actor := httputil.ActorIdentity(r, headerName)
 	if actor == "" || !utf8.ValidString(actor) || strings.ContainsRune(actor, '\x00') {
 		return "anonymous"
 	}
@@ -137,29 +134,6 @@ func actorFromRequest(r *http.Request, headerName string) string {
 		return string(runes[:maxHTTPActorChars])
 	}
 	return actor
-}
-
-// clientIP prefers the first X-Forwarded-For hop, then RemoteAddr with the
-// port stripped so values are comparable across requests.
-func clientIP(r *http.Request) string {
-	if r == nil {
-		return ""
-	}
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if i := strings.IndexByte(xff, ','); i >= 0 {
-			xff = xff[:i]
-		}
-		if ip := strings.TrimSpace(xff); ip != "" {
-			return ip
-		}
-	}
-	if r.RemoteAddr == "" {
-		return ""
-	}
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		return host
-	}
-	return r.RemoteAddr
 }
 
 // writeAudit records one repair mutation. Routed through the handler so tests
@@ -172,12 +146,12 @@ func (h *DataRepairHandler) writeAudit(
 	detail string,
 ) error {
 	entry := auditEntry{
-		Actor:      actorFromRequest(r, h.forwardAuthHeader),
+		Actor:      normalizeHTTPActor(r, h.forwardAuthHeader),
 		Action:     action,
 		EntityType: entityType,
 		EntityID:   &entityID,
 		Detail:     detail,
-		IP:         clientIP(r),
+		IP:         httputil.ClientIP(r, httputil.ClientIPOptions{TrustXForwardedFor: true}),
 		UserAgent:  r.UserAgent(),
 	}
 	if h.audit != nil {

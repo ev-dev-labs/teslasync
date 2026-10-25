@@ -801,15 +801,15 @@ func TestActorFromRequest_OpenModeAndBounds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := actorFromRequest(request, ""); got != "anonymous" {
+	if got := normalizeHTTPActor(request, ""); got != "anonymous" {
 		t.Fatalf("open-mode actor = %q, want anonymous", got)
 	}
 	request.Header.Set("X-Operator", strings.Repeat("é", maxHTTPActorChars+20))
-	if got := actorFromRequest(request, "X-Operator"); utf8.RuneCountInString(got) != maxHTTPActorChars {
+	if got := normalizeHTTPActor(request, "X-Operator"); utf8.RuneCountInString(got) != maxHTTPActorChars {
 		t.Fatalf("bounded actor rune count = %d, want %d", utf8.RuneCountInString(got), maxHTTPActorChars)
 	}
 	request.Header.Set("X-Operator", string([]byte{0xff}))
-	if got := actorFromRequest(request, "X-Operator"); got != "anonymous" {
+	if got := normalizeHTTPActor(request, "X-Operator"); got != "anonymous" {
 		t.Fatalf("invalid UTF-8 actor = %q, want anonymous", got)
 	}
 }

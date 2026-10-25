@@ -257,7 +257,7 @@ func TestSettingsResetHandler_RepoErrorReturns500(t *testing.T) {
 }
 
 func TestSettingsResetHandler_OpenModeAllowsResetExceptQuietHours(t *testing.T) {
-	// When ForwardAuth header is empty, actorFromRequest returns "".
+	// When ForwardAuth header is empty, ActorIdentity returns "".
 	// Sections other than quiet_hours are install-global so they
 	// remain valid and the orchestrator gets called with userID="".
 	stub := &stubResetExecutor{}

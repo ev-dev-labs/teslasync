@@ -20,7 +20,6 @@ package auth
 
 import (
 	"context"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -28,6 +27,7 @@ import (
 	"github.com/google/uuid"
 
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // SessionCookieName is the cookie name TeslaSync uses for its own
@@ -203,7 +203,10 @@ func mintAndAttach(ctx context.Context, store SessionStore, subject string, r *h
 	if err != nil {
 		return uuid.Nil, false
 	}
-	id, err := store.Create(ctx, subject, hash, requestUserAgent(r), requestClientIP(r))
+	id, err := store.Create(ctx, subject, hash, requestUserAgent(r), httputil.ClientIP(r, httputil.ClientIPOptions{
+		TrustForwardedHeaders:  true,
+		SkipEmptyXForwardedFor: true,
+	}))
 	if err != nil {
 		return uuid.Nil, false
 	}
@@ -264,29 +267,4 @@ func WithSessionForTests(ctx context.Context, id uuid.UUID) context.Context {
 // requestUserAgent returns the trimmed User-Agent header.
 func requestUserAgent(r *http.Request) string {
 	return strings.TrimSpace(r.Header.Get("User-Agent"))
-}
-
-// requestClientIP returns the best-effort client IP for r. Prefers
-// X-Forwarded-For (left-most) when present, falls back to RemoteAddr.
-// Mirrors the helper in internal/api/audit.go but lives here so the
-// auth package has no api-package dependency.
-func requestClientIP(r *http.Request) string {
-	if xff := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); xff != "" {
-		// Left-most non-empty token.
-		for _, candidate := range strings.Split(xff, ",") {
-			c := strings.TrimSpace(candidate)
-			if c == "" {
-				continue
-			}
-			return c
-		}
-	}
-	if xri := strings.TrimSpace(r.Header.Get("X-Real-IP")); xri != "" {
-		return xri
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return strings.TrimSpace(r.RemoteAddr)
-	}
-	return host
 }

@@ -3,14 +3,13 @@ package charging
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apibulk"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/rs/zerolog/log"
 )
 
@@ -90,34 +89,6 @@ func nullableStr(s string) any {
 	return s
 }
 
-func actorFromRequest(r *http.Request, headerName string) string {
-	if r == nil || headerName == "" {
-		return ""
-	}
-	return strings.TrimSpace(r.Header.Get(headerName))
-}
-
-func clientIP(r *http.Request) string {
-	if r == nil {
-		return ""
-	}
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if i := strings.IndexByte(xff, ','); i >= 0 {
-			xff = xff[:i]
-		}
-		if ip := strings.TrimSpace(xff); ip != "" {
-			return ip
-		}
-	}
-	if r.RemoteAddr == "" {
-		return ""
-	}
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		return host
-	}
-	return r.RemoteAddr
-}
-
 func logAuditFromRequest(db *database.DB, r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
 	if db == nil || r == nil {
 		return
@@ -127,12 +98,12 @@ func logAuditFromRequest(db *database.DB, r *http.Request, headerName, action, r
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 	_, err := db.Pool.Exec(r.Context(), query,
 		time.Now().UTC(),
-		actorFromRequest(r, headerName),
+		httputil.ActorIdentity(r, headerName),
 		action,
 		resource,
 		entityID,
 		detail,
-		nullableStr(clientIP(r)),
+		nullableStr(httputil.ClientIP(r, httputil.ClientIPOptions{TrustXForwardedFor: true})),
 		nullableStr(r.UserAgent()),
 	)
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/webvitals"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // Public in-app feedback ingest handler.
@@ -103,8 +103,8 @@ func (h *Handler) Submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subject := actorFromRequest(r, h.authHdr)
-	ip := clientIP(r)
+	subject := httputil.ActorIdentity(r, h.authHdr)
+	ip := httputil.ClientIP(r, httputil.ClientIPOptions{TrustXForwardedFor: true})
 
 	// Per-submitter throttle. We reach into the DB so the limit
 	// survives pod restarts and is shared across replicas — the
@@ -191,34 +191,6 @@ func normalizePageRoute(raw string) string {
 		return ""
 	}
 	return webvitals.NormalizeRoute(raw)
-}
-
-func actorFromRequest(r *http.Request, headerName string) string {
-	if r == nil || headerName == "" {
-		return ""
-	}
-	return strings.TrimSpace(r.Header.Get(headerName))
-}
-
-func clientIP(r *http.Request) string {
-	if r == nil {
-		return ""
-	}
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if i := strings.IndexByte(xff, ','); i >= 0 {
-			xff = xff[:i]
-		}
-		if ip := strings.TrimSpace(xff); ip != "" {
-			return ip
-		}
-	}
-	if r.RemoteAddr == "" {
-		return ""
-	}
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		return host
-	}
-	return r.RemoteAddr
 }
 
 func firstNonEmpty(values ...string) string {

@@ -525,7 +525,7 @@ func (h *DataRepairHandler) quarantineSession(
 	reason string,
 ) (*systemmodel.RepairQuarantine, error) {
 	ctx := r.Context()
-	actor := requestActor(r, h.forwardAuthHeader)
+	actor := normalizeHTTPActor(r, h.forwardAuthHeader)
 	var result *systemmodel.RepairQuarantine
 
 	err := h.withTransaction(ctx, func(tx database.DBTX) error {
@@ -737,7 +737,7 @@ func (h *DataRepairHandler) RestoreQuarantine(w http.ResponseWriter, r *http.Req
 	}
 
 	ctx := r.Context()
-	actor := requestActor(r, h.forwardAuthHeader)
+	actor := normalizeHTTPActor(r, h.forwardAuthHeader)
 	var restored *systemmodel.RepairQuarantine
 	err = h.withTransaction(ctx, func(tx database.DBTX) error {
 		record, err := h.caseRepo.GetQuarantineForUpdate(ctx, tx, quarantineID)

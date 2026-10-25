@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 func TestActorFromRequest(t *testing.T) {
@@ -25,9 +27,9 @@ func TestActorFromRequest(t *testing.T) {
 			if tt.setHeader != "" {
 				req.Header.Set("X-Forwarded-User", tt.setHeader)
 			}
-			got := actorFromRequest(req, tt.headerName)
+			got := httputil.ActorIdentity(req, tt.headerName)
 			if got != tt.want {
-				t.Fatalf("actorFromRequest = %q, want %q", got, tt.want)
+				t.Fatalf("ActorIdentity = %q, want %q", got, tt.want)
 			}
 		})
 	}
@@ -51,8 +53,8 @@ func TestClientIP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.name == "nil request" {
-				if got := clientIP(nil); got != "" {
-					t.Fatalf("clientIP(nil) = %q, want empty", got)
+				if got := httputil.ClientIP(nil, httputil.ClientIPOptions{TrustXForwardedFor: true}); got != "" {
+					t.Fatalf("ClientIP(nil) = %q, want empty", got)
 				}
 				return
 			}
@@ -61,8 +63,8 @@ func TestClientIP(t *testing.T) {
 			if tt.xff != "" {
 				req.Header.Set("X-Forwarded-For", tt.xff)
 			}
-			if got := clientIP(req); got != tt.wantHost {
-				t.Fatalf("clientIP = %q, want %q", got, tt.wantHost)
+			if got := httputil.ClientIP(req, httputil.ClientIPOptions{TrustXForwardedFor: true}); got != tt.wantHost {
+				t.Fatalf("ClientIP = %q, want %q", got, tt.wantHost)
 			}
 		})
 	}

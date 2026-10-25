@@ -103,10 +103,10 @@ func (h *MaskedRevealHandler) Reveal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	evt := auditdb.AuditRevealEvent{
-		Actor:     actorFromRequest(r, h.forwardAuthHeader),
+		Actor:     httputil.ActorIdentity(r, h.forwardAuthHeader),
 		Variant:   body.Variant,
 		Kind:      body.Kind,
-		IP:        clientIP(r),
+		IP:        httputil.ClientIP(r, httputil.ClientIPOptions{TrustXForwardedFor: true}),
 		UserAgent: r.UserAgent(),
 	}
 
@@ -152,15 +152,4 @@ func decodeRevealAuditBody(r *http.Request) (revealAuditRequest, error) {
 		return body, errors.New("variant is required")
 	}
 	return body, nil
-}
-
-func actorFromRequest(r *http.Request, headerName string) string {
-	if r == nil || headerName == "" {
-		return ""
-	}
-	return strings.TrimSpace(r.Header.Get(headerName))
-}
-
-func clientIP(r *http.Request) string {
-	return httputil.ClientIP(r, httputil.ClientIPOptions{TrustXForwardedFor: true})
 }

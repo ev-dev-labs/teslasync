@@ -69,28 +69,6 @@ func logAudit(db *database.DB, ctx context.Context, action, resource, details, i
 	})
 }
 
-// actorFromRequest resolves the user identity for an audit event.
-//
-// When a ForwardAuth header is configured (Authentik, Authelia, oauth2-proxy,
-// Keycloak, etc.) and present on the request, its value is treated as the
-// stable per-user actor id (typically an email or username). When absent or
-// unconfigured, the function returns the empty string — callers that need
-// guaranteed identity for per-user filtering should error out in that case
-// rather than silently aggregating across users.
-func actorFromRequest(r *http.Request, headerName string) string {
-	if r == nil || headerName == "" {
-		return ""
-	}
-	return strings.TrimSpace(r.Header.Get(headerName))
-}
-
-// clientIP extracts the best-effort client IP from a request, preferring
-// X-Forwarded-For (trusted reverse-proxy chain) then RemoteAddr. The port
-// is stripped so the value is comparable across requests.
-func clientIP(r *http.Request) string {
-	return httputil.ClientIP(r, httputil.ClientIPOptions{TrustXForwardedFor: true})
-}
-
 // logAuditFromRequest persists a fully-attributed audit event for an HTTP
 // mutation. Actor is derived from the configured ForwardAuth header (empty
 // string when no auth is configured — those rows still record IP/UA so admins
@@ -98,12 +76,12 @@ func clientIP(r *http.Request) string {
 // path so that /users/me/activity can surface it.
 func logAuditFromRequest(db *database.DB, r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
 	insertAuditLog(db, r.Context(), auditEntry{
-		Actor:      actorFromRequest(r, headerName),
+		Actor:      httputil.ActorIdentity(r, headerName),
 		Action:     action,
 		EntityType: resource,
 		EntityID:   entityID,
 		Detail:     detail,
-		IP:         clientIP(r),
+		IP:         httputil.ClientIP(r, httputil.ClientIPOptions{TrustXForwardedFor: true}),
 		UserAgent:  r.UserAgent(),
 	})
 }

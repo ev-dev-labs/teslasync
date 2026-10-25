@@ -29,6 +29,7 @@ import (
 	"github.com/google/uuid"
 
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // fakeSessionStore is an in-memory SessionStore for tests. The HMAC
@@ -432,7 +433,10 @@ func TestRequestClientIP(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			tc.set(req)
-			if got := requestClientIP(req); got != tc.want {
+			if got := httputil.ClientIP(req, httputil.ClientIPOptions{
+				TrustForwardedHeaders:  true,
+				SkipEmptyXForwardedFor: true,
+			}); got != tc.want {
 				t.Fatalf("got %q, want %q", got, tc.want)
 			}
 		})
