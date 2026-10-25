@@ -212,6 +212,20 @@ describe('GrafanaPanelPage', () => {
     expect(within(root).getByText('Tesla VIN (PII)')).toBeInTheDocument();
     expect(within(root).getByText('user-chosen display name (PII)')).toBeInTheDocument();
     expect(within(root).getByText('numeric value (SI), null if non-numeric')).toBeInTheDocument();
+    for (const [table, column, description] of [
+      ['drives', 'started_at', 'Drive start instant.'],
+      ['drives', 'ended_at', 'Drive end instant.'],
+      ['charging_sessions', 'started_at', 'Session start instant.'],
+      ['charging_sessions', 'ended_at', 'Session end instant.'],
+      ['alerts', 'fired_at', 'Alert firing instant.'],
+      ['signal_log_view', 'ts', 'Sample instant.'],
+    ]) {
+      const entry = within(root).getByText(table).closest('li');
+      const field = within(entry!).getByText(column, { selector: 'code' }).closest('li');
+      expect(field).toHaveTextContent('timestamptz');
+      expect(field).toHaveTextContent(description);
+      expect(field).not.toHaveTextContent(/\bUTC\b/);
+    }
     expect(root.querySelectorAll('[class*="bg-white/"]')).toHaveLength(0);
   });
 

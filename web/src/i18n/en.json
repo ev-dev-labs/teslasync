@@ -14668,7 +14668,7 @@
       "scopeMismatch": "Charging spend and energy use a different filter and temporal scope from positive-drive distance and dates.",
       "lifetimeGas": "The lifetime gasoline equivalent is distance-derived from positive-drive kilometres, configured price per unit, and comparison MPG.",
       "monthlyGas": "Only monthly gasoline equivalents are energy-derived, using lifetime km/kWh or the endpoint 5 km/kWh fallback.",
-      "calendar": "Monthly labels use backend/database calendar semantics; no vehicle-local or UTC timezone is exposed.",
+      "calendar": "Monthly labels retain the source calendar; the response supplies no timezone metadata.",
       "maintenance": "Maintenance is a flat $50-per-modeled-month heuristic, not measured service spend.",
       "scenarios": "Break-even and sensitivity outputs are algebraic what-if scenarios, not forecasts or recommendations.",
       "negative": "Negative deltas are valid modeled losses and are never relabeled as savings.",
@@ -40318,6 +40318,14 @@
   },
   "powerGrafana": {
     "title": "Grafana panel builder",
+    "timestampColumns": {
+      "driveStart": "Drive start instant.",
+      "driveEnd": "Drive end instant.",
+      "sessionStart": "Session start instant.",
+      "sessionEnd": "Session end instant.",
+      "alertFired": "Alert firing instant.",
+      "sample": "Sample instant."
+    },
     "summary": {
       "panelTypes": "Panel types",
       "datasources": "Datasources",

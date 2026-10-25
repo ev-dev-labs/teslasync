@@ -200,7 +200,8 @@ describe('SignalEntropyPage preservation and presentation', () => {
     const after = latestChart('Rolling information density');
     expect(after.data).toEqual(before.data);
     expect(after.dataColumns?.[0]?.format?.(after.data?.[0]?.time)).toBe('01.01.26, 11:00');
-    expect(after.metadata?.rangeLabel).toBe('America/Los_Angeles');
+    expect(after.metadata).toEqual({ unitLabel: 'bits' });
+    expect(screen.queryByText('America/Los_Angeles', { exact: true })).not.toBeInTheDocument();
     expect(screen.getByText('01.01.26, 11:00')).toBeInTheDocument();
   });
 
@@ -320,7 +321,7 @@ describe('SignalEntropyPage preservation and presentation', () => {
     expect(formatDateTime).toHaveBeenLastCalledWith(timestamp);
     const after = latestChart('Rolling information density');
     expect(after.data).toEqual(before.data);
-    expect(after.metadata).toEqual({ unitLabel: 'bits', rangeLabel: 'America/Los_Angeles' });
+    expect(after.metadata).toEqual({ unitLabel: 'bits' });
   });
 
   it('preserves no-vehicle onboarding without fabricating measurements', () => {

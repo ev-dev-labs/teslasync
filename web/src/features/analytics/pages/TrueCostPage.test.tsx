@@ -329,6 +329,9 @@ describe('TrueCostPage persistent query states', () => {
     expect(h.hookIds).toEqual(['7']);
     expect(screen.getByTestId('ai-tco-narration')).toHaveAttribute('data-vehicle-id', '7');
     expect(screen.getByText('GET /analytics/tco?vehicle_id=…')).toBeInTheDocument();
+    const methodology = screen.getByTestId('tco-methodology');
+    expect(within(methodology).getAllByRole('listitem')).toHaveLength(8);
+    expect(methodology).toHaveTextContent('Monthly labels retain the source calendar; the response supplies no timezone metadata.');
   });
 
   it('keeps every shell mounted with no selected vehicle and passes an empty hook ID', () => {

@@ -1380,6 +1380,14 @@
       "intro": "These tables are the only tables the curated catalog exposes for postgres-target rawSql. The Helix natural-language drafter refuses any postgres query referencing tables outside this list.",
       "title": "Curated table catalog (postgres targets)"
     },
+    "timestampColumns": {
+      "alertFired": "Alert firing instant.",
+      "driveEnd": "Drive end instant.",
+      "driveStart": "Drive start instant.",
+      "sample": "Sample instant.",
+      "sessionEnd": "Session end instant.",
+      "sessionStart": "Session start instant."
+    },
     "title": "Grafana panel builder",
     "workflow": {
       "note": "The browser never pushes panels to Grafana directly â€” you stay in control of what lands on your dashboards.",

@@ -179,6 +179,32 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   Evidence: `r32-local-clock-red`, `r32-home-route`, `r32-home-audit`,
   `r32-lint`, `r33-home-supported`, `r33-eslint`, `r35-home-unit`,
   `r35-tsc`, `r35-eslint`. No Windows mirror or baseline changes.
+- Three-route phase gate (21:52Z): home-energy is pushed as `000dcd1095`.
+  Entropy already formatted its axis/table/tooltips with the selected
+  clock; removed only its redundant zone-as-range metadata, retaining the
+  actual unit, every raw instant and reactive selected-zone formatting.
+  TCO still discloses source-calendar/absent-timezone metadata; it does not
+  invent a selected-zone grouping or mention literal zone names in that
+  negative disclosure. Grafana's six `timestamptz` reference descriptions
+  now describe absolute instants through six catalog-backed translations.
+  All 33 ordered columns, types, identifiers, 50 reference codes, manual
+  editor/copy/persistence and propose-only AI behavior remain unchanged;
+  no backend catalog, SQL, storage or exported panel changed.
+  Four new assertions failed before the fixes; **65/65** affected unit/
+  AI-route cases and **15/15** unchanged five-width route guards now pass,
+  escapes=0. Each production audit reports six zero categories plus actual
+  TypeScript pass; affected ESLint, full unchanged lint and the hermetic
+  build pass. Catalog splitting must finish before building (an initial
+  concurrent check correctly failed; the sequenced build passed).
+  Hook URLs match the router; lines/section markers are preserved:
+  entropy 326/326 and 10/10, Grafana 541/543 and 11/11, methodology 56/56
+  and 3/3. Latest graph: **32 pass / 158 pending / 3 skip**, incomplete.
+  **Exact next after push:** selected-zone monthly milestone grouping,
+  then full-range automation trend bucketing (backend aggregate, never
+  the currently loaded rows), followed by utilization/export/sleep/
+  insurance models. Evidence: `r36-zone-captions-red`, `r36-zone-unit`,
+  `r36-eslint`, `r37-build`, `r37-source-audit`, `r37-three-routes`,
+  `r37-lint`, `r37-hooks`. No baseline or mirror changes.
 
 ## CI-until-green continuation (2026-10-25, after `3ca29a42ad`)
 

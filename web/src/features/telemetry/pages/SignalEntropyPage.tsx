@@ -215,7 +215,7 @@ export default function SignalEntropyPage() {
               : noSamplesMessage}
             emptyDescription={noSamplesDescription}
             emptyIcon={<Binary className="h-8 w-8" aria-hidden="true" />}
-            metadata={{ unitLabel: 'bits', rangeLabel: tz }}
+            metadata={{ unitLabel: 'bits' }}
             height={300}
             data={rollingSeries}
             dataColumns={[
