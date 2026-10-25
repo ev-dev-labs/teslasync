@@ -143,14 +143,47 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   Both test files pass affected ESLint; every browser wrapper reports zero
   escapes. No production date, API, storage, i18n or baseline changed.
   Evidence: `r9-catalog-date`, `r9-seasonal-final`, `r9-date-eslint`.
-- Exact next step: continue the day-ledger source/methodology contract:
-  responsive 48/49 still
-  demands raw ISO day bounds and an old unavailable-source caption. Preserve
-  request bounds, source provenance, refresh/retry, unknown states and
-  inclusive/exclusive semantics while binding its assertions to the real
-  selected-zone display. Charge-advisor raw 2025-12-05 is another confirmed
-  obsolete date assertion (`r9-responsive20`). Inspect actual nonzero route
-  guard diagnostics, not the passing tail of responsive 49.
+- Date-contract fixes 8/9 pushed as `f943f3cde4`.
+- Fix 10: day-ledger interval provenance was genuinely absent. A narrow
+  optional analysisPeriod prop threads through the existing brief/narrative
+  composition to CalculationDetails' native Analysis period row. It now
+  shows exact localized authoritative half-open bounds, explicitly end
+  exclusive, or the existing unavailable-bounds message. No legacy API,
+  raw ISO or duplicate timezone caption is restored.
+  Three new assertions failed before production repair; all 54 day-summary
+  and shared brief/narrative/calculation tests pass, including a 23-hour
+  Los Angeles DST day with unchanged UTC wire instants.
+- All 28 focused day-ledger source/refresh/loading/retry/navigation cases
+  and all eight header layout cases pass, escapes=0. Native Analysis period
+  definitions require exact bounds and reject raw ISO. Header cases retain
+  geometry/focus/copy checks and now additionally require exact vehicle 7,
+  Buenos Aires timezone and day parameters through navigation/manual/today
+  requests instead of a removed duplicate zone badge. API fixture payloads
+  are unchanged; only expected display constants are localized.
+  Full unchanged lint, rebuilt mock bundle, 7,728 frozen tests, all three
+  six-zero-count production audits and actual TypeScript pass. The existing
+  day-log hook matches router.go. Canonical translations are unchanged; the
+  sanctioned split/usage generators expose two existing keys. None of the
+  three changed production files is in the frozen producer manifest.
+  Lines/panels: Brief 375->377/1->1; NarrativeDetails 246->249/0->0;
+  DaySummary 116->122/1->1, no chart removed. Evidence: `r10-day-bounds-red`,
+  `r10-day-bounds-final-unit`, `r10-day-gate`, `r10-day-contract`,
+  `r10-day-header`, `r10-frozen`, `r10-*-audit`, `r10-day-hooks`.
+- Corrected diagnosis: responsive 49 contains 115 route samples, all with
+  tzIso/tzZones/tzDupes=0. Its failures are day-ledger contracts, not a
+  remaining route-zone violation; do not change those passing guards.
+- At 18:55Z, pushed head f943f3cde4 has **1 failing / 97 passing /
+  99 pending / 3 skipped**, not a final graph. First current failure:
+  responsive-26, run `40222371592`, job `121257103490`. The day-ledger phase
+  has not yet been evaluated by CI. This ten-fix checkpoint must be pushed,
+  then continue unattended.
+- Exact next step: inspect that completed responsive-26 log and fix its
+  precise remaining notification/date contract. Then charge-advisor's
+  supported-history cases still demand raw 2025-12-05 and directory day
+  keys (`r9-responsive20`); preserve exact source window and seven projected
+  business days using their actual localized displays. Continue the newest
+  head's remaining dashboard/catalogue roots and CI loop; no baseline
+  regeneration unless a new reviewed Windows visual failure requires it.
 
 ## Mandatory ten-fix handoff (2026-10-25 16:43Z)
 

@@ -9,7 +9,8 @@ export type DistancePreference = 'km' | 'mi';
 
 export const vehicle = { ...mockVehicle, timezone: 'UTC' };
 export const day = '2026-09-14';
-export const dayBounds = '[2026-09-14T00:00:00Z, 2026-09-15T00:00:00Z) · end exclusive';
+export const dayLabel = 'Sep 14, 2026';
+export const dayBoundsDisplay = '[Sep 14, 2026, 12:00 AM, Sep 15, 2026, 12:00 AM) · end exclusive';
 
 const ledgerEvents: DayLogEvent[] = [
   {

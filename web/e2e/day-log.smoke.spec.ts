@@ -10,11 +10,18 @@ for (const theme of ['light', 'dark'] as const) {
       await page.setViewportSize({ width, height: 900 });
       await seedBrowserState(page, theme, '/day-log');
       const mocks = await installApiMocks(page, 'populated', theme);
+      const dayRequests: URL[] = [];
+      const scopes = () => dayRequests.map(url => [
+        url.searchParams.get('vehicle_id'), url.searchParams.get('date'), url.searchParams.get('timezone'),
+      ]);
+      const timezone = 'America/Argentina/Buenos_Aires';
       await page.route('**/api/v1/vehicles', (route) => route.fulfill({
         json: [{ id: 7, vehicle_id: 7, display_name: 'Aurora', model: 'Model Y',
           state: 'online', timezone: 'America/Argentina/Buenos_Aires' }],
       }));
-      await page.route('**/api/v1/day-log?*', (route) => route.fulfill({
+      await page.route('**/api/v1/day-log?*', (route) => {
+        dayRequests.push(new URL(route.request().url()));
+        return route.fulfill({
         json: {
           vehicle_id: 1, date: '2026-09-14', timezone: 'UTC',
           day_start: '2026-09-14T00:00:00Z', day_end: '2026-09-15T00:00:00Z',
@@ -25,14 +32,15 @@ for (const theme of ['light', 'dark'] as const) {
             drive_distance_m: null, energy_added_wh: null, energy_used_wh: null,
           },
         },
-      }));
+        });
+      });
       await page.goto('/day-log?date=2026-09-14');
       await waitForHarnessReady(page, mocks);
       const header = page.locator('[data-role="page-header"]');
       const date = header.getByTestId('daylog-date');
       await expect(date).toHaveValue('2026-09-14');
-      await expect(header.locator('#daylog-timezone')).toBeVisible();
-      await expect(header.locator('[data-action-group="metadata"] #daylog-timezone')).toHaveCount(1);
+      await expect(header.locator('#daylog-timezone')).toHaveCount(0);
+      await expect.poll(scopes).toContainEqual(['7', '2026-09-14', timezone]);
       await expectNoHorizontalOverflow(page);
       const navigation = header.getByTestId('daylog-date-navigation');
       const navBox = await navigation.boundingBox();
@@ -84,12 +92,15 @@ for (const theme of ['light', 'dark'] as const) {
       }
       await header.getByTestId('daylog-prev').click();
       await expect(date).toHaveValue('2026-09-13');
+      await expect.poll(scopes).toContainEqual(['7', '2026-09-13', timezone]);
       await header.getByTestId('daylog-next').click();
       await expect(date).toHaveValue('2026-09-14');
       await date.fill('2026-09-10');
       await expect(page).toHaveURL(/date=2026-09-10/);
+      await expect.poll(scopes).toContainEqual(['7', '2026-09-10', timezone]);
       await header.getByTestId('daylog-today').click();
       await expect(date).toHaveValue(await date.getAttribute('max') ?? '');
+      await expect.poll(scopes).toContainEqual(['7', await date.inputValue(), timezone]);
       await header.getByRole('button', { name: /copy link/i }).click();
       await expect(header.getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
       await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(page.url());

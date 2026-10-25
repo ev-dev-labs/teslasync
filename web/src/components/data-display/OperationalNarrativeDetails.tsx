@@ -14,6 +14,7 @@ import type {
 
 export interface OperationalNarrativeDetailsProps {
   narrative: OperationalNarrative;
+  analysisPeriod?: string | null;
   className?: string;
 }
 
@@ -46,6 +47,7 @@ function provenanceLine(
 
 export function OperationalNarrativeDetails({
   narrative,
+  analysisPeriod,
   className,
 }: OperationalNarrativeDetailsProps) {
   const { t, i18n } = useTranslation();
@@ -221,6 +223,7 @@ export function OperationalNarrativeDetails({
 
       <CalculationDetails
         className="mt-4"
+        period={analysisPeriod}
         methods={narrative.provenance
           .map((item) => item.method ?? '')
           .filter(Boolean)}

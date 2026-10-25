@@ -23,10 +23,15 @@ export function DayLogOperationalSummary({
   data, date, isLoading, error, status, onRetry,
 }: DayLogOperationalSummaryProps) {
   const { t } = useTranslation();
-  const { formatDayKey } = useDateFormat();
+  const { formatDayKey, formatDateTime } = useDateFormat();
   const summary = data?.summary ?? null;
   const hasSessions = (summary?.drive_count ?? 0) + (summary?.charge_count ?? 0) > 0;
   const scope = formatDayKey(data?.date ?? date);
+  const analysisPeriod = data?.day_start && data?.day_end
+    ? t('dayLog.brief.bounds', '[{{start}}, {{end}}) · end exclusive', {
+      start: formatDateTime(data.day_start), end: formatDateTime(data.day_end),
+    })
+    : t('dayLog.brief.boundsUnknown', 'Recorded day bounds unavailable');
   const period = t('dayLog.summary.period', 'Selected vehicle day');
   const metricContext = <>{period} · {scope}</>;
   const sourceMetrics: readonly StatMetric[] = [
@@ -93,6 +98,7 @@ export function DayLogOperationalSummary({
         metrics={metrics}
         loading={isLoading}
         scope={<Text as="span" variant="caption">{period} · {scope}</Text>}
+        analysisPeriod={analysisPeriod}
         provenance={[
           t('dayLog.brief.provenance', 'Recorded drives and charging sessions for the selected vehicle day. Signal transitions and per-source availability remain in Timeline and Sources.'),
           scope,

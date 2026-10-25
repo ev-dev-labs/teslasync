@@ -8,7 +8,7 @@ import {
   expectNoRuntimeFailures, monitorPage, type PageDiagnostics,
 } from '../qualityAssertions';
 import {
-  day, dayBounds, dayFixture, recordedDisplays, twinFixture, vehicle,
+  day, dayBoundsDisplay, dayFixture, dayLabel, recordedDisplays, twinFixture, vehicle,
   type DayReading, type DistancePreference, type TwinReading,
 } from './vehicles.fixtures';
 
@@ -85,10 +85,16 @@ async function reviewDrawer(page: Page, brief: Locator, title: string, source: R
   if (calc) {
     for (const text of calc) await expect(drawer.getByTestId('calculation-details')).toContainText(text);
   } else if (title === 'Day summary') {
-    await expect(drawer.getByTestId('calculation-details')).toContainText(dayBounds);
-    await expect(drawer.getByTestId('calculation-details')).toContainText(`${day} · UTC`);
+    await expect(drawer.getByTestId('calculation-details')).toContainText(dayBoundsDisplay);
+    await expect(drawer.getByTestId('calculation-details')).toContainText(dayLabel);
   } else {
     await expect(drawer.getByTestId('calculation-details')).toContainText('Signal timestamp unknown');
+  }
+  if (title === 'Day summary') {
+    const period = drawer.getByTestId('calculation-details').locator('dt')
+      .filter({ hasText: /^Analysis period$/ }).locator('..').locator('dd');
+    await expect(period).toHaveText(calc?.[0] ?? dayBoundsDisplay);
+    await expect(drawer).not.toContainText(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
   }
   const close = drawer.getByRole('button', { name: 'Close', exact: true });
   await expect(close.first()).toBeFocused();
@@ -274,8 +280,8 @@ for (const theme of ['light', 'dark'] as const) {
             .toHaveAttribute('href', '/live-monitor?vehicle_id=7');
         }
         await reviewDrawer(page, brief, 'Day summary', /Recorded drives and charging sessions for the selected vehicle day/, [
-          dayBounds,
-          `Selected vehicle day · ${day} · UTC`,
+          dayBoundsDisplay,
+          `Selected vehicle day · ${dayLabel}`,
           reading === 'recorded' ? 'Recorded day summary' : 'Some sources unavailable',
           ...(reading === 'unknown' ? ['4 empty fields are hidden.'] : []),
         ]);
@@ -284,10 +290,10 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(controls.getByTestId('daylog-date')).toHaveValue('2026-09-13');
         await expect(page).toHaveURL(/date=2026-09-13/);
         await reviewDrawer(page, brief, 'Day summary', /Recorded drives and charging sessions for the selected vehicle day/, [
-          /Selected vehicle day · 2026-09-13 · UTC/,
+          'Selected vehicle day · Sep 13, 2026',
         ], [
-          '[2026-09-13T00:00:00Z, 2026-09-14T00:00:00Z) · end exclusive',
-          '2026-09-13 · UTC',
+          '[Sep 13, 2026, 12:00 AM, Sep 14, 2026, 12:00 AM) · end exclusive',
+          'Sep 13, 2026',
         ]);
         await controls.getByTestId('daylog-next').click();
         await expect(controls.getByTestId('daylog-date')).toHaveValue(day);

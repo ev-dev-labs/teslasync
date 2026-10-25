@@ -30763,6 +30763,8 @@
       "date.preset.today",
       "date.preset.yesterday",
       "date.preset.ytd",
+      "dayLog.brief.bounds",
+      "dayLog.brief.boundsUnknown",
       "dayLog.brief.chargesBasis",
       "dayLog.brief.description",
       "dayLog.brief.distanceBasis",

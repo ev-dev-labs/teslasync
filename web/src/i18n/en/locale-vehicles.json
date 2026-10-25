@@ -1692,6 +1692,8 @@
   },
   "dayLog": {
     "brief": {
+      "bounds": "[{{start}}, {{end}}) · end exclusive",
+      "boundsUnknown": "Recorded day bounds unavailable",
       "chargesBasis": "Recorded charging-session count for the selected vehicle day, before timeline filters.",
       "description": "Recorded totals for this vehicle day, independent of timeline search and category filters. Missing measurements are not zero; source availability is listed below.",
       "distanceBasis": "Recorded driving distance in meters, displayed using your saved unit and precision preferences.",
