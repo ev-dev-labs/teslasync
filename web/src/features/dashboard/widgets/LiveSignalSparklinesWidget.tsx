@@ -150,7 +150,7 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
         </Text>
       </div>
 
-      {historyState.fatalError ? <QueryError error={historyState.fatalError} onRetry={() => { void historyQuery.refetch(); }} /> : hasSparkline ? (
+      {!historyState.fatalError && (hasSparkline ? (
         <Sparkline
           data={numericPoints}
           color={color}
@@ -162,9 +162,9 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
         <Caption className="w-14 break-words text-center">
           {t('widget.noHistory', 'no data')}
         </Caption>
-      )}
+      ))}
 
-      <span role="img" aria-label={numericPoints.length >= 4 ? trendLabel : t('widget.noHistory', 'no data')} className="flex-shrink-0">
+      <span role="img" aria-label={numericPoints.length >= 4 ? trendLabel : t('widget.noHistory', 'no data')} className="col-start-3 row-start-1 flex-shrink-0">
         <TrendIcon className={cn(
           'h-3.5 w-3.5',
           trend === 'up' && 'text-emerald-300',
@@ -172,7 +172,12 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
           trend === 'flat' && 'text-[var(--text-muted)]',
         )} aria-hidden="true" />
       </span>
-      <StaleRefreshWarning state={historyState} className="w-full min-w-0" />
+      {historyState.fatalError && (
+        <div className="col-span-full min-w-0">
+          <QueryError error={historyState.fatalError} onRetry={() => { void historyQuery.refetch(); }} />
+        </div>
+      )}
+      <StaleRefreshWarning state={historyState} className="col-span-full w-full min-w-0" />
     </div>
   );
 }

@@ -229,12 +229,32 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 - Head fd3c156153 at 19:20Z is **0 failing / 50 passing / 142 pending /
   3 skipped**, still incomplete. Do not compare this with the completed
   28-failure graph as a final improvement.
-- Exact next step: inspect the running focused widget-overflow diagnostic
-  (`r14-overflow-before`, shell 329) and its per-element records to repair
-  live-signal sparkline horizontal overflow. Then address the missing
-  fleet-posture brief, remaining sleep/home-energy timezone semantics and
-  new completed CI roots. No baseline regeneration unless a new reviewed
-  Windows visual failure requires it.
+- Fix 13 pushed as `bc841f3b79`.
+- Fix 14: a real history failure was rendering its entire retry panel in
+  the fixed 56/80px sparkline track. Recovery and retained-history warnings
+  now span the whole row; the trend icon stays in its own first-row track.
+  Current measurements, error detail, retry actions and retained curves are
+  preserved, not clipped or hidden. Both compact/wide new regressions fail
+  before production repair; all 30 signal widget unit cases pass.
+  The unchanged browser guard reproduced exactly four 688/678px overflows.
+  After repair all 121 widgets pass all six min/default/large view/edit
+  configurations, with no missing widgets, header failures, overflow or
+  proxy escapes. This is one related browser spec, not a local full suite.
+  Actual TypeScript, six-zero-count audit, complete unchanged lint,
+  hermetic rebuild, both hook-domain route verifiers and all 7,728 frozen
+  contracts pass. Source 276->281 lines, shell and plot sites 2->2.
+  No translation, receipt, tolerance, guard or baseline changes.
+  Evidence: `r14-overflow-before`, `r14-overflow-unit-red`,
+  `r14-overflow-unit`, `r14-overflow-audit`, `r14-overflow-gate`,
+  `r14-signal-hooks`, `r14-frozen`, `r14-overflow-final`.
+- At 19:34Z, bc841f3b79 is **0 failing / 79 passing / 115 pending /
+  3 skipped**, still incomplete rather than green.
+- Exact next step: commit the separately verified native fleet-posture
+  layout contracts (both widths pass in `r15-fleet-native-browser`).
+  Then repair the related signal catalogue's precise unmatched history
+  requests (`r16-signals-before`), remaining sleep/home-energy timezone
+  semantics and new completed CI roots. No baseline regeneration unless
+  a new reviewed Windows visual failure requires it.
 
 ## Mandatory ten-fix handoff (2026-10-25 16:43Z)
 

@@ -462,6 +462,34 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
     return coordinates;
   }
 
+  it.each([NARROW, FULL])('keeps history recovery outside the fixed sparkline track at $cols-column size', async (size) => {
+    populate();
+    const failures = new Set<SignalSource>(['history']);
+    wire(failures);
+    renderWidget(size, 1, { signals: ['BatteryLevel'] });
+    await screen.findByText('Battery Level');
+    const row = signalRow('Battery Level');
+    const alert = await within(row).findByRole('alert');
+    const recovery = alert.parentElement;
+
+    expect(recovery).toHaveClass('col-span-full', 'min-w-0');
+    expect(recovery?.parentElement).toBe(row);
+    expect(within(row).getByText('82.0%')).toBeVisible();
+    expect(within(row).getByRole('img', { name: 'no data' })).toHaveClass('col-start-3', 'row-start-1');
+    expect(within(row).queryByRole('img', { name: 'Battery Level trend' })).not.toBeInTheDocument();
+    expect(within(row).queryByText('no data')).not.toBeInTheDocument();
+
+    failures.clear();
+    fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }));
+    const sparkline = await within(row).findByRole('img', { name: 'Battery Level trend' });
+    expect(sparkline).toHaveAttribute('width', size.cols >= 3 ? '80' : '56');
+    expect(within(row).getByText('82.0%')).toBeVisible();
+    expect(within(row).queryByRole('alert')).not.toBeInTheDocument();
+    expect(sourceCallCount('history')).toBe(2);
+    expect(sourceCallCount('catalogue')).toBe(1);
+    expect(sourceCallCount('live')).toBe(1);
+  });
+
   it('shows a fatal retry instead of empty rows when catalogue and live both fail initially', async () => {
     populate();
     const failures = new Set<SignalSource>(['catalogue', 'live']);
@@ -569,6 +597,7 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
       expect(warning).toHaveAttribute('aria-live', 'polite');
       expect(warning).toHaveAttribute('data-data-state', 'stale');
       expect(warning).toHaveTextContent('Previously loaded data remains visible');
+      if (source === 'history') expect(warning).toHaveClass('col-span-full', 'min-w-0');
 
       const counts = {
         catalogue: sourceCallCount('catalogue'),
