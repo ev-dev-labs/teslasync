@@ -122,3 +122,37 @@ These E2E failures are recorded, not silently converted into success. No branch 
 - Attribution by exact spec/title: 270 unique pairs failed on both branch and merge-base; they are recorded as pre-existing. The branch-only set was concentrated in route-layout and vehicle-hero reading contracts.
 - A branch-only `vehicle-hero-readings.smoke.spec.ts` rerun failed 32/32 cases. The same implementation is unchanged between merge-base and branch, so these failures are pre-existing baselines; no revert was performed.
 - Route-layout reruns also continued to report timezone-zone/TZ duplication violations and were bounded by the 45-minute timeout. These are recorded as blocked by the existing route-layout baseline and not silently converted into success.
+
+## Final CI and frozen-contract completion (2026-10-25)
+
+### Frozen i18n verification
+
+- Verified translations through the typed i18n trio generator; dynamic-key files remain dynamic projections, not raw byte fingerprints.
+- Static producer files re-pinned via `i18n-trio-checkpoint.mjs --typed --checkpoint-sources=<LF-normalized files>`.
+- Combined producer manifest regenerated via `i18n-trio-combined-checkpoint.mjs`.
+- Seven frozen suites pass: `7728/7728`.
+- Split catalog check passes with 57 grouped locale bundles, 183 per-namespace fallbacks, 1262 inlined shell keys, and 0 known-missing keys.
+
+### Final PR attribution
+
+- Draft PR #205 opened against `fix/post-merge-followups` and left open; never merged.
+- PR #202 failure names: 39 baseline failure check names plus the baseline Security/visual/quality aggregate set.
+- Final PR #205 rerun: 39 exact check names overlap PR #202; 1 branch-only name remains Lighthouse.
+- The branch-only Lighthouse startup closure is 403.0 KB against the 400 KB strict budget after the startup icon item revert.
+- Item 10 icon-registry adoption (`79600c4fde`) was reverted by commit `c199554ddd` because its startup closure was attributable to the branch-only Lighthouse budget failure.
+- Commit `6f03f7e786` fixed branch-only backend unused-wrapper lint and one TanStack mutation-state timing assertion. PR rerun then passed backend lint, backend race tests, frontend lint, frontend build, and all 8 frontend Vitest shards.
+- Remaining visual/quality/Security failures are pre-existing overlaps with PR #202 or branch-independent baseline failures; branch-only Lighthouse is the sole unresolved name.
+
+### Final category counts and resolved call sites
+
+| Category | Merge-base | HEAD |
+|---|---:|---:|
+| Inline unit factors | 202 | 181 |
+| Direct locale formatting | 83 | 63 |
+| Direct Lucide imports | 1448 | 1446 |
+| Exact `/api/v1/` strings | 969 | 969 |
+| Raw HTML primitive matches | 571 | 576 |
+
+Resolved work-item call sites: 14/14 work items were accounted as replaced, caller-owned exception, or not-a-real-duplicate; item 10 was retained in the accounting but its startup-regressing adoption commit was reverted. Guard categories continue to enforce canonical modules with explicit caller-specific/domain exceptions and no inline marker bypasses.
+
+Status: `ready to merge after PR #202 is green`.
