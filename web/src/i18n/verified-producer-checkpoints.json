@@ -715,7 +715,7 @@
   {
     "file": "web/src/features/dashboard/widgets/EnergyStatsWidget.tsx",
     "calls": 15,
-    "sha256": "3f48c9e2f2474ab7d39681e7de3e6581190f6d58a3771a27e29c77480ba8ce93"
+    "sha256": "c17dd054015ee278efaf99786ff1ced6d96c237366dd0957cd0370ab0c863640"
   },
   {
     "file": "web/src/features/dashboard/widgets/FleetStatsBarWidget.tsx",

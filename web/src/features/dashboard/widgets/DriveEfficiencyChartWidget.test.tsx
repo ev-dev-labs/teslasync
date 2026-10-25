@@ -398,6 +398,10 @@ describe('DriveEfficiencyChartWidget — rendering', () => {
     expect(axisCapture.series.map(series => series.dataKey)).toContain('efficiency');
     expect(screen.getByText('100')).toBeInTheDocument();
     expect(screen.getByText('Wh/km')).toBeInTheDocument();
+    expect(axisCapture.reference).toMatchObject({
+      y: 100, label: { value: 'Avg: 100.00 Wh/km' },
+    });
+    expect(screen.queryByText('7-day avg')).not.toBeInTheDocument();
   });
 
   it('preserves the measured rolling series and display units when multiple days exist', () => {

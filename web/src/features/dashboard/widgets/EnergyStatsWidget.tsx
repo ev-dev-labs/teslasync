@@ -184,6 +184,7 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
     <WidgetShell {...shellProps}>
       {data ? (
         <div className="flex h-full min-h-0 flex-col gap-3">
+          <div className="shrink-0 space-y-3">
           <WidgetBigNumber
             value={usedWh == null ? null : fmtNumber(convertEnergyFromSI(usedWh, unitPrefs.energy), unitPrefs.energy === 'kWh' ? 1 : 0)}
             unit={unitPrefs.energy}
@@ -196,6 +197,8 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
             maxPerRow={3}
             stats={secondaryStats}
           />
+          </div>
+          <div className="min-h-0 flex-1">
           <WidgetChartSummary
             yAxisLabel={unitPrefs.energy}
             stats={[]}
@@ -210,8 +213,7 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
                   { key: 'date', label: t('widget.energyStats.date', 'Date') },
                   { key: 'energy', label: `${t('widget.energyStats.dailyUsage', 'Daily usage')} (${unitPrefs.energy})` },
                 ]}
-                fluid={false}
-                className="h-24 shrink-0"
+                className="h-full min-h-0"
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
@@ -243,6 +245,7 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
               </EmbeddedChart>
             }
           />
+          </div>
         </div>
       ) : (
         <EmptyState

@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
+import { CHART_COLORS } from '../src/lib/colors';
 import {
   assertCatalogueQueryScope, catalogueRecordedSources, renderedCatalogueQueryBinding,
 } from './dashboardCatalogueChargeHistory';
@@ -9,7 +10,7 @@ const object = (value: unknown): value is Record<string, unknown> =>
 const unwrap = (value: unknown) => object(value) && 'data' in value ? value.data : value;
 
 async function boundSource(page: Page, panel: Locator, widgetId: string, title: string,
-  path: string, limit: string, key: readonly unknown[]) {
+  path: string, limit: string | null, key: readonly unknown[]) {
   const state = catalogueRecordedSources(page);
   await Promise.all([...state.pending]);
   expect(state.errors).toEqual([]);
@@ -60,7 +61,7 @@ export async function assertCatalogueCountReference(page: Page, panel: Locator,
   }
   const speed = id === 'speed-heatmap';
   const source = await boundSource(page, panel, widgetId, speed ? 'Speed heatmap' : 'Drive efficiency',
-    '/drives', speed ? '200' : '60', ['drives', 7, speed ? 'speed-heatmap' : 'efficiency-chart-60']);
+    '/drives', speed ? null : '60', ['drives', 7, speed ? 'speed-heatmap' : 'efficiency-chart-60']);
   expect(source.source).toMatchObject({ id: 101, vehicle_id: 7, distance_m: 17400, energy_used_wh: 4200, avg_speed_mps: 18 });
   if (speed) {
     if (width === 1440) {
@@ -129,11 +130,11 @@ export async function assertCatalogueCountReference(page: Page, panel: Locator,
     throw new Error('No same-widget native reference-line y/label source');
   });
   expect(nativeReference.y).toBe(expectedAverage);
-  expect(nativeReference.stroke).toBe('#6b7280');
+  expect(nativeReference.stroke).toBe(CHART_COLORS[3]);
   expect(nativeReference.label.value).toBe(`Avg: ${formatted} Wh/km`);
   await expect(reference.locator('.recharts-label')).toHaveText(`Avg: ${formatted} Wh/km`);
   await expect(reference.locator('.recharts-label')).toBeVisible();
-  await expect(reference.locator('.recharts-reference-line-line')).toHaveAttribute('stroke', '#6b7280');
+  await expect(reference.locator('.recharts-reference-line-line')).toHaveAttribute('stroke', CHART_COLORS[3]);
   await expect(panel.locator('.recharts-legend-wrapper')).not.toContainText('7-day avg');
   await expect(panel.locator('.recharts-area')).toHaveCount(1);
   await writeFile(info.outputPath('drive-reference-native-contract.json'), JSON.stringify({

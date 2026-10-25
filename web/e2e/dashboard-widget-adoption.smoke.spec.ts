@@ -76,7 +76,7 @@ const readings: Record<string, RegExp> = {
   ...vehicleReadings,
   ...batteryReadings,
   ...drivingReadings,
-  'energy-stats': /15(?:\.0)?/,
+  'energy-stats': /Total used\s*12\.0\s*kWh/,
   'energy-flow-animated': /14\.00\s*kW/,
   'power-flow-history': /3\.85\s*kW/,
   'solar-production': /12\.0/,
@@ -98,7 +98,7 @@ const readings: Record<string, RegExp> = {
   'signal-health': /(?:1\/1|Active1With gaps0)/,
   'signal-log': /(?:signals\/sec|Soc)/,
   'signal-catalog': /(?:signals available|Soc)/,
-  'uptime-monitor': /(?:4\/4|All OK)/,
+  'uptime-monitor': /Database\s*OK\s*MQTT\s*OK\s*Tesla API\s*OK\s*Fleet Telemetry\s*OK/,
 };
 
 for (const [batch, ids] of Object.entries(batches)) {
@@ -450,6 +450,9 @@ for (const [batch, ids] of Object.entries(batches)) {
             await expect(panel).toContainText('65.00');
             for (const curve of await panel.locator('.recharts-line-curve').all()) {
               expect(await curve.getAttribute('d'), 'Motor torque/temperature curve must contain real points').toMatch(/^M.+/);
+            }
+            if (widget.widgetId === 'driving-dynamics' && width === 1440) {
+              await expect(panel).toContainText(/Accel\s*0\.30\s*g\s*Brake\s*0\.40\s*g\s*Lateral\s*0\.20\s*g/);
             }
           }
           if (batch.startsWith('vehicle-twin')) {

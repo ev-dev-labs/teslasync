@@ -4,6 +4,59 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
+## CI-until-green continuation (2026-10-25, after `3ca29a42ad`)
+
+- Section 0: fetched/switched/pulled the expected branch; worktree clean.
+  The existing CLI is this session's parent; preserved IDE-owned Copilot,
+  Playwright test-server and TypeScript processes. No orphan runner found.
+  The latest user request overrides the ten-fix stop below: checkpoint and
+  push, but continue until every check passes.
+- Initial current-head observation: 15 failing / 129 passing / 53 pending /
+  3 skipped, still in flight. CI `40213226711`, quality `40213226800`.
+  Exact evidence: `resume-3ca-checks.json`, `resume-ci-failed.log`,
+  `resume-unit-3.log`, and `resume-responsive-*.log` in the existing CI
+  continuation evidence directory.
+- Grouped roots: dashboard redesign assertions plus real energy/battery
+  chart clipping (largest group); a real ToastProvider timeout surviving
+  unmount causes unit shard 3 and three dependent failures despite all its
+  11,692 tests passing; obsolete date/zone drawer assertions across
+  operations, notifications, seasonal driving and charge-advisor contracts;
+  missing fleet-posture contract; live-signal sparkline horizontal overflow;
+  remaining route timezone guards. Exact deduplicated widget evidence:
+  `resume-root-summary.txt`.
+- Round 0 is now complete: **32 failing / 168 passing / 3 skipped**.
+  Bulk quality-log retrieval failed with HTTP/2 cancellation and HTTP/1
+  unexpected EOF; bounded per-job log retrieval works and is the recovery
+  path. Do not repeatedly download the full archive.
+- Fix 1 verified subset: bounded EnergyStats/BatteryDegradation headline
+  allocation repairs real clipping; DriveEfficiency retains its measured
+  mean reference, numeric axis, exact source values and null rolling series.
+  Four native mean-line proofs require y=241.37931034482762 and the exact
+  Avg: 241.38 Wh/km label, palette token, full wire record and observer scope.
+  Its static rolling key appears only with a measured rolling series.
+  Updated exact dashboard counts, version metadata, healthy-service states,
+  dynamics peaks and associated readout units instead of obsolete precision.
+  Speed-heatmap binding requires the actual absent limit parameter, matching
+  its existing request and explicit unit contract; no request
+  or fixture changed and every full-wire/observer invariant remains.
+- Verification: 55 chart unit tests, all 7,728 frozen receipt tests and actual
+  final TypeScript/affected ESLint pass. All three source audits report six
+  zero counts and TypeScript pass; energy hook paths match. Battery browser
+  cases pass 4/4, system/telemetry/charging cases pass 12/12, escapes=0.
+  Source lines 257->260 / 164->166 / 262->286; all three chart frames remain.
+  Sanctioned generators refresh only verified receipts; no baseline change.
+  Evidence: `r4-widget-final-unit`, `r4-final-frozen`, `r4-final-tsc`,
+  `r4-final-eslint`, `r4-audit`, `r4-final-build`, `r4-system-confirmed` logs,
+  and the four `drive-reference-native-contract.json` artifacts.
+- The broader energy/driving groups are NOT passing yet: each still has
+  four failing cases, with zero escapes. Newly exposed roots are CostForecast
+  period-total/header allocation, speed-profile/regen readout precision,
+  coach recommendation vs old score, and missing telemetry readout/geometry.
+  The separate wide-dynamics distribution and motor-history cases also remain.
+  Current next step: fix the independently identified toast timer lifetime,
+  then continue those precise widget and date-contract groups. Full-suite
+  validation remains exclusively CI-owned; inspect the next pushed head.
+
 ## Mandatory ten-fix handoff (2026-10-25 16:43Z)
 
 - Ten fixes are complete in this continuation; stop here per section 0b.

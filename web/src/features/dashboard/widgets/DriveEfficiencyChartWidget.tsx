@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { TrendingUp } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, chartGrid, chartAnimation, useThemeChartPalette, AREA_DEFAULTS, areaGradient, EmbeddedChart, ChartLegend } from '@/components/charts';
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, chartGrid, chartAnimation, axisTickSm, useMeasuredAxisWidth, useThemeChartPalette, AREA_DEFAULTS, areaGradient, EmbeddedChart, ChartLegend } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDataState } from '@/hooks/useDataState';
@@ -135,6 +135,15 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
   const hasRollingAverage = displayData.some(point => point.rollingAvg != null);
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
+  const axisLabels = useMemo(
+    () => displayData.flatMap(point => [point.efficiency, point.rollingAvg])
+      .filter((value): value is number => value != null && Number.isFinite(value))
+      .map(value => fmtNumber(value)),
+    [displayData, fmtNumber],
+  );
+  const axisWidth = useMeasuredAxisWidth({
+    labels: axisLabels, fontSize: 10, minWidth: 52, padding: 20, enabled: !isCompact,
+  });
 
   // Series colour follows the active theme.
   const palette = useThemeChartPalette();
@@ -172,13 +181,24 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
             {chartGrid}
             <XAxis dataKey="label" tick={false} tickLine={false} axisLine={false} />
             <YAxis
-              tick={false}
+              tick={axisTickSm}
               tickLine={false}
               axisLine={false}
-              width={1}
+              width={axisWidth}
+              tickFormatter={(value: number) => fmtNumber(value)}
               domain={['dataMin - 20', 'dataMax + 20']}
             />
             <Tooltip content={<ChartTooltip />} />
+            {overallAvg != null && <ReferenceLine
+              y={overallAvg}
+              stroke={ROLLING_AVG_COLOR}
+              label={{
+                value: `${t('widget.driveEfficiencyChart.avg', 'Avg')}: ${fmtNumber(overallAvg)} ${efficiencyUnit}`,
+                position: 'insideTopRight',
+                fill: ROLLING_AVG_COLOR,
+                fontSize: 10,
+              }}
+            />}
             <ChartLegend />
             <Area
               {...AREA_DEFAULTS}
@@ -229,14 +249,16 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
           emptyIcon={<TrendingUp className="h-5 w-5" />}
         />
       ) : (
-        <div className="flex h-full min-w-0 flex-col">
+        <div className="flex h-full min-h-0 min-w-0 flex-col">
           {!isCompact && (
+            <div className="shrink-0">
             <WidgetBigNumber
               value={overallAvg != null ? fmtNumber(overallAvg, 0) : null}
               unit={efficiencyUnit}
               subtitle={t('widget.driveEfficiencyChart.windowAverage', '30-day average')}
               animated={false}
             />
+            </div>
           )}
           {isCompact ? (
             <WidgetBigNumber
@@ -246,14 +268,16 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
               animated={false}
             />
           ) : (
+            <div className="min-h-0 flex-1">
             <WidgetChartSummary
               stats={[]}
               chart={chartEl}
               legend={[
                 { label: t('widget.driveEfficiencyChart.daily', 'Daily'), color: palette.series[0] },
-                { label: t('widget.driveEfficiencyChart.rolling', '7-day avg'), color: ROLLING_AVG_COLOR },
+                ...(hasRollingAverage ? [{ label: t('widget.driveEfficiencyChart.rolling', '7-day avg'), color: ROLLING_AVG_COLOR }] : []),
               ]}
             />
+            </div>
           )}
         </div>
       )}

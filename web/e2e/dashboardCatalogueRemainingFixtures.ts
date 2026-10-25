@@ -54,7 +54,7 @@ export const remainingReadings: Record<string, RegExp> = {
   'charge-cost-tracker': /\$6\.72/,
   'charging-schedule': /80%/,
   'charging-optimizer': /80\.00%/,
-  'charging-telemetry': /11\.00/,
+  'charging-telemetry': /Power\s*11\.0\s*kW/,
   'supercharger-history': /\$12\.00/,
   'charge-plans': /80\.00%/,
   'next-charge-decision': /Catalogue low-rate window starts soon/,
@@ -77,7 +77,7 @@ export const remainingReadings: Record<string, RegExp> = {
   'backup-monitor': /2\.0(?:0)?\s*MB/,
   'export-status': /Running/,
   'version-info': /catalogue-2026\.10/,
-  'dashboard-stats': /123/,
+  'dashboard-stats': /Widgets placed\s*5(?![\d.])/,
   'live-signals': /21\.00/,
   'live-signal-sparklines': /72\.00/,
   'tire-pressure-visual': /2\.80/,
@@ -87,6 +87,7 @@ export const remainingReadings: Record<string, RegExp> = {
 };
 
 export const remainingCompactReadings: Record<string, RegExp> = {
+  'uptime-monitor': /Services healthy\s*4\/4/,
   'anomaly-detector': /1 active/,
   'automation-status': /1\/1/,
   'automation-history': /100\.00/,
@@ -368,7 +369,9 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
     await expect(panel.getByTestId('fleet-posture-announcement')).toContainText('All 1 vehicles verified from current telemetry.');
   }
   if (id === 'version-info' && width === 1440) {
-    await expect(panel).toContainText(/Signals\/sec\s*—/);
-    await expect(panel).toContainText(/Messages today\s*—/);
+    await expect(panel).toContainText(/Build date\s*—/);
+    await expect(panel).toContainText(/Git commit\s*—/);
+    await expect(panel).toContainText(/Server uptime\s*1h 0m/);
+    await expect(panel).toContainText(/Go version\s*go1\.25\.0/);
   }
 }

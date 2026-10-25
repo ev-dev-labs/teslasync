@@ -139,7 +139,8 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <div className="flex h-full min-w-0 flex-col">
+      <div className="flex h-full min-h-0 min-w-0 flex-col">
+        <div className="shrink-0">
         <WidgetBigNumber
           value={currentRange != null ? Math.round(currentRange) : null}
           unit={distanceUnit}
@@ -153,6 +154,7 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
             : undefined}
           animated={false}
         />
+        </div>
         {!isCompact && <div className="mt-2 min-h-0 flex-1">{chart}</div>}
       </div>
       {isCompact && !data && (

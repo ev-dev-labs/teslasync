@@ -58,8 +58,10 @@ to resume without redoing work.
 - Append one line to `docs/progress-log.md` every 30 minutes:
   `time | agent | part/step | done since last entry | blockers`.
 - After every ten completed fixes, commit verified work, update the work
-  queue with the exact next step, push, and hand off to a fresh session.
-  Validation attempts are not completed fixes.
+  queue with the exact next step and push. The user's 2026-10-25 continuation
+  overrides the earlier ten-fix handoff: continue until every PR #202 check
+  passes, rather than stopping at that checkpoint. Validation attempts are
+  not completed fixes.
 - When your session or usage is about to end: stop starting new tasks,
   finish or safely stop the current one, commit (exact paths; WIP commits
   named `wip: <part/task> - <what's incomplete>`), remove worktrees you

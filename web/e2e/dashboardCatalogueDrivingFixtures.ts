@@ -8,12 +8,12 @@ import { fulfillApiFixture, mockDrive, type MockApiController } from './mockApi'
 
 export const drivingReadings: Record<string, RegExp> = {
   'recent-drives': /(?:Home|Office|17\.40)/,
-  'drive-score': /Score: 100\.00/,
+  'drive-score': /100\/100[\s\S]*241\s*Wh\/km\s*Avg\b/,
   'recent-drives-list': /(?:Home|Office|17\.40)/,
   'drive-score-gauge': /92/,
   'drive-efficiency-chart': /241\.38/,
   'speed-heatmap': /64\.80/,
-  'driving-dynamics': /(?:Max g0\.40|0\.10[\s\S]*Accel)/,
+  'driving-dynamics': /Style\s*Smooth(?=\s*(?:Accel|$))/,
   'speed-profile': /57\.60/,
   'regen-efficiency': /20\.00%/,
   'route-efficiency': /(?:Home|Office|160)/,
