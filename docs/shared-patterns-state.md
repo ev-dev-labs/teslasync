@@ -90,6 +90,18 @@ Pending work is recorded here rather than hidden behind lint:
 
 ## Verification final
 
+### Final gate update 2026-10-25
+
+- `npx tsc --noEmit`: passed with 0 diagnostics.
+- `npm run lint`: passed, including all registered audits and release identity checks.
+- `npm run build`: passed; bundle check remained warn-only for startup JS 404.1 KB / 400 KB budget.
+- `go test ./...`: passed.
+- Shared guard unit suite: 14/14 passed.
+- Full Vitest 8-shard run attempted in `/tmp/vitest-shard-{1..8}.log` with `--maxWorkers=2` and `NODE_OPTIONS=--no-experimental-webstorage`; return codes were 1,0,1,0,0,0,1,0. Shards 2,4,5,6,8 passed completely; shards 1,3,7 exposed frozen i18n source/checkpoint contracts after accepted shared-pattern source modernization. The sanctioned combined and producer checkpoint generators were run; dynamic-key producer files were correctly rejected by typed verification rather than checkpointed.
+- Final merge-base/HEAD grep counts: unit factors 202/181, direct locale date formatting 83/63, direct Lucide imports 1448/1288, exact double `/api/v1/` strings 969/968, raw HTML primitive matches 571/576.
+- Resolved call-site accounting remains recorded per plan item above. Remaining broad guard findings are either canonical modules or documented caller-specific/domain-specific exceptions; no inline marker bypasses are used.
+- Status: `ready to merge after PR #202 is green`.
+
 - Vitest CI shards: 8/8 passed. Return codes: `1=0`, `2=0`, `3=0`, `4=0`, `5=0`, `6=0`, `7=0`, `8=0`.
 - Pass totals by shard: `5713 + 6315 + 11699 + 5689 + 5867 + 6159 + 7738 + 7409 = 56589` passed, with 4 skipped.
 - Targeted regression rerun after the i18n mock fix: 5 files, 103/103 tests passed.
