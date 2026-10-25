@@ -1,7 +1,8 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import type {
-  ChargingTelemetry, MotorSnapshot, VehicleConfigSnapshot, VehicleInfoEnvelope, VehicleState,
+  ChargingTelemetry, DriveDynamicsSnapshot, MotorSnapshot, VehicleConfigSnapshot, VehicleInfoEnvelope, VehicleState,
 } from '../src/api/types';
+import type { DailyMileageResponse } from '../src/types/analytics';
 import type { WatchComplication, WatchSummary } from '../src/api/hooks/useWatch';
 import type { DrivetrainHealthData, DrivingStats } from '../src/types/driving';
 import type { MaintenanceForecast, MaintenanceItem, ServiceRecord, SoftwareUpdate } from '../src/types/vehicle-systems';
@@ -61,6 +62,14 @@ export async function installCatalogueVehicleSources(page: Page, mocks: MockApiC
     data, fetched_at: now,
   });
   const fixtures: Record<string, unknown> = {
+    '/mileage/daily': {
+      vehicle_id: 7,
+      days: [{ date: now.slice(0, 10), drive_count: 1, total_km: 17.4, end_odometer_km: 32_100 }],
+    } satisfies DailyMileageResponse,
+    '/drive-dynamics/latest': {
+      lateral_acceleration: 0.2, longitudinal_acceleration: 0.3,
+      pedal_position: 35, brake_pedal_position: 0, brake_pedal_active: false,
+    } satisfies DriveDynamicsSnapshot,
     '/motor/latest': motor,
     '/motor': [{ ...motor, ts: earlier, created_at: earlier, di_torque: 180 }, motor],
     '/charging-telemetry/latest': charging,
@@ -135,6 +144,14 @@ export async function installCatalogueVehicleSources(page: Page, mocks: MockApiC
   for (const [path, json] of Object.entries(fixtures)) {
     await page.route(url => url.pathname === `/api/v1${path}`, route => {
       if (route.request().method() !== 'GET') return route.fallback();
+      if (path === '/mileage/daily' || path === '/drive-dynamics/latest') {
+        const query = [...new URL(route.request().url()).searchParams.entries()].sort();
+        expect(query, `${path} retains its exact native vehicle/range/zone request`).toEqual(
+          path === '/mileage/daily'
+            ? [['days', '366'], ['timezone', 'UTC'], ['vehicle_id', '7']]
+            : [['vehicle_id', '7']],
+        );
+      }
       return fulfillApiFixture(route, mocks, { json });
     });
   }

@@ -122,6 +122,26 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   3 skipped** (`r28-checks.json`). Continue semantic route timezone roots
   afterward. The historical Phase-48 methodology path in instructions is
   absent on this branch; no API/model/unit-definition change was made.
+- Vehicle phase gate (21:24Z): the precision/header phase is pushed as
+  `6d1e451863`; all five affected grid unit suites also pass **34/34**.
+  Vehicle source WIP is now verified: **8/8** width/theme/motion cases,
+  **63/63** hero/odometer/motor units, affected ESLint and actual
+  TypeScript/source audit pass, escapes=0. Both newly supplied endpoints
+  match the router and validate their exact native request parameters.
+  The native hero contract uses the full name/model heading and existing
+  single Details link, plus its actual 44px keyboard target, 72% meter,
+  410km range, temperatures/access and normalized five-field trust count.
+  It retains all original four-sample six-row/560px migration, two-column
+  allocation, viewport containment and before/after screenshot-geometry
+  equality assertions; removed preview navigation is not restored.
+  No production hero or baseline change. **Exact next after push:** tackle
+  the real home-energy local-hour model (tariff/departure/forecast + KPI),
+  then the remaining timezone route roots. Shared numeric zoned parts and
+  wall-time conversion already exist in `lib/dateFormat.ts` /
+  `lib/dateConvert.ts`; reuse them, do not invent another parser.
+  The latest `6d1e451863` graph is still registering (9 pending / 2 skip),
+  not a completed graph or green. Evidence: `r28-grid-unit`,
+  `r31-vehicle`, `r31-vehicle-unit`, `r31-fixture-audit`, `r31-eslint`.
 
 ## CI-until-green continuation (2026-10-25, after `3ca29a42ad`)
 

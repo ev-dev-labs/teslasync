@@ -58,14 +58,37 @@ export async function assertCatalogueHeroMigration(
       behavior: 'instant',
     });
   });
-  const identity = panel.getByRole('heading', { name: 'Aurora', exact: true });
+  const identityName = 'Aurora · Model Y Long Range';
+  const identity = panel.getByRole('heading', { name: identityName, exact: true });
+  await expect(identity).toHaveCount(1);
   await expect(identity).toBeVisible();
   await expect(identity).toBeInViewport({ ratio: 1 });
-  for (const path of ['/vehicles/7', '/commands', '/live', '/digital-twin']) {
-    await expect(panel.locator(`a[href="${path}"]`)).toBeVisible();
-    await expect(panel.locator(`a[href="${path}"]`)).toBeInViewport({ ratio: 1 });
+  const details = panel.getByRole('link', { name: /^Details/ });
+  await expect(panel.getByRole('link')).toHaveCount(1);
+  await expect(details).toHaveAttribute('href', '/vehicles/7');
+  await expect(details).toBeVisible();
+  await expect(details).toBeInViewport({ ratio: 1 });
+  const target = await details.boundingBox();
+  if (!target) throw new Error('Missing native vehicle Details target');
+  expect(target.width).toBeGreaterThanOrEqual(44);
+  expect(target.height).toBeGreaterThanOrEqual(44);
+  await details.focus();
+  await expect(details).toBeFocused();
+  const battery = panel.getByRole('meter', { name: 'Battery', exact: true });
+  await expect(battery).toHaveAttribute('aria-valuenow', '72');
+  await expect(battery).toHaveAttribute('aria-valuemin', '0');
+  await expect(battery).toHaveAttribute('aria-valuemax', '100');
+  for (const [label, reading] of [
+    ['Range', /^Range\s*410\s*km$/],
+    ['Inside', /^Inside\s*21\s*°C$/],
+    ['Outside', /^Outside\s*18\s*°C$/],
+  ] as const) {
+    await expect(panel.getByRole('group', { name: label, exact: true })).toHaveText(reading);
   }
-  const geometry = () => panel.evaluate(element => {
+  await expect(panel.getByText('Locked', { exact: true })).toBeVisible();
+  await expect(panel).toContainText(/Sentry\s*On/);
+  await expect(panel).toContainText('5 verified fields');
+  const geometry = () => panel.evaluate((element, identityName) => {
     const bounds = (node: Element) => {
       const rect = node.getBoundingClientRect();
       return { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right,
@@ -74,7 +97,7 @@ export async function assertCatalogueHeroMigration(
     const main = element.closest('main');
     const grid = element.closest('.react-grid-layout');
     const identity = [...element.querySelectorAll('h1,h2,h3,h4,h5,h6')]
-      .find(node => node.textContent?.trim() === 'Aurora');
+      .find(node => node.textContent?.trim() === identityName);
     if (!main || !identity || !grid) throw new Error('Missing VehicleHero viewport, native grid or identity geometry');
     return {
       panel: bounds(element), main: bounds(main), grid: bounds(grid), identity: bounds(identity),
@@ -85,7 +108,7 @@ export async function assertCatalogueHeroMigration(
       viewport: { width: window.innerWidth, height: window.innerHeight },
       computedHeight: getComputedStyle(element).height,
     };
-  });
+  }, identityName);
   const before = await geometry();
   expect(before.panel.height).toBe(560);
   const columnWidth = (before.grid.width - (GRID_COLS.md - 1) * GRID_MARGIN[0]) / GRID_COLS.md;
