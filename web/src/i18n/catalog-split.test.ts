@@ -703,7 +703,7 @@ describe('checked-in locale artifacts', () => {
 
   it('keeps enlarged emptyState reachable through its real lazy namespace fallback', async () => {
     expect(JSON.stringify(catalog.emptyState).length).toBeGreaterThan(256)
-    expect(usageManifest.detailNamespaces).toHaveLength(183)
+    expect(usageManifest.detailNamespaces).toHaveLength(182)
     // The shared automation hook now localizes copy names; its namespace needs
     // the same independently loadable fallback as other shared producers.
     expect(usageManifest.detailNamespaces).toContain('automations')
@@ -737,6 +737,7 @@ describe('checked-in locale artifacts', () => {
       expect(runtime.default.getResourceBundle('en', 'translation')).toEqual({
         ...before, emptyState: catalog.emptyState,
       })
+
       // A repeated request stays idempotent without importing a foreign route.
       await runtime.loadEnglishNamespace('emptyState')
       expect(runtime.default.getResourceBundle('en', 'translation')).toEqual({
@@ -746,6 +747,14 @@ describe('checked-in locale artifacts', () => {
       runtime.flushPendingEnglishResourcesForTest()
       window.history.replaceState(null, '', previousPath)
     }
+  })
+
+  it('keeps data-repair copy route-local without a duplicate namespace fallback', () => {
+    expect(shell).not.toHaveProperty('dataRepair')
+    expect(usageManifest.detailNamespaces).not.toContain('dataRepair')
+    expect(usageManifest.namespaceFallbackBundles.dataRepair).toBe('system')
+    expect(emitted.get('system')).toHaveProperty('dataRepair', catalog.dataRepair)
+    expect(emitted.has('detail-dataRepair')).toBe(false)
   })
 
   it('keeps the known-missing ratchet baseline in sync with the generated list', () => {

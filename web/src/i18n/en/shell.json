@@ -447,7 +447,6 @@
   "contextMenu": {
     "menuLabel": "Context menu"
   },
-  "dataRepair": {},
   "dataSources": {
     "partialMessage": "Available sections remain visible. Source status is tracked independently below.",
     "staleMessage": "Previously loaded data remains visible while affected sources recover.",

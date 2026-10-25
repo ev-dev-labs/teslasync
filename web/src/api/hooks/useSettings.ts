@@ -4,7 +4,7 @@ import { useMutationToast } from './_toastHelpers';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
-import { fleetSetupKeys } from './useFleetSetup';
+import { fleetSetupKeys } from './fleetSetupKeys';
 import type {
   AppSettings,
   GasPriceStatus,

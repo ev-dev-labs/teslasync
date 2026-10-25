@@ -15,7 +15,7 @@
 
 import { useEffect, useRef } from 'react'
 import type { SignalChangeEvent } from '@/api/types'
-import { normalizeSignalKind } from '@/api/hooks/useSignals'
+import { normalizeSignalKind } from '@/lib/signalKind'
 import { sseManager } from '@/lib/sseManager'
 import { createEventStream } from '@/lib/eventStream'
 

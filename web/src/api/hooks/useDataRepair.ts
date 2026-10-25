@@ -1,53 +1,13 @@
 import {
-  keepPreviousData,
   useMutation,
   useQuery,
   useQueryClient,
-  type QueryKey,
 } from '@tanstack/react-query';
-import { useRef } from 'react';
 import { request } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
-
-/** Retention is renderable, but only matching source scope authorizes row actions. */
-export function useRepairScopedQuery<T>(
-  queryKey: QueryKey,
-  queryFn: (context: { signal: AbortSignal }) => Promise<T>,
-  currentScope: string,
-  scopeFromKey: (key: QueryKey) => string,
-) {
-  const retained = useRef<{ scope: string; updatedAt: number } | null>(null);
-  const query = useQuery({
-    queryKey,
-    queryFn,
-    placeholderData: (previousData, previousQuery) => {
-      if (previousData !== undefined && previousQuery) {
-        retained.current = {
-          scope: scopeFromKey(previousQuery.queryKey),
-          updatedAt: previousQuery.state.dataUpdatedAt,
-        };
-      }
-      return keepPreviousData(previousData);
-    },
-    refetchInterval: 30_000,
-    staleTime: 15_000,
-  });
-  const sourceScope = query.data === undefined
-    ? null
-    : query.isPlaceholderData ? retained.current?.scope ?? null : currentScope;
-  const isPreviousScope = sourceScope !== null && sourceScope !== currentScope;
-  return {
-    ...query,
-    dataUpdatedAt: query.isPlaceholderData
-      ? retained.current?.updatedAt ?? 0
-      : query.dataUpdatedAt,
-    sourceScope,
-    currentScope,
-    isPreviousScope,
-    canWriteCurrentScope: query.data !== undefined && sourceScope === currentScope,
-  };
-}
+import { useRepairScopedQuery } from './useRepairScopedQuery';
+export { useRepairScopedQuery } from './useRepairScopedQuery';
 
 /**
  * Data-repair hooks — the ONE data layer for the /data-repair page.

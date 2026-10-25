@@ -24,6 +24,21 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   `/home/atul/.copilot/session-state/d279d214-3d92-4a65-b124-08c71e983561/files/`.
   Caption regression/build/audit/browser logs use `timezone-*` and
   `e2e-build-caption.log`.
+- Completed result 2: startup closure reduced from 413,843 to 409,084 gzip
+  bytes (404.1 -> 399.5 KB; unchanged 400 KB budget). Extracted the unchanged
+  repair-scoped query, fleet-setup keys and signal-kind normalizer into
+  synchronous leaf modules; shell consumers no longer pull route-only
+  useDataRepair/useFleetSetup/useSignals implementations. Re-exported
+  existing public names; no request/response contract or timing changed.
+  Private-map production build and the ENTIRE strict `npm run perf:check`
+  exit 0; source maps confirm the three domain hooks leave startup.
+  Five existing focused suites pass 204/204. Changed request-bearing hooks
+  match registered routes (21/2/5/19/5 patterns; extracted helper: zero).
+  Regenerated split catalogs with the sanctioned generator: dataRepair now
+  lives only in the lazy system bundle, not shell plus a duplicate fallback.
+  Catalog-locality suite passes 132/132, including the new exact locality
+  regression. Full lint/audit chain and TypeScript exit 0. Evidence:
+  `startup-final-*`, `startup-hooks-contract.log`, `catalog-locality-final.log`.
 - Next: reconcile hero E2E coverage with the approved one-gauge redesign
   without dropping unknown/zero/value, navigation or responsive coverage.
   Startup-budget repair is independently in progress. Sleep/departure/
