@@ -134,9 +134,9 @@ export default function SignalsWorkspacePage() {
   );
 
   // ── Time range ───────────────────────────────────────────────
-  const { start, end } = useRangeState({ defaultPresetId: preferences.defaultAnalysisRange });
-  const fromIso = useMemo(() => (start ? new Date(`${start}T00:00:00`).toISOString() : ''), [start]);
-  const toIso   = useMemo(() => (end   ? new Date(`${end}T23:59:59.999`).toISOString() : ''), [end]);
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({ defaultPresetId: preferences.defaultAnalysisRange });
+  const fromIso = startInstant;
+  const toIso = endInstantExclusive;
 
   // ── Pagination ───────────────────────────────────────────────
   const [page, setPage]       = useUrlNumber('page', 1);

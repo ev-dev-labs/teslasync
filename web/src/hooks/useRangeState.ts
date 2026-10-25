@@ -31,7 +31,7 @@ import {
   matchPresetId,
   type DatePresetRange,
 } from '@/lib/datePresets';
-import { calendarRangeToInstants } from '@/lib/dateRange';
+import { addCivilDays, calendarRangeToInstants } from '@/lib/dateRange';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_PRESET_ID = '7d';
@@ -151,8 +151,7 @@ export interface UseRangeStateReturn {
 
 function isValidIsoDate(s: string | null | undefined): s is string {
   if (!s || !ISO_DATE_RE.test(s)) return false;
-  const t = Date.parse(`${s}T00:00:00`);
-  return !Number.isNaN(t);
+  return addCivilDays(s, 0) === s;
 }
 
 function clampRange(range: RangeValue, minDate: string | undefined): RangeValue {
@@ -214,6 +213,10 @@ function saveToStorage(
   } catch {
     // URL state remains authoritative when browser storage is unavailable.
   }
+}
+
+export function hasSharedRangePreference(storageKey = SHARED_RANGE_STORAGE_KEY): boolean {
+  return loadFromStorage(storageKey) != null;
 }
 
 function notifySharedRangeChange(
@@ -281,19 +284,15 @@ function resetPagination(params: URLSearchParams) {
  * of `start` (i.e. previous period ends one day before `start`).
  */
 function computeComparePrev(start: string, end: string): RangeValue | undefined {
-  const s = new Date(`${start}T00:00:00`);
-  const e = new Date(`${end}T00:00:00`);
-  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return undefined;
-  const ms = e.getTime() - s.getTime();
-  const prevEnd = new Date(s.getTime() - 86_400_000);
-  const prevStart = new Date(prevEnd.getTime() - ms);
-  const iso = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  };
-  return { start: iso(prevStart), end: iso(prevEnd) };
+  if (!isValidIsoDate(start) || !isValidIsoDate(end) || start > end) return undefined;
+  let length = 1;
+  for (let cursor = start; cursor !== end; length += 1) {
+    cursor = addCivilDays(cursor, 1);
+    if (cursor > end) return undefined;
+  }
+  const prevEnd = addCivilDays(start, -1);
+  const prevStart = addCivilDays(prevEnd, -(length - 1));
+  return { start: prevStart, end: prevEnd };
 }
 
 export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateReturn {

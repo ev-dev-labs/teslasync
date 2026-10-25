@@ -1,9 +1,7 @@
+import { isoUtcToLocalDatetimeInput } from '@/lib/dateConvert';
+
 export function toLocalDateTime(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const value = new Date(iso);
-  if (!Number.isFinite(value.getTime())) return '';
-  const offsetMs = value.getTimezoneOffset() * 60_000;
-  return new Date(value.getTime() - offsetMs).toISOString().slice(0, 16);
+  return isoUtcToLocalDatetimeInput(iso);
 }
 
 export function toISOStringOrNull(value: string): string | null {
