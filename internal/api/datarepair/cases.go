@@ -691,10 +691,6 @@ func (h *DataRepairHandler) AssignCase(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, updated)
 }
 
-func requestActor(r *http.Request, headerName string) string {
-	return actorFromRequest(r, headerName)
-}
-
 // AddCaseComment appends a bounded comment and its audit row atomically.
 func (h *DataRepairHandler) AddCaseComment(w http.ResponseWriter, r *http.Request) {
 	r, span := startHandlerSpan(r, "add_case_comment")
@@ -739,7 +735,7 @@ func (h *DataRepairHandler) AddCaseComment(w http.ResponseWriter, r *http.Reques
 
 	comment := &systemmodel.RepairCaseComment{
 		CaseID: caseID,
-		Actor:  requestActor(r, h.forwardAuthHeader),
+		Actor:  normalizeHTTPActor(r, h.forwardAuthHeader),
 		Body:   body,
 	}
 	err = h.withTransaction(r.Context(), func(tx database.DBTX) error {

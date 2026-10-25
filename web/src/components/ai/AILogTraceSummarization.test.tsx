@@ -1,3 +1,5 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
+import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 // Co-located unit + wiring test for AILogTraceSummarization.
 //
 // The module has a single runtime export:
@@ -49,7 +51,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
-import type { AppSettings } from '@/api/types'
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -72,36 +76,10 @@ const ONE_DAY_S = 24 * 60 * 60
 // baseSettings is a complete-enough AppSettings with realistic non-AI
 // defaults. Per-test overrides flip ai_mode + ai_features to exercise
 // the gate.
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-}
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
-}
-
 // enabled() returns the fully-on settings shape (non-off mode + toggle)
 // so the on-mode tests read one intent-revealing helper.
 function enabled(overrides: Partial<AppSettings> = {}) {
-  return settingsPayload({
+  return appSettingsPayload({
     ai_mode: 'cloud',
     ai_features: { [FEATURE_ID]: true },
     ...overrides,
@@ -112,27 +90,8 @@ function enabled(overrides: Partial<AppSettings> = {}) {
 // arbitrarily-sized text chunks, matching the helper the useAiStream +
 // sibling wiring tests use so the SSE parser receives byte-for-byte
 // equivalent input.
-function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder()
-  let i = 0
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (i < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[i]))
-        i++
-      } else {
-        controller.close()
-      }
-    },
-  })
-}
-
 // sseFrame formats a single SSE event the way internal/ai/stream/writer.go
 // emits it.
-function sseFrame(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
-}
-
 // A never-closing stream response holds the hook at state='streaming'.
 function pendingStreamResponse(): Response {
   return new Response(
@@ -184,7 +143,7 @@ afterEach(() => {
 describe('AILogTraceSummarization — AI-off render gate', () => {
   it('renders nothing when ai_mode=off even with the feature toggle on', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({ ai_mode: 'off', ai_features: { [FEATURE_ID]: true } }),
+      appSettingsPayload({ ai_mode: 'off', ai_features: { [FEATURE_ID]: true } }),
     )
     const { container } = render(
       <AILogTraceSummarization fromUnix={FROM_UNIX} toUnix={TO_UNIX} />,
@@ -196,7 +155,7 @@ describe('AILogTraceSummarization — AI-off render gate', () => {
 
   it('renders nothing when the per-feature toggle is off even with ai_mode=cloud', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({ ai_mode: 'cloud', ai_features: { [FEATURE_ID]: false } }),
+      appSettingsPayload({ ai_mode: 'cloud', ai_features: { [FEATURE_ID]: false } }),
     )
     const { container } = render(
       <AILogTraceSummarization fromUnix={FROM_UNIX} toUnix={TO_UNIX} />,
@@ -207,7 +166,7 @@ describe('AILogTraceSummarization — AI-off render gate', () => {
 
   it('renders nothing when the ai_features map is entirely absent (fail-closed)', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({ ai_mode: 'cloud', ai_features: undefined }),
+      appSettingsPayload({ ai_mode: 'cloud', ai_features: undefined }),
     )
     const { container } = render(
       <AILogTraceSummarization fromUnix={FROM_UNIX} toUnix={TO_UNIX} />,

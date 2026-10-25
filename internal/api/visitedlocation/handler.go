@@ -16,6 +16,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 // visitedLocationRepo is the narrow port the handler depends on. Declaring it
@@ -71,7 +72,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 	if vehicleIDStr := r.URL.Query().Get("vehicle_id"); vehicleIDStr != "" {
 		vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
-		if err != nil || vehicleID <= 0 {
+		if err != nil || validation.ValidateVehicleID(vehicleID) != nil {
 			httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 			return
 		}

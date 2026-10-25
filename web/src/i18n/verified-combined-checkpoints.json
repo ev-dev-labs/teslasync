@@ -32,6 +32,7 @@
     "web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx",
     "web/src/features/charging/components/charging-curve/SessionCurveChart.tsx",
     "web/src/features/charging/components/charging-list/ChargingInsights.tsx",
+    "web/src/features/charging/components/ChargingSessionCard.tsx",
     "web/src/features/charging/components/stat-modernization/CostForecastSection.tsx",
     "web/src/features/driving/components/ShareDriveDialog.tsx",
     "web/src/features/charging/components/SitePriceRadar.tsx",
@@ -261,6 +262,11 @@
       "file": "web/src/features/charging/components/charging-list/ChargingInsights.tsx",
       "calls": 19,
       "sha256": "418a4aacf535056bb9f8e92f01a0afb178d23f81b9515e413378e1c61443cf59"
+    },
+    {
+      "file": "web/src/features/charging/components/ChargingSessionCard.tsx",
+      "calls": 11,
+      "sha256": "13d1c660ab562a01c63f71ae4f46fbb8ffaa3a150739a491551c0db5bf4f85f1"
     },
     {
       "file": "web/src/features/charging/components/stat-modernization/CostForecastSection.tsx",

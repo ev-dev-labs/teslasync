@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/rs/zerolog/log"
 
@@ -15,6 +14,7 @@ import (
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // Per-user notification quiet-hours and DND CRUD endpoints.
@@ -87,7 +87,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusServiceUnavailable, "quiet-hours store unavailable")
 		return
 	}
-	user := actorFromRequest(r, h.authHdr)
+	user := httputil.ActorIdentity(r, h.authHdr)
 	rows, err := h.store.ListByUser(r.Context(), user)
 	if err != nil {
 		log.Error().Err(err).Msg("quiet_hours: list failed")
@@ -114,7 +114,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid payload")
 		return
 	}
-	user := actorFromRequest(r, h.authHdr)
+	user := httputil.ActorIdentity(r, h.authHdr)
 	row, err := h.store.Insert(r.Context(), user, p.toInput())
 	if err != nil {
 		writeQuietHoursError(w, err)
@@ -142,7 +142,7 @@ func (h *Handler) Patch(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid payload")
 		return
 	}
-	user := actorFromRequest(r, h.authHdr)
+	user := httputil.ActorIdentity(r, h.authHdr)
 	row, err := h.store.Update(r.Context(), user, id, p.toInput())
 	if err != nil {
 		writeQuietHoursError(w, err)
@@ -161,7 +161,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	user := actorFromRequest(r, h.authHdr)
+	user := httputil.ActorIdentity(r, h.authHdr)
 	if err := h.store.Delete(r.Context(), user, id); err != nil {
 		writeQuietHoursError(w, err)
 		return
@@ -176,13 +176,6 @@ func (h *Handler) parseID(w http.ResponseWriter, r *http.Request) (int64, bool) 
 		return 0, false
 	}
 	return id, true
-}
-
-func actorFromRequest(r *http.Request, headerName string) string {
-	if r == nil || headerName == "" {
-		return ""
-	}
-	return strings.TrimSpace(r.Header.Get(headerName))
 }
 
 // writeQuietHoursError maps repo sentinel errors onto HTTP statuses.

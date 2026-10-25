@@ -1,3 +1,5 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
+import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 // Co-located Project Apex elevation suite for AIVoiceMode.
 //
 // The module exposes a single runtime export: `AIVoiceMode`, an
@@ -45,7 +47,9 @@ import {
   cleanup,
 } from '@testing-library/react'
 
-import type { AppSettings } from '@/api/types'
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -58,38 +62,10 @@ const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
 
 const TRANSCRIPT_DRAFT_KEY = 'ai.voiceMode.transcriptDraft'
 
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: true,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'hourly',
-  critical_flash_enabled: true,
-  tab_badge_enabled: true,
-}
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
-}
-
 // enabledSettings is the fully-on shape (mode + per-feature toggle) so
 // the on-mode tests read one intent-revealing helper.
 function enabledSettings(overrides: Partial<AppSettings> = {}) {
-  return settingsPayload({
+  return appSettingsPayload({
     ai_mode: 'cloud',
     ai_features: { 'voice-mode': true },
     ...overrides,
@@ -97,25 +73,6 @@ function enabledSettings(overrides: Partial<AppSettings> = {}) {
 }
 
 // ── SSE helpers (byte-for-byte identical to the writer + sibling tests) ──
-function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder()
-  let i = 0
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (i < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[i]))
-        i++
-      } else {
-        controller.close()
-      }
-    },
-  })
-}
-
-function sseFrame(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
-}
-
 // ── SpeechRecognition stub ──────────────────────────────────────────────
 // A flexible stand-in for the vendor-prefixed browser API. Unlike the
 // single-shot sibling stub, `emit` accepts a batch of {transcript,
@@ -301,7 +258,7 @@ afterEach(() => {
 describe('AIVoiceMode — AI-off render gate', () => {
   it('renders nothing when ai_mode=off even with the voice-mode toggle on', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({ ai_mode: 'off', ai_features: { 'voice-mode': true } }),
+      appSettingsPayload({ ai_mode: 'off', ai_features: { 'voice-mode': true } }),
     )
 
     const { container } = render(<AIVoiceMode />)

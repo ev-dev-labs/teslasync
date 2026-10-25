@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 const maxAutomationRequestBodyBytes = 1 << 20
@@ -109,8 +110,8 @@ func decodeStrictAutomationJSON(raw []byte, dst interface{}) error {
 
 func validateAutomationInputWire(wire automationInputWire) (*createAutomationRequest, error) {
 	req := &createAutomationRequest{
-		Name:        strings.TrimSpace(wire.Name),
-		Description: strings.TrimSpace(wire.Description),
+		Name:        validation.TrimSpace(wire.Name),
+		Description: validation.TrimSpace(wire.Description),
 		VehicleID:   wire.VehicleID,
 		Enabled:     wire.Enabled,
 		Triggers:    make([]automationTypedStep, 0, len(wire.Triggers)),
@@ -256,7 +257,7 @@ func parseAutomationActionStep(raw json.RawMessage) (automationTypedStep, error)
 		if err := decodeStrictAutomationJSON(raw, &step); err != nil {
 			return automationTypedStep{}, err
 		}
-		if strings.TrimSpace(step.CommandName) == "" {
+		if validation.TrimSpace(step.CommandName) == "" {
 			return automationTypedStep{}, errors.New("command_name is required")
 		}
 		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
@@ -274,10 +275,10 @@ func parseAutomationActionStep(raw json.RawMessage) (automationTypedStep, error)
 		if err := decodeStrictAutomationJSON(raw, &step); err != nil {
 			return automationTypedStep{}, err
 		}
-		if step.ChannelID <= 0 {
+		if validation.ValidatePositiveID(step.ChannelID) != nil {
 			return automationTypedStep{}, errors.New("channel_id is required")
 		}
-		if strings.TrimSpace(step.Template) == "" {
+		if validation.TrimSpace(step.Template) == "" {
 			return automationTypedStep{}, errors.New("template is required")
 		}
 		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
@@ -286,7 +287,7 @@ func parseAutomationActionStep(raw json.RawMessage) (automationTypedStep, error)
 		if err := decodeStrictAutomationJSON(raw, &step); err != nil {
 			return automationTypedStep{}, err
 		}
-		if strings.TrimSpace(step.SettingKey) == "" {
+		if validation.TrimSpace(step.SettingKey) == "" {
 			return automationTypedStep{}, errors.New("setting_key is required")
 		}
 		if automationScalarValueCount(step.ValueText, step.ValueNum, step.ValueBool) != 1 {
@@ -298,7 +299,7 @@ func parseAutomationActionStep(raw json.RawMessage) (automationTypedStep, error)
 		if err := decodeStrictAutomationJSON(raw, &step); err != nil {
 			return automationTypedStep{}, err
 		}
-		if step.TargetAutomationID <= 0 {
+		if validation.ValidatePositiveID(step.TargetAutomationID) != nil {
 			return automationTypedStep{}, errors.New("target_automation_id is required")
 		}
 		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
@@ -320,7 +321,7 @@ func automationStepKind(raw json.RawMessage) (string, error) {
 	if err := json.Unmarshal(kindRaw, &kind); err != nil {
 		return "", errors.New("kind must be a string")
 	}
-	kind = strings.TrimSpace(kind)
+	kind = validation.TrimSpace(kind)
 	if kind == "" {
 		return "", errors.New("kind is required")
 	}
@@ -328,10 +329,10 @@ func automationStepKind(raw json.RawMessage) (string, error) {
 }
 
 func validateAutomationTriggerSignal(step automationTriggerSignalDTO) error {
-	if strings.TrimSpace(step.Signal) == "" {
+	if validation.TrimSpace(step.Signal) == "" {
 		return errors.New("signal is required")
 	}
-	if strings.TrimSpace(step.Op) == "" {
+	if validation.TrimSpace(step.Op) == "" {
 		return errors.New("op is required")
 	}
 	switch step.Op {
@@ -350,7 +351,7 @@ func validateAutomationTriggerSignal(step automationTriggerSignalDTO) error {
 }
 
 func validateAutomationTriggerGeofence(step automationTriggerGeofenceDTO) error {
-	if step.PlaceID <= 0 {
+	if validation.ValidatePositiveID(step.PlaceID) != nil {
 		return errors.New("place_id is required")
 	}
 	switch step.Event {
@@ -359,7 +360,7 @@ func validateAutomationTriggerGeofence(step automationTriggerGeofenceDTO) error 
 			return errors.New("dwell_minutes is only allowed when event is dwell")
 		}
 	case "dwell":
-		if step.DwellMinutes != nil && *step.DwellMinutes <= 0 {
+		if step.DwellMinutes != nil && validation.ValidatePositiveID(int64(*step.DwellMinutes)) != nil {
 			return errors.New("dwell_minutes must be greater than zero")
 		}
 	default:
@@ -369,10 +370,10 @@ func validateAutomationTriggerGeofence(step automationTriggerGeofenceDTO) error 
 }
 
 func validateAutomationTriggerSchedule(step *automationTriggerScheduleDTO) error {
-	if strings.TrimSpace(step.CronExpr) == "" {
+	if validation.TrimSpace(step.CronExpr) == "" {
 		return errors.New("cron_expr is required")
 	}
-	if strings.TrimSpace(step.Timezone) == "" {
+	if validation.TrimSpace(step.Timezone) == "" {
 		step.Timezone = "UTC"
 	}
 	return nil
@@ -390,10 +391,10 @@ func validateAutomationTriggerEvent(step automationTriggerEventDTO) error {
 }
 
 func validateAutomationConditionSignal(step automationConditionSignalDTO) error {
-	if strings.TrimSpace(step.Signal) == "" {
+	if validation.TrimSpace(step.Signal) == "" {
 		return errors.New("signal is required")
 	}
-	if strings.TrimSpace(step.Op) == "" {
+	if validation.TrimSpace(step.Op) == "" {
 		return errors.New("op is required")
 	}
 	scalarCount := automationScalarValueCount(step.ValueText, step.ValueNum, step.ValueBool)
@@ -436,7 +437,7 @@ func validateAutomationConditionTimeWindow(step automationConditionTimeWindowDTO
 }
 
 func validateAutomationConditionGeofence(step automationConditionGeofenceDTO) error {
-	if step.PlaceID <= 0 {
+	if validation.ValidatePositiveID(step.PlaceID) != nil {
 		return errors.New("place_id is required")
 	}
 	switch step.State {
@@ -450,7 +451,7 @@ func validateAutomationConditionGeofence(step automationConditionGeofenceDTO) er
 }
 
 func validateAutomationConditionOtherAutomation(step automationConditionOtherAutomationDTO) error {
-	if step.OtherAutomationID <= 0 {
+	if validation.ValidatePositiveID(step.OtherAutomationID) != nil {
 		return errors.New("other_automation_id is required")
 	}
 	switch step.State {
@@ -464,7 +465,7 @@ func validateAutomationConditionOtherAutomation(step automationConditionOtherAut
 }
 
 func parseAutomationClockTime(value string) (time.Time, error) {
-	value = strings.TrimSpace(value)
+	value = validation.TrimSpace(value)
 	if value == "" {
 		return time.Time{}, errors.New("time is required")
 	}
@@ -512,7 +513,7 @@ func automationStepOrderValues(steps []automationTypedStep) ([]int, error) {
 			continue
 		}
 		order := *step.StepOrder
-		if order <= 0 || order > len(steps) {
+		if validation.ValidatePositiveID(int64(order)) != nil || order > len(steps) {
 			return nil, fmt.Errorf("step_order for step %d must be between 1 and %d", i, len(steps))
 		}
 		if _, ok := used[order]; ok {

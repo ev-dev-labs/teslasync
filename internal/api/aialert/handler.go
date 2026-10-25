@@ -10,9 +10,9 @@ package aialert
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
@@ -26,7 +26,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
-	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 // builderMaxIterations allows draft/validate plus a small retry budget without
@@ -35,7 +36,7 @@ const builderMaxIterations = 6
 
 // builderMaxPromptChars allows multi-sentence rule descriptions while capping
 // token-cost amplification from accidental or hostile paste payloads.
-const builderMaxPromptChars = 4096
+const builderMaxPromptChars = validation.MaxPromptRunes
 
 func writeError(w http.ResponseWriter, status int, msg string) {
 	httpx.WriteError(w, status, msg)
@@ -117,17 +118,20 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if body.VehicleID <= 0 {
+	if err := validation.ValidateVehicleID(body.VehicleID); err != nil {
 		writeError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
 		return
 	}
-	prompt := strings.TrimSpace(body.Prompt)
-	if prompt == "" {
-		writeError(w, http.StatusBadRequest, "prompt is required")
-		return
-	}
-	if len(prompt) > builderMaxPromptChars {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", builderMaxPromptChars))
+	prompt, err := validation.ValidatePrompt(&body.Prompt)
+	if err != nil {
+		switch {
+		case errors.Is(err, validation.ErrEmpty):
+			writeError(w, http.StatusBadRequest, "prompt is required")
+		case errors.Is(err, validation.ErrTextTooLong):
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", builderMaxPromptChars))
+		default:
+			writeError(w, http.StatusBadRequest, err.Error())
+		}
 		return
 	}
 
@@ -139,7 +143,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Empty subject is the open-mode audit value ("anonymous").
-	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
+	subject := httputil.ActorIdentity(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, nlalertbuilder.FeatureID)
 
@@ -183,7 +187,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// EmitLimitError on the underlying writer); we just log.
 		log.Error().Err(err).
 			Int64("vehicle_id", body.VehicleID).
-			Int("prompt_chars", len(prompt)).
+			Int("prompt_chars", validation.RuneCount(prompt)).
 			Msg("ai alert builder: dispatcher returned error")
 	}
 }

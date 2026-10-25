@@ -17,12 +17,12 @@ import (
 // stays null: unavailable history is not zero runs or a known disable reason.
 type automationResponse struct {
 	*models.Automation
-	ExecutionCount  *int64     `json:"execution_count"`
-	FailureCount    *int64     `json:"failure_count"`
-	LastTriggeredAt *time.Time `json:"last_triggered_at"`
-	AutoDisabled    *bool      `json:"auto_disabled"`
-	NextFireTime *string              `json:"next_fire_time,omitempty"`
-	Conflicts    []condition.Conflict `json:"conflicts,omitempty"`
+	ExecutionCount  *int64               `json:"execution_count"`
+	FailureCount    *int64               `json:"failure_count"`
+	LastTriggeredAt *time.Time           `json:"last_triggered_at"`
+	AutoDisabled    *bool                `json:"auto_disabled"`
+	NextFireTime    *string              `json:"next_fire_time,omitempty"`
+	Conflicts       []condition.Conflict `json:"conflicts,omitempty"`
 }
 
 // presetsResponse is the envelope for the presets API.

@@ -46,7 +46,7 @@ export default function EfficiencyLandscapePage() {
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const { formatTemperature, unitPrefs } = useUnits();
 
-  const { start, end, setRange } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive, setRange } = useRangeState({
     persistKey: 'efficiency-landscape.range',
     defaultPresetId: 'all',
   });
@@ -57,14 +57,14 @@ export default function EfficiencyLandscapePage() {
 
   const drives = useMemo<Drive[]>(() => {
     if (!allDrives.length) return [];
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    const startMs = new Date(startInstant).getTime();
+    const endMs = new Date(endInstantExclusive).getTime();
     return allDrives.filter((d) => {
       if (!d.startTs) return false;
       const ts = new Date(d.startTs).getTime();
-      return ts >= startMs && ts <= endMs;
+      return ts >= startMs && ts < endMs;
     });
-  }, [allDrives, start, end]);
+  }, [allDrives, startInstant, endInstantExclusive]);
 
   const landscape = useMemo(() => buildLandscape(drives), [drives]);
 

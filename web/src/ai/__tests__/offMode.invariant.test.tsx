@@ -1,3 +1,4 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
 // AI-Off Contract.
 
 // Off-mode invariant suite. ADR-015 §I5 says: "When ai_mode='off',
@@ -17,7 +18,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-import type { AppSettings } from '@/api/types';
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -29,35 +32,9 @@ import { withAiFeature } from '@/components/ai/withAiFeature';
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>;
 
-const offModeSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-  ai_mode: 'off',
-  ai_features: {},
-  ai_provider_config: {},
-  ai_cost_cap_cents: 0,
-};
-
 beforeEach(() => {
   mockUseSettings.mockReset();
-  mockUseSettings.mockReturnValue({ settings: offModeSettings });
+  mockUseSettings.mockReturnValue(appSettingsPayload({ ai_mode: 'off', ai_features: {} }));
 });
 
 describe('AI-off contract — DOM invariant', () => {

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -19,6 +18,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // Admin feedback queue handler.
@@ -188,7 +188,7 @@ func (h *AdminFeedbackHandler) Patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	actor := actorFromRequest(r, h.authHdr)
+	actor := httputil.ActorIdentity(r, h.authHdr)
 	upd := dbuser.FeedbackUpdate{
 		Status:         req.Status,
 		GitHubIssueURL: req.GitHubIssueURL,
@@ -265,13 +265,6 @@ func (h *AdminFeedbackHandler) parseID(w http.ResponseWriter, r *http.Request) (
 	return id, true
 }
 
-func actorFromRequest(r *http.Request, headerName string) string {
-	if r == nil || headerName == "" {
-		return ""
-	}
-	return strings.TrimSpace(r.Header.Get(headerName))
-}
-
 func logAuditFromRequest(db *database.DB, r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
 	if db == nil || r == nil {
 		return
@@ -281,12 +274,12 @@ func logAuditFromRequest(db *database.DB, r *http.Request, headerName, action, r
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 	_, err := db.Pool.Exec(r.Context(), query,
 		time.Now().UTC(),
-		actorFromRequest(r, headerName),
+		httputil.ActorIdentity(r, headerName),
 		action,
 		resource,
 		entityID,
 		detail,
-		nullableStr(clientIP(r)),
+		nullableStr(httputil.ClientIP(r, httputil.ClientIPOptions{TrustXForwardedFor: true})),
 		nullableStr(r.UserAgent()),
 	)
 	if err != nil {
@@ -299,27 +292,6 @@ func nullableStr(s string) any {
 		return nil
 	}
 	return s
-}
-
-func clientIP(r *http.Request) string {
-	if r == nil {
-		return ""
-	}
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if i := strings.IndexByte(xff, ','); i >= 0 {
-			xff = xff[:i]
-		}
-		if ip := strings.TrimSpace(xff); ip != "" {
-			return ip
-		}
-	}
-	if r.RemoteAddr == "" {
-		return ""
-	}
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		return host
-	}
-	return r.RemoteAddr
 }
 
 // buildGitHubIssueContent renders the title + body the bridge submits

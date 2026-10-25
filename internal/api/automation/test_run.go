@@ -15,6 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 	"github.com/ev-dev-labs/teslasync/internal/automation/condition"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 // ── Test Run ────────────────────────────────────────────────────────────
@@ -27,7 +28,7 @@ import (
 //	POST /automations/{id}/test-run
 func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 	id, err := urlParamInt64(r, "id")
-	if err != nil || id <= 0 {
+	if err != nil || validation.ValidatePositiveID(id) != nil {
 		writeError(w, http.StatusBadRequest, "invalid automation ID")
 		return
 	}
@@ -540,7 +541,7 @@ func testRunActionConfigFrom(item any) ([]action.ActionConfig, error) {
 }
 
 func parseTestRunActionRaw(raw json.RawMessage) ([]action.ActionConfig, error) {
-	trimmed := strings.TrimSpace(string(raw))
+	trimmed := validation.TrimSpace(string(raw))
 	if trimmed == "" || trimmed == "null" {
 		return []action.ActionConfig{}, nil
 	}

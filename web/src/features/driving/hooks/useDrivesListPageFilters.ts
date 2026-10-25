@@ -9,7 +9,7 @@ import { scopedPath } from '@/api/scope';
 import {formatDayKey} from '@/lib/dateFormat'
 import {formatRelativeDayKey} from '@/lib/dateConvert';
 import type { Drive } from '@/types/driving';
-import { convertTempFromSI, convertPowerFromSI } from '@/lib/unitConversion';
+import { convertTempFromSI, convertPowerFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import {
   getEfficiency, gradeFromEfficiency, gradeFromNumeric,
   computePeriodStats, detectAnomalies, detectNotable, detectCommutes,
@@ -257,8 +257,8 @@ export function useDrivesListPageFilters(data: ReturnType<typeof useDrivesListPa
           ['battery', battery.end],
           ['startBattery', battery.start],
           ['batteryUsed', battery.used],
-          ['energy', d.energyUsedWh != null ? d.energyUsedWh / 1000 : null],
-          ['regen', d.regenEnergyWh != null ? d.regenEnergyWh / 1000 : null],
+          ['energy', d.energyUsedWh != null ? convertEnergyFromSI(d.energyUsedWh, 'kWh') : null],
+          ['regen', d.regenEnergyWh != null ? convertEnergyFromSI(d.regenEnergyWh, 'kWh') : null],
           ['score', d.score],
         ];
         if (thresholds.some(([key, value]) => {

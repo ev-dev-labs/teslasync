@@ -77,7 +77,7 @@ export default function SignalExplorerPage() {
   const catalogState = useDataState(signalsQuery);
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
 
-  const { start, end } = useRangeState({ defaultPresetId: preferences.defaultAnalysisRange });
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({ defaultPresetId: preferences.defaultAnalysisRange });
 
   const [exploreKey, setExploreKey] = useState<number | null>(null);
   const [page, setPage] = useUrlNumber('page', 1);
@@ -85,14 +85,8 @@ export default function SignalExplorerPage() {
   const [isLive, setIsLive] = useState(false);
   const setUrlBatch = useUrlBatch();
 
-  const fromIso = useMemo(
-    () => (start ? new Date(`${start}T00:00:00`).toISOString() : ''),
-    [start],
-  );
-  const toIso = useMemo(
-    () => (end ? new Date(`${end}T23:59:59.999`).toISOString() : ''),
-    [end],
-  );
+  const fromIso = startInstant;
+  const toIso = endInstantExclusive;
 
   const canExplore = selectedSignals.length > 0 && !!start && !!end && vehicleId > 0;
   const handleExplore = useCallback(() => {

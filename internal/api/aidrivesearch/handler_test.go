@@ -13,7 +13,6 @@
 package aidrivesearch
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,23 +28,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"context"
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/trip"
+	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
 )
-
-type stubGuardSettings struct {
-	mode string
-	on   map[string]bool
-}
-
-func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
-	return s.mode, nil
-}
-
-func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
-	return s.on[id], nil
-}
 
 // TestNLDriveSearchReplayAIOff404 is the load-bearing off-mode
 // contract proof for tool group. It mounts the AI drive search
@@ -61,10 +49,7 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 // web/src/features/driving/__tests__/.
 func TestNLDriveSearchReplayAIOff404(t *testing.T) {
 	t.Parallel()
-	guardSettings := &stubGuardSettings{
-		mode: "off",
-		on:   map[string]bool{"nl-drive-search-replay": true}, // toggle on; mode trumps it
-	}
+	guardSettings := apitest.NewGuardSettings("off", map[string]bool{"nl-drive-search-replay": true})
 	g := guard.New(guardSettings)
 
 	router := chi.NewRouter()

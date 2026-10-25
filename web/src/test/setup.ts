@@ -23,6 +23,8 @@
  * `patchMatchMedia()`.
  */
 import '@testing-library/jest-dom'
+import { vi } from 'vitest'
+import type { Mock } from 'vitest'
 
 // A minimal structural view of an object we can hang browser globals off of:
 // `globalThis` in real use, or a throwaway fake target in unit tests.
@@ -34,6 +36,7 @@ type GlobalLike = Record<string, unknown>
  * mounts synchronously under test rather than staying invisible forever.
  */
 export class MockIntersectionObserver implements IntersectionObserver {
+  static readonly instances: MockIntersectionObserver[] = []
   readonly root: Element | Document | null
   readonly rootMargin: string
   readonly thresholds: ReadonlyArray<number>
@@ -41,13 +44,18 @@ export class MockIntersectionObserver implements IntersectionObserver {
   readonly observed = new Set<Element>()
 
   constructor(
-    private readonly callback: IntersectionObserverCallback,
+    protected readonly callback: IntersectionObserverCallback,
     options?: IntersectionObserverInit,
   ) {
     this.root = options?.root ?? null
     this.rootMargin = options?.rootMargin ?? '0px'
     const threshold = options?.threshold
     this.thresholds = Array.isArray(threshold) ? threshold : [threshold ?? 0]
+    MockIntersectionObserver.instances.push(this)
+  }
+
+  static reset(): void {
+    MockIntersectionObserver.instances.length = 0
   }
 
   observe(target: Element): void {
@@ -74,6 +82,91 @@ export class MockIntersectionObserver implements IntersectionObserver {
 
   takeRecords(): IntersectionObserverEntry[] {
     return []
+  }
+
+  /** Synchronously deliver a controlled set of entries to this observer. */
+  emit(entries: Array<Partial<IntersectionObserverEntry>>): void {
+    const delivered = entries.map((entry) => ({
+      target: entry.target ?? document.createElement('div'),
+      isIntersecting: entry.isIntersecting ?? false,
+      intersectionRatio: entry.intersectionRatio ?? (entry.isIntersecting ? 1 : 0),
+      boundingClientRect: entry.boundingClientRect ?? new DOMRect(),
+      intersectionRect: entry.intersectionRect ?? new DOMRect(),
+      rootBounds: entry.rootBounds ?? null,
+      time: entry.time ?? 0,
+    })) as IntersectionObserverEntry[]
+    this.callback(delivered, this)
+  }
+}
+
+/**
+ * Intersection observer that never fires on `observe()`. Call `emit()` to
+ * deliver a precise state transition, ideal for hooks and components that
+ * need visibility branches to be asserted independently.
+ */
+export class MockControlledIntersectionObserver implements IntersectionObserver {
+  static readonly instances: MockControlledIntersectionObserver[] = []
+  readonly root: Element | Document | null
+  readonly rootMargin: string
+  readonly thresholds: ReadonlyArray<number>
+  readonly observed = new Set<Element>()
+  disconnectCount = 0
+  readonly options?: IntersectionObserverInit
+  readonly cb: IntersectionObserverCallback
+  get disconnected(): boolean {
+    return this.disconnectCount > 0
+  }
+
+  constructor(
+    private readonly callback: IntersectionObserverCallback,
+    options?: IntersectionObserverInit,
+  ) {
+    this.cb = callback
+    this.options = options
+    this.root = options?.root ?? null
+    this.rootMargin = options?.rootMargin ?? '0px'
+    const threshold = options?.threshold
+    this.thresholds = Array.isArray(threshold) ? threshold : [threshold ?? 0]
+    MockControlledIntersectionObserver.instances.push(this)
+  }
+
+  static reset(): void {
+    MockControlledIntersectionObserver.instances.length = 0
+  }
+
+  static latest(): MockControlledIntersectionObserver | undefined {
+    const list = MockControlledIntersectionObserver.instances
+    return list[list.length - 1]
+  }
+
+  observe = vi.fn((target: Element): void => {
+    this.observed.add(target)
+  })
+
+  unobserve = vi.fn((target: Element): void => {
+    this.observed.delete(target)
+  })
+
+  disconnect = vi.fn((): void => {
+    this.observed.clear()
+    this.disconnectCount += 1
+  })
+
+  takeRecords(): IntersectionObserverEntry[] {
+    return []
+  }
+
+  emit(entries: Array<Partial<IntersectionObserverEntry>>): void {
+    const delivered = entries.map((entry) => ({
+      target: entry.target ?? document.createElement('div'),
+      isIntersecting: entry.isIntersecting ?? false,
+      intersectionRatio: entry.intersectionRatio ?? (entry.isIntersecting ? 1 : 0),
+      boundingClientRect: entry.boundingClientRect ?? new DOMRect(),
+      intersectionRect: entry.intersectionRect ?? new DOMRect(),
+      rootBounds: entry.rootBounds ?? null,
+      time: entry.time ?? 0,
+    })) as IntersectionObserverEntry[]
+    this.callback(delivered, this)
   }
 }
 
@@ -231,6 +324,12 @@ export interface MatchMediaController {
   fire: (query: string, matches: boolean) => void
   /** Restore the previous `window.matchMedia` (or remove the stub). */
   restore: () => void
+  /** The factory installed as `window.matchMedia`, exposed for call assertions. */
+  spy: Mock<(query: string) => MediaQueryList>
+  /** Every MediaQueryList created by this patch. */
+  instances: MediaQueryList[]
+  /** Return the newest instance for a media query. */
+  lastFor: (query: string) => MediaQueryList | undefined
 }
 
 /**
@@ -243,44 +342,436 @@ export function patchMatchMedia(
   win: Window = window,
 ): MatchMediaController {
   const listeners = new Map<string, Set<(event: MediaQueryListEvent) => void>>()
+  const instances = new Map<string, Set<MediaQueryList>>()
+  const currentMatches = new Map<string, boolean>()
+  const allInstances: MediaQueryList[] = []
 
   const factory = (query: string): MediaQueryList => {
     const set = listeners.get(query) ?? new Set<(event: MediaQueryListEvent) => void>()
     listeners.set(query, set)
+    const queryInstances = instances.get(query) ?? new Set<MediaQueryList>()
+    instances.set(query, queryInstances)
     const mql = {
-      matches: matches(query),
+      matches: currentMatches.get(query) ?? matches(query),
       media: query,
       onchange: null,
-      addEventListener: (type: string, listener: (event: MediaQueryListEvent) => void) => {
+      addEventListener: vi.fn((type: string, listener: (event: MediaQueryListEvent) => void) => {
         if (type === 'change') set.add(listener)
-      },
-      removeEventListener: (type: string, listener: (event: MediaQueryListEvent) => void) => {
+      }),
+      removeEventListener: vi.fn((type: string, listener: (event: MediaQueryListEvent) => void) => {
         if (type === 'change') set.delete(listener)
-      },
-      addListener: (listener: (event: MediaQueryListEvent) => void) => set.add(listener),
-      removeListener: (listener: (event: MediaQueryListEvent) => void) => set.delete(listener),
-      dispatchEvent: () => true,
+      }),
+      addListener: vi.fn((listener: (event: MediaQueryListEvent) => void) => set.add(listener)),
+      removeListener: vi.fn((listener: (event: MediaQueryListEvent) => void) => set.delete(listener)),
+      dispatchEvent: vi.fn(() => true),
     }
+    queryInstances.add(mql as unknown as MediaQueryList)
+    allInstances.push(mql as unknown as MediaQueryList)
     return mql as unknown as MediaQueryList
   }
 
   const previous = Object.getOwnPropertyDescriptor(win, 'matchMedia')
+  const spy = vi.fn(factory)
   Object.defineProperty(win, 'matchMedia', {
     configurable: true,
     writable: true,
-    value: factory,
+    value: spy,
   })
 
   return {
     fire: (query, next) => {
       const set = listeners.get(query)
-      if (!set) return
       const event = { matches: next, media: query } as MediaQueryListEvent
-      set.forEach((listener) => listener(event))
+      currentMatches.set(query, next)
+      for (const mql of instances.get(query) ?? []) {
+        Object.defineProperty(mql, 'matches', {
+          configurable: true,
+          writable: true,
+          value: next,
+        })
+      }
+      set?.forEach((listener) => listener(event))
     },
     restore: () => {
       if (previous) Object.defineProperty(win, 'matchMedia', previous)
       else Reflect.deleteProperty(win, 'matchMedia')
     },
+    spy,
+    instances: allInstances,
+    lastFor: (query) => {
+      const candidates = instances.get(query)
+      if (!candidates) return undefined
+      const list = Array.from(candidates)
+      return list[list.length - 1]
+    },
+  }
+}
+
+export type TranslationOptions = {
+  count?: number
+  defaultValue?: string
+  defaultValue_one?: string
+  defaultValue_other?: string
+  replace?: Record<string, unknown> | null
+  [key: string]: unknown
+}
+
+export interface TranslationMockResources {
+  [key: string]: unknown
+}
+
+export interface TranslationMockOptions {
+  language?: string
+  resources?: TranslationMockResources
+  onLanguageChange?: (language: string) => void
+}
+
+export function interpolateTranslation(
+  text: string,
+  values: Record<string, unknown> | null | undefined,
+): string {
+  if (!values) return text
+  return text.replace(/{{\s*([^{}\s]+)\s*}}/g, (_match, key: string) => {
+    const value = values[key]
+    return value == null ? '' : String(value)
+  })
+}
+
+function readTranslationResource(
+  resources: TranslationMockResources | undefined,
+  key: string,
+  language: string,
+): unknown {
+  const languageRoot = resources?.[language]
+  const current =
+    languageRoot && typeof languageRoot === 'object'
+      && Object.prototype.hasOwnProperty.call(languageRoot, 'translation')
+      ? (languageRoot as Record<string, unknown>).translation
+      : languageRoot
+  if (!current || typeof current !== 'object') return undefined
+  let cursor = current as Record<string, unknown>
+  for (const segment of key.split('.')) {
+    if (!cursor || typeof cursor !== 'object') return undefined
+    cursor = cursor[segment] as Record<string, unknown>
+  }
+  return cursor
+}
+
+export function createTranslationT(options: TranslationMockOptions = {}) {
+  const state = {
+    language: options.language ?? 'en',
+  }
+  const t = (
+    key: string,
+    second?: string | TranslationOptions | null,
+    third?: TranslationOptions | null,
+  ): string => {
+    const explicitFallback = typeof second === 'string' ? second : undefined
+    const bag = (
+      typeof second === 'object' && second !== null ? second : third
+    ) as TranslationOptions | undefined
+    const resource = readTranslationResource(options.resources, key, state.language)
+    const plainResource = typeof resource === 'string' ? resource : undefined
+
+    let fallback: string
+    if (typeof bag?.count === 'number') {
+      fallback =
+        bag.count === 1
+          ? bag.defaultValue_one ?? bag.defaultValue ?? explicitFallback ?? plainResource ?? key
+          : bag.defaultValue_other ?? bag.defaultValue ?? explicitFallback ?? plainResource ?? key
+    } else {
+      fallback =
+        explicitFallback
+        ?? (typeof bag?.defaultValue === 'string' ? bag.defaultValue : undefined)
+        ?? plainResource
+        ?? key
+    }
+
+    const values = bag?.replace && typeof bag.replace === 'object'
+      ? bag.replace
+      : bag
+    return interpolateTranslation(fallback, values as Record<string, unknown> | undefined)
+  }
+  const setLanguage = (language: string) => {
+    state.language = language
+    options.onLanguageChange?.(language)
+    return Promise.resolve(language)
+  }
+  return {
+    t,
+    i18n: {
+      get language() {
+        return state.language
+      },
+      changeLanguage: setLanguage,
+    },
+  }
+}
+
+export function createReactI18nextMock(options: TranslationMockOptions = {}) {
+  const translation = createTranslationT(options)
+  return {
+    useTranslation: () => translation,
+    Trans: ({ children }: { children?: unknown }) => children,
+    I18nextProvider: ({ children }: { children?: unknown }) => children,
+    initReactI18next: { type: '3rdParty', init: () => undefined },
+  }
+}
+
+/**
+ * A deterministic in-process BroadcastChannel test double. Messages posted by
+ * a channel are delivered asynchronously to every other open channel with the
+ * same name, matching the browser's cross-context behavior.
+ */
+export class MockBroadcastChannel extends EventTarget implements BroadcastChannel {
+  static readonly instances = new Map<string, Set<MockBroadcastChannel>>()
+
+  readonly name: string
+  readonly referrerPolicy = 'strict-origin-when-cross-origin'
+  onmessage: ((this: BroadcastChannel, ev: MessageEvent) => unknown) | null = null
+  onmessageerror: ((this: BroadcastChannel, ev: MessageEvent) => unknown) | null = null
+
+  constructor(name: string) {
+    super()
+    this.name = String(name)
+    const peers = MockBroadcastChannel.instances.get(this.name)
+      ?? new Set<MockBroadcastChannel>()
+    peers.add(this)
+    MockBroadcastChannel.instances.set(this.name, peers)
+  }
+
+  postMessage(message: unknown): void {
+    queueMicrotask(() => {
+      if (!this.closed) {
+        const peers = MockBroadcastChannel.instances.get(this.name)
+        peers?.forEach((peer) => {
+          if (peer !== this && !peer.closed) peer.emitMessage(message)
+        })
+      }
+    })
+  }
+
+  emitMessage(message: unknown): void {
+    const event = new MessageEvent('message', { data: message })
+    this.onmessage?.call(this as unknown as BroadcastChannel, event)
+    this.dispatchEvent(event)
+  }
+
+  emitMessageError(message: unknown): void {
+    const event = new MessageEvent('messageerror', { data: message })
+    this.onmessageerror?.call(this as unknown as BroadcastChannel, event)
+    this.dispatchEvent(event)
+  }
+
+  private isClosed = false
+  get closed(): boolean {
+    return this.isClosed
+  }
+
+  close(): void {
+    if (this.isClosed) return
+    this.isClosed = true
+    const peers = MockBroadcastChannel.instances.get(this.name)
+    peers?.delete(this)
+    if (peers?.size === 0) MockBroadcastChannel.instances.delete(this.name)
+  }
+
+  static reset(): void {
+    for (const peers of MockBroadcastChannel.instances.values()) {
+      for (const peer of peers) peer.close()
+    }
+    MockBroadcastChannel.instances.clear()
+  }
+}
+
+export function patchBroadcastChannel(
+  target: GlobalLike = globalThis as unknown as GlobalLike,
+): () => void {
+  const previous = Object.getOwnPropertyDescriptor(target, 'BroadcastChannel')
+  MockBroadcastChannel.reset()
+  target.BroadcastChannel = MockBroadcastChannel
+  return () => {
+    MockBroadcastChannel.reset()
+    if (previous) Object.defineProperty(target, 'BroadcastChannel', previous)
+    else Reflect.deleteProperty(target, 'BroadcastChannel')
+  }
+}
+
+export class MockServiceWorkerRegistration {
+  readonly scope = 'http://localhost/'
+  active: ServiceWorker | null = null
+  waiting: ServiceWorker | null = null
+  installing: ServiceWorker | null = null
+  private readonly showNotificationImpl: () => Promise<void>
+
+  addEventListener(): void {}
+  removeEventListener(): void {}
+  dispatchEvent(): boolean {
+    return true
+  }
+  private updateImpl: () => Promise<void> = async () => {}
+  setUpdateImpl(updateImpl: () => Promise<void>): void {
+    this.updateImpl = updateImpl
+  }
+  async update(): Promise<void> {
+    await this.updateImpl()
+  }
+  async unregister(): Promise<boolean> {
+    return true
+  }
+  constructor(options: { showNotification?: () => Promise<void> } = {}) {
+    this.showNotificationImpl = options.showNotification ?? (async () => {})
+  }
+  async showNotification(): Promise<void> {
+    await this.showNotificationImpl()
+  }
+  async getNotifications(): Promise<readonly Notification[]> {
+    return []
+  }
+}
+
+export interface ServiceWorkerLifecycleOptions {
+  showNotification?: () => Promise<void>
+  postMessage?: (message: unknown, transfer?: Transferable[]) => void
+  getRegistration?: () => Promise<unknown>
+  getRegistrations?: () => Promise<unknown[]>
+  register?: () => Promise<unknown>
+  controlled?: boolean
+}
+
+export class MockServiceWorkerLifecycle {
+  readonly registration: MockServiceWorkerRegistration
+  readonly controller: ServiceWorker
+
+  private readonly containerListeners = new Set<(event: Event) => void>()
+  private readonly messageListeners = new Set<(event: MessageEvent) => void>()
+  private readonly registrations: MockServiceWorkerRegistration[] = []
+  readyResolve!: () => void
+  readonly ready: Promise<ServiceWorkerRegistration>
+  private readonly options: ServiceWorkerLifecycleOptions
+
+  readonly container = {
+    get controller() {
+      return this.containerController
+    },
+    containerController: null as ServiceWorker | null,
+    ready: undefined as Promise<ServiceWorkerRegistration> | undefined,
+    register: async () => (
+      this.options.register
+        ? await this.options.register()
+        : this.registration
+    ) as ServiceWorkerRegistration,
+    getRegistration: async () => (
+      this.options.getRegistration
+        ? await this.options.getRegistration()
+        : this.registration
+    ) as ServiceWorkerRegistration | undefined,
+    getRegistrations: async () => (
+      this.options.getRegistrations
+        ? await this.options.getRegistrations()
+        : this.registrations
+    ) as ServiceWorkerRegistration[],
+    addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
+      if (type === 'controllerchange') {
+        this.containerListeners.add(listener as (event: Event) => void)
+      }
+      if (type === 'message') {
+        this.messageListeners.add(listener as (event: MessageEvent) => void)
+      }
+    },
+    removeEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
+      if (type === 'controllerchange') {
+        this.containerListeners.delete(listener as (event: Event) => void)
+      }
+      if (type === 'message') {
+        this.messageListeners.delete(listener as (event: MessageEvent) => void)
+      }
+    },
+    startMessages: () => undefined,
+  }
+
+  constructor(options: ServiceWorkerLifecycleOptions = {}) {
+    this.options = options
+    this.registration = new MockServiceWorkerRegistration({
+      showNotification: options.showNotification,
+    })
+    const postMessage = options.postMessage ?? (() => {})
+    this.controller = {
+      postMessage,
+    } as unknown as ServiceWorker
+    this.registrations.push(this.registration)
+    this.ready = new Promise<ServiceWorkerRegistration>((resolve) => {
+      this.readyResolve = () => resolve(this.registration as unknown as ServiceWorkerRegistration)
+    })
+    this.container.ready = this.ready
+  }
+
+  setUpdateImpl(updateImpl: () => Promise<void>): void {
+    this.registration.setUpdateImpl(updateImpl)
+  }
+
+  installWaiting(): void {
+    this.registration.waiting = this.controller
+  }
+
+  activate(): void {
+    this.registration.waiting = null
+    this.registration.active = this.controller
+    this.container.containerController = this.controller
+    this.readyResolve()
+    const event = new Event('controllerchange')
+    this.containerListeners.forEach((listener) => listener(event))
+  }
+
+  updateFailure(error: unknown): Promise<void> {
+    return Promise.reject(error)
+  }
+
+  emitMessage(data: unknown): void {
+    const event = new MessageEvent('message', { data })
+    this.messageListeners.forEach((listener) => listener(event))
+  }
+}
+
+export interface ServiceWorkerLifecycleController {
+  lifecycle: MockServiceWorkerLifecycle
+  restore: () => void
+}
+
+export function patchServiceWorkerLifecycle(
+  nav: Navigator = navigator,
+  options: ServiceWorkerLifecycleOptions = {},
+): ServiceWorkerLifecycleController {
+  const lifecycle = new MockServiceWorkerLifecycle(options)
+  const previous = Object.getOwnPropertyDescriptor(nav, 'serviceWorker')
+  if (options.postMessage || options.showNotification) {
+    lifecycle.container.containerController = lifecycle.controller
+    lifecycle.registration.active = lifecycle.controller
+    lifecycle.readyResolve()
+  }
+  Object.defineProperty(nav, 'serviceWorker', {
+    configurable: true,
+    writable: true,
+    value: lifecycle.container,
+  })
+  return {
+    lifecycle,
+    restore: () => {
+      if (previous) Object.defineProperty(nav, 'serviceWorker', previous)
+      else Reflect.deleteProperty(nav, 'serviceWorker')
+    },
+  }
+}
+
+export class TestCleanupRegistry {
+  private readonly cleanups: Array<() => void> = []
+
+  add(cleanup: () => void): () => void {
+    this.cleanups.push(cleanup)
+    return cleanup
+  }
+
+  cleanup(): void {
+    while (this.cleanups.length) this.cleanups.pop()?.()
   }
 }

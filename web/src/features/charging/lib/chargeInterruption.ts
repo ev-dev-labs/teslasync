@@ -32,6 +32,11 @@
  */
 
 import type { ChargingSession } from '@/types/charging';
+import {
+  betaQuantile as sharedBetaQuantile,
+  regularizedIncompleteBeta as sharedRegularizedIncompleteBeta,
+} from '@/lib/statistics';
+import { normalizePlaceGeoSite } from './siteIdentity';
 
 export type ChargeInterruptionSession = Omit<ChargingSession, 'total_energy_added_wh'> & {
   total_energy_added_wh?: number | null;
@@ -138,16 +143,7 @@ function num(v: number | null | undefined): number | null {
  * (there is nothing to compare them against).
  */
 export function groupSiteKey(session: ChargeInterruptionSession): { key: string; label: string } | null {
-  const place = session.start_place?.trim();
-  if (place != null && place.length > 0) {
-    return { key: `place:${place.toLowerCase()}`, label: place };
-  }
-  const lat = num(session.start_lat);
-  const lng = num(session.start_lng);
-  if (lat == null || lng == null) return null;
-  const rLat = Math.round(lat * 100) / 100;
-  const rLng = Math.round(lng * 100) / 100;
-  return { key: `geo:${rLat.toFixed(2)},${rLng.toFixed(2)}`, label: `${rLat.toFixed(2)}, ${rLng.toFixed(2)}` };
+  return normalizePlaceGeoSite(session);
 }
 
 function startedMsOf(session: ChargeInterruptionSession): number {
@@ -170,87 +166,14 @@ function durationSOf(session: ChargeInterruptionSession): number | null {
   return mins != null && mins > 0 ? mins * 60 : null;
 }
 
-/* ── Regularized incomplete beta function (for posterior credible intervals) ──
- * Numerical-Recipes-style continued-fraction implementation. Used only to
- * turn (alpha, beta) into a 95% credible interval; no external stats
- * dependency is available to this pure lib. */
-
-function lnGamma(x: number): number {
-  const g = 7;
-  const c = [
-    0.99999999999980993, 676.5203681218851, -1259.1392167224028,
-    771.32342877765313, -176.61502916214059, 12.507343278686905,
-    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7,
-  ];
-  if (x < 0.5) {
-    return Math.log(Math.PI / Math.sin(Math.PI * x)) - lnGamma(1 - x);
-  }
-  const xm1 = x - 1;
-  let a = c[0]!;
-  const t = xm1 + g + 0.5;
-  for (let i = 1; i < g + 2; i++) {
-    a += c[i]! / (xm1 + i);
-  }
-  return 0.5 * Math.log(2 * Math.PI) + (xm1 + 0.5) * Math.log(t) - t + Math.log(a);
-}
-
-function betacf(x: number, a: number, b: number): number {
-  const MAXIT = 200;
-  const EPS = 3e-7;
-  const FPMIN = 1e-30;
-  const qab = a + b;
-  const qap = a + 1;
-  const qam = a - 1;
-  let c = 1;
-  let d = 1 - (qab * x) / qap;
-  if (Math.abs(d) < FPMIN) d = FPMIN;
-  d = 1 / d;
-  let h = d;
-  for (let m = 1; m <= MAXIT; m++) {
-    const m2 = 2 * m;
-    let aa = (m * (b - m) * x) / ((qam + m2) * (a + m2));
-    d = 1 + aa * d;
-    if (Math.abs(d) < FPMIN) d = FPMIN;
-    c = 1 + aa / c;
-    if (Math.abs(c) < FPMIN) c = FPMIN;
-    d = 1 / d;
-    h *= d * c;
-    aa = (-(a + m) * (qab + m) * x) / ((a + m2) * (qap + m2));
-    d = 1 + aa * d;
-    if (Math.abs(d) < FPMIN) d = FPMIN;
-    c = 1 + aa / c;
-    if (Math.abs(c) < FPMIN) c = FPMIN;
-    d = 1 / d;
-    const del = d * c;
-    h *= del;
-    if (Math.abs(del - 1) < EPS) break;
-  }
-  return h;
-}
-
 /** Regularized incomplete beta I_x(a, b), the Beta(a,b) CDF at x. */
 export function regularizedIncompleteBeta(x: number, a: number, b: number): number {
-  if (x <= 0) return 0;
-  if (x >= 1) return 1;
-  const bt = Math.exp(
-    lnGamma(a + b) - lnGamma(a) - lnGamma(b) + a * Math.log(x) + b * Math.log(1 - x),
-  );
-  if (x < (a + 1) / (a + b + 2)) {
-    return (bt * betacf(x, a, b)) / a;
-  }
-  return 1 - (bt * betacf(1 - x, b, a)) / b;
+  return sharedRegularizedIncompleteBeta(x, a, b);
 }
 
 /** Inverse Beta CDF via bisection — accurate to ~1e-6, plenty for a UI bound. */
 export function betaQuantile(p: number, a: number, b: number): number {
-  let lo = 0;
-  let hi = 1;
-  for (let i = 0; i < 60; i++) {
-    const mid = (lo + hi) / 2;
-    if (regularizedIncompleteBeta(mid, a, b) < p) lo = mid;
-    else hi = mid;
-  }
-  return (lo + hi) / 2;
+  return sharedBetaQuantile(p, a, b);
 }
 
 /** Jeffreys prior — standard non-informative prior for a binomial rate. */

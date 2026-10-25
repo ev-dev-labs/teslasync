@@ -12,8 +12,12 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   preserved the alert place-ID validation message. TypeScript, focused
   schemas (82/82), ESLint, and split-catalog check pass. Full replica is
   deferred to the combined validation phase requested for this operation.
-- Next: merge `origin/feat/shared-patterns`, regenerate verified i18n
-  checkpoints, typecheck, commit and push; then merge `origin/feat/chart-palette`.
+- Shared merge: `origin/feat/shared-patterns` at `c2d4ae5cb2` merged without
+  conflicts. Combined/catalog checkpoint and split generators ran against
+  the merged LF sources; all seven frozen suites pass (7,728/7,728).
+  `npx tsc --noEmit` exits 0. Shared modules are retained.
+- Next: commit/push the shared merge, then merge `origin/feat/chart-palette`,
+  regenerate and verify again before combined repairs.
 - Combined failure groups to investigate after merging: branch-only
   vehicle-hero-readings/route-layout regressions (~53 reported; attribution
   must be re-established rather than trusting the branch handoff), remaining

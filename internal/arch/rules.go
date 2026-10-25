@@ -313,6 +313,7 @@ var AllowedPlatformSubpackages = []string{
 	"database",
 	"httputil",
 	"telemetry",
+	"validation",
 }
 
 // AdapterForbiddenImports lists internal/* package prefixes that

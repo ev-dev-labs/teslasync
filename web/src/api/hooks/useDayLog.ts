@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useRef } from 'react';
 import { request } from '../client';
 import { queryPolicy } from '../queryPolicy';
+import { deriveDataState } from '../dataState';
+import { scopedPath, scopeKey } from '../scope';
 import type { DayLogLayer, DayLogResponse } from '../types';
 
 /** Page size for the all-pages fetch loop (server max is 2000). */
@@ -42,13 +44,16 @@ async function fetchAllPages(
   layers: DayLogLayer[],
   signal: AbortSignal | undefined,
 ): Promise<DayLogResponse> {
-  const base = new URLSearchParams({
-    vehicle_id: String(vehicleId),
-    date,
+  const scopePath = scopedPath('/day-log', {
+    vehicleId,
     timezone,
+    filters: {
+    date,
     limit: String(DAY_LOG_PAGE_LIMIT),
-  });
-  if (layers.length > 0) base.set('layers', layers.join(','));
+      ...(layers.length > 0 ? { layers: [...layers].sort().join(',') } : {}),
+    },
+  }, { includePresentation: true });
+  const base = new URLSearchParams(scopePath.split('?')[1] ?? '');
 
   // Retrieve every page: the day is complete only when the loaded
   // count reaches total_events. Guarded against a non-advancing
@@ -110,7 +115,11 @@ export function useDayLog({ vehicleId, date, timezone, layers = [] }: UseDayLogP
   const id = typeof vehicleId === 'number' && Number.isInteger(vehicleId) && vehicleId > 0 ? vehicleId : null;
   const enabled = id != null && date !== '' && timezone !== '';
   const queryKey = dayLogKeys.day(id ?? 0, date, timezone, layers);
-  const scope = JSON.stringify(queryKey);
+  const scope = JSON.stringify(scopeKey({
+    vehicleId: id,
+    timezone,
+    filters: { date, layers: [...layers].sort().join(',') },
+  }));
   const partial = useRef<{ scope: string; data: DayLogResponse } | null>(null);
 
   const query = useQuery({
@@ -131,7 +140,10 @@ export function useDayLog({ vehicleId, date, timezone, layers = [] }: UseDayLogP
     enabled,
     ...queryPolicy('operational'),
   });
-  const pagingError = query.error instanceof DayLogPagingError ? query.error : null;
+  const state = deriveDataState(query);
+  const pagingError = state.fatalError instanceof DayLogPagingError
+    ? state.fatalError as DayLogPagingError
+    : null;
   return {
     ...query,
     data: query.data ?? pagingError?.partialData

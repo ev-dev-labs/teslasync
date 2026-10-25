@@ -1,3 +1,5 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
+import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 // `TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks` (the
 // Vitest sibling to the Go test of the same name) proves the
 // React AI-OFF contract. It mounts
@@ -43,8 +45,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
-import type { AppSettings } from '@/api/types'
 import type { AutomationFullInput } from '@/api/hooks/useAutomations'
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -54,51 +58,6 @@ import { useSettings } from '@/hooks/useSettings'
 import { AIGeofenceAwareAutomationSuggestions } from '@/components/ai/AIGeofenceAwareAutomationSuggestions'
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
-
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-}
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
-}
-
-function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder()
-  let i = 0
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (i < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[i]))
-        i++
-      } else {
-        controller.close()
-      }
-    },
-  })
-}
-
-function sseFrame(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
-}
 
 beforeEach(() => {
   mockUseSettings.mockReset()
@@ -114,7 +73,7 @@ afterEach(() => {
 describe('TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks (geofence-aware-automation-suggestions AI-off contract)', () => {
   it('TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks: renders nothing when ai_mode=off even with the geofence-aware-automation-suggestions toggle on', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'off',
         ai_features: { 'geofence-aware-automation-suggestions': true },
       }),
@@ -135,7 +94,7 @@ describe('TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks (geofence-
 
   it('TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks: renders nothing when ai_mode is non-off but the geofence-aware-automation-suggestions toggle is false', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'geofence-aware-automation-suggestions': false },
       }),
@@ -155,7 +114,7 @@ describe('TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks (geofence-
 
   it('TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks: renders the section when ai_mode=cloud AND geofence-aware-automation-suggestions toggle is on (positive control)', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'geofence-aware-automation-suggestions': true },
       }),
@@ -181,7 +140,7 @@ describe('TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks (geofence-
 describe('TestGeofenceAwareAutomationSuggestionsAIOnWiredCallsRoute (geofence-aware-automation-suggestions on-mode SPA wiring)', () => {
   it('TestGeofenceAwareAutomationSuggestionsAIOnWiredCallsRoute: clicking Suggest POSTs once to /api/v1/ai/geofences/automations/draft with the vehicle_id+prompt and renders the first delta', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'geofence-aware-automation-suggestions': true },
       }),
@@ -254,7 +213,7 @@ describe('TestGeofenceAwareAutomationSuggestionsAIOnWiredCallsRoute (geofence-aw
 
   it('TestGeofenceAwareAutomationSuggestionsAIOnWiredCallsRoute: suggest button is disabled when vehicleId is non-positive (computed disabled, never literal)', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'geofence-aware-automation-suggestions': true },
       }),
@@ -274,7 +233,7 @@ describe('TestGeofenceAwareAutomationSuggestionsAIOnWiredCallsRoute (geofence-aw
 
   it('TestGeofenceAwareAutomationSuggestionsAIOnWiredCallsRoute: suggest button is disabled when prompt is empty (computed disabled, never literal)', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'geofence-aware-automation-suggestions': true },
       }),
@@ -291,7 +250,7 @@ describe('TestGeofenceAwareAutomationSuggestionsAIOnWiredCallsRoute (geofence-aw
 
   it('TestGeofenceAwareAutomationSuggestionsAIOnWiredCallsRoute: a second click while streaming is a no-op (double-submit guard)', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'geofence-aware-automation-suggestions': true },
       }),
@@ -337,7 +296,7 @@ describe('TestGeofenceAwareAutomationSuggestionsAIOnWiredCallsRoute (geofence-aw
 
   it('TestGeofenceAwareAutomationSuggestionsAIOnWiredCallsRoute: tool_result draft envelope renders the proposal card and Apply calls onApplyDraft with the typed envelope', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'geofence-aware-automation-suggestions': true },
       }),
@@ -446,7 +405,7 @@ describe('TestGeofenceAwareAutomationSuggestionsAIOnWiredCallsRoute (geofence-aw
 
   it('TestGeofenceAwareAutomationSuggestionsAIOnWiredCallsRoute: invalid envelope shows the rejected label, disables Apply, and never invokes onApplyDraft', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'geofence-aware-automation-suggestions': true },
       }),

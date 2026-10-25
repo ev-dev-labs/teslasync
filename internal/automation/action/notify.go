@@ -9,6 +9,7 @@ import (
 	"time"
 
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -145,7 +146,7 @@ func (e *NotifyExecutor) ExecuteTyped(ctx context.Context, vehicleID *int64, pay
 		Channel: fmt.Sprintf("id:%d", action.ChannelID),
 		Message: action.Template,
 	}
-	if action.ChannelID <= 0 {
+	if validation.ValidatePositiveID(action.ChannelID) != nil {
 		return nil, fmt.Errorf("channel_id is required")
 	}
 	if action.Template == "" {

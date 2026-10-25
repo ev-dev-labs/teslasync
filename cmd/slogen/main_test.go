@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/slo/catalogparser"
 )
 
 func TestValidateRealCatalog(t *testing.T) {
@@ -153,7 +155,7 @@ func TestValidateCatalog_BadFastBurnSeverity(t *testing.T) {
 
 func TestStripComment_PreservesHashInsideQuotes(t *testing.T) {
 	t.Parallel()
-	got := stripComment(`good_events: "rate(x{tag=\"#foo\"}[5m])" # tail`)
+	got := catalogparser.StripComment(`good_events: "rate(x{tag=\"#foo\"}[5m])" # tail`)
 	want := `good_events: "rate(x{tag=\"#foo\"}[5m])"`
 	if got != want {
 		t.Fatalf("got %q, want %q", got, want)

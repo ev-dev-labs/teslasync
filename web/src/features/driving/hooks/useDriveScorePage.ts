@@ -12,6 +12,7 @@ import { getEnergyIntensityWhPerKm } from '@/lib/drivesAggregation';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
+import { convertEfficiencyFromSI } from '@/lib/unitConversion';
 import {
   CATEGORY_COLORS, gradeFromScore, scoreDrive,
   type HistoryRow, type ScoredDrive,
@@ -63,7 +64,7 @@ export function useDriveScorePage() {
   const { unitPrefs, formatDistance, formatSpeed, formatPower } = useUnits();
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
   const efficiencyDisplay = (whPerKm: number) =>
-    unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
+    convertEfficiencyFromSI(whPerKm, unitPrefs.distance);
   const formatEfficiency = (whPerKm: number) =>
     `${fmtInt(efficiencyDisplay(whPerKm))} ${efficiencyUnit}`;
 

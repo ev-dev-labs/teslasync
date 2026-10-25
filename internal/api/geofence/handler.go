@@ -13,6 +13,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 
 	"github.com/rs/zerolog/log"
 )
@@ -95,8 +96,8 @@ func decodeGeofenceWriteBody(body io.Reader) (*systemmodel.Geofence, *geofenceCr
 	coalesceGeofenceRequestSpellings(&req)
 
 	g := &systemmodel.Geofence{
-		Name:       strings.TrimSpace(req.Name),
-		PolygonWKT: strings.TrimSpace(req.PolygonWKT),
+		Name:       validation.TrimSpace(req.Name),
+		PolygonWKT: validation.TrimSpace(req.PolygonWKT),
 		Category:   req.Category,
 	}
 	if req.Enabled != nil {
@@ -129,7 +130,7 @@ func validateGeofence(g *systemmodel.Geofence) error {
 	if g.Radius() > 100000 {
 		return fmt.Errorf("radius must be 100km or less")
 	}
-	if len(g.Name) > 200 {
+	if validation.RuneCount(g.Name) > validation.MaxNameRunes {
 		return fmt.Errorf("name must be 200 characters or less")
 	}
 	return nil
@@ -215,7 +216,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		geofences []*systemmodel.Geofence
 		err       error
 	)
-	if strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("include_archived")), "true") {
+	if strings.EqualFold(validation.TrimSpace(r.URL.Query().Get("include_archived")), "true") {
 		geofences, err = h.geofenceRepo.GetAllIncludingArchived(r.Context())
 	} else {
 		geofences, err = h.geofenceRepo.GetAll(r.Context())

@@ -1,3 +1,5 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
+import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 // Suggest new geofences.
 //
 // `TestSuggestGeofencesAIOffManualGeofenceWorks` (the Vitest sibling
@@ -44,7 +46,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
-import type { AppSettings } from '@/api/types'
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -54,51 +58,6 @@ import { useSettings } from '@/hooks/useSettings'
 import { AISuggestNewGeofences } from '@/components/ai/AISuggestNewGeofences'
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
-
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-}
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
-}
-
-function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder()
-  let i = 0
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (i < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[i]))
-        i++
-      } else {
-        controller.close()
-      }
-    },
-  })
-}
-
-function sseFrame(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
-}
 
 beforeEach(() => {
   mockUseSettings.mockReset()
@@ -114,7 +73,7 @@ afterEach(() => {
 describe('TestSuggestGeofencesAIOffManualGeofenceWorks (suggest-new-geofences AI-off contract)', () => {
   it('TestSuggestGeofencesAIOffManualGeofenceWorks: renders nothing when ai_mode=off even with the suggest-new-geofences toggle on', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'off',
         ai_features: { 'suggest-new-geofences': true },
       }),
@@ -136,7 +95,7 @@ describe('TestSuggestGeofencesAIOffManualGeofenceWorks (suggest-new-geofences AI
 
   it('TestSuggestGeofencesAIOffManualGeofenceWorks: renders nothing when ai_mode is non-off but the suggest-new-geofences toggle is false', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'suggest-new-geofences': false },
       }),
@@ -157,7 +116,7 @@ describe('TestSuggestGeofencesAIOffManualGeofenceWorks (suggest-new-geofences AI
 
   it('TestSuggestGeofencesAIOffManualGeofenceWorks: renders the section when ai_mode=cloud AND suggest-new-geofences toggle is on (positive control)', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'suggest-new-geofences': true },
       }),
@@ -179,7 +138,7 @@ describe('TestSuggestGeofencesAIOffManualGeofenceWorks (suggest-new-geofences AI
 describe('TestSuggestNewGeofencesAIOnWiredCallsRoute (suggest-new-geofences on-mode SPA wiring)', () => {
   it('TestSuggestNewGeofencesAIOnWiredCallsRoute: clicking Suggest POSTs once to /api/v1/ai/geofences/draft with the location_id and renders the first delta', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'suggest-new-geofences': true },
       }),
@@ -239,7 +198,7 @@ describe('TestSuggestNewGeofencesAIOnWiredCallsRoute (suggest-new-geofences on-m
 
   it('TestSuggestNewGeofencesAIOnWiredCallsRoute: suggest button is disabled when locationId is non-positive (computed disabled, never literal)', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'suggest-new-geofences': true },
       }),
@@ -254,7 +213,7 @@ describe('TestSuggestNewGeofencesAIOnWiredCallsRoute (suggest-new-geofences on-m
 
   it('TestSuggestNewGeofencesAIOnWiredCallsRoute: a second click while streaming is a no-op (double-submit guard)', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'suggest-new-geofences': true },
       }),
@@ -295,7 +254,7 @@ describe('TestSuggestNewGeofencesAIOnWiredCallsRoute (suggest-new-geofences on-m
 
   it('TestSuggestNewGeofencesAIOnWiredCallsRoute: tool_result draft envelope renders the proposal card and Apply calls onApplyDraft with the typed envelope', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'suggest-new-geofences': true },
       }),
@@ -397,7 +356,7 @@ describe('TestSuggestNewGeofencesAIOnWiredCallsRoute (suggest-new-geofences on-m
 
   it('TestSuggestNewGeofencesAIOnWiredCallsRoute: invalid envelope shows the rejected label, disables Apply, and never invokes onApplyDraft', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'suggest-new-geofences': true },
       }),

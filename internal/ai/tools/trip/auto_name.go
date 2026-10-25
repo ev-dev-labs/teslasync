@@ -53,12 +53,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"strings"
-	"unicode"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 // TripSource is the narrow trip-header interface the auto-trip-naming
@@ -199,20 +198,17 @@ func validateTripNameShape(proposed string) error {
 	if proposed == "" {
 		return errors.New("trip name must not be empty")
 	}
-	if strings.TrimSpace(proposed) == "" {
+	if validation.TrimSpace(proposed) == "" {
 		return errors.New("trip name must contain at least one non-whitespace character")
 	}
-	if proposed[0] == ' ' || proposed[0] == '\t' || proposed[len(proposed)-1] == ' ' || proposed[len(proposed)-1] == '\t' {
+	if validation.HasLeadingOrTrailingWhitespace(proposed) {
 		return errors.New("trip name must not have leading or trailing whitespace")
 	}
-	runes := []rune(proposed)
-	if len(runes) > autoTripNamingMaxNameLen {
+	if validation.RuneCount(proposed) > autoTripNamingMaxNameLen {
 		return errors.New("trip name must be at most 200 characters")
 	}
-	for _, r := range runes {
-		if unicode.IsControl(r) {
-			return errors.New("trip name must not contain control characters")
-		}
+	if validation.HasControlCharacters(proposed) {
+		return errors.New("trip name must not contain control characters")
 	}
 	return nil
 }

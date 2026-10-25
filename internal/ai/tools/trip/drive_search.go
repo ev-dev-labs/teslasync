@@ -68,6 +68,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 // nlDriveSearchSourceRouteSegment / nlDriveSearchSourceLocationSummary
@@ -406,7 +407,7 @@ func (t *hydrateDriveReplay) Validate(raw json.RawMessage) (any, error) {
 		return nil, fmt.Errorf("hydrate_drive_replay: source_type %q not in allowed set %s",
 			in.SourceType, nlDriveSearchAllowedSourceTypesHint)
 	}
-	if strings.TrimSpace(in.SourceID) == "" {
+	if validation.TrimSpace(in.SourceID) == "" {
 		return nil, errors.New("hydrate_drive_replay: source_id must be non-empty after trim")
 	}
 	return in, nil

@@ -6,7 +6,7 @@ export type IconSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 export interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'ref'> {
   /** Canonical Lucide glyph; route-local named imports may follow `@/lib/icons` mappings. */
-  icon: LucideIcon;
+  icon?: LucideIcon | null;
   /** Tailwind size token. Default `md` = h-4 w-4. */
   size?: IconSize;
   /** Extra Tailwind classes. */

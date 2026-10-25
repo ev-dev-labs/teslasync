@@ -8,12 +8,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 
 	"github.com/rs/zerolog/log"
 )
@@ -115,7 +116,7 @@ func (h *AlertHandler) AcknowledgeAlert(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	actor := actorFromRequest(r, h.forwardAuthHeader)
+	actor := httputil.ActorIdentity(r, h.forwardAuthHeader)
 
 	updated, _, err := h.notifRepo.AcknowledgeLog(r.Context(), id, actor, note)
 	if err != nil {
@@ -158,7 +159,7 @@ func (h *AlertHandler) CommentAlert(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	actor := actorFromRequest(r, h.forwardAuthHeader)
+	actor := httputil.ActorIdentity(r, h.forwardAuthHeader)
 
 	event, err := h.notifRepo.CommentOnLog(r.Context(), id, actor, note)
 	if err != nil {
@@ -200,7 +201,7 @@ func (h *AlertHandler) ReopenAlert(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid alert ID")
 		return
 	}
-	actor := actorFromRequest(r, h.forwardAuthHeader)
+	actor := httputil.ActorIdentity(r, h.forwardAuthHeader)
 	updated, _, err := h.notifRepo.ReopenLog(r.Context(), id, actor)
 	if err != nil {
 		log.Error().Err(err).Int64("alert_id", id).Msg("failed to reopen alert")
@@ -310,7 +311,7 @@ func normalizeNote(note *string, required bool) (string, error) {
 		}
 		return "", nil
 	}
-	trimmed := strings.TrimSpace(*note)
+	trimmed := validation.TrimSpace(*note)
 	if trimmed == "" {
 		if required {
 			return "", errors.New("note is required")

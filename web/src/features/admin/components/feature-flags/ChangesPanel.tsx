@@ -21,7 +21,7 @@ import {
 } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { EmptyState, TableSkeleton } from '@/components/feedback';
-import type { CsvCellValue } from '@/lib/csvExport';
+import { normalizeCsvCellValue } from '@/lib/csvValidation';
 import type {
   FeatureFlagChange,
   FeatureFlagOperation,
@@ -59,11 +59,6 @@ function fullValue(value: unknown): string {
 function compact(value: unknown): string {
   const valueText = fullValue(value);
   return valueText.length > 60 ? `${valueText.slice(0, 57)}…` : valueText;
-}
-
-function rawExportValue(value: unknown): CsvCellValue {
-  return value == null || typeof value === 'string' || typeof value === 'number'
-    || typeof value === 'boolean' || typeof value === 'object' ? value : '—';
 }
 
 export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
@@ -117,7 +112,7 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
       {
         key: 'old_value',
         header: t('admin.flags.audit.cols.oldValue', 'Old'),
-        exportValue: (row) => rawExportValue(row.old_value),
+        exportValue: (row) => normalizeCsvCellValue(row.old_value),
         render: (row) => (
           <Text as="span" mono size="xs" color="muted">
             {compact(row.old_value)}
@@ -127,7 +122,7 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
       {
         key: 'new_value',
         header: t('admin.flags.audit.cols.newValue', 'New'),
-        exportValue: (row) => rawExportValue(row.new_value),
+        exportValue: (row) => normalizeCsvCellValue(row.new_value),
         render: (row) => (
           <Text as="span" mono size="xs" color="muted">
             {compact(row.new_value)}

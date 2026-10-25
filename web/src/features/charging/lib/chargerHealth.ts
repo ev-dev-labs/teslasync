@@ -31,6 +31,7 @@
  */
 
 import type { ChargingSession } from '@/types/charging';
+import { normalizePlaceGeoSite } from './siteIdentity';
 
 export type SiteStatus = 'healthy' | 'degrading' | 'degraded' | 'unknown';
 
@@ -126,21 +127,7 @@ function num(v: number | null | undefined): number | null {
  * history to judge.
  */
 export function siteKeyOf(session: ChargingSession): { key: string; label: string } | null {
-  const place = session.start_place?.trim();
-  if (place != null && place.length > 0) {
-    return { key: `place:${place.toLowerCase()}`, label: place };
-  }
-  const lat = num(session.start_lat);
-  const lng = num(session.start_lng);
-  if (lat == null || lng == null) return null;
-  // ~1 km cells: enough to merge parking-bay GPS scatter, tight enough to keep
-  // neighbouring sites apart.
-  const rLat = Math.round(lat * 100) / 100;
-  const rLng = Math.round(lng * 100) / 100;
-  return {
-    key: `geo:${rLat.toFixed(2)},${rLng.toFixed(2)}`,
-    label: `${rLat.toFixed(2)}, ${rLng.toFixed(2)}`,
-  };
+  return normalizePlaceGeoSite(session);
 }
 
 /**

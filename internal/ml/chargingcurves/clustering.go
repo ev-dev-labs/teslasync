@@ -58,6 +58,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ml/stats"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 )
 
@@ -378,17 +379,15 @@ func learnedCluster(clusterID string, sessions []*chargingmodel.ChargingSession)
 	deltaSocs := pluckFloat(sessions, func(s *chargingmodel.ChargingSession) *float64 { return s.DeltaSocPct })
 	ramps := rampShapes(sessions)
 
-	peakMean, peakStddev := meanStddev(peakPowers)
-	avgMean, avgStddev := meanStddev(avgPowers)
-	energyMean, energyStddev := meanStddev(energies)
-	durationMean, _ := meanStddev(durations)
-	deltaSocMean, _ := meanStddev(deltaSocs)
-	rampMean, _ := meanStddev(ramps)
+	peakMean, peakStddev := stats.MeanStddev(peakPowers)
+	avgMean, avgStddev := stats.MeanStddev(avgPowers)
+	energyMean, energyStddev := stats.MeanStddev(energies)
+	durationMean, _ := stats.MeanStddev(durations)
+	deltaSocMean, _ := stats.MeanStddev(deltaSocs)
+	rampMean, _ := stats.MeanStddev(ramps)
 
-	sortedPeaks := append([]float64(nil), peakPowers...)
-	sort.Float64s(sortedPeaks)
-	p5 := percentile(sortedPeaks, 0.05)
-	p95 := percentile(sortedPeaks, 0.95)
+	p5 := stats.Percentile(peakPowers, 0.05)
+	p95 := stats.Percentile(peakPowers, 0.95)
 
 	return LearnedCluster{
 		ClusterID:           clusterID,
@@ -496,55 +495,6 @@ func exampleSessionIDs(sessions []*chargingmodel.ChargingSession) []int64 {
 		out = append(out, sessions[i].ID)
 	}
 	return out
-}
-
-// meanStddev computes the population mean and stddev of values.
-// Returns (0,0) for an empty slice. Population (1/n) form rather
-// than sample (1/(n-1)) for stable boundary behaviour at the
-// MinSessions=3 floor.
-func meanStddev(values []float64) (float64, float64) {
-	n := len(values)
-	if n == 0 {
-		return 0, 0
-	}
-	var sum float64
-	for _, v := range values {
-		sum += v
-	}
-	mean := sum / float64(n)
-	var sq float64
-	for _, v := range values {
-		d := v - mean
-		sq += d * d
-	}
-	return mean, math.Sqrt(sq / float64(n))
-}
-
-// percentile returns the q-th percentile of an ALREADY-SORTED slice
-// using linear interpolation (the "C=1" type-7 definition Numpy
-// defaults to). q in [0,1]. Empty slice returns 0.
-func percentile(sortedValues []float64, q float64) float64 {
-	n := len(sortedValues)
-	if n == 0 {
-		return 0
-	}
-	if n == 1 {
-		return sortedValues[0]
-	}
-	if q <= 0 {
-		return sortedValues[0]
-	}
-	if q >= 1 {
-		return sortedValues[n-1]
-	}
-	pos := q * float64(n-1)
-	lo := int(math.Floor(pos))
-	hi := int(math.Ceil(pos))
-	if lo == hi {
-		return sortedValues[lo]
-	}
-	frac := pos - float64(lo)
-	return sortedValues[lo]*(1-frac) + sortedValues[hi]*frac
 }
 
 // CurrentEffectiveClusters returns the per-cluster envelope that the

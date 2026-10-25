@@ -12,6 +12,7 @@ import (
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -414,7 +415,7 @@ func (e *CommandExecutor) currentVehicleState(ctx context.Context, v *vehiclemod
 	if err != nil {
 		return "", err
 	}
-	return strings.ToLower(strings.TrimSpace(state)), nil
+	return strings.ToLower(validation.TrimSpace(state)), nil
 }
 
 // logCommand writes a command_logs row for audit. Errors are logged but not propagated.

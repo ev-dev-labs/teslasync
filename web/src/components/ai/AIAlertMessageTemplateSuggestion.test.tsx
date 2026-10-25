@@ -1,3 +1,5 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
+import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 // Co-located unit + wiring test for AIAlertMessageTemplateSuggestion.
 //
 // Covers:
@@ -13,7 +15,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
-import type { AppSettings } from '@/api/types'
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -62,34 +66,8 @@ const SUGGEST_NAME = /Suggest template/i
 const TITLE = /Suggest a message template/i
 const TOOL_NAME = 'validate_alert_message_template'
 
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-}
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
-}
-
 function enabled(overrides: Partial<AppSettings> = {}) {
-  return settingsPayload({
+  return appSettingsPayload({
     ai_mode: 'cloud',
     ai_features: { [FEATURE_ID]: true },
     ...overrides,
@@ -101,25 +79,6 @@ const readyDraft = {
   signal_name: 'BrakePedal',
   op: '=',
   severity: 'info',
-}
-
-function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder()
-  let i = 0
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (i < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[i]))
-        i++
-      } else {
-        controller.close()
-      }
-    },
-  })
-}
-
-function sseFrame(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
 }
 
 function pendingStreamResponse(): Response {
@@ -201,7 +160,7 @@ describe('AIAlertMessageTemplateSuggestion — exported type contracts', () => {
 describe('AIAlertMessageTemplateSuggestion — AI-off render gate', () => {
   it('renders nothing when ai_mode=off even with the feature toggle on', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({ ai_mode: 'off', ai_features: { [FEATURE_ID]: true } }),
+      appSettingsPayload({ ai_mode: 'off', ai_features: { [FEATURE_ID]: true } }),
     )
     const { container } = render(
       <AIAlertMessageTemplateSuggestion draft={readyDraft} onApplyTemplate={vi.fn()} />,
@@ -212,7 +171,7 @@ describe('AIAlertMessageTemplateSuggestion — AI-off render gate', () => {
 
   it('renders nothing when the per-feature toggle is off', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({ ai_mode: 'cloud', ai_features: { [FEATURE_ID]: false } }),
+      appSettingsPayload({ ai_mode: 'cloud', ai_features: { [FEATURE_ID]: false } }),
     )
     const { container } = render(
       <AIAlertMessageTemplateSuggestion draft={readyDraft} onApplyTemplate={vi.fn()} />,

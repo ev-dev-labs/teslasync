@@ -46,7 +46,7 @@ func (h *DataRepairHandler) ScanCases(w http.ResponseWriter, r *http.Request) {
 	result, err := h.scanner.Scan(r.Context(), ScanOptions{
 		Trigger:     systemmodel.RepairScanTriggerManual,
 		VehicleID:   req.VehicleID,
-		InitiatedBy: actorFromRequest(r, h.forwardAuthHeader),
+		InitiatedBy: normalizeHTTPActor(r, h.forwardAuthHeader),
 	})
 	if errors.Is(err, ErrScanAlreadyRunning) {
 		httpx.WriteError(w, http.StatusConflict, "a data-repair scan is already running")

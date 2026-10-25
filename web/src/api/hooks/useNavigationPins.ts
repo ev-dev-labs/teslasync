@@ -5,6 +5,8 @@ import type { PinnedItem } from '../types'
 import { pinnedKeys, usePinned, useTogglePin } from './usePinned'
 import { useMutationToast } from './_toastHelpers'
 import { useRefreshInterval } from '@/hooks/useRefreshPolicy'
+import { queryPolicy } from '../queryPolicy'
+import { useDataState } from '@/hooks/useDataState'
 
 const INITIALIZED_PIN = '@navigation-initialized'
 const PENDING_PINS_KEY = 'teslasync-navigation-pins-pending'
@@ -40,10 +42,12 @@ export function navigationPaths(rows: readonly PinnedItem[]): string[] {
 
 export function useNavigationPins(initialPaths: readonly string[], onServerPaths: (paths: string[]) => void) {
   const refreshInterval = useRefreshInterval(30_000)
+  const refreshPolicy = queryPolicy('operational', { refetchInterval: refreshInterval })
   const query = usePinned('navigation', undefined, {
-    refetchInterval: refreshInterval,
+    refetchInterval: refreshPolicy.refetchInterval,
     refetchOnWindowFocus: 'always',
   })
+  const queryState = useDataState(query, { provenance: 'cached' })
   const mutation = useTogglePin('navigation', { notifyError: false })
   const qc = useQueryClient()
   const { error } = useMutationToast()
@@ -136,8 +140,8 @@ export function useNavigationPins(initialPaths: readonly string[], onServerPaths
       if (!ready) {
         pending.current.set(itemId, pin)
         writePendingPins(pending.current)
-        if (query.isError) {
-          error(query.error, 'toast.pin.navigation.pending', 'Saved on this device; pin will sync when connected')
+        if (queryState.fatalError != null) {
+          error(queryState.fatalError, 'toast.pin.navigation.pending', 'Saved on this device; pin will sync when connected')
         }
         void qc.invalidateQueries({ queryKey: pinnedKeys.type('navigation') })
         return Promise.resolve()
@@ -164,7 +168,7 @@ export function useNavigationPins(initialPaths: readonly string[], onServerPaths
       inFlight.current = operation
       return operation
     },
-    [ready, mutation.mutateAsync, qc, error, query.isError, query.error],
+    [ready, mutation.mutateAsync, qc, error, queryState.fatalError],
   )
   const restore = useCallback(() => {
     const cached = qc.getQueryData<PinnedItem[]>(pinnedKeys.list('navigation'))
@@ -174,5 +178,5 @@ export function useNavigationPins(initialPaths: readonly string[], onServerPaths
     void qc.invalidateQueries({ queryKey: pinnedKeys.type('navigation') })
   }, [qc, onServerPaths])
 
-  return { ready, syncUnavailable: query.isError, toggle, restore }
+  return { ready, syncUnavailable: queryState.fatalError != null, toggle, restore }
 }

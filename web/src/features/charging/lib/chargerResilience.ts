@@ -33,6 +33,7 @@
  */
 
 import type { ChargingSession } from '@/types/charging';
+import { normalizePlaceGeoSite } from './siteIdentity';
 
 export type SiteGroupedBy = 'place' | 'geo' | 'charger_type';
 export type EnergyDenominator = 'available' | 'missing' | 'nonpositive';
@@ -108,19 +109,11 @@ function num(v: number | null | undefined): number | null {
 export function resolveResilienceSite(
   session: ChargingSession,
 ): { key: string; label: string | null; groupedBy: SiteGroupedBy } {
-  const place = session.start_place?.trim();
-  if (place != null && place.length > 0) {
-    return { key: `place:${place.toLowerCase()}`, label: place, groupedBy: 'place' };
-  }
-  const lat = num(session.start_lat);
-  const lng = num(session.start_lng);
-  if (lat != null && lng != null) {
-    const rLat = Math.round(lat * 100) / 100;
-    const rLng = Math.round(lng * 100) / 100;
+  const placeGeo = normalizePlaceGeoSite(session);
+  if (placeGeo != null) {
     return {
-      key: `geo:${rLat.toFixed(2)},${rLng.toFixed(2)}`,
-      label: `${rLat.toFixed(2)}, ${rLng.toFixed(2)}`,
-      groupedBy: 'geo',
+      ...placeGeo,
+      groupedBy: placeGeo.key.startsWith('place:') ? 'place' : 'geo',
     };
   }
   const type = session.charger_type?.trim();

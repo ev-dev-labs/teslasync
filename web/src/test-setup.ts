@@ -2,34 +2,12 @@ import '@testing-library/jest-dom'
 import { beforeEach, vi } from 'vitest'
 import * as resilience from '@/lib/resilience'
 import * as numberFormat from '@/lib/numberFormat'
+import {
+  createReactI18nextMock,
+  installTestPolyfills,
+} from '@/test/setup'
 
-vi.mock('react-i18next', () => {
-  const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
-    if (!vars) return str
-    let s = str
-    for (const [k, v] of Object.entries(vars)) {
-      s = s.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v))
-    }
-    return s
-  }
-  const t = (key: string, second?: unknown, third?: unknown): string => {
-    const options = typeof second === 'string' ? third : second
-    const bag = options && typeof options === 'object' ? options as Record<string, unknown> : {}
-    const fallback = typeof second === 'string' ? second
-      : typeof bag.defaultValue === 'string' ? bag.defaultValue : key
-    const plural = typeof bag.count === 'number'
-      ? bag.count === 1 ? bag.defaultValue_one : bag.defaultValue_other : undefined
-    const values = bag.replace && typeof bag.replace === 'object'
-      ? bag.replace as Record<string, unknown> : bag
-    return interpolate(typeof plural === 'string' ? plural : fallback, values)
-  }
-  return {
-    useTranslation: () => ({ t, i18n: { language: 'en', changeLanguage: vi.fn() } }),
-    Trans: ({ children }: { children?: unknown }) => children,
-    I18nextProvider: ({ children }: { children?: unknown }) => children,
-    initReactI18next: { type: '3rdParty', init: () => undefined },
-  }
-})
+vi.mock('react-i18next', () => createReactI18nextMock({ language: 'en' }))
 
 // Global default mock for useSettings. Many components reach for it
 // transitively via useDateFormat / useUnits / useFormatting; without a
@@ -257,68 +235,4 @@ beforeEach(() => {
   if (navigator.onLine) window.dispatchEvent(new Event('online'))
 })
 
-// Polyfill IntersectionObserver for jsdom (used by framer-motion's useInView)
-class MockIntersectionObserver {
-  readonly root: Element | null = null
-  readonly rootMargin: string = ''
-  readonly thresholds: ReadonlyArray<number> = []
-  constructor(private callback: IntersectionObserverCallback, _options?: IntersectionObserverInit) {}
-  observe(target: Element) {
-    // Immediately trigger with isIntersecting = true, echoing the observed
-    // target back on the entry. The DOM contract guarantees every entry
-    // carries its `target`; without it, consumers that key off
-    // `entry.target` (rather than only `entry.isIntersecting`) would read
-    // `undefined` under test.
-    this.callback(
-      [{ isIntersecting: true, intersectionRatio: 1, target } as IntersectionObserverEntry],
-      this as unknown as IntersectionObserver,
-    )
-  }
-  unobserve() {}
-  disconnect() {}
-  takeRecords(): IntersectionObserverEntry[] { return [] }
-}
-
-if (typeof globalThis.IntersectionObserver === 'undefined') {
-  globalThis.IntersectionObserver = MockIntersectionObserver as any
-}
-
-// Polyfill ResizeObserver for jsdom (used by Recharts ResponsiveContainer,
-// react-grid-layout, and a handful of our own chart wrappers). Individual
-// test files used to install ad-hoc `vi.stubGlobal('ResizeObserver', …)`,
-// but as soon as a non-stubbing test imports a chart/grid component
-// transitively, jsdom throws `ReferenceError: ResizeObserver is not
-// defined`. Installing it globally here matches what we do for
-// IntersectionObserver and EventSource and removes the per-test boilerplate.
-class MockResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-
-if (typeof globalThis.ResizeObserver === 'undefined') {
-  globalThis.ResizeObserver = MockResizeObserver as any
-}
-
-// Mock EventSource for SSE tests (not available in jsdom)
-global.EventSource = class EventSource {
-  static CONNECTING = 0
-  static OPEN = 1
-  static CLOSED = 2
-
-  readyState = 0
-  url: string
-  onopen: ((ev: Event) => void) | null = null
-  onmessage: ((ev: MessageEvent) => void) | null = null
-  onerror: ((ev: Event) => void) | null = null
-
-  constructor(url: string) {
-    this.url = url
-    this.readyState = 1
-  }
-
-  addEventListener() {}
-  removeEventListener() {}
-  dispatchEvent() { return true }
-  close() { this.readyState = 2 }
-} as any
+installTestPolyfills()

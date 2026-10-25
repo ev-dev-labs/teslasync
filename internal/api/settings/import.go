@@ -16,6 +16,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // MaxSettingsImportBodyBytes caps the inbound JSON body. The biggest
@@ -80,7 +81,7 @@ func (h *SettingsImportHandler) Import(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := actorFromRequest(r, h.authHdr)
+	userID := httputil.ActorIdentity(r, h.authHdr)
 	result, err := h.serializer.ImportSettings(r.Context(), userID, req.Bundle, req.DryRun)
 	if err != nil {
 		if errors.Is(err, settingsdb.ErrSettingsBundleUnsupportedVersion) {

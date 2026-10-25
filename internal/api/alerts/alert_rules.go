@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
@@ -17,6 +16,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"go.opentelemetry.io/otel"
 )
@@ -96,11 +96,11 @@ func coalesceVehicleSelection(
 	}
 
 	for _, vid := range vehicleIDs {
-		if vid <= 0 {
+		if validation.ValidateVehicleID(vid) != nil {
 			return false, nil, present, errVehicleSelectionInvalidID
 		}
 	}
-	if legacyVehicleID != nil && *legacyVehicleID <= 0 {
+	if legacyVehicleID != nil && validation.ValidateVehicleID(*legacyVehicleID) != nil {
 		return false, nil, present, errVehicleSelectionInvalidID
 	}
 
@@ -614,7 +614,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	// the actual template the user typed, including `{{...}}`
 	// substitutions against live signals (handled below).
 	if body.MsgTemplate != nil {
-		if tmpl := strings.TrimSpace(*body.MsgTemplate); tmpl != "" {
+		if tmpl := validation.TrimSpace(*body.MsgTemplate); tmpl != "" {
 			message = tmpl
 		}
 	}
@@ -847,7 +847,7 @@ func normalizeMsgTemplate(raw *string) (*string, error) {
 	if raw == nil {
 		return nil, nil
 	}
-	trimmed := strings.TrimSpace(*raw)
+	trimmed := validation.TrimSpace(*raw)
 	if trimmed == "" {
 		return nil, nil
 	}
@@ -895,7 +895,7 @@ func validateAlertRuleEscalation(rule *alertmodel.AlertRule) error {
 	if rule.TriggerMode != "repeat" {
 		return errors.New(`escalation requires trigger_mode "repeat" (once-mode rules latch and never re-evaluate)`)
 	}
-	if *rule.EscalationAfterMin <= 0 {
+	if validation.ValidatePositiveID(int64(*rule.EscalationAfterMin)) != nil {
 		return errors.New("escalation_after_min must be greater than 0 when set")
 	}
 	escalated, err := validateAlertSeverity(*rule.EscalationSeverity)
@@ -935,19 +935,19 @@ func validateAlertRule(rule *alertmodel.AlertRule) error {
 	if rule.Name == "" {
 		return errors.New("name is required")
 	}
-	if len(rule.Name) > 200 {
+	if validation.RuneCount(rule.Name) > validation.MaxNameRunes {
 		return errors.New("name must be 200 characters or less")
 	}
 	if _, err := validateAlertSeverity(rule.Severity); err != nil {
 		return err
 	}
-	if rule.CooldownMin <= 0 {
+	if validation.ValidatePositiveID(int64(rule.CooldownMin)) != nil {
 		return errors.New("cooldown_min must be greater than 0")
 	}
 	if rule.TriggerMode != "once" && rule.TriggerMode != "repeat" {
 		return errors.New(`trigger_mode must be "once" or "repeat"`)
 	}
-	if rule.MaxFiresPerResolution != nil && *rule.MaxFiresPerResolution <= 0 {
+	if rule.MaxFiresPerResolution != nil && validation.ValidatePositiveID(int64(*rule.MaxFiresPerResolution)) != nil {
 		return errors.New("max_fires_per_resolution must be greater than 0 when set")
 	}
 	if err := validateAlertRuleEscalation(rule); err != nil {
@@ -958,7 +958,7 @@ func validateAlertRule(rule *alertmodel.AlertRule) error {
 		if rule.ComponentName != nil || rule.Transition != nil || rule.PlaceID != nil {
 			return errors.New("signal rules cannot specify component_name, transition, or place_id")
 		}
-		if strings.TrimSpace(rule.SignalName) == "" {
+		if validation.TrimSpace(rule.SignalName) == "" {
 			return errors.New("signal_name is required")
 		}
 		return validateAlertRuleOperand(rule)
@@ -985,7 +985,7 @@ func validateAlertRule(rule *alertmodel.AlertRule) error {
 		}
 		return nil
 	case alertmodel.AlertRuleKindPlace:
-		if rule.PlaceID == nil || *rule.PlaceID <= 0 || rule.Transition == nil {
+		if rule.PlaceID == nil || validation.ValidatePositiveID(*rule.PlaceID) != nil || rule.Transition == nil {
 			return errors.New("place requires a positive place_id and transition")
 		}
 		if *rule.Transition != "enter" && *rule.Transition != "exit" {
@@ -1017,13 +1017,13 @@ func hasRuleOperands(rule *alertmodel.AlertRule) bool {
 // validateComputedMetricRule enforces that all four metric_* fields are set
 // and reference a known metric / window / operator combination.
 func validateComputedMetricRule(rule *alertmodel.AlertRule) error {
-	if rule.MetricID == nil || strings.TrimSpace(*rule.MetricID) == "" {
+	if rule.MetricID == nil || validation.TrimSpace(*rule.MetricID) == "" {
 		return errors.New("metric_id is required for computed_metric rules")
 	}
-	if rule.MetricWindow == nil || strings.TrimSpace(*rule.MetricWindow) == "" {
+	if rule.MetricWindow == nil || validation.TrimSpace(*rule.MetricWindow) == "" {
 		return errors.New("metric_window is required for computed_metric rules")
 	}
-	if rule.MetricOp == nil || strings.TrimSpace(*rule.MetricOp) == "" {
+	if rule.MetricOp == nil || validation.TrimSpace(*rule.MetricOp) == "" {
 		return errors.New("metric_op is required for computed_metric rules")
 	}
 	if rule.MetricThreshold == nil {
@@ -1171,7 +1171,7 @@ func validateAlertTestTarget(target *alertTestTargetRequest) ([]int64, bool, err
 		return nil, false, errors.New("target must specify all_channels or channel_ids")
 	}
 	for _, id := range target.ChannelIDs {
-		if id <= 0 {
+		if validation.ValidatePositiveID(id) != nil {
 			return nil, false, errors.New("target channel_ids must be positive")
 		}
 	}

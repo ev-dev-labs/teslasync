@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apibulk"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 )
@@ -35,7 +36,7 @@ func (h *AlertHandler) BulkDeleteRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, id := range body.IDs {
-		if id <= 0 {
+		if validation.ValidatePositiveID(id) != nil {
 			writeError(w, http.StatusBadRequest, "rule IDs must be positive")
 			return
 		}

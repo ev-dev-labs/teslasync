@@ -11,7 +11,6 @@ package aitirepress
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,26 +19,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"context"
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/maintenance"
+	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
-
-type stubGuardSettings struct {
-	mode string
-	on   map[string]bool
-}
-
-func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
-	if s.mode == "" {
-		return "off", nil
-	}
-	return s.mode, nil
-}
-
-func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
-	return s.on[id], nil
-}
 
 // TestTirePressureReasoningAIOffShowsThresholdsOnly is the
 // load-bearing off-mode contract proof. It mounts the AI
@@ -67,10 +52,7 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 func TestTirePressureReasoningAIOffShowsThresholdsOnly(t *testing.T) {
 	t.Parallel()
 
-	guardSettings := &stubGuardSettings{
-		mode: "off",
-		on:   map[string]bool{"tire-pressure-trend-reasoning": true}, // toggle on; mode trumps it
-	}
+	guardSettings := apitest.NewGuardSettings("off", map[string]bool{"tire-pressure-trend-reasoning": true})
 	g := guard.New(guardSettings)
 
 	router := chi.NewRouter()

@@ -10,6 +10,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/automation/condition"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 // newAutomationResponse builds a response for an Automation (base row only).
@@ -87,7 +88,7 @@ func (h *AutomationHandler) List(w http.ResponseWriter, r *http.Request) {
 // Get returns a single automation by ID with computed fields.
 func (h *AutomationHandler) Get(w http.ResponseWriter, r *http.Request) {
 	id, err := urlParamInt64(r, "id")
-	if err != nil || id <= 0 {
+	if err != nil || validation.ValidatePositiveID(id) != nil {
 		writeError(w, http.StatusBadRequest, "invalid automation ID")
 		return
 	}
@@ -121,14 +122,14 @@ func (h *AutomationHandler) Create(w http.ResponseWriter, r *http.Request) {
 		enabled = *req.Enabled
 	}
 
-	desc := strings.TrimSpace(req.Description)
+	desc := validation.TrimSpace(req.Description)
 	var descPtr *string
 	if desc != "" {
 		descPtr = &desc
 	}
 
 	a := &models.Automation{
-		Name:        strings.TrimSpace(req.Name),
+		Name:        validation.TrimSpace(req.Name),
 		Description: descPtr,
 		VehicleID:   req.VehicleID,
 		Enabled:     enabled,
@@ -169,7 +170,7 @@ func (h *AutomationHandler) Create(w http.ResponseWriter, r *http.Request) {
 // Update replaces an automation's configuration. This is full-replacement PUT.
 func (h *AutomationHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id, err := urlParamInt64(r, "id")
-	if err != nil || id <= 0 {
+	if err != nil || validation.ValidatePositiveID(id) != nil {
 		writeError(w, http.StatusBadRequest, "invalid automation ID")
 		return
 	}
@@ -196,8 +197,8 @@ func (h *AutomationHandler) Update(w http.ResponseWriter, r *http.Request) {
 		enabled = *req.Enabled
 	}
 
-	existing.Name = strings.TrimSpace(req.Name)
-	desc := strings.TrimSpace(req.Description)
+	existing.Name = validation.TrimSpace(req.Name)
+	desc := validation.TrimSpace(req.Description)
 	if desc != "" {
 		existing.Description = &desc
 	}
@@ -238,7 +239,7 @@ func (h *AutomationHandler) Update(w http.ResponseWriter, r *http.Request) {
 // Delete removes an automation by ID.
 func (h *AutomationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := urlParamInt64(r, "id")
-	if err != nil || id <= 0 {
+	if err != nil || validation.ValidatePositiveID(id) != nil {
 		writeError(w, http.StatusBadRequest, "invalid automation ID")
 		return
 	}

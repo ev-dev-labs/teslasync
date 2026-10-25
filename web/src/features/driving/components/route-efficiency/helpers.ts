@@ -1,5 +1,5 @@
 import { safeNumber } from '@/lib/numberFormat';
-import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertEfficiencyFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
 
 export type EfficiencyVariant = 'success' | 'info' | 'warning' | 'danger';
 
@@ -22,13 +22,6 @@ export function efficiencyVariant(whPerKm: number): EfficiencyVariant {
   if (whPerKm < 220) return 'warning';
   return 'danger';
 }
-
-/**
- * 1 mile expressed in kilometres. Used only at the display boundary to turn
- * a Wh/km figure into Wh/mi (there is no formatEfficiency in the SI lib, so
- * this named factor keeps the conversion out of the JSX).
- */
-const KM_PER_MILE = 1.609344;
 
 /**
  * Display-boundary unit helpers derived from the user's distance preference.
@@ -58,7 +51,7 @@ export function makeUnitDisplay(distance: DistanceUnitPref): UnitDisplay {
     toDistance: (meters) => convertDistanceFromSI(safeNumber(meters), distance),
     toEfficiency: (whPerKm) => {
       const w = safeNumber(whPerKm);
-      return isMiles ? w * KM_PER_MILE : w;
+      return convertEfficiencyFromSI(w, distance);
     },
   };
 }
