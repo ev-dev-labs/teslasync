@@ -65,7 +65,7 @@ export const remainingReadings: Record<string, RegExp> = {
   'climate-control-panel': /21\s*°?C/,
   'weather-at-car': /18\s*°?C/,
   'climate-history': /Cabin \(°C\)/,
-  'command-quick-actions': /Lock/,
+  'command-quick-actions': /Unlock/,
   'command-history': /Flash Lights/i,
   'location-favorites': /Catalogue home/,
   'geofence-status': /Catalogue home/,
@@ -379,14 +379,14 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
     }
   }
   if (id === 'command-quick-actions') {
-    for (const name of ['Lock', 'Unlock', 'Climate on', 'Climate off', 'Frunk', 'Horn']) {
+    for (const name of ['Unlock', 'Climate control', 'Frunk', 'Trunk', 'Flash Lights', 'Horn']) {
       const button = panel.getByRole('button', { name, exact: true });
       await expect(button).toBeVisible();
       await expect(button).toBeEnabled();
     }
     // Do not send any command, even against a permissive generic mock route.
-    await panel.getByRole('button', { name: 'Lock', exact: true }).focus();
-    await expect(panel.getByRole('button', { name: 'Lock', exact: true })).toBeFocused();
+    await panel.getByRole('button', { name: 'Unlock', exact: true }).focus();
+    await expect(panel.getByRole('button', { name: 'Unlock', exact: true })).toBeFocused();
   }
   if (id === 'media-now-playing') {
     await expect(panel).toContainText('Synthetic ensemble');

@@ -6,6 +6,24 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
 ## Continuation after `98e23bed33` (2026-10-25)
 
+- CI command-contract phase (after pushed `5be78d19c5`):
+  responsive-10's four actual failures required removed Lock/Climate-off
+  actions rather than the intentional redesign's stable six-action set.
+  The independent catalogue guard now pins **Unlock, Climate control,
+  Frunk, Trunk, Flash Lights, Horn**, checks every button visible/enabled,
+  and focuses Unlock without issuing any command. The source-content regex
+  likewise checks Unlock. No production actions, permissions or behavior
+  changed; existing dispatch/running-state/write-block tests pass **19/19**.
+  Both native widths/themes pass **4/4**, escapes=0, preserving all other
+  command/media readings and unchanged geometry tolerances.
+  Actual TypeScript, full unchanged lint and six zero source-audit counts
+  pass. Evidence: `r82-responsive10`, `r84-commands-unit`,
+  `r84-commands-native`, `r84-lint`, `r85-commands-audit`.
+  At 23:52Z CI is **162 pass / 36 pending / 1 fail / 3 skipped**; the
+  remaining observed failure is this now-locally-repaired root. Responsive
+  21/38 are still pending, not yet CI-confirmed. No baseline changes.
+  **Exact next:** push this gate and continue current-head CI at five-minute
+  intervals, fixing only actual failed roots. Do not rerun full local quality.
 - CI contract follow-up (23:26Z, after pushed insurance `e5174b3521`):
   actual CI has two observed failing roots: responsive-21's native sleep
   fixtures still pinned date-only bounds, and responsive-38's home-energy
@@ -25,9 +43,11 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   `r75-lint`, `r77-home-native`, `r77-tsc`, `r77-eslint`.
   Latest pre-push graph **124 pass / 70 pending / 2 fail / 3 skipped**;
   the two observed failure roots are repaired locally, not yet CI-confirmed.
-  **Exact next:** push this verified test-contract phase, refresh actual
-  current-head checks and logs, then continue the CI green loop. If only
-  pending, wait five minutes between checks; do not rerun full local quality.
+  Pushed as `5be78d19c5`. At 23:32Z the fresh graph is **22 pass /
+  20 pending / 3 skipped**, still incomplete, with no observed failures.
+  **Exact next:** refresh actual current-head checks and failed logs, then
+  continue the CI green loop. If only pending, wait five minutes between
+  checks; do not rerun full local quality.
 - Insurance phase gate (23:04Z, after pushed sleep `98cbb1a1b2`):
   seven boundary cases reproduced UTC-only trip-start attribution.
   The shared selected clock now owns the typed hook/cache/query, service
