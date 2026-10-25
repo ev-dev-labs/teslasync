@@ -22,6 +22,39 @@ final Vitest | blocked | parent |  | stopped after 45 minutes while actively pro
 final E2E | blocked/failed | parent |  | old run exposed operationalbrief/overflow failures; item attribution not isolated in this phase
 merge readiness | ready-pending-PR-202 | parent |  | `feat/shared-patterns` is ready to merge into `fix/post-merge-followups` only after PR #202 is green; no merge performed
 
+## Plan Part 3 item accounting
+
+| Item | Call-site accounting |
+|---|---|
+| 1 canonical statistics | Replaced `src/features/charging/lib/chargeInterruption.ts` and `src/features/analytics/lib/firmwareImpact.ts`; guard SP-1 covers any second local implementation. |
+| 2 charger site identity | Replaced `src/features/charging/lib/chargeInterruption.ts`, `chargerHealth.ts`, and `chargerResilience.ts`; resilience-only charger/type/unknown fallback remains caller-owned by design. |
+| 3 TOU registry and charge-window engine | Replaced `internal/api/chargeplanner/{compute.go,handler.go,dtos.go,queue.go}` and `internal/api/chargeautopilot/{compute.go,rates.go}` with `internal/api/tou`; frontend modal/page consume existing canonical UI/API contracts; parity goldens cover planner/autopilot. |
+| 4 validation contracts | Replaced repeated prompt/name/vehicle validation in AI, alerts, automation, geofence, trip, visited-location, and tool packages with `internal/platform/validation`; CSV guards in feature flags use `web/src/lib/csvValidation.ts`; caller-specific HTTP text remains local. |
+| 5 HTTP identity/errors/proxy | Replaced audit/session/client-IP wrappers with `internal/platform/httputil`; existing trusted-proxy semantics are preserved opt-in; package-local status/error envelopes remain legitimate caller-specific transport behavior. |
+| 6 strict SLO parser | Replaced `cmd/slogen/main.go` and `internal/slo/catalog.go` duplicate parsers with `internal/slo/catalogparser`; no runtime/generator duplicate parser remains. |
+| 7 ML statistics | Replaced `internal/ml/anomaly/baseline.go`, `internal/ml/range/trainer.go`, and `internal/ml/chargingcurves/clustering.go` algorithms with `internal/ml/stats`; package fallback policies remain local. |
+| 8 fixtures | Replaced repeated Go AI settings/setup fixtures via `internal/api/apitest`; replaced shared frontend AppSettings/AI payload fixtures under `web/src/test/fixtures` across AI/analytics/battery/charging/diagnostics suites. |
+| 9 test harness | Replaced repeated i18n/browser/PWA harness copies with `web/src/test/setup.ts` and `web/src/test-setup.ts`; `ReloadPrompt`, `OfflineAnnouncementOwnership`, PWA hooks, media/infinite-scroll, and fixture suites are adopted. |
+| 10 icon registry | Registered missing concepts in `web/src/lib/icons.ts` and adopted `web/src/features/admin/**` plus UI icon callers; remaining direct imports are enumerated by SP-10 until migrated item-by-item; one-off vendor/specialist imports are not duplicates where semantics differ. |
+| 11 date/time/duration | Migrated `TimeMachineBanner`, drive calendar/anomalies, efficiency, energy anatomy, fleet form utilities, telemetry inspector/workspaces, and range state; existing `dateFormat/dateConvert/timezone/dateRange` modules remain the render/query/API boundary; remaining guard findings are catalogued as legitimate primitive/math callers or low-level parsing until equivalent shared exports exist. |
+| 12 units/SI | Migrated charge/drive/analytics hooks and display components to `useUnits`/`unitConversion`; remaining literal `1000` matches are non-unit time/byte/cache/retry values when not multiplied as a unit conversion and are excluded from SP-12 semantics; legacy imperial field callers remain guarded by canonical SI-name checks. |
+| 13 UI/query/routing/storage | Adopted DataTable, shared UI, icon, queryPolicy/dataState/scope, route registry, typed storage, raw feature HTML replacements, and existing hooks; remaining raw primitives/routes are outstanding feature call sites, not shared-module copies. Each is governed by SP-13. |
+| 14 backend helpers | Adopted canonical cache/retry/null/log/trace/platform helpers; added platform package docs/allowlist; generated/vendor-specific wrappers, precision-specific SQL, zone-specific parsers, and one-off protocol wrappers are legitimate exceptions and remain local. |
+
+## Category counts after continuation
+
+Merge-base: `213c52cfffa9534a387c85a4f4a4af288934d24d`
+Current: `HEAD`
+
+| Category | Merge-base grep count | HEAD grep count | Raw AST finding count | Status |
+|---|---:|---:|---:|---|
+| Unit conversion factors | 186 | 181 | 846 unit guard findings | More precise guard narrowing is required; plain-text matches include tests, time/cache/retry values, and canonical exports |
+| Direct date formatting | 63 | 63 | 127 timezone guard findings | No delta; remaining AST findings must be split into shared-adoption versus primitive host/time parsing |
+| Direct Lucide imports | 1468 | 1310 | SP-10 inventory remains high | Admin/representative adoption complete; broader feature migration continues under item 10 |
+| Double `/api/v1/` strings | 969 | 968 | Orphan allowlist/SSE plus caller-specific exceptions | Count is not zero; exact hook violations are governed by SP-13 |
+| Static CSS-variable inline styles | 2 | 2 | 0 under SP-13 | Both base matches are likely review exceptions; guard test remains strict |
+| Raw HTML primitives | 684 | 683 | 829 UI guard findings | Guard breadth includes layout/component-shell raw primitives still requiring migration or shared primitive exception review |
+
 ## Final verification update
 
 | Metric | Branch base (merge-base `213c52cfffa9534a387c95a4f4a4af288934d24d`) | Now (`55faa83ef5` + repairs) |

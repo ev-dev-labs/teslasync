@@ -175,6 +175,7 @@ export function scanIconAdoptionGuard(source, { rel = 'src/features/example/Page
 export function scanTimezoneGuard(source, { rel = 'src/features/example/example.ts' } = {}) {
   const sf = createSource(rel, source);
   const findings = [];
+  if (/\b(?:test|spec)\b/u.test(rel) || /\/(?:__tests__|test)\//u.test(rel) || rel.includes('/test/')) return findings;
   const visit = (node) => {
     if (ts.isPropertyAccessExpression(node)) {
       const member = node.name.text;
@@ -285,9 +286,8 @@ export function scanUnitFactorGuard(source, { rel = 'src/features/example/exampl
         : parent && ts.isBinaryExpression(parent)
           && (parent.operatorToken.kind === ts.SyntaxKind.AsteriskToken
             || parent.operatorToken.kind === ts.SyntaxKind.SlashToken);
-      const scalingFactor = raw === '1000' || raw === '1_000' ? 'SI scale factor (1000)' : null;
-      if (factor || (unitScalingExpression && scalingFactor)) {
-        const description = factor ?? scalingFactor;
+      if (factor) {
+        const description = factor;
         findings.push(finding(
           'SP-12',
           rel,

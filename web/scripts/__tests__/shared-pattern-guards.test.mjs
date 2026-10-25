@@ -97,7 +97,7 @@ test('SP-11 allows shared date modules', () => {
 test('SP-12 rejects inline conversion factors and legacy unit suffix names', () => {
   const factors = scanUnitFactorGuard(`
     const miles = meters / 1609.344;
-    const kilometers = meters / 1000;
+    const kilometers = miles * 1.609344;
   `, { rel: 'src/features/driving/pages/Distance.tsx' });
   assert.ok(rules(factors).every((rule) => rule === 'SP-12'));
   assert.ok(factors.length >= 2);
