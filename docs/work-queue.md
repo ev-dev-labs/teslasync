@@ -6,6 +6,33 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
 ## Continuation after `98e23bed33` (2026-10-25)
 
+- Sleep-efficiency phase gate (22:53Z): export repair is pushed as
+  `4922899147`. Sleep now sends the shared header's actual half-open
+  instants rather than date-only UTC bounds. Its exact coverage window
+  and historical as-of clamp use those same instants; elapsed exposure
+  remains 23/25 hours across DST and rolling windows do not expand to
+  containing calendar days. Calendar labels still count civil dates.
+  Source measurements, union/overlap accounting, unavailable dwell/drain
+  semantics and every one of the fourteen sections are preserved.
+  The endpoint keeps legacy date-only `(from,to]` SQL behavior; exact
+  RFC3339 starts include the first instant by normalizing the existing
+  strict-lower predicate at database microsecond precision. Sub-day exact
+  windows report at least one period day rather than the old thirty-day
+  fallback. OpenAPI documents both contracts; no SQL/storage/schema change.
+  Four new model cases and two backend cases first failed against old code.
+  Final **220/220** affected units and the Go package `-race` pass,
+  including mounted shared-clock requery and all original source contracts.
+  Three production audit targets each report six zero counts plus actual
+  TypeScript pass; full unchanged lint, affected ESLint, energy-hook routing,
+  hermetic build and all **7,728/7,728** frozen cases pass. The unchanged
+  five-width guard passes **5/5**, escapes=0. Lines: page 227/229,
+  model 1302/1317, coverage 314/316, methodology 136/136, evidence 151/153;
+  section definitions 14/14. No baseline changes.
+  **Exact next after push:** selected-clock insurance overnight trip-start
+  attribution (retain explicit proxy limitations, never label it measured
+  night distance), inspect actual CI failures, then finish the green loop.
+  Latest export-head graph **31 pass / 159 pending / 3 skipped**, incomplete.
+  Evidence: `r57-sleep-*` red, `r58-sleep-go`, `r60-sleep-*`, `r61-sleep-route`.
 - Export phase gate (22:44Z, following pushed `47b4fa59c9`): both
   independent job forms now resolve civil dates in the shared selected
   clock and send inclusive-start/exclusive-end RFC3339 instants, including

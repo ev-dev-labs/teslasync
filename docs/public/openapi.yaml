@@ -1535,6 +1535,54 @@ paths:
           $ref: "#/components/responses/InternalError"
 
   # ─── Analytics ──────────────────────────────────────────────────────
+  /analytics/sleep:
+    get:
+      operationId: getSleepAnalytics
+      summary: Get vehicle sleep transition evidence
+      description: |
+        Explicit RFC3339 bounds select [start, end) at database microsecond
+        precision. Workspace callers send both shared-header instants, preserving
+        selected-clock calendar dates, DST and rolling windows. Legacy date-only
+        inputs retain their UTC calendar behavior and existing (start, end] SQL
+        representation. Without a start bound, days selects a rolling UTC window
+        (default 30, maximum 365). period_days is the rounded elapsed-day count,
+        at least one; it does not establish observed sleep duration or occupancy.
+        Transition counts remain available while dwell and per-park drain
+        reconstruction are unavailable.
+      tags: [Analytics]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: start
+          in: query
+          schema:
+            type: string
+          description: Inclusive RFC3339 instant or legacy YYYY-MM-DD UTC date.
+        - name: end
+          in: query
+          schema:
+            type: string
+          description: Exclusive RFC3339 instant or legacy inclusive YYYY-MM-DD UTC date.
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+            minimum: 1
+            maximum: 365
+          description: Used only when no explicit start bound is supplied.
+      responses:
+        "200":
+          description: Transition evidence with preserved unavailable-duration fields
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /analytics/fleet:
     get:
       operationId: getFleetAnalytics

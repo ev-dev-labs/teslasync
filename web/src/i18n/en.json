@@ -16418,16 +16418,16 @@
         "valid": "Valid"
       },
       "rangeStatus": "Range status: {{status}}",
-      "requested": "Requested UTC dates",
+      "requested": "Requested dates",
       "responseIdentity": "Sanitized response identity",
       "rows": "Rows",
       "source": "Source",
       "stateCap": "State directory cap",
       "stateRows": "State rows",
-      "subtitle": "Requested UTC dates, backend coverage, exclusions, duplicate policy, display caps, and the frozen analysis clock are disclosed together.",
+      "subtitle": "Requested dates, backend coverage, exclusions, duplicate policy, display caps, and the frozen analysis clock are disclosed together.",
       "summaryScope": "Summary scope",
       "title": "Range, source coverage, and exact accounting",
-      "utcSafe": "Computed from UTC calendar dates",
+      "utcSafe": "Calendar day count; elapsed hours use the exact selected bounds",
       "vehicle": "Response vehicle_id",
       "windowValue": "{{start}} to {{end}}"
     },
@@ -16531,14 +16531,14 @@
       "minutesValue": "{{value}} min",
       "percentValue": "{{value}}%",
       "placeholderWithheld": "Placeholder zero withheld",
-      "rangeValue": "{{start}} to {{end}} UTC",
+      "rangeValue": "{{start}} to {{end}}",
       "reportedEvidence": "Positive finite response value",
       "sentryAvailability": "Sentry comparison",
       "sentrySamples": "Requires positive sample counts",
       "title": "Evidence overview",
       "transitionDestinations": "Valid transition destinations",
       "transitionSubtitle": "Destination counts from the vehicle FSM",
-      "utcWindow": "Selected UTC window"
+      "utcWindow": "Selected window"
     },
     "methodology": {
       "capacitySources": "Capacity source categories distinguish VIN estimate, model estimate, default estimate, other, and unavailable.",
@@ -16554,7 +16554,7 @@
       "support": "Evidence breadth is a transparent source-availability score, not statistical confidence or model accuracy.",
       "title": "Methodology and interpretation limits",
       "transitionSemantics": "state_distribution.count records FSM transition destinations from fsm_transitions.to_state; it is not occupancy or duration.",
-      "utcDates": "Date-only start and end bounds represent inclusive UTC calendar days."
+      "utcDates": "Calendar dates use the selected clock. The server and coverage calculations receive the exact start-inclusive, end-exclusive instants."
     },
     "analysis": "Sleep and sentry analysis",
     "avgBatteryLost": "Avg battery lost (%)",

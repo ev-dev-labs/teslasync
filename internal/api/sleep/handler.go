@@ -15,6 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 )
 
 // SleepHandler handles sleep efficiency analytics requests.
@@ -110,6 +111,8 @@ func (h *SleepHandler) now() time.Time {
 // otherwise. Battery-capacity and electricity-price enrichment degrade to
 // defaults rather than failing the request.
 func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.sleep.get_analytics")
+	defer span.End()
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID <= 0 {
 		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
@@ -118,14 +121,13 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 
 	days, from, to := resolveWindow(r, h.now())
 
-	ctx := r.Context()
-
 	vin, model, capErr := h.repo.VehicleVINModel(ctx, vehicleID)
 	batteryCapacityWh, capacitySource := resolveCapacity(vin, model, capErr)
 
 	states, err := h.repo.StateDistribution(ctx, vehicleID, from, to)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("sleep: failed to get fsm_transitions")
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Int64("vehicleID", vehicleID).Msg("sleep: failed to get fsm_transitions")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get sleep data")
 		return
 	}
@@ -191,13 +193,18 @@ func resolveWindow(r *http.Request, now time.Time) (days int, from, to time.Time
 	days = sleepDefaultDays
 	if s, e := apiparams.ParseDateRange(r); !s.IsZero() {
 		from = s
+		// Preserve legacy date-only (from,to] behavior while exact instants
+		// include the selected start at PostgreSQL's microsecond precision.
+		if _, err := time.Parse(time.RFC3339, strings.TrimSpace(r.URL.Query().Get("start"))); err == nil {
+			from = from.Add(-time.Microsecond)
+		}
 		if !e.IsZero() {
 			to = e
 		} else {
 			to = now
 		}
-		if d := int(math.Round(to.Sub(from).Hours() / 24)); d > 0 {
-			days = d
+		if !to.Before(from) {
+			days = max(1, int(math.Round(to.Sub(from).Hours()/24)))
 		}
 	} else {
 		if d := r.URL.Query().Get("days"); d != "" {

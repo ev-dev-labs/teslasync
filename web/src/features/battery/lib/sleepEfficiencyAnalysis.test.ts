@@ -778,6 +778,42 @@ describe('sleepEfficiencyAnalysis event accounting', () => {
 });
 
 describe('sleepEfficiencyAnalysis range handling', () => {
+  it.each([
+    ['2026-03-08', '2026-03-08T08:00:00Z', '2026-03-09T07:00:00Z', 23],
+    ['2026-11-01', '2026-11-01T07:00:00Z', '2026-11-02T08:00:00Z', 25],
+    ['2026-01-01', '2025-12-31T10:00:00Z', '2026-01-01T10:00:00Z', 24],
+  ])('accounts for the actual selected-calendar duration on %s', (day, startInstant, endInstantExclusive, hours) => {
+    const startMs = Date.parse(startInstant);
+    const endMs = Date.parse(endInstantExclusive);
+    const source: SleepEfficiencyData = {
+      recent_events: [event({
+        start_date: new Date(startMs - 3_600_000).toISOString(),
+        end_date: new Date(endMs + 3_600_000).toISOString(),
+        duration_hours: hours + 2,
+      })],
+    };
+    const original = structuredClone(source);
+    const result = analyzeSleepEfficiency(source, endMs + 3_600_000, day, day, {
+      startInstant, endInstantExclusive,
+    });
+    expect(result.range).toMatchObject({
+      status: 'valid', inclusiveDays: 1, startMs, endInstantExclusiveMs: endMs,
+    });
+    expect(result.events.exposure).toMatchObject({
+      requestedHours: hours, coveredRequestedHours: hours, requestedCoverage: 1,
+    });
+    expect(result.events.events[0]?.durationHours).toBe(hours + 2);
+    expect(source).toEqual(original);
+  });
+
+  it('uses exact rolling bounds rather than the containing calendar dates', () => {
+    const result = analyzeSleepEfficiency({}, NOW, '2026-08-07', '2026-08-08', {
+      startInstant: '2026-08-07T12:00:00Z', endInstantExclusive: '2026-08-08T12:00:00Z',
+    });
+    expect(result.range.inclusiveDays).toBe(2);
+    expect(result.events.exposure.requestedHours).toBe(24);
+  });
+
   it('computes inclusive UTC dates without DST sensitivity', () => {
     expect(analyzeSleepRange('2026-03-07', '2026-03-09')).toMatchObject({
       status: 'valid',

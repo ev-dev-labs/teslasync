@@ -44,6 +44,10 @@ vi.mock('@/hooks/useFormatting', () => ({
 
 type SleepQuery = ReturnType<typeof useSleepEfficiency>;
 const mockSleep = vi.mocked(useSleepEfficiency);
+vi.mock('@/lib/timezone', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/timezone')>(),
+  useTimezone: () => 'UTC',
+}));
 const mockVehicle = vi.mocked(useSelectedVehicle);
 const retry = vi.fn();
 const observers: MockResizeObserver[] = [];
@@ -118,11 +122,11 @@ describe('live Sleep Efficiency modernization (authored; execution NOTRUN)', () 
 
   it('preserves original operands while consuming persistent real-router header changes', () => {
     const view = mount();
-    expect(mockSleep).toHaveBeenLastCalledWith('1', 3, '2026-08-04', '2026-08-06');
+    expect(mockSleep).toHaveBeenLastCalledWith('1', 3, '2026-08-04T00:00:00.000Z', '2026-08-07T00:00:00.000Z');
     fireEvent.click(screen.getByRole('button', { name: 'Change header window' }));
-    expect(mockSleep).toHaveBeenLastCalledWith('1', 1, '2026-08-06', '2026-08-06');
+    expect(mockSleep).toHaveBeenLastCalledWith('1', 1, '2026-08-06T00:00:00.000Z', '2026-08-07T00:00:00.000Z');
     view.refresh();
-    expect(mockSleep).toHaveBeenLastCalledWith('1', 1, '2026-08-06', '2026-08-06');
+    expect(mockSleep).toHaveBeenLastCalledWith('1', 1, '2026-08-06T00:00:00.000Z', '2026-08-07T00:00:00.000Z');
     expect(screen.queryByRole('combobox', { name: /vehicle|range/i })).not.toBeInTheDocument();
   });
 

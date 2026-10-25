@@ -5,6 +5,7 @@ import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBri
 import { AlertBanner, QueryError } from '@/components/feedback';
 import { LayoutCard } from '@/components/layout/layout-reference';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { StatPeriod } from '@/lib/metric-reference';
 import type { SleepEfficiencySectionProps } from '../sleep-efficiency';
 
@@ -13,6 +14,7 @@ export function SleepEvidenceOverview({ analysis, state, trust }: SleepEfficienc
 }) {
   const { t } = useTranslation();
   const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { formatDayKey } = useDateFormat();
   const hasResponse = state.vehicleSelected && trust.hasData && analysis.source.hasResponse;
   const hasTransitionCounts = hasResponse && analysis.stateAccounting.collectionPresent
     && (analysis.stateAccounting.returnedRows === 0 || analysis.stateAccounting.includedRows > 0);
@@ -20,8 +22,8 @@ export function SleepEvidenceOverview({ analysis, state, trust }: SleepEfficienc
   const retained = trust.hasData && (trust.status !== 'ok' || Boolean(state.refreshError));
   const rangeValue = analysis.range.status === 'valid'
     && analysis.range.requestedStart && analysis.range.requestedEnd
-    ? t('sleep.kpi.rangeValue', '{{start}} to {{end}} UTC', {
-      start: analysis.range.requestedStart, end: analysis.range.requestedEnd,
+    ? t('sleep.kpi.rangeValue', '{{start}} to {{end}}', {
+      start: formatDayKey(analysis.range.requestedStart), end: formatDayKey(analysis.range.requestedEnd),
     })
     : t('sleep.common.unavailable', 'Unavailable');
   const sentryAvailability = analysis.sentry.comparisonAvailable
@@ -33,8 +35,8 @@ export function SleepEvidenceOverview({ analysis, state, trust }: SleepEfficienc
   const metrics: StatMetric[] = [
     {
       metricId: 'text', occurrenceId: 'sleep-window', rawValue: rangeValue,
-      label: t('sleep.kpi.utcWindow', 'Selected UTC window'),
-      description: t('sleep.kpi.utcWindow', 'Selected UTC window'),
+      label: t('sleep.kpi.utcWindow', 'Selected window'),
+      description: t('sleep.kpi.utcWindow', 'Selected window'),
       context: analysis.range.inclusiveDays != null
         ? t('sleep.kpi.inclusiveDays', '{{count}} inclusive calendar days', { count: analysis.range.inclusiveDays })
         : t('sleep.kpi.invalidWindow', 'No valid inclusive day count'),

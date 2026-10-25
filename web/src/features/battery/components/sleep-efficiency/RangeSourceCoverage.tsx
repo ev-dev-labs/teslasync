@@ -16,6 +16,7 @@ import { rangeStatusLabel } from './labels';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
 import type { SleepEfficiencySectionProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 interface AccountingRow {
   key: string;
@@ -29,6 +30,7 @@ export function RangeSourceCoverage({
   state,
 }: SleepEfficiencySectionProps) {
   const { fmtInt } = useNumberFormatting();
+  const { formatDayKey } = useDateFormat();
   const { t } = useTranslation();
   const stateAccounting = analysis.stateAccounting;
   const eventAccounting = analysis.events.accounting;
@@ -154,8 +156,8 @@ export function RangeSourceCoverage({
           'sleep.coverage.windowValue',
           '{{start}} to {{end}}',
           {
-            start: analysis.range.requestedStart,
-            end: analysis.range.requestedEnd,
+            start: formatDayKey(analysis.range.requestedStart),
+            end: formatDayKey(analysis.range.requestedEnd),
           },
         )
       : '—';
@@ -176,7 +178,7 @@ export function RangeSourceCoverage({
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'sleep.coverage.subtitle',
-            'Requested UTC dates, backend coverage, exclusions, duplicate policy, display caps, and the frozen analysis clock are disclosed together.',
+            'Requested dates, backend coverage, exclusions, duplicate policy, display caps, and the frozen analysis clock are disclosed together.',
           )}
         </Text>
         <SleepEfficiencySectionBody
@@ -186,7 +188,7 @@ export function RangeSourceCoverage({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               icon={<CalendarRange className="h-4 w-4" aria-hidden="true" />}
-              label={t('sleep.coverage.requested', 'Requested UTC dates')}
+              label={t('sleep.coverage.requested', 'Requested dates')}
               value={requestedWindow}
               color="neutral"
               subtitle={t(
@@ -209,7 +211,7 @@ export function RangeSourceCoverage({
               color="neutral"
               subtitle={t(
                 'sleep.coverage.utcSafe',
-                'Computed from UTC calendar dates',
+                'Calendar day count; elapsed hours use the exact selected bounds',
               )}
             />
             <MetricCard
