@@ -4,6 +4,64 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
+## Mandatory ten-fix handoff (2026-10-25 16:43Z)
+
+- Ten fixes are complete in this continuation; stop here per section 0b.
+  Latest implementation commit: `f57f163381`. The final documentation
+  checkpoint accompanies `065314d27c`, `664b02a0c8` and `f57f163381`
+  in the final push bundle.
+  PR #202 is **not green**; full-suite validation remains CI-owned.
+- Fix 10 formats Locations scope and both Parking scope/methodology bounds
+  through the existing selected-zone date layer. API UTC instants, range
+  arithmetic, inclusive/exclusive semantics and source coverage are unchanged.
+  Three new regressions failed before the production change; all four
+  affected suites now pass 77/77, covering Los Angeles, Tokyo and saved
+  German/Berlin formatting plus unchanged request bounds and source summaries.
+  The existing Berlin assertion now requires both exact localized boundaries
+  and rejects raw ISO instead of demanding the old raw timestamp.
+- Final verification: actual TypeScript and the complete existing lint/audit
+  chain exit 0. All three seven-category production audits report six zero
+  violation counts and TypeScript pass; Locations/Driving hook URLs match
+  registered routes. Both unchanged 1280px route guards pass with
+  tzIso/tzZones/tzDupes=0 and wrapper proxy escapes=0. Seven existing frozen
+  receipt suites pass 7,728/7,728 after serial sanctioned generators and mock
+  rebuild. Source lines 549->549, 127->129, 124->124; panel/chart section
+  counts stay 1/1/0. No translations, API contracts or baselines changed
+  in this tenth fix.
+- Evidence remains in the CI continuation directory below:
+  `fix-10-window-red.log`, `fix-10-window-unit.log`, `fix-10-tsc.log`,
+  `fix-10-eslint.log`, `fix-10-audits.log`, `fix-10-full-lint.log`,
+  `fix-10-frozen-unit.log`, `fix-10-mock-build.log`,
+  `fix-10-route-guard.log`, and both `fix-10-*-hooks.log` files.
+- Latest graph for the previously pushed `bfecead853`: **8 failing /
+  134 passing / 53 pending / 3 skipped**, still in flight, not a completed
+  improvement from round 0's 42 failures. Failures: responsive shards
+  9/12/13/26/27/31/32/47. CI `40211130150` and quality `40211129921`
+  describe that older head; discover the new head's runs after this push.
+  `round-3-handoff-checks.json` and `round-3-handoff-workflows.json` preserve
+  the exact observation. Completed-job logs can be captured while the parent
+  workflow is running using `gh api --allow-escape-sequences
+  repos/ev-dev-labs/teslasync/actions/jobs/<job-id>/logs > <session-log>`;
+  strip ANSI only when reading bounded summaries. The ordinary full-run
+  `gh run view --log-failed` is unavailable until that workflow completes.
+- **Exact next step:** start section 0, inspect the newest head's
+  `gh pr checks 202`, then group its completed failures using bounded logs.
+  A concrete remaining root in responsive-32 is four operations-brief cases
+  in `e2e/operationalbrief-contracts/operations.smoke.spec.ts` (lines 290/380):
+  the service-report/catalog-age drawer locator still demands the raw title
+  `2026-08-05T07:00:00.000Z`. Inspect the real shared date output and preserve
+  exact source-age/recovery semantics when repairing the contract; do not
+  weaken it to substring or presence-only checks. Evidence:
+  `round-3-responsive-32.log`. Continue the remaining semantic timezone and
+  dashboard-acceptance roots listed below, targeted locally, full suite in CI.
+  Do not rerun a local replica or count this incomplete graph as green.
+- Windows baseline work is complete: the same six reviewed shards were
+  regenerated once and verified read-only (10/10); the mirror is clean.
+  Do not regenerate those baselines again. Handoff preflight confirms every
+  tracked shell command completed and no preview listens on port 4301;
+  IDE-owned processes were preserved. The documentation commit/push is the
+  only remaining operation before the final WSL clean-tree confirmation.
+
 ## CI-driven continuation (2026-10-25, after `ec53fca3b5`)
 
 - User strategy override is now reflected in playbook section 3: local
@@ -101,7 +159,7 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   against the synchronized lockfile. Run the permitted single native
   `npm.cmd ci --legacy-peer-deps`, rebuild, and verify those same shards
   WITHOUT update-snapshots after syncing the committed images.
-- Current next step: commit/push the reviewed images, restore native
+- Then-next step (at seven fixes): commit/push the reviewed images, restore native
   dependencies as above, then verify them without regenerating; repair
   remaining exact dashboard readout contracts and semantic timezone roots.
   Unknown-charger binding now passes; next observed assertion is obsolete
@@ -129,7 +187,7 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   branches remain. No request or hook changed. Evidence: `fix-9-chart-unit`,
   `fix-9-frozen-unit`, `fix-9-contained-browser`, `fix-9-audit`,
   `fix-9-source-eslint`, `fix-9-mock-build` logs.
-- Current next step: remove raw requested-window instants from
+- Then-next step (at nine fixes): remove raw requested-window instants from
   Locations/Parking display using the selected-zone formatter, with unchanged
   API bounds; verify, commit/push, then hand off at ten completed fixes.
   Full CI for `bfecead853` is queued, not green (CI `40211130150`, Frontend
