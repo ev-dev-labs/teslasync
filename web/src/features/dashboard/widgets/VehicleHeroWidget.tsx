@@ -325,11 +325,12 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
               </div>
             )}
             <div
-              role="meter"
+              role={batteryLevel != null ? 'meter' : 'group'}
               aria-label={t('hero.battery', 'Battery')}
+              aria-description={batteryLevel == null ? t('hero.unknownStatus', 'Unknown') : undefined}
               aria-valuenow={batteryLevel != null ? Math.round(batteryLevel) : undefined}
-              aria-valuemin={0}
-              aria-valuemax={100}
+              aria-valuemin={batteryLevel != null ? 0 : undefined}
+              aria-valuemax={batteryLevel != null ? 100 : undefined}
               aria-valuetext={batteryLevel != null ? `${fmtNumber(batteryLevel, 0)}%` : undefined}
               className="relative h-3 w-full overflow-visible rounded-shape-sm bg-[var(--surface-2)]"
             >

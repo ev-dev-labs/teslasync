@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import type { VehicleState } from '../src/api/types';
 import {
   assertMockApiComplete, fulfillApiFixture, installApiMocks,
@@ -31,6 +31,57 @@ function fixture(reading: ReadingCase): NullableState {
   };
 }
 
+async function openDashboardHero(page: Page, theme: 'light' | 'dark', reading: ReadingCase) {
+  await seedBrowserState(page, theme, '/', { preserveDashboardState: true });
+  await page.addInitScript(() => {
+    localStorage.setItem('teslasync-active-dashboard', 'e2e');
+    localStorage.setItem('teslasync-dashboards', JSON.stringify([{
+      id: 'e2e', name: 'E2E', isDefault: true,
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+      widgets: [{ id: 'e2e-full-hero', widgetId: 'vehicle-hero' }],
+      layouts: {},
+    }]));
+  });
+  const mocks = await installApiMocks(page, 'populated', theme);
+  const state = fixture(reading);
+  const envelope = {
+    state, live: true, observed_at: new Date().toISOString(),
+    freshness: 'fresh',
+    verified_fields: Object.keys(state).filter((key) =>
+      state[key as keyof NullableState] != null),
+  };
+  await page.route('**/api/v1/vehicles/7/state*', (route) => fulfillApiFixture(route, mocks, {
+    json: envelope,
+  }));
+  await page.route('**/api/v1/vehicles/states*', (route) => fulfillApiFixture(route, mocks, {
+    json: {
+      now: envelope.observed_at, total: 1, limit: 250,
+      vehicles: [{ vehicle_id: 7, outcome: 'resolved', ...envelope }],
+    },
+  }));
+  await page.goto('/');
+  await waitForHarnessReady(page, mocks);
+  return mocks;
+}
+
+for (const reading of ['unknown', 'zero'] as const) {
+  test(`dashboard battery accessibility preserves ${reading} readings`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 900 });
+    const mocks = await openDashboardHero(page, 'dark', reading);
+    const hero = page.locator('[data-widget-id="e2e-full-hero"]');
+    if (reading === 'unknown') {
+      await expect(hero.getByRole('meter', { name: 'Battery', exact: true })).toHaveCount(0);
+      await expect(hero.getByRole('group', { name: 'Battery', exact: true }))
+        .toHaveAccessibleDescription('Unknown');
+    } else {
+      await expect(hero.getByRole('meter', { name: 'Battery', exact: true }))
+        .toHaveAttribute('aria-valuenow', '0');
+    }
+    await assertMockApiComplete(page, mocks);
+  });
+}
+
 for (const theme of ['light', 'dark'] as const) {
   for (const width of [320, 390, 768, 1024, 1440, 2560]) {
     const readings: ReadingCase[] = width === 320 || width === 1440
@@ -38,35 +89,7 @@ for (const theme of ['light', 'dark'] as const) {
     for (const reading of readings) {
       test(`full dashboard hero preserves ${reading} readings at ${width}px in ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width, height: 900 });
-        await seedBrowserState(page, theme, '/');
-        await page.addInitScript(() => {
-          localStorage.setItem('teslasync-dashboards', JSON.stringify([{
-            id: 'e2e', name: 'E2E', isDefault: true,
-            createdAt: '2026-10-01T00:00:00.000Z',
-            updatedAt: '2026-10-01T00:00:00.000Z',
-            widgets: [{ id: 'e2e-full-hero', widgetId: 'vehicle-hero' }],
-            layouts: {},
-          }]));
-        });
-        const mocks = await installApiMocks(page, 'populated', theme);
-        const state = fixture(reading);
-        const envelope = {
-          state, live: true, observed_at: new Date().toISOString(),
-          freshness: 'fresh',
-          verified_fields: Object.keys(state).filter((key) =>
-            state[key as keyof NullableState] != null),
-        };
-        await page.route('**/api/v1/vehicles/7/state*', (route) => fulfillApiFixture(route, mocks, {
-          json: envelope,
-        }));
-        await page.route('**/api/v1/vehicles/states*', (route) => fulfillApiFixture(route, mocks, {
-          json: {
-            now: envelope.observed_at, total: 1, limit: 250,
-            vehicles: [{ vehicle_id: 7, outcome: 'resolved', ...envelope }],
-          },
-        }));
-        await page.goto('/');
-        await waitForHarnessReady(page, mocks);
+        const mocks = await openDashboardHero(page, theme, reading);
         const hero = page.locator('[data-widget-id="e2e-full-hero"]');
         await expect(hero.getByRole('heading', { name: 'Aurora', exact: true })).toBeVisible();
         if (reading === 'unknown') {

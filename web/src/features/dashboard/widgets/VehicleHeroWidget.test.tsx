@@ -320,6 +320,23 @@ describe('VehicleHeroWidget — vehicle resolution', () => {
 });
 
 describe('VehicleHeroWidget — After layout', () => {
+  it('announces an unknown battery without publishing an empty numeric meter', () => {
+    setup({ state: makeQuery({ data: makeStateData({ batteryLevel: null }) }) });
+    renderWidget(<VehicleHeroWidget size={STANDARD} />);
+
+    expect(screen.queryByRole('meter', { name: 'Battery', exact: true })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Battery', exact: true }))
+      .toHaveAccessibleDescription('Unknown');
+  });
+
+  it('preserves a genuine zero battery reading as a numeric meter', () => {
+    setup({ state: makeQuery({ data: makeStateData({ batteryLevel: 0 }) }) });
+    renderWidget(<VehicleHeroWidget size={STANDARD} />);
+
+    expect(screen.getByRole('meter', { name: 'Battery', exact: true }))
+      .toHaveAttribute('aria-valuenow', '0');
+  });
+
   it('renders the headline battery, estimated range, limit marker and chips', () => {
     setup();
     renderWidget(<VehicleHeroWidget size={STANDARD} />);
