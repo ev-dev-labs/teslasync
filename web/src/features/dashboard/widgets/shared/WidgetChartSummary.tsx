@@ -89,10 +89,11 @@ export function WidgetChartSummary({
   const safeLegend = legend ?? [];
 
   return (
-    <div className="flex h-full min-w-0 flex-col">
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
       {safeStats.length > 0 && (
         <div
           className={cn(
+            'shrink-0',
             // Reflow against the widget width, including a narrow desktop column.
             compact
               ? 'grid grid-cols-1 gap-2 @xs:grid-cols-2'
@@ -116,15 +117,15 @@ export function WidgetChartSummary({
       )}
 
       {!compact && (
-        <div className="mt-2 min-h-0 flex-1">
+        <div className="mt-2 flex min-h-0 flex-1 flex-col">
           {yAxisLabel != null && yAxisLabel !== '' && (
-            <p className={cn(typography.role.label, 'mb-1 break-words text-start')}>
+            <p className={cn(typography.role.label, 'mb-1 shrink-0 break-words text-start')}>
               {yAxisLabel}
             </p>
           )}
-          {chart}
+          <div className="min-h-0 flex-1">{chart}</div>
           {safeLegend.length > 0 && (
-            <ul className="mt-1.5 flex min-w-0 flex-wrap gap-x-3 gap-y-1">
+            <ul className="mt-1.5 flex min-w-0 shrink-0 flex-wrap gap-x-3 gap-y-1">
               {safeLegend.map((item, index) => (
                 <li key={`${item.label}-${index}`} className="flex min-w-0 items-center gap-1.5">
                   {/* Dot repeats the adjacent word; meaning never relies on color alone. */}
@@ -141,7 +142,7 @@ export function WidgetChartSummary({
             </ul>
           )}
           {xAxisLabel != null && xAxisLabel !== '' && (
-            <p className={cn(typography.role.caption, 'mt-1.5 break-words text-start')}>
+            <p className={cn(typography.role.caption, 'mt-1.5 shrink-0 break-words text-start')}>
               {xAxisLabel}
             </p>
           )}

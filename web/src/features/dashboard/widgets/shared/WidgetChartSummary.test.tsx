@@ -155,6 +155,20 @@ describe('WidgetChartSummary — null safety (hardening)', () => {
 });
 
 describe('WidgetChartSummary — axis labels', () => {
+  it('reserves caption and legend height around a bounded, shrinkable chart slot', () => {
+    render(<WidgetChartSummary stats={sampleStats} chart={chartNode}
+      yAxisLabel="kW" xAxisLabel="Speed range" legend={[{ label: 'Recorded energy' }]} />);
+
+    const slot = screen.getByTestId('chart').parentElement;
+    expect(slot).toHaveClass('min-h-0', 'flex-1');
+    expect(slot?.parentElement).toHaveClass('flex', 'flex-col', 'min-h-0');
+    expect(screen.getByText('kW')).toHaveClass('shrink-0');
+    expect(screen.getByText('Speed range')).toHaveClass('shrink-0');
+    expect(screen.getByRole('list')).toHaveClass('shrink-0');
+    expect(screen.getByText('Most Common')).toBeInTheDocument();
+    expect(screen.getByText('45')).toBeInTheDocument();
+  });
+
   it('renders the axis titles around the chart body when provided', () => {
     render(
       <WidgetChartSummary

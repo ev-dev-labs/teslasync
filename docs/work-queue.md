@@ -114,16 +114,28 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   Baselines are committed/pushed at `bfecead853`; evidence
   `windows-restored-dependency-build.log`, `windows-dependencies-final.json`,
   `windows-verified-{1,5,10,14,39,56}.log`.
-- Current next step: finish the Unknown-charger contract. Correct native
-  source key and exact new detail readouts expose a REAL wide-card chart
-  overflow: SVG bottom 568.75 exceeds card bound 552.75. Fix shared
-  WidgetChartSummary height allocation (captions/legend currently added
-  outside a full-height chart), keeping the unchanged geometry guard.
-  Then remove raw requested-window instants from Locations/Parking display
-  using the selected-zone formatter, with unchanged API bounds.
+- Fix 9 verified: exact redesigned detail readings expose a REAL wide-card
+  overflow (SVG bottom 568.75 exceeds card bound 552.75). Shared
+  WidgetChartSummary now reserves non-shrinking caption/legend/stat height
+  and gives its chart a bounded flexible slot; no geometry threshold changed.
+  Regression plus both charging-widget suites pass 113/113; all seven
+  sanctioned frozen receipt suites pass 7,728/7,728. Full signed/8-decimal
+  axis matrix and all four Unknown-source cases pass 12/12, escapes=0.
+  Unknown assertions retain full native wire/scope checks and now require
+  exact 42.0 + associated kWh, the single accessible 42-kWh source row and
+  real tooltip/bar, rather than aggregate tiles absent from the redesign.
+  Actual seven-category shared-source audit: six counts 0, TypeScript pass;
+  affected ESLint passes. Shared source 152->153 lines; all three axis/legend
+  branches remain. No request or hook changed. Evidence: `fix-9-chart-unit`,
+  `fix-9-frozen-unit`, `fix-9-contained-browser`, `fix-9-audit`,
+  `fix-9-source-eslint`, `fix-9-mock-build` logs.
+- Current next step: remove raw requested-window instants from
+  Locations/Parking display using the selected-zone formatter, with unchanged
+  API bounds; verify, commit/push, then hand off at ten completed fixes.
   Full CI for `bfecead853` is queued, not green (CI `40211130150`, Frontend
   Quality Gates `40211129921`); the small currently registered graph is
-  not full-suite acceptance. Completed fixes this session: 8.
+  not full-suite acceptance. Latest observation: 4 failures / 46 passes /
+  142 pending / 3 skipped, still in flight. Completed fixes this session: 9.
 
 ## Resume verification (2026-10-25, after `354deb1c1f`)
 
