@@ -41,6 +41,7 @@ func Connect(cfg config.RedisConfig) (*Client, error) {
 	defer cancel()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
+		_ = rdb.Close()
 		return nil, fmt.Errorf("pinging Redis at %s: %w", cfg.Addr(), err)
 	}
 
@@ -52,6 +53,12 @@ func Connect(cfg config.RedisConfig) (*Client, error) {
 // Returns the value and true if found, or zero value and false if not.
 func Get[T any](ctx context.Context, c *Client, key string) (T, bool) {
 	var zero T
+	if c == nil || c.rdb == nil {
+		return zero, false
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	val, err := c.rdb.Get(ctx, c.prefix+key).Bytes()
 	if err != nil {
 		// redis.Nil is an ordinary cache miss; anything else (connection
@@ -76,6 +83,12 @@ func Set[T any](ctx context.Context, c *Client, key string, val T, ttl time.Dura
 	if ttl <= 0 {
 		return fmt.Errorf("cache TTL must be positive, got %v", ttl)
 	}
+	if c == nil || c.rdb == nil {
+		return fmt.Errorf("cache client is nil")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	data, err := json.Marshal(val)
 	if err != nil {
 		return fmt.Errorf("marshaling cache value for key %s: %w", key, err)
@@ -88,6 +101,12 @@ func Set[T any](ctx context.Context, c *Client, key string, val T, ttl time.Dura
 
 // Delete removes a key from the cache.
 func Delete(ctx context.Context, c *Client, key string) error {
+	if c == nil || c.rdb == nil {
+		return fmt.Errorf("cache client is nil")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	if err := c.rdb.Del(ctx, c.prefix+key).Err(); err != nil {
 		return fmt.Errorf("deleting cache key %s: %w", key, err)
 	}
@@ -96,6 +115,12 @@ func Delete(ctx context.Context, c *Client, key string) error {
 
 // Invalidate removes all keys matching a prefix pattern.
 func (c *Client) Invalidate(ctx context.Context, pattern string) error {
+	if c == nil || c.rdb == nil {
+		return fmt.Errorf("cache client is nil")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	iter := c.rdb.Scan(ctx, 0, c.prefix+pattern+"*", 100).Iterator()
 	for iter.Next(ctx) {
 		if err := c.rdb.Del(ctx, iter.Val()).Err(); err != nil {
@@ -110,6 +135,12 @@ func (c *Client) Invalidate(ctx context.Context, pattern string) error {
 
 // Health checks Redis connectivity.
 func (c *Client) Health(ctx context.Context) error {
+	if c == nil || c.rdb == nil {
+		return fmt.Errorf("cache client is nil")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	if err := c.rdb.Ping(checkCtx).Err(); err != nil {
@@ -120,10 +151,16 @@ func (c *Client) Health(ctx context.Context) error {
 
 // Close shuts down the Redis client.
 func (c *Client) Close() error {
+	if c == nil || c.rdb == nil {
+		return nil
+	}
 	return c.rdb.Close()
 }
 
 // Underlying returns the raw Redis client for advanced operations.
 func (c *Client) Underlying() *redis.Client {
+	if c == nil {
+		return nil
+	}
 	return c.rdb
 }

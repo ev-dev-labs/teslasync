@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 )
 
 // ComponentStatus represents the health state of a system component.
@@ -151,9 +153,18 @@ type HealthSnapshot struct {
 func (hm *HealthMonitor) GetHealthHistory() []HealthSnapshot {
 	hm.mu.RLock()
 	defer hm.mu.RUnlock()
+	overall := StatusHealthy
+	for _, c := range hm.components {
+		if c.Status == StatusUnknown && c.TotalChecks == 0 {
+			continue
+		}
+		if c.Status > overall && c.Status != StatusUnknown {
+			overall = c.Status
+		}
+	}
 	snap := HealthSnapshot{
 		Timestamp:  time.Now(),
-		Overall:    hm.OverallStatus(),
+		Overall:    overall,
 		Components: make(map[string]ComponentStatus),
 	}
 	for name, c := range hm.components {
@@ -185,8 +196,34 @@ func DefaultRetryConfig() RetryConfig {
 // Retry executes fn with exponential backoff retries.
 // Returns the last error if all attempts fail.
 func Retry(ctx context.Context, name string, cfg RetryConfig, fn func(ctx context.Context) error) error {
+	if fn == nil {
+		return fmt.Errorf("%s: retry function is nil", name)
+	}
+	if cfg.MaxAttempts <= 0 {
+		return fmt.Errorf("%s: max attempts must be positive, got %d", name, cfg.MaxAttempts)
+	}
+	if cfg.InitialWait < 0 {
+		return fmt.Errorf("%s: initial wait must not be negative, got %v", name, cfg.InitialWait)
+	}
+	if cfg.MaxWait < 0 {
+		return fmt.Errorf("%s: max wait must not be negative, got %v", name, cfg.MaxWait)
+	}
+	if cfg.MaxAttempts > 1 && cfg.Multiplier <= 0 {
+		return fmt.Errorf("%s: retry multiplier must be positive, got %v", name, cfg.Multiplier)
+	}
+	if ctx != nil {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("%s: context cancelled before retry: %w", name, err)
+		}
+	} else {
+		ctx = context.Background()
+	}
+
 	var lastErr error
 	wait := cfg.InitialWait
+	if cfg.MaxWait > 0 && wait > cfg.MaxWait {
+		wait = cfg.MaxWait
+	}
 
 	for attempt := 1; attempt <= cfg.MaxAttempts; attempt++ {
 		lastErr = fn(ctx)
@@ -229,6 +266,9 @@ func Retry(ctx context.Context, name string, cfg RetryConfig, fn func(ctx contex
 // RetryWithResult executes fn with exponential backoff retries and returns a result.
 func RetryWithResult[T any](ctx context.Context, name string, cfg RetryConfig, fn func(ctx context.Context) (T, error)) (T, error) {
 	var zero T
+	if fn == nil {
+		return zero, fmt.Errorf("%s: retry function is nil", name)
+	}
 	var result T
 	err := Retry(ctx, name, cfg, func(ctx context.Context) error {
 		var e error
@@ -244,6 +284,15 @@ func RetryWithResult[T any](ctx context.Context, name string, cfg RetryConfig, f
 // ConnectWithRetry repeatedly attempts to connect with exponential backoff.
 // Uses a more aggressive config suitable for startup.
 func ConnectWithRetry(ctx context.Context, name string, maxAttempts int, fn func(ctx context.Context) error) error {
+	if maxAttempts <= 0 {
+		return fmt.Errorf("%s: max attempts must be positive, got %d", name, maxAttempts)
+	}
+	if fn == nil {
+		return fmt.Errorf("%s: retry function is nil", name)
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	cfg := RetryConfig{
 		MaxAttempts: maxAttempts,
 		InitialWait: 2 * time.Second,
@@ -256,9 +305,13 @@ func ConnectWithRetry(ctx context.Context, name string, maxAttempts int, fn func
 
 // SafeGo runs a function in a goroutine with panic recovery.
 func SafeGo(name string, fn func()) {
+	if fn == nil {
+		return
+	}
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
+				metrics.PanicsRecovered.WithLabelValues(name).Inc()
 				log.Error().Str("goroutine", name).Interface("panic", r).Msg("recovered from panic in goroutine")
 			}
 		}()
@@ -268,6 +321,12 @@ func SafeGo(name string, fn func()) {
 
 // SafeGoLoop runs a function in a goroutine with panic recovery that restarts on panic.
 func SafeGoLoop(ctx context.Context, name string, fn func(ctx context.Context)) {
+	if fn == nil {
+		return
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	go func() {
 		for {
 			select {
@@ -279,6 +338,7 @@ func SafeGoLoop(ctx context.Context, name string, fn func(ctx context.Context)) 
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
+						metrics.PanicsRecovered.WithLabelValues(name).Inc()
 						log.Error().Str("goroutine", name).Interface("panic", r).Msg("recovered from panic, restarting loop")
 					}
 				}()
