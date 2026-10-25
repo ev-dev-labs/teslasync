@@ -205,13 +205,36 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 - Head 55fe6605c6 at 19:09Z is **0 failing / 73 passing / 120 pending /
   3 skipped**. It has not evaluated fixes 11/12; this is NOT a completed
   improvement from the last final 28-failure graph.
-- Exact next step: repair notification activity's obsolete `(exclusive) ·
-  UTC` source-drawer contract (old responsive 30), preserving actual
-  localized half-open bounds and source-error/retention proofs rather than
-  deleting interval evidence. Then address genuine live-signal sparkline
-  overflow, missing fleet-posture brief, remaining sleep/home-energy
-  timezone semantics and any new completed CI roots. No baseline
-  regeneration unless a new reviewed Windows visual failure requires it.
+- Fix 12 pushed as `fd3c156153`, together with cost-query fix 11.
+- Fix 13: notification activity now retains its exact requested half-open
+  interval in the existing native Analysis period row, separately from its
+  compact calendar scope. Both bounds use the shared selected-zone
+  formatter; end-exclusive semantics and actual UTC request parameters
+  remain unchanged, including when the report is unavailable.
+  Three regressions fail before production repair; all 16 report unit
+  cases pass, including the 23-hour Los Angeles DST window. All eight
+  focused loaded/unavailable browser cases pass with zero proxy escapes,
+  exact request-bound displays, unknown metrics and source shells intact.
+  Actual TypeScript, affected ESLint, full unchanged lint chain and
+  hermetic build pass; the production audit reports six zero counts and
+  the notification hook URLs match registered routes.
+  Source 174->178 lines; all nine panel/chart/brief sites remain.
+  One canonical English bounds key and its generated split/usage entries
+  are added. Sanctioned generators update seven catalog-size/hash receipts
+  mechanically; all 7,728 frozen tests pass without removed assertions,
+  handwritten hashes, suppressions, guard or baseline changes.
+  Evidence: `r13-notification-red`, `r13-notification-unit`,
+  `r13-notification-audit`, `r13-notification-hooks`,
+  `r13-notification-gate`, `r13-notification-browser`, `r13-frozen`.
+- Head fd3c156153 at 19:20Z is **0 failing / 50 passing / 142 pending /
+  3 skipped**, still incomplete. Do not compare this with the completed
+  28-failure graph as a final improvement.
+- Exact next step: inspect the running focused widget-overflow diagnostic
+  (`r14-overflow-before`, shell 329) and its per-element records to repair
+  live-signal sparkline horizontal overflow. Then address the missing
+  fleet-posture brief, remaining sleep/home-energy timezone semantics and
+  new completed CI roots. No baseline regeneration unless a new reviewed
+  Windows visual failure requires it.
 
 ## Mandatory ten-fix handoff (2026-10-25 16:43Z)
 
