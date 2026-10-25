@@ -177,8 +177,16 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   responsive-26, run `40222371592`, job `121257103490`. The day-ledger phase
   has not yet been evaluated by CI. This ten-fix checkpoint must be pushed,
   then continue unattended.
-- Exact next step: inspect that completed responsive-26 log and fix its
-  precise remaining notification/date contract. Then charge-advisor's
+- Day-ledger fix 10 pushed as `55fe6605c6`.
+- Fix 11: the actual responsive-26 root is the strict cost-forecast source
+  query, not notifications. Its established hook now resolves the saved
+  timezone; the contract requires exactly months=6, vehicle_id=7 and
+  timezone=UTC. No request keys are ignored. All three focused mixed/null/
+  measured-zero cost browser cases pass, retaining exact free-session,
+  unknown-vs-zero, cost/energy, source-ledger and drawer proofs; escapes=0.
+  Affected ESLint passes; no production code or fixture response changed.
+  Evidence: `r11-responsive26`, `r11-cost`.
+- Exact next step: finish charge-advisor's
   supported-history cases still demand raw 2025-12-05 and directory day
   keys (`r9-responsive20`); preserve exact source window and seven projected
   business days using their actual localized displays. Continue the newest
