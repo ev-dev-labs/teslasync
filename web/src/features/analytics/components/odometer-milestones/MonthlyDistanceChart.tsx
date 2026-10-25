@@ -74,7 +74,7 @@ export function MonthlyDistanceChart({
         )}
         subtitle={t(
           'milestones.monthly.subtitle',
-          'UTC calendar-month distance bars with eligible drive-count context.',
+          'Selected-calendar month distance bars with eligible drive-count context.',
         )}
         ariaLabel={t(
           'milestones.monthly.aria',

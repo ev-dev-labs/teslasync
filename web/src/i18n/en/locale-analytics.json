@@ -1219,7 +1219,7 @@
     },
     "monthly": {
       "title": "Monthly distance & drive frequency",
-      "subtitle": "UTC calendar-month distance bars with eligible drive-count context.",
+      "subtitle": "Selected-calendar month distance bars with eligible drive-count context.",
       "aria": "Observed monthly distance bars with an eligible drive-count line",
       "distanceSeries": "Observed distance",
       "drivesSeries": "Eligible drives",
@@ -1274,7 +1274,7 @@
       "calibration": "Calibration is stored canonically in kilometres and means the odometer immediately before the chronologically first eligible returned drive.",
       "ladder": "The ladder is round in {{unit}}: every 10,000 through 100,000, then every 50,000.",
       "inclusion": "Eligible rows need a valid non-future start time and a finite, positive distance; every other row is excluded once.",
-      "months": "Monthly context groups eligible drive starts by UTC calendar month.",
+      "months": "Monthly context groups eligible drive starts in the selected display calendar.",
       "pace": "Each pace needs at least {{minimum}} eligible drives. Its denominator is the elapsed time from the later of its boundary or first eligible row through the frozen as-of time.",
       "forecast": "Roadmap dates use unrounded trailing-90-day pace; scenario ranges show sensitivity to other supported windows.",
       "horizon": "Invalid or extreme projections beyond {{days}} days are withheld.",

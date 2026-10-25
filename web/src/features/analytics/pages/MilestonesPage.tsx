@@ -12,6 +12,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useStoredNumber } from '@/hooks/useStoredNumber';
 import { useUnits } from '@/hooks/useUnits';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import {
   convertDistanceFromSI,
   convertDistanceToSI,
@@ -44,6 +45,7 @@ export default function MilestonesPage() {
   const vehicleIdStr =
     vehicleId != null ? String(vehicleId) : undefined;
   const { unitPrefs } = useUnits();
+  const { tz } = useDateFormat();
   const [nowMs] = useState(() => Date.now());
   const drivesQuery = useDriveHistory(
     vehicleIdStr,
@@ -54,8 +56,8 @@ export default function MilestonesPage() {
   const milestoneUnitKm =
     convertDistanceToSI(1, unitPrefs.distance) / 1_000;
   const options = useMemo(() => ({
-    nowMs, milestoneUnitKm, historyLimit: DEFAULT_HISTORY_LIMIT,
-  }), [nowMs, milestoneUnitKm]);
+    nowMs, milestoneUnitKm, timezone: tz, historyLimit: DEFAULT_HISTORY_LIMIT,
+  }), [nowMs, milestoneUnitKm, tz]);
   const observation = useMemo(() => {
     try {
       return { summary: buildOdometerMilestones(drives, { ...options, baseOdometerKm: 0 }), error: null };

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 
 import { useUnits } from '@/hooks/useUnits';
-import {formatDate} from '@/lib/dateFormat'
+import { useDateFormat } from '@/hooks/useDateFormat';
 import {formatMonthYear} from '@/lib/dateConvert';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -10,6 +10,7 @@ import { getGlobalPrecision } from '@/lib/numberFormat';
 export function useOdometerMilestoneDisplay() {
   const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { formatDistance, unitPrefs } = useUnits();
+  const { formatDate } = useDateFormat();
   const { distance: distanceUnit, locale } = unitPrefs;
 
   const formatDistanceKm = useCallback(
@@ -23,11 +24,11 @@ export function useOdometerMilestoneDisplay() {
   );
   const formatDateMs = useCallback(
     (ms: number | null | undefined) =>
-      ms == null ? '—' : formatDate(new Date(ms), { locale }),
-    [locale],
+      ms == null ? '—' : formatDate(new Date(ms)),
+    [formatDate],
   );
   const formatMonth = useCallback(
-    // Month-start markers are UTC-anchored, not display-zone instants.
+    // Calendar markers encode the already-grouped month, not an observed instant.
     (monthStartMs: number) => formatMonthYear(new Date(monthStartMs), { locale, tz: 'UTC' }),
     [locale],
   );

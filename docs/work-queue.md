@@ -205,6 +205,26 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   insurance models. Evidence: `r36-zone-captions-red`, `r36-zone-unit`,
   `r36-eslint`, `r37-build`, `r37-source-audit`, `r37-three-routes`,
   `r37-lint`, `r37-hooks`. No baseline or mirror changes.
+- Milestone phase gate (22:06Z): three selected-calendar boundary cases
+  cover UTC, Los Angeles and Tokyo, with opposite month/date shifts.
+  Monthly bucketing now uses the selected zone; its UTC-anchored month
+  markers remain calendar labels rather than observed instants. Actual
+  observation/forecast dates use the shared selected formatter.
+  Four assertions failed before implementation; all **80/80** affected
+  model/page/definition/control/brief cases now pass. Mounted rerenders
+  prove changed months without changing the frozen clock, calibration
+  owner, raw rows, cumulative totals or pace evidence. The unchanged
+  five-width route guards pass **5/5**, escapes=0. Source audits report
+  six zero categories and actual TypeScript pass on the component group,
+  model and page; full unchanged lint, affected ESLint, drive-hook routing
+  and hermetic build pass. All eight original sections remain. Source
+  lengths: page 225/227, monthly chart 201/201, methodology 219/219,
+  display helper 42/43, model 655/665. No storage, API or baseline change.
+  **Next before push:** commit the separately generated catalog receipt
+  repair below, then continue full-range automation calendar semantics.
+  Evidence: `r38-milestones-red`, `r38-milestones-unit`, `r38-tsc`,
+  `r38-eslint`, `r38-build`, `r39-milestones-route`, `r39-source-audit`,
+  `r39-lint`, `r39-driving-hooks`.
 
 ## CI-until-green continuation (2026-10-25, after `3ca29a42ad`)
 

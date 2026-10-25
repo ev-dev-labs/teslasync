@@ -63,6 +63,7 @@ function options(
     baseOdometerKm: 0,
     nowMs: NOW,
     milestoneUnitKm: 1,
+    timezone: 'UTC',
     ...overrides,
   };
 }
@@ -374,6 +375,26 @@ describe('buildOdometerMilestones', () => {
     ]);
   });
 
+  it.each([
+    ['UTC', [['2026-03', 3, 2]]],
+    ['America/Los_Angeles', [['2026-02', 1, 1], ['2026-03', 2, 1]]],
+    ['Asia/Tokyo', [['2026-03', 1, 1], ['2026-04', 2, 1]]],
+  ] as const)('groups month-boundary instants in %s without changing cumulative or pace evidence', (timezone, expected) => {
+    const rows = [
+      drive('2026-03-01T00:30:00Z', 1000),
+      drive('2026-03-31T15:30:00Z', 2000),
+    ];
+    const original = JSON.stringify(rows);
+    const utc = buildOdometerMilestones(rows, options());
+    const result = buildOdometerMilestones(rows, options({ timezone }));
+    expect(result.monthly.map(month => [month.month, month.distanceKm, month.driveCount])).toEqual(expected);
+    for (const month of result.monthly) {
+      expect(month.monthStartMs).toBe(Date.parse(`${month.month}-01T00:00:00Z`));
+    }
+    expect({ ...result, monthly: [] }).toEqual({ ...utc, monthly: [] });
+    expect(JSON.stringify(rows)).toBe(original);
+  });
+
   it('downsamples deterministically while all rows still feed aggregates', () => {
     const rows = [5, 4, 3, 2, 1].map((days) =>
       drive(daysAgo(days), 1_000),
@@ -427,6 +448,7 @@ describe('buildOdometerMilestones', () => {
 
   it.each([
     ['negative base', { baseOdometerKm: -1 }],
+    ['invalid time zone', { timezone: 'Not/A_Zone' }],
     ['invalid clock', { nowMs: Number.NaN }],
     ['invalid unit factor', { milestoneUnitKm: 0 }],
     ['invalid history limit', { historyLimit: 0 }],

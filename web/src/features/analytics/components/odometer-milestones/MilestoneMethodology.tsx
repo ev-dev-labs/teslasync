@@ -170,7 +170,7 @@ export function MilestoneMethodology({
               <li>
                 {t(
                   'milestones.method.months',
-                  'Monthly context groups eligible drive starts by UTC calendar month.',
+                  'Monthly context groups eligible drive starts in the selected display calendar.',
                 )}
               </li>
             </Text>
