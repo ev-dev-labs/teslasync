@@ -27,8 +27,100 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   updated the neon-help copy fixture to the intended palette wording.
   No hash was hand-edited. TypeScript exits 0; eight palette/frozen suites
   pass (7,782/7,782).
-- Next: commit/push palette merge, close drafts #205/#204, remove only
-  clean/pushed shared/colors worktrees, then repair the combined failures.
+- Palette merge committed and pushed as `11d3fd570c`.
+- Cleanup done: GitHub automatically marked #205 MERGED into this branch
+  after pushing its merge commit (therefore `gh pr close 205` refused);
+  #204 was already CLOSED. Posted the requested exact comment to both.
+  Both shared/colors worktrees had empty porcelain status and zero commits
+  ahead of their origin branches; verified both branches ancestor-merged,
+  then removed both worktrees without force. The pre-existing detached
+  `/tmp/teslasync-palette-base` worktree was not created here and is retained.
+- Combined validation so far: full frontend lint/audit chain exits 0;
+  actual seven-category violations audit reports all six pattern counts 0
+  and TypeScript passes; backend `go build ./...` and `go test -race ./...`
+  exit 0. Route registry/template checks pass for 266 actual routes;
+  E2E route/scenario contracts pass, harness contracts 24/24 pass,
+  discovery lists 2,087 tests in 88 files before the new scanner contracts.
+  Full Vitest was interrupted at the command time limit (exit 130); it
+  did not produce a passing full-suite result.
+- Windows baseline update BLOCKED: mirror status is
+  `?? docs/widget-redesign/`. Section 4 forbids syncing a dirty mirror;
+  no files there were modified and no baselines regenerated. Use Windows
+  CI artifacts until the mirror is clean.
+- New confirmed failure group: Lighthouse startup closure is 404.1 KB,
+  above the unchanged 400 KB budget. Reproduced on merged production build;
+  public AND private-map production builds exit 0; strict private-map
+  performance check fails only that budget (273/432 startup icons; 13
+  feature modules). No budget or threshold changed.
+- Unit conversion worker replaced 17 guarded factors plus one elevation
+  conversion across 16 source files; 78 focused tests passed, including
+  17 new regressions. Five coupled stale palette assertions fixed to
+  explicit shared tokens; affected suites 26/26 pass. Parent verification
+  and generator-only fingerprint regeneration complete; committed as
+  `0f45d02e08`.
+- Complete CI unit failure inventory collected from all eight shards:
+  69 files / 145 failing assertions, grouped into intended palette
+  expectation changes, deleted production contracts, and shared-format
+  expectations. Full raw logs and file/assertion inventory are in the
+  session evidence directory below; all three disjoint test workers have
+  finished and released their files.
+- Production palette regression fixes: restore InsightsEngine up/down
+  trend glyph records using canonical GOOD/BAD colors (previously only
+  neutral remained, causing runtime crashes); restore TimeMarker's public
+  canonical severityTokens re-export; replace duplicate blue signal-series
+  colors with six distinct canonical teal/violet/amber/green/blue/rose
+  tokens. Original behavioral assertions retained.
+- E2E attribution used a real pre-merge build at `a2308886c3`, not
+  unchanged-source inference. All six representative hero/route cases
+  fail there too; this does NOT establish attribution for every case.
+  Fixed competing dashboard init-script seeding, unknown battery meter
+  semantics, and a timezone scanner visibility bug: descendants of a
+  clipped accessible chart table were falsely treated as visible.
+  New scanner checks real ancestor clipping, including forced-colors
+  overrides; no class allowlist, skip, or tolerance changes. Focused
+  browser proof 12/12, hero unit tests 40/40; parent timezone switch and
+  scanner contracts 9/9, preview proxy escapes 0.
+- Remaining E2E roots (not declared fixed): compact/full hero contracts
+  disagree with old four-gauge/three-action E2E expectations; real visible
+  UTC captions remain on climate, vehicle recent drives, sleep efficiency,
+  departure forecast and energy-orchestrator; charge-departure-alignment
+  repeats two visible friendly timestamps. Full 266-route TZ-5 sweep and
+  16 quality shards still required after repairing these causes.
+- Security Scan on merged PR run now SUCCESS (observed, not assumed).
+- Evidence directory:
+  `/home/atul/.copilot/session-state/da9135b7-c9ba-4ad9-a198-fd85558513da/files/`.
+  Start with `combined-unit-failures.json`, `e2e-root-cause/report.json`,
+  `merged-private-perf.log`, and the final handoff entry below.
+- Verified repair commits: `0f45d02e08` canonical conversion adoption,
+  `725355f7f6` visibility-aware timezone scanning/dashboard seeding/battery
+  semantics, and `54a115d1f0` production palette contracts plus exact
+  intended palette/copy expectations. No Windows baselines changed.
+- Parent combined verification: 81/81 test files and 9,210/9,210 tests
+  pass, covering every collected CI unit failure, changed regression
+  tests and seven frozen i18n suites. Existing changed test/spec assertion
+  calls increased from 4,894 to 4,915; no per-file assertion reductions or
+  new skips. These are targeted results, NOT a passing full Vitest suite.
+  Final actual audit reports six pattern counts of zero and TypeScript
+  passing; full `npm run lint` including all registered audits exits 0.
+  Evidence: `batch-all-affected.log`, `batch-final-audit.log`,
+  `batch-final-lint.log`.
+- Handoff at the requested completed-result/context boundary: repair
+  commits are persisted serially; push this batch and resume in a fresh
+  session. Last observed checks on pre-repair `11d3fd570c`: 124 success,
+  31 failure, 20 in progress, 24 queued, 3 skipped. PR #202 is NOT green.
+- Exact next steps: inspect checks on the new pushed HEAD; rebuild
+  `E2E_MOCKS=1 npm run e2e:build` after the final palette source fix, then
+  fix the unresolved hero behavior/contract mismatch without removing
+  coverage. Repair visible timezone/duplicate-time roots listed above
+  (exact file evidence in `e2e-root-cause/report.json`), then run the full
+  TZ-5 route sweep and TZ-6/7 plus section 3 local replica. Reduce the
+  actual 404.1 KB startup closure below the unchanged 400 KB budget.
+  Full Vitest still required; use a bounded runner and preserve partial
+  output if its command reaches the playbook limit. For visual work,
+  recheck the dirty Windows mirror without changing its unrelated files;
+  use CI artifacts if it remains unavailable. Review old/new visuals and
+  update Windows baselines ONCE only after causes and intended changes
+  have been reconciled; then loop PR checks until green.
 - Combined failure groups to investigate after merging: branch-only
   vehicle-hero-readings/route-layout regressions (~53 reported; attribution
   must be re-established rather than trusting the branch handoff), remaining
@@ -38,22 +130,22 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   `docs/shared-patterns-state.md` remain a separate later adoption task.
 - No Windows baselines have been regenerated in this session.
 
-Last updated: 2026-10-23 by Copilot recovery session.
-Branch HEAD: reconcile at handoff; two widget-track recovery commits were
-pushed, followed by the dashboard Phase 4 repair batch. The Track B
-worktree is absent and origin/feat/widget-redesign is already merged in
-HEAD. Next: fix remaining PR #202 SI guard findings, finish TZ validation,
-then run the full replica and retain single-track work.
+Last updated: 2026-10-25 by Copilot merge-then-fix session.
+Latest repair commit: `54a115d1f0` (followed by this handoff documentation).
+Both requested branches are merged in order. The removed shared/colors
+worktrees are absent. The pre-existing detached
+`/tmp/teslasync-palette-base` remains untouched. All five batch workers
+are idle/released; no batch-owned preview/test process remains.
 
 ## Parts overview
 
 | Part | Name | Status | Last commit / note | Next step |
 |---|---|---|---|---|
-| 1 | Time zone: follow setting everywhere, remove duplicates — TRACK A (`fix/post-merge-followups`) | in progress | TZ-5c done; wip fixed by a09dc6ec15; freshness correction b7c55d6ab2+b3f0ba6272+658e6563fc; startup-budget fix (this change, unpushed) | TZ-5 277-route sweep, TZ-6 re-run, TZ-7 replica + push + PR #202 green. Only Track A commits here until done |
+| 1 | Time zone: follow setting everywhere, remove duplicates — TRACK A (`fix/post-merge-followups`) | in progress | Visibility-aware scanner contracts and TZ-6 pass; real visible timezone issues remain; merged startup is 404.1 KB > 400 KB | Fix listed roots, full current 266-route TZ-5 sweep, TZ-6/7 replica |
 | 2 | Dashboard widget redesign (119 widgets) — one active branch | done | Widget redesign merged at `248c9d13d5`; Track B worktree removed; Phase 4 dashboard scope repaired and verified. Recovery commits `823c8802c8`, `16bf49ebd1`, and `7b3fabbe7a` pushed. | Dashboard suite green; collect remaining PR/TZ failures and continue the one-track fix list |
-| 3 | Shared-pattern consolidation (whole codebase) | not started | — | `docs/shared-patterns.md` catalog first |
+| 3 | Shared-pattern consolidation (whole codebase) | in progress | Shared modules merged via `b235484463`; remaining feature conversions adopted via `0f45d02e08` | Call sites marked `pending` in `docs/shared-patterns-state.md` remain a separate later task |
 | 4 | Remaining: product items (A) + security re-check (B) | in progress (verify) | branch commits `e0196914cd..f84aad0ce7` cover A1-A7 + security; A8 owner-decision recorded | Audit plan-vs-branch after Part 3; B re-run audits |
-| 5 | CI green on PR #202 | not started | PR green at takeover (199 pass / 1 skipping) | Loop `gh pr checks --watch` after each push |
+| 5 | CI green on PR #202 | in progress | Not green; targeted unit repair batch passes, full replica incomplete | Inspect fresh HEAD checks, repair remaining groups, complete replica and Windows visual review |
 | 6 | Tailwind v3 -> v4 (`chore/tailwind-v4`, separate PR) | not started | 4 local commits, unpushed (pre-existing) | Only after Part 5 green |
 
 ## Part 1 steps (playbook items 1-8 + tests)
@@ -98,8 +190,10 @@ rule line; the same line goes into every worker prompt. Next: Phase 2 pilots
 
 ## Part 3 counts (once started)
 
-Catalog: not started. Coverage: 0%. Found / replaced / new-shared /
-exceptions / bugs-fixed: —.
+Shared modules and branch state were merged in `b235484463`. Remaining
+call-site adoption is tracked in `docs/shared-patterns-state.md`; rows
+marked `pending` are explicitly deferred to a separate task. No aggregate
+adoption percentage is claimed.
 
 ## Decisions log
 
