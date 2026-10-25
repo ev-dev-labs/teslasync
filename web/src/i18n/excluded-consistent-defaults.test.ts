@@ -226,7 +226,7 @@ describe('exact81 feature-owned consistent producer defaults', () => {
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     expect(oldEntries).toHaveLength(30240)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
-      .toBe("476d75f51c62765e349eb43f63b0e978751f4b220ccfb2bd5ff97964c49b8f8a")
+      .toBe("3fe8f647b810c1ad83daca636d1b67bb148e0d4d1727781433127b0593a8146c")
     expect(leaves(catalog)).toHaveLength(33171)
     expect(english.t('settings.title')).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)

@@ -65,7 +65,7 @@ export function UtilizationKpis({
                   context: t('utilization.ofWindow', 'of the observed window') },
                 { metricId: 'text', occurrenceId: 'active-days', label: t('utilization.activeDays', 'Days used'),
                   rawValue: summary.activeDayShare != null ? `${fmtNumber(summary.activeDayShare * 100)}%` : null,
-                  context: t('utilization.observedCalendarDays', '{{active}} of {{days}} observed UTC days', {
+                  context: t('utilization.observedCalendarDays', '{{active}} of {{days}} observed calendar days', {
                     active: fmtInt(summary.consistency.activeDays), days: fmtInt(summary.observedCalendarDays),
                   }) },
                 { metricId: 'text', occurrenceId: 'distance-per-day', label: t('utilization.perDay', 'Distance per day'),

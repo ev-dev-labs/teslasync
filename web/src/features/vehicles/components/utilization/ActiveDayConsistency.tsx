@@ -87,7 +87,7 @@ export function ActiveDayConsistency({
         )}
         subtitle={t(
           'utilization.consistency.subtitle',
-          'Latest 26 UTC weeks at most; partial first or final weeks remain explicitly marked.',
+          'Latest 26 calendar weeks at most; partial first or final weeks remain explicitly marked.',
         )}
         ariaLabel={t(
           'utilization.consistency.aria',

@@ -104,7 +104,7 @@ describe('final four genuine localization gaps — production source contracts',
     const predecessor = entries.filter(([parts]) => !exact.has(JSON.stringify(parts)))
     expect(predecessor).toHaveLength(33155)
     expect(createHash('sha256').update(JSON.stringify(predecessor)).digest('hex'))
-      .toBe("7cb341d52e8a151b1061ceed55ce94394aba5ff6c56f9b6859379a9eaa884eee")
+      .toBe("eda320d6fdb3327cc1f4f3ce8281b3756b68101d2dd3b4998ac31722fbd09881")
     expect(typeof catalog.temperature).toBe('object')
     expect(catalog.share.curve).toBe('Charge curve')
     expect(catalog.signalLog.composition).toBe('Value composition')

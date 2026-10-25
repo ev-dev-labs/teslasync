@@ -70,7 +70,7 @@ describe('canonical vehicle-page KPI preservation', () => {
   });
 
   it('keeps utilization window, sample and energy-only costing qualifiers', () => {
-    const summary = summarizeUtilization([], 0.15, { rangeStart: '2026-07-01',
+    const summary = summarizeUtilization([], 0.15, { timezone: 'UTC', rangeStart: '2026-07-01',
       rangeEnd: '2026-07-31', asOfMs: asOf, historyLimit: 1000 });
     render(<MemoryRouter><UtilizationKpis summary={summary} isLoading={false} error={null} onRetry={onRetry} /></MemoryRouter>);
     expect(tile('Time driving').getByText('—')).toBeInTheDocument();

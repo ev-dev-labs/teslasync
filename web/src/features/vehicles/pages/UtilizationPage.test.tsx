@@ -14,6 +14,7 @@ import {
 import type { Drive } from '@/types/driving';
 import type { UtilizationSummary } from '../lib/utilization';
 import { calendarRangeToInstants } from '@/lib/dateRange';
+import { formatDayKey } from '@/lib/dateFormat';
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const {
@@ -302,6 +303,34 @@ describe('UtilizationPage', () => {
     return summaryMock.mock.calls.at(-1)![0] as UtilizationSummary;
   }
 
+  it('recomputes selected-calendar accounting without changing source instants or the frozen clock', () => {
+    rangeMock.mockReturnValue({
+      start: '2026-07-31', end: '2026-08-01',
+      startInstant: '2026-07-31T00:00:00.000Z', endInstantExclusive: '2026-08-02T00:00:00.000Z',
+    });
+    const rows = [{ ...eligibleDrive(), startTs: '2026-08-01T00:30:00Z' }];
+    const original = JSON.stringify(rows);
+    drivesMock.mockReturnValue(query({ data: rows }));
+    const view = render(<UtilizationPage />, { wrapper: MemoryRouter });
+    const previous = latestSummary();
+    expect(previous.days[0].day).toBe('2026-08-01');
+    expect(previous.observedCalendarDays).toBe(1);
+    datePreferences.tz = 'America/Los_Angeles';
+    vi.setSystemTime(new Date('2030-01-01T00:00:00Z'));
+    view.rerender(<UtilizationPage />);
+    const current = latestSummary();
+    expect(current.days[0].day).toBe('2026-07-31');
+    expect(current.observedCalendarDays).toBe(2);
+    expect(current.window.asOfMs).toBe(previous.window.asOfMs);
+    expect(current.window.observedDurationS).toBe(previous.window.observedDurationS);
+    expect(current.distanceM).toBe(previous.distanceM);
+    expect(current.energyWh).toBe(previous.energyWh);
+    expect(JSON.stringify(rows)).toBe(original);
+    expect(drivesMock).toHaveBeenLastCalledWith('42', {
+      start: '2026-07-31T00:00:00.000Z', end: '2026-08-02T00:00:00.000Z', limit: 1000,
+    });
+  });
+
   it('passes unknown weekdays and observed inactive zero rates through the page without defaulting them', () => {
     rangeMock.mockReturnValue({
       start: '2026-07-10', end: '2026-07-11',
@@ -349,12 +378,15 @@ describe('UtilizationPage', () => {
     expect(summary.window.selectedStartMs).toBe(lower);
     expect(summary.window.selectedEndExclusiveMs).toBe(upper);
     expect(summary.window.observedDurationS).toBe(hours * 3600);
+    expect(summary.observedCalendarDays).toBe(1);
+    expect(summary.days[0]).toMatchObject({ day, dayStartMs: lower });
     expect(summary.drivingShare).toBeCloseTo((1800 + 0.001) / (hours * 3600));
     expect(summary.accounting).toMatchObject({
       returnedRows: 4, eligibleRows: 2, beforeRangeRows: 1, afterRangeRows: 1,
       truncatedDurationRows: 1,
     });
-    assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), `Requested ${day} → ${day}`, { contains: true });
+    const label = formatDayKey(day, { locale: 'de-DE', style: 'long' });
+    assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), `Requested ${label} → ${label}`, { contains: true });
     expect(screen.queryByTestId('utilization-range')).not.toBeInTheDocument();
   });
 
@@ -548,7 +580,7 @@ describe('UtilizationPage', () => {
     expect(drivesMock).toHaveBeenCalledWith('42', { start: '2026-07-01T00:00:00.000Z', end: '2026-08-01T00:00:00.000Z', limit: 1000 });
   });
 
-  it('opens the real review drawer with UTC-day denominators and energy-only cost context', () => {
+  it('opens the real review drawer with calendar-day denominators and energy-only cost context', () => {
     render(<UtilizationPage />, { wrapper: MemoryRouter });
     const brief = screen.getByTestId('utilization-summary');
     const distance = brief.querySelector('[data-operational-metric="distance-per-day"]');
@@ -556,7 +588,7 @@ describe('UtilizationPage', () => {
     expect(distance).toHaveAttribute('data-value-state', 'value');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText(/observed UTC days/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/observed calendar days/)).toBeInTheDocument();
     expect(within(drawer).getByText('energy only')).toBeInTheDocument();
     expect(within(drawer).getByText('1 drives')).toBeInTheDocument();
   });

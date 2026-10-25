@@ -281,6 +281,39 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   data-export bounds, sleep-efficiency accounting and insurance overnight
   grouping afterward; use real failing CI artifacts for any Windows work.
 
+- Utilization phase gate (22:30Z): automation history is pushed as
+  `968047ce31`. Nine new utilization regressions first failed against the
+  UTC model; the selected calendar now owns daily/monthly/weekday/week
+  attribution and duration splitting at actual local midnight. Spring and
+  fall days retain their true 23/25-hour elapsed durations, complete DST
+  weeks are not mislabeled partial, and skipped civil dates add no phantom
+  observation. Calendar month markers remain labels, not source instants.
+  Required explicit model timezone plus optional exact paired bounds
+  replace the page's containing-UTC-envelope workaround. Rolling bounds
+  remain exact; malformed/one-sided bounds fail closed. Source measures,
+  null coverage, clipping, populations and frozen-clock behavior remain.
+  A mounted zone-only rerender proves changed calendar denominators with
+  unchanged rows, bounds, elapsed time, measured totals and as-of clock.
+  All **112/112** affected model/page/table/coverage/KPI cases and **5/5**
+  unchanged five-width route guards pass, escapes=0. Actual TypeScript
+  and three source audits each pass with six zero categories; full
+  unchanged lint, affected ESLint, driving-hook routing and hermetic
+  build pass. Catalog copy now describes the actual selected calendar;
+  approved generators preserve other languages and all **7,728/7,728**
+  strict frozen cases pass. Removed the duplicate inline methodology
+  scope, retaining its one localized details-drawer disclosure; summary
+  scope dates likewise use the shared civil-day formatter. All eight
+  sections remain. Source lengths: page 290/253, model 903/914,
+  methodology 346/336. No API, storage, schema or baseline change.
+  Latest incomplete graph: **52 pass / 138 pending / 3 skip**, no
+  failures observed yet. Evidence: `r45-utilization-red`,
+  `r46-tsc`, `r47-utilization-unit`, `r47-utilization-audit`,
+  `r47-checkpoint`, `r48-frozen-unit`, `r48-eslint`, `r48-lint`,
+  `r48-build`, `r49-utilization-route`, `r49-driving-hooks`, `r49-checks`.
+  **Exact next:** commit/push utilization, then fix queued data-export
+  absolute bounds, followed by sleep-efficiency and insurance overnight
+  semantics. Keep refreshing CI and prioritize newly failing roots.
+
 ## CI-until-green continuation (2026-10-25, after `3ca29a42ad`)
 
 - Section 0: fetched/switched/pulled the expected branch; worktree clean.
