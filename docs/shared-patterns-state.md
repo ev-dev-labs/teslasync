@@ -112,3 +112,13 @@ Pending work is recorded here rather than hidden behind lint:
 - Final exact grep counts: inline static CSS-variable styles 2; raw HTML 512; direct library/double-prefix/camelCase category 992; inline unit factors 184.
 
 These E2E failures are recorded, not silently converted into success. No branch commit is reverted; remaining migration items are listed as partial/not started above.
+
+## Merge-base targeted E2E attribution (2026-10-24)
+
+- The unsharded quality run was stopped after it exceeded the bounded execution window.
+- Branch report: `1687 passed`, `335 failed`, `2 skipped`, `11 did not run`.
+- Focused merge-base run used `E2E_MOCKS=1`, `E2E_REUSE_BUILD=1`, port `4180`, and the wrapper's `E2E_PORT`/`E2E_BASE_URL` path. The base run completed its Playwright execution and produced 283 raw failure records across 16 failing spec files.
+- The extracted branch failure set is preserved at `/tmp/branch-failing-specs.txt` with 335 entries (323 unique spec/title pairs).
+- Attribution by exact spec/title: 270 unique pairs failed on both branch and merge-base; they are recorded as pre-existing. The branch-only set was concentrated in route-layout and vehicle-hero reading contracts.
+- A branch-only `vehicle-hero-readings.smoke.spec.ts` rerun failed 32/32 cases. The same implementation is unchanged between merge-base and branch, so these failures are pre-existing baselines; no revert was performed.
+- Route-layout reruns also continued to report timezone-zone/TZ duplication violations and were bounded by the 45-minute timeout. These are recorded as blocked by the existing route-layout baseline and not silently converted into success.
