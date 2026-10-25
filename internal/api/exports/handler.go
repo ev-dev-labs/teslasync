@@ -71,7 +71,8 @@ func decodeSubmitJobRequest(w http.ResponseWriter, r *http.Request) (submitJobRe
 // intentional "All Time" contract. Jobs are queued and streamed by the
 // worker, so changing an omitted range into a synthetic recent window would
 // silently omit records. Explicit date-only bounds retain the established
-// request format and reject only malformed or reversed windows.
+// request format. RFC3339 bounds use the shared half-open contract, normalized
+// to inclusive microsecond-precision worker/SQL bounds without a storage change.
 func parseAsyncExportWindow(startRaw, endRaw string) (*time.Time, *time.Time, error) {
 	parse := func(raw, field string) (*time.Time, error) {
 		raw = strings.TrimSpace(raw)
@@ -80,7 +81,14 @@ func parseAsyncExportWindow(startRaw, endRaw string) (*time.Time, *time.Time, er
 		}
 		value, err := time.Parse("2006-01-02", raw)
 		if err != nil {
-			return nil, fmt.Errorf("%s must use YYYY-MM-DD format", field)
+			if field == "start" {
+				value, _, err = apiparams.ParseDateRangeValues(raw, "")
+			} else {
+				_, value, err = apiparams.ParseDateRangeValues("", raw)
+			}
+			if err != nil {
+				return nil, fmt.Errorf("%s must be an RFC3339 timestamp or YYYY-MM-DD date", field)
+			}
 		}
 		value = value.UTC()
 		return &value, nil
@@ -385,9 +393,11 @@ func (h *ExportHandler) SubmitImportJob(w http.ResponseWriter, r *http.Request) 
 
 // SubmitAccountJob queues a GDPR-style "Download my data" full account export.
 // Produces a ZIP containing one CSV per allowed table plus manifest.json.
-// Convenience wrapper around SubmitJob with type=account so the frontend can
-// hit a single dedicated endpoint instead of crafting the generic payload.
+// Shares SubmitJob's optional window parsing and inclusive worker contract.
 func (h *ExportHandler) SubmitAccountJob(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.exports.submit_account_job")
+	defer span.End()
+	traceID := span.SpanContext().TraceID().String()
 	var req struct {
 		VehicleID *int64 `json:"vehicle_id,omitempty"`
 		Start     string `json:"start,omitempty"`
@@ -396,27 +406,17 @@ func (h *ExportHandler) SubmitAccountJob(w http.ResponseWriter, r *http.Request)
 	// Empty body is allowed — defaults to "all data, all vehicles, all time".
 	if r.ContentLength > 0 {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			span.RecordError(err)
 			writeError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
 	}
 
-	var startDate, endDate *time.Time
-	if req.Start != "" {
-		t, err := time.Parse("2006-01-02", req.Start)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "invalid start date format (expected YYYY-MM-DD)")
-			return
-		}
-		startDate = &t
-	}
-	if req.End != "" {
-		t, err := time.Parse("2006-01-02", req.End)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "invalid end date format (expected YYYY-MM-DD)")
-			return
-		}
-		endDate = &t
+	startDate, endDate, err := parseAsyncExportWindow(req.Start, req.End)
+	if err != nil {
+		span.RecordError(err)
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	jobID := fmt.Sprintf("acc-%d", time.Now().UnixNano())
@@ -432,8 +432,9 @@ func (h *ExportHandler) SubmitAccountJob(w http.ResponseWriter, r *http.Request)
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	if err := h.jobRepo.Create(r.Context(), job); err != nil {
-		log.Error().Err(err).Msg("export account: failed to create job")
+	if err := h.jobRepo.Create(ctx, job); err != nil {
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", traceID).Msg("export account: failed to create job")
 		writeError(w, http.StatusInternalServerError, "failed to create export job")
 		return
 	}
@@ -448,9 +449,10 @@ func (h *ExportHandler) SubmitAccountJob(w http.ResponseWriter, r *http.Request)
 			EndDate:   endDate,
 		},
 	}
-	if err := export.PublishCtx(r.Context(), h.mqttClient, mqttReq); err != nil {
-		log.Error().Err(err).Str("job_id", jobID).Msg("export account: failed to publish to MQTT")
-		_ = h.jobRepo.Fail(r.Context(), jobID, "failed to queue: "+err.Error())
+	if err := export.PublishCtx(ctx, h.mqttClient, mqttReq); err != nil {
+		span.RecordError(err)
+		log.Error().Err(err).Str("job_id", jobID).Str("trace_id", traceID).Msg("export account: failed to publish to MQTT")
+		_ = h.jobRepo.Fail(ctx, jobID, "failed to queue: "+err.Error())
 		writeError(w, http.StatusServiceUnavailable, "export service unavailable, MQTT not connected")
 		return
 	}
@@ -677,4 +679,3 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 func pagination(r *http.Request) (limit, offset int) {
 	return apiparams.Pagination(r)
 }
-

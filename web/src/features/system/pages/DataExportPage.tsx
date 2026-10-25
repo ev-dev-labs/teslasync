@@ -6,7 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { fmtInt as libFmtInt } from '@/lib/numberFormat';
 import { formatRelative } from '@/lib/dateFormat';
-import { addCivilDays } from '@/lib/dateRange';
+import { addCivilDays, civilDateInTimeZone, localMidnightToInstant } from '@/lib/dateRange';
 import { typography } from '@/lib/tokens';
 import { Icons } from '@/lib/icons';
 
@@ -54,6 +54,7 @@ import { ScheduledExportsPanel } from './ScheduledExportsPanel';
 import type { Vehicle } from '@/api/types';
 import type { DataState } from '@/api/dataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -175,13 +176,14 @@ const TYPE_BADGE_VARIANT: Record<ExportType, 'info' | 'success' | 'warning' | 'd
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-function daysAgo(days: number): string {
-  return addCivilDays(new Date().toISOString().split('T')[0], -days);
+function exportDateBounds(start: string, end: string, timezone: string): { start?: string; end?: string } {
+  return {
+    ...(start ? { start: localMidnightToInstant(start, timezone).toISOString() } : {}),
+    ...(end ? { end: localMidnightToInstant(addCivilDays(end, 1), timezone).toISOString() } : {}),
+  };
 }
 
 function validExportDates(start: string, end: string): boolean {
-  // Both queued endpoints parse date-only UTC midnights and include the end
-  // instant itself, not the remainder of that day.
   const valid = (date: string) => !date || (
     /^\d{4}-\d{2}-\d{2}$/.test(date) &&
     Number.isFinite(Date.parse(`${date}T00:00:00Z`)) &&
@@ -551,6 +553,7 @@ function ExportWizard({
   isPending: boolean;
 }) {
   const { t } = useTranslation();
+  const { tz } = useDateFormat();
   const vehicles = vehiclesState.data;
   const [searchParams] = useSearchParams();
   const {
@@ -617,17 +620,16 @@ function ExportWizard({
       payload.vehicle_id = Number(vehicleId);
     }
     if (useCustomRange) {
-      payload.start = customStart;
-      payload.end = customEnd;
+      Object.assign(payload, exportDateBounds(customStart, customEnd, tz));
     } else if (presetDays > 0) {
-      payload.start = daysAgo(presetDays);
-      payload.end = new Date().toISOString().split('T')[0];
+      const today = civilDateInTimeZone(new Date(), tz);
+      Object.assign(payload, exportDateBounds(addCivilDays(today, 1 - presetDays), today, tz));
     }
     if (selectedColumns !== null && selectedColumns.length > 0) {
       payload.columns = selectedColumns;
     }
     onSubmit(payload);
-  }, [targetReady, datesReady, jobType, exportFormat, vehicleId, presetDays, customStart, customEnd, useCustomRange, selectedColumns, onSubmit]);
+  }, [targetReady, datesReady, jobType, exportFormat, vehicleId, presetDays, customStart, customEnd, useCustomRange, selectedColumns, onSubmit, tz]);
 
   const vehicleOptions = useMemo(() => {
     const opts = [{ value: '', label: t('dataExport.allVehicles', 'All vehicles') }];
@@ -693,7 +695,7 @@ function ExportWizard({
         <Label className="mb-2 block">{t('dataExport.wizard.step4', 'STEP 4 — date range')}</Label>
         <DatePresetSelector selected={useCustomRange ? -1 : presetDays} onChange={handlePresetChange} />
         <HelperText>
-          {t('dataExport.startDate', 'Start')} 00:00 UTC ≤ {t('common.timestamp', 'Timestamp')} ≤ {t('dataExport.endDate', 'End')} 00:00 UTC
+          {t('dataExport.dateBounds', 'Dates use the selected clock. Start is inclusive; the end date includes its whole day.')}
         </HelperText>
         <div className="mt-3 flex items-center gap-3">
           <Button
@@ -1169,6 +1171,7 @@ function ExportHistoryTable({
 
 function AccountExportPanel({ vehiclesState, onRetryVehicles }: VehicleTargetProps) {
   const { t } = useTranslation();
+  const { tz } = useDateFormat();
   const vehicles = vehiclesState.data;
   const [searchParams] = useSearchParams();
   const {
@@ -1209,10 +1212,9 @@ function AccountExportPanel({ vehiclesState, onRetryVehicles }: VehicleTargetPro
       const id = Number(vehicleId);
       payload.vehicle_id = id;
     }
-    if (startDate) payload.start = startDate;
-    if (endDate) payload.end = endDate;
+    Object.assign(payload, exportDateBounds(startDate, endDate, tz));
     createAccount.mutate(payload);
-  }, [targetReady, datesReady, vehicleId, startDate, endDate, createAccount]);
+  }, [targetReady, datesReady, vehicleId, startDate, endDate, createAccount, tz]);
 
   const vehicleOptions = useMemo(
     () => [
@@ -1267,7 +1269,7 @@ function AccountExportPanel({ vehiclesState, onRetryVehicles }: VehicleTargetPro
         />
       </div>
       <HelperText>
-        {t('dataExport.startDate', 'Start')} 00:00 UTC ≤ {t('common.timestamp', 'Timestamp')} ≤ {t('dataExport.endDate', 'End')} 00:00 UTC
+        {t('dataExport.dateBounds', 'Dates use the selected clock. Start is inclusive; the end date includes its whole day.')}
       </HelperText>
       {!datesReady && <HelperText role="alert">{t('vehicleSettings.validation.invalidDate', 'Enter a valid date and time.')}</HelperText>}
       <VehicleTargetFeedback vehiclesState={vehiclesState} onRetryVehicles={onRetryVehicles} unknownTarget={unknownTarget ? vehicleId : undefined} />

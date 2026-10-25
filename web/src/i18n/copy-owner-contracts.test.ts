@@ -126,12 +126,12 @@ describe('five source-backed copy-owner contracts', () => {
       approved.add(key)
     }
     const entries = leaves(catalog)
-    expect(entries).toHaveLength(33171)
+    expect(entries).toHaveLength(33172)
     const predecessor = entries.filter(([key]) => !approved.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
-    expect(predecessor).toHaveLength(31127)
+    expect(predecessor).toHaveLength(31128)
     expect(createHash('sha256').update(JSON.stringify(predecessor)).digest('hex'))
-      .toBe("9abe6682b32af1530242e956606a8a8407b2d22bb6805821c2200027b68f6967")
+      .toBe("1068b26ad830b25e883f180f8dd7b934e6b706dc6e8bc65110618b64218217c2")
   })
 
   it('executes the actual guarded incident count producer with English plurals', () => {

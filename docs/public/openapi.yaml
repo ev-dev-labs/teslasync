@@ -5253,6 +5253,10 @@ paths:
                   type: string
                   enum: [csv, json]
                   default: csv
+                start:
+                  $ref: "#/components/schemas/QueuedExportStart"
+                end:
+                  $ref: "#/components/schemas/QueuedExportEnd"
       responses:
         "202":
           description: Export job submitted
@@ -5298,6 +5302,36 @@ paths:
                     completed_at:
                       type: string
                       format: date-time
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /export/jobs/account:
+    post:
+      operationId: submitAccountExportJob
+      summary: Queue an account ZIP export
+      description: |
+        Produces one CSV per allowed account table plus a manifest. Optional
+        bounds use the same instant contract as /export/jobs; omitted sides
+        remain unbounded. Existing date-only clients retain UTC midnight bounds.
+      tags: [Export]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vehicle_id:
+                  type: integer
+                start:
+                  $ref: "#/components/schemas/QueuedExportStart"
+                end:
+                  $ref: "#/components/schemas/QueuedExportEnd"
+      responses:
+        "202":
+          description: Account export queued
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -5673,6 +5707,22 @@ components:
             category: internal
 
   schemas:
+    QueuedExportStart:
+      type: string
+      description: |
+        Inclusive RFC3339 instant. Legacy YYYY-MM-DD inputs retain UTC-midnight
+        semantics. Omitted or empty values leave the lower bound unbounded.
+      example: "2026-03-08T08:00:00.000Z"
+    QueuedExportEnd:
+      type: string
+      description: |
+        Exclusive RFC3339 instant. The existing worker and inclusive SQL bounds
+        receive the preceding microsecond, matching database precision without
+        changing storage or MQTT fields. Legacy YYYY-MM-DD inputs retain their
+        inclusive UTC-midnight behavior, not end-of-day behavior. Omitted or
+        empty values leave the upper bound unbounded. Backup exports always
+        contain the complete database and do not apply date filters.
+      example: "2026-03-09T07:00:00.000Z"
     ErrorResponse:
       type: object
       required: [error, code]

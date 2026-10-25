@@ -22,10 +22,17 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 		return nil, err
 	}
 
-	// Parse cutoff from request dates
-	cutoff := time.Now().UTC().AddDate(0, 0, -30) // default 30 days
+	var cutoff, endTime, firstObserved time.Time
 	if req.StartDate != nil {
 		cutoff = *req.StartDate
+	}
+	if req.EndDate != nil {
+		endTime = *req.EndDate
+	}
+	observe := func(instant time.Time) {
+		if firstObserved.IsZero() || instant.Before(firstObserved) {
+			firstObserved = instant
+		}
 	}
 
 	type vehicleStats struct {
@@ -75,7 +82,7 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 		var allDrives []*drivemodel.Drive
 		offset := 0
 		for {
-			drives, _ := p.driveRepo.GetByVehicle(ctx, v.ID, 500, offset, time.Time{}, time.Time{})
+			drives, _ := p.driveRepo.GetByVehicle(ctx, v.ID, 500, offset, cutoff, endTime)
 			if len(drives) == 0 {
 				break
 			}
@@ -89,7 +96,7 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 		var allSessions []*chargingmodel.ChargingSession
 		offset = 0
 		for {
-			sessions, _ := p.chargingRepo.GetByVehicle(ctx, v.ID, 500, offset, time.Time{}, time.Time{})
+			sessions, _ := p.chargingRepo.GetByVehicle(ctx, v.ID, 500, offset, cutoff, endTime)
 			if len(sessions) == 0 {
 				break
 			}
@@ -106,6 +113,7 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 			if d.StartTs.Before(cutoff) {
 				continue
 			}
+			observe(d.StartTs)
 			distKm := d.DistanceM / 1000.0
 			dist += distKm
 			driveCount++
@@ -147,6 +155,7 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 			if s.StartedAt.Before(cutoff) {
 				continue
 			}
+			observe(s.StartedAt)
 			if s.TotalEnergyAddedWh != nil {
 				energy += (*s.TotalEnergyAddedWh / 1000.0)
 			}
@@ -221,8 +230,9 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 			`SELECT bucket, end_soc, min_soc, max_soc, soc_sample_count
 			 FROM cagg_battery_daily
 			 WHERE vehicle_id = $1 AND bucket >= $2
+			   AND ($3::timestamptz IS NULL OR bucket <= $3)
 			 ORDER BY bucket ASC`,
-			v.ID, cutoff)
+			v.ID, cutoff, req.EndDate)
 		if btErr == nil {
 			for btRows.Next() {
 				var bucket time.Time
@@ -231,6 +241,7 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 				if scanErr := btRows.Scan(&bucket, &endSOC, &minSOC, &maxSOC, &chargeSignals); scanErr != nil {
 					continue
 				}
+				observe(bucket)
 				soc := 0.0
 				if endSOC != nil {
 					soc = *endSOC
@@ -306,8 +317,16 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 	}
 	sort.Slice(batteryTrend, func(i, j int) bool { return batteryTrend[i].Date < batteryTrend[j].Date })
 
+	periodStart := cutoff
+	if periodStart.IsZero() {
+		periodStart = firstObserved
+	}
+	periodEnd := endTime
+	if periodEnd.IsZero() {
+		periodEnd = time.Now().UTC()
+	}
 	result := map[string]interface{}{
-		"period_days":             int(time.Since(cutoff).Hours()/24) + 1,
+		"period_days":             analyticsPeriodDays(periodStart, periodEnd),
 		"total_vehicles":          len(vehicles),
 		"total_distance_km":       math.Round(fleetDist*10) / 10,
 		"total_drives":            fleetDrives,
@@ -350,6 +369,13 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 		Data:        buf.Bytes(),
 		RecordCount: fleetDrives + fleetSessions,
 	}, nil
+}
+
+func analyticsPeriodDays(start, end time.Time) int {
+	if start.IsZero() || end.Before(start) {
+		return 0
+	}
+	return int(end.Sub(start).Hours()/24) + 1
 }
 
 func computeStats(vals []float64) map[string]interface{} {

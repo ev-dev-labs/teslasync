@@ -171,6 +171,7 @@
     "reapply": "Re-apply to my dashboard"
   },
   "dataExport": {
+    "dateBounds": "Dates use the selected clock. Start is inclusive; the end date includes its whole day.",
     "csvPreview": "CSV preview",
     "csvDesc": "Comma-separated values, compatible with Excel and Google Sheets",
     "jsonPreview": "JSON preview",

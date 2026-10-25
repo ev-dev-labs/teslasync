@@ -3,7 +3,28 @@ package export
 import (
 	"context"
 	"testing"
+	"time"
 )
+
+func TestAnalyticsPeriodDays(t *testing.T) {
+	start := time.Date(2026, 3, 8, 8, 0, 0, 0, time.UTC)
+	for _, tt := range []struct {
+		name       string
+		start, end time.Time
+		want       int
+	}{
+		{"no observed all-time history", time.Time{}, start, 0},
+		{"past bounded report", start, start.Add(23*time.Hour - time.Microsecond), 1},
+		{"inclusive exact boundary", start, start.Add(24 * time.Hour), 2},
+		{"reversed window", start, start.Add(-time.Hour), 0},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := analyticsPeriodDays(tt.start, tt.end); got != tt.want {
+				t.Fatalf("period days = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
 
 func TestJobStatusConstants(t *testing.T) {
 	tests := []struct {

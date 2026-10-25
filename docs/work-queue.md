@@ -6,6 +6,31 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
 ## Continuation after `98e23bed33` (2026-10-25)
 
+- Export phase gate (22:44Z, following pushed `47b4fa59c9`): both
+  independent job forms now resolve civil dates in the shared selected
+  clock and send inclusive-start/exclusive-end RFC3339 instants, including
+  full DST days. Seven-day presets mean seven inclusive calendar dates;
+  omitted bounds remain omitted. The two queued endpoints accept this
+  additive format through the shared date helper, preserving legacy
+  date-only UTC-midnight semantics and inclusive worker/SQL storage at
+  microsecond precision. No schema/MQTT shape changes. Analytics now applies
+  both query bounds and does not silently restrict All time to thirty days.
+  New OpenAPI bound schemas document compatibility on both endpoints.
+  Final affected units pass **89/89**, including a mounted clock-change
+  regression with retained civil values and both real mutation hooks.
+  Both Go packages pass `-race`; synchronous legacy semantics, exact
+  microsecond conversion and both endpoint rejection paths are covered.
+  Actual TypeScript, six zero source audit categories, export-hook routing,
+  full unchanged lint, affected ESLint and hermetic build pass. The unchanged
+  five-width route guard passes **5/5**, proxy escapes=0. All seven frozen
+  suites pass **7,728/7,728** after sanctioned catalog and verified producer
+  receipt generation (114 verified calls replace 118 old caption calls).
+  Page lines 1461/1463, sections 5/5; no content or control removed.
+  **Exact next after push:** inspect current CI and trace sleep-efficiency
+  exact bounds/accounting, then insurance overnight attribution. Latest
+  graph: **76 pass / 117 pending / 3 skipped**, incomplete; no Windows
+  changes. Evidence: `r50` red, `r52-export-go`, `r53-export-*`,
+  `r55-export-frozen` and `r56-export-unit`; do not rerun the full local suite.
 - The latest user clarification supersedes the historical handoff below:
   ordinary failing tests, commands and CI checks NEVER trigger stopping.
   Only two consecutive malformed/garbled tool calls trigger that rule.

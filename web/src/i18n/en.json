@@ -25308,6 +25308,7 @@
     "noEntriesHelp": "Audit entries appear after system or account activity is recorded."
   },
   "dataExport": {
+    "dateBounds": "Dates use the selected clock. Start is inclusive; the end date includes its whole day.",
     "csvPreview": "CSV preview",
     "csvDesc": "Comma-separated values, compatible with Excel and Google Sheets",
     "jsonPreview": "JSON preview",

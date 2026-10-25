@@ -156,7 +156,45 @@ func TestParseAsyncExportWindow(t *testing.T) {
 		{name: "invalid start", start: "invalid", wantErr: true},
 		{name: "reversed range", start: "2026-08-26", end: "2026-08-01", wantErr: true},
 		{name: "long explicit range remains valid", start: "2020-01-01", end: "2026-08-26"},
+		{name: "empty absolute range", start: "2026-03-08T08:00:00Z", end: "2026-03-08T08:00:00Z", wantErr: true},
+		{name: "reversed absolute range", start: "2026-03-09T07:00:00Z", end: "2026-03-08T08:00:00Z", wantErr: true},
 	}
+
+	t.Run("selected clock and legacy compatibility", func(t *testing.T) {
+		for _, tt := range []struct {
+			name, start, end, wantStart, wantEnd string
+		}{
+			{"legacy date-only midnight", "2026-08-01", "2026-08-26", "2026-08-01T00:00:00Z", "2026-08-26T00:00:00Z"},
+			{"spring DST day", "2026-03-08T08:00:00Z", "2026-03-09T07:00:00Z", "2026-03-08T08:00:00Z", "2026-03-09T06:59:59.999999Z"},
+			{"fall DST day", "2026-11-01T07:00:00Z", "2026-11-02T08:00:00Z", "2026-11-01T07:00:00Z", "2026-11-02T07:59:59.999999Z"},
+			{"offset instants", "2026-03-08T00:00:00-08:00", "2026-03-09T00:00:00-07:00", "2026-03-08T08:00:00Z", "2026-03-09T06:59:59.999999Z"},
+			{"open lower bound", "", "2026-03-09T07:00:00Z", "", "2026-03-09T06:59:59.999999Z"},
+			{"open upper bound", "2026-03-08T08:00:00Z", "", "2026-03-08T08:00:00Z", ""},
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				start, end, err := parseAsyncExportWindow(tt.start, tt.end)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for i, got := range []*time.Time{start, end} {
+					want := []string{tt.wantStart, tt.wantEnd}[i]
+					if want == "" {
+						if got != nil {
+							t.Fatalf("bound %d = %v, want nil", i, got)
+						}
+						continue
+					}
+					expected, err := time.Parse(time.RFC3339Nano, want)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if got == nil || !got.Equal(expected) || got.Location() != time.UTC {
+						t.Fatalf("bound %d = %v, want UTC %v", i, got, expected)
+					}
+				}
+			})
+		}
+	})
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			start, end, err := parseAsyncExportWindow(tt.start, tt.end)
@@ -176,6 +214,33 @@ func TestParseAsyncExportWindow(t *testing.T) {
 				t.Fatal("explicit range returned a nil bound")
 			}
 		})
+	}
+}
+
+func TestQueuedExportEndpointsRejectInvalidBoundsBeforeQueueing(t *testing.T) {
+	h := &ExportHandler{}
+	for _, endpoint := range []struct {
+		name    string
+		handler http.HandlerFunc
+	}{
+		{"generic", h.SubmitJob},
+		{"account", h.SubmitAccountJob},
+	} {
+		for _, bounds := range []string{
+			`"start":"invalid"`,
+			`"start":"2026-03-08T08:00:00Z","end":"2026-03-08T08:00:00Z"`,
+			`"start":"2026-03-09","end":"2026-03-08"`,
+		} {
+			t.Run(endpoint.name+"/"+bounds, func(t *testing.T) {
+				rec := httptest.NewRecorder()
+				req := httptest.NewRequest(http.MethodPost, "/export/jobs",
+					strings.NewReader(`{"type":"drives",`+bounds+`}`))
+				endpoint.handler(rec, req)
+				if rec.Code != http.StatusBadRequest {
+					t.Fatalf("status = %d, want 400; body=%s", rec.Code, rec.Body.String())
+				}
+			})
+		}
 	}
 }
 
@@ -199,6 +264,7 @@ func TestSyncExportWindowPreservesLegacyDateSemantics(t *testing.T) {
 			wantEnd:   time.Date(2026, time.August, 26, 23, 59, 59, 999999000, time.FixedZone("PDT", -7*60*60)),
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.target, nil)

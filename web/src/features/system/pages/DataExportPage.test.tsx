@@ -11,7 +11,7 @@
  *   2.  `StatsRow` useMemo aggregation (count / summed bytes / most-exported).
  *   3.  Export wizard submit — type + format + default 30-day range reach the API.
  *   4.  "All Time" preset omits the start/end window.
- *   5.  UTC date-only bounds, inclusive midnight end, and invalid ranges.
+ *   5.  Selected-calendar half-open bounds, DST, and invalid ranges.
  *   6.  Column picker — required column locked, unchecked column dropped on submit.
  *   7.  Account ("Download my data") export queues against /export/jobs/account.
  *   8.  Empty state when there are no jobs.
@@ -35,11 +35,11 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 const savedSettings = vi.hoisted(() => ({
-  locale: 'en-US', timezone_user: 'UTC', decimal_precision: 2, currency_symbol: '$',
+  locale: 'en-US', tz_display_default: 'user', timezone_user: 'UTC', decimal_precision: 2, currency_symbol: '$',
 }));
 vi.mock('@/hooks/useSettings', async importOriginal => ({
   ...await importOriginal<typeof import('@/hooks/useSettings')>(),
-  useSettings: () => ({ settings: savedSettings, settingsUnavailable: false }),
+  useSettings: () => ({ locale: savedSettings.locale, settings: savedSettings, settingsUnavailable: false }),
 }));
 
 vi.mock('@/api/client', async () => {
@@ -273,7 +273,7 @@ describe('Data export responsive callers', () => {
     submit.focus();
     await user.keyboard('{Enter}');
     await waitFor(() => expect(lastPostBody('/export/jobs')).toMatchObject({
-      start: '2026-01-01', end: '2026-01-31',
+      start: '2026-01-01T00:00:00.000Z', end: '2026-02-01T00:00:00.000Z',
     }));
     for (const name of ['Last 7 days', 'Last 30 days', 'Clear', 'Start full export']) {
       expect(screen.getByRole('button', { name, exact: true })).toHaveClass('min-h-11', 'min-w-11', 'whitespace-normal');
@@ -617,14 +617,16 @@ describe('DataExportPage — Project Apex elevation', () => {
     });
 
     const body = lastPostBody('/export/jobs');
-    expect(body.start).toBe('2025-03-01');
-    expect(body.end).toBe('2025-03-31');
+    expect(body.start).toBe('2025-03-01T00:00:00.000Z');
+    expect(body.end).toBe('2025-04-01T00:00:00.000Z');
   });
 
   it.each([
-    ['de-DE', 'America/Los_Angeles', '2026-03-08'],
-    ['fr-FR', 'Pacific/Auckland', '2026-11-01'],
-  ])('keeps both endpoints on UTC date-only bounds with saved %s / %s settings', async (locale, timezone, day) => {
+    ['de-DE', 'America/Los_Angeles', '2026-03-08', '2026-03-08T08:00:00.000Z', '2026-03-09T07:00:00.000Z'],
+    ['de-DE', 'America/Los_Angeles', '2026-11-01', '2026-11-01T07:00:00.000Z', '2026-11-02T08:00:00.000Z'],
+    ['fr-FR', 'Pacific/Auckland', '2026-11-01', '2026-10-31T11:00:00.000Z', '2026-11-01T11:00:00.000Z'],
+    ['en-US', 'Pacific/Kiritimati', '2026-01-01', '2025-12-31T10:00:00.000Z', '2026-01-01T10:00:00.000Z'],
+  ])('uses selected-calendar bounds on both queued endpoints with saved %s / %s settings', async (locale, timezone, day, start, end) => {
     savedSettings.locale = locale;
     savedSettings.timezone_user = timezone;
     renderPage();
@@ -635,18 +637,54 @@ describe('DataExportPage — Project Apex elevation', () => {
     fireEvent.change(screen.getByLabelText('End'), { target: { value: day } });
     fireEvent.change(screen.getByLabelText('Start date (optional)'), { target: { value: day } });
     fireEvent.change(screen.getByLabelText('End date (optional)'), { target: { value: day } });
-    expect(screen.getAllByText('Start 00:00 UTC ≤ Timestamp ≤ End 00:00 UTC')).toHaveLength(2);
+    expect(screen.getAllByText('Dates use the selected clock. Start is inclusive; the end date includes its whole day.')).toHaveLength(2);
+    expect(screen.queryByText(/00:00 UTC/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
     fireEvent.click(screen.getByRole('button', { name: 'Start full export' }));
     await waitFor(() => {
-      expect(lastPostBody('/export/jobs')).toMatchObject({ start: day, end: day });
-      expect(lastPostBody('/export/jobs/account')).toMatchObject({ start: day, end: day });
+      expect(lastPostBody('/export/jobs')).toMatchObject({ start, end });
+      expect(lastPostBody('/export/jobs/account')).toMatchObject({ start, end });
     });
   });
 
-  it.each(['2026-03-08T00:00:00.000Z', '2026-03-08T23:59:59.999Z'])(
-    'uses UTC calendar arithmetic at the day boundary %s despite saved timezone',
-    async now => {
+  it('reinterprets retained civil dates after a mounted shared-clock change', async () => {
+    const view = renderPage();
+    await screen.findByText('New export');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Start export' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Custom range' }));
+    for (const label of ['Start', 'End', 'Start date (optional)', 'End date (optional)']) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value: '2026-03-08' } });
+    }
+    savedSettings.timezone_user = 'America/Los_Angeles';
+    view.rerender(
+      <QueryClientProvider client={view.queryClient}>
+        <MemoryRouter initialEntries={['/data-export']}>
+          <ToastProvider>
+            <DataExportPage />
+          </ToastProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    for (const label of ['Start', 'End', 'Start date (optional)', 'End date (optional)']) {
+      expect(screen.getByLabelText(label)).toHaveValue('2026-03-08');
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start full export' }));
+    await waitFor(() => {
+      for (const endpoint of ['/export/jobs', '/export/jobs/account']) {
+        expect(lastPostBody(endpoint)).toMatchObject({
+          start: '2026-03-08T08:00:00.000Z', end: '2026-03-09T07:00:00.000Z',
+        });
+      }
+    });
+  });
+
+  it.each([
+    ['2026-03-08T00:00:00.000Z', '2026-03-01T08:00:00.000Z', '2026-03-08T08:00:00.000Z'],
+    ['2026-03-08T23:59:59.999Z', '2026-03-02T08:00:00.000Z', '2026-03-09T07:00:00.000Z'],
+  ])(
+    'uses selected-calendar preset arithmetic at the absolute day boundary %s',
+    async (now, start, end) => {
       vi.useFakeTimers({ toFake: ['Date'] });
       vi.setSystemTime(new Date(now));
       savedSettings.locale = 'de-DE';
@@ -657,7 +695,7 @@ describe('DataExportPage — Project Apex elevation', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Last 7 days' }));
       fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
       await waitFor(() => expect(lastPostBody('/export/jobs')).toMatchObject({
-        start: '2026-03-01', end: '2026-03-08',
+        start, end,
       }));
     },
   );
@@ -685,8 +723,8 @@ describe('DataExportPage — Project Apex elevation', () => {
   });
 
   it.each([
-    ['2026-03-08', '', { start: '2026-03-08' }],
-    ['', '2026-03-08', { end: '2026-03-08' }],
+    ['2026-03-08', '', { start: '2026-03-08T00:00:00.000Z' }],
+    ['', '2026-03-08', { end: '2026-03-09T00:00:00.000Z' }],
   ])('preserves an independently optional account bound (%s, %s)', async (start, end, expected) => {
     renderPage();
     await screen.findByText('Download my data');
