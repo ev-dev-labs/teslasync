@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { ROUTE_REGISTRY } from '../../src/lib/routeRegistry';
 import type { SleepEfficiencyData } from '../../src/types/energy';
 import {
-  assertMockApiComplete, expectThemeApplied, fulfillApiFixture, installApiMocks,
+  assertMockApiComplete, expectThemeApplied, fulfillApiFixture, installApiMocks, mockAppSettings,
   seedBrowserState, waitForHarnessReady, type MockApiController,
 } from '../mockApi';
 import {
@@ -586,6 +586,51 @@ for (const theme of ['light', 'dark'] as const) {
       await finish(page, mocks, diagnostics);
     });
   }
+}
+
+for (const clock of [
+  { zone: 'America/Los_Angeles', issued: 'Aug 7, 2026, 05:30 PM', observed: 'Jan 2, 2024, 11:30 PM' },
+  { zone: 'Asia/Tokyo', issued: 'Aug 8, 2026, 09:30 AM', observed: 'Jan 3, 2024, 04:30 PM' },
+]) {
+  test(`passport preserves canonical days and raw export with the selected ${clock.zone} clock`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-08-08T12:00:00Z'));
+    const mocks = await setup(page, 'dark', 1440, '/battery-passport');
+    await page.route('**/api/v1/settings', route => fulfillApiFixture(route, mocks, {
+      json: { ...mockAppSettings, tz_display_default: 'user', timezone_user: clock.zone },
+    }));
+    const source = {
+      ...passport,
+      issued_at: '2026-08-08T00:30:00Z',
+      first_observed_at: '2024-01-02T23:30:00-08:00',
+    };
+    await installBatteryEndpoint(page, mocks, '/vehicles/7/battery-passport', source, {});
+    await installBatteryEndpoint(page, mocks, '/vehicles/7/battery-passport/verify', passportVerification, {
+      hash: source.provenance_hash,
+    });
+    const diagnostics = monitorPage(page);
+    await ready(page, mocks, '/battery-passport', 'dark');
+    const row = (section: string, field: string) => page.getByTestId(section)
+      .getByRole('row').filter({ has: page.getByText(field, { exact: true }) });
+    await expect(row('battery-passport-field-directory', 'issued_at')).toContainText(clock.issued);
+    await expect(row('battery-passport-field-directory', 'first_observed_at')).toContainText(clock.observed);
+    await expect(row('battery-passport-provenance-matrix', 'issued_at day')).toContainText('Aug 8, 2026');
+    await expect(row('battery-passport-provenance-matrix', 'first_observed_at day')).toContainText('Jan 3, 2024');
+    const trend = page.getByTestId('battery-passport-trend-timeline').getByRole('table');
+    await expect(trend).toContainText('May 1, 2026');
+    await expect(trend).toContainText('Aug 1, 2026');
+    await expect(page.locator('main')).not.toContainText(/\bUTC\b|America\/Los_Angeles|Asia\/Tokyo|20\d\d-\d\d-\d\dT\d\d:/);
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Export certificate', exact: true }).click(),
+    ]);
+    const stream = await download.createReadStream();
+    if (!stream) throw new Error('Certificate download stream is unavailable');
+    let json = '';
+    for await (const chunk of stream) json += chunk.toString();
+    expect(JSON.parse(json)).toEqual(source);
+    expect(download.suggestedFilename()).toBe('battery-passport-7-aaaaaaaaaaaa.json');
+    await finish(page, mocks, diagnostics);
+  });
 }
 
 test('sleep source refresh holds published values until success without inventing duration evidence', async ({ page }) => {

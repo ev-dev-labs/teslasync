@@ -6,6 +6,38 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
 ## Continuation after `98e23bed33` (2026-10-25)
 
+- Battery-passport fixed-calendar phase gate (after pushed `4b24bb653f`):
+  unchanged five-width guards reproduce **5 failures**, each with 11 visible
+  zone labels and no layout/instant/duplicate failures. Two new selected-clock
+  unit cases reproduce raw issue and first-observed instants in Field Directory.
+  The presentation repair preserves source-owned daily aggregates, canonical
+  hash days, precision, frozen diagnostic clock, all 14 sections and raw JSON.
+  Instants use shared selected-clock formatting; real calendar days use
+  zone-stable localized day-key formatters. The canonical empty-day sentinel
+  remains an explicit protocol value. Source-calendar and hash explanations
+  replace zone captions without removing any caveat or threshold.
+  All three affected unit suites pass **87/87**, including both clocks,
+  full export and all retained/error/empty-state contracts. Four existing
+  fallback capitalization mismatches now match the catalog; the corresponding
+  paused/loading assertions preserve their complete state checks.
+  Generated catalogs and all eight verified producer sources are checkpointed
+  through the authorized generators. Final affected plus frozen gate passes
+  **7,815/7,815** (87 battery cases and 7,728 receipt cases). Both source
+  scopes pass actual TypeScript and six zero audit counts; unchanged full
+  lint, both hook routes and the hermetic build pass.
+  **11/11** browser cases pass, zero escapes: all five unchanged route
+  widths, four native operand/review combinations, and two new actual-clock
+  cases that check fixed source days and complete raw JSON downloads.
+  All 14 source cards remain. Production page plus components total
+  **3,663 → 3,668 lines**; page 501/501, Field Directory 466/463,
+  provenance 353/358 and timeline 116/119. All 12 methodology items remain.
+  Evidence: `r111-passport-red`, `r113-passport-unit-red`, `r114-*`,
+  `r115-*`, `r116-*`, `r117-*`, `r119-*`.
+  **Exact next:** push this phase, then inspect the current PR head's
+  actual failing jobs/artifacts. If only pending, recheck every five minutes;
+  rerun only hosted-setup failures after their containing run completes.
+  Last `4b24bb653f` graph at 01:09Z: **77 pass / 114 pending / 3 skipped**,
+  incomplete. No baseline, source math, storage, workflow or tolerance edit.
 - Tesla usage selected-calendar phase gate (after pushed `dae94b1d54`):
   reproduced absent calendar query/cache identity and three accepted invalid
   backend calendars. The handler now validates the optional IANA calendar,
@@ -35,7 +67,7 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   0/0 and 5/5. No content section or test scenario removed.
   Evidence: `r101-usage-hook-red`, `r102-usage-go-red`, `r103-*`,
   `r104-*`, `r106-*`, `r107-*`, `r108-usage-browser`.
-  **Exact next:** push this verified phase, then finish battery-passport's
+  **Pushed:** `4b24bb653f`. The next phase is battery-passport's
   actual fixed source-calendar presentation and instant formatting. Preserve
   certificate aggregation, qualification and canonical hash bytes. Continue
   actual CI failure diagnosis while pending, not the full local suite.

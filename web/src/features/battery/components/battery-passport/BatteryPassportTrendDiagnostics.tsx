@@ -108,14 +108,14 @@ export function BatteryPassportTrendDiagnostics({
       key: 'invalid_date',
       label: t(
         'batteryPassport.diagnostics.invalidDate',
-        'Invalid UTC dates',
+        'Invalid certificate dates',
       ),
     },
     {
       key: 'future_date',
       label: t(
         'batteryPassport.diagnostics.futureDate',
-        'Future UTC dates',
+        'Future certificate dates',
       ),
     },
     {
@@ -129,7 +129,7 @@ export function BatteryPassportTrendDiagnostics({
       key: 'duplicate_date',
       label: t(
         'batteryPassport.diagnostics.duplicateDate',
-        'Duplicate UTC dates',
+        'Duplicate certificate dates',
       ),
     },
   ];
@@ -141,7 +141,7 @@ export function BatteryPassportTrendDiagnostics({
             'Trend diagnostics and exact accounting',
           )} description={t(
             'batteryPassport.diagnostics.subtitle',
-            'Coverage, UTC cadence, recency to the frozen page clock, variability, quantiles, and gated linear description.',
+            'Coverage, source-calendar cadence, recency to the frozen page clock, variability, quantiles, and gated linear description.',
           )} actions={<Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -162,7 +162,7 @@ export function BatteryPassportTrendDiagnostics({
             <MetricCard
               label={t(
                 'batteryPassport.diagnostics.span',
-                'UTC date span',
+                'Certificate date span',
               )}
               value={diagnostics.spanDays != null
                 ? t(
@@ -192,7 +192,7 @@ export function BatteryPassportTrendDiagnostics({
                 : '—'}
               subtitle={t(
                 'batteryPassport.diagnostics.recencyHint',
-                'latest UTC date to frozen page clock',
+                'latest certificate date to frozen page clock',
               )}
               icon={<CalendarClock className="h-5 w-5" />}
               color="green"
@@ -200,7 +200,7 @@ export function BatteryPassportTrendDiagnostics({
             <MetricCard
               label={t(
                 'batteryPassport.diagnostics.cadence',
-                'Median UTC cadence',
+                'Median daily cadence',
               )}
               value={diagnostics.medianCadenceDays != null
                 ? t(
@@ -367,7 +367,7 @@ export function BatteryPassportTrendDiagnostics({
               <Text as="p" variant="caption">
                 {t(
                   'batteryPassport.diagnostics.cap',
-                  'The response reached the 180-point server maximum. Earlier qualifying UTC dates may be absent; {{omitted}} additional valid points were omitted by the defensive display cap.',
+                  'The response reached the 180-point server maximum. Earlier qualifying source dates may be absent; {{omitted}} additional valid points were omitted by the defensive display cap.',
                   {
                     omitted:
                       analysis.trend.cap.omittedByDisplayCap,

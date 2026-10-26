@@ -119,7 +119,7 @@ export default function BatteryPassportPage() {
   usePageTitle(
     t(
       'batteryPassport.title',
-      'Battery Passport',
+      'Battery passport',
     ),
   );
 
@@ -327,7 +327,7 @@ export default function BatteryPassportPage() {
     <PageLayout
       title={t(
         'batteryPassport.title',
-        'Battery Passport',
+        'Battery passport',
       )}
       subtitle={t(
         'batteryPassport.subtitle',
@@ -338,7 +338,7 @@ export default function BatteryPassportPage() {
         passport != null ? (
           <StaleRefreshWarning
             state={passportSource}
-            label={t('batteryPassport.title', 'Battery Passport')}
+            label={t('batteryPassport.title', 'Battery passport')}
           />
         ) : (
           <AlertBanner variant="info" role="status" data-refresh-blocked>
@@ -379,7 +379,7 @@ export default function BatteryPassportPage() {
       </FadeIn>
 
       {/*
-       * 3 · UTC trend timeline.
+       * 3 · Fixed-calendar trend timeline.
        * Its shared chart shell remains mounted for every query state.
        */}
       <FadeIn delay={0.06}>

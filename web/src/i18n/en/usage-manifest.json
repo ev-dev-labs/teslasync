@@ -17516,7 +17516,6 @@
       "batteryPassport.fields.trend",
       "batteryPassport.fields.trendDate",
       "batteryPassport.fields.trendDateSource",
-      "batteryPassport.fields.trendDateSummary",
       "batteryPassport.fields.trendSoh",
       "batteryPassport.fields.trendSohSource",
       "batteryPassport.fields.trendSohSummary",

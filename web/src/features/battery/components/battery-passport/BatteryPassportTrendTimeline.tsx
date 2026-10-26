@@ -37,7 +37,10 @@ export function BatteryPassportTrendTimeline({
     () => [
       {
         key: 'date',
-        label: t('batteryPassport.trend.date', 'UTC date'),
+        label: t('batteryPassport.trend.date', 'Certificate date'),
+        format: (value) => typeof value === 'string'
+          ? formatDayKey(value, { locale })
+          : '—',
       },
       {
         key: 'soh_pct',
@@ -52,7 +55,7 @@ export function BatteryPassportTrendTimeline({
         ),
       },
     ],
-    [t, fmtPercent],
+    [t, fmtPercent, locale],
   );
   const unavailable =
     !state.vehicleSelected
@@ -70,7 +73,7 @@ export function BatteryPassportTrendTimeline({
         )}
         subtitle={t(
           'batteryPassport.trend.subtitle',
-          'Qualifying daily points are calendar dates in UTC, not vehicle-local dates.',
+          'Qualifying daily points retain the fixed certificate calendar; display settings do not move these dates.',
         )}
         loading={state.isLoading}
         empty={unavailable}
@@ -78,7 +81,7 @@ export function BatteryPassportTrendTimeline({
         exportable={false}
         ariaLabel={t(
           'batteryPassport.trend.aria',
-          'Certificate-reported state of health by qualifying UTC date',
+          'Certificate-reported state of health by qualifying certificate date',
         )}
         ariaDescription={t(
           'batteryPassport.trend.description',
@@ -93,7 +96,7 @@ export function BatteryPassportTrendTimeline({
           height={240}
           ariaLabel={t(
             'batteryPassport.trend.chartAria',
-            'Certificate-reported state of health timeline in UTC',
+            'Certificate-reported state of health timeline by certificate date',
           )}
           xFormatter={(value) =>
             formatDayKey(value, { locale, style: 'short' })

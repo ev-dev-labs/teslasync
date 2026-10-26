@@ -14,6 +14,7 @@ import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis'
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 interface BatteryPassportFieldDirectoryProps {
   analysis: BatteryPassportAnalysis;
@@ -42,6 +43,7 @@ export function BatteryPassportFieldDirectory({
 }: BatteryPassportFieldDirectoryProps) {
   const { fmtPercent, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatDateTime, formatDayKeyRange } = useDateFormat();
   const passport = state.passport;
   const rawTrend = Array.isArray(passport?.degradation_trend)
     ? passport.degradation_trend
@@ -71,10 +73,10 @@ export function BatteryPassportFieldDirectory({
       },
       {
         field: t('batteryPassport.fields.issued', 'issued_at'),
-        summary: passport?.issued_at || '—',
+        summary: formatDateTime(passport?.issued_at),
         source: t(
           'batteryPassport.fields.issuedSource',
-          'RFC 3339 server issue instant; only its UTC day enters the v1 hash.',
+          'RFC 3339 server issue instant; only its canonical certificate day enters the v1 hash.',
         ),
         binding: 'utc_day',
       },
@@ -83,10 +85,10 @@ export function BatteryPassportFieldDirectory({
           'batteryPassport.fields.firstObserved',
           'first_observed_at',
         ),
-        summary: passport?.first_observed_at ?? '—',
+        summary: formatDateTime(passport?.first_observed_at),
         source: t(
           'batteryPassport.fields.firstObservedSource',
-          'Earliest charging or drive instant, nullable; only the UTC day enters the v1 hash.',
+          'Earliest charging or drive instant, nullable; only the canonical certificate day enters the v1 hash.',
         ),
         binding: 'utc_day',
       },
@@ -265,21 +267,14 @@ export function BatteryPassportFieldDirectory({
           'degradation_trend[].date',
         ),
         summary: analysis.trend.points.length > 0
-          ? t(
-              'batteryPassport.fields.trendDateSummary',
-              '{{first}} through {{last}} UTC',
-              {
-                first: analysis.trend.points[0]?.date ?? '—',
-                last:
-                  analysis.trend.points[
-                    analysis.trend.points.length - 1
-                  ]?.date ?? '—',
-              },
+          ? formatDayKeyRange(
+              analysis.trend.points[0]?.date,
+              analysis.trend.points[analysis.trend.points.length - 1]?.date,
             )
           : '—',
         source: t(
           'batteryPassport.fields.trendDateSource',
-          'YYYY-MM-DD calendar day explicitly defined as UTC.',
+          'YYYY-MM-DD source-calendar day; display settings never shift this certificate fact.',
         ),
         binding: 'not_bound',
       },
@@ -337,6 +332,8 @@ export function BatteryPassportFieldDirectory({
       passport,
       rawRecommendations.length,
       rawTrend.length,
+      formatDateTime,
+      formatDayKeyRange,
       t, fmtPercent, displayPrecision, displayLocale,
     ],
   );
@@ -398,7 +395,7 @@ export function BatteryPassportFieldDirectory({
               : row.binding === 'utc_day'
                 ? t(
                     'batteryPassport.fields.boundDay',
-                    'Bound UTC day',
+                    'Bound canonical day',
                   )
                 : row.binding === 'digest'
                   ? t(
@@ -444,7 +441,7 @@ export function BatteryPassportFieldDirectory({
                     return row.binding === 'value'
                       ? t('batteryPassport.fields.boundValue', 'Bound value')
                       : row.binding === 'utc_day'
-                        ? t('batteryPassport.fields.boundDay', 'Bound UTC day')
+                        ? t('batteryPassport.fields.boundDay', 'Bound canonical day')
                         : row.binding === 'digest'
                           ? t('batteryPassport.fields.digest', 'Digest output')
                           : t('batteryPassport.fields.notBound', 'Not bound');

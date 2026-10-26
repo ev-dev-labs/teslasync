@@ -548,6 +548,41 @@
     "sha256": "be056ffeb0703bcec702d74da112eec13285b0ce64f24fe951c240f739d1082a"
   },
   {
+    "file": "web/src/features/battery/components/battery-passport/BatteryPassportFieldDirectory.tsx",
+    "calls": 59,
+    "sha256": "5066b3984c3a8e5ed80d81223119c7bdf888161a6baa033bb0cccda54bee08d8"
+  },
+  {
+    "file": "web/src/features/battery/components/battery-passport/BatteryPassportMasthead.tsx",
+    "calls": 25,
+    "sha256": "220163104ab073d8c0a72d054c30af170834c7befc01e5270df3322022512110"
+  },
+  {
+    "file": "web/src/features/battery/components/battery-passport/BatteryPassportMethodology.tsx",
+    "calls": 27,
+    "sha256": "e72b9c64cf5996f6139c3d21a0ee2325fc56c6f6832f1d9a6ce7df2fa7ee34d9"
+  },
+  {
+    "file": "web/src/features/battery/components/battery-passport/BatteryPassportProvenanceMatrix.tsx",
+    "calls": 41,
+    "sha256": "e5f2f18c143969b74ff660c31af630a9453a398a61f792e7caeddbd2564813d3"
+  },
+  {
+    "file": "web/src/features/battery/components/battery-passport/BatteryPassportTrendDiagnostics.tsx",
+    "calls": 40,
+    "sha256": "6dc4a1cc357c209fa5b2e54ddd5cbaaab4269b71410f0287d4411fcc788cc8ce"
+  },
+  {
+    "file": "web/src/features/battery/components/battery-passport/BatteryPassportTrendTimeline.tsx",
+    "calls": 8,
+    "sha256": "1ff142e17f9423ab08b4e8dbf4f257c77cdea6afa94a50eb03f806834cd1041d"
+  },
+  {
+    "file": "web/src/features/battery/components/battery-passport/BatteryPassportVerificationDiagnostics.tsx",
+    "calls": 17,
+    "sha256": "d572c1c73eb994df02116c219eb1c086f1652ac73f8c5dc18f5aa70cdfe2b3c0"
+  },
+  {
     "file": "web/src/features/battery/components/energy-products-modernization/CapBadge.tsx",
     "calls": 2,
     "sha256": "f53e2eb8853a20daaab9487011c532bb87d111348e887c8ba0a4d15e935f9ac1"
@@ -561,6 +596,11 @@
     "file": "web/src/features/battery/pages/BatteryDegradationPage.tsx",
     "calls": 121,
     "sha256": "9afdd6ec81e82cb8f0c554ac4313949723b7cb50431d8eb50735d02794ccecd9"
+  },
+  {
+    "file": "web/src/features/battery/pages/BatteryPassportPage.tsx",
+    "calls": 8,
+    "sha256": "5b5fb278064184f331cba374e695a9693277b520d78f9d134e1bfe6f22d6a623"
   },
   {
     "file": "web/src/features/charging/components/charging-list/BatteryLevelChart.tsx",
