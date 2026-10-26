@@ -4,6 +4,39 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`. Freshness rule and
 kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
+## Final source-head verification — PR #202 (2026-10-26 02:46Z)
+
+- **Green source/test head: `25d47baa31eae8fc645acc346371a8faad64b3c9`.**
+  Actual `gh pr checks 202` exits **0**: **200 success / 3 skipped /
+  0 failed / 0 pending**. All **65 visual/Windows-named checks pass**.
+  Evidence: `r147-checks.json` and `r148-source-green.txt` in the existing
+  session CI evidence directory. The PR remains **open and draft**; not merged.
+- The three existing conditional skips are Optional authenticated production
+  smoke, AI Evaluation full/blocking-on-main, and AI Evaluation judged/nightly
+  drift. No skip, suppression, relaxed threshold or workflow change was added.
+- Completed the handed-off source/calendar work and CI roots: selected-clock
+  calendar boundaries and real grouping; shared header scope; localized
+  instants/ranges without duplicate zone captions; fixed certificate-day/hash
+  semantics; chart/hero/source-binding preservation; actual widget document
+  ownership and late-request isolation. Earlier verified hero accessibility,
+  startup **399.5 KB**, native observer binding and redesign repairs are
+  retained. Detailed red/green evidence and exact commits remain below.
+- Windows baseline work remains the previously completed **six reviewed
+  shards**, regenerated once for intended redesign/palette changes and then
+  verified read-only **10/10**. The prior handoff recorded a clean mirror.
+  This continuation did not use the mirror or change any baseline; current
+  visual CI passes without another regeneration.
+- Follow-ups outside this PR-green task remain explicit: deferred Part 3
+  call-site adoption, the Part 4 owner/review items, and separate Part 6
+  Tailwind work. The additional standalone E2E type project reports errors in
+  unchanged legacy-unit/nullable fixtures and missing app ambient types;
+  it was not declared clean or weakened. The required application TypeScript,
+  unchanged lint and configured full CI pass. The isolated local Timescale
+  case was not run without its disposable DSN; local golangci-lint was absent.
+- This final checkpoint changes documentation only. Current PR checks are the
+  authoritative result for that follow-up head; verify them after pushing.
+  No further product change, baseline regeneration or merge is requested.
+
 ## Continuation after `98e23bed33` (2026-10-25)
 
 - Responsive-8 document-teardown phase gate (after pushed `3ae15d4777`):
@@ -37,8 +70,7 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   application ambient declarations. No such error was reported in these
   three changed files. That separate baseline was not weakened or swept into
   this test-only lifecycle correction.
-  **Exact next:** push the verified correction, then follow actual current-
-  head CI until every check is green. Only pending means five-minute waits.
+  **Pushed:** `25d47baa31`. Its complete graph is green as recorded above.
   Evidence: `r131-responsive8`, `r132-responsive8-artifacts`,
   `r133-dashboard-repro` and `r133-dashboard-results`.
   Final before-fix graph at 02:13Z: **198 pass / 2 fail / 3 skipped**;
@@ -1353,11 +1385,11 @@ are idle/released; no batch-owned preview/test process remains.
 
 | Part | Name | Status | Last commit / note | Next step |
 |---|---|---|---|---|
-| 1 | Time zone: follow setting everywhere, remove duplicates — TRACK A (`fix/post-merge-followups`) | in progress | `e71d532ee7` removes climate/vehicle captions; `54ade03061` restores startup to 399.5 KB; other semantic roots remain | Sleep/departure/orchestrator semantic repairs, duplicate instants, full 266-route TZ-5 sweep |
+| 1 | Time zone: follow setting everywhere, remove duplicates — TRACK A (`fix/post-merge-followups`) | done | Selected-clock semantics, fixed source-calendar facts and configured route/timezone CI guards pass at `25d47baa31`; startup remains 399.5 KB | No remaining PR #202 timezone failure; retain documented source-calendar distinctions |
 | 2 | Dashboard widget redesign (119 widgets) — one active branch | done | Widget redesign merged at `248c9d13d5`; Track B worktree removed; Phase 4 dashboard scope repaired and verified. Recovery commits `823c8802c8`, `16bf49ebd1`, and `7b3fabbe7a` pushed. | Dashboard suite green; collect remaining PR/TZ failures and continue the one-track fix list |
 | 3 | Shared-pattern consolidation (whole codebase) | in progress | Shared modules merged via `b235484463`; remaining feature conversions adopted via `0f45d02e08` | Call sites marked `pending` in `docs/shared-patterns-state.md` remain a separate later task |
 | 4 | Remaining: product items (A) + security re-check (B) | in progress (verify) | branch commits `e0196914cd..f84aad0ce7` cover A1-A7 + security; A8 owner-decision recorded | Audit plan-vs-branch after Part 3; B re-run audits |
-| 5 | CI green on PR #202 | in progress | Not green; hero matrix 34/34 and strict startup perf pass after current repairs; full replica in progress | Finish bounded replica inventory, preserve repairs, then remaining timezone roots and once-only reviewed Windows baselines |
+| 5 | CI green on PR #202 | done | `25d47baa31`: 200 success / 3 existing conditional skips; actual CLI exit 0, no failed or pending checks | Verify the documentation-only checkpoint's current-head checks; never merge |
 | 6 | Tailwind v3 -> v4 (`chore/tailwind-v4`, separate PR) | not started | 4 local commits, unpushed (pre-existing) | Only after Part 5 green |
 
 ## Part 1 steps (playbook items 1-8 + tests)
@@ -1371,12 +1403,12 @@ are idle/released; no batch-owned preview/test process remains.
 | Calendar values unshifted (LA + Kiritimati tests) | done | `d4653c5517` + `86bb6e735d` | `formatMonthYear` day-rollover validation; `dateFormat.test.ts` 82 green |
 | `useConversionTimezone` + `resolveRawTimezone` (conversion boundaries) | done | `d4653c5517` + `86bb6e735d` | RateForm + JourneyAssurancePage converted; `timezone.test.ts` extended |
 | TZ-4 API `timezone` sends + backend zone params + Go tests | done | `284851a318..147f180cf3` (7, pushed) | Vitest 2727/57276 + tsc + Go green at push; PR202 run in progress |
-| TZ-5 guard (lint/audit) + ALL-routes (277) sweep | in progress | `e24583d253` timeline fix + Codex calibration 2026-10-22 | Guard done (R1-R5, 3725 green); sweep spec + 12-route calibration done; timeline zoned bucketing done; waitoracle panel calibration 2/2 pass (/charging + /tesla-charging-sessions @1280, tzIso/zones/dupes 0). Full 277-route sweep pending (timeboxed; run at TZ-7 gate or via CI smoke). |
+| TZ-5 guard (lint/audit) + configured all-route sweep | done | `25d47baa31` final CI gate | All configured responsive route/timezone shards pass in full CI; targeted local route guards and semantic/native cases are recorded above. |
 | TZ-5c marker-free migration (user update) | done | `2fbe414e..edf280bfeb` (4 + docs + Analytics pin) | `tz-computation` 72->0 verified 0 in web/src, all other `tz-*` 0 (1 absence test kept); playbook no-suppression rule present |
 | WaitOracle backend zone param + useCharging + panel (wip handoff fix) | done | `66eda8c6d5` wip + `a09dc6ec15` fix | Backend `?timezone=` (400/UTC default), store AT TIME ZONE $3, Predict(loc); hook sends effective tz; panel best_hour + no UTC; Go + 43 panel + 43 trips + tsc + split + trio + audit green |
 | TZ-6 e2e spec (UTC browser, LA then Tokyo) | done | TZ-6 spec (this change) | `web/e2e/timezone-display.smoke.spec.ts` 4/4 green (chromium-smoke, mock build reuse); TZ=UTC browser, `tz_display_default=user` + `timezone_user` LA/Tokyo; drive times + Quick-view drawer, timeline daily bucket (Mar 8 LA / Mar 9 Tokyo) + Review-details range drawer (end-inclusive, no Mar 10) + Inspect drawer; no raw ISO / zone names; tsc + split-check green; audit unaffected (specs excluded by design); no markers added. |
 | Freshness-header CORRECTION (owner override: `f6d6be4106` KEPT) | done | `b7c55d6ab2` revert-of-revert + `b3f0ba6272` docs + `658e6563fc` verify | `f6d6be4106` (one shared FreshnessDot per widget, top-right corner, header icons directly left) restored; only `c8aad38605` + `dc22ed9bfb` stay reverted. Header guard (`dashboard-widget-headers` + overflow + unit ownership) STAYS PASSING — never SKIPPED/DROPPED. i18n pins regen via sanctioned `--typed --checkpoint-catalog`; FreshnessDot back, 14 calls, shell/edit-chrome shas + dashboardTokens entry restored; combined 68/68. Vitest dash scope + tsc + split-check green; TZ-6 e2e 4/4. Followups-plan SKIPPED-task wording corrected this change. |
-| TZ-7 i18n regen, full local replica, commit, push, PR green | not started | — | Section 3 replica, then push once |
+| TZ-7 i18n regen, targeted local checks, full CI, commit/push | done | `25d47baa31` final CI gate | Catalogs and receipts use authorized generators; 200 checks pass with 3 existing conditional skips. Full local replica was superseded by the user's targeted-local/full-CI strategy. |
 
 ## Part 2 summary mirror (updated after every task once started)
 
@@ -1522,44 +1554,23 @@ adoption percentage is claimed.
   CI/UTC). Fixed by pinning both resolutions to UTC; 20/20 green in
   PDT, UTC, and Pacific/Kiritimati.
 
-## Blockers
+## Blockers and historical notes
 
-- PR202: run 39699895510 (TZ-4 push) responsive-14/-29/-34 + visual (1/64) red — triage at TZ-7 (likely intended display changes). Latest run 39715700018: only Lighthouse CI red, caused by wip `best_hour_utc` break (tsc); fixed by `a09dc6ec15`, pushing to verify. Visual/e2e diffs regen at TZ-7 after all display work. Not blocking TZ-5/6.
-- :8080 serves the TeslaSync SPA (user's server via Docker; left running).
+- **No open PR #202 check blocker** at the verified source head above.
+- Historical, superseded: run 39699895510 (TZ-4 push) responsive-14/-29/-34 + visual (1/64) red; run 39715700018 Lighthouse CI red from the `best_hour_utc` break, fixed by `a09dc6ec15`. The final current-head graph supersedes these old results.
+- Historical environment note, not re-probed: :8080 served the TeslaSync SPA (user's server via Docker; left untouched).
   Mock-preview proxy escapes would fail loudly (HTML vs JSON), not via
   ECONNREFUSED. Caveat recorded for the TZ-7 replica; revisit if escape
   anomalies appear.
 
 ## Exact next step
 
-Use the newest resume/handoff section at the top, not the historical recovery
-entries below. Current repairs: `e71d532ee7` (caption regressions),
-`54ade03061` (startup 399.5 KB), `9c6fbb98ec` (hero unknown/zero/readings and
-Details keyboard navigation, 34/34 E2E cases).
-
-Remaining semantic timezone roots must NOT be fixed by hiding or simply
-relabeling the UTC disclosures:
-- `useEnergy.ts:useSleepEfficiency` currently sends date-only start/end
-  without a timezone; SleepEfficiencyPage and its analysis clamp against
-  inclusive UTC days. Reconcile request/query boundaries with the shared
-  selected zone first, then fix RangeSourceCoverage/SleepMethodologyPanel
-  copy and format calendar dates with the shared calendar formatter.
-- `DepartureForecastPage` explicitly calls `useDateFormat('vehicle')`,
-  overriding the user's selected display mode, and provenance prose still
-  names UTC fallbacks. Model and display must share the selected effective
-  zone; preserve truthful fallback provenance without raw zone labels.
-- `home-energy/components/ScenarioControls.tsx` exposes peak hours as UTC.
-  Reconcile actual tariff/simulation hour semantics before changing labels.
-- `ChargeDepartureAlignmentPage` renders both source bounds (including
-  identical first/last instants) and AlignmentPairs timestamps; inspect the
-  guard's exact duplicate records. Keep evidence accessible once, through
-  the existing details surface, rather than dropping accounting information.
-
-Then rebuild mocks, finish TZ-5/6/7 and the full section 3 replica. Mirror was
-confirmed clean but has NOT been synced or used; after pushing, compare
-old/new Windows images and regenerate intended redesign/palette snapshots
-ONCE per section 4. Do not regenerate in Linux. Continue PR #202 checks;
-Parts 3-6 later adoption/migration work stays deferred as previously recorded.
+The requested source work is complete and PR #202 is green at `25d47baa31`.
+Push this documentation-only final record and verify the follow-up head's
+checks without changing source or restarting a local replica. Leave the PR
+open/draft and do not merge. The deferred Part 3/4/6 work and standalone E2E
+type-project baseline are separate follow-ups, not new work for this task.
+Older failure descriptions and next-step entries below are historical.
 
 ## Recovery handoff (2026-10-23)
 
