@@ -1161,6 +1161,16 @@
     "sha256": "7ae9b2fe3e1323c41d33870561533903d2a4f85ce21ee228c60f80a4e72227db"
   },
   {
+    "file": "web/src/features/system/components/status/TeslaApiUsageCard.tsx",
+    "calls": 33,
+    "sha256": "3abc8237c4a02ae7dd467d10ccf2f7cb5720b1dc9a8e80ed360fe9b2167277ec"
+  },
+  {
+    "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+    "calls": 36,
+    "sha256": "389813c96d228e476c825c866ef07462c4c33e2ee301e28e4c6daa52437204ae"
+  },
+  {
     "file": "web/src/features/system/pages/CommandHistoryPage.tsx",
     "calls": 101,
     "sha256": "b377c4f9719a8527f03c7bf3de75814ce9b4efc2265084755b0a84c5a28c18c6"
@@ -1194,6 +1204,11 @@
     "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
     "calls": 81,
     "sha256": "a2b3ae8dfdac5091e91988e7b37535097b44a5655d3f2b73e40380b75998a486"
+  },
+  {
+    "file": "web/src/features/system/pages/TeslaApiUsagePage.tsx",
+    "calls": 20,
+    "sha256": "871f56a6e3ac2d335f8d3e87721742ef502cf34134d7acb1983a92f5843cb56e"
   },
   {
     "file": "web/src/features/telemetry/components/SignalCompareControls.tsx",

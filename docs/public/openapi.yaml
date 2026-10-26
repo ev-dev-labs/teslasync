@@ -3233,6 +3233,80 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /system/api-usage/history:
+    get:
+      operationId: getTeslaUsageHistory
+      summary: Observed Tesla usage in the selected calendar
+      description: |
+        Sparse daily or Monday-start weekly usage from locally observed traffic,
+        not an invoice. Both sources use the selected calendar at query time.
+        Only events in the exact half-open [start,end) interval contribute,
+        including partial calendar buckets. No missing buckets are zero-filled.
+        Totals cover the full requested interval independently of pagination.
+        Fixed 30-day observation cycles are not changed by this endpoint.
+      tags: [System]
+      parameters:
+        - name: start
+          in: query
+          required: true
+          schema: { type: string, format: date-time }
+          description: Inclusive RFC3339 instant.
+        - name: end
+          in: query
+          required: true
+          schema: { type: string, format: date-time }
+          description: Exclusive RFC3339 instant, at most 366 selected-calendar days after start and no later than tomorrow.
+        - name: bucket
+          in: query
+          required: true
+          schema: { type: string, enum: [day, week] }
+        - name: timezone
+          in: query
+          schema: { type: string, default: UTC, maxLength: 64 }
+          description: Valid IANA calendar name. Omitted or empty retains UTC; host-dependent Local and invalid names return 400.
+        - name: limit
+          in: query
+          schema: { type: integer, default: 366, minimum: 1, maximum: 366 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0, maximum: 366 }
+      responses:
+        "200":
+          description: Selected-range totals and sparse observed buckets.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [start, end, bucket, total, points]
+                properties:
+                  start: { type: string, format: date-time }
+                  end: { type: string, format: date-time }
+                  bucket: { type: string, enum: [day, week] }
+                  total:
+                    allOf:
+                      - $ref: "#/components/schemas/TeslaUsageAmounts"
+                      - type: object
+                        required: [start, end]
+                        properties:
+                          start: { type: string, format: date-time }
+                          end: { type: string, format: date-time }
+                  points:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/TeslaUsageAmounts"
+                        - type: object
+                          required: [bucket_start]
+                          properties:
+                            bucket_start:
+                              type: string
+                              format: date-time
+                              description: Absolute start instant of this selected-calendar bucket.
+        "400":
+          description: Invalid range, calendar, bucket or pagination.
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /system/compression-stats:
     get:
       operationId: getCompressionStats
@@ -5796,6 +5870,17 @@ components:
             category: internal
 
   schemas:
+    TeslaUsageAmounts:
+      type: object
+      required: [signals, commands, data_requests, wakes, estimated_usd]
+      properties:
+        signals: { type: integer, format: int64 }
+        commands: { type: integer, format: int64 }
+        data_requests: { type: integer, format: int64 }
+        wakes: { type: integer, format: int64 }
+        estimated_usd:
+          type: number
+          description: Unrounded estimate from the four documented local observation rates.
     QueuedExportStart:
       type: string
       description: |

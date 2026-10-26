@@ -49,11 +49,18 @@ available if the current-cycle query fails.
 
 ## Selected history
 
-The system-status history picker supports a custom inclusive UTC civil-date
-range or 7-, 30-, 90-day and one-year presets, with daily or Monday-anchored
-weekly buckets. `GET /api/v1/system/api-usage/history` accepts RFC3339
+The dedicated page consumes the header's shared View settings and exact
+half-open range. Custom inclusive calendar dates, rolling windows and
+7-, 30-, 90-day and one-year presets use the selected display timezone.
+Daily and Monday-anchored weekly grouping use that same calendar for both
+observed sources; changing the setting updates the query and its cache key.
+Fixed 30-day observation cycles remain independently anchored to Unix epoch.
+`GET /api/v1/system/api-usage/history` accepts RFC3339
 `start` and exclusive `end`, `bucket=day|week`, and optional `limit` and
-`offset`. Ranges are limited to 366 days per request; select a different
+`offset`, plus optional `timezone` (a valid IANA name, default `UTC`; the
+host-dependent `Local` name is rejected). Ranges are limited to 366 calendar
+days in that timezone, including the extra hour across fall daylight saving;
+select a different
 custom range to inspect older years. Each point and the selected-range total
 are derived from the same billable evidence as the current-cycle estimate.
 No points are generated for unobserved dates. Weekly buckets crossing the

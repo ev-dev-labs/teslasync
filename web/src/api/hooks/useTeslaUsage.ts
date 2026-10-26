@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { request } from '@/api/client'
 import type { APIUsage, TeslaUsageCycle, TeslaUsagePoint, TeslaUsageSeries } from '@/api/types'
+import { useDateFormat } from '@/hooks/useDateFormat'
 
 export class TeslaUsageContractError extends Error {
   constructor() {
@@ -56,11 +57,13 @@ export function useTeslaUsage() {
   })
 }
 
-export function useTeslaUsageHistory(start: string, end: string, bucket: 'day' | 'week', enabled = true) {
+export function useTeslaUsageHistory(start: string, end: string, bucket: 'day' | 'week', enabled = true, timezone?: string) {
+  const { tz } = useDateFormat()
+  const zone = timezone ?? tz
   return useQuery({
-    queryKey: ['system-status', 'tesla-usage-history', start, end, bucket],
+    queryKey: ['system-status', 'tesla-usage-history', start, end, bucket, zone],
     queryFn: async ({ signal }) => {
-      const params = new URLSearchParams({ start, end, bucket })
+      const params = new URLSearchParams({ start, end, bucket, timezone: zone })
       const response = await request<unknown>(`/system/api-usage/history?${params.toString()}`, { signal })
       if (!isSeries(response)) throw new TeslaUsageContractError()
       return response

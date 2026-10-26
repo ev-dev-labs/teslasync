@@ -6,6 +6,41 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
 ## Continuation after `98e23bed33` (2026-10-25)
 
+- Tesla usage selected-calendar phase gate (after pushed `dae94b1d54`):
+  reproduced absent calendar query/cache identity and three accepted invalid
+  backend calendars. The handler now validates the optional IANA calendar,
+  defaults legacy requests to UTC, forwards exact instants and caps 366
+  civil days correctly across fall DST. Both SQL signal groups and outbound
+  requests use the same selected-calendar day/Monday week; raw sources,
+  four prices, sparse periods, pagination totals and fixed epoch-anchored
+  30-day cycles are preserved. Race-tested pure boundaries include both
+  clocks, DST, skipped and repeated midnight; both Go packages pass.
+  The isolated Timescale integration case was extended but is **not run**
+  locally: its required disposable DSN is absent.
+  History now consumes the shared header, retains one-year access and
+  exact rolling bounds, and has no competing local picker. Visible labels
+  use shared selected-clock formatters; CSV raw instants remain unchanged.
+  All five affected frontend suites are verified (98 distinct cases; the
+  corrected German ranges and header registration pass 48/48, and the final
+  card/receipt gate passes 7,741/7,741). Stronger existing catalog disclaimer
+  defaults are preserved exactly. Actual TypeScript, six zero audit counts,
+  all-five-source scan, usage hook routing, full unchanged lint and hermetic
+  build pass. OpenAPI parses with all six exact parameters. Both Go packages
+  pass `-race` and targeted `go vet`; golangci-lint is not installed locally,
+  so that remains a CI check, not a claimed local success.
+  Native usage and unchanged route guards pass **9/9**, zero escapes,
+  including both selected clocks, 23/24-hour bounds, weekly dates, four
+  width/theme combinations, one-year history, custom dates and empty states.
+  History lines 242/219, card 118/118, page 92/92; section markers 3/3,
+  0/0 and 5/5. No content section or test scenario removed.
+  Evidence: `r101-usage-hook-red`, `r102-usage-go-red`, `r103-*`,
+  `r104-*`, `r106-*`, `r107-*`, `r108-usage-browser`.
+  **Exact next:** push this verified phase, then finish battery-passport's
+  actual fixed source-calendar presentation and instant formatting. Preserve
+  certificate aggregation, qualification and canonical hash bytes. Continue
+  actual CI failure diagnosis while pending, not the full local suite.
+  Fresh `dae94b1d54` graph at 00:55Z: **134 pass / 65 pending / 3 skipped**,
+  no observed failure yet, incomplete. No Windows baseline changes.
 - Timezone route phase gate (2026-10-26, after `02d31f2f09`):
   the completed graph is **193 pass / 7 fail / 3 skipped**. Five route shards
   (52/53/54/56/58) expose mileage, notification health aliases, SQL metadata,
@@ -32,6 +67,7 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   zero escapes. Original/current lines: mileage 465/465, fatigue 433/431,
   burn 289/289, latency 308/308, SQL card 122/130; panel/chart markers
   remain 0/0, 8/8, 6/6, 7/7 and 1/1 respectively. No section removed.
+  Mileage's six LayoutCard sections also remain 6/6.
   Evidence: `r93-fatigue-red`, `r94-timezone-unit`, `r95-*`, `r96-*`,
   `r98-timezone-route`, `r99-notification-native`.
   **Exact next:** push this verified phase and finish the Tesla-usage /

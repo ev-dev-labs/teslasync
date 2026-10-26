@@ -10,8 +10,8 @@ import { StaleRefreshWarning } from '@/components/feedback'
 import { TeslaApiUsageCard, TeslaApiUsageHistory } from '../components/status'
 
 /**
- * Observed usage, not an invoice: fixed UTC cycles and independently selected
- * daily/weekly history intentionally remain separate queries and panels.
+ * Fixed observation cycles and shared-range daily/weekly history remain
+ * independent sources; neither is an invoice.
  */
 export default function TeslaApiUsagePage() {
   const { t } = useTranslation()
@@ -79,7 +79,7 @@ export default function TeslaApiUsagePage() {
                 { label: t('teslaUsage.historyWakes', 'Wakes'), value: t('teslaUsage.wakeRate', '50 / $1') },
               ]} />
               <Text as="p" variant="caption" className="mt-4 break-words">
-                {t('teslaUsage.cycleCaveat', 'These are fixed UTC 30-day windows, not Tesla calendar-month billing cycles. No monthly credit, rounding or invoice adjustments are assumed.')}
+                {t('teslaUsage.cycleCaveat', 'These are fixed 30-day observation windows anchored to the server epoch, not Tesla calendar-month billing cycles. No monthly credit, rounding or invoice adjustments are assumed.')}
                 {' '}
                 {t('teslaUsage.rateSource', 'Tesla Fleet API pricing reference')}: {data?.rate_source ?? 'https://developer.tesla.com/'}
               </Text>

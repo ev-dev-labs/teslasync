@@ -120,7 +120,7 @@ describe('getWorkspaceRouteScope', () => {
     expect(getWorkspaceQuickRangePresets('/signal-change-points')).toEqual(['24h', '7d', '30d', '90d']);
   });
 
-  it('keeps Tesla API usage fleet-wide without overriding its independent UTC history range', () => {
+  it('owns Tesla usage history range without implying single-vehicle scope', () => {
     for (const path of [
       '/tesla-api-usage',
       '/tesla-api-usage/',
@@ -128,8 +128,11 @@ describe('getWorkspaceRouteScope', () => {
       '/tesla-api-usage#history',
       'tesla-api-usage',
     ]) {
-      expect(getWorkspaceRouteScope(path), path).toEqual({ range: false, vehicle: false });
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: false });
     }
+    expect(isWorkspaceRangePresetAvailable('/tesla-api-usage', '1y')).toBe(true);
+    expect(getWorkspaceQuickRangePresets('/tesla-api-usage')).toEqual(['24h', '7d', '30d', '90d', '1y']);
+    expect(isWorkspaceRangePresetAvailable('/drives', '1y')).toBe(false);
     expect(getWorkspaceRouteScope('/drives')).toEqual({ range: true, vehicle: true });
   });
 

@@ -1,6 +1,6 @@
 import { expectBriefDetails } from './operationalbrief-contracts/disclosure.helpers';
 import { expect, test } from '@playwright/test'
-import { installApiMocks, seedBrowserState } from './mockApi'
+import { fulfillApiFixture, installApiMocks, mockAppSettings, seedBrowserState } from './mockApi'
 
 // A locally installed Edge is a valid Chromium target when Playwright's
 // bundled browser revision is unavailable on an operator workstation.
@@ -30,6 +30,49 @@ const cycle = {
   disclaimer: 'Local estimate; not an invoice.',
 }
 const usageRoute = /\/api\/v1\/system\/api-usage(?:\/history)?(?:\?|$)/
+
+for (const calendar of [
+  { timezone: 'America/Los_Angeles', start: '2024-03-10T08:00:00.000Z', end: '2024-03-11T07:00:00.000Z', week: '2024-03-04T08:00:00.000Z' },
+  { timezone: 'Asia/Tokyo', start: '2024-03-09T15:00:00.000Z', end: '2024-03-10T15:00:00.000Z', week: '2024-03-03T15:00:00.000Z' },
+]) {
+  test(`history follows ${calendar.timezone} for exact DST bounds, both buckets and visible dates`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-09-23T00:42:00Z'))
+    await seedBrowserState(page, 'dark', '/tesla-api-usage')
+    const mocks = await installApiMocks(page, 'populated', 'dark')
+    await page.route('**/api/v1/settings', route => fulfillApiFixture(route, mocks, {
+      json: { ...mockAppSettings, tz_display_default: 'user', timezone_user: calendar.timezone },
+    }))
+    let selected: Record<string, string> | null = null
+    await page.route(usageRoute, async route => {
+      const url = new URL(route.request().url())
+      if (url.pathname.endsWith('/history')) {
+        selected = Object.fromEntries(url.searchParams)
+        const observed = point(selected.bucket === 'week' ? calendar.week : calendar.start, 150000, 1000, 500, 50)
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+          start: selected.start, end: selected.end, bucket: selected.bucket,
+          total: { ...observed, start: selected.start, end: selected.end }, points: [observed],
+        }) })
+      } else {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(cycle) })
+      }
+    })
+    await page.goto('/tesla-api-usage?from=2024-03-10&to=2024-03-10')
+    await expect.poll(() => selected).toEqual({
+      start: calendar.start, end: calendar.end, bucket: 'day', timezone: calendar.timezone,
+    })
+    const trend = page.locator('figure').filter({ hasText: 'Tesla usage cost over time' })
+    await expect(trend).toHaveAttribute('data-chart-state', 'ready')
+    await expect(trend.getByRole('table')).toContainText('Mar 10, 2024')
+    await expectBriefDetails(page, page.getByRole('region', { name: 'Selected range estimate', exact: true }), ['1 observed bucket'])
+    await page.getByRole('combobox', { name: 'Group by' }).selectOption('week')
+    await expect.poll(() => selected).toEqual({
+      start: calendar.start, end: calendar.end, bucket: 'week', timezone: calendar.timezone,
+    })
+    await expect(trend.getByRole('table')).toContainText('Mar 4, 2024')
+    await expect(page.locator('main')).not.toContainText(/\bUTC\b|America\/Los_Angeles|Asia\/Tokyo|20\d\d-\d\d-\d\dT\d\d:/)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true)
+  })
+}
 
 test('Tesla usage page and status overview render desktop/mobile, light/dark and historical empty states', async ({ page }, testInfo) => {
   testInfo.setTimeout(180_000)
@@ -65,7 +108,7 @@ test('Tesla usage page and status overview render desktop/mobile, light/dark and
         await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(cycle) })
       })
 
-      await page.goto('/tesla-api-usage')
+      await page.goto('/tesla-api-usage?from=2026-08-25&to=2026-09-23')
       await expect(page.getByRole('heading', { name: 'Tesla API usage' })).toBeVisible()
       await expect(page.getByText('Current cycle and prior periods', { exact: true })).toBeVisible()
       await expect(page.getByRole('heading', { name: 'Selected-range cost distribution' })).toBeVisible()
@@ -81,17 +124,23 @@ test('Tesla usage page and status overview render desktop/mobile, light/dark and
       await trend.locator('.recharts-bar-rectangle').first().hover()
       await expect(page.locator('.recharts-tooltip-wrapper').last()).toBeVisible()
       await page.screenshot({ path: testInfo.outputPath(`tesla-usage-${theme}-${width}-populated.png`), fullPage: true })
-      await page.getByRole('button', { name: 'Date range' }).click()
-      await expect(page.getByRole('option', { name: 'Last year' })).toBeVisible()
-      await expect(page.locator('.rdp-month').first()).toBeVisible()
-      await expect(page.getByRole('dialog', { name: 'Date range picker' }).locator('.rdp-day_button').first()).toBeVisible()
-      const applyButton = page.getByRole('dialog', { name: 'Date range picker' }).getByRole('button', { name: 'Apply' })
+      await expect(page.locator('main').getByRole('button', { name: 'Date range', exact: true })).toHaveCount(0)
+      await expect(page.getByRole('button', { name: /^Analysis window:/ })).toHaveCount(1)
+      await page.getByRole('button', { name: /^Analysis window:/ }).click()
+      const view = page.getByRole('dialog', { name: 'View settings' })
+      await expect(view.getByRole('button', { name: '1 year', exact: true })).toBeVisible()
+      await view.getByRole('button', { name: 'Custom', exact: true }).click()
+      await expect(view.getByLabel('Start date')).toHaveValue('2026-08-25')
+      await expect(view.getByLabel('End date')).toHaveValue('2026-09-23')
+      const applyButton = view.getByRole('button', { name: 'Apply custom range' })
+      await applyButton.scrollIntoViewIfNeeded()
       await expect.poll(async () => {
         const bounds = await applyButton.boundingBox()
         return bounds ? bounds.y + bounds.height : Number.POSITIVE_INFINITY
       }).toBeLessThan(width === 390 ? 844 - 80 : 900 - 8)
       await page.screenshot({ path: testInfo.outputPath(`tesla-usage-${theme}-${width}-picker.png`), fullPage: true })
-      await page.getByRole('option', { name: 'Last year' }).click()
+      await view.getByRole('button', { name: '1 year', exact: true }).click()
+      await view.getByRole('button', { name: 'Close view settings' }).click()
       await expect.poll(() => longRange).toBe(true)
       await expect(trend).toHaveAttribute('data-chart-state', 'ready')
       await expectBriefDetails(page, page.getByRole('region', { name: 'Selected range estimate', exact: true }), ['3 observed buckets'])
@@ -102,8 +151,9 @@ test('Tesla usage page and status overview render desktop/mobile, light/dark and
       await expect(trend).toHaveAttribute('data-chart-state', 'ready')
       await trend.screenshot({ path: testInfo.outputPath(`tesla-trend-week-${theme}-${width}.png`) })
       empty = true
-      await page.getByRole('button', { name: 'Date range' }).click()
-      await page.getByRole('option', { name: 'Last 90 days' }).click()
+      await page.getByRole('button', { name: /^Analysis window:/ }).click()
+      await view.getByRole('button', { name: '90 days', exact: true }).click()
+      await view.getByRole('button', { name: 'Close view settings' }).click()
       await expect(page.locator('figure').filter({ hasText: 'Selected-range cost distribution' })).toHaveAttribute('data-chart-state', 'empty')
       await expect(trend).toHaveAttribute('data-chart-state', 'empty')
       await page.screenshot({ path: testInfo.outputPath(`tesla-usage-${theme}-${width}-empty.png`), fullPage: true })
@@ -122,7 +172,7 @@ test('Tesla usage page and status overview render desktop/mobile, light/dark and
   }
 })
 
-test('custom calendar dates submit inclusive UTC days as an exclusive-end API query', async ({ page }) => {
+test('shared custom calendar dates submit inclusive days as an exclusive-end API query', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-23T00:42:00Z'))
   await seedBrowserState(page, 'dark', '/tesla-api-usage')
   await installApiMocks(page, 'populated', 'dark')
@@ -141,16 +191,12 @@ test('custom calendar dates submit inclusive UTC days as an exclusive-end API qu
     }
   })
   await page.goto('/tesla-api-usage')
-  await page.getByRole('button', { name: 'Date range' }).click()
-  const picker = page.getByRole('dialog', { name: 'Date range picker' })
-  await picker.getByRole('button', { name: 'New range' }).click()
-  const september = picker.getByRole('grid', { name: 'September' })
-  const day20 = september.locator('[data-day="2026-09-20"] button')
-  const day21 = september.locator('[data-day="2026-09-21"] button')
-  await expect(day20).toBeVisible()
-  await day20.click()
-  await day21.click()
-  await picker.getByRole('button', { name: 'Apply' }).click()
+  await page.getByRole('button', { name: /^Analysis window:/ }).click()
+  const picker = page.getByRole('dialog', { name: 'View settings' })
+  await picker.getByRole('button', { name: 'Custom', exact: true }).click()
+  await picker.getByLabel('Start date').fill('2026-09-20')
+  await picker.getByLabel('End date').fill('2026-09-21')
+  await picker.getByRole('button', { name: 'Apply custom range' }).click()
   await expect.poll(() => historyRange).toEqual({
     start: '2026-09-20T00:00:00.000Z', end: '2026-09-22T00:00:00.000Z',
   })

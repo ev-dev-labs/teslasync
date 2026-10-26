@@ -165,6 +165,6 @@ describe('Tesla API usage preservation boundaries', () => {
     render(<TeslaApiUsagePage />)
     expect(screen.getByText(/Tesla Fleet API pricing reference/)).toHaveTextContent(source)
     expect(screen.getByText(/Tesla Fleet API pricing reference/)).toHaveClass('break-words')
-    expect(screen.getByText(/These are fixed UTC 30-day windows/)).toBeInTheDocument()
+    expect(screen.getByText(/These are fixed 30-day observation windows anchored to the server epoch/)).toBeInTheDocument()
   })
 })
