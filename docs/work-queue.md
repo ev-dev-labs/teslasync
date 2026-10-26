@@ -6,6 +6,45 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
 ## Continuation after `98e23bed33` (2026-10-25)
 
+- Responsive-8 document-teardown phase gate (after pushed `3ae15d4777`):
+  all 32 hosted tests pass, but the unchanged wrapper correctly fails on
+  two preview proxy escapes: `/climate/latest?vehicle_id=7` and
+  `/security/latest?vehicle_id=7`. These occur during the two dashboard
+  auto-fit/persistence cases, which close multiple live application pages.
+  Downloaded the complete job artifact. A four-case targeted replay with
+  traces passes with zero escapes; no claim that the race was reproduced.
+  The existing usage/physics tests already unload the old app before
+  removing its mocks. Applying that lifecycle to owned dashboard documents:
+  validate complete late API activity, navigate to blank with interception
+  still installed, then close. A new native contract schedules both late
+  requests, verifies fulfillment and per-document isolation, and confirms
+  the surviving document still works.
+  Stronger completion exposed two previously unfulfilled widget dependencies.
+  This geometry case now supplies explicit valid null-configuration and
+  typed empty-history responses, verified against both unchanged hook
+  domains/router. No general fallback or endpoint exception was added.
+  The new post-close runtime assertion also reproduced a real opaque-origin
+  storage error: seeding application storage in a blank teardown document.
+  Browser seeding now operates only in origin-backed HTTP(S) documents;
+  the runtime assertion remains strict and passes after that repair.
+  Targeted repeated lifecycle cases pass **10/10**; both complete affected
+  specs then pass **28/28** over two repetitions, with **zero escapes**,
+  every original drag/resize/viewport/persistence assertion, negative
+  beacon contracts and post-close runtime checks intact. Actual required
+  TypeScript and full unchanged lint pass; final touched-file ESLint passes.
+  The additional standalone E2E project typecheck does **not** pass:
+  it reports errors in unchanged legacy-unit/nullable fixtures and missing
+  application ambient declarations. No such error was reported in these
+  three changed files. That separate baseline was not weakened or swept into
+  this test-only lifecycle correction.
+  **Exact next:** push the verified correction, then follow actual current-
+  head CI until every check is green. Only pending means five-minute waits.
+  Evidence: `r131-responsive8`, `r132-responsive8-artifacts`,
+  `r133-dashboard-repro` and `r133-dashboard-results`.
+  Final before-fix graph at 02:13Z: **198 pass / 2 fail / 3 skipped**;
+  failures are responsive-8 and its dependent aggregate, no others.
+  Final evidence: `r134-*`, `r136-*`, `r137-*`, `r138-*`, `r139-*`,
+  `r140-teardown-reviewed.diff`, `r140-checks`.
 - Passport preservation-contract CI round (after pushed `39bf1313ff`):
   frontend unit shard 3/8 reports **1 failure / 11,699 pass**. The only
   failure requires the old literal caption `calendar dates in UTC`, rather
@@ -21,7 +60,7 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   Evidence: `r124-unit3`, `r125-passport-preservation`,
   `r125-preservation-types-lint`.
   Before-fix graph at 01:24Z: **86 pass / 1 fail / 107 pending / 3 skipped**.
-  **Exact next:** push this test-contract correction, then continue the
+  **Pushed:** `3ae15d4777`. Continue the
   current-head CI loop. Wait five minutes only when no actionable failure
   remains; diagnose new failures from their actual logs/artifacts.
 - Battery-passport fixed-calendar phase gate (after pushed `4b24bb653f`):
