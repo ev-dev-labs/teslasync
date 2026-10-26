@@ -1,8 +1,8 @@
 import type { ChargingSession } from '@/types/charging';
+import { isValidTimeZone, zonedDateParts } from '@/lib/dateFormat';
 
 const DAY_MS = 86_400_000;
 const DAYS_PER_YEAR = 365.25;
-const PARTS_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
 
 export const DEFAULT_PACK_CAPACITY_HISTORY_LIMIT = 1_000;
 export const DEFAULT_CAPACITY_SOC_WINDOW_PCT = 10;
@@ -726,28 +726,7 @@ export function kalmanFilterCapacity(
 function resolveTimeZone(candidate: string): string {
   const trimmed = candidate.trim();
   if (!trimmed) return 'UTC';
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone: trimmed }).format(0);
-    return trimmed;
-  } catch {
-    return 'UTC';
-  }
-}
-
-function partsFormatter(timeZone: string): Intl.DateTimeFormat {
-  const cached = PARTS_FORMATTERS.get(timeZone);
-  if (cached) return cached;
-  const formatter = new Intl.DateTimeFormat(
-    'en-US-u-ca-gregory-nu-latn',
-    {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    },
-  );
-  PARTS_FORMATTERS.set(timeZone, formatter);
-  return formatter;
+  return isValidTimeZone(trimmed) ? trimmed : 'UTC';
 }
 
 function localWeekKey(year: number, month: number, day: number): string {
@@ -758,14 +737,11 @@ function localWeekKey(year: number, month: number, day: number): string {
 }
 
 function localParts(ms: number, timeZone: string): LocalParts {
-  const parts = partsFormatter(timeZone).formatToParts(new Date(ms));
-  const value = (type: Intl.DateTimeFormatPartTypes): number => {
-    const parsed = Number(parts.find((part) => part.type === type)?.value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
-  const year = value('year');
-  const month = value('month');
-  const day = value('day');
+  const parts = zonedDateParts(ms, timeZone);
+  if (!parts) {
+    throw new RangeError(`unable to derive calendar parts in ${timeZone}`);
+  }
+  const { year, month, day } = parts;
   const yearText = String(year).padStart(4, '0');
   const monthText = String(month).padStart(2, '0');
   const dayText = String(day).padStart(2, '0');

@@ -44,7 +44,6 @@ export function DayLogControls({ date, timezone, onDateChange }: DayLogControlsP
           size="sm"
           className="h-11 min-w-0 px-2 sm:h-9"
           aria-label={t('dayLog.controls.dateLabel', 'Day')}
-          aria-describedby="daylog-timezone"
           value={isValidYmd(date) ? date : ''}
           max={todayYmd(timezone)}
           onChange={(e) => onDateChange(e.target.value)}

@@ -35,7 +35,7 @@
  * consistent with the other page tests.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, act, within, getDefaultNormalizer } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
@@ -367,16 +367,15 @@ describe('Trip replay summary event bounds', () => {
     driveMock.mockReturnValue(makeDriveQuery({ data: drive }));
     renderPage(settings);
     const summary = screen.getByRole('region', { name: 'Drive Summary' });
-    // The scope (raw instants in `title`, formatted bounds as text) moved off
-    // the brief face into the Review-details drawer header.
-    expect(within(summary).queryByTitle('Drive #7 · 2024-06-16T06:59:00Z – 2024-06-16T07:01:00Z')).not.toBeInTheDocument();
+    // The scope moved off the brief face into the Review-details drawer
+    // header, shown once in the user's format with no zone suffix.
     fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
-    const scope = within(drawer).getByTitle('Drive #7 · 2024-06-16T06:59:00Z – 2024-06-16T07:01:00Z');
     const opts = { locale: settings.locale, tz: settings.timezone_user };
-    expect(scope).toHaveTextContent(
-      `Drive #7 · ${formatDateTime(drive.startTs, opts)} – ${formatDateTime(drive.endTs, opts)} (${opts.tz})`,
-    );
+    const scope = within(drawer).getAllByText(
+      `Drive #7 · ${formatDateTime(drive.startTs, opts)} – ${formatDateTime(drive.endTs, opts)}`,
+      { exact: false },
+    )[0];
     expect(scope).toHaveTextContent('15. Juni 2024');
     expect(scope).toHaveTextContent('16. Juni 2024');
     fireEvent.keyDown(drawer, { key: 'Escape' });
@@ -396,26 +395,23 @@ describe('Trip replay summary event bounds', () => {
     const summary = screen.getByRole('region', { name: 'Drive Summary' });
     fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
-    // Empty raw bounds leave a double space in the title; match it verbatim.
-    const scope = within(drawer).getByTitle(`Drive #7 · ${startTs} – ${endTs ?? 'In progress'}`, {
-      normalizer: getDefaultNormalizer({ trim: false, collapseWhitespace: false }),
-    });
-    expect(scope).toHaveTextContent(`Drive #7 · — – ${endLabel} (${settings.timezone_user})`);
+    const scope = within(drawer).getAllByText(`Drive #7 · — – ${endLabel}`)[0];
     expect(scope).not.toHaveTextContent('Invalid Date');
     fireEvent.keyDown(drawer, { key: 'Escape' });
   });
 
-  it('discloses UTC when the saved display mode overrides the user timezone', () => {
+  it('renders UTC bounds without a zone suffix when the saved display mode overrides the user timezone', () => {
     const drive = makeDrive();
     renderPage({ ...settings, tz_display_default: 'utc' });
     const summary = screen.getByRole('region', { name: 'Drive Summary' });
     fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
-    const scope = within(drawer).getByTitle(`Drive #7 · ${drive.startTs} – ${drive.endTs}`);
     const opts = { locale: settings.locale, tz: 'UTC' };
-    expect(scope).toHaveTextContent(
-      `Drive #7 · ${formatDateTime(drive.startTs, opts)} – ${formatDateTime(drive.endTs, opts)} (UTC)`,
-    );
+    const scope = within(drawer).getAllByText(
+      `Drive #7 · ${formatDateTime(drive.startTs, opts)} – ${formatDateTime(drive.endTs, opts)}`,
+      { exact: false },
+    )[0];
+    expect(scope).not.toHaveTextContent('(UTC)');
     fireEvent.keyDown(drawer, { key: 'Escape' });
   });
 
@@ -426,8 +422,7 @@ describe('Trip replay summary event bounds', () => {
     const summary = screen.getByRole('region', { name: 'Drive Summary' });
     fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByTitle('Drive record unavailable; event bounds unknown.'))
-      .toHaveTextContent('Drive record unavailable; event bounds unknown.');
+    expect(within(drawer).getByText('Drive record unavailable; event bounds unknown.')).toBeInTheDocument();
     fireEvent.keyDown(drawer, { key: 'Escape' });
   });
 });

@@ -4,7 +4,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { fmtCompact, fmtNumber, getFormatterPreferences, setGlobalPrecision } from '@/lib/numberFormat';
-import { formatDurationMinutes } from '@/lib/dateFormat';
+import { formatDurationMinutes } from '@/lib/dateConvert';
 import { ChargingOverviewStats } from './ChargingOverviewStats';
 import { chargingStats, priorChargingStats } from './fixtures.test-utils';
 

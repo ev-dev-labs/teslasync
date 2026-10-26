@@ -69,8 +69,13 @@ describe('route-owned shared locale closures', () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     for (const key of keys) runtime.default.t(key, { defaultValue: '__fallback__', saveMissing: true })
     await runtime.loadEnglishNamespace(namespace)
-    await new Promise(resolve => setTimeout(resolve, 80))
-    for (const key of keys) expect(runtime.default.t(key, '__fallback__'), key).not.toBe('__fallback__')
+    // Poll for bundle application instead of a fixed sleep: under full-suite
+    // load the lazy resources can land after 80ms. Same pass criteria.
+    for (const key of keys) {
+      await vi.waitFor(() => {
+        expect(runtime.default.t(key, '__fallback__'), key).not.toBe('__fallback__')
+      }, { timeout: 5000, interval: 25 })
+    }
     expect(loads[bundle as keyof typeof loads]).toBe(1)
     expect(Object.values(loads).reduce((sum, count) => sum + count, 0)).toBe(1)
     expect(errors).not.toHaveBeenCalled()

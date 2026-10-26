@@ -8,7 +8,7 @@
  * arithmetic.
  */
 import type { Drive } from '@/types/driving';
-import { ymdInTz } from './dateFormat';
+import { ymdInTz } from './dateConvert';
 
 /* ------------------------------------------------------------------ */
 /*  Grades                                                            */

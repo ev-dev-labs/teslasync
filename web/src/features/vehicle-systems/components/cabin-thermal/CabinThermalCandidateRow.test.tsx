@@ -80,9 +80,10 @@ describe('CabinThermalCandidateRow evidence timestamps', () => {
     preferences.timeFormat = timeFormat;
     const { container } = render(row());
     const time = container.querySelector('time');
-    expect(time).toHaveTextContent('Aug 7, 2026, 05:15 PM (America/Los_Angeles)');
+    expect(time).toHaveTextContent('Aug 7, 2026, 05:15 PM');
+    expect(time).not.toHaveTextContent('America/Los_Angeles');
     expect(time).toHaveAttribute('datetime', candidate.startTs);
-    expect(time).toHaveAttribute('title', `${candidate.startTs} (America/Los_Angeles)`);
+    expect(time).not.toHaveAttribute('title');
     expect(preferences.resolveZone).toHaveBeenCalledWith('vehicle');
     expect(screen.getByText('Accepted fit')).toBeInTheDocument();
     for (const value of ['Cooling', '12', '3600 s', '40°C / 20°C', '6000 s']) {
@@ -99,7 +100,8 @@ describe('CabinThermalCandidateRow evidence timestamps', () => {
     preferences.zoneMode = 'utc';
     view.rerender(row());
     const time = view.container.querySelector('time');
-    expect(time).toHaveTextContent('8 Aug 2026, 00:15 (UTC)');
+    expect(time).toHaveTextContent('8 Aug 2026, 00:15');
+    expect(time).not.toHaveTextContent('(UTC)');
     expect(time).toHaveAttribute('datetime', candidate.startTs);
     expect(preferences.resolveZone).toHaveBeenCalledWith('utc');
   });

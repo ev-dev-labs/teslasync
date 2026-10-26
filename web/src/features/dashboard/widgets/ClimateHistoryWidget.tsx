@@ -1,12 +1,13 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThermometerSun } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartLegend, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
+import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, ChartLegend, EmbeddedChart, type ChartDataRow } from '@/components/charts';
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useRangeState } from '@/hooks/useRangeState';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -29,7 +30,10 @@ function buildChartData(
 ): ChartDatum[] {
   const items = safeArray(data);
   return items
-    .filter((d) => d.created_at || d.timestamp)
+    .filter((d) => {
+      const ts = d.created_at ?? d.timestamp;
+      return typeof ts === 'string' && Number.isFinite(Date.parse(ts));
+    })
     .map((d) => {
       const ts = d.created_at ?? d.timestamp ?? '';
       const insideRaw = knownNumber(d.insideTemp);
@@ -42,14 +46,15 @@ function buildChartData(
 }
 
 export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber: fmt } = useNumberFormatting();
+  const { fmtInt: fmt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { formatDateTime: formatTime } = useDateFormat();
+  const { formatTime } = useDateFormat();
   const vehiclesQuery = useVehicles();
   const candidate = vehicleId ?? safeArray(vehiclesQuery.data)[0]?.id;
   const vid = Number.isSafeInteger(candidate) && Number(candidate) > 0 ? Number(candidate) : 0;
   const { unitPrefs } = useUnits();
   const tempUnit = unitPrefs.temperature;
+  const { startInstant, endInstantExclusive } = useRangeState({ defaultPresetId: '24h' });
   // Memoise on the primitive unit so the chartData memo below actually caches;
   // an inline arrow would be a new reference every render and defeat it.
   const toTemperatureDisplay = useCallback(
@@ -57,7 +62,10 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
     [tempUnit],
   );
 
-  const query = useClimateHistory(vid > 0 ? String(vid) : '');
+  const query = useClimateHistory(
+    vid > 0 ? String(vid) : '',
+    vid > 0 ? { start: startInstant, end: endInstantExclusive } : undefined,
+  );
   const {
     data,
     isLoading,
@@ -90,44 +98,23 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
   const dataState = !vid && vehicleId == null && discoveryState.status !== 'ok'
     ? discoveryState : sourceState;
   const isCompact = size.cols <= 1;
-  const isWide = size.cols >= 3;
-
+  const tick = size.cols >= 3 ? axisTick : axisTickSm;
   const latestInside = useMemo(() => {
     for (let i = chartData.length - 1; i >= 0; i--) {
       if (chartData[i].inside != null) return chartData[i].inside;
     }
     return null;
   }, [chartData]);
-
   const latestOutside = useMemo(() => {
     for (let i = chartData.length - 1; i >= 0; i--) {
       if (chartData[i].outside != null) return chartData[i].outside;
     }
     return null;
   }, [chartData]);
-
-  const stats: ChartSummaryStat[] = hasData
-    ? [
-        {
-          label: t('widget.climateHistory.cabin', 'Cabin'),
-          value: latestInside != null ? fmt(latestInside) : '—',
-          unit: tempUnit,
-        },
-        {
-          label: t('widget.climateHistory.outside', 'Outside'),
-          value: latestOutside != null ? fmt(latestOutside) : '—',
-          unit: tempUnit,
-        },
-      ]
-    : [];
-
-  const tick = isWide ? axisTick : axisTickSm;
-  const temperatureAxisLabels = useMemo(() => [0, ...chartData.flatMap(point => [point.inside, point.outside])
-    .filter((value): value is number => value != null && Number.isFinite(value))]
-    .map(value => `${fmt(value)}°`), [chartData, fmt]);
-  const temperatureAxisWidth = useMeasuredAxisWidth({
-    labels: temperatureAxisLabels, fontSize: tick.fontSize, minWidth: 35, padding: 20, enabled: !isCompact,
-  });
+  const stats: ChartSummaryStat[] = hasData ? [
+    { label: t('widget.climateHistory.cabin', 'Cabin'), value: latestInside != null ? fmt(latestInside) : '—', unit: tempUnit },
+    { label: t('widget.climateHistory.outside', 'Outside'), value: latestOutside != null ? fmt(latestOutside) : '—', unit: tempUnit },
+  ] : [];
 
   if (isCompact) {
     return (
@@ -167,7 +154,11 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
         isEmpty={!hasData}
         emptyMessage={t('widget.climateHistory.noData', 'No climate history')}
         emptyIcon={<ThermometerSun className="h-5 w-5" />}
-        stats={stats}
+        stats={[]}
+        legend={[
+          { label: t('widget.inside', 'Inside'), color: CHART_COLORS[0] },
+          { label: t('widget.climateHistory.outside', 'Outside'), color: CHART_COLORS[1] },
+        ]}
         chart={
           <EmbeddedChart
             title={t('widget.climateHistory.title', 'Climate history')}
@@ -186,31 +177,14 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
           >
             {({ hiddenSeries }) => (
               <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+              <LineChart data={chartData} margin={{ ...chartMargin, left: 4, right: 4 }} {...chartAnimation}>
               {chartGrid}
-              <defs>
-                <linearGradient id="gradInside" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={CHART_COLORS[0]} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={CHART_COLORS[0]} stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gradOutside" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={CHART_COLORS[1]} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={CHART_COLORS[1]} stopOpacity={0} />
-                </linearGradient>
-              </defs>
               <XAxis
                 dataKey="time"
                 tick={tick}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v: string) => formatTime(v)}
-              />
-              <YAxis
-                tick={tick}
-                tickLine={false}
-                axisLine={false}
-                width={temperatureAxisWidth}
-                tickFormatter={(v: number) => `${fmt(v)}°`}
               />
               <Tooltip
                 content={<ChartTooltip />}
@@ -224,30 +198,32 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
                 }}
               />
               <ChartLegend />
-              <Area
+              <Line
                 type="monotone"
                 dataKey="inside"
                 stroke={CHART_COLORS[0]}
                 strokeWidth={2}
-                fill="url(#gradInside)"
                 connectNulls={false}
                 name="inside"
                 hide={hiddenSeries?.isHidden('inside')}
+                dot={false}
+                isAnimationActive={false}
               />
-              <Area
+              <Line
                 type="monotone"
                 dataKey="outside"
                 stroke={CHART_COLORS[1]}
                 strokeWidth={2}
-                fill="url(#gradOutside)"
                 connectNulls={false}
                 name="outside"
                 hide={hiddenSeries?.isHidden('outside')}
+                dot={false}
+                isAnimationActive={false}
               />
-              </AreaChart>
+              </LineChart>
             </ResponsiveContainer>
             )}
-          </EmbeddedChart>
+            </EmbeddedChart>
         }
       />
     </WidgetShell>

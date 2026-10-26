@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -209,8 +210,12 @@ func summaryReq(id, query string) *http.Request {
 	return reqWithParam(httptest.NewRequest(http.MethodGet, url, nil), id)
 }
 
-func recommendationReq(id string) *http.Request {
-	return reqWithParam(httptest.NewRequest(http.MethodGet, "/vehicles/"+id+"/carbon/recommendation", nil), id)
+func recommendationReq(id string, query ...string) *http.Request {
+	url := "/vehicles/" + id + "/carbon/recommendation"
+	if len(query) > 0 && query[0] != "" {
+		url += "?" + query[0]
+	}
+	return reqWithParam(httptest.NewRequest(http.MethodGet, url, nil), id)
 }
 
 func reqWithParam(r *http.Request, id string) *http.Request {
@@ -446,18 +451,68 @@ func TestSummary_RangeParamsForwarded(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 (body=%q)", rec.Code, rec.Body.String())
 	}
-	// Query #2 is the charging rollup: args = (vehicleID, start, end).
+	// Query #2 is the charging rollup: args = (vehicleID, start, end, zone).
 	if len(pool.queryArgs) < 2 {
 		t.Fatalf("expected >=2 Query calls, got %d", len(pool.queryArgs))
 	}
 	chargingArgs := pool.queryArgs[1]
-	if len(chargingArgs) != 3 || chargingArgs[1] == nil || chargingArgs[2] == nil {
-		t.Errorf("charging rollup args = %v, want (id, non-nil start, non-nil end)", chargingArgs)
+	if len(chargingArgs) != 4 || chargingArgs[1] == nil || chargingArgs[2] == nil {
+		t.Errorf("charging rollup args = %v, want (id, non-nil start, non-nil end, zone)", chargingArgs)
+	}
+	// No ?timezone= ⇒ UTC default preserves the historical attribution frame.
+	if len(chargingArgs) == 4 && chargingArgs[3] != "UTC" {
+		t.Errorf("charging rollup zone = %v, want UTC default", chargingArgs[3])
+	}
+	if !strings.Contains(pool.querySQLs[1], "AT TIME ZONE $4") {
+		t.Errorf("charging rollup SQL = %q, want AT TIME ZONE $4 attribution", pool.querySQLs[1])
 	}
 	// Distance QueryRow also receives the window.
 	if len(pool.queryRowArgs) != 1 || len(pool.queryRowArgs[0]) != 3 ||
 		pool.queryRowArgs[0][1] == nil || pool.queryRowArgs[0][2] == nil {
 		t.Errorf("distance args = %v, want (id, non-nil start, non-nil end)", pool.queryRowArgs)
+	}
+}
+
+func TestSummary_TimezoneForwarded(t *testing.T) {
+	t.Parallel()
+	pool := &fakePool{
+		queryResults: []queryResult{
+			{rows: curveRows()},
+			{rows: &fakeRows{}},
+		},
+		queryRowResults: []pgx.Row{fakeRow{vals: []any{0.0}}},
+	}
+	rec := httptest.NewRecorder()
+	testHandler(pool).Summary(rec, summaryReq("42", "timezone=America%2FLos_Angeles"))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body=%q)", rec.Code, rec.Body.String())
+	}
+	if len(pool.queryArgs) < 2 || len(pool.queryArgs[1]) != 4 {
+		t.Fatalf("charging rollup args = %v, want (id, start, end, zone)", pool.queryArgs)
+	}
+	if pool.queryArgs[1][3] != "America/Los_Angeles" {
+		t.Errorf("charging rollup zone = %v, want America/Los_Angeles", pool.queryArgs[1][3])
+	}
+}
+
+func TestSummary_InvalidTimezone(t *testing.T) {
+	t.Parallel()
+	for _, raw := range []string{"Mars/Olympus_Mons", "America/Los_Angeles ", string(make([]byte, 65))} {
+		pool := &fakePool{}
+		rec := httptest.NewRecorder()
+		r := summaryReq("42", "")
+		q := r.URL.Query()
+		q.Set("timezone", raw)
+		r.URL.RawQuery = q.Encode()
+		testHandler(pool).Summary(rec, r)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("timezone=%q: status = %d, want 400 (body=%q)", raw, rec.Code, rec.Body.String())
+		}
+		if len(pool.querySQLs) != 0 {
+			t.Errorf("timezone=%q: ran %d queries, want none before validation", raw, len(pool.querySQLs))
+		}
 	}
 }
 
@@ -610,6 +665,60 @@ func TestRecommendation_HappyPath(t *testing.T) {
 	}
 	if got.PotentialSavingPct != 39.5 {
 		t.Errorf("potential_saving_pct = %v, want 39.5", got.PotentialSavingPct)
+	}
+}
+
+func TestRecommendation_TimezoneForwarded(t *testing.T) {
+	t.Parallel()
+	pool := &fakePool{queryResults: []queryResult{
+		{rows: curveRows()},
+		{rows: &fakeRows{}},
+	}}
+	rec := httptest.NewRecorder()
+	testHandler(pool).Recommendation(rec, recommendationReq("42", "timezone=Asia%2FTokyo"))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body=%q)", rec.Code, rec.Body.String())
+	}
+	if len(pool.queryArgs) < 2 || len(pool.queryArgs[1]) != 2 {
+		t.Fatalf("charging rollup args = %v, want (id, zone)", pool.queryArgs)
+	}
+	if pool.queryArgs[1][1] != "Asia/Tokyo" {
+		t.Errorf("charging rollup zone = %v, want Asia/Tokyo", pool.queryArgs[1][1])
+	}
+	if !strings.Contains(pool.querySQLs[1], "AT TIME ZONE $2") {
+		t.Errorf("charging rollup SQL = %q, want AT TIME ZONE $2 attribution", pool.querySQLs[1])
+	}
+}
+
+func TestRecommendation_TimezoneDefaultsUTC(t *testing.T) {
+	t.Parallel()
+	pool := &fakePool{queryResults: []queryResult{
+		{rows: curveRows()},
+		{rows: &fakeRows{}},
+	}}
+	rec := httptest.NewRecorder()
+	testHandler(pool).Recommendation(rec, recommendationReq("42"))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body=%q)", rec.Code, rec.Body.String())
+	}
+	if len(pool.queryArgs) < 2 || len(pool.queryArgs[1]) != 2 || pool.queryArgs[1][1] != "UTC" {
+		t.Errorf("charging rollup args = %v, want (id, UTC default)", pool.queryArgs)
+	}
+}
+
+func TestRecommendation_InvalidTimezone(t *testing.T) {
+	t.Parallel()
+	pool := &fakePool{}
+	rec := httptest.NewRecorder()
+	testHandler(pool).Recommendation(rec, recommendationReq("42", "timezone=Not%2FA+Zone"))
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400 (body=%q)", rec.Code, rec.Body.String())
+	}
+	if len(pool.querySQLs) != 0 {
+		t.Errorf("ran %d queries, want none before validation", len(pool.querySQLs))
 	}
 }
 

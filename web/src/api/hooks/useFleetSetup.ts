@@ -4,6 +4,8 @@ import { queryPolicy } from '../queryPolicy';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { onboardingKeys } from './useOnboarding';
+import { fleetSetupKeys } from './fleetSetupKeys';
+export { fleetSetupKeys } from './fleetSetupKeys';
 
 /**
  * Operator setup against Tesla Fleet API + Fleet Telemetry.
@@ -12,13 +14,6 @@ import { onboardingKeys } from './useOnboarding';
  * Fleet Setup is the guided Settings surface that calls the same contracts
  * with typed hooks instead of the ad-hoc `apiFetch` helper.
  */
-
-export const fleetSetupKeys = {
-  apiInfo: ['fleet-setup', 'fleet-api-info'] as const,
-  publicKey: ['fleet-setup', 'public-key-status'] as const,
-  telemetryConfig: (vin: string) => ['fleet-setup', 'telemetry-config', vin] as const,
-  telemetryErrors: (vin: string) => ['fleet-setup', 'telemetry-errors', vin] as const,
-};
 
 export interface FleetApiInfo {
   base_url: string;

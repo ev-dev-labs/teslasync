@@ -8,7 +8,7 @@ import {
   formatDurationMinutes,
   formatDurationClock,
   formatDurationRange,
-} from '../dateFormat'
+} from '../dateConvert'
 
 const FALLBACK = '—'
 

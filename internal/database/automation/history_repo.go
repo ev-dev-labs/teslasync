@@ -219,6 +219,7 @@ type HistoryFilter struct {
 	Status       string    // empty = no status filter
 	Since        time.Time // zero = no lower bound
 	Before       time.Time // zero = no upper bound (exclusive)
+	Timezone     string    // daily trend buckets only; empty = UTC
 }
 
 // ListAll returns execution history matching the filter with pagination.
@@ -283,7 +284,7 @@ type HistoryStats struct {
 	AvgDurationRuns       int    `json:"avg_duration_runs"`
 }
 
-// HistoryTrendPoint is a UTC day/status bucket across the entire filtered range.
+// HistoryTrendPoint is a requested-zone day/status bucket across the entire filtered range.
 type HistoryTrendPoint struct {
 	Day    string `json:"day"`
 	Status string `json:"status"`
@@ -291,11 +292,8 @@ type HistoryTrendPoint struct {
 }
 
 func (r *AutomationHistoryRepo) GetTrend(ctx context.Context, f HistoryFilter) ([]HistoryTrendPoint, error) {
-	where, args := buildHistoryWhere(f)
-	rows, err := r.db.Pool.Query(ctx, `
-		SELECT to_char(triggered_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, status, COUNT(*)::int
-		FROM automation_history`+where+`
-		GROUP BY day, status ORDER BY day, status`, args...)
+	query, args := historyTrendQuery(f)
+	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("get automation history trend: %w", err)
 	}
@@ -312,6 +310,20 @@ func (r *AutomationHistoryRepo) GetTrend(ctx context.Context, f HistoryFilter) (
 		return nil, fmt.Errorf("iterate automation history trend: %w", err)
 	}
 	return points, nil
+}
+
+func historyTrendQuery(f HistoryFilter) (string, []any) {
+	where, args := buildHistoryWhere(f)
+	timezone := f.Timezone
+	if timezone == "" {
+		timezone = "UTC"
+	}
+	zoneParameter := fmt.Sprintf("$%d", len(args)+1)
+	query := `
+		SELECT to_char(triggered_at AT TIME ZONE ` + zoneParameter + `, 'YYYY-MM-DD') AS day, status, COUNT(*)::int
+		FROM automation_history` + where + `
+		GROUP BY day, status ORDER BY day, status`
+	return query, append(args, timezone)
 }
 
 const historyDurationFilter = `duration_ms IS NOT NULL AND status NOT IN ('test','undo')`

@@ -8,9 +8,9 @@
  *   1. `getBatteryColor` — the SoC → accent-color band utility (an export):
  *        > 50 % emerald, > 20 % amber, ≤ 20 % red, with the two boundaries pinned.
  *   2. Two layouts driven by `size.cols`:
- *        - compact (cols <= 1): a titled watch face — a LinearGauge whose
- *          progress stroke is `getBatteryColor(level)`, a StatusBadge, the
- *          SI→preference converted range, and a pulsing charging indicator.
+ *        - compact (cols <= 1): a centered watch face — a LinearGauge whose
+ *          progress stroke is `getBatteryColor(level)`, the SI→preference
+ *          converted range, and a localized "Charging · Locked" status line.
  *        - standard (cols >= 2): a titled "Watch Summary" shell with a battery
  *          big-number + state badge (variant derived from the state), and a 2×2
  *          detail grid (range, lock/unlock, cabin temp, last seen).
@@ -343,21 +343,21 @@ afterEach(() => {
 
 describe('getBatteryColor', () => {
   it('maps healthy SoC (> 50%) to emerald', () => {
-    expect(getBatteryColor(100)).toBe('#10b981');
-    expect(getBatteryColor(72)).toBe('#10b981');
-    expect(getBatteryColor(51)).toBe('#10b981');
+    expect(getBatteryColor(100)).toBe(COLOR.GOOD);
+    expect(getBatteryColor(72)).toBe(COLOR.GOOD);
+    expect(getBatteryColor(51)).toBe(COLOR.GOOD);
   });
 
   it('maps low SoC (> 20% and <= 50%) to amber, including the 50 boundary', () => {
-    expect(getBatteryColor(50)).toBe('#f59e0b');
-    expect(getBatteryColor(30)).toBe('#f59e0b');
-    expect(getBatteryColor(21)).toBe('#f59e0b');
+    expect(getBatteryColor(50)).toBe(COLOR.WARN);
+    expect(getBatteryColor(30)).toBe(COLOR.WARN);
+    expect(getBatteryColor(21)).toBe(COLOR.WARN);
   });
 
   it('maps critical SoC (<= 20%) to red, including the 20 boundary and zero', () => {
-    expect(getBatteryColor(20)).toBe('#ef4444');
-    expect(getBatteryColor(5)).toBe('#ef4444');
-    expect(getBatteryColor(0)).toBe('#ef4444');
+    expect(getBatteryColor(20)).toBe(COLOR.BAD);
+    expect(getBatteryColor(5)).toBe(COLOR.BAD);
+    expect(getBatteryColor(0)).toBe(COLOR.BAD);
   });
 });
 
@@ -548,18 +548,18 @@ describe('WatchSummaryWidget — state badge variants', () => {
 });
 
 describe('WatchSummaryWidget — compact layout', () => {
-  it('renders the compact heading, gauge, status badge and converted range', () => {
+  it('renders the compact heading, gauge, converted range and lock status', () => {
     useUnitsMock.mockReturnValue(makeUnits('mi', '°C'));
     useWatchSummaryMock.mockReturnValue(
-      makeSummaryQuery({ data: makeSummary({ battery_level: 72, range_m: 300000, state: 'online' }) }),
+      makeSummaryQuery({ data: makeSummary({ battery_level: 72, range_m: 300000, state: 'online', is_locked: true }) }),
     );
 
     renderWidget({ cols: 1, rows: 2 });
 
     expect(screen.getByText('72.00')).toBeInTheDocument(); // gauge value
     expect(screen.getByText('%')).toBeInTheDocument(); // gauge unit
-    expect(screen.getByText('online')).toBeInTheDocument(); // StatusBadge
     expect(screen.getByText(/186/)).toBeInTheDocument(); // converted range
+    expect(screen.getByText('Locked')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Watch summary' })).toBeInTheDocument();
   });
 
@@ -568,8 +568,8 @@ describe('WatchSummaryWidget — compact layout', () => {
 
     const { container } = renderWidget({ cols: 1, rows: 2 });
 
-    expect(hasGaugeColor(container, '#10b981')).toBe(true);
-    expect(hasGaugeColor(container, '#ef4444')).toBe(false);
+    expect(hasGaugeColor(container, COLOR.GOOD)).toBe(true);
+    expect(hasGaugeColor(container, COLOR.BAD)).toBe(false);
   });
 
   it('paints the gauge progress stroke with the critical-band color at low SoC', () => {
@@ -577,19 +577,19 @@ describe('WatchSummaryWidget — compact layout', () => {
 
     const { container } = renderWidget({ cols: 1, rows: 2 });
 
-    expect(hasGaugeColor(container, '#ef4444')).toBe(true);
-    expect(hasGaugeColor(container, '#10b981')).toBe(false);
+    expect(hasGaugeColor(container, COLOR.BAD)).toBe(true);
+    expect(hasGaugeColor(container, COLOR.GOOD)).toBe(false);
   });
 
   it('shows the pulsing charging indicator when the complication reports charging', () => {
-    useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: makeSummary() }));
+    useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: makeSummary({ is_locked: true }) }));
     useWatchComplicationMock.mockReturnValue(
       makeComplicationQuery({ data: makeComplication({ charging: true }) }),
     );
 
     renderWidget({ cols: 1, rows: 2 });
 
-    expect(screen.getByText(/Charging/i)).toBeInTheDocument();
+    expect(screen.getByText('Charging · Locked')).toBeInTheDocument();
   });
 
   it('omits the charging indicator when not charging', () => {
@@ -817,3 +817,4 @@ describe('WatchSummaryWidget — prop wiring', () => {
     expect(useWatchComplicationMock).toHaveBeenCalledWith(undefined);
   });
 });
+import { COLOR } from '@/lib/colors';

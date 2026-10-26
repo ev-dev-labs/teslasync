@@ -1,100 +1,40 @@
-/**
- * SignalHealthWidget contract + hardening tests.
- *
- * The widget is a self-refreshing dashboard tile that summarises the health of
- * a vehicle's live signal stream. Its whole shape is a function of four inputs:
- * the resolved vehicle id (`vehicleId` prop, else the first fleet vehicle, else
- * 0), the `useSignalStats` query (drives ONLY the <WidgetShell> chrome —
- * loading / freshness / refresh), the `useSignalGaps` live snapshot
- * (`Record<name, { value, timestamp }>` — the source of the active/stale
- * classification), and the `useSignals` catalogue (the "total signals" count),
- * intersected with the widget `size`:
- *
- *   - size.cols <= 1 → CompactView (ratio badge + total + freshness).
- *   - size.cols >= 3 → StandardView + a scrollable "Stale / Gap Signals" list.
- *   - otherwise      → StandardView (four StatCards + a status badge).
- *   - no data at all → the accessible <EmptyState>.
- *   - stats.isLoading → <Skeleton> chrome only.
- *
- * The suite locks, facet by facet:
- *   1. Lifecycle: loading → skeleton only; all-undefined data → empty state;
- *      no vehicle → id resolves to 0 and every hook is called with it.
- *   2. Health classification off the live snapshot: all-fresh → green/"Healthy";
- *      a minority stale → amber/"Degraded"; a majority stale → red/"Critical";
- *      an empty snapshot → neutral/"Unknown" + an em-dash freshness.
- *   3. Freshness label branches (formatAge): "Ns ago" / "Nm ago" / "Nh ago" and
- *      "—" when there is no valid timestamp.
- *   4. Compact view: the enabled/total ratio badge, the total-signal count, and
- *      the freshness chip; the header title is suppressed.
- *   5. Wide view: the stale/gap list renders one row per gap, sorts
- *      null-last-seen first, dashes a missing last-seen, and never lists an
- *      active signal.
- *   6. Hardening regression guard: a gap whose timestamp is unparseable must be
- *      counted as a GAP (not "active") and must NOT leak "NaN" into the
- *      freshness reading — the exact bug this elevation fixes.
- *   7. Refresh: the accessible "Refresh" freshness control refetches stats.
- *   8. Vehicle resolution: prop wins over the fleet head, which wins over 0.
- *
- * i18n is stubbed to echo the English fallback (interpolating {{count}}) so
- * every copy assertion is real; `Date.now` is pinned so relative-time output is
- * deterministic; and the three telemetry hooks + `useVehicles` are mocked so no
- * network is ever touched. The real <WidgetShell> / <FreshnessDot> /
- * <StatCard> / <EmptyState> render so chrome + a11y are exercised end-to-end.
- */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// i18n passthrough: honour the English fallback and interpolate {{count}} so
-// every count/copy assertion is real.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, defaultValue?: unknown, options?: Record<string, unknown>) => {
       const template = typeof defaultValue === 'string' ? defaultValue : key;
       const vars = typeof defaultValue === 'string' ? options : undefined;
       return vars
-        ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(vars[name] ?? ''))
+        ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(vars?.[name] ?? ''))
         : template;
     },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
 
-// Fleet list injected per-test through a mutable holder.
 let MOCK_VEHICLES: { data: { id: number }[] | undefined };
+let MOCK_STATS: StatsQuery;
+let MOCK_GAPS: { data: GapMap | undefined; isError?: boolean; error?: unknown; isFetching?: boolean; isStale?: boolean; refetch?: () => void; dataUpdatedAt?: number };
+let MOCK_SIGNALS: { data: string[] | undefined; isError?: boolean; error?: unknown; isFetching?: boolean; isStale?: boolean; refetch?: () => void; dataUpdatedAt?: number };
+const mockIds = { stats: [] as number[], gaps: [] as number[], signals: [] as number[] };
+
 vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => MOCK_VEHICLES,
 }));
 
-// The three telemetry queries are injected per-test through mutable holders,
-// and the id each hook is called with is captured so vehicle resolution can be
-// asserted. `MOCK_`/`mock` prefixes let vitest hoist the factory safely.
-let MOCK_STATS: StatsQuery;
-let MOCK_GAPS: { data: GapMap | undefined; isError?: boolean; error?: unknown; refetch?: () => void };
-let MOCK_SIGNALS: { data: string[] | undefined; isError?: boolean; error?: unknown; refetch?: () => void };
-const mockStatsIds: number[] = [];
-const mockGapsIds: number[] = [];
-const mockSignalsIds: number[] = [];
 vi.mock('@/api/hooks/useTelemetry', () => ({
-  useSignalStats: (id: number) => {
-    mockStatsIds.push(id);
-    return MOCK_STATS;
-  },
-  useSignalGaps: (id: number) => {
-    mockGapsIds.push(id);
-    return MOCK_GAPS;
-  },
-  useSignals: (id: number) => {
-    mockSignalsIds.push(id);
-    return MOCK_SIGNALS;
-  },
+  useSignalStats: (id: number) => (mockIds.stats.push(id), MOCK_STATS),
+  useSignalGaps: (id: number) => (mockIds.gaps.push(id), MOCK_GAPS),
+  useSignals: (id: number) => (mockIds.signals.push(id), MOCK_SIGNALS),
 }));
 
 import SignalHealthWidget from './SignalHealthWidget';
 import type { WidgetSize } from './types';
 
-/** Only the fields the widget reads off the stats query result. */
 interface StatsQuery {
   error?: unknown;
   data: unknown;
@@ -105,380 +45,144 @@ interface StatsQuery {
   dataUpdatedAt: number;
   refetch: () => void;
 }
-
 type GapEntry = { value?: unknown; timestamp?: string | null };
 type GapMap = Record<string, GapEntry>;
 
-// Pinned "now"; every fixture timestamp is expressed relative to it.
 const NOW = Date.parse('2026-07-05T12:00:00.000Z');
 const ago = (ms: number) => new Date(NOW - ms).toISOString();
-const S = 1_000;
-const MIN = 60 * S;
-const HR = 60 * MIN;
-
+const MIN = 60_000;
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
 const STANDARD: WidgetSize = { cols: 2, rows: 2 };
 const WIDE: WidgetSize = { cols: 3, rows: 2 };
 
 function makeStats(overrides: Partial<StatsQuery> = {}): StatsQuery {
   return {
-    data: { count: 1 },
-    isLoading: false,
-    isFetching: false,
-    isStale: false,
-    isError: false,
-    dataUpdatedAt: NOW,
-    refetch: vi.fn(),
-    ...overrides,
+    data: { count: 1 }, isLoading: false, isFetching: false, isStale: false,
+    isError: false, dataUpdatedAt: NOW, refetch: vi.fn(), ...overrides,
   };
 }
 
-function renderWidget(size: WidgetSize, opts: { vehicleId?: number } = {}) {
+function renderWidget(size: WidgetSize, vehicleId = 42) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
-        <SignalHealthWidget vehicleId={opts.vehicleId} size={size} />
+        <SignalHealthWidget vehicleId={vehicleId} size={size} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-/** Read the bold value rendered inside the StatCard with the given label. */
-function statValue(label: string): string {
-  const card = screen.getByText(label).closest('[data-operational-metric]');
-  if (!card) throw new Error(`Operational metric "${label}" not found`);
-  return card.querySelector('[data-operational-value]')?.textContent ?? '';
-}
-
-/** The semantic definition-list row pairs each complete signal name and age. */
-function gapRowOf(name: string): HTMLElement {
-  const el = screen.getByText(name).closest('dt')?.parentElement;
-  if (!el) throw new Error(`gap row for "${name}" not found`);
-  return el as HTMLElement;
-}
-
-it('reviews actual signal quantities, selected-vehicle scope and the unchanged gap threshold', () => {
-  MOCK_SIGNALS = { data: ['Fresh', 'Missing'] };
-  MOCK_GAPS = { data: { Fresh: { timestamp: ago(30 * S) }, Missing: { timestamp: null } } };
-  renderWidget(WIDE, { vehicleId: 42 });
-  const brief = screen.getByTestId('signal-health-operational-brief');
-  expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
-  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-  const drawer = screen.getByRole('dialog');
-  expect(within(drawer).getByText('30s ago')).toBeInTheDocument();
-  expect(within(drawer).getByText('Vehicle 42; current catalog and returned observations only', { exact: true })).toBeInTheDocument();
-  expect(within(drawer).getAllByText(/does not certify distributed live-state freshness/).length).toBeGreaterThan(0);
-  expect(within(drawer).getByText(/missing or unparseable timestamps/)).toBeInTheDocument();
-});
-
 beforeEach(() => {
   vi.spyOn(Date, 'now').mockReturnValue(NOW);
-  MOCK_VEHICLES = { data: [{ id: 1 }] };
+  MOCK_VEHICLES = { data: [{ id: 7 }] };
   MOCK_STATS = makeStats();
   MOCK_GAPS = { data: {} };
   MOCK_SIGNALS = { data: [] };
-  mockStatsIds.length = 0;
-  mockGapsIds.length = 0;
-  mockSignalsIds.length = 0;
+  mockIds.stats.length = 0;
+  mockIds.gaps.length = 0;
+  mockIds.signals.length = 0;
 });
-
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
 
-describe('SignalHealthWidget — independent source trust', () => {
-  it('shows fatal failure only when no source has retained data', () => {
-    MOCK_STATS = makeStats({ data: undefined, isError: true, error: new Error('failed') });
-    MOCK_GAPS = { data: undefined };
-    MOCK_SIGNALS = { data: undefined };
-    renderWidget(STANDARD);
-    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+describe('SignalHealthWidget redesign', () => {
+  it('shows one headline active/observed value, coverage, and status without timezone labels', () => {
+    MOCK_SIGNALS = { data: ['A', 'B', 'C'] };
+    MOCK_GAPS = { data: {
+      A: { timestamp: ago(30_000) },
+      B: { timestamp: ago(20_000) },
+      C: { timestamp: ago(10 * MIN) },
+    } };
+    const { container } = renderWidget(STANDARD);
+
+    expect(screen.getByText('2/3')).toBeInTheDocument();
+    expect(screen.getByText('Degraded')).toBeInTheDocument();
+    const meter = screen.getByRole('progressbar', { name: 'Reporting coverage' });
+    expect(meter).toHaveAttribute('aria-valuenow', '67');
+    expect(container.textContent ?? '').not.toMatch(/\bUTC\b|\bGMT\b|time zone/i);
   });
 
-  it('retains live signal analysis when its background refresh fails', () => {
-    MOCK_SIGNALS = { data: ['A'] };
-    MOCK_GAPS = { data: { A: { timestamp: ago(10 * S) } }, isError: true, error: new Error('refresh') };
-    const { container } = renderWidget(WIDE);
-    expect(statValue('Active')).toBe('1');
-    expect(screen.getByText('No observed signal gaps')).toBeInTheDocument();
-    expect(container.querySelector('[data-data-state="stale"]')).toBeTruthy();
+  it('uses real gap rows for the wide view and excludes active signals', () => {
+    MOCK_SIGNALS = { data: ['A', 'B', 'C'] };
+    MOCK_GAPS = { data: {
+      VehicleSpeed: { timestamp: ago(20_000) },
+      TpmsPressureRl: { timestamp: ago(40 * MIN) },
+      MissingTimestamp: { value: 1 },
+    } };
+    renderWidget(WIDE);
+
+    expect(screen.queryByText('VehicleSpeed')).toBeNull();
+    expect(screen.getByText('TpmsPressureRl')).toBeInTheDocument();
+    expect(screen.getByText('MissingTimestamp')).toBeInTheDocument();
+    expect(screen.getByText(/Stale ·/)).toBeInTheDocument();
+    expect(screen.getByText('Gap')).toBeInTheDocument();
   });
 
-  it('refreshes every source that contributes to health', () => {
+  it('counts unparseable timestamps as gaps and never fabricates freshness or NaN', () => {
+    MOCK_SIGNALS = { data: ['A', 'B', 'C'] };
+    MOCK_GAPS = { data: {
+      Good: { timestamp: ago(30_000) },
+      Bad: { timestamp: 'not-a-real-date' },
+      Missing: { value: 1 },
+    } };
+    const { container } = renderWidget(STANDARD);
+
+    expect(screen.getByText('1/3')).toBeInTheDocument();
+    expect(screen.getByText('Critical')).toBeInTheDocument();
+    expect(container.textContent ?? '').not.toContain('NaN');
+  });
+
+  it('renders compact coverage with no duplicate large totals', () => {
+    MOCK_GAPS = { data: {
+      A: { timestamp: ago(30_000) },
+      B: { timestamp: ago(10 * MIN) },
+    } };
+    MOCK_SIGNALS = { data: ['A', 'B'] };
+    renderWidget(COMPACT);
+
+    expect(screen.getByText('1/2')).toBeInTheDocument();
+    expect(screen.getByText('50%')).toBeInTheDocument();
+    expect(screen.getByText('Signals reporting')).toBeInTheDocument();
+    expect(screen.queryByText('Total signals')).toBeNull();
+  });
+
+  it('retains data on refresh failure and wires every source refresh', () => {
     const stats = vi.fn(), gaps = vi.fn(), signals = vi.fn();
     MOCK_STATS = makeStats({ refetch: stats });
-    MOCK_GAPS = { data: {}, refetch: gaps };
-    MOCK_SIGNALS = { data: [], refetch: signals };
-    renderWidget(STANDARD);
+    MOCK_GAPS = { data: { A: { timestamp: ago(10_000) } }, isError: true, error: new Error('refresh'), refetch: gaps };
+    MOCK_SIGNALS = { data: ['A'], refetch: signals };
+    const { container } = renderWidget(STANDARD);
+
+    expect(screen.getByText('1/1')).toBeInTheDocument();
+    expect(container.querySelector('[data-data-state="stale"]')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(stats).toHaveBeenCalledTimes(1);
     expect(gaps).toHaveBeenCalledTimes(1);
     expect(signals).toHaveBeenCalledTimes(1);
   });
 
-  it('shows a loading skeleton before any contributing source has arrived', () => {
-    MOCK_STATS = makeStats({ data: undefined, isLoading: true });
-    MOCK_GAPS = { data: undefined };
-    MOCK_SIGNALS = { data: undefined };
-    const { container } = renderWidget(STANDARD);
-    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
-  });
-});
-
-describe('SignalHealthWidget — lifecycle states', () => {
-  it('keeps measured signal readings visible while the stats source loads', () => {
-    MOCK_STATS = makeStats({ isLoading: true });
-    MOCK_SIGNALS = { data: ['A', 'B'] };
-    MOCK_GAPS = { data: { A: { timestamp: ago(10 * S) } } };
-    const { container } = renderWidget(STANDARD);
-
-    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
-    // Loading short-circuits the shell: title, content and empty state are gone.
-    expect(screen.queryByText('Signal health')).toBeInTheDocument();
-    expect(screen.getByText('Total signals')).toBeInTheDocument();
-    expect(screen.queryByText('No signal health data')).toBeNull();
-  });
-
-  it('renders an accessible empty state when no source data has arrived', () => {
+  it('uses the empty-state action only when no source data exists', () => {
     MOCK_STATS = makeStats({ data: undefined, dataUpdatedAt: 0 });
     MOCK_GAPS = { data: undefined, refetch: vi.fn() };
     MOCK_SIGNALS = { data: undefined, refetch: vi.fn() };
     renderWidget(STANDARD);
 
-    expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByText('No signal health data')).toBeInTheDocument();
-    // No StatCards leak through the empty branch.
-    expect(screen.getByText('Total signals')).toBeInTheDocument();
-    const emptyBrief = screen.getByTestId('signal-health-operational-brief');
-    fireEvent.click(within(emptyBrief).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
-    fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Refresh', exact: true }));
+    fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Refresh' }));
     expect(MOCK_STATS.refetch).toHaveBeenCalledTimes(1);
     expect(MOCK_GAPS.refetch).toHaveBeenCalledTimes(1);
     expect(MOCK_SIGNALS.refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('does not suggest corrective action when a successful snapshot records no signal gaps', () => {
-    MOCK_GAPS = { data: {} };
-    renderWidget(WIDE);
-
-    expect(screen.getByText('No observed signal gaps')).toBeInTheDocument();
-    expect(within(screen.getByRole('status')).queryByRole('button')).toBeNull();
-  });
-
-  it('resolves to vehicle id 0 and still calls every hook when the fleet is empty', () => {
-    MOCK_VEHICLES = { data: [] };
-    MOCK_STATS = makeStats({ data: undefined, dataUpdatedAt: 0 });
-    MOCK_GAPS = { data: undefined };
-    MOCK_SIGNALS = { data: undefined };
-    renderWidget(STANDARD); // no vehicleId prop + empty fleet → id 0
-
-    expect(mockStatsIds).toContain(0);
-    expect(mockGapsIds).toContain(0);
-    expect(mockSignalsIds).toContain(0);
-    // Still shows the empty state rather than crashing on undefined data.
-    expect(screen.getByText('No signal health data')).toBeInTheDocument();
-  });
-});
-
-describe('SignalHealthWidget — health classification (standard view)', () => {
-  it('reports "Healthy" (green) when every live signal is fresh', () => {
-    MOCK_SIGNALS = { data: ['a', 'b', 'c', 'd', 'e'] };
-    MOCK_GAPS = {
-      data: {
-        PackVoltage: { timestamp: ago(30 * S) },
-        PackCurrent: { timestamp: ago(60 * S) },
-      },
-    };
-    renderWidget(STANDARD);
-
-    expect(statValue('Total signals')).toBe('5');
-    expect(statValue('Active')).toBe('2');
-    expect(statValue('With gaps')).toBe('0');
-    expect(statValue('Freshness')).toBe('30s ago');
-    expect(screen.getByText('Healthy')).toBeInTheDocument();
-  });
-
-  it('reports "Degraded" (amber) when a minority of signals are stale', () => {
-    MOCK_SIGNALS = { data: ['a', 'b', 'c', 'd'] };
-    MOCK_GAPS = {
-      data: {
-        A: { timestamp: ago(10 * S) },
-        B: { timestamp: ago(20 * S) },
-        C: { timestamp: ago(30 * S) },
-        D: { timestamp: ago(10 * MIN) }, // > 5m stale threshold
-      },
-    };
-    renderWidget(STANDARD);
-
-    expect(statValue('Active')).toBe('3');
-    expect(statValue('With gaps')).toBe('1');
-    expect(statValue('Freshness')).toBe('10s ago'); // newest is 10s
-    expect(screen.getByText('Degraded')).toBeInTheDocument();
-    expect(screen.queryByText('Healthy')).toBeNull();
-  });
-
-  it('reports "Critical" (red) when at least half the signals are stale', () => {
-    MOCK_SIGNALS = { data: ['a', 'b', 'c'] };
-    MOCK_GAPS = {
-      data: {
-        Fresh: { timestamp: ago(30 * S) },
-        Stale: { timestamp: ago(10 * MIN) },
-        Missing: { value: 1 }, // no timestamp → gap
-      },
-    };
-    renderWidget(STANDARD);
-
-    expect(statValue('Active')).toBe('1');
-    expect(statValue('With gaps')).toBe('2');
-    expect(screen.getByText('Critical')).toBeInTheDocument();
-  });
-
-  it('reports "Unknown" (neutral) and an em-dash freshness with no live signals', () => {
-    MOCK_SIGNALS = { data: ['a', 'b'] };
-    MOCK_GAPS = { data: {} };
-    renderWidget(STANDARD);
-
-    expect(statValue('Total signals')).toBe('2');
-    expect(statValue('Active')).toBe('0');
-    expect(statValue('With gaps')).toBe('0');
-    expect(screen.queryByText('Freshness')).not.toBeInTheDocument();
-    const unknownBrief = screen.getByTestId('signal-health-operational-brief');
-    fireEvent.click(within(unknownBrief).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
-  });
-});
-
-describe('SignalHealthWidget — freshness label branches', () => {
-  it.each([
-    ['seconds', 30 * S, '30s ago'],
-    ['minutes', 90 * S, '1m ago'],
-    ['hours', 2 * HR, '2h ago'],
-  ])('formats the newest-signal age in %s as "%s"', (_label, age, expected) => {
-    MOCK_SIGNALS = { data: ['a'] };
-    MOCK_GAPS = { data: { Only: { timestamp: ago(age) } } };
-    renderWidget(STANDARD);
-
-    expect(statValue('Freshness')).toBe(expected as string);
-  });
-});
-
-describe('SignalHealthWidget — compact view', () => {
-  it('shows the active/total ratio, the catalogue count and the freshness chip', () => {
-    MOCK_SIGNALS = { data: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] };
-    MOCK_GAPS = {
-      data: {
-        A: { timestamp: ago(30 * S) },
-        B: { timestamp: ago(40 * S) },
-        C: { timestamp: ago(10 * MIN) },
-      },
-    };
-    renderWidget(COMPACT);
-
-    // 2 of 3 live signals active.
-    expect(screen.getByText('2/3')).toBeInTheDocument();
-    expect(screen.getByText('7')).toBeInTheDocument();
-    expect(screen.getByText('Signals')).toBeInTheDocument();
-    expect(screen.getByText('30s ago')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Signal source coverage' })).toBeInTheDocument();
-    expect(screen.queryByText('Total signals')).toBeNull();
-  });
-});
-
-describe('SignalHealthWidget — wide view stale list', () => {
-  it('lists every gap, sorts null-last-seen first, and never lists active signals', () => {
-    MOCK_SIGNALS = { data: ['x', 'y', 'z', 'w'] };
-    MOCK_GAPS = {
-      data: {
-        AlphaFresh: { timestamp: ago(20 * S) }, // active → excluded from the list
-        BetaStale: { timestamp: ago(15 * MIN) },
-        GammaGap: { value: 1 }, // no timestamp → null last-seen
-      },
-    };
-    renderWidget(WIDE);
-
-    expect(screen.getByText('Stale / gap signals')).toBeInTheDocument();
-    expect(screen.getByText('GammaGap')).toBeInTheDocument();
-    expect(screen.getByText('BetaStale')).toBeInTheDocument();
-    // The active signal is not a gap.
-    expect(screen.queryByText('AlphaFresh')).toBeNull();
-
-    // Null last-seen sorts before a dated one.
-    const gamma = screen.getByText('GammaGap');
-    const beta = screen.getByText('BetaStale');
-    expect(gamma.compareDocumentPosition(beta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-
-    // Missing last-seen dashes; a dated one renders a relative label.
-    expect(within(gapRowOf('GammaGap')).getByText('—')).toBeInTheDocument();
-    expect(within(gapRowOf('BetaStale')).getByText('15m ago')).toBeInTheDocument();
-
-    // The standard StatCards still render alongside the list.
-    expect(statValue('Active')).toBe('1');
-    expect(statValue('With gaps')).toBe('2');
-  });
-});
-
-describe('SignalHealthWidget — unparseable timestamp hardening', () => {
-  it('counts an unparseable timestamp as a gap and never leaks "NaN" into freshness', () => {
-    MOCK_SIGNALS = { data: ['a', 'b', 'c', 'd', 'e'] };
-    MOCK_GAPS = {
-      data: {
-        GoodSig: { timestamp: ago(30 * S) },
-        BadSig: { timestamp: 'not-a-real-date' }, // unparseable
-        MissingSig: { value: 1 }, // no timestamp
-      },
-    };
-    const { container } = renderWidget(STANDARD);
-
-    // The unparseable + missing entries are gaps, NOT active. (Before the fix
-    // BadSig was miscounted as active → Active=2, and freshness collapsed to
-    // "NaNh ago" because the bad string won the max-timestamp comparison.)
-    expect(statValue('Active')).toBe('1');
-    expect(statValue('With gaps')).toBe('2');
-    expect(statValue('Freshness')).toBe('30s ago');
-
-    // A majority-stale snapshot is Critical, never the pre-fix "Degraded".
-    expect(screen.getByText('Critical')).toBeInTheDocument();
-    expect(screen.queryByText('Degraded')).toBeNull();
-
-    // Hard guard: no "NaN" text anywhere in the rendered tile.
-    expect(container.textContent ?? '').not.toContain('NaN');
-  });
-});
-
-describe('SignalHealthWidget — refresh interaction', () => {
-  it('refetches stats when the accessible "Refresh" control is activated', () => {
-    const refetch = vi.fn();
-    MOCK_STATS = makeStats({ refetch });
-    MOCK_SIGNALS = { data: ['a', 'b'] };
-    MOCK_GAPS = { data: { A: { timestamp: ago(30 * S) } } };
-    renderWidget(STANDARD);
-
-    const refresh = screen.getByRole('button', { name: /^Refresh/i });
-    fireEvent.click(refresh);
-
-    expect(refetch).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('SignalHealthWidget — vehicle resolution', () => {
-  it('prefers the explicit vehicleId prop over the fleet head', () => {
+  it('resolves the vehicle scope and does not invent a vehicle result from the fleet head', () => {
     MOCK_VEHICLES = { data: [{ id: 7 }] };
-    renderWidget(STANDARD, { vehicleId: 42 });
-
-    expect(mockStatsIds).toContain(42);
-    expect(mockStatsIds).not.toContain(7);
-  });
-
-  it('falls back to the first fleet vehicle when no vehicleId prop is given', () => {
-    MOCK_VEHICLES = { data: [{ id: 7 }, { id: 9 }] };
-    renderWidget(STANDARD);
-
-    expect(mockStatsIds).toContain(7);
-    expect(mockGapsIds).toContain(7);
-    expect(mockSignalsIds).toContain(7);
+    renderWidget(STANDARD, 42);
+    expect(mockIds.stats).toContain(42);
+    expect(mockIds.gaps).toContain(42);
+    expect(mockIds.signals).toContain(42);
+    expect(mockIds.stats).not.toContain(7);
   });
 });

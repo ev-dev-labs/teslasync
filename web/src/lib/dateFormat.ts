@@ -19,12 +19,19 @@
  * negative duration, or a non-number masquerading via a cast) and returns
  * the universal "—" placeholder rather than throwing or producing strings
  * like "NaN:NaN" or "Invalid Date". Callers should NOT pre-guard.
+ *
+ * Instant helpers accept `string | number | Date | null | undefined`:
+ * ISO strings, epoch millis, and Dates are instants rendered in the
+ * target zone; callers pass raw values, never pre-converting to ISO
+ * strings. (Day-key helpers take `YYYY-MM-DD` calendar strings,
+ * `formatHourName` takes 0-23 bucket hours, and `formatMonthName` takes
+ * 1-12 month numbers — those are bucket identities, not instants.)
  */
 
-import { fmtNumber, getGlobalLocale, isFiniteNumber } from './numberFormat'
+import { getGlobalLocale } from './numberFormat'
 
 /** Universal placeholder returned by every formatter for unrenderable input. */
-const FALLBACK = '—'
+export const FALLBACK = '—'
 
 /** Optional locale + timezone overrides for the shared formatters. */
 export interface FormatOptions {
@@ -34,17 +41,48 @@ export interface FormatOptions {
   locale?: string
   /** Explicit clock fields for instants; date-only and business-day labels ignore these. */
   clock?: Pick<Intl.DateTimeFormatOptions, 'hour' | 'minute' | 'second' | 'hour12' | 'hourCycle'>
+  /** Year width; only `formatDate` and `formatMonthYear` honor this. */
+  yearStyle?: 'numeric' | '2-digit'
+  /** Weekday width; only `formatWeekdayName` honors this. */
+  weekdayStyle?: 'short' | 'long'
+  /** Append ":00" minutes; only `formatHourName` honors this. */
+  showMinutes?: boolean
+}
+
+/**
+ * Usable `timeZone` for `Intl`, or `undefined` (browser zone) when the
+ * supplied zone is blank or unknown. Kept local instead of importing
+ * `@/lib/timezone` because that module also carries React hooks and this
+ * leaf library must stay importable from non-React contexts. Primary
+ * validation lives in `resolveTimezone`; this is the backstop that keeps
+ * every formatter total per the contract above.
+ */
+const timeZoneValidityCache = new Map<string, boolean>()
+
+export function safeTimeZone(tz: unknown): string | undefined {
+  if (typeof tz !== 'string' || tz.trim() === '') return undefined
+  const cached = timeZoneValidityCache.get(tz)
+  if (cached !== undefined) return cached ? tz : undefined
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz }).format(0)
+    timeZoneValidityCache.set(tz, true)
+    return tz
+  } catch {
+    timeZoneValidityCache.set(tz, false)
+    return undefined
+  }
 }
 
 function intlOpts(base: Intl.DateTimeFormatOptions, opts?: FormatOptions): Intl.DateTimeFormatOptions {
   const fields = base.hour ? { ...base, ...opts?.clock } : base
-  if (opts?.tz) {
-    return { ...fields, timeZone: opts.tz }
+  const timeZone = safeTimeZone(opts?.tz)
+  if (timeZone) {
+    return { ...fields, timeZone }
   }
   return fields
 }
 
-function intlLocale(opts?: FormatOptions): string | undefined {
+export function intlLocale(opts?: FormatOptions): string | undefined {
   const raw = opts?.locale
   // Empty / whitespace-only strings would throw RangeError if handed to
   // `Intl.*`. Treat them as "no override" so the runtime falls back to
@@ -53,10 +91,107 @@ function intlLocale(opts?: FormatOptions): string | undefined {
   return undefined
 }
 
+/**
+ * Canonical IANA probe for the date layer: true when `tz` names a zone
+ * `Intl` can format in. Display code should prefer `resolveTimezone` /
+ * `useDateFormat` (which fall back to a usable zone); this boolean is
+ * for branching (normalize-then-compute) in bucketing and schedule code.
+ * Never throws.
+ */
+export function isValidTimeZone(tz: unknown): tz is string {
+  return safeTimeZone(tz) !== undefined
+}
+
+/**
+ * Browser's IANA zone, or `'UTC'` when `Intl` is unavailable. The
+ * mock-safe leaf for "default to the browser zone" branching in
+ * bucketing and schedule code; display code should prefer
+ * `resolveTimezone` / `useDateFormat`. Never throws.
+ */
+export function browserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  } catch {
+    return 'UTC'
+  }
+}
+
+/** Numeric calendar parts of an instant in a zone. `weekday` is 0 (Sun) - 6. */
+export interface ZonedDateParts {
+  year: number
+  month: number
+  day: number
+  hour: number
+  minute: number
+  second: number
+  weekday: number
+}
+
+const partsFormatterCache = new Map<string, Intl.DateTimeFormat>()
+
+function cachedPartsFormatter(timeZone: string): Intl.DateTimeFormat {
+  let formatter = partsFormatterCache.get(timeZone)
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-US-u-ca-gregory-nu-latn', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    })
+    partsFormatterCache.set(timeZone, formatter)
+  }
+  return formatter
+}
+
+/**
+ * Numeric calendar parts of an instant in the given IANA zone, for
+ * bucketing, grouping, and schedule math. Single `formatToParts` call;
+ * formatters are cached per zone. Returns `null` for missing, invalid,
+ * or unparseable input, or when `timeZone` is not a real zone —
+ * callers normalize the zone first (see {@link isValidTimeZone}).
+ * Never throws.
+ */
+export function zonedDateParts(
+  value: string | number | Date | null | undefined,
+  timeZone: string,
+): ZonedDateParts | null {
+  if (value == null || value === '') return null
+  const d = value instanceof Date ? value : new Date(value)
+  if (isNaN(d.getTime()) || !isValidTimeZone(timeZone)) return null
+  try {
+    const parts = cachedPartsFormatter(timeZone).formatToParts(d)
+    const get = (type: string): number => Number(parts.find((p) => p.type === type)?.value)
+    const year = get('year')
+    const month = get('month')
+    const day = get('day')
+    // h23 midnight reads back as 24 on some ICU builds; bucketing
+    // expects 0-23, so normalize here for every caller.
+    const rawHour = get('hour')
+    const out: ZonedDateParts = {
+      year,
+      month,
+      day,
+      hour: rawHour === 24 ? 0 : rawHour,
+      minute: get('minute'),
+      second: get('second'),
+      weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay(),
+    }
+    if (Object.values(out).some((n) => !Number.isInteger(n))) return null
+    return out
+  } catch {
+    return null
+  }
+}
+
+
 /** Full date + time: "Apr 4, 2026, 2:30 AM" */
-export function formatDateTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
+export function formatDateTime(value: string | number | Date | null | undefined, opts?: FormatOptions): string {
+  if (value == null || value === '') return '—'
+  const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleString(intlLocale(opts), intlOpts({
     year: 'numeric', month: 'short', day: 'numeric',
@@ -65,19 +200,19 @@ export function formatDateTime(iso: string | Date | null | undefined, opts?: For
 }
 
 /** Date only: "Apr 4, 2026" */
-export function formatDate(iso: string | Date | null | undefined, opts?: FormatOptions): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
+export function formatDate(value: string | number | Date | null | undefined, opts?: FormatOptions): string {
+  if (value == null || value === '') return '—'
+  const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString(intlLocale(opts), intlOpts({
-    year: 'numeric', month: 'short', day: 'numeric',
+    year: opts?.yearStyle ?? 'numeric', month: 'short', day: 'numeric',
   }, opts))
 }
 
 /** Short date: "Apr 4" */
-export function formatDateShort(iso: string | Date | null | undefined, opts?: FormatOptions): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
+export function formatDateShort(value: string | number | Date | null | undefined, opts?: FormatOptions): string {
+  if (value == null || value === '') return '—'
+  const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString(intlLocale(opts), intlOpts({
     month: 'short', day: 'numeric',
@@ -112,9 +247,9 @@ function cachedTimeFormatter(opts?: FormatOptions): Intl.DateTimeFormat {
 }
 
 /** Time only: "02:30" (24h) or "2:30 AM" (based on locale) */
-export function formatTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
+export function formatTime(value: string | number | Date | null | undefined, opts?: FormatOptions): string {
+  if (value == null || value === '') return '—'
+  const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return '—'
   return cachedTimeFormatter(opts).format(d)
 }
@@ -124,9 +259,9 @@ export function formatTime(iso: string | Date | null | undefined, opts?: FormatO
  * after seven days. Uses the selected formatter locale unless overridden.
  * English keeps its existing "just now" label for the first past minute.
  */
-export function formatRelative(iso: string | Date | null | undefined, opts?: FormatOptions): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
+export function formatRelative(value: string | number | Date | null | undefined, opts?: FormatOptions): string {
+  if (value == null || value === '') return '—'
+  const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return '—'
   const diff = d.getTime() - Date.now()
   const seconds = Math.floor(Math.abs(diff) / 1000)
@@ -155,55 +290,9 @@ export function formatRelative(iso: string | Date | null | undefined, opts?: For
   if (hours < 24) return formatter.format(direction * hours, 'hour')
   const days = Math.floor(hours / 24)
   if (days < 7) return formatter.format(direction * days, 'day')
-  return formatDate(iso, { ...opts, locale: formatter.resolvedOptions().locale })
+  return formatDate(value, { ...opts, locale: formatter.resolvedOptions().locale })
 }
 
-/**
- * Relative *day*-precision label used by date-grouped feeds. Unlike
- * `formatRelative`, this never falls back to an absolute date — it
- * always returns a relative phrase ("Today", "Yesterday", "3d ago",
- * "2w ago", "5mo ago", "1y ago"). Pair it with a separate absolute
- * date label (e.g. group header showing "Apr 24, 2026 · 18d ago").
- *
- * Day deltas are computed in the *target* timezone (defaults to the
- * browser's local zone). Pass `tz` to anchor day boundaries to a
- * specific zone — e.g. the active vehicle's IANA zone — so a drive
- * recorded at 11pm vehicle-local doesn't get reported as "Yesterday"
- * just because the user's browser already rolled to the next day.
- */
-export function formatRelativeDays(
-  iso: string | Date | null | undefined,
-  opts?: FormatOptions,
-): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return '—'
-  const targetKey = ymdInTz(d, opts?.tz)
-  if (!targetKey) return '—'
-  return formatRelativeDayKey(targetKey, opts)
-}
-
-/**
- * Relative day label for an existing `YYYY-MM-DD` calendar key.
- *
- * Unlike converting the key to a UTC instant, this preserves the calendar day
- * chosen by the caller and compares it with "today" in the same target
- * timezone. Use it for grouped list headers whose keys already came from
- * {@link ymdInTz}.
- */
-export function formatRelativeDayKey(dayKey: string, opts?: FormatOptions): string {
-  if (parseYmdToUtcMillis(dayKey) == null) return FALLBACK
-  const todayKey = ymdInTz(new Date(), opts?.tz)
-  if (!todayKey) return FALLBACK
-  const diffDays = daysBetweenYmd(dayKey, todayKey)
-  if (diffDays === 0) return 'Today'
-  if (diffDays === 1) return 'Yesterday'
-  if (diffDays < 0) return `in ${Math.abs(diffDays)}d`
-  if (diffDays < 7) return `${diffDays}d ago`
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`
-  return `${Math.floor(diffDays / 365)}y ago`
-}
 
 /* ------------------------------------------------------------------ */
 /*  Timezone-aware day primitives                                     */
@@ -217,7 +306,7 @@ export function formatRelativeDayKey(dayKey: string, opts?: FormatOptions): stri
  */
 const FORMATTER_CACHE = new Map<string, Intl.DateTimeFormat>()
 
-function getFormatter(opts: Intl.DateTimeFormatOptions, locale?: string): Intl.DateTimeFormat {
+export function getFormatter(opts: Intl.DateTimeFormatOptions, locale?: string): Intl.DateTimeFormat {
   // Empty / whitespace-only locale strings would throw `RangeError: Invalid
   // language tag: ` if passed to `Intl.DateTimeFormat`. Coerce to undefined
   // so the runtime falls back to the host default.
@@ -231,43 +320,6 @@ function getFormatter(opts: Intl.DateTimeFormatOptions, locale?: string): Intl.D
   return fmt
 }
 
-/**
- * Extract a `YYYY-MM-DD` string from a Date in the requested timezone.
- * Falls back to the browser's local zone when `tz` is unset. Used as the
- * shared day-key primitive that `formatRelativeDays` and the per-feature
- * day-grouping helpers (e.g. `localDayKey` in `drivesAggregation`) build
- * on, so every "what day is this drive on?" question gives the same
- * answer across the page.
- */
-export function ymdInTz(d: Date, tz?: string): string | null {
-  if (isNaN(d.getTime())) return null
-  if (!tz) {
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${day}`
-  }
-  // Use formatToParts so we get raw numeric components — toLocaleDateString
-  // would inject locale separators we'd then have to parse back out.
-  try {
-    const fmt = getFormatter({
-      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
-    }, 'en-US')
-    const parts = fmt.formatToParts(d)
-    const get = (type: string) => parts.find(p => p.type === type)?.value
-    const y = get('year')
-    const m = get('month')
-    const day = get('day')
-    if (!y || !m || !day) return null
-    return `${y}-${m}-${day}`
-  } catch {
-    // Invalid IANA tz — fall back to browser-local rather than throwing.
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${day}`
-  }
-}
 
 /**
  * Render a valid `YYYY-MM-DD` business day without timezone conversion.
@@ -304,29 +356,12 @@ export function formatDayKey(
   return getFormatter(fmtOpts, opts?.locale).format(noon)
 }
 
-/**
- * Compute the inclusive day delta `today - target` from two day keys in
- * `YYYY-MM-DD` form. Used by `formatRelativeDays`. Positive when
- * `target` is earlier than `today`. Returns `0` if either key is malformed.
- */
-function daysBetweenYmd(target: string, today: string): number {
-  const a = parseYmdToUtcMillis(target)
-  const b = parseYmdToUtcMillis(today)
-  if (a == null || b == null) return 0
-  return Math.round((b - a) / 86_400_000)
-}
-
-function parseYmdToUtcMillis(key: string): number | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key)
-  if (!m) return null
-  const [, ys, ms, ds] = m
-  return Date.UTC(Number(ys), Number(ms) - 1, Number(ds))
-}
 
 /** Relative time matching dashboard activity feeds: "Just now", "5m ago", or "Apr 4, 02:30 AM" */
-export function formatRelativeTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
+export function formatRelativeTime(value: string | number | Date | null | undefined, opts?: FormatOptions): string {
+  if (value == null || value === '') return '—'
+  const d = value instanceof Date ? value : new Date(value)
+  if (isNaN(d.getTime())) return '—'
   const diffMs = Date.now() - d.getTime()
   const diffMin = Math.floor(diffMs / 60_000)
   // relative-time: shared event-time formatter
@@ -337,74 +372,6 @@ export function formatRelativeTime(iso: string | Date | null | undefined, opts?:
   return d.toLocaleDateString(intlLocale(opts), intlOpts({ month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }, opts))
 }
 
-/** Nonnegative measured duration uses selected precision; missing/invalid values remain unknown. */
-export function formatDurationMs(ms: number | null | undefined): string {
-  if (!isFiniteNumber(ms) || ms < 0) return FALLBACK
-  if (ms < 1000) return `${fmtNumber(ms)}ms`
-  return `${fmtNumber(ms / 1000)}s`
-}
-
-/** Measured duration with decimal minute rollover and selected precision. */
-export function formatDurationMsCompact(ms: number | null | undefined): string {
-  if (!isFiniteNumber(ms) || ms < 0) return FALLBACK
-  if (ms < 1000) return `${fmtNumber(ms)}ms`
-  if (ms < 60_000) return `${fmtNumber(ms / 1000)}s`
-  return `${fmtNumber(ms / 60_000)}m`
-}
-
-/** Job duration with minute/second output for longer jobs: "1m 05s". Zero means "no run yet". */
-export function formatDurationMsLong(ms: number | null | undefined): string {
-  if (!isFiniteNumber(ms) || ms <= 0) return FALLBACK
-  if (ms < 1000) return `${fmtNumber(ms)}ms`
-  const sec = ms / 1000
-  if (sec < 60) return `${fmtNumber(sec)}s`
-  const min = Math.floor(sec / 60)
-  return `${min}m ${formatRoundedInt(sec % 60)}s`
-}
-
-/** Locale-aware seconds represented as rounded minutes/hours: "5m", "2h 10m", or "2h". */
-export function formatDurationSecondsAsMinutes(seconds: number | null | undefined): string {
-  if (!isFiniteNumber(seconds) || seconds < 0) return FALLBACK
-  const h = Math.floor(seconds / 3600)
-  const m = (seconds % 3600) / 60
-  if (h === 0) return `${fmtNumber(m, 0)}m`
-  return m >= 0.5 ? `${fmtNumber(h, 0)}h ${fmtNumber(m, 0)}m` : `${fmtNumber(h, 0)}h`
-}
-
-/** Minute duration with rounded minute remainder: "5m" or "2h 05m". */
-export function formatDurationMinutes(
-  minutes: number | null | undefined,
-  options: { subMinuteLabel?: string } = {},
-): string {
-  if (!isFiniteNumber(minutes) || minutes < 0) return FALLBACK
-  if (options.subMinuteLabel && minutes < 1) return options.subMinuteLabel
-  const h = Math.floor(minutes / 60)
-  const m = formatRoundedInt(minutes % 60)
-  return h > 0 ? `${h}h ${m}m` : `${m}m`
-}
-
-/** Duration between two timestamps, rounded to whole minutes. */
-export function formatDurationRange(
-  start: string | Date | null | undefined,
-  end: string | Date | null | undefined,
-): string {
-  if (!start || !end) return FALLBACK
-  const s = new Date(start).getTime()
-  const e = new Date(end).getTime()
-  if (!Number.isFinite(s) || !Number.isFinite(e)) return FALLBACK
-  const ms = e - s
-  if (ms < 0) return FALLBACK
-  return formatDurationMinutes(Math.round(ms / 60_000))
-}
-
-/** Media/player clock duration: "3:07". Returns "—" for nullish, non-finite, or negative durations. */
-export function formatDurationClock(ms: number | null | undefined): string {
-  if (!isFiniteNumber(ms) || ms < 0) return FALLBACK
-  const totalSec = Math.floor(ms / 1000)
-  const m = Math.floor(totalSec / 60)
-  const s = totalSec % 60
-  return `${m}:${s.toString().padStart(2, '0')}`
-}
 
 /** Local datetime string for `<input type="datetime-local">` value: "2026-04-04T14:30:00" */
 export function toLocalDatetimeStr(d: Date): string {
@@ -412,35 +379,11 @@ export function toLocalDatetimeStr(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
-/**
- * Stored UTC ISO instant → `<input type="datetime-local">` value
- * ("2026-04-04T14:30", browser-local wall time). Never slice a UTC string
- * directly: the input interprets the value as LOCAL time, so slicing shifts
- * the instant by the UTC offset on save. Returns '' for missing/invalid input.
- */
-export function isoUtcToLocalDatetimeInput(iso: string | null | undefined): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return ''
-  return toLocalDatetimeStr(d).slice(0, 16)
-}
-
-/**
- * `<input type="datetime-local">` value → stored UTC ISO instant. Returns null
- * for empty/invalid input instead of throwing (a cleared input must never
- * crash the form — callers keep the previous value or show a validation error).
- */
-export function localDatetimeInputToIso(value: string | null | undefined): string | null {
-  if (!value) return null
-  const d = new Date(value)
-  if (isNaN(d.getTime())) return null
-  return d.toISOString()
-}
 
 /** Weekday + short date: "Fri, Apr 4" */
-export function formatDateWithDay(iso: string | Date | null | undefined, opts?: FormatOptions): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
+export function formatDateWithDay(value: string | number | Date | null | undefined, opts?: FormatOptions): string {
+  if (value == null || value === '') return '—'
+  const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString(intlLocale(opts), intlOpts({
     weekday: 'short', month: 'short', day: 'numeric',
@@ -448,25 +391,79 @@ export function formatDateWithDay(iso: string | Date | null | undefined, opts?: 
 }
 
 /**
- * Returns the short timezone abbreviation (e.g. "PST", "EDT") for the
- * given timestamp in the given IANA zone. Date-aware so DST transitions
- * are honored — `tzAbbreviation(jan, 'America/Los_Angeles')` yields
- * "PST" while the same call in July yields "PDT".
+ * User-facing label for a half-open API range `[start, endExclusive)`:
+ * renders the inclusive last day ("Sep 22 – Oct 21, 2026") via
+ * `Intl.DateTimeFormat.formatRange`, which collapses shared fields in a
+ * locale-aware way. A reversed range is swapped rather than thrown on —
+ * a display helper must stay total. Missing or invalid bounds return
+ * the universal placeholder.
  */
-export function tzAbbreviation(value: string | Date, tz: string): string {
-  const date = value instanceof Date ? value : new Date(value)
-  if (isNaN(date.getTime())) return ''
+export function formatDateRange(
+  start: string | number | Date | null | undefined,
+  endExclusive: string | number | Date | null | undefined,
+  opts?: FormatOptions,
+): string {
+  if (start == null || start === '' || endExclusive == null || endExclusive === '') return FALLBACK
+  const s = new Date(start)
+  const e = new Date(endExclusive)
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return FALLBACK
+  let from = s.getTime()
+  let until = e.getTime()
+  if (until < from) [from, until] = [until, from]
+  // Last included instant, then its civil day in the target zone. Query
+  // ends carry millisecond precision, so minus 1ms is exactly the final
+  // included millisecond; a DST transition inside the day cannot move it.
+  const inclusiveEnd = new Date(Math.max(0, until - 1))
+  const timeZone = safeTimeZone(opts?.tz)
   try {
-    const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' }).formatToParts(date)
-    return parts.find(p => p.type === 'timeZoneName')?.value ?? ''
+    const fmt = new Intl.DateTimeFormat(intlLocale(opts), {
+      ...(timeZone ? { timeZone } : {}),
+      year: 'numeric', month: 'short', day: 'numeric',
+    })
+    // ICU pads the range separator with thin/narrow spaces that vary by
+    // version; normalize to plain spaces so labels, tests and snapshots
+    // stay stable and match the existing "{{start}} – {{end}}" labels.
+    return fmt.formatRange(new Date(from), inclusiveEnd).replace(/[\u2009\u202F]/g, ' ')
   } catch {
-    return ''
+    return FALLBACK
   }
 }
 
-function formatRoundedInt(value: number): string {
-  return value.toLocaleString('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })
+/**
+ * User-facing label for an inclusive `YYYY-MM-DD` calendar span
+ * ("Aug 1 – 8, 2026"). Business dates are not instants, so both ends
+ * are noon-anchored in UTC exactly like {@link formatDayKey} — the label
+ * never shifts with the display zone. A reversed span is swapped rather
+ * than thrown on; missing or invalid keys return the placeholder.
+ */
+export function formatDayKeyRange(
+  startKey: string | null | undefined,
+  endKey: string | null | undefined,
+  opts?: FormatOptions,
+): string {
+  const toNoon = (key: string | null | undefined): Date | null => {
+    if (typeof key !== 'string') return null
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key)
+    if (!m) return null
+    const noon = new Date(0)
+    noon.setUTCHours(12, 0, 0, 0)
+    noon.setUTCFullYear(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    if (noon.getUTCFullYear() !== Number(m[1]) || noon.getUTCMonth() !== Number(m[2]) - 1 || noon.getUTCDate() !== Number(m[3])) {
+      return null
+    }
+    return noon
+  }
+  const from = toNoon(startKey)
+  const until = toNoon(endKey)
+  if (!from || !until) return FALLBACK
+  const [first, last] = from.getTime() <= until.getTime() ? [from, until] : [until, from]
+  try {
+    const fmt = new Intl.DateTimeFormat(intlLocale(opts), {
+      timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric',
+    })
+    return fmt.formatRange(first, last).replace(/[\u2009\u202F]/g, ' ')
+  } catch {
+    return FALLBACK
+  }
 }
+

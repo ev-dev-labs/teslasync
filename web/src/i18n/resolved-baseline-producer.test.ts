@@ -65,7 +65,7 @@ const laterAdditions = [
   ['admin.teslaOrders.card.aria', '{{model}} order, {{status}}'],
   ['widget.backupHistory.summaryScope', 'Energy site {{siteId}}; history since {{since}}, no explicit exclusive end bound'],
   ['widget.energyStats.summary.scope', 'Vehicle {{id}} · source period {{days}} days'],
-  ['widget.fsdWeekly.summary.scope', 'Vehicle {{id}} · {{start}} to {{end}} exclusive · {{timezone}}'],
+  ['widget.fsdWeekly.summary.scope', 'Vehicle {{id}} · {{range}}'],
   ['widget.lifetimeStats.summary.scope', 'Vehicle {{id}} · lifetime'],
   ['widget.mileageStats.summary.scope', 'Vehicle {{id}} · rolling 30 days / lifetime'],
   ['widget.speedHeatmap.gridLabel', 'Average speed by day of week and hour of day'],
@@ -211,11 +211,11 @@ describe('resolved known-missing canonical producers', () => {
     const oldEntries = leaves(catalog)
       .filter(([key]) => !addedKeys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
-    expect(oldEntries).toHaveLength(30028)
+    expect(oldEntries).toHaveLength(30229)
     // User-approved current checkpoint; preserve every exact leaf/value in this partition.
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
-      .toBe("bfd0b367d31dc47e731d0afab57fb57de2aa9e6d8eaa15f6f6a8dd3598cd789a")
-    expect(leaves(catalog)).toHaveLength(32977)
+      .toBe("64308a56b36d02619cd15b791563958329757ce5cbd7753b71f771f5ff396b65")
+    expect(leaves(catalog)).toHaveLength(33178)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa.offline.banner).toBe(
       'Showing cached data. Operational changes stay disabled until you reconnect.',

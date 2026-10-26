@@ -46,11 +46,112 @@ function options(overrides: Partial<UtilizationOptions> = {}): UtilizationOption
     rangeEnd: '2026-07-31',
     asOfMs: Date.parse('2026-08-10T00:00:00.000Z'),
     historyLimit: 1000,
+    timezone: 'UTC',
     ...overrides,
   };
 }
 
 describe('summarizeUtilization', () => {
+  it.each([
+    ['UTC', '2026-08-01', 6, 1],
+    ['America/Los_Angeles', '2026-07-31', 5, 2],
+    ['Asia/Tokyo', '2026-08-01', 6, 2],
+  ] as const)('attributes complete source evidence to the selected calendar in %s', (timezone, day, weekday, calendarDays) => {
+    const rows = [drive('2026-08-01T00:30:00Z')];
+    const original = JSON.stringify(rows);
+    const summary = summarizeUtilization(rows, 0.1, options({
+      rangeStart: '2026-07-31', rangeEnd: '2026-08-01', timezone,
+      startInstant: '2026-07-31T00:00:00Z', endInstantExclusive: '2026-08-02T00:00:00Z',
+    }));
+    expect(summary.days.find(row => row.driveCount > 0)).toMatchObject({ day, distanceM: 50_000, energyWh: 10_000 });
+    expect(summary.months.find(row => row.driveCount > 0)?.month).toBe(day.slice(0, 7));
+    expect(summary.weekdays[Number(weekday)]).toMatchObject({ driveCount: 1, activeDays: 1, distanceM: 50_000 });
+    expect(summary.observedCalendarDays).toBe(calendarDays);
+    expect(summary.distancePerDayM).toBe(50_000 / Number(calendarDays));
+    expect(summary).toMatchObject({ drives: 1, drivingHours: 1, distanceM: 50_000, energyWh: 10_000, totalEnergyCost: 1 });
+    expect(summary.window.observedEndMs).toBe(Date.parse('2026-08-02T00:00:00Z'));
+    expect(JSON.stringify(rows)).toBe(original);
+  });
+
+  it('splits elapsed driving time at selected midnight while retaining full-drive evidence on its start day', () => {
+    const summary = summarizeUtilization([drive('2026-08-01T06:30:00Z', { durationS: 7200 })], 0.1, options({
+      rangeStart: '2026-07-31', rangeEnd: '2026-08-01', timezone: 'America/Los_Angeles',
+    }));
+    expect(summary.days.map(day => [day.day, day.drivingS, day.driveCount, day.distanceM, day.energyWh])).toEqual([
+      ['2026-07-31', 1800, 1, 50_000, 10_000],
+      ['2026-08-01', 5400, 0, 0, 0],
+    ]);
+    expect(summary.months.map(month => [month.month, month.drivingS])).toEqual([['2026-07', 1800], ['2026-08', 5400]]);
+    expect(summary.accounting.truncatedDurationRows).toBe(0);
+    expect(summary.drivingHours).toBe(2);
+  });
+
+  it.each([
+    ['2026-03-08', '2026-03-08T08:00:00Z', 23],
+    ['2026-11-01', '2026-11-01T07:00:00Z', 25],
+  ] as const)('measures actual elapsed hours for selected-calendar day %s', (day, start, hours) => {
+    const summary = summarizeUtilization([drive(String(start))], null, options({
+      rangeStart: String(day), rangeEnd: String(day), timezone: 'America/Los_Angeles',
+      asOfMs: Date.parse('2026-12-01T00:00:00Z'),
+    }));
+    expect(summary.days).toHaveLength(1);
+    expect(summary.days[0]).toMatchObject({ day, observedS: Number(hours) * 3600, driveCount: 1 });
+    expect(summary.window.observedDurationS).toBe(Number(hours) * 3600);
+    expect(summary.activeDayShare).toBe(1);
+    expect(summary.distancePerDayM).toBe(50_000);
+  });
+
+  it.each([
+    ['2026-03-02', '2026-03-08', '2026-03-02T08:00:00Z', 167],
+    ['2026-10-26', '2026-11-01', '2026-10-26T07:00:00Z', 169],
+  ] as const)('recognizes a complete selected-calendar week across DST starting %s', (start, end, instant, hours) => {
+    const summary = summarizeUtilization([drive(String(instant), { durationS: 0 })], null, options({
+      rangeStart: String(start), rangeEnd: String(end), timezone: 'America/Los_Angeles',
+      asOfMs: Date.parse('2026-12-01T00:00:00Z'),
+    }));
+    expect(summary.days).toHaveLength(7);
+    expect(summary.consistency.weeks).toHaveLength(1);
+    expect(summary.consistency.weeks[0]).toMatchObject({ weekStart: start, observedCalendarDays: 7, isPartial: false });
+    expect(summary.window.observedDurationS).toBe(Number(hours) * 3600);
+    expect(summary.consistency.weeks[0].observedDays).toBeCloseTo(Number(hours) / 24);
+  });
+
+  it('does not invent an observed day when a zone skips an entire civil date', () => {
+    const summary = summarizeUtilization([drive('2011-12-29T10:00:00Z')], null, options({
+      rangeStart: '2011-12-29', rangeEnd: '2011-12-31', timezone: 'Pacific/Apia',
+      asOfMs: Date.parse('2012-01-05T00:00:00Z'),
+    }));
+    expect(summary.days.map(day => day.day)).toEqual(['2011-12-29', '2011-12-31']);
+    expect(summary.window.observedDurationS).toBe(48 * 3600);
+  });
+
+  it('preserves exact rolling bounds instead of widening them to calendar midnights', () => {
+    const summary = summarizeUtilization([
+      drive('2026-07-10T11:59:59.999Z'),
+      drive('2026-07-10T12:00:00Z'),
+      drive('2026-07-11T12:00:00Z'),
+    ], null, options({
+      rangeStart: '2026-07-10', rangeEnd: '2026-07-11', timezone: 'America/Los_Angeles',
+      startInstant: '2026-07-10T12:00:00Z', endInstantExclusive: '2026-07-11T12:00:00Z',
+    }));
+    expect(summary.window.observedDurationS).toBe(24 * 3600);
+    expect(summary.window.selectedStartMs).toBe(Date.parse('2026-07-10T12:00:00Z'));
+    expect(summary.window.selectedEndExclusiveMs).toBe(Date.parse('2026-07-11T12:00:00Z'));
+    expect(summary.accounting).toMatchObject({ eligibleRows: 1, beforeRangeRows: 1, afterRangeRows: 1 });
+    expect(summary.days.map(day => day.observedS)).toEqual([19 * 3600, 5 * 3600]);
+  });
+
+  it.each([
+    { startInstant: '2026-07-10T12:00:00Z' },
+    { endInstantExclusive: '2026-07-11T12:00:00Z' },
+    { startInstant: 'invalid', endInstantExclusive: '2026-07-11T12:00:00Z' },
+    { startInstant: '2026-07-11T12:00:00Z', endInstantExclusive: '2026-07-10T12:00:00Z' },
+  ])('does not silently replace malformed absolute bounds with a broader calendar window: %j', (bounds) => {
+    const summary = summarizeUtilization([drive('2026-07-10T12:00:00Z')], null, options(bounds));
+    expect(summary.window.rangeValid).toBe(false);
+    expect(summary.accounting).toMatchObject({ eligibleRows: 0, invalidRangeRows: 1 });
+  });
+
   it('carries missing and partial field coverage into each rollup without erasing inactive zeros or counts', () => {
     const summary = summarizeUtilization([
       drive('2026-07-01T08:00:00Z', { durationS: null, distanceM: null, energyUsedWh: null }),

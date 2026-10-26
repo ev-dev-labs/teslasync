@@ -96,6 +96,11 @@ describe('generateCarbonCertificate', () => {
     expect(writeSpy).not.toHaveBeenCalled()
   })
 
+  it('keeps audit markers out of the print document', () => {
+    generateCarbonCertificate(baseData)
+    expect(capturedHTML).not.toContain('tz-number-format')
+  })
+
   it('contains certificate heading and TeslaSync branding', () => {
     generateCarbonCertificate(baseData)
     expect(capturedHTML).toContain('Carbon Offset Certificate')

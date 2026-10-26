@@ -72,7 +72,7 @@ export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
                   : t('driveDetail.noAddress', 'No address data')}
             </p>
             <p className="text-xs text-[var(--text-muted)]">
-              <span title={drive.startTs || undefined}>{formatDateTime(drive.startTs, { tz: timezone })}</span>
+              <span>{formatDateTime(drive.startTs, { tz: timezone })}</span>
             </p>
             {drive.startAddress && startCoords ? <p className="mt-1 font-mono text-xs text-[var(--text-muted)]">{startCoords}</p> : null}
             <p className="mt-2 text-xs text-[var(--text-secondary)]">{t('driveDetail.battery', 'Battery')}: {drive.startBatteryPct != null ? `${fmtNumber(drive.startBatteryPct)}%` : '—'}</p>
@@ -86,7 +86,7 @@ export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
             </p>
             <p className="text-xs text-[var(--text-muted)]">
               {hasEnded
-                ? <span title={drive.endTs || undefined}>{formatDateTime(drive.endTs, { tz: timezone })}</span>
+                ? <span>{formatDateTime(drive.endTs, { tz: timezone })}</span>
                 : t('driveDetail.inProgress', 'In progress')}
             </p>
             <p className="text-xs text-[var(--text-secondary)]">

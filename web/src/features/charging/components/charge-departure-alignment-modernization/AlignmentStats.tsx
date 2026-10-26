@@ -110,9 +110,9 @@ export function AlignmentStats({ summary, loading, retained, missingReason, hist
           'Selected vehicle · up to 1,000 charges and 1,000 drives from the existing queries. These are loaded records, not complete lifetime coverage; the workspace date range does not filter this model.',
         ),
       }}
+      scopeDetails={historyContext}
       secondary={
         <div className="space-y-3">
-          {historyContext}
           <div className="flex flex-wrap items-center gap-2">
             <HelpTooltip i18nKey="help.chargeDepartureAlignment.avgMargin" defaultValue={marginHelp}
               ariaLabel={t('chargeDepartureAlignment.avgMargin', 'Avg. Readiness Margin')} />

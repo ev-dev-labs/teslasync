@@ -44,7 +44,7 @@
 
 import { type ReactNode } from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -208,13 +208,7 @@ it('reviews the real fleet error sample while retaining source errors independen
   mockUseErrors.mockReturnValue(qr({ data: [makeError({ error_code: 'RETAINED' })] }));
   renderWidget(STANDARD);
   expect(screen.getByText('RETAINED')).toBeInTheDocument();
-  const brief = screen.getByTestId('telemetry-errors-operational-brief');
-  expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(2);
-  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-  const drawer = screen.getByRole('dialog');
-  expect(within(drawer).getAllByText('1')).toHaveLength(2);
-  expect(within(drawer).getByText(/not the total error count for a complete time range/)).toBeInTheDocument();
-  expect(within(drawer).getAllByText(/exact coverage bounds unknown/)).toHaveLength(2);
+  expect(screen.getByText('1 · Errors in fetched sample')).toBeInTheDocument();
 });
 
 // ── Compact layout (cols ≤ 1): the status hero ──────────────────────────────
@@ -252,7 +246,7 @@ describe('TelemetryErrorsWidget — compact layout', () => {
     mockUseVINs.mockReturnValue(qr({ data: [makeVIN(), makeVIN()] }));
     renderWidget(COMPACT);
     expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('Error VINs')).toBeInTheDocument();
+    expect(screen.getByText('error VINs')).toBeInTheDocument();
     expect(screen.getByText('Errors')).toBeInTheDocument();
     expect(screen.queryByText('Healthy')).toBeNull();
   });
@@ -276,7 +270,7 @@ describe('TelemetryErrorsWidget — standard layout', () => {
     mockUseErrors.mockReturnValue(qr({ data: [makeError()] }));
     renderWidget(STANDARD);
     expect(screen.getByText('Telemetry errors')).toBeInTheDocument();
-    expect(screen.getByText('2 VINs with errors')).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.textContent === '2 VINs with errors')).toBeInTheDocument();
     expect(screen.getByText('Errors')).toBeInTheDocument();
   });
 
@@ -324,7 +318,7 @@ describe('TelemetryErrorsWidget — standard layout', () => {
     const { container } = renderWidget(STANDARD);
 
     // Exactly one "recent" badge (the 5-minute-old entry).
-    expect(screen.getAllByText('Recent')).toHaveLength(1);
+    expect(screen.getAllByText('recent')).toHaveLength(1);
     // Each row threads its resolved last_seen into <TimeStamp>.
     expect(screen.getByText(recentTs)).toBeInTheDocument();
     expect(screen.getByText(oldTs)).toBeInTheDocument();
@@ -339,7 +333,7 @@ describe('TelemetryErrorsWidget — standard layout', () => {
     renderWidget(STANDARD);
     expect(screen.getByText('No errors recorded')).toBeInTheDocument();
     expect(screen.getByText('Healthy')).toBeInTheDocument();
-    expect(screen.getByText('0 VINs with errors')).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.textContent === '0 VINs with errors')).toBeInTheDocument();
   });
 });
 
@@ -352,7 +346,7 @@ describe('TelemetryErrorsWidget — loading, error & refresh hardening', () => {
     const { container } = renderWidget(STANDARD);
     expect(screen.getByRole('status', { name: 'Loading Errors in fetched sample' })).toBeInTheDocument();
     expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
-    expect(screen.getByText('1 VINs with errors')).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.textContent === '1 VINs with errors')).toBeInTheDocument();
     expect(screen.queryByText('Telemetry errors')).toBeInTheDocument();
   });
 

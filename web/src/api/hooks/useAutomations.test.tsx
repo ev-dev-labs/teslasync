@@ -263,6 +263,31 @@ describe('useAutomationHistory', () => {
   });
 
   describe('useAutomationHistoryPage', () => {
+    it('owns a separate daily-bucket cache when only the selected zone changes', async () => {
+      const source = makeHistoryResponse({ trend: [{ day: '2026-03-08', status: 'success', count: 100 }] });
+      const original = JSON.stringify(source);
+      requestMock.mockResolvedValue(source);
+      const client = makeClient();
+      const filters = { page: 1, pageSize: 25, since: '2026-03-08T08:00:00Z', until: '2026-03-09T07:00:00Z' };
+      const { result, rerender } = renderHook(
+        ({ timezone }) => useAutomationHistoryPage({ ...filters, timezone }),
+        { initialProps: { timezone: 'UTC' }, wrapper: wrapperFor(client) },
+      );
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      rerender({ timezone: 'America/Los_Angeles' });
+      await waitFor(() => expect(requestMock).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      const urls = requestMock.mock.calls.map(([path]) => new URL(path, 'http://fixture.invalid'));
+      expect(urls.map(url => url.searchParams.get('timezone'))).toEqual(['UTC', 'America/Los_Angeles']);
+      for (const url of urls) {
+        expect(url.searchParams.get('since')).toBe(filters.since);
+        expect(url.searchParams.get('until')).toBe(filters.until);
+      }
+      expect(client.getQueryCache().findAll({ queryKey: ['automation-history', 'page'] })).toHaveLength(2);
+      expect(JSON.stringify(source)).toBe(original);
+      expect(result.current.data?.trend[0]?.count).toBe(100);
+    });
+
     it('paginates and filters on the server rather than truncating local history', async () => {
       requestMock.mockResolvedValueOnce(makeHistoryResponse({ total: 101, limit: 25, offset: 50 }));
       const { result } = renderHook(() => useAutomationHistoryPage({

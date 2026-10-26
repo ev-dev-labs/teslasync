@@ -59,16 +59,29 @@ type anomalyResponse struct {
 	DetectorStages   map[string]string `json:"detector_stages"`
 }
 
+// Explanation parameters retain canonical signal units and numeric types.
+// Pointers distinguish inapplicable facts from measured zero.
+type anomalyExplanationParams struct {
+	Value         float64  `json:"value"`
+	Baseline      float64  `json:"baseline"`
+	ZScore        *float64 `json:"z_score,omitempty"`
+	Minimum       *float64 `json:"minimum,omitempty"`
+	Maximum       *float64 `json:"maximum,omitempty"`
+	PercentChange *float64 `json:"percent_change,omitempty"`
+}
+
 type anomalyEntry struct {
-	Signal     string  `json:"signal"`
-	Type       string  `json:"type"`
-	Severity   string  `json:"severity"`
-	Value      float64 `json:"value"`
-	Baseline   float64 `json:"baseline"`
-	ZScore     float64 `json:"z_score"`
-	DetectedAt string  `json:"detected_at"`
-	Message    string  `json:"message"`
-	Unit       string  `json:"unit,omitempty"`
+	ExplanationCode   string                    `json:"explanation_code,omitempty"`
+	ExplanationParams *anomalyExplanationParams `json:"explanation_params,omitempty"`
+	Signal            string                    `json:"signal"`
+	Type              string                    `json:"type"`
+	Severity          string                    `json:"severity"`
+	Value             float64                   `json:"value"`
+	Baseline          float64                   `json:"baseline"`
+	ZScore            float64                   `json:"z_score"`
+	DetectedAt        string                    `json:"detected_at"`
+	Message           string                    `json:"message"`
+	Unit              string                    `json:"unit,omitempty"`
 }
 
 // Predefined safe ranges for critical signals in canonical signal_log units.
@@ -203,7 +216,52 @@ func anomalyContextResultToResponse(r *aitools.AnomalyContextResult) anomalyResp
 			Unit:       anomalySignalUnit(a.Signal),
 		})
 	}
+	for i := range out.Anomalies {
+		addExplanationFacts(&out.Anomalies[i])
+	}
 	return out
+}
+
+func addExplanationFacts(a *anomalyEntry) {
+	if !finiteMeasurements(a.Value, a.Baseline, a.ZScore) {
+		return
+	}
+	params := &anomalyExplanationParams{Value: a.Value, Baseline: a.Baseline}
+	switch a.Type {
+	case "z_score":
+		a.ExplanationCode = "z_score"
+		params.ZScore = &a.ZScore
+	case "range":
+		bounds, ok := safeRanges[a.Signal]
+		if !ok {
+			return
+		}
+		if a.Value < bounds[0] {
+			a.ExplanationCode = "below_minimum"
+			params.Minimum = &bounds[0]
+		} else if a.Value > bounds[1] {
+			a.ExplanationCode = "above_maximum"
+			params.Maximum = &bounds[1]
+		} else {
+			return
+		}
+	case "trend":
+		a.ExplanationCode = "trend_increased"
+		if a.Value < a.Baseline {
+			a.ExplanationCode = "trend_decreased"
+		}
+		if a.Baseline != 0 {
+			percent := math.Abs(a.Value-a.Baseline) / math.Abs(a.Baseline) * 100
+			if math.IsInf(percent, 0) || math.IsNaN(percent) {
+				return
+			}
+			params.PercentChange = &percent
+			a.ExplanationCode += "_percent"
+		}
+	default:
+		return
+	}
+	a.ExplanationParams = params
 }
 
 // DetectAnomalies runs the full detection pipeline (Z-score outliers,

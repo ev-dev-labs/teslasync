@@ -36,9 +36,7 @@ function DriveCalendarContent() {
   const drivesQuery = useDriveCalendarHistory(vehicleIdStr, startInstant, endInstantExclusive);
   const historyState = deriveDataState(drivesQuery, { provenance: 'historical' });
   const source = vehicleId == null ? vehiclesState : historyState;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayMs = today.getTime();
+  const todayMs = Date.now();
 
   const calendar = useMemo(
     () => buildDriveCalendar(drivesQuery.data ?? [], todayMs, { start, end }),

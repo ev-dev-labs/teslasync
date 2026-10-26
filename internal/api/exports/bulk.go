@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/rs/zerolog/log"
 )
 
@@ -200,42 +199,14 @@ func insertAuditLog(db *database.DB, ctx context.Context, e auditEntry) {
 	}
 }
 
-func actorFromRequest(r *http.Request, headerName string) string {
-	if r == nil || headerName == "" {
-		return ""
-	}
-	return strings.TrimSpace(r.Header.Get(headerName))
-}
-
-func clientIP(r *http.Request) string {
-	if r == nil {
-		return ""
-	}
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if i := strings.IndexByte(xff, ','); i >= 0 {
-			xff = xff[:i]
-		}
-		if ip := strings.TrimSpace(xff); ip != "" {
-			return ip
-		}
-	}
-	if r.RemoteAddr == "" {
-		return ""
-	}
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		return host
-	}
-	return r.RemoteAddr
-}
-
 func logAuditFromRequest(db *database.DB, r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
 	insertAuditLog(db, r.Context(), auditEntry{
-		Actor:      actorFromRequest(r, headerName),
+		Actor:      httputil.ActorIdentity(r, headerName),
 		Action:     action,
 		EntityType: resource,
 		EntityID:   entityID,
 		Detail:     detail,
-		IP:         clientIP(r),
+		IP:         httputil.ClientIP(r, httputil.ClientIPOptions{TrustXForwardedFor: true}),
 		UserAgent:  r.UserAgent(),
 	})
 }

@@ -6,6 +6,10 @@ import type { WidgetSize } from '../src/features/dashboard/widgets/types';
 import { observeCatalogueAxisRendering } from './dashboardCatalogueAxisDiagnostic';
 import { assertCatalogueFullBounds } from './dashboardCatalogueBounds';
 
+export function catalogueVerticalGap(a: { y: number; height: number }, b: { y: number; height: number }) {
+  return Math.max(a.y - b.y - b.height, b.y - a.y - a.height);
+}
+
 export async function installCataloguePhotoSource(page: Page, svgFallback: boolean) {
   const path = process.env.E2E_CATALOGUE_PHOTO
     ?? resolve(process.cwd(), 'e2e', 'fixtures', 'dashboard-catalogue-model-y-white.png');
@@ -85,7 +89,10 @@ export async function assertCatalogueYAxisTickBounds(
         const axisIndex = indexes[axisKind]++;
         return [...axis.querySelectorAll('.recharts-cartesian-axis-tick-value')].map(tick => {
           const box = tick.getBoundingClientRect();
+          const style = getComputedStyle(tick);
           return { text: tick.textContent, left: box.left, right: box.right,
+            font: style.font, availableWidth: tick.getAttribute('width'),
+            lines: [...tick.querySelectorAll('tspan')].map(line => line.textContent),
             top: box.top, bottom: box.bottom, height: box.height,
             chartLeft: bounds.left, chartRight: bounds.right,
             chartTop: bounds.top, chartBottom: bounds.bottom,
@@ -138,6 +145,14 @@ export async function assertSpeedProfileTickBounds(panel: Locator, info: TestInf
   const ticks = await assertCatalogueYAxisTickBounds(panel, 'speed-profile', info, 2);
   expect(ticks.filter(tick => tick.text?.includes('%')).length).toBeGreaterThan(2);
   expect(ticks.filter(tick => !tick.text?.includes('%')).length).toBeGreaterThan(2);
+  const curve = panel.locator('.recharts-line-curve');
+  await expect(curve).toHaveCount(1);
+  expect(await curve.getAttribute('d'), 'Average power must plot real source points').toMatch(/^M.+/);
+  const table = panel.getByRole('table', { name: 'Speed profile — data table', exact: true });
+  await expect(table.getByRole('columnheader', { name: 'Average power (kW)', exact: true })).toHaveCount(1);
+  for (const value of ['3.00', '9.60', '20%', '80%']) {
+    await expect(table.getByRole('cell', { name: value, exact: true })).toHaveCount(1);
+  }
 }
 
 const affectedAxisIDs = new Set([
@@ -166,6 +181,13 @@ export async function assertCatalogueAffectedAxes(
       status: 'bounds-passed', axisStatus: 'not-applicable',
       expectedAxes: 0, actualAxes: 0, reason, size,
     }, null, 2));
+    return;
+  } else if (widgetId === 'climate-history') {
+    await expect(panel.locator('.recharts-line-curve')).toHaveCount(2);
+    for (const curve of await panel.locator('.recharts-line-curve').all()) {
+      expect(await curve.getAttribute('d'), 'Both native temperature series retain real source points').toMatch(/^M.+/);
+    }
+    await assertCatalogueYAxisTickBounds(panel, widgetId, info, 0);
     return;
   }
   if (reason) {

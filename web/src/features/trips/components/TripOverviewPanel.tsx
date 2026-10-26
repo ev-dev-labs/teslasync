@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { LayoutCard } from '@/components/layout';
 import { KVList, DateTime } from '@/components/data-display';
 import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateConvert';
 import type { TripDetail } from '@/api/types';
 
 interface TripOverviewPanelProps {

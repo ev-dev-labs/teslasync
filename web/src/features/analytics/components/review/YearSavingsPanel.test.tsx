@@ -26,6 +26,7 @@
  * (the panel's real job is computing those props), while the header, caption,
  * coffee note and icons render for real.
  */
+import { COLOR } from '@/lib/colors';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 
@@ -140,12 +141,12 @@ describe('YearSavingsPanel', () => {
       // gasEquiv = savings + electric = 1500; both bars share barMax = 1500.
       expect(gas).toHaveAttribute('data-value', '1500');
       expect(gas).toHaveAttribute('data-max', '1500');
-      expect(gas).toHaveAttribute('data-color', '#fb7185');
+      expect(gas).toHaveAttribute('data-color', COLOR.BAD);
       expect(within(gas).getByText('Gas would cost')).toBeInTheDocument();
 
       expect(electric).toHaveAttribute('data-value', '300');
       expect(electric).toHaveAttribute('data-max', '1500');
-      expect(electric).toHaveAttribute('data-color', '#34d399');
+      expect(electric).toHaveAttribute('data-color', COLOR.GOOD);
       expect(within(electric).getByText('Electric cost')).toBeInTheDocument();
     });
 

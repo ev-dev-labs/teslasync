@@ -4,13 +4,11 @@ import { MapPin, ArrowRight, Clock, Zap } from 'lucide-react';
 import { GlassPanel, Text, Caption, Label, MetricValue } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 
 import type { YearReviewDriveHighlight } from '@/api/types';
 import type { LucideIcon } from 'lucide-react';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-
-const KM_PER_MILE = 1.609344;
 
 interface Props {
   drive: YearReviewDriveHighlight | null;
@@ -36,7 +34,7 @@ export function YearDriveHighlight({ drive, label, icon: Icon }: Props) {
   const efficiencyWhKm = drive?.efficiency_wh_km ?? 0;
   const efficiencyDisplay =
     efficiencyWhKm > 0
-      ? fmtInt(distanceUnit === 'mi' ? efficiencyWhKm * KM_PER_MILE : efficiencyWhKm)
+      ? fmtInt(convertEfficiencyFromSI(efficiencyWhKm, distanceUnit))
       : '—';
 
   return (

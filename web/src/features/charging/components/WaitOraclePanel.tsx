@@ -135,12 +135,12 @@ export function WaitOraclePanel() {
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-1 flex items-center gap-2">
         <Icons.clock className={`h-4 w-4 ${typography.color.secondary}`} aria-hidden="true" />
-        {t('wait_oracle.title', 'Supercharger Wait Oracle')}
+        {t('wait_oracle.title', 'Supercharger wait oracle')}
       </PanelTitle>
       <Text as="p" size="sm" color="secondary" className="mb-4">
         {t(
           'wait_oracle.subtitle',
-          'Expected queue wait per site and arrival time, predicted from your fleet charging history. All hours UTC.',
+          'Expected queue wait per site and arrival time, predicted from your fleet charging history.',
         )}
       </Text>
 
@@ -195,7 +195,7 @@ export function WaitOraclePanel() {
       {activeSite != null && (
         <StaleRefreshWarning
           state={forecastState}
-          label={t('wait_oracle.title', 'Supercharger Wait Oracle')}
+          label={t('wait_oracle.title', 'Supercharger wait oracle')}
           data-last-success-at={forecastState.updatedAt ?? undefined}
           className="mb-3"
         />
@@ -231,7 +231,7 @@ export function WaitOraclePanel() {
           ) : !forecastState.hasData && forecastState.isRefreshBlocked ? (
             <DataSourceNotice sources={[{
               id: 'wait-oracle-forecast',
-              label: t('wait_oracle.title', 'Supercharger Wait Oracle'),
+              label: t('wait_oracle.title', 'Supercharger wait oracle'),
               query: forecastQuery,
             }]} />
           ) : !forecastState.hasData && (forecastQuery.isLoading || forecastQuery.isFetching) ? (
@@ -270,9 +270,9 @@ export function WaitOraclePanel() {
                 <Text as="p" size="sm">
                   {t(
                     'wait_oracle.bestHour',
-                    'Arrive {{hour}}:00 UTC instead to save ~{{min}} min.',
+                    'Arrive {{hour}}:00 instead to save ~{{min}} min.',
                     {
-                      hour: String(forecast.best_hour_utc).padStart(2, '0'),
+                      hour: String(forecast.best_hour).padStart(2, '0'),
                       min: fmtNumber(savedWait),
                     },
                   )}
@@ -294,11 +294,11 @@ export function WaitOraclePanel() {
           )}
         </div>
         <ChartContainer
-          title={t('wait_oracle.chart.title', 'Wait across the arrival day (UTC)')}
+          title={t('wait_oracle.chart.title', 'Wait across the arrival day')}
           ariaLabel={t('wait_oracle.chart.aria', 'Expected wait minutes by hour of day')}
           data={chartData}
           dataColumns={[
-            { key: 'label', label: t('wait_oracle.chart.col.hour', 'Hour (UTC)') },
+            { key: 'label', label: t('wait_oracle.chart.col.hour', 'Hour') },
             {
               key: 'wait',
               label: t('wait_oracle.chart.col.wait', 'Expected wait (min)'),

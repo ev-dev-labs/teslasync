@@ -7,7 +7,7 @@ import { Heading, Text } from '@/components/ui';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { cn } from '@/lib/cn';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertDistanceToSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 
 interface PeriodSourcesProps {
   stateA: DataState<PeriodStats>;
@@ -38,9 +38,9 @@ export function PeriodSources({ stateA, stateB, retryA, retryB }: PeriodSourcesP
           // Match the original display conversion, without manufacturing values
           // for an absent source. Raw query payloads are never modified.
           const distance = data?.total_distance != null
-            ? convertDistanceFromSI(data.total_distance * 1000, unitPrefs.distance) : null;
+            ? convertDistanceFromSI(convertDistanceToSI(data.total_distance, 'km'), unitPrefs.distance) : null;
           const efficiency = data?.avg_efficiency != null
-            ? data.avg_efficiency * (unitPrefs.distance === 'mi' ? 1.609344 : 1) : null;
+            ? convertEfficiencyFromSI(data.avg_efficiency, unitPrefs.distance) : null;
           const rows = [
             { key: 'distance', label: t('compare.totalDistance', 'Total distance'), value: distance, unit: unitPrefs.distance },
             { key: 'drives', label: t('compare.totalDrives', 'Total drives'), value: data?.total_drives, unit: '', count: true },

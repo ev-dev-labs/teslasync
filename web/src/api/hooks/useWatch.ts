@@ -6,6 +6,8 @@ import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useToast } from '@/components/feedback/Toast';
 import { subscribe } from '@/lib/broadcast';
 import { TOPICS } from '@/lib/broadcastTopics';
+import { queryPolicy } from '@/api/queryPolicy';
+import { useDataState } from '@/hooks/useDataState';
 
 // --- Watch-specific API client ---
 // Watch requests use API key auth (X-API-Key header) instead of
@@ -190,12 +192,15 @@ export function useWatchSummary(vehicleId?: number) {
     queryKey: watchKeys.summary(vehicleId),
     queryFn: ({ signal }) => watchRequest<WatchSummary>(`/watch/summary${params}`, { signal }, true),
     enabled: configured,
-    refetchInterval: query => configured && !(query.state.error instanceof WatchPrerequisiteError) ? INTERVALS.STANDARD : false,
-    staleTime: STALE_TIMES.MODERATE,
+    ...queryPolicy('live', {
+      staleTime: STALE_TIMES.MODERATE,
+      refetchInterval: configured ? INTERVALS.STANDARD : false,
+    }),
     retry: (failureCount, error) => !(error instanceof WatchPrerequisiteError)
       && readWatchAvailability() === 'configured' && failureCount < 2,
   });
-  const capability = useWatchReadCapability(availability, query.error, query.refetch);
+  const state = useDataState(query, { provenance: 'live' });
+  const capability = useWatchReadCapability(availability, state.fatalError, query.refetch);
   return { ...query, ...capability };
 }
 
@@ -209,15 +214,18 @@ export function useWatchComplication(vehicleId?: number) {
     queryKey: watchKeys.complication(vehicleId),
     queryFn: ({ signal }) => watchRequest<WatchComplication>(`/watch/complication${params}`, { signal }, true),
     enabled: configured,
-    refetchInterval: query => configured && !(query.state.error instanceof WatchPrerequisiteError) ? INTERVALS.SLOW : false,
-    staleTime: STALE_TIMES.FAST,
+    ...queryPolicy('live', {
+      staleTime: STALE_TIMES.FAST,
+      refetchInterval: configured ? INTERVALS.SLOW : false,
+    }),
     retry: (failureCount, error) => {
       if (error instanceof WatchPrerequisiteError || readWatchAvailability() !== 'configured') return false;
       if (typeof defaultRetry === 'function') return defaultRetry(failureCount, error);
       return defaultRetry === true || (defaultRetry !== false && failureCount < (defaultRetry ?? 3));
     },
   });
-  const capability = useWatchReadCapability(availability, query.error, query.refetch);
+  const state = useDataState(query, { provenance: 'live' });
+  const capability = useWatchReadCapability(availability, state.fatalError, query.refetch);
   return { ...query, ...capability };
 }
 

@@ -1,46 +1,26 @@
-import { useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Gauge } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, ChartTooltip, EmbeddedChart, axisTick, axisTickSm, chartGrid, useThemeChartPalette, useMeasuredAxisWidth } from '@/components/charts';
-import { Badge, Caption } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
-import { useDrivingDynamics, useAccelerationDistribution } from '@/api/hooks/useDriving';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { Gauge } from "lucide-react";
+import { EmptyState } from "@/components/feedback";
+import { useDrivingDynamics, useAccelerationDistribution } from "@/api/hooks/useDriving";
+import { useVehicles } from "@/api/hooks/useVehicles";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, EmbeddedChart, ChartTooltip, axisTickSm, chartGrid, useThemeChartPalette, useMeasuredAxisWidth } from "@/components/charts";
+import { SourceContent } from "@/components/layout";
+import { safeArray } from "@/lib/safeArray";
+import { sourceBoundaryState } from "../components/continuation-dashboard-1/sourceBoundary";
 
-import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetGaugeHero } from './shared';
-import { knownNumber } from '@/api/dataState';
-import { safeArray } from '@/lib/safeArray';
-import { useDataState } from '@/hooks/useDataState';
-import type { WidgetProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { WidgetShell } from "./WidgetShell";
+import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from "./shared";
+import { deriveDataState, knownNumber } from "@/api/dataState";
+import type { WidgetProps } from "./types";
+import { useNumberFormatting } from "@/hooks/useNumberFormatting";
 
-const G_MAX = 1.2;
-
-type Severity = 'calm' | 'normal' | 'sporty' | 'aggressive';
-
-function deriveSeverity(avgAccel: number, avgBrake: number): Severity {
-  const avg = (avgAccel + avgBrake) / 2;
-  if (avg < 0.15) return 'calm';
-  if (avg < 0.3) return 'normal';
-  if (avg < 0.5) return 'sporty';
-  return 'aggressive';
-}
-
-function isSmooth(maxG: number): boolean {
-  return maxG < 0.4;
-}
-
-function gaugeColor(g: number): string {
-  if (g < 0.2) return '#10b981';
-  if (g < 0.4) return '#22d3ee';
-  if (g < 0.6) return '#f59e0b';
-  return '#ef4444';
-}
-
-export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) {
+export default function DrivingDynamicsWidget({
+  vehicleId,
+  size,
+}: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
-  const { t } = useTranslation('dashboard');
+  const { t } = useTranslation("dashboard");
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vehicleIdStr = vid != null ? String(vid) : undefined;
@@ -55,226 +35,184 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
     dataUpdatedAt: dynUpdatedAt,
     refetch: dynRefetch,
   } = useDrivingDynamics(vehicleIdStr);
-
-  const {
-    data: distData,
-    isLoading: distLoading,
-    isFetching: distFetching,
-    error: distError,
-    isError: distIsError,
-    isStale: distStale,
-    refetch: distRefetch,
-    dataUpdatedAt: distUpdatedAt,
-  } = useAccelerationDistribution(vehicleIdStr);
-
-  const isLoading = !dynamics && !distData && dynLoading;
-  const updatedAt = dynUpdatedAt > 0 && distUpdatedAt > 0
-    ? Math.min(dynUpdatedAt, distUpdatedAt)
-    : Math.max(dynUpdatedAt ?? 0, distUpdatedAt ?? 0);
-  const isFetching = dynFetching || distFetching;
-
-  // Only replace the whole widget with a full-panel error on the INITIAL
-  // load failure, when there is no cached data to fall back on. Once we have
-  // data, a transient background-refetch failure must not blank out
-  // otherwise-valid numbers — it is surfaced through the freshness
-  // indicator's error state instead (WidgetShell forwards `isError` to
-  // <FreshnessDot>).
-  const trust = useDataState({
-    data: dynamics ?? distData, error: dynError ?? distError, isLoading: dynLoading, isFetching,
-    isError: dynIsError || distIsError, isStale: dynStale || distStale, dataUpdatedAt: updatedAt, refetch: dynRefetch,
-  }, { provenance: 'historical' });
-  const blockingError = !distData ? trust.fatalError?.message ?? null : null;
+  const isWide = size.cols >= 3;
+  const distribution = useAccelerationDistribution(isWide ? vehicleIdStr : undefined);
+  const distributionTrust = deriveDataState(distribution, { provenance: "historical" });
+  const palette = useThemeChartPalette();
+  const histogram = useMemo(() => {
+    const values = safeArray(distribution.data?.values)
+      .map(knownNumber)
+      .filter((value): value is number => value != null);
+    if (values.length === 0) return [];
+    const bins = Array.from({ length: 12 }, (_, index) => ({
+      range: index === 11
+        ? `${fmtNumber(1.1, 1)}+`
+        : `${fmtNumber(index / 10, 1)}-${fmtNumber((index + 1) / 10, 1)}`,
+      count: 0,
+    }));
+    // The API returns signed G readings, not pre-binned observation counts.
+    for (const value of values) bins[Math.min(11, Math.floor(Math.abs(value) * 10))].count += 1;
+    return bins;
+  }, [distribution.data, fmtNumber]);
+  const countLabels = useMemo(
+    () => [0, ...histogram.map(bin => bin.count)].map(value => fmtNumber(value, 0)),
+    [histogram, fmtNumber],
+  );
+  const axisWidth = useMeasuredAxisWidth({
+    labels: countLabels, fontSize: 10, minWidth: 40, padding: 20, enabled: isWide,
+  });
+  const timestamps = [dynUpdatedAt, isWide ? distribution.dataUpdatedAt : 0]
+    .filter(value => value > 0);
+  const updatedAt = timestamps.length ? Math.min(...timestamps) : 0;
   const refresh = () => {
     void dynRefetch();
-    void distRefetch?.();
+    if (isWide) void distribution.refetch();
   };
 
-  const isCompact = size.cols <= 1;
-  const isWide = size.cols >= 3;
-
-  // Chart colors derive from the active theme.
-  const palette = useThemeChartPalette();
-
-  const peaks = [dynamics?.maxAccelerationG, dynamics?.maxBrakingG, dynamics?.maxCorneringG].map(knownNumber);
-  const knownPeaks = peaks.filter((value): value is number => value != null);
-  const maxG = knownPeaks.length > 0 ? Math.max(...knownPeaks) : null;
-  const smooth = maxG != null && isSmooth(maxG);
-  const completePeaks = knownPeaks.length === peaks.length;
-
-  const severity = useMemo(
-    () => {
-      const acceleration = knownNumber(dynamics?.avgAccelerationG);
-      const braking = knownNumber(dynamics?.avgBrakingG);
-      return acceleration == null || braking == null ? null : deriveSeverity(acceleration, braking);
+  const trust = deriveDataState(
+    {
+      data:
+        dynamics ?? (isWide ? distribution.data : undefined)
+          ?? (dynLoading || dynIsError || dynError ? undefined : null),
+      error: dynError,
+      isLoading: dynLoading,
+      isFetching: dynFetching,
+      isStale: dynStale,
+      isError: dynIsError,
+      dataUpdatedAt: updatedAt,
+      refetch: refresh,
     },
-    [dynamics?.avgAccelerationG, dynamics?.avgBrakingG],
+    { provenance: "historical" },
   );
+  const isCompact = size.cols <= 1;
 
-  const histogramData = useMemo(() => {
-    const values = safeArray(distData?.values);
-    if (values.length === 0) return [];
-    const step = G_MAX / values.length;
-    return values.map((count, i) => ({
-      range: `${fmtNumber(i * step)}`,
-      count: knownNumber(count),
-    }));
-  }, [distData, fmtNumber]);
-  const countAxisLabels = useMemo(() => [0, ...histogramData.map(point => point.count)
-    .filter((value): value is number => value != null && Number.isFinite(value))].map(String), [histogramData]);
-  const countAxisWidth = useMeasuredAxisWidth({
-    labels: countAxisLabels, fontSize: axisTick.fontSize, minWidth: 60, padding: 24, enabled: isWide,
-  });
-
-  // Compact layout: large number + badge
-  if (isCompact) {
-    return (
-      <WidgetShell
-        title={t('widget.drivingDynamics.title', 'Driving dynamics')}
-        loading={isLoading}
-        dataState={trust.hasData ? trust : undefined}
-        error={blockingError}
-        updatedAt={updatedAt}
-        isFetching={isFetching}
-        isStale={dynStale || distStale}
-        isError={dynIsError || distIsError}
-        onRefresh={refresh}
-      >
-        {dynamics ? (
-          <div className="h-full flex flex-col items-center justify-center gap-2">
-            <WidgetBigNumber
-              value={maxG == null ? null : fmtNumber(maxG)}
-              label={t('widget.drivingDynamics.maxG', 'Max g')}
-              align="center"
-              animated={false}
-              subtitle={!completePeaks ? t('widget.drivingDynamics.partialPeaks', 'Partial peak readings') : undefined}
-            />
-            {completePeaks && <Badge
-              variant={smooth ? 'success' : 'warning'}
-              className="min-h-[44px] min-w-[44px] flex items-center justify-center"
-            >
-              {smooth
-                ? t('widget.drivingDynamics.smooth', 'Smooth')
-                : t('widget.drivingDynamics.aggressive', 'Aggressive')}
-            </Badge>}
-          </div>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<Gauge className="h-5 w-5" />}
-            message={t('widget.drivingDynamics.noData', 'No dynamics data')}
-            className="py-2"
-          />
-        )}
-      </WidgetShell>
-    );
+  const smoothness = knownNumber(dynamics?.smoothnessScore);
+  const acceleration = knownNumber(dynamics?.avgAccelerationG);
+  const braking = knownNumber(dynamics?.avgBrakingG);
+  let style: "smooth" | "normal" | "sporty" | "aggressive" | null = null;
+  if (smoothness != null) {
+    if (smoothness >= 80) style = "smooth";
+    else if (smoothness >= 60) style = "normal";
+    else if (smoothness >= 40) style = "sporty";
+    else style = "aggressive";
+  } else if (acceleration != null && braking != null) {
+    const mean = (acceleration + braking) / 2;
+    if (mean < 0.15) style = "smooth";
+    else if (mean < 0.3) style = "normal";
+    else if (mean < 0.5) style = "sporty";
+    else style = "aggressive";
   }
 
-  // Standard + Wide layout
+  const styleText =
+    style == null
+      ? null
+      : style === 'smooth'
+        ? t('widget.drivingDynamics.severity.smooth', 'Smooth')
+        : style === 'normal'
+          ? t('widget.drivingDynamics.severity.normal', 'Normal')
+          : style === 'sporty'
+            ? t('widget.drivingDynamics.severity.sporty', 'Sporty')
+            : t('widget.drivingDynamics.severity.aggressive', 'Aggressive');
+
+  const peakStats: StatGridItem[] = [
+    {
+      label: t("widget.drivingDynamics.accel", "Accel"),
+      value: knownNumber(dynamics?.maxAccelerationG),
+      unit: "g",
+      sublabel: undefined,
+    },
+    {
+      label: t("widget.drivingDynamics.brake", "Brake"),
+      value: knownNumber(dynamics?.maxBrakingG),
+      unit: "g",
+      sublabel: undefined,
+    },
+    {
+      label: t("widget.drivingDynamics.lateral", "Lateral"),
+      value: knownNumber(dynamics?.maxCorneringG),
+      unit: "g",
+      sublabel: undefined,
+    },
+  ].map((stat) => ({
+    ...stat,
+    value:
+      typeof stat.value === "number" && Number.isFinite(stat.value)
+        ? fmtNumber(stat.value, 2)
+        : null,
+  }));
+
   return (
     <WidgetShell
-      title={t('widget.drivingDynamics.title', 'Driving dynamics')}
+      title={t("widget.drivingDynamics.title", "Driving dynamics")}
       icon={<Gauge className="h-3.5 w-3.5" aria-hidden="true" />}
-      loading={isLoading}
-      dataState={trust.hasData ? trust : undefined}
-      error={blockingError}
+      loading={dynLoading && !dynamics && !(isWide && distribution.data)}
+      dataState={trust}
       updatedAt={updatedAt}
-      isFetching={isFetching}
-      isStale={dynStale || distStale}
-      isError={dynIsError || distIsError}
+      isFetching={dynFetching || (isWide && distribution.isFetching)}
+      isStale={dynStale || (isWide && distribution.isStale)}
+      isError={dynIsError || (isWide && distribution.isError)}
       onRefresh={refresh}
     >
-      {dynamics || histogramData.length > 0 ? (
-        <div className="min-h-full min-w-0 flex flex-col gap-3">
-          {/* 3 LinearGauges */}
-          <div className="grid grid-cols-1 @xs:grid-cols-3 gap-3">
-            {[
-              { label: t('widget.drivingDynamics.accel', 'Accel'), value: knownNumber(dynamics?.avgAccelerationG) },
-              { label: t('widget.drivingDynamics.brake', 'Brake'), value: knownNumber(dynamics?.avgBrakingG) },
-              { label: t('widget.drivingDynamics.lateral', 'Lateral'), value: knownNumber(dynamics?.maxCorneringG) },
-            ].map((metric) => (
-              <div key={metric.label} className="flex min-w-0 flex-col items-center gap-1">
-                {metric.value == null ? (
-                  <WidgetBigNumber value={null} align="center" />
-                ) : (
-                  <WidgetGaugeHero
-                    compact
-                    gauge={{
-                      preserveReadingAndScale: true,
-                      kind: 'measurement',
-                      value: metric.value,
-                      max: G_MAX,
-                      label: fmtNumber(metric.value),
-                      unit: '',
-                      color: gaugeColor(metric.value),
-                    }}
-                  />
-                )}
-                <span className="text-xs text-[var(--text-secondary)]">{metric.label}</span>
-              </div>
-            ))}
+      {dynamics || isWide ? (
+        <div className={isWide
+          ? "flex h-full min-h-0 min-w-0 flex-col gap-2"
+          : "flex min-h-full min-w-0 flex-col gap-4"}>
+          <div className="shrink-0">
+          {styleText != null ? (
+            <WidgetBigNumber
+              value={styleText}
+              label={t("widget.drivingDynamics.style", "Style")}
+              size={isCompact ? "secondary" : "primary"}
+              animated={false}
+            />
+          ) : (
+            <WidgetBigNumber
+              value={null}
+              label={t("widget.drivingDynamics.style", "Style")}
+              animated={false}
+            />
+          )}
           </div>
-
-          {/* Severity label */}
-          <div className="flex justify-center">
-            {severity != null ? <Badge
-              variant={severity === 'calm' || severity === 'normal' ? 'success' : 'warning'}
-              size="sm"
-            >
-              {t(`widget.drivingDynamics.severity.${severity}`, { calm: 'Calm', normal: 'Normal', sporty: 'Sporty', aggressive: 'Aggressive' }[severity])}
-            </Badge> : <Badge variant="neutral" size="sm">{t('widget.drivingDynamics.unknown', 'Unknown dynamics')}</Badge>}
-          </div>
-
-          {/* Wide: acceleration distribution histogram */}
+          {!isCompact && <div className="shrink-0"><WidgetStatGrid stats={peakStats} cols={3} /></div>}
           {isWide && (
-            histogramData.length > 0 ? (
-            <div className="min-w-0">
-              <Caption className="mb-1 block text-2xs">
-                {t('widget.drivingDynamics.distribution', 'G-force distribution')}
-              </Caption>
-              <EmbeddedChart
-                title={t('widget.drivingDynamics.distribution', 'G-force distribution')}
-                ariaLabel={t(
-                  'widget.drivingDynamics.distributionAria',
-                  'Distribution of observed acceleration magnitudes',
-                )}
-                data={histogramData}
-                dataColumns={[
-                  { key: 'range', label: t('widget.drivingDynamics.gForce', 'G-force') },
-                  { key: 'count', label: t('widget.drivingDynamics.samples', 'Samples') },
-                ]}
-                height={160}
-                mobileHeight={144}
+            <div className="flex min-h-0 flex-1 flex-col">
+              <SourceContent
+                state={sourceBoundaryState(distributionTrust, histogram.length > 0)}
+                label={t("widget.drivingDynamics.distribution", "G-force distribution")}
+                emptyMessage={t("widget.drivingDynamics.distributionEmpty", "No acceleration samples yet")}
+                errorMessage={t("widget.drivingDynamics.distributionError", "Acceleration distribution unavailable")}
+                error={distributionTrust.fatalError}
+                errorRecovery={{ onRetry: () => { void distribution.refetch(); } }}
+                emptyRecovery={{ action: { label: t("common.refresh", "Refresh"), onClick: () => { void distribution.refetch(); } } }}
               >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={histogramData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
-                    {chartGrid}
-                    <XAxis dataKey="range" tick={axisTickSm} />
-                    <YAxis tick={axisTick} width={countAxisWidth} allowDecimals={false} />
-                    <Tooltip
-                      content={<ChartTooltip />}
-                      labelFormatter={(v) => `${v}g`}
-                    />
-                    <Bar dataKey="count" fill={palette.series[0]} radius={[2, 2, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </EmbeddedChart>
+                <EmbeddedChart
+                  title={t("widget.drivingDynamics.distribution", "G-force distribution")}
+                  ariaLabel={t("widget.drivingDynamics.distributionAria", "Distribution of observed acceleration magnitudes")}
+                  data={histogram}
+                  dataColumns={[
+                    { key: "range", label: t("widget.drivingDynamics.gForce", "G-force") },
+                    { key: "count", label: t("widget.drivingDynamics.samples", "Samples") },
+                  ]}
+                  className="h-full min-h-0"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={histogram} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                      {chartGrid}
+                      <XAxis dataKey="range" tick={axisTickSm} tickLine={false} axisLine={false} />
+                      <YAxis width={axisWidth} allowDecimals={false} tick={axisTickSm} tickLine={false} axisLine={false} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Bar dataKey="count" name={t("widget.drivingDynamics.samples", "Samples")} fill={palette.primary} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </EmbeddedChart>
+              </SourceContent>
             </div>
-            ) : (
-              <EmptyState
-                /* no-action: distribution populates from observed acceleration samples. */
-                icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
-                message={distError
-                  ? t('widget.drivingDynamics.distributionError', 'Acceleration distribution unavailable')
-                  : distLoading
-                    ? t('widget.drivingDynamics.distributionLoading', 'Loading acceleration distribution')
-                    : t('widget.drivingDynamics.distributionEmpty', 'No acceleration samples yet')}
-              />
-            )
           )}
         </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Gauge className="h-5 w-5" />}
-          message={t('widget.drivingDynamics.noData', 'No dynamics data')}
+          message={t("widget.drivingDynamics.noData", "No dynamics data")}
           className="py-4"
         />
       )}

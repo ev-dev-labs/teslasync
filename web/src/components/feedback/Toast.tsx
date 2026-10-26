@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 import { motion, AnimatePresence } from '@/components/motion'
 import { Link } from 'react-router-dom'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
@@ -128,7 +128,7 @@ const ariaRole: Record<ToastType, 'alert' | 'status'> = {
 let toastCounter = 0
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([])
+  const [toasts, setToasts] = useState<(Toast & { expiresAt: number | null })[]>([])
   const { reduce } = useMotionPreference()
 
   const dismiss = useCallback((id: string) => {
@@ -138,11 +138,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const addToast = useCallback((opts: Omit<Toast, 'id'>) => {
     const id = `toast-${++toastCounter}`
     const duration = opts.duration ?? 4000
-    setToasts(prev => [...prev.slice(-4), { ...opts, id }])
-    if (duration > 0) {
-      setTimeout(() => dismiss(id), duration)
-    }
-  }, [dismiss])
+    const expiresAt = duration > 0 ? Date.now() + duration : null
+    setToasts(prev => [...prev.slice(-4), { ...opts, id, expiresAt }])
+  }, [])
+
+  useEffect(() => {
+    // Preserve original deadlines when another toast changes the visible list.
+    const timers = toasts.flatMap(t => t.expiresAt === null ? [] : [
+      setTimeout(() => dismiss(t.id), Math.max(0, t.expiresAt - Date.now())),
+    ])
+    return () => timers.forEach(timer => clearTimeout(timer))
+  }, [dismiss, toasts])
 
   const value: ToastContextValue = {
     toast: addToast,

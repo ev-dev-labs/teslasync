@@ -2,12 +2,14 @@ import { expect, type Locator, type Page, type TestInfo } from '@playwright/test
 import { writeFile } from 'node:fs/promises';
 import type { MapConfig } from '../src/api/types';
 import type { FsdInsightsPeriod, FsdInsightsTotals } from '../src/types/fsd';
-import { catalogueAnalyticsSources, installCatalogueRoutes, type CatalogueSources } from './dashboardCatalogueRemainingSources';
+import type { SignalHistoryResponse } from '../src/types/telemetry';
+import { catalogueAnalyticsSources, catalogueWire, installCatalogueRoutes, type CatalogueSources } from './dashboardCatalogueRemainingSources';
 import { catalogueOperationalSources } from './dashboardCatalogueOperationalSources';
 import { catalogueSystemSources } from './dashboardCatalogueSystemSources';
 import { fulfillApiFixture, resolveApiFixture, type MockApiController } from './mockApi';
 import { assertCatalogueYAxisTickBounds } from './dashboardCatalogueGeometry';
-import { expectBriefDetails } from './operationalbrief-contracts/disclosure.helpers';
+import { assertCatalogueQueryScope, catalogueRecordedSources, renderedCatalogueQueryBinding } from './dashboardCatalogueChargeHistory';
+import { assertCataloguePostureContent } from './dashboardCatalogueHeaderCollision';
 
 export const remainingBatches = {
   'catalogue-analytics-totals': ['fleet-stats', 'fleet-stats-bar', 'weekly-summary-card', 'weekly-digest',
@@ -30,71 +32,77 @@ export const remainingBatches = {
 
 export const remainingReadings: Record<string, RegExp> = {
   'alert-feed': /Catalogue battery threshold/,
-  'notification-stats': /90\.00/,
-  'fleet-stats': /300\.00/,
-  'fleet-stats-bar': /300\.00/,
+  'notification-stats': /Delivery rate\s*90\.0%/,
+  'fleet-stats': /Distance \(30d\)\s*300\s*km/,
+  'fleet-stats-bar': /Distance \(30d\)\s*300\s*km/,
   'weekly-summary-card': /42\.00/,
-  'weekly-digest': /42\.00/,
-  'fsd-weekly': /No metric values are available yet\./,
+  'weekly-digest': /Distance\s*last week 21 km\s*42\s*km\s*100\.00%/,
+  'fsd-weekly': /Reported FSD\s*—/,
   'monthly-mileage': /123/,
-  'lifetime-stats': /1,234\.00/,
-  'mileage-stats': /10\.00/,
-  'state-timeline': /66\.67/,
+  'lifetime-stats': /Total distance\s*1,234\s*km/,
+  'mileage-stats': /Daily avg\s*10\s*km/,
+  'state-timeline': /driving\s*2h 0m · 67%/,
   'anomaly-detector': /Catalogue cabin temperature exceeded baseline/,
   'fsm-distribution': /driving/i,
-  'year-review': /1,234\.00/,
-  'analytics-summary': /300\.00/,
+  'year-review': /Total distance\s*1,234\s*km/,
+  'analytics-summary': /Distance \(30d\)\s*300\s*km/,
   'recently-unlocked-achievements': /Catalogue first trip/,
   'automation-status': /Catalogue cabin routine/,
   'automation-history': /Catalogue cabin routine/,
-  'charge-status': /72\.00%/,
-  'charge-status-live': /72\.00%/,
+  'charge-status': /Not charging\s*72%/,
+  'charge-status-live': /Not charging\s*72%/,
   'charge-history': /42\.00/,
-  'charge-session-chart': /42\.00/,
+  'charge-session-chart': /Added \(kWh\)/,
   'charge-cost-tracker': /\$6\.72/,
   'charging-schedule': /80%/,
   'charging-optimizer': /80\.00%/,
-  'charging-telemetry': /11\.00/,
+  'charging-telemetry': /Power\s*11\.0\s*kW/,
   'supercharger-history': /\$12\.00/,
   'charge-plans': /80\.00%/,
   'next-charge-decision': /Catalogue low-rate window starts soon/,
-  'charging-session-detail': /42\.00/,
+  'charging-session-detail': /Energy added\s*42\.0\s*kWh/,
   'climate-status': /21\s*°?C/,
   'climate-control-panel': /21\s*°?C/,
   'weather-at-car': /18\s*°?C/,
-  'climate-history': /21\.00/,
-  'command-quick-actions': /Lock/,
+  'climate-history': /Cabin \(°C\)/,
+  'command-quick-actions': /Unlock/,
   'command-history': /Flash Lights/i,
   'location-favorites': /Catalogue home/,
   'geofence-status': /Catalogue home/,
-  'destination-eta': /12\.00/,
+  'destination-eta': /ETA\s*12\s*min/,
   'media-now-playing': /Catalogue evening drive/,
   'media-history': /Catalogue evening drive/,
   'onboarding-checklist': /Connect your Tesla/i,
-  'fleet-posture': /Verified\s*1\/1/,
-  'quick-nav': /Trip history/,
+  'fleet-posture': /Verified\s*1\s*\/\s*1/,
+  'quick-nav': /Drives/,
   'audit-log': /Catalogue settings updated/,
   'backup-monitor': /2\.0(?:0)?\s*MB/,
   'export-status': /Running/,
   'version-info': /catalogue-2026\.10/,
-  'dashboard-stats': /123/,
-  'live-signals': /21\.00/,
-  'live-signal-sparklines': /72\.00/,
+  'dashboard-stats': /Widgets placed\s*5(?![\d.])/,
+  'live-signals': /InsideTemp\s*21\.0\s*°C/,
+  'live-signal-sparklines': /Battery Level\s*72\.0%/,
   'tire-pressure-visual': /2\.80/,
   // Deliberately demands real history. Do not inject the frontend-only
   // timestamp alias: the actual tire-pressure handler emits created_at.
-  'tire-pressure-history': /2\.80/,
+  'tire-pressure-history': /2\.85/,
 };
 
 export const remainingCompactReadings: Record<string, RegExp> = {
+  'uptime-monitor': /Services healthy\s*4\/4/,
   'anomaly-detector': /1 active/,
   'automation-status': /1\/1/,
-  'automation-history': /100\.00/,
+  'automation-history': /Succeeded\s*1\.3\s*s/,
+  'mileage-stats': /10\s*km\/day/,
+  'state-timeline': /driving\s*67%/,
+  'year-review': /1,234\s*km/,
+  'climate-history': /Cabin\s*21\s*°C/,
   'charging-optimizer': /01:00|1:00/,
+  'charging-session-detail': /kWh added\s*42\.0/,
   'audit-log': /Events \(24h\)\s*2/,
   'backup-monitor': /Just now/i,
   'export-status': /Active exports\s*2/,
-  'location-favorites': /Home/,
+  'location-favorites': /Catalogue home/,
 };
 
 export const geometrySourceIDs = new Set(['location-map', 'position-heatmap']);
@@ -113,18 +121,51 @@ export async function installRemainingCatalogueSources(page: Page, mocks: MockAp
     '/alerts/rules': [],
     '/notifications/channels': [],
   };
-  // The signals fixture also feeds ChargingSchedule, without dropping Soc.
+  const numericSignals = {
+    BatteryLevel: { unit: '%', values: [69, 70, 71, 72] },
+    ACChargingPower: { unit: 'W', values: [8000, 9000, 10000, 11000] },
+    InsideTemp: { unit: '°C', values: [21, 21, 21, 21] },
+    OutsideTemp: { unit: '°C', values: [18, 18, 18, 18] },
+    RatedRange: { unit: 'm', values: [380000, 390000, 400000, 410000] },
+  };
+  const liveSignals = {
+    Soc: { value: 72, timestamp: now },
+    ChargeLimitSoc: { value: 80, timestamp: now },
+    ScheduledChargingMode: { value: 'StartAt', timestamp: now },
+    ScheduledChargingPending: { value: true, timestamp: now },
+    ScheduledChargingStartTime: { value: now, timestamp: now },
+    ...Object.fromEntries(Object.entries(numericSignals).map(([name, { values }]) => [
+      name, { value: values[values.length - 1], timestamp: now },
+    ])),
+  };
+  sources['/signals/7/available'] = {
+    count: 1 + Object.keys(numericSignals).length,
+    signals: [
+      { name: 'Soc', unit: '%', type: 'float' },
+      ...Object.entries(numericSignals).map(([name, { unit }]) => ({ name, unit, type: 'float' })),
+    ],
+  };
   sources['/signals/7/live'] = {
-    vehicle_id: 7, count: 5, at: now,
-    signals: {
-      Soc: { value: 72, timestamp: now },
-      ChargeLimitSoc: { value: 80, timestamp: now },
-      ScheduledChargingMode: { value: 'StartAt', timestamp: now },
-      ScheduledChargingPending: { value: true, timestamp: now },
-      ScheduledChargingStartTime: { value: now, timestamp: now },
-    },
+    vehicle_id: 7, count: Object.keys(liveSignals).length, at: now, signals: liveSignals,
   };
   await installCatalogueRoutes(page, mocks, sources);
+  for (const [signal, { values }] of Object.entries(numericSignals)) {
+    const history = catalogueWire({
+      vehicleId: 7, signal,
+      from: new Date(Date.parse(now) - 3_600_000).toISOString(),
+      to: now, count: values.length,
+      data: values.map((value, index) => ({
+        ts: new Date(Date.parse(now) - (values.length - 1 - index) * 900_000).toISOString(),
+        kind: 'ValueKindDouble', value, ingest_origin: null, source_emitted_at: null,
+        received_at: null, normalization_version: null,
+      })),
+    } satisfies SignalHistoryResponse);
+    await page.route(url => url.pathname === `/api/v1/signals/7/${signal}/history`, route => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      expect([...new URL(route.request().url()).searchParams.entries()]).toEqual([['hours', '1']]);
+      return fulfillApiFixture(route, mocks, { json: history });
+    });
+  }
   await page.route('https://tile.openstreetmap.org/**', route => {
     if (!/\/\d+\/\d+\/\d+\.png$/.test(new URL(route.request().url()).pathname)) {
       throw new Error(`Unexpected catalogue tile request: ${route.request().url()}`);
@@ -304,8 +345,11 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
     await panel.getByRole('button', { name: 'Restart checklist', exact: true }).click();
     await expect(panel.getByTestId('checklist-task-connect-vehicle')).toHaveAttribute('data-complete', 'true');
   }
-  if (id === 'location-favorites' && width === 390) {
-    await expect(panel.getByRole('img', { name: 'Home', exact: true })).toBeVisible();
+  if (id === 'location-favorites') {
+    const home = panel.getByRole('listitem').filter({ hasText: 'Catalogue home' });
+    await expect(home).toHaveCount(1);
+    await expect(home).toBeVisible();
+    await expect(home).toContainText('8 visits');
   }
   if (id === 'export-status' && width === 1440) {
     await expect(panel.getByText('Running', { exact: true })).toHaveCount(2);
@@ -330,18 +374,19 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
       }
     } else {
       await expect(panel.locator('svg.recharts-surface')).toHaveCount(0);
-      await expect(panel).toContainText(/Total\s*42\.00\s*kWh\s*Avg\s*42\.00\s*kWh/);
+      await expect(panel).toContainText(/Total\s*42\.00\s*kWh/);
+      await expect(panel.getByText('Avg', { exact: true })).toHaveCount(0);
     }
   }
   if (id === 'command-quick-actions') {
-    for (const name of ['Lock', 'Unlock', 'Climate on', 'Climate off', 'Frunk', 'Horn']) {
+    for (const name of ['Unlock', 'Climate control', 'Frunk', 'Trunk', 'Flash Lights', 'Horn']) {
       const button = panel.getByRole('button', { name, exact: true });
       await expect(button).toBeVisible();
       await expect(button).toBeEnabled();
     }
     // Do not send any command, even against a permissive generic mock route.
-    await panel.getByRole('button', { name: 'Lock', exact: true }).focus();
-    await expect(panel.getByRole('button', { name: 'Lock', exact: true })).toBeFocused();
+    await panel.getByRole('button', { name: 'Unlock', exact: true }).focus();
+    await expect(panel.getByRole('button', { name: 'Unlock', exact: true })).toBeFocused();
   }
   if (id === 'media-now-playing') {
     await expect(panel).toContainText('Synthetic ensemble');
@@ -351,24 +396,112 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
       await expect(progress).toHaveAttribute('aria-valuemax', '100');
     }
   }
+  if (id === 'climate-history') {
+    if (width === 390) {
+      await expect(panel.getByText('Cabin', { exact: true }).locator('..')).toHaveText(/^Cabin\s*21\s*°C$/);
+      await expect(panel.getByText('Outside', { exact: true }).locator('..')).toHaveText(/^Outside\s*18\s*°C$/);
+    } else {
+      const table = panel.getByRole('table', { name: 'Climate history — data table', exact: true });
+      await expect(table.getByRole('columnheader')).toHaveText(['Time', 'Cabin (°C)', 'Outside (°C)']);
+      const rows = table.getByRole('row');
+      await expect(rows).toHaveCount(3);
+      await expect(rows.nth(1).getByRole('cell').nth(1)).toHaveText('20');
+      await expect(rows.nth(1).getByRole('cell').nth(2)).toHaveText('18');
+      await expect(rows.nth(2).getByRole('cell').nth(1)).toHaveText('21');
+      await expect(rows.nth(2).getByRole('cell').nth(2)).toHaveText('18');
+    }
+  }
+  if (id === 'state-timeline') {
+    await expect(panel.getByRole('img', { name: 'driving: 2h 0m, 67%; parked: 1h 0m, 33%', exact: true }))
+      .toBeVisible();
+    if (width === 1440) {
+      await expect(panel).toContainText('66.67%');
+      await expect(panel).toContainText('33.33%');
+    } else {
+      await expect(panel).toContainText(/parked\s*33%/);
+    }
+  }
+  if (id === 'live-signals') {
+    const state = catalogueRecordedSources(panel.page());
+    await Promise.all([...state.pending]);
+    expect(state.errors).toEqual([]);
+    const bindings = [];
+    for (const [path, key] of [
+      ['/signals/7/live', ['live-signals', 7]],
+      ...['BatteryLevel', 'ACChargingPower', 'InsideTemp', 'OutsideTemp', 'RatedRange']
+        .map(name => [`/signals/7/${name}/history`, ['signal-history', 7, name, 1]] as const),
+    ] as const) {
+      const response = state.responses.find(item => new URL(item.url).pathname === `/api/v1${path}`);
+      if (!response) throw new Error(`Missing actually served telemetry source: ${path}`);
+      const params = new URL(response.url).searchParams;
+      expect([...params.entries()]).toEqual(path.endsWith('/history') ? [['hours', '1']] : []);
+      const binding = await renderedCatalogueQueryBinding(panel, 'review-live-signals', 'Live signals', key);
+      assertCatalogueQueryScope(binding, 'review-live-signals', key);
+      const source = record(response.body) && record(response.body.data) ? response.body.data : response.body;
+      if (!record(source)) throw new Error(`Missing telemetry object: ${path}`);
+      expect(binding.data, 'Each native telemetry observer must preserve every original source field/null').toMatchObject(source);
+      bindings.push({ response, binding });
+    }
+    await writeFile(info.outputPath('live-signals-native-observers.json'), JSON.stringify(bindings, null, 2));
+    const readings = [
+      ['BatteryLevel', /^BatteryLevel\s*72\s*%$/],
+      ['ACChargingPower', /^ACChargingPower\s*11\.0\s*kW$/],
+      ['InsideTemp', /^InsideTemp\s*21\.0\s*°C$/],
+      ['OutsideTemp', /^OutsideTemp\s*18\.0\s*°C$/],
+      ['RatedRange', /^RatedRange\s*410\.0\s*km$/],
+    ] as const;
+    for (const [name, reading] of readings) {
+      const row = panel.getByRole('listitem').filter({ hasText: new RegExp(`^${name}`) });
+      await expect(row).toHaveText(reading);
+      const sparkline = row.getByRole('img', { name: `${name} trend`, exact: true });
+      await expect(sparkline).toBeVisible();
+      await expect(sparkline.locator('polyline').first()).toHaveAttribute('points', /^(?:\S+\s+){3}\S+$/);
+    }
+  }
   if (id === 'live-signal-sparklines') {
     await expect(panel.getByRole('img', { name: 'Increasing', exact: true })).toHaveCount(1);
     await expect(panel.getByRole('img', { name: 'Increasing', exact: true })).toBeVisible();
-    await expect(panel.getByRole('img', { name: /Soc trend/i })).toBeVisible();
+    await expect(panel.getByRole('img', { name: 'Stable', exact: true })).toHaveCount(2);
+    await expect(panel.getByRole('img', { name: 'Battery Level trend', exact: true })).toBeVisible();
+    await expect(panel.getByRole('img', { name: 'Battery Level trend', exact: true })
+      .locator('polyline').first()).toHaveAttribute('points', /^0,20 \S+ \S+ 56,0$/);
   }
   if (id === 'fsd-weekly') {
     const weekly = panel.getByTestId('fsd-weekly-distance');
-    await expect(weekly).toContainText('No metric values are available yet.');
-    await expect(weekly.locator('[data-operational-metric]')).toHaveCount(0);
-    await expectBriefDetails(panel.page(), weekly, ['Unmeasured is not zero']);
-    await expect(panel.getByTestId('fsd-weekly-distance')).not.toContainText('0.00');
+    await expect(weekly).toHaveText(/^Reported FSD\s*—$/);
+    await expect(weekly).not.toContainText(/\d/);
+    const help = panel.getByRole('button', { name: 'More info about FSD this week', exact: true });
+    await help.focus();
+    const explanation = panel.getByRole('tooltip', { name: /Unmeasured is not zero/ });
+    await expect(explanation).toBeVisible();
+    await expect.poll(() => explanation.evaluate(node => getComputedStyle(node).opacity)).toBe('1');
+    await panel.page().keyboard.press('Escape');
+    await help.blur();
+    if (width === 1440) {
+      for (const [name, href] of [['FSD insights', '/fsd'], ['Weekly digest', '/weekly-digest']]) {
+        await expect(panel.getByRole('link', { name, exact: true })).toHaveAttribute('href', href);
+      }
+    }
   }
   if (id === 'fleet-posture') {
-    await expect(panel.getByRole('listitem').filter({ hasText: /^Verified\s*1\/1$/ })).toHaveCount(1);
-    await expect(panel.getByTestId('fleet-posture-announcement')).toContainText('All 1 vehicles verified from current telemetry.');
+    await assertCataloguePostureContent(panel);
+  }
+  if (id === 'quick-nav') {
+    const navigation = panel.getByRole('navigation', { name: 'Quick navigation', exact: true });
+    await expect(navigation.getByRole('link')).toHaveCount(4);
+    for (const [name, href] of [
+      ['Drives', '/drives'], ['Charging', '/charging'],
+      ['Analytics', '/analytics'], ['Battery health', '/battery'],
+    ]) {
+      const link = navigation.getByRole('link', { name, exact: true });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute('href', href);
+    }
   }
   if (id === 'version-info' && width === 1440) {
-    await expect(panel).toContainText(/Signals\/sec\s*—/);
-    await expect(panel).toContainText(/Messages today\s*—/);
+    await expect(panel).toContainText(/Build date\s*—/);
+    await expect(panel).toContainText(/Git commit\s*—/);
+    await expect(panel).toContainText(/Server uptime\s*1h 0m/);
+    await expect(panel).toContainText(/Go version\s*go1\.25\.0/);
   }
 }

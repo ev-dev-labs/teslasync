@@ -1,6 +1,14 @@
 {
   "powerGrafana": {
     "title": "Grafana panel builder",
+    "timestampColumns": {
+      "driveStart": "Drive start instant.",
+      "driveEnd": "Drive end instant.",
+      "sessionStart": "Session start instant.",
+      "sessionEnd": "Session end instant.",
+      "alertFired": "Alert firing instant.",
+      "sample": "Sample instant."
+    },
     "summary": {
       "panelTypes": "Panel types",
       "datasources": "Datasources",

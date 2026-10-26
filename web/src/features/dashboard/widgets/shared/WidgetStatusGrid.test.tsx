@@ -7,10 +7,13 @@
  *      runtime-`undefined` array that the `data?.field` call-sites can produce)
  *      renders the shared EmptyState with the resolved message + icon instead of
  *      an empty grid or a "Cannot read properties of undefined" crash.
- *   2. Cell rendering — one chip per cell, the label always shows, the value shows
- *      only when present AND not `compact`, and a supplied icon is rendered.
- *   3. Status → style map — each of the five known statuses paints its chip
- *      background and status-dot colour.
+ *   2. Cell rendering — one bordered box per cell (After `.sgi`), the label
+ *      always shows, the value shows only when present (as semibold truncated
+ *      text with a `title` for clipped content), the status word always shows,
+ *      and a supplied icon is rendered.
+ *   3. Status → style map — each of the five known statuses paints its status-dot
+ *      colour; the box itself stays neutral (border + transparent surface, never
+ *      a status-tinted fill).
  *   4. Fail-closed status — a status outside the union (a raw backend string cast
  *      to StatusCell['status']) must NOT dereference `undefined`; it falls back to
  *      the neutral "unknown" styling and still renders the label. This is the
@@ -18,7 +21,7 @@
  *      the next `.bg` access threw, taking the whole widget (and its dashboard
  *      row) down.
  *   5. Column layout — `cols` selects the container-query grid template, `compact`
- *      forces the 2-up baseline and tightens chip padding.
+ *      forces the 2-up baseline and tightens box padding.
  *   6. a11y — the colour-only status dot and the decorative icon are `aria-hidden`
  *      (the label/value text is the accessible channel), matching StatusBadge.
  *
@@ -98,7 +101,7 @@ describe('WidgetStatusGrid — empty state', () => {
 });
 
 describe('WidgetStatusGrid — cell rendering', () => {
-  it('renders exactly one chip per cell with its label and value', () => {
+  it('renders exactly one box per cell with its label, value and status word', () => {
     const { container } = render(
       <WidgetStatusGrid
         cells={[
@@ -113,6 +116,21 @@ describe('WidgetStatusGrid — cell rendering', () => {
     expect(screen.getByText('Locked')).toBeInTheDocument();
     expect(screen.getByText('Sentry')).toBeInTheDocument();
     expect(screen.getByText('Off')).toBeInTheDocument();
+    // The status meaning is text, not colour alone: value cells without a
+    // caller statusLabel still carry the generic word (SecurityStatus locks on
+    // this via its own suite).
+    expect(screen.getByText('Healthy')).toBeInTheDocument();
+    expect(screen.getByText('Inactive')).toBeInTheDocument();
+  });
+
+  it('renders the value as semibold truncated text with its full text as title', () => {
+    render(<WidgetStatusGrid cells={[makeCell({ label: 'Lock', value: 'Locked' })]} />);
+
+    const value = screen.getByText('Locked');
+    expect(value.tagName).toBe('P');
+    expect(value.className).toContain('font-semibold');
+    expect(value.className).toContain('truncate');
+    expect(value).toHaveAttribute('title', 'Locked');
   });
 
   it('preserves the value and status meaning in compact mode', () => {
@@ -150,7 +168,7 @@ describe('WidgetStatusGrid — cell rendering', () => {
   });
 });
 
-describe('WidgetStatusGrid - flat status styles', () => {
+describe('WidgetStatusGrid — boxed status cells (After `.sgi`)', () => {
   const cases: Array<[StatusCell['status'], string]> = [
     ['ok', 'bg-[var(--semantic-success)]'],
     ['warning', 'bg-[var(--semantic-warning)]'],
@@ -159,15 +177,24 @@ describe('WidgetStatusGrid - flat status styles', () => {
     ['unknown', 'bg-[var(--text-muted)]'],
   ];
 
-  it.each(cases)('shows the %s status dot while keeping the cell flat', (status, dotBg) => {
+  it.each(cases)('shows the %s status dot on a neutral box', (status, dotBg) => {
     const { container } = render(<WidgetStatusGrid cells={[makeCell({ status })]} />);
 
     const [cell] = getCellNodes(container);
     expect(getDot(cell).className).toContain(dotBg);
-    expect(cell.className).toContain('border-b');
-    expect(cell.className).not.toContain('bg-');
-    expect(cell.className).not.toContain('rounded-shape-sm');
+    // After `.sgi`: bordered 10px box, 8px grid gap — never a status-tinted
+    // fill and never the old flat divider-row treatment.
+    expect(cell.className).toContain('border');
+    expect(cell.className).toContain('rounded-shape-lg');
+    expect(cell.className).toContain('px-2.5');
+    expect(cell.className).not.toContain('border-b');
+    expect(cell.className).not.toContain('bg-[var(--semantic');
     expect(cell).toHaveTextContent(status === 'ok' ? 'Healthy' : status === 'warning' ? 'Warning' : status === 'error' ? 'Error' : status === 'inactive' ? 'Inactive' : 'Unknown');
+  });
+
+  it('keeps the 8px grid gap between boxes', () => {
+    const { container } = render(<WidgetStatusGrid cells={[makeCell({ id: 'a' })]} />);
+    expect(getGrid(container).className).toContain('gap-2');
   });
 });
 
@@ -225,10 +252,11 @@ describe('WidgetStatusGrid — column layout', () => {
     const grid = getGrid(container);
     expect(grid.className).toContain('grid-cols-2');
     expect(grid.className).not.toContain('@sm:grid-cols-4');
-    // Compact flat rows keep a tighter vertical rhythm without inset boxes.
+    // Compact boxes keep the bordered `.sgi` chrome with a tighter vertical rhythm.
     const [cell] = getCellNodes(container);
     expect(cell.className).toContain('py-1.5');
-    expect(cell.className).not.toContain('px-');
+    expect(cell.className).toContain('rounded-shape-lg');
+    expect(cell.className).toContain('px-2.5');
   });
 });
 

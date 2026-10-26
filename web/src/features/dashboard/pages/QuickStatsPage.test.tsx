@@ -513,9 +513,7 @@ describe('QuickStatsPage', () => {
     expect(captured.hero.dataState).toMatchObject({ status: 'ok', provenance: 'live' });
     expect(captured.hero.observation).toEqual({ observedAt, freshness: 'fresh' });
     expect(screen.getByText('Unlocked')).toBeInTheDocument();
-    expect(screen.getByText('Off')).toBeInTheDocument();
-    expect(screen.getByText('-2.00')).toBeInTheDocument();
-    expect(screen.getAllByText('-5').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Sentry Off/)).toBeInTheDocument();
     expect(screen.getAllByText('0').length).toBeGreaterThan(0);
     expect(screen.getByText('Telemetry stream observation does not verify individual reading timestamps or completeness.')).toBeInTheDocument();
   });

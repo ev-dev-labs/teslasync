@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -6,10 +7,10 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { navRouteIcons } from '@/lib/navRouteIcons';
 
 const NAV_ITEMS = [
-  { to: '/drives', icon: navRouteIcons['/drives'], labelKey: 'nav.drives', label: 'Drives', descKey: 'nav.drivesDesc', desc: 'Trip history', color: '#00f0ff' },
-  { to: '/charging', icon: navRouteIcons['/charging'], labelKey: 'nav.charging', label: 'Charging', descKey: 'nav.chargingDesc', desc: 'Sessions & costs', color: '#10b981' },
-  { to: '/analytics', icon: navRouteIcons['/analytics'], labelKey: 'nav.analytics', label: 'Analytics', descKey: 'nav.analyticsDesc', desc: 'Fleet insights', color: '#a855f7' },
-  { to: '/battery', icon: navRouteIcons['/battery'], labelKey: 'nav.battery', label: 'Battery', descKey: 'nav.batteryDesc', desc: 'Health & degradation', color: '#f59e0b' },
+  { to: '/drives', icon: navRouteIcons['/drives'], labelKey: 'nav.drives', label: 'Drives', descKey: 'nav.drivesDesc', desc: 'Trip history', color: palette.DATA_VISUAL_COLORS.info },
+  { to: '/charging', icon: navRouteIcons['/charging'], labelKey: 'nav.charging', label: 'Charging', descKey: 'nav.chargingDesc', desc: 'Sessions & costs', color: palette.COLOR.GOOD },
+  { to: '/analytics', icon: navRouteIcons['/analytics'], labelKey: 'nav.analytics', label: 'Analytics', descKey: 'nav.analyticsDesc', desc: 'Fleet insights', color: palette.DATA_VISUAL_COLORS.purple },
+  { to: '/battery', icon: navRouteIcons['/battery'], labelKey: 'nav.battery', label: 'Battery health', descKey: 'nav.batteryDesc', desc: 'Health & degradation', color: palette.COLOR.WARN },
 ] as const;
 
 function QuickNavComponent() {

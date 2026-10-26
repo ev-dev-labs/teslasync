@@ -87,7 +87,6 @@ import BatteryDegradationForecastWidget, {
   riskIcon,
   healthTier,
   scoreToImpact,
-  formatProjectedMonth,
 } from './BatteryDegradationForecastWidget';
 import { useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -169,7 +168,7 @@ it('keeps measured health and degradation zero independent of projected risk and
   renderWidget(STANDARD);
   const brief = screen.getByTestId('dashboard-battery-forecast-brief');
   expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(2);
-  expect(brief).toHaveTextContent('0.00%');
+  expect(brief).toHaveTextContent('0%');
   expect(brief).toHaveTextContent('0.00%/mo');
   fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
   const scopeDrawer = screen.getByRole('dialog');
@@ -224,27 +223,11 @@ describe('riskIcon', () => {
   });
 });
 
-describe('formatProjectedMonth', () => {
-  it('formats a valid ISO date as a localized month + year', () => {
-    const expected = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short' }).format(
-      new Date('2027-03-15'),
-    );
-    expect(formatProjectedMonth('2027-03-15', 'en-US')).toBe(expected);
-    expect(formatProjectedMonth('2027-03-15', 'en-US')).toContain('2027');
-  });
-
-  it('returns an em dash for missing / empty / unparseable dates (no crash)', () => {
-    expect(formatProjectedMonth(null, 'en-US')).toBe('—');
-    expect(formatProjectedMonth(undefined, 'en-US')).toBe('—');
-    expect(formatProjectedMonth('', 'en-US')).toBe('—');
-    expect(formatProjectedMonth('not-a-date', 'en-US')).toBe('—');
-  });
-
-  it('falls back to en-US when handed an invalid locale tag', () => {
-    const expected = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short' }).format(
-      new Date('2027-03-15'),
-    );
-    expect(formatProjectedMonth('2027-03-15', 'not-a-locale')).toBe(expected);
+describe('projected month', () => {
+  it('renders the shared month-year label for the projected date', () => {
+    mockDegradation.mockReturnValue(qr({ data: makeData() }));
+    renderWidget(STANDARD);
+    expect(screen.getByText('Mar 2027')).toBeInTheDocument();
   });
 });
 
@@ -252,7 +235,7 @@ describe('BatteryDegradationForecastWidget — shell states', () => {
   it('retains the prediction, outlook, risks and recommendations on a cached refresh failure', () => {
     mockDegradation.mockReturnValue(qr({ data: makeData(), error: new Error('transient'), isError: true }));
     renderWidget(STANDARD);
-    expect(screen.getByText('92.00%')).toBeInTheDocument();
+    expect(screen.getByText('92%')).toBeInTheDocument();
     expect(screen.getByText('High Temperature')).toBeInTheDocument();
     expect(screen.getByText('Charge to 80% for daily use')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -337,7 +320,7 @@ describe('BatteryDegradationForecastWidget — populated standard layout', () =>
     expect(screen.getByText('Projected 80% capacity')).toBeInTheDocument();
     expect(screen.getByText(expectedDate)).toBeInTheDocument();
     expect(screen.getByText('Current health')).toBeInTheDocument();
-    expect(screen.getByText('92.00%')).toBeInTheDocument();
+    expect(screen.getByText('92%')).toBeInTheDocument();
     // rate 0.08 → "Normal" tier and a "0.08%/mo" delta.
     expect(screen.getByText('Normal')).toBeInTheDocument();
     expect(container.textContent).toContain('0.08%/');
@@ -351,8 +334,8 @@ describe('BatteryDegradationForecastWidget — populated standard layout', () =>
     expect(screen.getByText('Frequent heat exposure')).toBeInTheDocument();
     expect(screen.getByText('Fast Charging')).toBeInTheDocument();
     expect(screen.getByText('High DC usage')).toBeInTheDocument();
-    expect(screen.getByText('8.00')).toBeInTheDocument();
-    expect(screen.getByText('5.00')).toBeInTheDocument();
+    expect(screen.getByText('8')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
   });
 
   it('renders each recommendation as a tip card', () => {
@@ -383,7 +366,7 @@ describe('BatteryDegradationForecastWidget — compact layout', () => {
   it('shows the heading, health% and tier badge in compact mode', () => {
     renderWidget(COMPACT);
 
-    expect(screen.getByText('92.00%')).toBeInTheDocument();
+    expect(screen.getByText('92%')).toBeInTheDocument();
     expect(screen.getByText('Normal')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Battery forecast', level: 3 })).toBeVisible();
     expect(screen.queryByText('Projected 80% capacity')).toBeNull();
@@ -518,8 +501,8 @@ describe('BatteryDegradationForecastWidget — horizon outlook', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('1 / 3 / 5-year outlook')).toBeTruthy();
-    expect(screen.getByText('90.50%')).toBeTruthy();
-    expect(screen.getByText('81.70%')).toBeTruthy();
+    expect(screen.getByText('91%')).toBeTruthy();
+    expect(screen.getByText('82%')).toBeTruthy();
   });
 
   it('keeps the outlook section visible with an empty placeholder when absent', () => {
@@ -528,5 +511,25 @@ describe('BatteryDegradationForecastWidget — horizon outlook', () => {
 
     expect(screen.getByText('1 / 3 / 5-year outlook')).toBeInTheDocument();
     expect(screen.getByText('This widget has no qualifying data yet.')).toBeInTheDocument();
+  });
+
+  it('renders the After-spec history + forecast line with a word legend', () => {
+    mockDegradation.mockReturnValue(qr({
+      data: makeData({
+        monthly_trend: [
+          { month: '2024-01', avg_health: 98, avg_capacity: 72, avg_range: 480 },
+          { month: '2024-02', avg_health: 97, avg_capacity: 71, avg_range: 475 },
+          { month: '2024-03', avg_health: 96.6, avg_capacity: 71, avg_range: 470 },
+        ],
+        projections: [
+          { date: '2027-03-15', health_pct: 92, confidence_low: 90, confidence_high: 94 },
+          { date: '2028-03-15', health_pct: 90.3, confidence_low: 88, confidence_high: 92 },
+        ],
+      }),
+    }));
+    renderWidget(STANDARD);
+
+    expect(screen.getAllByText('Forecast').length).toBeGreaterThan(0);
+    expect(screen.queryByText('More data needed for trend')).toBeNull();
   });
 });

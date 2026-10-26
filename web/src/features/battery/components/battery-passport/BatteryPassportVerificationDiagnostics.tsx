@@ -185,7 +185,7 @@ export function BatteryPassportVerificationDiagnostics({
                 : verification.status === 'mismatch'
                 ? t(
                     'batteryPassport.verification.mismatchNotice',
-                    'The freshly recomputed digest does not match the supplied digest. Current evidence or the UTC issue day may have changed; this result alone does not identify why.',
+                    'The freshly recomputed digest does not match the supplied digest. Current evidence or the canonical issue day may have changed; this result alone does not identify why.',
                   )
                 : t(
                     'batteryPassport.verification.notice',

@@ -36,8 +36,8 @@ export interface LiveControlsProps {
   filteredBufferCount?: number;
   rangeScope?: string;
   page?: number;
-  bufferSince?: string;
-  windowEnd?: string;
+  bufferSince?: string | null;
+  windowEnd?: string | null;
   /**
    * @deprecated Use the explicit window, filtered buffer, loaded and total
    * counts. Legacy callers retain the generic "{{n}} buffered" copy.

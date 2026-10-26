@@ -62,8 +62,7 @@ export function ArrivalReliabilityMonthTrend({
         )}
         ariaDescription={t(
           'arrivalReliability.profiles.monthDescription',
-          'Months use {{timeZone}} and may retain residual route-mix effects when route support changes.',
-          { timeZone },
+          'Months use your selected time zone and may retain residual route-mix effects when route support changes.',
         )}
         height={360}
         chartKey="arrival-month-trend"

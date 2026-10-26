@@ -1,62 +1,28 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, renderHook } from '@testing-library/react'
 import { useInfiniteScroll } from './useInfiniteScroll'
+import {
+  MockControlledIntersectionObserver,
+} from '@/test/setup'
 
 // A fully controllable IntersectionObserver test double. The global polyfill
 // in test-setup.ts fires `isIntersecting: true` immediately on observe(),
 // which is useless for asserting the hasMore / not-intersecting / empty-batch
 // branches — so each test installs this stub via vi.stubGlobal and drives the
 // callback by hand.
-type Emit = Array<Partial<IntersectionObserverEntry>>
-
-class FakeIntersectionObserver {
-  static instances: FakeIntersectionObserver[] = []
-  readonly root: Element | null = null
-  readonly rootMargin: string = ''
-  readonly thresholds: ReadonlyArray<number> = []
-  callback: IntersectionObserverCallback
-  options?: IntersectionObserverInit
-  observed: Element[] = []
-  disconnectCount = 0
-
-  constructor(cb: IntersectionObserverCallback, options?: IntersectionObserverInit) {
-    this.callback = cb
-    this.options = options
-    FakeIntersectionObserver.instances.push(this)
-  }
-
-  observe(el: Element) {
-    this.observed.push(el)
-  }
-  unobserve() {}
-  disconnect() {
-    this.disconnectCount += 1
-  }
-  takeRecords(): IntersectionObserverEntry[] {
-    return []
-  }
-
-  emit(entries: Emit) {
-    this.callback(
-      entries as IntersectionObserverEntry[],
-      this as unknown as IntersectionObserver,
-    )
-  }
-}
-
 function Harness({ onLoadMore, hasMore }: { onLoadMore: () => void; hasMore: boolean }) {
   const ref = useInfiniteScroll(onLoadMore, hasMore)
   return <div data-testid="sentinel" ref={ref} />
 }
 
-function latest(): FakeIntersectionObserver {
-  const list = FakeIntersectionObserver.instances
+function latest(): MockControlledIntersectionObserver {
+  const list = MockControlledIntersectionObserver.instances
   return list[list.length - 1]
 }
 
 beforeEach(() => {
-  FakeIntersectionObserver.instances = []
-  vi.stubGlobal('IntersectionObserver', FakeIntersectionObserver)
+  MockControlledIntersectionObserver.reset()
+  vi.stubGlobal('IntersectionObserver', MockControlledIntersectionObserver)
 })
 
 afterEach(() => {
@@ -68,7 +34,7 @@ describe('useInfiniteScroll', () => {
     const onLoadMore = vi.fn()
     const { getByTestId } = render(<Harness onLoadMore={onLoadMore} hasMore />)
 
-    expect(FakeIntersectionObserver.instances).toHaveLength(1)
+    expect(MockControlledIntersectionObserver.instances).toHaveLength(1)
     const io = latest()
     expect(io.observed).toContain(getByTestId('sentinel'))
     expect(io.options?.threshold).toBe(0.1)
@@ -131,7 +97,7 @@ describe('useInfiniteScroll', () => {
     // Flip hasMore off: the stale observer is torn down, a fresh one is wired.
     rerender(<Harness onLoadMore={onLoadMore} hasMore={false} />)
     expect(first.disconnectCount).toBe(1)
-    expect(FakeIntersectionObserver.instances).toHaveLength(2)
+    expect(MockControlledIntersectionObserver.instances).toHaveLength(2)
 
     // The new observer closes over hasMore=false, so intersecting is a no-op.
     latest().emit([{ isIntersecting: true }])
@@ -160,7 +126,7 @@ describe('useInfiniteScroll', () => {
     const onLoadMore = vi.fn()
 
     expect(() => render(<Harness onLoadMore={onLoadMore} hasMore />)).not.toThrow()
-    expect(FakeIntersectionObserver.instances).toHaveLength(0)
+    expect(MockControlledIntersectionObserver.instances).toHaveLength(0)
     expect(onLoadMore).not.toHaveBeenCalled()
   })
 })

@@ -24,6 +24,7 @@ export type WorkspaceScopedComponent = {
 export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/activity',
   '/admin/audit-log',
+  '/admin/vehicle-cost',
   '/analytics',
   '/analytics/carbon',
   '/api-logs',
@@ -31,7 +32,6 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/battery-degradation',
   '/cabin-thermal',
   '/charging',
-  '/charge-advisor',
   '/charging-curve',
   '/charging-heatmap',
   '/charging/costs',
@@ -70,6 +70,7 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/regen-efficiency',
   '/route-efficiency',
   '/security-access',
+  '/science',
   '/share-card',
   '/signal-change-points',
   '/signal-correlation',
@@ -83,6 +84,7 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/speed-sweetspot',
   '/state-debugger',
   '/statistics',
+  '/tesla-api-usage',
   '/tesla-charging-history',
   '/tesla-charging-sessions',
   '/timeline',
@@ -99,6 +101,7 @@ const CALENDAR_QUICK_PRESETS = ['7d', '30d', '90d', 'ytd'] as const;
 export function getWorkspaceQuickRangePresets(pathname: string): readonly WorkspaceQuickRangePreset[] {
   const normalized = normalizePathname(pathname);
   if (normalized === '/tesla-physics/ledger') return ['6h', '24h'];
+  if (normalized === '/tesla-api-usage') return ['24h', '7d', '30d', '90d', '1y'];
   return normalized === '/drive-calendar'
     ? CALENDAR_QUICK_PRESETS
     : STANDARD_QUICK_PRESETS;
@@ -107,6 +110,7 @@ export function getWorkspaceQuickRangePresets(pathname: string): readonly Worksp
 export function isWorkspaceRangePresetAvailable(pathname: string, id: string): boolean {
   const normalized = normalizePathname(pathname);
   if (id === '6h') return normalized === '/tesla-physics/ledger';
+  if (normalized === '/tesla-api-usage' && id === '1y') return true;
   if (normalized === '/drive-calendar') {
     return id !== 'live' && id !== '24h' && id !== 'today' && id !== '1y';
   }

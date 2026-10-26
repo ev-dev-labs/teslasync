@@ -13,8 +13,6 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { tzAbbreviation } from '@/lib/dateFormat';
-import { useTimezone } from '@/lib/timezone';
 
 import {
   ColdStartMethodology,
@@ -38,8 +36,7 @@ export default function ColdStartPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const { formatCurrency, costPerKwh } = useFormatting();
-  const timezone = useTimezone('vehicle');
-  const { formatDateTime } = useDateFormat('vehicle');
+  const { formatDateTime, tz: timezone } = useDateFormat();
   const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'cold-start.range',
     defaultPresetId: 'all',
@@ -103,8 +100,8 @@ export default function ColdStartPage() {
             'coldStart.brief.window',
             '{{start}}–{{end}}; returned selected-window drives',
             {
-              start: `${formatDateTime(startInstant)} ${tzAbbreviation(startInstant, timezone)}`,
-              end: `${formatDateTime(endInstantExclusive)} ${tzAbbreviation(endInstantExclusive, timezone)}`,
+              start: formatDateTime(startInstant),
+              end: formatDateTime(endInstantExclusive),
             },
           )}
           retained={sectionState.retained ?? false}

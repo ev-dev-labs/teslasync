@@ -90,6 +90,45 @@ describe('noiseScoreOf', () => {
 });
 
 describe('analyzeAlertFatigue', () => {
+  it.each([
+    ['UTC', 1, 0],
+    ['America/Los_Angeles', 0, 16],
+    ['Asia/Tokyo', 1, 9],
+  ] as const)('attributes weekday and hour in %s without changing source evidence', (timezone, weekday, hour) => {
+    const instant = '2024-01-01T00:30:00Z';
+    const logs = [{
+      ...log({ min: 0, title: 'Calendar rule' }),
+      created_at: instant, sent_at: instant,
+    }];
+    const original = structuredClone(logs);
+    const result = analyzeAlertFatigue(logs, { timezone });
+    const group = result.groups[0]!;
+    expect(group.weekdayCounts[weekday]).toBe(1);
+    expect(group.hourCounts[hour]).toBe(1);
+    expect(group.weekdayCounts.reduce((sum, value) => sum + value, 0)).toBe(1);
+    expect(group.hourCounts.reduce((sum, value) => sum + value, 0)).toBe(1);
+    const { weekdayCounts: _weekdays, hourCounts: _hours, ...evidence } = group;
+    const { weekdayCounts: _utcWeekdays, hourCounts: _utcHours, ...utcEvidence } =
+      analyzeAlertFatigue(logs, { timezone: 'UTC' }).groups[0]!;
+    expect(evidence).toEqual(utcEvidence);
+    expect(logs).toEqual(original);
+  });
+
+  it.each([
+    ['spring gap', ['2024-03-10T09:30:00Z', '2024-03-10T10:30:00Z'], [1, 3]],
+    ['fall overlap', ['2024-11-03T08:30:00Z', '2024-11-03T09:30:00Z'], [1, 1]],
+  ] as const)('conserves both source events through the selected-calendar %s', (_name, instants, hours) => {
+    const logs = instants.map(instant => ({
+      ...log({ min: 0, title: 'DST rule' }), created_at: instant, sent_at: instant,
+    }));
+    const result = analyzeAlertFatigue(logs, { timezone: 'America/Los_Angeles' });
+    const expected = Array<number>(24).fill(0);
+    hours.forEach(hour => { expected[hour]! += 1; });
+    expect(result.groups[0]!.hourCounts).toEqual(expected);
+    expect(result.groups[0]!.weekdayCounts[0]).toBe(2);
+    expect(result.totalNotifications).toBe(2);
+  });
+
   it('is empty and safe with no data', () => {
     const s = analyzeAlertFatigue([]);
     expect(s.groups).toEqual([]);

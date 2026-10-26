@@ -206,6 +206,7 @@ beforeEach(() => {
   mockUseSystemHealth.mockReturnValue(makeQuery());
   mockUseDBStats.mockReturnValue(makeQuery());
   mockUseConnectionPool.mockReturnValue(makeQuery());
+  mockUseDBStats.mockReturnValue(makeQuery());
   mockUseMQTTStatus.mockReturnValue(makeQuery());
   mockUseVersionInfo.mockReturnValue(makeQuery());
   mockUseCaptureStats.mockReturnValue(makeQuery());
@@ -388,7 +389,7 @@ describe('system-health — lazy component wiring', () => {
     expect(screen.getByText('Healthy')).toBeInTheDocument();
     // 3 of 4 services report ok/healthy (tesla_api is degraded).
     expect(screen.getByText('3/4')).toBeInTheDocument();
-    expect(screen.getByText('Services')).toBeInTheDocument();
+    expect(screen.getByText('services')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'System health' })).toBeInTheDocument();
   });
 

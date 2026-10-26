@@ -194,7 +194,7 @@ describe('real analytics summary OperationalBrief contracts', () => {
     fireEvent.keyDown(compareDialog, { key: 'Escape' });
   });
   it('keeps calibration, supported pace, ETA reasons, and browse action', () => {
-    const summary = buildOdometerMilestones([], { baseOdometerKm: 1000, nowMs: Date.now(), milestoneUnitKm: 1, historyLimit: 1000 });
+    const summary = buildOdometerMilestones([], { timezone: 'UTC', baseOdometerKm: 1000, nowMs: Date.now(), milestoneUnitKm: 1, historyLimit: 1000 });
     const { container } = render(<MemoryRouter><MilestoneBrief summary={summary} isLoading={false}
       error={null} onRetry={vi.fn()} retained /></MemoryRouter>);
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(3);

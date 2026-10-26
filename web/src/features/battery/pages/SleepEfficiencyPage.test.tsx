@@ -52,6 +52,13 @@ vi.mock('react-i18next', () => ({
 }));
 
 const unitState = vi.hoisted(() => ({ fahrenheit: false }));
+const dateSettings = vi.hoisted(() => ({
+  locale: 'en-US', tz_display_default: 'user', timezone_user: 'UTC', decimal_precision: 2,
+}));
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ locale: dateSettings.locale, settings: dateSettings, settingsUnavailable: false }),
+}));
 const widgetState = vi.hoisted(() => ({ failDestination: false }));
 const chartPreference = vi.hoisted(() => ({ palette: 'cb_safe' }));
 vi.mock('@/api/hooks/useAnnotations', () => ({
@@ -375,6 +382,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   unitState.fahrenheit = false;
+  dateSettings.locale = 'en-US';
+  dateSettings.timezone_user = 'UTC';
   widgetState.failDestination = false;
   chartPreference.palette = 'cb_safe';
   pricingFixture.symbol = '$';
@@ -522,20 +531,41 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     }
   });
 
-  it('passes the exact inclusive URL range to the canonical hook', () => {
+  it('passes the exact half-open header instants to the canonical hook', () => {
     renderPage();
     expect(mockSleep).toHaveBeenCalledWith(
       '1',
       30,
-      '2026-06-17',
-      '2026-07-16',
+      '2026-06-17T00:00:00.000Z',
+      '2026-07-17T00:00:00.000Z',
     );
     expect(screen.queryByTestId('sleep-efficiency-range')).not.toBeInTheDocument();
     assertOperationalBriefDisclosure(
       screen.getByTestId('sleep-efficiency-kpi-evidence'),
-      '2026-06-17 to 2026-07-16 UTC',
+      'Jun 17, 2026 to Jul 16, 2026',
       { contains: true },
     );
+  });
+
+  it('updates header instants on a mounted clock change without rewriting source rows', () => {
+    const data = fullyPopulatedData();
+    const original = structuredClone(data);
+    mockSleep.mockReturnValue(queryResult({ data }));
+    const view = renderPage(['/sleep-efficiency?from=2026-03-08&to=2026-03-08']);
+    expect(mockSleep).toHaveBeenLastCalledWith(
+      '1', 1, '2026-03-08T00:00:00.000Z', '2026-03-09T00:00:00.000Z',
+    );
+    dateSettings.timezone_user = 'America/Los_Angeles';
+    dateSettings.locale = 'de-DE';
+    view.rerenderPage();
+    expect(mockSleep).toHaveBeenLastCalledWith(
+      '1', 1, '2026-03-08T08:00:00.000Z', '2026-03-09T07:00:00.000Z',
+    );
+    for (const testId of SECTION_TEST_IDS) {
+      expect(screen.getByTestId(testId)).toBeInTheDocument();
+    }
+    expect(data).toEqual(original);
+    expect(screen.getByTestId('sleep-analysis-as-of')).not.toHaveTextContent(/UTC|T\d\d:\d\d/);
   });
 
   it('keeps all shells mounted with no vehicle and disables evidence values', () => {
@@ -548,8 +578,8 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     expect(mockSleep).toHaveBeenCalledWith(
       null,
       30,
-      '2026-06-17',
-      '2026-07-16',
+      '2026-06-17T00:00:00.000Z',
+      '2026-07-17T00:00:00.000Z',
     );
     for (const testId of SECTION_TEST_IDS) {
       expect(screen.getByTestId(testId)).toBeInTheDocument();
@@ -715,7 +745,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     const page = renderPage();
     const assertHistoricalScope = () => {
       expect(screen.getByTestId('sleep-analysis-as-of')).toHaveTextContent(
-        'As of 2026-07-16T23:59:59.999Z',
+        'As of Jul 16, 2026, 11:59 PM',
       );
       const directory = within(screen.getByTestId('sleep-efficiency-event-directory'));
       expect(directory.getByText('Last 24 hours')).toBeInTheDocument();
@@ -748,7 +778,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     const acceptedAt = Date.parse('2026-08-08T15:00:00Z');
     mockSleep.mockReturnValue(queryResult({ data, dataUpdatedAt: acceptedAt }));
     page.rerenderPage();
-    expect(screen.getByTestId('sleep-analysis-as-of')).toHaveTextContent('2026-08-08T15:00:00.000Z');
+    expect(screen.getByTestId('sleep-analysis-as-of')).toHaveTextContent('Aug 8, 2026, 03:00 PM');
     expect(screen.getByText('20.00 °C')).toBeInTheDocument();
 
     vi.mocked(Date.now).mockReturnValue(Date.parse('2026-08-10T12:00:00Z'));
@@ -759,7 +789,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
       error: new Error('refresh failed'),
     }));
     page.rerenderPage();
-    expect(screen.getByTestId('sleep-analysis-as-of')).toHaveTextContent('2026-08-08T15:00:00.000Z');
+    expect(screen.getByTestId('sleep-analysis-as-of')).toHaveTextContent('Aug 8, 2026, 03:00 PM');
     expect(within(screen.getByTestId('sleep-efficiency-event-directory')).getByText('Last 24 hours')).toBeInTheDocument();
 
     mockSleep.mockReturnValue(queryResult({
@@ -767,7 +797,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
       dataUpdatedAt: Date.parse('2026-08-08T16:00:00Z'),
     }));
     page.rerenderPage();
-    expect(screen.getByTestId('sleep-analysis-as-of')).toHaveTextContent('2026-08-08T16:00:00.000Z');
+    expect(screen.getByTestId('sleep-analysis-as-of')).toHaveTextContent('Aug 8, 2026, 04:00 PM');
   });
 
   it('caps future-event classification at the historical window even for a newer response', () => {
@@ -876,7 +906,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     fireEvent.click(within(screen.getByTestId('sleep-efficiency-kpi-evidence'))
       .getByRole('button', { name: 'Review details' }));
     expect(within(screen.getByRole('dialog')).getAllByText(/request is paused/).length).toBeGreaterThan(0);
-    expect(within(screen.getByRole('dialog')).getAllByText(/2026-06-17 to 2026-07-16 UTC/).length).toBeGreaterThan(0);
+    expect(within(screen.getByRole('dialog')).getAllByText(/Jun 17, 2026 to Jul 16, 2026/).length).toBeGreaterThan(0);
   });
 
   it('retains duration and energy during a paused refresh without inventing a fetch error', () => {
@@ -976,7 +1006,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
     assertOperationalBriefDisclosure(
       screen.getByTestId('sleep-efficiency-kpi-evidence'),
-      '2026-06-17 to 2026-07-16 UTC',
+      'Jun 17, 2026 to Jul 16, 2026',
       { contains: true },
     );
   });

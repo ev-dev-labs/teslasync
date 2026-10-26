@@ -24,6 +24,7 @@
  * off) comes from the global stub in src/test-setup.ts. No real network.
  */
 
+import { DATA_VISUAL_COLORS } from '@/lib/colors'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -568,7 +569,8 @@ describe('WatchFacePage', () => {
     expect(details).toHaveAttribute('aria-expanded', 'false')
     fireEvent.click(details)
     expect(screen.getByRole('region', { name: 'Learn more' })).toHaveTextContent('Status: HTTP 500')
-    expect(document.body.textContent).not.toMatch(/private-key|private-vin|private-code|private stack|<script>/)
+    expect(document.body.textContent).not.toMatch(/private-key|private-vin|private-code|private stack|<script>/i)
+    expect(document.querySelector('script')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(refetch).toHaveBeenCalledTimes(1)
 
@@ -708,7 +710,7 @@ describe('WatchPWAMeta', () => {
     const { unmount } = render(<WatchPWAMeta />)
 
     expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe(
-      '#000000',
+      DATA_VISUAL_COLORS.canvasInk,
     )
     expect(
       document.querySelector('meta[name="apple-mobile-web-app-capable"]')?.getAttribute('content'),

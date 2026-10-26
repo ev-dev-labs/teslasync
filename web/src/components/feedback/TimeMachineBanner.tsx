@@ -7,6 +7,9 @@ import { Input } from '@/components/ui/Input'
 import { useAsOfDate } from '@/hooks/useAsOfDate'
 import { useOperationalMode } from '@/hooks/useOperationalMode'
 import { formatDateTime, toLocalDatetimeStr } from '@/lib/dateFormat'
+import { isoUtcToLocalDatetimeInput, localDatetimeInputToIso, ymdInTz, zonedWallTimeToUtc } from '@/lib/dateConvert'
+import { addCivilDays } from '@/lib/dateRange'
+import { browserTimezone } from '@/lib/timezone'
 
 /**
  * Global "viewing data as of …" banner.
@@ -52,16 +55,6 @@ interface TimeMachineBannerProps {
   testHookPickerOpen?: boolean
 }
 
-function localInputToRfc3339(value: string): string | null {
-  if (!value) return null
-  // <input type="datetime-local"> emits "YYYY-MM-DDTHH:mm" in LOCAL
-  // time with no zone; the new Date(...) constructor interprets the
-  // string in the host's local zone, then toISOString() converts to UTC.
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return null
-  return date.toISOString()
-}
-
 export function TimeMachineBanner({
   testHookAsOf,
   testHookPickerOpen = false,
@@ -84,12 +77,14 @@ export function TimeMachineBanner({
         effective != null
           ? new Date(effective)
           : (() => {
-              const d = new Date()
-              d.setDate(d.getDate() - 1)
-              d.setHours(12, 0, 0, 0)
-              return d
+              const timezone = browserTimezone()
+              const today = ymdInTz(new Date(), timezone)
+              const yesterday = today ? addCivilDays(today, -1) : null
+              return yesterday
+                ? zonedWallTimeToUtc(`${yesterday}T12:00`, timezone) ?? new Date()
+                : new Date()
             })()
-      setDraft(toLocalDatetimeStr(seed))
+      setDraft(isoUtcToLocalDatetimeInput(seed.toISOString()))
       setPickerOpen(true)
     }
     window.addEventListener(TIME_MACHINE_OPEN_PICKER_EVENT, onOpen)
@@ -97,7 +92,7 @@ export function TimeMachineBanner({
   }, [effective])
 
   const handleSubmit = useCallback(() => {
-    const iso = localInputToRfc3339(draft)
+    const iso = localDatetimeInputToIso(draft)
     if (!iso) return
     setAsOf(iso)
     setPickerOpen(false)
@@ -138,7 +133,7 @@ export function TimeMachineBanner({
   const inputId = 'time-machine-banner-input'
   const maxDate = new Date()
   const minDate = new Date(maxDate.getTime() - 90 * 24 * 60 * 60 * 1000)
-  const draftIso = localInputToRfc3339(draft)
+  const draftIso = localDatetimeInputToIso(draft)
   const draftTime = draftIso == null ? Number.NaN : Date.parse(draftIso)
   const draftValid =
     Number.isFinite(draftTime) &&

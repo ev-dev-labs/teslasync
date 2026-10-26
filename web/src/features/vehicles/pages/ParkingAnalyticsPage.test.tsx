@@ -48,14 +48,19 @@ vi.mock('@/hooks/usePageTitle', () => ({
   usePageTitle: (title: string) => pageTitleMock(title),
 }));
 
-vi.mock('@/hooks/useDateFormat', () => ({
-  useDateFormat: () => ({
-    ...datePreferences,
-    formatDateTime: (value: Date) => new Intl.DateTimeFormat(datePreferences.locale, {
-      timeZone: datePreferences.tz, dateStyle: 'short', timeStyle: 'short',
-    }).format(value),
-  }),
-}));
+vi.mock('@/hooks/useDateFormat', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/dateFormat')>('@/lib/dateFormat');
+  return {
+    useDateFormat: () => ({
+      ...datePreferences,
+      formatDateTime: (value: Date) => new Intl.DateTimeFormat(datePreferences.locale, {
+        timeZone: datePreferences.tz, dateStyle: 'short', timeStyle: 'short',
+      }).format(value),
+      formatDayKeyRange: (start: string, end: string) =>
+        actual.formatDayKeyRange(start, end, { locale: datePreferences.locale, tz: datePreferences.tz }),
+    }),
+  };
+});
 
 vi.mock('@/hooks/useRangeState', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
@@ -614,10 +619,10 @@ describe('ParkingAnalyticsPage', () => {
   });
 
   it.each([
-    ['America/Los_Angeles', '2026-03-08', '2026-03-08T08:00:00.000Z', '2026-03-09T07:00:00.000Z', 23],
-    ['Europe/Berlin', '2026-10-25', '2026-10-24T22:00:00.000Z', '2026-10-25T23:00:00.000Z', 25],
-    ['Asia/Kolkata', '2026-07-01', '2026-06-30T18:30:00.000Z', '2026-07-01T18:30:00.000Z', 24],
-  ])('shares exact local-day boundaries with the model in %s', (timezone, day, start, end, hours) => {
+    ['America/Los_Angeles', '2026-03-08', '2026-03-08T08:00:00.000Z', '2026-03-09T07:00:00.000Z', 23, '8. März 2026'],
+    ['Europe/Berlin', '2026-10-25', '2026-10-24T22:00:00.000Z', '2026-10-25T23:00:00.000Z', 25, '25. Okt. 2026'],
+    ['Asia/Kolkata', '2026-07-01', '2026-06-30T18:30:00.000Z', '2026-07-01T18:30:00.000Z', 24, '1. Juli 2026'],
+  ])('shares exact local-day boundaries with the model in %s', (timezone, day, start, end, hours, label) => {
     datePreferences.tz = timezone;
     const startMs = Date.parse(start);
     const endMs = Date.parse(end);
@@ -640,7 +645,8 @@ describe('ParkingAnalyticsPage', () => {
     expect(result.totalParkedMs).toBe(hours * 3_600_000);
     expect(result.stints.at(-1).endMs).toBe(endMs);
     expect(result.hourly[0].stints).toBe(1);
-    assertOperationalBriefDisclosure(screen.getByTestId('parking-summary'), timezone, { contains: true });
+    assertOperationalBriefDisclosure(screen.getByTestId('parking-summary'), label, { contains: true });
+    assertOperationalBriefDisclosure(screen.getByTestId('parking-summary'), timezone, { contains: true, absent: true });
   });
 
   it.each([
@@ -704,12 +710,18 @@ describe('ParkingAnalyticsPage', () => {
       startInstant: start, endInstantExclusive: end, timeZone: datePreferences.tz,
     });
     render(<ParkingMethodCaveats summary={summary} rangeStart={start} rangeEnd={end} />);
-    expect(screen.getByText(/as exact instants/)).toHaveTextContent(`${end} (exclusive)`);
-    expect(screen.queryByText(/UTC calendar dates/)).not.toBeInTheDocument();
-    expect(screen.getByText(/Hour, weekday/)).toHaveTextContent('Europe/Berlin');
-    const localizedEdge = new Intl.DateTimeFormat('de-DE', {
+    const formatter = new Intl.DateTimeFormat('de-DE', {
       timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short',
-    }).format(new Date(end));
+    });
+    const localizedEdge = formatter.format(new Date(end));
+    const methodology = screen.getByText(/as exact instants/);
+    expect(methodology).toHaveTextContent(`${formatter.format(new Date(start))} (inclusive)`);
+    expect(methodology).toHaveTextContent(`${localizedEdge} (exclusive)`);
+    expect(methodology).not.toHaveTextContent(start);
+    expect(methodology).not.toHaveTextContent(end);
+    expect(screen.queryByText(/UTC calendar dates/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Hour, weekday/)).toHaveTextContent('use your selected time zone');
+    expect(screen.getByText(/Hour, weekday/)).not.toHaveTextContent('Europe/Berlin');
     expect(screen.getByText(/right-censored/)).toHaveTextContent(localizedEdge);
   });
 });

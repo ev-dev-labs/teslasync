@@ -10,7 +10,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { Drive } from '@/types/driving';
 
 import {
@@ -37,7 +37,7 @@ export default function ArrivalReliabilityPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const { formatDuration } = useUnits();
-  const selectedTimeZone = useTimezone('vehicle');
+  const { tz: selectedTimeZone } = useDateFormat();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(vehicleIdStr, DRIVE_HISTORY_LIMIT);
   const drivesState = useDataState(drivesQuery, { provenance: 'historical' });

@@ -10,7 +10,7 @@ import { CopyButton } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import {
   ShareCardAccountingIdentities,
   ShareCardCoverageDisclosure,
@@ -39,7 +39,7 @@ export default function ShareCardPage() {
   usePageTitle(t('shareCard.title', 'Share card studio'));
   const { vehicleId } = useSelectedVehicle();
   const location = useLocation();
-  const timezone = useTimezone('vehicle');
+  const { tz: timezone } = useDateFormat();
   const display = useShareCardDisplay();
   const { start, end, startInstant, endInstantExclusive, presetId } = useRangeState({
     persistKey: 'share-card.range',

@@ -6,25 +6,21 @@ import { useWeeklyDigest } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
-import { Delta } from '@/components/data-display';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
+import { useCompareWindow } from '@/hooks/useCompareWindow';
 
 import { WidgetShell } from './WidgetShell';
-import { type ComparisonMetric } from './shared';
+import { WidgetComparisonCard, type ComparisonMetric } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { isFiniteNumber } from '@/lib/numberFormat';
 
-type DigestMetric = Omit<ComparisonMetric, 'current' | 'previous'> & {
-  current: number | null;
-  previous: number | null;
-};
+const unknownMetricValue = null as unknown as number;
 
 export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const { previousLabel } = useCompareWindow('week');
   const vehiclesQuery = useVehicles();
   const id = vehicleId ?? vehiclesQuery.data?.[0]?.id;
   const idStr = id != null && Number.isSafeInteger(id) && id > 0 ? String(id) : '';
@@ -44,26 +40,20 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
 
   const isCompact = size.cols <= 1;
 
-  const metrics = useMemo((): DigestMetric[] => {
+  const metrics = useMemo((): ComparisonMetric[] => {
     if (!data) return [];
 
-    // distanceKm arrives in kilometres — lift to SI metres first, then to the
-    // user's display unit. convertDistanceFromSI expects metres, so feeding it
-    // km-or-miles directly (the previous behaviour) skewed distance ~1609×.
     const toDistance = (km: number) =>
       convertDistanceFromSI(convertDistanceToSI(km, 'km'), distanceUnit);
     const dist = toDistance(data.distanceKm ?? 0);
     const prevDist = toDistance(data.prevDistanceKm ?? 0);
 
-    // efficiency arrives in Wh/km. One display distance-unit spans this many
-    // kilometres (1 for km, 1.609344 for mi), so Wh per display-unit is
-    // Wh/km × that span — derived via the lib, never a hardcoded mile factor.
     const kmPerDisplayUnit = convertDistanceFromSI(convertDistanceToSI(1, distanceUnit), 'km');
     const eff = (data.efficiency ?? 0) * kmPerDisplayUnit;
     const prevEff = (data.prevEfficiency ?? 0) * kmPerDisplayUnit;
 
-    const energy = (data.energyWh ?? 0) / 1000;
-    const prevEnergy = (data.prevEnergyWh ?? 0) / 1000;
+    const energy = isFiniteNumber(data.energyWh) ? data.energyWh / 1000 : null;
+    const prevEnergy = isFiniteNumber(data.prevEnergyWh) ? data.prevEnergyWh / 1000 : null;
 
     const drives = data.drives ?? 0;
     const prevDrives = data.prevDrives ?? 0;
@@ -71,65 +61,56 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
     return [
       {
         label: t('widget.weeklyDigest.distance', 'Distance'),
-        current: isFiniteNumber(data.distanceKm) ? dist : null,
-        previous: isFiniteNumber(data.prevDistanceKm) ? prevDist : null,
-        formattedCurrent: isFiniteNumber(data.distanceKm) ? fmtNumber(dist) : '—',
+        current: isFiniteNumber(data.distanceKm) ? dist : unknownMetricValue,
+        previous: isFiniteNumber(data.prevDistanceKm) ? prevDist : unknownMetricValue,
+        formattedCurrent: isFiniteNumber(data.distanceKm) ? fmtNumber(dist, 0) : '—',
+        formattedPrevious: isFiniteNumber(data.prevDistanceKm) ? `${fmtNumber(prevDist, 0)} ${distanceUnit}` : undefined,
         unit: distanceUnit,
         higherIsBetter: true,
+        tone: 'neutral',
+        deltaDisplay: 'percent',
       },
       {
         label: t('widget.weeklyDigest.drives', 'Drives'),
-        current: isFiniteNumber(data.drives) ? drives : null,
-        previous: isFiniteNumber(data.prevDrives) ? prevDrives : null,
+        current: isFiniteNumber(data.drives) ? drives : unknownMetricValue,
+        previous: isFiniteNumber(data.prevDrives) ? prevDrives : unknownMetricValue,
         formattedCurrent: isFiniteNumber(data.drives) ? fmtInt(drives) : '—',
+        formattedPrevious: isFiniteNumber(data.prevDrives) ? fmtInt(prevDrives) : undefined,
         higherIsBetter: true,
+        tone: 'neutral',
+        deltaDisplay: 'absolute',
       },
       {
         label: t('widget.weeklyDigest.energy', 'Energy'),
-        current: isFiniteNumber(data.energyWh) ? energy : null,
-        previous: isFiniteNumber(data.prevEnergyWh) ? prevEnergy : null,
-        formattedCurrent: isFiniteNumber(data.energyWh) ? fmtNumber(energy) : '—',
+        current: energy ?? unknownMetricValue,
+        previous: prevEnergy ?? unknownMetricValue,
+        formattedCurrent: energy != null ? fmtNumber(energy, 1) : '—',
+        formattedPrevious: prevEnergy != null ? `${fmtNumber(prevEnergy, 1)} kWh` : undefined,
         unit: 'kWh',
         higherIsBetter: true,
+        tone: 'neutral',
+        deltaDisplay: 'percent',
       },
       {
         label: t('widget.weeklyDigest.efficiency', 'Efficiency'),
-        current: isFiniteNumber(data.efficiency) ? eff : null,
-        previous: isFiniteNumber(data.prevEfficiency) ? prevEff : null,
-        formattedCurrent: isFiniteNumber(data.efficiency) ? fmtNumber(eff) : '—',
+        current: isFiniteNumber(data.efficiency) ? eff : unknownMetricValue,
+        previous: isFiniteNumber(data.prevEfficiency) ? prevEff : unknownMetricValue,
+        formattedCurrent: isFiniteNumber(data.efficiency) ? fmtNumber(eff, 0) : '—',
+        formattedPrevious: isFiniteNumber(data.prevEfficiency) ? `${fmtNumber(prevEff, 0)} ${efficiencyUnit}` : undefined,
         unit: efficiencyUnit,
         higherIsBetter: false,
+        tone: 'good',
+        deltaDisplay: 'percent',
       },
     ];
   }, [data, distanceUnit, efficiencyUnit, t, fmtNumber, fmtInt]);
 
-  const sourceMetrics: DigestMetric[] = metrics.length > 0 ? metrics : [
-    { label: t('widget.weeklyDigest.distance', 'Distance'), current: null, previous: null, formattedCurrent: '—', unit: distanceUnit, higherIsBetter: true },
-    { label: t('widget.weeklyDigest.drives', 'Drives'), current: null, previous: null, formattedCurrent: '—', higherIsBetter: true },
-    { label: t('widget.weeklyDigest.energy', 'Energy'), current: null, previous: null, formattedCurrent: '—', unit: 'kWh', higherIsBetter: true },
-    { label: t('widget.weeklyDigest.efficiency', 'Efficiency'), current: null, previous: null, formattedCurrent: '—', unit: efficiencyUnit, higherIsBetter: false },
+  const sourceMetrics: ComparisonMetric[] = metrics.length > 0 ? metrics : [
+    { label: t('widget.weeklyDigest.distance', 'Distance'), current: unknownMetricValue, previous: unknownMetricValue, formattedCurrent: '—', unit: distanceUnit, higherIsBetter: true },
+    { label: t('widget.weeklyDigest.drives', 'Drives'), current: unknownMetricValue, previous: unknownMetricValue, formattedCurrent: '—', higherIsBetter: true },
+    { label: t('widget.weeklyDigest.energy', 'Energy'), current: unknownMetricValue, previous: unknownMetricValue, formattedCurrent: '—', unit: 'kWh', higherIsBetter: true },
+    { label: t('widget.weeklyDigest.efficiency', 'Efficiency'), current: unknownMetricValue, previous: unknownMetricValue, formattedCurrent: '—', unit: efficiencyUnit, higherIsBetter: false },
   ];
-  const visibleMetrics = isCompact ? sourceMetrics.slice(0, 2) : sourceMetrics;
-  const rawMetrics: readonly StatMetric[] = visibleMetrics.map((metric, index) => ({
-    metricId: index === 0 ? 'distance' : index === 1 ? 'count' : index === 2 ? 'energy' : 'efficiency',
-    rawValue: index === 0
-      ? data?.distanceKm == null ? null : data.distanceKm * 1000
-      : index === 1 ? data?.drives
-        : index === 2 ? data?.energyKwh == null ? null : data.energyKwh * 1000
-          : data?.efficiency == null ? null : data.efficiency / 1000,
-    label: metric.label,
-    description: t('widget.weeklyDigest.summary.metricHelp', 'Current-week source quantity; the comparison uses its matching previous-week operand. Missing values are not zero.'),
-    display: { formatter: () => ({ value: metric.formattedCurrent ?? '—', unit: metric.unit ?? '' }) },
-    comparisonContent: metric.current != null && metric.previous != null ? (
-      <Delta
-        metric={{ direction: metric.higherIsBetter === false ? 'lower_better' : 'higher_better' }}
-        current={metric.current}
-        previous={metric.previous}
-        display="percent"
-        size="sm"
-      />
-    ) : null,
-  }));
 
   const handleRefresh = useCallback(() => {
     if (idStr) {
@@ -151,23 +132,20 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <DashboardSourceBrief
-          metrics={rawMetrics}
-          state={dataState}
-          eyebrow={t('widget.weeklyDigest.summary.eyebrow', 'Weekly comparison')}
-          title={t('widget.weeklyDigest.summary.title', 'Weekly operating digest')}
-          description={t('widget.weeklyDigest.summary.description', 'This week versus the source’s previous week for the resolved vehicle. Exact week boundaries, timezone and completeness are not supplied by this digest response; comparisons retain their original operands and direction rules.')}
-          scope={t('widget.weeklyDigest.summary.scope', 'Vehicle {{id}} · current / previous week', { id: idStr })}
-          testId="weekly-digest-operational-brief"
-          loading={isLoading && !data}
+      {data && metrics.length > 0 ? (
+        <WidgetComparisonCard
+          metrics={sourceMetrics}
+          compact={isCompact}
+          previousLabel={previousLabel}
+          emptyMessage={t('widget.weeklyDigest.noData', 'No weekly data yet')}
         />
-      {metrics.length === 0 && !isLoading && (
+      ) : !isLoading ? (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<CalendarDays className="h-5 w-5" />}
           message={t('widget.weeklyDigest.noData', 'No weekly data yet')}
           className="py-4"
         />
-      )}
+      ) : null}
     </WidgetShell>
   );
 }

@@ -1,4 +1,4 @@
-import { formatDurationClock } from '@/lib/dateFormat';
+import { formatDurationClock } from '@/lib/dateConvert';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export type DurationVariant = 'short' | 'long' | 'compact' | 'clock';

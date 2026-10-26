@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   Braces, Database, LayoutDashboard, ListChecks, Table2, Trash2,
 } from 'lucide-react';
@@ -97,15 +98,15 @@ const CURATED_DATASOURCE_TYPES: CuratedDatasourceType[] = [
   },
 ];
 
-const CURATED_TABLES: CuratedTable[] = [
+const curatedTables = (t: TFunction): CuratedTable[] => [
   {
     name: 'drives',
     description: 'Per-trip aggregates for completed drives',
     columns: [
       { name: 'id', type: 'bigint', description: 'primary key' },
       { name: 'vehicle_id', type: 'bigint', description: 'vehicle this drive belongs to' },
-      { name: 'started_at', type: 'timestamptz', description: 'drive start UTC' },
-      { name: 'ended_at', type: 'timestamptz', description: 'drive end UTC' },
+      { name: 'started_at', type: 'timestamptz', description: t('powerGrafana.timestampColumns.driveStart', 'Drive start instant.') },
+      { name: 'ended_at', type: 'timestamptz', description: t('powerGrafana.timestampColumns.driveEnd', 'Drive end instant.') },
       { name: 'distance_m', type: 'double precision', description: 'distance meters (SI)' },
       { name: 'duration_s', type: 'double precision', description: 'duration seconds (SI)' },
       { name: 'energy_used_wh', type: 'double precision', description: 'energy watt-hours (SI)' },
@@ -120,8 +121,8 @@ const CURATED_TABLES: CuratedTable[] = [
     columns: [
       { name: 'id', type: 'bigint', description: 'primary key' },
       { name: 'vehicle_id', type: 'bigint', description: 'vehicle being charged' },
-      { name: 'started_at', type: 'timestamptz', description: 'session start UTC' },
-      { name: 'ended_at', type: 'timestamptz', description: 'session end UTC' },
+      { name: 'started_at', type: 'timestamptz', description: t('powerGrafana.timestampColumns.sessionStart', 'Session start instant.') },
+      { name: 'ended_at', type: 'timestamptz', description: t('powerGrafana.timestampColumns.sessionEnd', 'Session end instant.') },
       { name: 'energy_added_wh', type: 'double precision', description: 'energy added watt-hours (SI)' },
       { name: 'cost_cents', type: 'bigint', description: 'session cost in user-currency cents' },
       { name: 'charger_kind', type: 'text', description: 'home, supercharger, third_party' },
@@ -146,7 +147,7 @@ const CURATED_TABLES: CuratedTable[] = [
       { name: 'id', type: 'bigint', description: 'primary key' },
       { name: 'vehicle_id', type: 'bigint', description: 'vehicle the alert fired for' },
       { name: 'alert_rule_id', type: 'bigint', description: 'alert rule that fired' },
-      { name: 'fired_at', type: 'timestamptz', description: 'fire timestamp UTC' },
+      { name: 'fired_at', type: 'timestamptz', description: t('powerGrafana.timestampColumns.alertFired', 'Alert firing instant.') },
       { name: 'level', type: 'text', description: 'info, warn, critical' },
     ],
   },
@@ -156,7 +157,7 @@ const CURATED_TABLES: CuratedTable[] = [
     columns: [
       { name: 'vehicle_id', type: 'bigint', description: 'vehicle the signal belongs to' },
       { name: 'signal_name', type: 'text', description: 'canonical signal name' },
-      { name: 'ts', type: 'timestamptz', description: 'sample timestamp UTC' },
+      { name: 'ts', type: 'timestamptz', description: t('powerGrafana.timestampColumns.sample', 'Sample instant.') },
       { name: 'num_value', type: 'double precision', description: 'numeric value (SI), null if non-numeric' },
       { name: 'str_value', type: 'text', description: 'string value, null if numeric' },
     ],
@@ -187,6 +188,7 @@ function persistJson(value: string): void {
 
 export default function GrafanaPanelPage() {
   const { t } = useTranslation();
+  const tables = useMemo(() => curatedTables(t), [t]);
   usePageTitle(t('powerGrafana.title', 'Grafana panel builder'));
   const editorGuidanceId = useId();
 
@@ -200,10 +202,10 @@ export default function GrafanaPanelPage() {
   // fetch — they are the same for every install.
   const panelTypeCount = CURATED_PANEL_TYPES.length;
   const datasourceCount = CURATED_DATASOURCE_TYPES.length;
-  const tableCount = CURATED_TABLES.length;
+  const tableCount = tables.length;
   const totalColumns = useMemo(
-    () => CURATED_TABLES.reduce((sum, tbl) => sum + tbl.columns.length, 0),
-    [],
+    () => tables.reduce((sum, tbl) => sum + tbl.columns.length, 0),
+    [tables],
   );
   const catalogMetrics = useOperationalMetrics([
     {
@@ -283,8 +285,8 @@ export default function GrafanaPanelPage() {
     [],
   );
   const sortedTables = useMemo(
-    () => [...CURATED_TABLES].sort((a, b) => a.name.localeCompare(b.name)),
-    [],
+    () => [...tables].sort((a, b) => a.name.localeCompare(b.name)),
+    [tables],
   );
 
   const canCopy = panelJson.trim().length > 0;
@@ -495,7 +497,7 @@ export default function GrafanaPanelPage() {
               )}
             </Text>
             {sortedTables.length === 0 ? (
-              // no-action: unreachable — sortedTables sorts the static CURATED_TABLES constant, never empty.
+              // no-action: unreachable — sortedTables sorts the bundled catalog, never empty.
               <EmptyState
                 icon={<Table2 className="h-8 w-8" aria-hidden="true" />}
                 message={t('powerGrafana.tables.empty', 'No tables available.')}

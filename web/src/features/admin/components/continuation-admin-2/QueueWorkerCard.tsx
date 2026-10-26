@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight } from 'lucide-react';
@@ -7,7 +8,7 @@ import { MetricBar } from '@/components/data-display';
 import { formatRelative } from '@/lib/dateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
-const COLOR: Record<QueueHeartbeatSeverity, string> = { ok: '#10b981', warn: '#f59e0b', critical: '#ef4444', down: '#94a3b8' };
+const COLOR: Record<QueueHeartbeatSeverity, string> = { ok: palette.COLOR.GOOD, warn: palette.COLOR.WARN, critical: palette.COLOR.BAD, down: palette.CHART_NEUTRAL };
 const TONE: Record<QueueHeartbeatSeverity, string> = { ok: 'text-emerald-300', warn: 'text-amber-300', critical: 'text-rose-300', down: 'text-[var(--text-muted)]' };
 
 export function QueueWorkerCard({ stat, onOpen }: { stat: QueueStat; onOpen: (worker: string) => void }) {

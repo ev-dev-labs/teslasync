@@ -25,7 +25,6 @@ export function WeekdayTransitionProfile({
   model,
   state,
   locale,
-  timeZone,
 }: WeekdayTransitionProfileProps) {
   const { t } = useTranslation();
   const rows = useMemo<DestinationTransitionProfileRow[]>(
@@ -64,8 +63,7 @@ export function WeekdayTransitionProfile({
         )}
         subtitle={t(
           'destinationTransitions.weekday.subtitle',
-          'Accepted transition starts grouped by weekday in {{timeZone}}.',
-          { timeZone },
+          'Accepted transition starts grouped by weekday in your selected time zone.',
         )}
         ariaLabel={t(
           'destinationTransitions.weekday.aria',

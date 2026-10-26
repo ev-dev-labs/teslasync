@@ -3,6 +3,7 @@ import { h } from 'vue'
 import './theme.css'
 import DocTools from './DocTools.vue'
 import HomePage from './home/HomePage.vue'
+import MermaidDiagram from './MermaidDiagram.vue'
 
 function installConsoleNote() {
   // eslint-disable-next-line no-console
@@ -134,6 +135,7 @@ export default {
   },
   enhanceApp({ app }: { app: { component: (name: string, comp: unknown) => void } }) {
     app.component('HomePage', HomePage)
+    app.component('MermaidDiagram', MermaidDiagram)
     if (typeof window === 'undefined') return
     installConsoleNote()
     installDiagramOverlay()

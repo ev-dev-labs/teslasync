@@ -1,5 +1,5 @@
 import { request } from '../client';
-import { useRepairScopedQuery } from './useDataRepair';
+import { useRepairScopedQuery } from './useRepairScopedQuery';
 
 export interface RepairCaseStats {
   total: number;

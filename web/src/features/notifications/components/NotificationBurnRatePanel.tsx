@@ -32,7 +32,7 @@ const STATUS_FALLBACK: Record<BurnBreachStatus, string> = {
 };
 
 export function NotificationBurnRatePanel() {
-  const { formatTime, formatDateTime, tz } = useDateFormat();
+  const { formatTime, formatDateTime } = useDateFormat();
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const logsQuery = useNotificationDeliveryLogs();
@@ -106,7 +106,7 @@ export function NotificationBurnRatePanel() {
         {source.hasData && (
           <Caption data-testid="notification-burn-rate-as-of">
             {t('operationalMode.asOf.label', 'As of {{when}}', {
-              when: `${formatDateTime(new Date(analysisAsOfMs))} (${tz})`,
+              when: formatDateTime(new Date(analysisAsOfMs)),
             })}
           </Caption>
         )}
@@ -162,10 +162,10 @@ export function NotificationBurnRatePanel() {
         ) : (
           <ChartContainer
             title={t('notificationBurnRate.timeline.title', 'Delivery outcomes by hour')}
-            subtitle={`${t(
+            subtitle={t(
               'notificationBurnRate.timeline.subtitle',
               'Deferred quiet-hours notifications remain visible but never consume delivery error budget',
-            )} (${tz})`}
+            )}
             ariaLabel={t(
               'notificationBurnRate.timeline.aria',
               'Stacked bar chart of sent, failed, and do-not-disturb deferred notifications by hour',

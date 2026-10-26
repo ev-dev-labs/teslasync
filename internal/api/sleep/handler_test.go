@@ -237,6 +237,41 @@ func TestResolveCapacity(t *testing.T) {
 // resolveWindow — request window derivation
 // ---------------------------------------------------------------------------
 
+func TestResolveAbsoluteWindowPreservesSelectedCalendarBoundaries(t *testing.T) {
+	for _, tt := range []struct {
+		name, start, end string
+	}{
+		{"spring DST", "2026-03-08T08:00:00Z", "2026-03-09T07:00:00Z"},
+		{"fall DST", "2026-11-01T07:00:00Z", "2026-11-02T08:00:00Z"},
+		{"short rolling window", "2026-03-08T08:00:00Z", "2026-03-08T09:00:00Z"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &fakeSleepRepo{}
+			handler := newTestHandler(repo, time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC))
+			rec := httptest.NewRecorder()
+			handler.GetSleepAnalytics(rec, getReq("/analytics/sleep?vehicle_id=1&start="+tt.start+"&end="+tt.end))
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d; body=%s", rec.Code, rec.Body.String())
+			}
+			var body struct {
+				Days int `json:"period_days"`
+			}
+			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+				t.Fatal(err)
+			}
+			if body.Days != 1 {
+				t.Fatalf("period_days = %d, want 1 for the actual short window", body.Days)
+			}
+			start, _ := time.Parse(time.RFC3339, tt.start)
+			end, _ := time.Parse(time.RFC3339, tt.end)
+			got := repo.gotStateCalls[0]
+			if !got.from.Equal(start.Add(-time.Microsecond)) || !got.to.Equal(end.Add(-time.Microsecond)) {
+				t.Fatalf("legacy (from,to] query bounds = (%v, %v], want [%v, %v) at database precision", got.from, got.to, start, end)
+			}
+		})
+	}
+}
+
 func TestResolveWindow(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)

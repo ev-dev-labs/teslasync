@@ -50,7 +50,7 @@ export function FSMOperationalBrief({ transitions, stateQuery, currentState, per
   onRetry: () => void;
 }) {
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat();
+  const { formatDateTime, formatDateRange } = useDateFormat();
   const history = deriveDataState(transitions);
   const live = deriveDataState(stateQuery);
   const fatal = history.fatalError ?? live.fatalError;
@@ -68,9 +68,8 @@ export function FSMOperationalBrief({ transitions, stateQuery, currentState, per
     ? t('operationalSource.fetchedAt', 'Fetched {{time}}', { time: formatDateTime(new Date(updatedAt)) })
     : t('operationalSource.unknownFreshness', 'Fetch time not supplied');
   const scope = period.kind === 'analysis'
-    ? t('fsm.brief.bounds', '{{label}} · [{{start}}, {{end}}) · {{timezone}}', {
-      label: period.label, start: period.start, end: period.endExclusive, timezone: period.timezone,
-    }) : `${period.label}${period.kind === 'unknown' && period.reason ? ` · ${period.reason}` : ''}`;
+    ? `${period.label} · ${formatDateRange(period.start, period.endExclusive)}`
+    : `${period.label}${period.kind === 'unknown' && period.reason ? ` · ${period.reason}` : ''}`;
   const provenance = period.kind === 'unknown' ? period.reason : period.provenance;
   return <section aria-label={t('fsm.kpis', 'FSM summary metrics')} data-retained={retained}>
     {retained && <Text role="status">{t('operationalSource.retained', 'Showing retained measurements')}</Text>}

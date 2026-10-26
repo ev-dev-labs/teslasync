@@ -39,7 +39,7 @@ const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 export default function UtilizationPage() {
   const { t } = useTranslation();
   const { fmtInt, fmtNumber } = useNumberFormatting();
-  const { distanceUnit, formatDistance } = useUtilizationDisplay();
+  const { distanceUnit, formatDistance, formatDay } = useUtilizationDisplay();
   usePageTitle(t('utilization.title', 'Utilization'));
 
   const { vehicleId } = useSelectedVehicle();
@@ -75,50 +75,13 @@ export default function UtilizationPage() {
     && (drivesState.isRefreshBlocked || !drivesQuery.isFetching);
   const initialLoading = drivesState.status === 'initial' && !initialDeferred;
   const summary = useMemo(
-    () => {
-      const startMs = Date.parse(startInstant);
-      const endMs = Date.parse(endInstantExclusive);
-      const rangeValid = Number.isFinite(startMs) && Number.isFinite(endMs) && startMs < endMs;
-      let beforeRangeRows = 0;
-      let afterRangeRows = 0;
-      const scopedDrives = rangeValid ? drives.filter(drive => {
-        const timestamp = drive.startTs ? Date.parse(drive.startTs) : Number.NaN;
-        // Leave invalid/future evidence to the model's existing accounting.
-        if (!Number.isFinite(timestamp) || timestamp >= asOfMs) return true;
-        if (timestamp < startMs) { beforeRangeRows += 1; return false; }
-        if (timestamp >= endMs) { afterRangeRows += 1; return false; }
-        return true;
-      }) : drives;
-      // The existing model owns UTC rollups. Use a containing UTC calendar
-      // envelope, with the exact end as its analysis clock, not local labels.
-      const result = summarizeUtilization(scopedDrives, availableCostPerKwh, {
-        rangeStart: rangeValid ? new Date(startMs).toISOString().slice(0, 10) : '',
-        rangeEnd: rangeValid ? new Date(endMs - 1).toISOString().slice(0, 10) : '',
-        asOfMs: rangeValid ? Math.min(asOfMs, endMs) : asOfMs,
-        historyLimit: Number.POSITIVE_INFINITY,
-      });
-      return {
-        ...result,
-        window: {
-          ...result.window,
-          rangeStart: start,
-          rangeEnd: end,
-          asOfMs,
-          selectedStartMs: rangeValid ? startMs : null,
-          selectedEndExclusiveMs: rangeValid ? endMs : null,
-        },
-        accounting: {
-          ...result.accounting,
-          returnedRows: drives.length,
-          excludedRows: result.accounting.excludedRows + beforeRangeRows + afterRangeRows,
-          beforeRangeRows: result.accounting.beforeRangeRows + beforeRangeRows,
-          afterRangeRows: result.accounting.afterRangeRows + afterRangeRows,
-          // The history hook publishes only after the final server page succeeds.
-          historyCapReached: false,
-        },
-      };
-    },
-    [asOfMs, availableCostPerKwh, drives, end, endInstantExclusive, start, startInstant],
+    () => summarizeUtilization(drives, availableCostPerKwh, {
+      rangeStart: start, rangeEnd: end, startInstant, endInstantExclusive,
+      timezone: tz, asOfMs,
+      // The history hook publishes only after the final server page succeeds.
+      historyLimit: Number.POSITIVE_INFINITY,
+    }),
+    [asOfMs, availableCostPerKwh, drives, end, endInstantExclusive, start, startInstant, tz],
   );
   // Coverage does not erase returned rows or override a retained-source warning.
   const incompleteMeasurements = summary.accounting.eligibleRows > 0 && (
@@ -174,8 +137,8 @@ export default function UtilizationPage() {
             freshness={initialDeferred ? t('system.outage.awaitingSource', 'This source has not resolved yet; missing evidence is not a confirmed empty result.') : undefined}
             provenance={t('utilization.briefSource', 'Returned drive history and configured energy price')}
             scope={t('utilization.briefWindow', 'Requested {{start}} → {{end}}; metrics use the observed window', {
-              start: start || t('vehicles.evidenceBrief.unbounded', 'Unbounded'),
-              end: end || t('vehicles.evidenceBrief.unbounded', 'Unbounded'),
+              start: start ? formatDay(start) : t('vehicles.evidenceBrief.unbounded', 'Unbounded'),
+              end: end ? formatDay(end) : t('vehicles.evidenceBrief.unbounded', 'Unbounded'),
             })}
             metrics={[
               { metricId: 'percent', occurrenceId: 'driving-share', label: t('utilization.drivingShare', 'Time driving'),
@@ -185,7 +148,7 @@ export default function UtilizationPage() {
               { metricId: 'percent', occurrenceId: 'active-days', label: t('utilization.activeDays', 'Days used'),
                 rawValue: drivesState.data == null || summary.activeDayShare == null ? null : summary.activeDayShare * 100,
                 display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) },
-                context: !drivesState.hasData ? t('dataSources.status.pending', 'Pending') : t('utilization.observedCalendarDays', '{{active}} of {{days}} observed UTC days', {
+                context: !drivesState.hasData ? t('dataSources.status.pending', 'Pending') : t('utilization.observedCalendarDays', '{{active}} of {{days}} observed calendar days', {
                   active: fmtInt(summary.consistency.activeDays), days: fmtInt(summary.observedCalendarDays),
                 }) },
               { metricId: 'distance', occurrenceId: 'distance-per-day', label: t('utilization.perDay', 'Distance per day'),

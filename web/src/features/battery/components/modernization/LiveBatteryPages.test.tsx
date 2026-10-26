@@ -138,7 +138,7 @@ describe('live battery pages: independent sources and preserved orchestration', 
     mocks.sessions.mockReturnValue(query([session], { error: new Error('Cached test refresh failed'), refetch: retry }));
     const { container } = mount(<EnergyPage />, '/energy');
     expect(container.querySelector('a[href="/charging/101"]')).not.toBeNull();
-    expect(screen.getByText('Buckets use UTC session start time.')).toBeInTheDocument();
+    expect(screen.getByText('Buckets use session start time in your selected time zone.')).toBeInTheDocument();
     expect(screen.getAllByTestId('stale-refresh-warning')).not.toHaveLength(0);
     fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: /refresh/i }));
     expect(retry).toHaveBeenCalledTimes(1);

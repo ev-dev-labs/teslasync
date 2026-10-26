@@ -15,6 +15,7 @@
 //      exists.
 //   4. a11y: every decorative lucide icon is marked aria-hidden.
 
+import { COLOR } from '@/lib/colors'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { fireEvent, render, screen, within, cleanup } from '@testing-library/react'
 import type { ReactNode } from 'react'
@@ -133,17 +134,17 @@ describe('BatteryRangePanel — battery gauge', () => {
 
   it('colours the gauge emerald above the 60% band', () => {
     const { container } = render(<BatteryRangePanel state={makeState({ battery_level: 72 })} />)
-    expect(gaugeHex(container)).toBe('#10b981')
+    expect(gaugeHex(container)).toBe(COLOR.GOOD)
   })
 
   it('colours the gauge amber inside the 25–60% band', () => {
     const { container } = render(<BatteryRangePanel state={makeState({ battery_level: 40 })} />)
-    expect(gaugeHex(container)).toBe('#f59e0b')
+    expect(gaugeHex(container)).toBe(COLOR.WARN)
   })
 
   it('colours the gauge red at or below the 25% band', () => {
     const { container } = render(<BatteryRangePanel state={makeState({ battery_level: 10 })} />)
-    expect(gaugeHex(container)).toBe('#ef4444')
+    expect(gaugeHex(container)).toBe(COLOR.BAD)
   })
 
   it('keeps an undefined battery unknown without emitting NaN geometry or critical-low colour', () => {

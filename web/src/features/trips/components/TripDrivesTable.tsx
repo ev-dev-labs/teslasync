@@ -5,7 +5,8 @@ import { LayoutCard } from '@/components/layout';
 import { RouteDisplay, DateTime } from '@/components/data-display';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateShort, formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import {formatDateShort} from '@/lib/dateFormat'
+import {formatDurationSecondsAsMinutes} from '@/lib/dateConvert';
 import type { TripDetail, TripDriveSummary } from '@/api/types';
 
 /** Stable empty reference so a trip without drives never churns the sort memo. */

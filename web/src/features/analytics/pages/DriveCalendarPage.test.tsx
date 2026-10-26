@@ -353,16 +353,16 @@ describe('DriveCalendarPage', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('to=2024-12-31');
     expect(screen.getByTestId('location')).not.toHaveTextContent('year=');
     const [, start, end] = useHistoryMock.mock.lastCall!;
-    expect(new Date(start)).toEqual(new Date(2024, 0, 1));
-    expect(new Date(end)).toEqual(new Date(2025, 0, 1));
+    expect(new Date(start)).toEqual(new Date(Date.UTC(2024, 0, 1)));
+    expect(new Date(end)).toEqual(new Date(Date.UTC(2025, 0, 1)));
 
     fireEvent.click(screen.getByRole('button', { name: 'Set header range' }));
     expect(screen.getByTestId('location')).toHaveTextContent('from=2025-01-01');
     expect(screen.getByTestId('location')).toHaveTextContent('to=2025-12-31');
     expect(screen.getByTestId('location')).toHaveTextContent('vehicle_id=42');
     const [, nextStart, nextEnd] = useHistoryMock.mock.lastCall!;
-    expect(new Date(nextStart)).toEqual(new Date(2025, 0, 1));
-    expect(new Date(nextEnd)).toEqual(new Date(2026, 0, 1));
+    expect(new Date(nextStart)).toEqual(new Date(Date.UTC(2025, 0, 1)));
+    expect(new Date(nextEnd)).toEqual(new Date(Date.UTC(2026, 0, 1)));
   });
 
   it('uses the calendar default when a bookmarked rolling 24-hour preset is unavailable', () => {
@@ -415,7 +415,7 @@ describe('DriveCalendarPage', () => {
         expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-drives', '2');
         expect(screen.getByTestId('location')).toHaveTextContent('time_scope=custom');
         expect(useHistoryMock).toHaveBeenLastCalledWith(
-          '42', new Date(2024, 0, 1).toISOString(), new Date(2025, 0, 1).toISOString(),
+          '42', new Date(Date.UTC(2024, 0, 1)).toISOString(), new Date(Date.UTC(2025, 0, 1)).toISOString(),
         );
         for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
       }
@@ -436,7 +436,7 @@ describe('DriveCalendarPage', () => {
     renderCalendar('/drive-calendar?year=2024&from=2026-01-01&to=2026-01-31');
     expect(screen.getByTestId('location')).not.toHaveTextContent('year=');
     const [, start, end] = useHistoryMock.mock.lastCall!;
-    expect(new Date(start)).toEqual(new Date(2026, 0, 1));
-    expect(new Date(end)).toEqual(new Date(2026, 1, 1));
+    expect(new Date(start)).toEqual(new Date(Date.UTC(2026, 0, 1)));
+    expect(new Date(end)).toEqual(new Date(Date.UTC(2026, 1, 1)));
   });
 });

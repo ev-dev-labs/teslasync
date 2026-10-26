@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { expect, test, type Page } from '@playwright/test'
 import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
+import { measureTz, type TzSweep } from './timezoneSweep'
 
 /**
  * Row-17 guard + gallery: every route renders a readable layout at 375px,
@@ -31,6 +32,15 @@ import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockAp
  * charging/201, vehicles/7, trips/1, automations/1/edit,
  * system-status/incidents/1, year-review/2025, s/e2e-token); `*` becomes
  * one bogus path exercising the not-found page.
+ *
+ * TZ-5 sweep: the same pass also fails a route/width when visible text
+ * contains a raw ISO timestamp (`2026-10-22T07:00:00.000Z`), a time zone
+ * name/offset (`America/Los_Angeles`, `UTC`, `GMT-7`), or the same instant
+ * in two different strings (friendly + raw pairs). `TZ_ALLOW` below excuses
+ * design-accepted hits per route (`'*'` excuses a whole category); GMT
+ * offsets inside SVG axis ticks are accepted globally (chart ticks by
+ * design) but still recorded. Calibrate with
+ * `GALLERY_ONLY=/a,/b` plus `-g "at 1280px"`.
  */
 
 const ROUTES: string[] = [
@@ -321,6 +331,30 @@ const WIDTHS = [
   { width: 1920, height: 900 },
 ] as const
 
+/**
+ * Design-accepted TZ hits per route. Each entry excuses hits whose text
+ * contains the substring; `'*'` excuses the whole category for the route.
+ * - `/dev-tools` ISO: the TimestampTool converter's subject is the raw
+ *   format itself (tz-tool-subject).
+ * - `/settings` zones: the page's own time-zone explanation (tz-settings).
+ * - `/notifications/quiet-hours` zones containing `/`: each window carries
+ *   its own IANA zone as schedule data (tz-schedule-data); bare UTC/GMT
+ *   hits are still flagged.
+ * - `/day-log` GMT offsets: fall-back disambiguation on the timeline
+ *   (tz-dst-offset, same class as the shared formatChartInstant).
+ */
+const TZ_ALLOW: Record<string, { iso?: string[]; zones?: string[]; dupes?: string[] }> = {
+  '/dev-tools': { iso: ['*'] },
+  '/settings': { zones: ['*'] },
+  '/notifications/quiet-hours': { zones: ['/'] },
+  '/day-log': { zones: ['GMT-', 'GMT+'] },
+}
+
+function tzExcused(route: string, kind: 'iso' | 'zones' | 'dupes', text: string): boolean {
+  const allow = TZ_ALLOW[route]?.[kind] ?? []
+  return allow.some((sub) => sub === '*' || text.includes(sub))
+}
+
 const onlyEnv = process.env.GALLERY_ONLY?.split(',').map((s) => s.trim()).filter(Boolean) ?? null
 const ACTIVE_ROUTES = onlyEnv ? ROUTES.filter((r) => onlyEnv.includes(r)) : ROUTES
 const CHUNKS = Math.min(64, Math.max(1, ACTIVE_ROUTES.length))
@@ -337,6 +371,7 @@ interface RouteRecord {
   perchar: PerChar[]
   overflow: { root: [number, number]; body: [number, number] } | null
   error: string | null
+  tz: TzSweep
 }
 
 function slug(route: string): string {
@@ -477,6 +512,7 @@ for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
         const record: RouteRecord = {
           route, width, finalUrl: '', status: 'pass', cards: 0,
           narrow: [], perchar: [], overflow: null, error: null,
+          tz: { iso: [], zones: [], dupes: [] },
         }
         try {
           await page.goto(route, { waitUntil: 'domcontentloaded' })
@@ -506,6 +542,28 @@ for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
             if (over) parts.push(`overflow root ${m.overflow.root[0]}/${m.overflow.root[1]} body ${m.overflow.body[0]}/${m.overflow.body[1]}`)
             violations.push(`${route} @${width}: ${parts.join('; ')}`)
           }
+          const tz = await measureTz(page)
+          record.tz = tz
+          // GMT offsets inside SVG axis ticks are chart ticks by design
+          // (shared formatChartInstant); everything else must be allowlisted.
+          const tzIso = tz.iso.filter((h) => !tzExcused(route, 'iso', h.text))
+          const tzZones = tz.zones.filter(
+            (h) => !(h.inSvg && /^GMT[+-]/.test(h.text)) && !tzExcused(route, 'zones', h.text),
+          )
+          const tzDupes = tz.dupes.filter((d) => !tzExcused(route, 'dupes', d))
+          if (tzIso.length > 0 || tzZones.length > 0 || tzDupes.length > 0) {
+            record.status = 'violation'
+            const parts = [
+              ...tzIso.slice(0, 5).map((h) => `raw-iso "${h.text}"${h.inSvg ? ' [svg]' : ''} <<${h.context}>>`),
+              ...tzZones.slice(0, 5).map((h) => `zone "${h.text}"${h.inSvg ? ' [svg]' : ''} <<${h.context}>>`),
+              ...tzDupes.slice(0, 5).map((d) => `dupe ${d}`),
+            ]
+            violations.push(`${route} @${width}: TZ ${parts.join('; ')}`)
+            await writeFile(
+              await guardArtifactPath(`tz-dom-${slug(route)}-${width}.html`),
+              await page.content(),
+            )
+          }
           if (width === 1280 || width === 375) {
             await page.screenshot({
               path: await guardArtifactPath(`${slug(route)}-${width}.jpg`),
@@ -526,6 +584,7 @@ for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
         console.log(
           `[route-guard] ${route} @${width}: ${record.status} `
           + `cards=${record.cards} narrow=${record.narrow.length} perchar=${record.perchar.length}`
+          + ` tzIso=${record.tz.iso.length} tzZones=${record.tz.zones.length} tzDupes=${record.tz.dupes.length}`
           + (record.error ? ` error=${record.error}` : ''),
         )
       }

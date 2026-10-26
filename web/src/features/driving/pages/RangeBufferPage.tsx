@@ -11,7 +11,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { Drive } from '@/types/driving';
 
 import {
@@ -41,7 +41,7 @@ export default function RangeBufferPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const { formatDistance } = useUnits();
-  const selectedTimeZone = useTimezone('vehicle');
+  const { tz: selectedTimeZone } = useDateFormat();
   const vehicleIdStr =
     vehicleId != null ? String(vehicleId) : undefined;
   const { start, end, startInstant, endInstantExclusive } = useRangeState({

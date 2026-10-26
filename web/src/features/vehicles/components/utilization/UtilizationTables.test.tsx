@@ -90,6 +90,7 @@ function summary(): UtilizationSummary {
     rangeEnd: '2026-09-30',
     asOfMs: Date.parse('2026-10-01T00:00:00Z'),
     historyLimit: 1000,
+    timezone: 'UTC',
   });
   return {
     ...empty,
@@ -267,13 +268,13 @@ describe('Shared utilization tables', () => {
     view.rerender(<TimeCostOverview summary={summary()} state={{ ...state, error: new Error('history unavailable') }} />);
     expect(screen.getByTestId('utilization-time-cost')).toHaveTextContent('Where the hours go');
     expect(screen.getByTestId('utilization-time-cost')).toHaveTextContent('Cost of motion');
-    const empty = summarizeUtilization([], null, { rangeStart: '2026-09-01', rangeEnd: '2026-09-30', asOfMs: Date.parse('2026-10-01') });
+    const empty = summarizeUtilization([], null, { timezone: 'UTC', rangeStart: '2026-09-01', rangeEnd: '2026-09-30', asOfMs: Date.parse('2026-10-01') });
     view.rerender(<TimeCostOverview summary={empty} state={state} />);
     expect(screen.getAllByText('No drives in this period yet.')).toHaveLength(2);
   });
 
   it('distinguishes paused without a source from a successful empty result', () => {
-    const empty = summarizeUtilization([], null, { rangeStart: '2026-09-01', rangeEnd: '2026-09-30', asOfMs: Date.parse('2026-10-01') });
+    const empty = summarizeUtilization([], null, { timezone: 'UTC', rangeStart: '2026-09-01', rangeEnd: '2026-09-30', asOfMs: Date.parse('2026-10-01') });
     const view = render(<TimeCostOverview summary={empty} state={state} hasSource={false} />);
     expect(screen.getAllByText('No source data')).toHaveLength(2);
     expect(screen.queryByText('No drives in this period yet.')).not.toBeInTheDocument();
@@ -293,7 +294,7 @@ describe('Shared utilization tables', () => {
       outsideTempAvgC: null, insideTempAvgC: null, score: null,
       endedStatus: null, createdAt: '', updatedAt: '',
     }], null, {
-      rangeStart: '2026-09-01', rangeEnd: '2026-09-02', asOfMs: Date.parse('2026-10-01'),
+      timezone: 'UTC', rangeStart: '2026-09-01', rangeEnd: '2026-09-02', asOfMs: Date.parse('2026-10-01'),
     });
     render(<WeekdayProfile summary={data} state={state} />);
     const props = chartBoundary.mock.calls.at(-1)![0];

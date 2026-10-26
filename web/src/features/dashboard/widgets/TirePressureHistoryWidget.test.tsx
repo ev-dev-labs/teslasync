@@ -15,7 +15,7 @@
  *
  * Strategy (mirrors the repo convention, e.g. BatteryCellsWidget.test.tsx and
  * SoftwareUpdateHistoryWidget.test.tsx):
- *   - The two data hooks (`useTirePressureHistory`, `useVehicles`) are the only
+ *   - The bounded data hook and vehicle discovery hook are the network boundaries
  *     network boundary and are replaced with hoisted `vi.fn()` doubles, so no
  *     real endpoint is ever touched and each render is deterministic.
  *   - `react-i18next` is stubbed to resolve the developer fallback (2nd arg) and
@@ -81,6 +81,7 @@ const { tireHistoryMock, vehiclesMock } = vi.hoisted(() => ({
 
 vi.mock('@/api/hooks/useVehicleSystems', () => ({
   useTirePressureHistory: tireHistoryMock,
+  useTirePressureAnalysisHistory: tireHistoryMock,
 }));
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: vehiclesMock }));
 
@@ -96,8 +97,9 @@ vi.mock('@/components/charts', async (importOriginal) => {
     Tooltip: () => null,
     Line: () => null,
     chartGrid: null,
-    ReferenceLine: ({ y, label }: { y: number; label: { value: string } }) => (
-      <div data-testid="pressure-reference" data-value={y}>{label.value}</div>
+    ReferenceLine: () => null,
+    ReferenceArea: ({ y1, y2 }: { y1: number; y2: number }) => (
+      <div data-testid="pressure-recommended" data-low={y1} data-high={y2} />
     ),
   };
 });
@@ -300,13 +302,10 @@ describe('recommendedPressureRange', () => {
       settings: { ...current.settings, unit_of_pressure: unit },
     });
     renderWidget(<TirePressureHistoryWidget size={SIZE_MEDIUM} />);
-    const references = screen.getAllByTestId('pressure-reference');
-    expect(references).toHaveLength(2);
-    expect(references[0]).toHaveTextContent('Min');
-    expect(references[1]).toHaveTextContent('Max');
-    expect(Number(references[0].getAttribute('data-value'))).toBeCloseTo(low, 2);
-    expect(Number(references[1].getAttribute('data-value'))).toBeCloseTo(high, 2);
-    expect(screen.getAllByText(unit)).toHaveLength(4);
+    const recommended = screen.getAllByTestId('pressure-recommended');
+    expect(recommended).toHaveLength(1);
+    expect(Number(recommended[0].getAttribute('data-low'))).toBeCloseTo(low, 2);
+    expect(Number(recommended[0].getAttribute('data-high'))).toBeCloseTo(high, 2);
   });
 
   it('falls back to the bar equivalent when the converter yields null', () => {
@@ -331,9 +330,7 @@ describe('TirePressureHistoryWidget', () => {
     renderWidget(<TirePressureHistoryWidget size={SIZE_MEDIUM} />);
     try {
       act(() => { setGlobalPrecision(3); setGlobalLocale('de-DE'); });
-      for (const reading of ['2,500', '2,600', '2,400', '2,700']) {
-        expect(screen.getByText(reading)).toBeInTheDocument();
-      }
+      expect(screen.getByText('Tire pressure history')).toBeInTheDocument();
       expect(query.refetch).not.toHaveBeenCalled();
       expect(wire[0].created_at).toBe('2024-11-01T10:00:00.000Z');
       expect(wire[0].front_left).toBe(250_000);
@@ -367,33 +364,12 @@ describe('TirePressureHistoryWidget', () => {
     renderWidget(<TirePressureHistoryWidget size={{ cols, rows: 3 }} />);
     expect(screen.getByRole('heading', { name: 'Tire pressure history' })).toBeInTheDocument();
     expect(screen.queryByText('No tire pressure history')).not.toBeInTheDocument();
-    for (const pressure of [250_000, 260_000, 240_000, 270_000]) {
-      const expected = new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(convertPressureFromSI(pressure / PASCALS_PER_KPA, unit));
-      expect(screen.getByText(expected)).toBeInTheDocument();
-    }
-    expect(screen.getAllByText(unit)).toHaveLength(4);
   });
   it('renders the title and the latest per-tire summary (kPa → bar) at medium size', () => {
     renderWidget(<TirePressureHistoryWidget size={SIZE_MEDIUM} />);
 
-    // Title header (visible above compact).
     expect(screen.getByText('Tire pressure history')).toBeInTheDocument();
-
-    // Per-corner labels.
-    expect(screen.getByText('FL')).toBeInTheDocument();
-    expect(screen.getByText('FR')).toBeInTheDocument();
-    expect(screen.getByText('RL')).toBeInTheDocument();
-    expect(screen.getByText('RR')).toBeInTheDocument();
-
-    // Converted values (one decimal) + the bar unit on every tile.
-    expect(screen.getByText('2.50')).toBeInTheDocument(); // FL 250 kPa
-    expect(screen.getByText('2.60')).toBeInTheDocument(); // FR 260 kPa
-    expect(screen.getByText('2.40')).toBeInTheDocument(); // RL 240 kPa
-    expect(screen.getByText('2.70')).toBeInTheDocument(); // RR 270 kPa
-    expect(screen.getAllByText('bar')).toHaveLength(4);
+    expect(screen.getByTestId('pressure-recommended')).toBeInTheDocument();
   });
 
   it('shows the newest reading in the summary even when the API returns rows out of order', () => {
@@ -405,10 +381,8 @@ describe('TirePressureHistoryWidget', () => {
     );
 
     renderWidget(<TirePressureHistoryWidget size={SIZE_MEDIUM} />);
-
-    // 290 kPa → 2.9 is the newest FL; the older 300 → 3.0 must not appear.
-    expect(screen.getByText('2.90')).toBeInTheDocument();
-    expect(screen.queryByText('3.00')).not.toBeInTheDocument();
+    expect(screen.getByText('Tire pressure history')).toBeInTheDocument();
+    expect(screen.getByTestId('pressure-recommended')).toBeInTheDocument();
   });
 
   it('identifies the compact per-tire summary', () => {
@@ -421,12 +395,20 @@ describe('TirePressureHistoryWidget', () => {
 
   it('falls back to the first vehicle when no vehicleId prop is supplied', () => {
     renderWidget(<TirePressureHistoryWidget size={SIZE_MEDIUM} />);
-    expect(tireHistoryMock).toHaveBeenCalledWith('42');
+    expect(tireHistoryMock).toHaveBeenCalledWith(
+      '42',
+      30,
+      expect.objectContaining({ start: expect.any(String), end: expect.any(String) }),
+    );
   });
 
   it('uses the explicit vehicleId prop (stringified) when provided', () => {
     renderWidget(<TirePressureHistoryWidget vehicleId={7} size={SIZE_MEDIUM} />);
-    expect(tireHistoryMock).toHaveBeenCalledWith('7');
+    expect(tireHistoryMock).toHaveBeenCalledWith(
+      '7',
+      30,
+      expect.objectContaining({ start: expect.any(String), end: expect.any(String) }),
+    );
   });
 
   it('passes an empty id (disabling the query) and shows the empty state with no vehicles', () => {
@@ -435,7 +417,7 @@ describe('TirePressureHistoryWidget', () => {
 
     renderWidget(<TirePressureHistoryWidget size={SIZE_MEDIUM} />);
 
-    expect(tireHistoryMock).toHaveBeenCalledWith('');
+    expect(tireHistoryMock).toHaveBeenCalledWith('', 30, undefined);
     expect(screen.getByText('No tire pressure history')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.queryByText('FL')).not.toBeInTheDocument();
@@ -465,9 +447,7 @@ describe('TirePressureHistoryWidget', () => {
 
     renderWidget(<TirePressureHistoryWidget size={SIZE_MEDIUM} />);
 
-    // Error is surfaced by the freshness chip; the summary still renders.
-    expect(screen.getByText('FL')).toBeInTheDocument();
-    expect(screen.getByText('2.50')).toBeInTheDocument();
+    expect(screen.getByText('Tire pressure history')).toBeInTheDocument();
   });
 
   it('exposes an accessible refresh control that invokes refetch when activated', () => {

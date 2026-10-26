@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
+import { toIsoString } from '@/lib/dateConvert';
 
 import type { DepartureForecast } from '../../lib/departureForecast';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -37,10 +38,10 @@ export function DepartureForecastMethodology({
       title: t('departure.method.snapshotTitle', 'Fixed model snapshot'),
       body: <>
         {t('departure.brief.snapshotAnchor', 'Model snapshot anchor: ')}
-        <time dateTime={new Date(forecast.nowMs).toISOString()}>
+        <time dateTime={toIsoString(forecast.nowMs) ?? undefined}>
           {departureDateTime(forecast.nowMs, locale, timeZone)}
         </time>
-        {' · '}{timeZone}{'. '}
+        {'. '}
         {t(
           'departure.method.snapshotBody',
           'The clock is captured when this page mounts and stays fixed while it remains mounted, including history refreshes and vehicle or timezone changes. The lookback, next-24-hour horizon, “in” times, and planning marker use that anchor, not the current clock or the history fetch time. Refreshed rows can change the estimates without advancing the anchor.',
@@ -90,8 +91,7 @@ export function DepartureForecastMethodology({
         {timeZoneProvenance}{' '}
         {t(
         'departure.method.modelTimezoneBody',
-        'Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use the effective model timezone: {{timeZone}}.',
-        { timeZone },
+        'Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use your selected time zone.',
         )}
       </>,
     },

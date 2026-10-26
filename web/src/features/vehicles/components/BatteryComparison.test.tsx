@@ -23,6 +23,7 @@
  * so the SI→display conversion is exercised end-to-end. Network is never hit.
  */
 
+import { COLOR } from '@/lib/colors';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -247,8 +248,8 @@ describe('BatteryComparison', () => {
     const mid = screen.getByRole('progressbar', { name: /Mid battery level/i });
     const low = screen.getByRole('progressbar', { name: /Low battery level/i });
 
-    expect((high.firstElementChild as HTMLElement).getAttribute('style')).toContain('#10b981');
-    expect((mid.firstElementChild as HTMLElement).getAttribute('style')).toContain('#f59e0b');
-    expect((low.firstElementChild as HTMLElement).getAttribute('style')).toContain('#ef4444');
+    expect((high.firstElementChild as HTMLElement).getAttribute('style')).toContain(COLOR.GOOD);
+    expect((mid.firstElementChild as HTMLElement).getAttribute('style')).toContain(COLOR.WARN);
+    expect((low.firstElementChild as HTMLElement).getAttribute('style')).toContain(COLOR.BAD);
   });
 });

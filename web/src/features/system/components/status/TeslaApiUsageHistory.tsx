@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TeslaUsageContractError, useTeslaUsageHistory } from '@/api/hooks/useTeslaUsage'
 import type { TeslaUsageCycle, TeslaUsagePoint } from '@/api/types'
-import { RangePicker } from '@/components/forms'
 import { GlassPanel, Select } from '@/components/ui'
 import { UsageCard } from '@/components/data-display'
 import { StaleRefreshWarning } from '@/components/feedback'
@@ -13,31 +12,14 @@ import {
 import { useFormatting } from '@/hooks/useFormatting'
 import { useDataState } from '@/hooks/useDataState'
 import { useChartPalette } from '@/hooks/useChartPalette'
+import { useDateFormat } from '@/hooks/useDateFormat'
+import { useRangeState } from '@/hooks/useRangeState'
+import { addCivilDays } from '@/lib/dateRange'
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { SystemSummaryBrief } from '../operationalbrief-all/SystemSummaryBrief'
 
-const DAY_MS = 86_400_000
 type Bucket = 'day' | 'week'
-type Range = { start: string; end: string }
-
-function utcDay(date: Date): string { return date.toISOString().slice(0, 10) }
-
-function initialRange(): Range {
-  const today = new Date(`${utcDay(new Date())}T00:00:00Z`)
-  return { start: utcDay(new Date(today.getTime() - 29 * DAY_MS)), end: utcDay(today) }
-}
-
-// Shared RangePicker uses inclusive civil dates. The API uses UTC [start,end).
-export function toUtcUsageRange(range: Range): { start: string; end: string } | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(range.start) || !/^\d{4}-\d{2}-\d{2}$/.test(range.end)) return null
-  const start = Date.parse(`${range.start}T00:00:00Z`)
-  const lastDay = Date.parse(`${range.end}T00:00:00Z`)
-  if (!Number.isFinite(start) || !Number.isFinite(lastDay) ||
-    utcDay(new Date(start)) !== range.start || utcDay(new Date(lastDay)) !== range.end ||
-    lastDay < start || lastDay + DAY_MS - start > 366 * DAY_MS) return null
-  return { start: new Date(start).toISOString(), end: new Date(lastDay + DAY_MS).toISOString() }
-}
 
 function categoryCost(point: TeslaUsagePoint | TeslaUsageCycle, category: 'signals' | 'commands' | 'data_requests' | 'wakes'): number {
   const size = { signals: 150000, commands: 1000, data_requests: 500, wakes: 50 }[category]
@@ -49,13 +31,16 @@ export function TeslaApiUsageHistory() {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatCurrency } = useFormatting()
+  const { formatDate, formatDateRange } = useDateFormat()
   const formatCost = (value: unknown): string =>
     typeof value === 'number' && Number.isFinite(value) ? formatCurrency(value) : '—'
-  const [range, setRange] = useState<Range>(initialRange)
+  const range = useRangeState()
   const [bucket, setBucket] = useState<Bucket>('day')
-  const utcRange = toUtcUsageRange(range)
+  const validRange = range.start <= range.end && range.end < addCivilDays(range.start, 366)
+    && Date.parse(range.startInstant) < Date.parse(range.endInstantExclusive)
+  const rangeLabel = formatDateRange(range.startInstant, range.endInstantExclusive)
   const query = useTeslaUsageHistory(
-    utcRange?.start ?? '', utcRange?.end ?? '', bucket, !!utcRange,
+    range.startInstant, range.endInstantExclusive, bucket, validRange, range.timezone,
   )
   const { data, isLoading, error, refetch } = query
   const state = useDataState(query, { provenance: 'historical' })
@@ -83,7 +68,7 @@ export function TeslaApiUsageHistory() {
   const distribution = totals ? (['signals', 'commands', 'data_requests', 'wakes'] as const).map((key, index) => ({
     category: labels[key], usd: categoryCost(totals, key), color: palette[index],
   })) : []
-  const invalid = !utcRange ? t('teslaUsage.invalidRange', 'Select 1 to 366 UTC days, with the end on or after the start.') : null
+  const invalid = !validRange ? t('teslaUsage.invalidRange', 'Select 1 to 366 calendar days, with the end on or after the start.') : null
   const showTotals = !!totals && !invalid
   const stateMessage = invalid ??
     (error instanceof TeslaUsageContractError
@@ -98,22 +83,13 @@ export function TeslaApiUsageHistory() {
   return (
     <div className="space-y-4" aria-label={t('teslaUsage.historySection', 'Tesla usage history')}>
       <div className="flex flex-wrap items-end gap-3">
-        <RangePicker
-          value={range}
-          onChange={next => setRange(next)}
-          presetIds={['7d', '30d', '90d', '1y']}
-          minDate="2015-01-01"
-          maxDate={utcDay(new Date())}
-          timezone="UTC"
-          scope="local"
-        />
         <Select
           label={t('teslaUsage.granularity', 'Group by')}
           value={bucket}
           onChange={e => setBucket(e.target.value as Bucket)}
           options={[
-            { value: 'day', label: t('teslaUsage.daily', 'Daily (UTC)') },
-            { value: 'week', label: t('teslaUsage.weekly', 'Weekly (UTC, Monday start)') },
+            { value: 'day', label: t('teslaUsage.daily', 'Daily') },
+            { value: 'week', label: t('teslaUsage.weekly', 'Weekly (Monday start)') },
           ]}
           size="sm"
         />
@@ -127,8 +103,8 @@ export function TeslaApiUsageHistory() {
       <SystemSummaryBrief
         variant="embedded"
         title={t('teslaUsage.selectedEstimate', 'Selected range estimate')}
-        description={t('teslaUsage.historyDisclaimer', 'Local observations only, not a Tesla invoice. Missing deliveries or audit logs can undercount; these UTC windows are not Tesla calendar-month billing cycles.')}
-        scope={`${range.start} – ${range.end} UTC`}
+        description={t('teslaUsage.historyDisclaimer', 'Local observations only, not a Tesla invoice. Missing deliveries or audit logs can undercount; these selected-calendar windows are not Tesla calendar-month billing cycles.')}
+        scope={rangeLabel}
         available={!!totals && !invalid} loading={loading && !invalid}
         retained={state.status === 'stale' && !!totals && !invalid}
         statusLabel={unresolved && !invalid ? unresolvedMessage : undefined}
@@ -174,7 +150,7 @@ export function TeslaApiUsageHistory() {
           { key: 'usd', label: t('teslaUsage.estimatedUSD', 'Estimated USD'),
             format: formatCost },
         ]}
-        metadata={{ rangeLabel: `${range.start} – ${range.end} UTC`, sourceLabel: t('teslaUsage.estimated', 'Estimated'), unitLabel: 'USD' }}
+        metadata={{ rangeLabel, sourceLabel: t('teslaUsage.estimated', 'Estimated'), unitLabel: 'USD' }}
         exportable
         exportFilename="tesla-usage-distribution"
         exportData={distribution}
@@ -192,7 +168,7 @@ export function TeslaApiUsageHistory() {
       </ChartContainer>
       <ChartContainer
         title={t('teslaUsage.trendTitle', 'Tesla usage cost over time')}
-        subtitle={t('teslaUsage.trendSubtitle', 'Observed USD estimate per UTC bucket; gaps are not filled with zeroes.')}
+        subtitle={t('teslaUsage.trendSubtitle', 'Observed USD estimate per selected-calendar bucket; gaps are not filled with zeroes.')}
         ariaLabel={t('teslaUsage.trendAria', 'Stacked daily or weekly estimated Tesla usage cost for streaming signals, commands, data requests and wakes')}
         loading={loading && !invalid}
         error={invalid ?? state.fatalError}
@@ -202,10 +178,11 @@ export function TeslaApiUsageHistory() {
         emptyMessage={emptyMessage}
         emptyAction={unresolved ? { label: t('common.refresh', 'Refresh'), onClick: () => { void refetch() } } : undefined}
         chartKey="tesla-usage-history"
-        metadata={{ rangeLabel: `${range.start} – ${range.end} UTC`, sourceLabel: t('teslaUsage.estimated', 'Estimated'), unitLabel: 'USD' }}
+        metadata={{ rangeLabel, sourceLabel: t('teslaUsage.estimated', 'Estimated'), unitLabel: 'USD' }}
         data={chartRows}
         dataColumns={[
-          { key: 'bucket_start', label: t('teslaUsage.bucketStart', 'UTC bucket start') },
+          { key: 'bucket_start', label: t('teslaUsage.bucketStart', 'Bucket start'),
+            format: value => formatDate(typeof value === 'string' ? value : null) },
           ...(['signals', 'commands', 'data_requests', 'wakes'] as const).map(key => ({
             key, label: labels[key], format: formatCost,
           })),
@@ -218,9 +195,9 @@ export function TeslaApiUsageHistory() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartRows} margin={{ top: 12, right: 8, bottom: 4, left: 0 }}>
               {chartGrid}
-              <XAxis dataKey="bucket_start" tick={axisTick} tickFormatter={value => String(value).slice(5, 10)} />
+              <XAxis dataKey="bucket_start" tick={axisTick} tickFormatter={value => formatDate(value)} />
               <YAxis tick={axisTick} width={62} tickFormatter={(value: number) => formatCurrency(value)} />
-              <Tooltip content={<ChartTooltip timezone="UTC" valueFormatter={value => formatCurrency(Number(value))} />} />
+              <Tooltip content={<ChartTooltip valueFormatter={value => formatCurrency(Number(value))} />} />
               <ChartLegend />
               {(['signals', 'commands', 'data_requests', 'wakes'] as const).map((key, index) => (
                 <Bar

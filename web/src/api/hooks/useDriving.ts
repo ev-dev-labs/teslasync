@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { safeArray } from '@/lib/safeArray';
 import { validateAnalyticalHistory } from '@/lib/analyticalHistory';
 import { STALE_TIMES, INTERVALS } from '@/lib/constants';
@@ -324,14 +325,17 @@ export function isDriveDateBound(value: string): boolean {
   return new Date(`${calendarDate}T00:00:00Z`).toISOString().slice(0, 10) === calendarDate;
 }
 
-export function useRegenEfficiency(vehicleId?: string, start?: string, end?: string) {
+export function useRegenEfficiency(vehicleId?: string, start?: string, end?: string, timezone?: string) {
+  const { tz } = useDateFormat();
+  const zone = timezone ?? tz;
   return useQuery({
-    queryKey: [...drivingKeys.regenEfficiency(vehicleId), start, end],
+    queryKey: [...drivingKeys.regenEfficiency(vehicleId), start, end, zone],
     queryFn: ({ signal }) => {
       if (!vehicleId) return request<RegenEfficiencyData>('/analytics/regen', { signal });
       const params = new URLSearchParams({ vehicle_id: vehicleId });
       if (start) params.set('start', start);
       if (end) params.set('end', end);
+      params.set('timezone', zone);
       return request<RegenEfficiencyData>(`/analytics/regen?${params}`, { signal });
     },
     enabled: !!vehicleId,

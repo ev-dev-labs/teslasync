@@ -14,7 +14,7 @@ import {
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
-import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import { QUICK_LINKS } from './constants';
@@ -25,7 +25,7 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const { formatCurrency } = useFormatting();
-  const { locale } = useDateFormat();
+  const { formatWeekdayName } = useDateLabels();
   const distanceUnit = unitPrefs.distance;
 
   const { data, isLoading, isError, error, refetch } = query;
@@ -56,20 +56,19 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
   const dowDisplayData = useMemo(
     () => {
       const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const formatter = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
       return dowData.map((row) => {
         const weekday = weekdays.indexOf(row.day);
         return {
           ...row,
           // Aggregate identities are calendar buckets, not instants to timezone-shift.
           day_label: weekday >= 0
-            ? formatter.format(new Date(Date.UTC(2000, 0, 2 + weekday)))
+            ? formatWeekdayName(new Date(Date.UTC(2000, 0, 2 + weekday)), { tz: 'UTC' })
             : row.day || '—',
           avg_distance: convertDistanceFromSI(safe(row.avg_distance) * 1000, distanceUnit),
         };
       });
     },
-    [distanceUnit, dowData, locale],
+    [distanceUnit, dowData, formatWeekdayName],
   );
 
   return (

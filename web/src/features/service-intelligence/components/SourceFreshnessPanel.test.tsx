@@ -20,8 +20,8 @@ describe('SourceFreshnessPanel supplied source evidence', () => {
     expect(within(rows[0]).getByText('Stale')).toBeInTheDocument();
     expect(within(rows[0]).getByText('Normalized cache')).toBeInTheDocument();
     expect(within(rows[0]).getByText('1 records')).toBeInTheDocument();
-    expect(within(rows[0]).getByTitle('2026-07-02T10:00:00.000Z')).toBeInTheDocument();
-    expect(within(rows[0]).getByTitle('2026-08-05T08:00:00.000Z')).toBeInTheDocument();
+    expect(within(rows[0]).queryByTitle('2026-07-02T10:00:00.000Z')).not.toBeInTheDocument();
+    expect(within(rows[0]).queryByTitle('2026-08-05T08:00:00.000Z')).not.toBeInTheDocument();
     expect(within(rows[1]).getByText('Maintenance evidence source')).toBeInTheDocument();
     expect(within(rows[1]).getByText('Unavailable')).toBeInTheDocument();
     expect(within(rows[1]).getByText('0 records')).toBeInTheDocument();
@@ -30,7 +30,7 @@ describe('SourceFreshnessPanel supplied source evidence', () => {
     expect(within(rows[1]).queryByText('Normalized cache')).not.toBeInTheDocument();
     expect(within(rows[1]).queryByText('Available')).not.toBeInTheDocument();
     expect(within(rows[1]).getByText('—')).toBeInTheDocument();
-    expect(within(rows[1]).getByTitle('2026-08-05T08:00:00.000Z')).toBeInTheDocument();
+    expect(within(rows[1]).queryByTitle('2026-08-05T08:00:00.000Z')).not.toBeInTheDocument();
     for (const [index, source] of props.sources.entries()) {
       const row = within(rows[index]);
       expect(row.getByText(/Checked/)).toBeInTheDocument();

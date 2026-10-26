@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useEffect, useMemo, useRef } from 'react';
 import { Marker, useMap } from 'react-leaflet';
 import { useTranslation } from 'react-i18next';
@@ -58,7 +59,7 @@ function createCarIcon(color: string, heading: number | undefined, label: string
 export function AnimatedMarker({
   position,
   heading,
-  color = '#00b4d8',
+  color = palette.DATA_VISUAL_COLORS.info,
   ariaLabel,
 }: AnimatedMarkerProps) {
   const { t } = useTranslation();

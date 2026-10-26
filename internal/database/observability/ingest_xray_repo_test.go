@@ -421,3 +421,26 @@ func TestIngestXRayRepo_VehicleCostReportNoDLQ(t *testing.T) {
 func costRow(id int64, name string, rows, bytes int64, rate float64, fails int64) func(dest ...any) error {
 	return scanRow(id, ptr(name), rows, bytes, rate, fails, tref)
 }
+
+func TestVehicleCostHistoricalBoundsAlsoReachMissingDLQFallback(t *testing.T) {
+	for _, missing := range []bool{false, true} {
+		f := &fakeDBTX{}
+		if missing {
+			f.pushQuery(nil, &pgconn.PgError{Code: "42P01"})
+		}
+		f.pushQuery(rowsFrom(), nil)
+		start := time.Date(2026, 1, 2, 3, 0, 0, 0, time.UTC)
+		end := start.Add(48 * time.Hour)
+		r := &IngestXRayRepo{exec: f}
+		if _, err := r.VehicleCostReport(context.Background(), start, 100, end); err != nil {
+			t.Fatal(err)
+		}
+		q := f.lastQuery()
+		if len(q.Args) != 3 || !q.Args[0].(time.Time).Equal(start) || !q.Args[2].(time.Time).Equal(end) {
+			t.Fatalf("lost bounds: %v", q.Args)
+		}
+		if !strings.Contains(q.SQL, "ts >= $1 AND ts < $3") || strings.Contains(q.SQL, "now()") {
+			t.Fatalf("unbounded SQL: %s", q.SQL)
+		}
+	}
+}

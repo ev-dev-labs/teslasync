@@ -23,6 +23,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { getWorkspaceRouteScope, isWorkspaceRangePresetAvailable } from '@/lib/workspaceScope';
 import {
@@ -30,7 +31,7 @@ import {
   matchPresetId,
   type DatePresetRange,
 } from '@/lib/datePresets';
-import { calendarRangeToInstants } from '@/lib/dateRange';
+import { addCivilDays, calendarRangeToInstants } from '@/lib/dateRange';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_PRESET_ID = '7d';
@@ -83,11 +84,11 @@ export interface UseRangeStateOptions {
   enableCompare?: boolean;
   /**
    * IANA timezone the calendar dates are interpreted in when computing
-   * `startInstant` / `endInstantExclusive`. Defaults to the browser's
-   * resolved timezone. Vehicle-centric pages should pass the vehicle's
-   * IANA tz (via `useTimezone('vehicle')`) so the API filter spans the
-   * user's intended wall-clock window — sending UTC midnight silently
-   * dropped today's local rows for any user not on UTC.
+   * `startInstant` / `endInstantExclusive`. Defaults to the single
+   * resolved display zone (`useDateFormat().tz`: settings display mode
+   * + override, vehicle-aware, browser fallback) so ranges and day
+   * boundaries follow the user's selected zone. An explicit zone still
+   * wins for pages with a genuine reason to differ.
    */
   timezone?: string;
 }
@@ -150,8 +151,7 @@ export interface UseRangeStateReturn {
 
 function isValidIsoDate(s: string | null | undefined): s is string {
   if (!s || !ISO_DATE_RE.test(s)) return false;
-  const t = Date.parse(`${s}T00:00:00`);
-  return !Number.isNaN(t);
+  return addCivilDays(s, 0) === s;
 }
 
 function clampRange(range: RangeValue, minDate: string | undefined): RangeValue {
@@ -213,6 +213,10 @@ function saveToStorage(
   } catch {
     // URL state remains authoritative when browser storage is unavailable.
   }
+}
+
+export function hasSharedRangePreference(storageKey = SHARED_RANGE_STORAGE_KEY): boolean {
+  return loadFromStorage(storageKey) != null;
 }
 
 function notifySharedRangeChange(
@@ -280,19 +284,15 @@ function resetPagination(params: URLSearchParams) {
  * of `start` (i.e. previous period ends one day before `start`).
  */
 function computeComparePrev(start: string, end: string): RangeValue | undefined {
-  const s = new Date(`${start}T00:00:00`);
-  const e = new Date(`${end}T00:00:00`);
-  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return undefined;
-  const ms = e.getTime() - s.getTime();
-  const prevEnd = new Date(s.getTime() - 86_400_000);
-  const prevStart = new Date(prevEnd.getTime() - ms);
-  const iso = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  };
-  return { start: iso(prevStart), end: iso(prevEnd) };
+  if (!isValidIsoDate(start) || !isValidIsoDate(end) || start > end) return undefined;
+  let length = 1;
+  for (let cursor = start; cursor !== end; length += 1) {
+    cursor = addCivilDays(cursor, 1);
+    if (cursor > end) return undefined;
+  }
+  const prevEnd = addCivilDays(start, -1);
+  const prevStart = addCivilDays(prevEnd, -(length - 1));
+  return { start: prevStart, end: prevEnd };
 }
 
 export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateReturn {
@@ -320,15 +320,12 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
   const sourceId = useId();
   const [params, setParams] = useSearchParams();
   const [rollingNow, setRollingNow] = useState(() => Date.now());
+  const { tz: settingsTimezone } = useDateFormat();
 
   const resolvedTimezone = useMemo(() => {
     if (timezone && timezone.trim()) return timezone;
-    try {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-    } catch {
-      return 'UTC';
-    }
-  }, [timezone]);
+    return settingsTimezone;
+  }, [timezone, settingsTimezone]);
 
   const urlStart = params.get(fromKey);
   const urlEnd = params.get(toKey);

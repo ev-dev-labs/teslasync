@@ -7,6 +7,7 @@ import { deriveDataState, type DataStateSource } from '@/api/dataState';
 import type { FeatureFlagEntry, FeatureFlagChange, FeatureFlagsListResponse, FeatureFlagChangesResponse } from '@/types/admin-diagnostics';
 import { classifyFlagValue, FLAG_VALUE_KINDS, type FlagValueKind } from '../feature-flags/flagValueKind';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { sourceStatus, sourceFreshness } from './sourceMetadata';
 
 export function featureFlagMetrics(
@@ -45,6 +46,7 @@ export function FeatureFlagsOperationalBrief({ flags, changes }: {
   flags: DataStateSource<FeatureFlagsListResponse>; changes: DataStateSource<FeatureFlagChangesResponse>;
 }) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const registry = deriveDataState(flags);
   const audit = deriveDataState(changes);
   const error = registry.fatalError ?? audit.fatalError ?? registry.refreshError ?? audit.refreshError;
@@ -67,7 +69,7 @@ export function FeatureFlagsOperationalBrief({ flags, changes }: {
       statusTone={error ? 'warning' : 'neutral'}
       scope={<Text as="span" variant="caption">{t('admin.flags.statstrip.period', 'Registry snapshot + recent audit subset')}</Text>}
       freshness={<Text as="span" variant="caption">{t('admin.flags.brief.freshness', 'Registry: {{registry}} · Audit: {{audit}}', {
-        registry: sourceFreshness(registry.updatedAt, t), audit: sourceFreshness(audit.updatedAt, t),
+        registry: sourceFreshness(registry.updatedAt, t, formatDateTime), audit: sourceFreshness(audit.updatedAt, t, formatDateTime),
       })}</Text>}
       provenance={t('admin.flags.statstrip.provenance', 'Registry counts describe the current feed. Changes, deletes and contributors describe only the separately fetched latest 50 audit rows; their date bounds are not supplied.')} />
     <Text variant="caption">{t('admin.flags.statstrip.provenance', 'Registry counts describe the current feed. Changes, deletes and contributors describe only the separately fetched latest 50 audit rows; their date bounds are not supplied.')}</Text>

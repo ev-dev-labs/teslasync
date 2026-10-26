@@ -105,7 +105,7 @@ export function VehicleAssumptionsPanel({ vehicleInputs, assumptions, sourceStat
                   </div>
                   {assumption.hasDeadline && (
                     <Slider
-                      label={t('homeEnergy.vehicle.departureHour', 'Departure hour (UTC)')}
+                      label={t('homeEnergy.vehicle.departureHour', 'Departure hour')}
                       min={0}
                       max={23}
                       step={1}

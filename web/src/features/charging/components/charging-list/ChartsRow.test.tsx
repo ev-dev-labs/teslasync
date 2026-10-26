@@ -85,11 +85,11 @@ describe('ChartsRow — populated panels', () => {
 
     const trendHeading = screen.getByRole('heading', {
       level: 3,
-      name: 'Energy & Cost Trend',
+      name: 'Energy & cost trend',
     });
     const breakdownHeading = screen.getByRole('heading', {
       level: 3,
-      name: 'Charger Breakdown',
+      name: 'Charger breakdown',
     });
     expect(trendHeading).toBeInTheDocument();
     expect(breakdownHeading).toBeInTheDocument();
@@ -173,10 +173,10 @@ describe('ChartsRow — per-source empty states (never a blank panel)', () => {
     expect(screen.getByText(BREAKDOWN_EMPTY)).toBeInTheDocument();
     // Headings always render, even with no data.
     expect(
-      screen.getByRole('heading', { name: 'Energy & Cost Trend' }),
+      screen.getByRole('heading', { name: 'Energy & cost trend' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: 'Charger Breakdown' }),
+      screen.getByRole('heading', { name: 'Charger breakdown' }),
     ).toBeInTheDocument();
   });
 });

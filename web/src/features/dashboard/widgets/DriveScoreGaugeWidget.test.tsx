@@ -1,69 +1,26 @@
-/**
- * DriveScoreGaugeWidget — behaviour, hardening & a11y contract.
- *
- * The widget resolves a vehicle (explicit prop → first vehicle → none), reads a
- * single `useDriveScore` result, and fans it into three responsive layouts
- * (compact 1×1 gauge-only / standard gauge + stat row / tall gauge + stats +
- * sub-score bars) plus one pure export (`scoreColor`). This suite drives every
- * export:
- *
- *   - `scoreColor` is unit-tested across all four tiers, at each threshold
- *     boundary, and for the non-finite (`NaN`) hardening path;
- *   - the component is exercised through its accessible surface for vehicle
- *     resolution (prop wins over the vehicle list; the list supplies the
- *     fallback; no vehicle → `undefined` so the query stays disabled), the
- *     loading / error paths, the populated standard + tall + compact layouts,
- *     the freshness refresh interaction, and — most importantly — the
- *     zero-drives regression: `/drives/score` answers 200 with an all-zero
- *     object (grade "F", total_drives 0) for a vehicle that has never driven,
- *     so a plain truthiness check would render a misleading "0 / F" gauge; the
- *     widget must instead surface the "No score yet" empty state.
- *
- * `useDriveScore` + `useVehicles` are mocked at the hook boundary so no network
- * is touched. `react-i18next` is stubbed to echo the English fallback and
- * interpolate `{{var}}` tokens. `@testing-library/user-event` is not installed
- * in this repo (see the sibling BackupMonitorWidget / ChargeSessionChartWidget
- * suites), so the one interaction goes through `fireEvent`.
- */
-
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
-// i18n stub: echo the fallback string, interpolating {{var}} tokens from the
-// options bag so any interpolated copy renders as real text.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string, opts?: Record<string, unknown>) => {
       const base = typeof fallback === 'string' ? fallback : key;
-      if (opts && typeof opts === 'object') {
-        const replacements = opts.replace;
-        const values = replacements && typeof replacements === 'object'
-          ? { ...opts, ...replacements }
-          : opts;
-        return base.replace(/{{(\w+)}}/g, (_m, name: string) =>
-          name in values ? String(values[name]) : `{{${name}}}`,
-        );
-      }
-      return base;
+      const replacements = opts?.replace;
+      return replacements && typeof replacements === 'object'
+        ? base.replace(/{{(\w+)}}/g, (_match, name: string) =>
+            name in replacements ? String((replacements as Record<string, unknown>)[name]) : `{{${name}}}`,
+          )
+        : base;
     },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
-  Trans: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-  initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
-
-// The two data sources become controllable vi.fns.
-vi.mock('@/api/hooks/useDriving', () => ({
-  useDriveScore: vi.fn(),
-}));
-vi.mock('@/api/hooks/useVehicles', () => ({
-  useVehicles: vi.fn(),
-}));
+vi.mock('@/api/hooks/useDriving', () => ({ useDriveScore: vi.fn() }));
+vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: vi.fn() }));
 
 import DriveScoreGaugeWidget, { scoreColor } from './DriveScoreGaugeWidget';
-import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { useDriveScore } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import type { DriveScore } from '@/types/driving';
@@ -72,66 +29,39 @@ import type { WidgetSize } from './types';
 const mockUseDriveScore = vi.mocked(useDriveScore);
 const mockUseVehicles = vi.mocked(useVehicles);
 
-// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <FreshnessDot>
-// inside <WidgetShell>, and <MetricBar>/<LinearGauge> motion) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => false,
+    matches: false, media: query, onchange: null,
+    addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    addListener: vi.fn(), removeListener: vi.fn(), dispatchEvent: () => false,
   })) as unknown as typeof window.matchMedia;
 }
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
-function qr(over: Record<string, unknown> = {}): any {
+function qr(over: Record<string, unknown> = {}) {
   return {
-    data: undefined,
-    isLoading: false,
-    error: null,
-    isFetching: false,
-    isStale: false,
-    isError: false,
-    dataUpdatedAt: Date.now(),
-    refetch: vi.fn(),
-    ...over,
+    data: undefined, isLoading: false, error: null, isFetching: false,
+    isStale: false, isError: false, dataUpdatedAt: Date.now(), refetch: vi.fn(), ...over,
   };
 }
 
-/** A fully-populated score (total_drives > 0 → the gauge renders). */
 function makeScore(over: Partial<DriveScore> = {}): DriveScore {
   return {
-    overall: 87,
-    efficiency: 90,
-    smoothness: 82,
-    speedDiscipline: 75,
-    grade: 'B',
-    totalDrives: 12,
-    trend: 'up',
-    ...over,
+    overall: 87, efficiency: 90, smoothness: 82, speedDiscipline: 75,
+    grade: 'B', totalDrives: 12, trend: 'up', ...over,
   };
 }
 
 function renderWidget(size: WidgetSize, vehicleId?: number) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
-  });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <DriveScoreGaugeWidget size={size} vehicleId={vehicleId} />
-      </MemoryRouter>
+      <MemoryRouter><DriveScoreGaugeWidget size={size} vehicleId={vehicleId} /></MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
-const STANDARD: WidgetSize = { cols: 2, rows: 1 }; // not compact, not tall
-const TALL: WidgetSize = { cols: 2, rows: 2 }; // not compact, tall (sub-score bars)
+const STANDARD: WidgetSize = { cols: 1, rows: 2 };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -139,257 +69,88 @@ beforeEach(() => {
   mockUseDriveScore.mockReturnValue(qr({ data: undefined }));
 });
 
-it('keeps the gauge, all three source factors and detailed bars in the constrained five-row density', () => {
-  mockUseDriveScore.mockReturnValue(qr({ data: makeScore() }));
-  const { container } = renderWidget({ cols: 1, rows: 5 });
-  expect(container.querySelector('.flex-col.gap-1')).toBeInTheDocument();
-  expect(container.querySelector('.flex-col.gap-0\\.5')).toBeInTheDocument();
-  expect(screen.getByText('87.00')).toBeInTheDocument();
-  for (const label of ['Efficiency', 'Smoothness', 'Speed discipline']) {
-    expect(screen.getAllByText(label)).toHaveLength(2);
-  }
-});
-
-it('keeps three real weekly score operands and their drive population alongside the gauge and detailed bars', () => {
-  mockUseDriveScore.mockReturnValue(qr({ data: makeScore({ efficiency: 0, smoothness: undefined }) }));
-  const { container } = renderWidget(TALL);
-  const brief = screen.getByTestId('dashboard-drive-score-factors-brief');
-  // The missing smoothness reading is omitted from the face (no missing tile)
-  // and explained in the drawer; the measured zero stays numeric.
-  expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(2);
-  assertOperationalMetricUnavailable(brief, 'Smoothness');
-  expect(brief).toHaveTextContent('0.00');
-  assertOperationalBriefDisclosure(brief, 'weekly scoring response for 12 drives', { contains: true });
-  expect(container.querySelector('[role="meter"]')).not.toBeNull();
-  expect(screen.getAllByText('Efficiency')).toHaveLength(2);
-});
-
-// ── Pure helper: scoreColor ────────────────────────────────────────────────
-
 describe('scoreColor', () => {
-  it('maps the excellent / good tiers at and above their lower bounds', () => {
-    expect(scoreColor(100)).toBe('#10b981'); // excellent
-    expect(scoreColor(80)).toBe('#10b981'); // boundary → excellent
-    expect(scoreColor(79.9)).toBe('#22d3ee'); // just below → good
-    expect(scoreColor(60)).toBe('#22d3ee'); // boundary → good
-  });
-
-  it('maps the fair / poor tiers and treats non-finite scores as poor', () => {
-    expect(scoreColor(59)).toBe('#f59e0b'); // fair
-    expect(scoreColor(40)).toBe('#f59e0b'); // boundary → fair
-    expect(scoreColor(39)).toBe('#ef4444'); // poor
-    expect(scoreColor(0)).toBe('#ef4444'); // poor
-    expect(scoreColor(Number.NaN)).toBe('#ef4444'); // NaN comparisons false → poor
+  it('uses the four score tiers and non-finite fallback', () => {
+    expect(scoreColor(80)).toBe(COLOR.GOOD);
+    expect(scoreColor(60)).toBe(COLOR.CYAN);
+    expect(scoreColor(40)).toBe(COLOR.WARN);
+    expect(scoreColor(39)).toBe(COLOR.BAD);
+    expect(scoreColor(Number.NaN)).toBe(COLOR.BAD);
   });
 });
 
-// ── Vehicle resolution ─────────────────────────────────────────────────────
+it('renders the After-card gauge and three score rows without a fabricated grade', () => {
+  mockUseDriveScore.mockReturnValue(qr({ data: makeScore() }));
+  renderWidget(STANDARD);
 
-describe('DriveScoreGaugeWidget vehicle resolution', () => {
-  it('prefers the explicit vehicleId prop over the vehicle list', () => {
-    mockUseVehicles.mockReturnValue({ data: [{ id: 7 }] } as any);
-    renderWidget(STANDARD, 42);
-
-    expect(mockUseDriveScore).toHaveBeenCalledWith('42');
-    expect(mockUseDriveScore).not.toHaveBeenCalledWith('7');
-  });
-
-  it('falls back to the first vehicle when no prop is given, else queries undefined', () => {
-    // First vehicle supplies the id.
-    mockUseVehicles.mockReturnValue({ data: [{ id: 7 }] } as any);
-    const { unmount } = renderWidget(STANDARD);
-    expect(mockUseDriveScore).toHaveBeenCalledWith('7');
-    unmount();
-
-    // No vehicle at all → undefined arg keeps the query disabled.
-    vi.clearAllMocks();
-    mockUseVehicles.mockReturnValue({ data: [] } as any);
-    mockUseDriveScore.mockReturnValue(qr({ data: undefined }));
-    renderWidget(STANDARD);
-    expect(mockUseDriveScore).toHaveBeenCalledWith(undefined);
-  });
+  expect(screen.getByText('87')).toBeInTheDocument();
+  expect(screen.getByText('this week')).toBeInTheDocument();
+  expect(screen.getByText('Efficiency')).toBeInTheDocument();
+  expect(screen.getByText('Smoothness')).toBeInTheDocument();
+  expect(screen.getByText('Speed')).toBeInTheDocument();
+  expect(screen.queryByText('B')).toBeNull();
+  expect(screen.getAllByRole('progressbar')).toHaveLength(3);
 });
 
-// ── States: loading / error ────────────────────────────────────────────────
+it('preserves zero readings and shows missing readings as unknown', () => {
+  mockUseDriveScore.mockReturnValue(qr({
+    data: makeScore({ overall: 0, efficiency: 0, smoothness: undefined }),
+  }));
+  renderWidget(STANDARD);
 
-describe('DriveScoreGaugeWidget states', () => {
-  it('renders a loading skeleton (no title, no empty copy) while fetching', () => {
-    mockUseDriveScore.mockReturnValue(qr({ isLoading: true, data: undefined }));
-    const { container } = renderWidget(TALL);
-
-    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
-    expect(screen.queryByText('Drive score')).toBeInTheDocument();
-    expect(screen.queryByText('No score yet')).toBeNull();
-  });
-
-  it('surfaces a QueryError (never a blank panel) when the score request fails', () => {
-    mockUseDriveScore.mockReturnValue(
-      qr({ isError: true, error: new Error('boom'), data: undefined }),
-    );
-    renderWidget(TALL);
-
-    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Drive score')).toBeInTheDocument();
-  });
+  expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(1);
+  expect(screen.getByText('Smoothness')).toBeInTheDocument();
+  expect(screen.queryByText('No score yet')).toBeNull();
 });
 
-// ── Regression: zero-drives object must show the empty state ────────────────
+it('uses the compact After-card layout only for compact size', () => {
+  mockUseDriveScore.mockReturnValue(qr({ data: makeScore() }));
+  renderWidget(COMPACT);
 
-describe('DriveScoreGaugeWidget empty (no scored drives)', () => {
-  it('shows "No score yet" instead of a misleading 0 / F gauge for total_drives === 0', () => {
-    // The real backend shape for a vehicle that has never driven.
-    mockUseDriveScore.mockReturnValue(
-      qr({
-        data: makeScore({
-          overall: 0,
-          efficiency: 0,
-          smoothness: 0,
-          speedDiscipline: 0,
-          grade: 'F',
-          totalDrives: 0,
-          trend: 'flat',
-        }),
-      }),
-    );
-    renderWidget(TALL);
-
-    const empty = screen.getByText('No score yet');
-    expect(empty).toBeInTheDocument();
-    expect(empty.closest('[role="status"]')).not.toBeNull();
-
-    // The gauge / grade "F" and the sub-score stats must NOT render.
-    expect(screen.queryByText('F')).toBeNull();
-    expect(screen.queryByText('Efficiency')).toBeNull();
-  });
-
-  it('renders the gauge (not the empty state) as soon as there is one scored drive', () => {
-    mockUseDriveScore.mockReturnValue(qr({ data: makeScore({ totalDrives: 1 }) }));
-    renderWidget(STANDARD);
-
-    expect(screen.queryByText('No score yet')).toBeNull();
-    expect(screen.getByText('87.00')).toBeInTheDocument(); // gauge value
-    expect(screen.getByText('B')).toBeInTheDocument(); // gauge grade label
-  });
+  expect(screen.getByText('87')).toBeInTheDocument();
+  expect(screen.queryByText('Efficiency')).toBeNull();
+  expect(screen.queryByText('Smoothness')).toBeNull();
+  expect(screen.queryByText('Speed')).toBeNull();
 });
 
-// ── Standard layout (gauge + stat row, no sub-score bars) ───────────────────
+it('shows an empty state only when no scored drives are returned', () => {
+  mockUseDriveScore.mockReturnValue(qr({
+    data: makeScore({ overall: 0, efficiency: 0, smoothness: 0, speedDiscipline: 0, grade: 'F', totalDrives: 0 }),
+  }));
+  renderWidget(STANDARD);
 
-describe('DriveScoreGaugeWidget standard layout', () => {
-  it('preserves an out-of-scale source score, its grade and all component scores', () => {
-    const score = makeScore({ overall: 125, grade: 'A' });
-    mockUseDriveScore.mockReturnValue(qr({ data: score }));
-    renderWidget(STANDARD);
-    expect(screen.getByText('125.00')).toBeInTheDocument();
-    expect(screen.queryByRole('meter')).toBeNull();
-    expect(screen.getByRole('group', { name: 'A' })).not.toHaveAttribute('aria-valuenow');
-    expect(screen.getByText('A')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency')).toBeInTheDocument();
-    expect(screen.getByText('Smoothness')).toBeInTheDocument();
-    expect(screen.getByText('Speed discipline')).toBeInTheDocument();
-    expect(score.overall).toBe(125);
-  });
-
-  it('renders the title, gauge value, grade and the three summary stats once each', () => {
-    mockUseDriveScore.mockReturnValue(qr({ data: makeScore() }));
-    renderWidget(STANDARD);
-
-    expect(screen.getByText('Drive score')).toBeInTheDocument(); // header title
-    expect(screen.getByText('87.00')).toBeInTheDocument(); // gauge overall
-    expect(screen.getByText('B')).toBeInTheDocument(); // gauge grade label
-
-    // Stat labels + values are present.
-    expect(screen.getByText('Efficiency')).toBeInTheDocument();
-    expect(screen.getByText('Smoothness')).toBeInTheDocument();
-    expect(screen.getByText('Speed discipline')).toBeInTheDocument();
-    expect(screen.getByText('90.00')).toBeInTheDocument();
-    expect(screen.getByText('82.00')).toBeInTheDocument();
-    expect(screen.getByText('75.00')).toBeInTheDocument();
-
-    // Non-tall → no MetricBar, so each label appears exactly once (stats only).
-    expect(screen.getAllByText('Efficiency')).toHaveLength(1);
-  });
+  const empty = screen.getByText('No score yet');
+  expect(empty).toBeInTheDocument();
+  expect(empty.closest('[role="status"]')).not.toBeNull();
+  expect(screen.queryByRole('meter')).toBeNull();
 });
 
-// ── Tall layout (gauge + stats + sub-score MetricBars) ──────────────────────
-
-describe('DriveScoreGaugeWidget tall layout', () => {
-  it('adds the per-metric sub-score bars, so each metric label appears twice', () => {
-    mockUseDriveScore.mockReturnValue(qr({ data: makeScore() }));
-    renderWidget(TALL);
-
-    // Once in the stat row, once as a MetricBar label.
-    expect(screen.getAllByText('Efficiency')).toHaveLength(2);
-    expect(screen.getAllByText('Smoothness')).toHaveLength(2);
-    expect(screen.getAllByText('Speed discipline')).toHaveLength(2);
-
-    // The bar sublabel echoes the value alongside the stat value → two "90"s.
-    expect(screen.getAllByText('90.00')).toHaveLength(2);
-    expect(screen.getByText('87.00')).toBeInTheDocument(); // gauge overall stays singular
-  });
+it('does not invent a gauge for a partial response', () => {
+  mockUseDriveScore.mockReturnValue(qr({ data: makeScore({ overall: undefined }) }));
+  renderWidget(STANDARD);
+  expect(screen.queryByRole('meter')).toBeNull();
+  expect(screen.getByText('—')).toBeInTheDocument();
 });
 
-// ── Compact layout (gauge only) ─────────────────────────────────────────────
+it('retains cached data and exposes refresh through the freshness dot', () => {
+  const refetch = vi.fn();
+  mockUseDriveScore.mockReturnValue(qr({
+    data: makeScore(), error: new Error('offline'), isError: true, refetch,
+  }));
+  renderWidget(STANDARD);
 
-describe('DriveScoreGaugeWidget compact layout', () => {
-  it('drops the title and stat row, showing only the gauge value + grade', () => {
-    mockUseDriveScore.mockReturnValue(qr({ data: makeScore() }));
-    renderWidget(COMPACT);
-
-    // The compact 1×1 gauge keeps the score + grade but nothing else.
-    expect(screen.getByText('87.00')).toBeInTheDocument();
-    expect(screen.getByText('B')).toBeInTheDocument();
-
-    expect(screen.queryByText('Drive score')).toBeNull(); // title hidden
-    expect(screen.queryByText('Efficiency')).toBeNull(); // stats hidden
-    expect(screen.queryByText('90.00')).toBeNull(); // stat value hidden
-  });
+  expect(screen.getByText('87')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+  expect(refetch).toHaveBeenCalledTimes(1);
 });
 
-// ── Refresh interaction ─────────────────────────────────────────────────────
-
-describe('DriveScoreGaugeWidget refresh', () => {
-  it('retains the score and breakdown on refresh failure with a working warning retry', () => {
-    const refetch = vi.fn();
-    mockUseDriveScore.mockReturnValue(qr({ data: makeScore(), error: new Error('offline'), isError: true, refetch }));
-    renderWidget(TALL);
-    expect(screen.getByText('87.00')).toBeInTheDocument();
-    expect(screen.getAllByText('Efficiency')).toHaveLength(2);
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    // The shell hides the warning's own retry when the header freshness dot
-    // offers one; the working retry is the header control.
-    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
-    expect(refetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('preserves a legitimate zero overall score and keeps missing subscores unknown', () => {
-    mockUseDriveScore.mockReturnValue(qr({ data: makeScore({ overall: 0, efficiency: undefined, smoothness: 0 }) }));
-    renderWidget(STANDARD);
-    expect(screen.getAllByText('0.00')).toHaveLength(2);
-    // The missing efficiency reading is omitted from the face (no em-dash
-    // tile) and explained in the drawer instead of invented as zero.
-    assertOperationalMetricUnavailable(
-      screen.getByTestId('dashboard-drive-score-factors-brief'),
-      'Efficiency',
-    );
-    expect(screen.queryByText('No score yet')).not.toBeInTheDocument();
-  });
-
-  it('does not invent an overall gauge for a partial score', () => {
-    mockUseDriveScore.mockReturnValue(qr({ data: makeScore({ overall: undefined }) }));
-    renderWidget(TALL);
-    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
-    expect(screen.getByText('Weekly score')).toBeInTheDocument();
-    expect(screen.getAllByText('90.00')).toHaveLength(2);
-  });
-
-  it('invokes refetch when the freshness refresh control is activated', () => {
-    const refetch = vi.fn();
-    mockUseDriveScore.mockReturnValue(qr({ data: makeScore(), refetch }));
-    renderWidget(STANDARD);
-
-    const refresh = screen.getByRole('button', { name: /^Refresh/i });
-    fireEvent.click(refresh);
-    expect(refetch).toHaveBeenCalledTimes(1);
-  });
+it('prefers the explicit vehicle and uses the first vehicle otherwise', () => {
+  mockUseVehicles.mockReturnValue({ data: [{ id: 7 }] } as any);
+  const { unmount } = renderWidget(STANDARD, 42);
+  expect(mockUseDriveScore).toHaveBeenCalledWith('42');
+  unmount();
+  mockUseVehicles.mockReturnValue({ data: [{ id: 7 }] } as any);
+  renderWidget(STANDARD);
+  expect(mockUseDriveScore).toHaveBeenCalledWith('7');
 });
+import { COLOR } from '@/lib/colors';

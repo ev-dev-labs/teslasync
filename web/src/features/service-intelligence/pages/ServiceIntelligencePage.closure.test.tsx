@@ -91,7 +91,8 @@ function expectCompleteServiceReport() {
     .toHaveAttribute('href', serviceReport.communications[0].source_document_url);
   expect(screen.getByRole('link', { name: 'Open evidence source' }))
     .toHaveAttribute('href', 'https://example.org/maintenance-7');
-  expect(screen.getByTitle('2026-07-01')).toHaveTextContent('Jul 1, 2026');
+  expect(screen.getByText('Jul 1, 2026')).toBeInTheDocument();
+  expect(screen.queryByTitle('2026-07-01')).not.toBeInTheDocument();
   const first = screen.getByText('first_server_rank').closest('li');
   const second = screen.getByText('second_server_rank').closest('li');
   expect(first).not.toBeNull();

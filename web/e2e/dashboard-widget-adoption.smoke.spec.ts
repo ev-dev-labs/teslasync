@@ -21,8 +21,8 @@ import { assertCatalogueChargeCategories, assertCatalogueChargeHistory, recordCa
 import { assertCatalogueCountReference } from './dashboardCatalogueCountReference';
 import { assertCataloguePressureParity } from './dashboardCataloguePressureParity';
 import { assertCatalogueHeaderCollision } from './dashboardCatalogueHeaderCollision';
-import { drivingReadings } from './dashboardCatalogueDrivingFixtures';
-import { assertCatalogueAffectedAxes, assertCatalogueAllocation, assertSpeedProfileTickBounds, assertTwinWheelAndPhotoGeometry, installCataloguePhotoSource } from './dashboardCatalogueGeometry';
+import { compactDrivingReadings, drivingReadings } from './dashboardCatalogueDrivingFixtures';
+import { assertCatalogueAffectedAxes, assertCatalogueAllocation, assertSpeedProfileTickBounds, assertTwinWheelAndPhotoGeometry, catalogueVerticalGap, installCataloguePhotoSource } from './dashboardCatalogueGeometry';
 import {
   assertRemainingContent, geometrySourceIDs, installRemainingCatalogueSources,
   remainingBatches, remainingCompactReadings, remainingReadings,
@@ -76,14 +76,14 @@ const readings: Record<string, RegExp> = {
   ...vehicleReadings,
   ...batteryReadings,
   ...drivingReadings,
-  'energy-stats': /15(?:\.0)?/,
+  'energy-stats': /Total used\s*12\.0\s*kWh/,
   'energy-flow-animated': /14\.00\s*kW/,
   'power-flow-history': /3\.85\s*kW/,
   'solar-production': /12\.0/,
   'energy-site-info': /13\.50\s*kWh/,
   'wall-connector': /14\.0/,
   'cost-breakdown': /\$110\.00/,
-  'cost-forecast': /\$120/,
+  'cost-forecast': /(?:Next 2 months\s*\$250\.00|\$250\.00\s*Next 2 months)/,
   'security-status': /Locked/,
   'door-window-status': /Closed/,
   'sentry-event-log': /Sentry mode activated/,
@@ -98,7 +98,7 @@ const readings: Record<string, RegExp> = {
   'signal-health': /(?:1\/1|Active1With gaps0)/,
   'signal-log': /(?:signals\/sec|Soc)/,
   'signal-catalog': /(?:signals available|Soc)/,
-  'uptime-monitor': /(?:4\/4|All OK)/,
+  'uptime-monitor': /Database\s*OK\s*MQTT\s*OK\s*Tesla API\s*OK\s*Fleet Telemetry\s*OK/,
 };
 
 for (const [batch, ids] of Object.entries(batches)) {
@@ -380,7 +380,7 @@ for (const [batch, ids] of Object.entries(batches)) {
             height: element.getBoundingClientRect().height,
           }));
           if (batch.startsWith('catalogue-')) await assertRemainingContent(panel, widget.widgetId, width, test.info());
-          if (widget.widgetId === 'live-signals') {
+          if (widget.widgetId === 'tire-pressure-history') {
             await assertCataloguePressureParity(page, panel, width, theme, test.info());
           }
           if (widget.widgetId === 'fleet-posture') {
@@ -398,26 +398,30 @@ for (const [batch, ids] of Object.entries(batches)) {
           }
           if (widget.widgetId === 'fleet-stats-bar') {
             await expect(panel.getByText('1', { exact: true })).toHaveCount(2);
-            // Captions live in the details drawer (same contract as the
-            // widget unit test): open it, assert, then close so later
-            // widgets capture without the overlay.
-            await panel.getByRole('button', { name: 'Review details' }).click();
-            const drawer = page.getByRole('dialog', { name: 'Fleet summary details' });
-            await expect(drawer.getByText('1 online', { exact: true })).toBeVisible();
-            await expect(drawer.getByText('100.00%', { exact: true })).toBeVisible();
-            await expect(drawer).not.toContainText(/\bno change\b/i);
+            const totals = panel.getByTestId('fleet-stats-bar');
+            for (const [label, value] of [
+              ['Vehicles', /^Vehicles\s*1$/],
+              ['online', /^online\s*1$/],
+              ['Distance (30d)', /^Distance \(30d\)\s*300\s*km$/],
+              ['Energy (30d)', /^Energy \(30d\)\s*42\.0\s*kWh$/],
+            ] as const) {
+              const metric = totals.getByText(label, { exact: true }).locator('xpath=../..');
+              await expect(metric).toBeVisible();
+              await expect(metric).toHaveText(value);
+            }
+            await expect(panel.getByRole('button', { name: 'Review details' })).toHaveCount(0);
+            await expect(totals).not.toContainText(/\bno change\b/i);
             const labels = await panel.locator('[aria-label], [aria-valuetext]').evaluateAll(elements =>
               elements.map(element => ({
                 label: element.getAttribute('aria-label'), valueText: element.getAttribute('aria-valuetext'),
               })));
             expect(JSON.stringify(labels), 'Current fleet counts must not announce invented comparison').not.toMatch(/\bno change\b/i);
             await writeFile(test.info().outputPath('fleet-current-caption-contract.json'), JSON.stringify({
-              currentCount: 1, currentOnlinePercentage: 100, text: await drawer.textContent(), labels,
+              currentCount: 1, currentOnlineCount: 1, text: await totals.textContent(), labels,
             }, null, 2));
-            await page.keyboard.press('Escape');
-            await expect(drawer).toHaveCount(0);
           }
-          const expected = (width === 390 ? remainingCompactReadings[widget.widgetId] ?? compactVehicleReadings[widget.widgetId] : undefined)
+          const expected = (width === 390 ? remainingCompactReadings[widget.widgetId]
+            ?? compactVehicleReadings[widget.widgetId] ?? compactDrivingReadings[widget.widgetId] : undefined)
             ?? readings[widget.widgetId];
           const geometryContract = geometrySourceIDs.has(widget.widgetId);
           if (!expected && !geometryContract) throw new Error(`Missing sourced reading assertion: ${widget.widgetId}`);
@@ -448,9 +452,17 @@ for (const [batch, ids] of Object.entries(batches)) {
             await expect(panel).toContainText('Torque');
             await expect(panel).toContainText('Stator');
             await expect(panel).toContainText('65.00');
+            const table = panel.getByRole('table', { name: 'Motor history — data table', exact: true });
+            await expect(table.getByRole('columnheader', { name: 'Torque (N·m)', exact: true })).toHaveCount(1);
+            await expect(table.getByRole('cell', { name: '240.00', exact: true })).toHaveCount(1);
+            await expect(table.getByRole('cell', { name: '180.00', exact: true })).toHaveCount(1);
+            await expect(table.getByRole('cell', { name: '65.00', exact: true })).toHaveCount(2);
             for (const curve of await panel.locator('.recharts-line-curve').all()) {
               expect(await curve.getAttribute('d'), 'Motor torque/temperature curve must contain real points').toMatch(/^M.+/);
             }
+          }
+          if (widget.widgetId === 'driving-dynamics' && width === 1440) {
+            await expect(panel).toContainText(/Accel\s*0\.30\s*g\s*Brake\s*0\.40\s*g\s*Lateral\s*0\.20\s*g/);
           }
           if (batch.startsWith('vehicle-twin')) {
             if (widget.widgetId === 'vehicle-twin') {
@@ -507,10 +519,10 @@ for (const [batch, ids] of Object.entries(batches)) {
           if (width === 1440 && widget.widgetId === 'energy-stats') {
             await expect.poll(async () => {
               const chartBounds = await panel.locator('svg.recharts-surface').boundingBox();
-              const metricBounds = await panel.getByText('Total used', { exact: true }).boundingBox();
+              const metricBounds = await panel.getByText('Total used', { exact: true }).locator('xpath=../..').boundingBox();
               if (!chartBounds || !metricBounds) throw new Error('Energy chart and summary must both render');
-              return chartBounds.y + chartBounds.height - metricBounds.y;
-            }, { message: 'Energy chart must not overlap summary metrics' }).toBeLessThanOrEqual(1);
+              return catalogueVerticalGap(chartBounds, metricBounds);
+            }, { message: 'Energy chart must not overlap summary metrics' }).toBeGreaterThanOrEqual(-1);
           }
           check(reading.height, widget.widgetId).toBeGreaterThan(60);
           check(reading.scrollWidth, `${widget.widgetId}: ${JSON.stringify(reading)}`)

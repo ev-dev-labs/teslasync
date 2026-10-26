@@ -8,9 +8,8 @@ import { usePressureFormat } from '@/hooks/usePressureFormat';
 
 import { tirePressureVariant } from '@/features/vehicles/components/vehicle-detail/helpers';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { COLOR, CHART_NEUTRAL } from '@/lib/colors';
 
 type TireVariant = ReturnType<typeof tirePressureVariant>;
 
@@ -23,10 +22,10 @@ type TireVariant = ReturnType<typeof tirePressureVariant>;
  * than an alarming critical-red.
  */
 const VARIANT_STYLE: Record<TireVariant, { fill: string; text: string }> = {
-  success: { fill: '#22c55e', text: 'text-emerald-300' },
-  warning: { fill: '#f59e0b', text: 'text-amber-300' },
-  danger: { fill: '#ef4444', text: 'text-rose-300' },
-  neutral: { fill: '#6b7280', text: 'text-[var(--text-muted)]' },
+  success: { fill: COLOR.GOOD, text: 'text-emerald-300' },
+  warning: { fill: COLOR.WARN, text: 'text-amber-300' },
+  danger: { fill: COLOR.BAD, text: 'text-rose-300' },
+  neutral: { fill: CHART_NEUTRAL, text: 'text-[var(--text-muted)]' },
 };
 
 interface TireInfo {
@@ -40,66 +39,37 @@ interface TireInfo {
  * Each tire is a rounded rect colored by pressure status.
  */
 function CarDiagram({ tires }: { tires: [TireInfo, TireInfo, TireInfo, TireInfo] }) {
-  const [fl, fr, rl, rr] = tires;
-
-  // Tire positions (x, y) for top-down SVG — viewBox 0 0 120 180
   const tirePositions = [
-    { tire: fl, x: 14, y: 28 },   // front-left
-    { tire: fr, x: 90, y: 28 },   // front-right
-    { tire: rl, x: 14, y: 126 },  // rear-left
-    { tire: rr, x: 90, y: 126 },  // rear-right
+    { tire: tires[0], x: 78, y: 28 },
+    { tire: tires[1], x: 172, y: 28 },
+    { tire: tires[2], x: 78, y: 116 },
+    { tire: tires[3], x: 172, y: 116 },
   ];
 
   return (
-    <svg viewBox="0 0 120 180" className="w-20 @xs:w-24 h-32" aria-hidden="true">
-      {/* Car body outline */}
-      <rect x="30" y="16" width="60" height="148" rx="16" ry="16"
-        fill="none" className="stroke-[var(--border-default)]" strokeWidth="1.5" />
-      {/* Windshield hint */}
-      <line x1="36" y1="52" x2="84" y2="52"
-        className="stroke-[var(--border-subtle)]" strokeWidth="1" />
-      {/* Rear window hint */}
-      <line x1="36" y1="132" x2="84" y2="132"
-        className="stroke-[var(--border-subtle)]" strokeWidth="1" />
-
-      {/* Tires */}
+    <svg viewBox="-30 0 320 170" className="mx-auto block w-full max-w-[320px]" aria-hidden="true">
       {tirePositions.map(({ tire, x, y }) => (
         <rect
           key={tire.label}
-          x={x} y={y} width="16" height="26" rx="4" ry="4"
+          x={x} y={y} width="10" height="26" rx="3"
           fill={VARIANT_STYLE[tire.variant].fill}
-          fillOpacity={0.85}
         />
       ))}
+      <rect x="86" y="10" width="88" height="150" rx="34"
+        fill="none" className="stroke-[var(--border-default)]" strokeWidth="1.5" />
+      <path d="M96 52 Q130 40 164 52 L160 70 Q130 62 100 70Z" className="fill-[var(--border-subtle)]" />
+      <path d="M100 118 Q130 124 160 118 L163 132 Q130 142 97 132Z" className="fill-[var(--border-subtle)]" />
+      <line x1="88" y1="92" x2="172" y2="92" className="stroke-[var(--border-subtle)]" />
     </svg>
   );
 }
 
-function formatTimestamp(iso: string | undefined, t: (k: string, fb: string) => string): string {
-  if (!iso) return t('widget.tireNoReading', 'No reading');
-  try {
-    const date = new Date(iso);
-    if (isNaN(date.getTime())) return '—';
-    const now = Date.now();
-    const diffMin = Math.round((now - date.getTime()) / 60_000);
-    // relative-time: reading age, shown only in the caption tooltip
-    if (diffMin < 1) return t('widget.tireJustNow', 'Just now');
-    if (diffMin < 60) return `${diffMin}m ${t('widget.ago', 'ago')}`;
-    const diffHrs = Math.round(diffMin / 60);
-    if (diffHrs < 24) return `${diffHrs}h ${t('widget.ago', 'ago')}`;
-    return `${Math.round(diffHrs / 24)}d ${t('widget.ago', 'ago')}`;
-  } catch {
-    return '—';
-  }
-}
-
 export default function TirePressureVisualWidget({ vehicleId }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { data: tireData, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useLatestTirePressure(id, 10_000);
-  const { pressureUnit, toPressureValue } = usePressureFormat();
+  const { pressureUnit, formatPressureValue } = usePressureFormat();
 
   const tires: [TireInfo, TireInfo, TireInfo, TireInfo] = [
     { label: 'FL', value: tireData?.front_left ?? null, variant: tirePressureVariant(tireData?.front_left) },
@@ -111,7 +81,6 @@ export default function TirePressureVisualWidget({ vehicleId }: WidgetProps) {
   const allNormal = tires.every((tire) => tire.variant === 'success');
   const hasWarning = tires.some((tire) => tire.variant === 'warning');
   const hasDanger = tires.some((tire) => tire.variant === 'danger');
-  const hasUnknown = tires.some((tire) => tire.variant === 'neutral');
   const loading = isLoading || (vehiclesLoading && !id);
   const queryError = error ?? (!id ? vehiclesError : null);
   const dataState = deriveDataState({
@@ -124,22 +93,11 @@ export default function TirePressureVisualWidget({ vehicleId }: WidgetProps) {
   });
 
   const formatPressure = (val: number | null): string => {
-    const v = toPressureValue(val);
-    return v != null ? `${fmtNumber(v)}` : '—';
+    if (val == null || !Number.isFinite(val)) return '—';
+    const formatted = formatPressureValue(val, { precision: 2 });
+    const suffix = ` ${pressureUnit}`;
+    return formatted.endsWith(suffix) ? formatted.slice(0, -suffix.length) : formatted;
   };
-
-  // Most recent reading time across all tires
-  const latestReading = tireData
-    ? [tireData.last_seen_time_fl, tireData.last_seen_time_fr, tireData.last_seen_time_rl, tireData.last_seen_time_rr]
-        .filter(Boolean)
-        .sort()
-        .pop()
-    : undefined;
-  const statusLabel = (variant: TireVariant) => variant === 'neutral'
-    ? t('hero.unknownStatus', 'Unknown')
-    : variant === 'success'
-      ? t('widget.tireAllNormal', 'All normal')
-      : t('widget.tireWarning', 'Check pressure');
 
   return (
     <WidgetShell
@@ -154,50 +112,27 @@ export default function TirePressureVisualWidget({ vehicleId }: WidgetProps) {
       onRefresh={() => refetch()}
     >
       {tireData ? (
-        <div className="flex min-w-0 flex-col gap-3">
-          {/* Car diagram + pressure values */}
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-            {/* Left column: FL / RL values */}
-            <div className="flex min-w-0 flex-col gap-3">
-              <div>
-                <WidgetBigNumber label={t('widget.tireFL', 'FL')} value={formatPressure(tires[0].value)} valueColor={VARIANT_STYLE[tires[0].variant].text} size="secondary" />
-                {tires[0].variant !== 'success' && <Text variant="caption">{statusLabel(tires[0].variant)}</Text>}
-              </div>
-              <div>
-                <WidgetBigNumber label={t('widget.tireRL', 'RL')} value={formatPressure(tires[2].value)} valueColor={VARIANT_STYLE[tires[2].variant].text} size="secondary" />
-                {tires[2].variant !== 'success' && <Text variant="caption">{statusLabel(tires[2].variant)}</Text>}
-              </div>
+        <div className="flex h-full min-w-0 flex-col justify-center gap-2">
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(112px,min(320px,calc(100%_-_6rem)))_minmax(0,1fr)] items-center gap-1">
+            <div className="flex min-w-0 flex-col gap-10 text-end">
+              <Text as="span" variant="body" className={VARIANT_STYLE[tires[0].variant].text}>{formatPressure(tires[0].value)}</Text>
+              <Text as="span" variant="body" className={VARIANT_STYLE[tires[2].variant].text}>{formatPressure(tires[2].value)}</Text>
             </div>
-
-            {/* Center: car diagram */}
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex items-center justify-center">
               <CarDiagram tires={tires} />
             </div>
-
-            {/* Right column: FR / RR values */}
-            <div className="flex min-w-0 flex-col gap-3">
-              <div>
-                <WidgetBigNumber label={t('widget.tireFR', 'FR')} value={formatPressure(tires[1].value)} valueColor={VARIANT_STYLE[tires[1].variant].text} size="secondary" />
-                {tires[1].variant !== 'success' && <Text variant="caption">{statusLabel(tires[1].variant)}</Text>}
-              </div>
-              <div>
-                <WidgetBigNumber label={t('widget.tireRR', 'RR')} value={formatPressure(tires[3].value)} valueColor={VARIANT_STYLE[tires[3].variant].text} size="secondary" />
-                {tires[3].variant !== 'success' && <Text variant="caption">{statusLabel(tires[3].variant)}</Text>}
-              </div>
+            <div className="flex min-w-0 flex-col gap-10 text-start">
+              <Text as="span" variant="body" className={VARIANT_STYLE[tires[1].variant].text}>{formatPressure(tires[1].value)}</Text>
+              <Text as="span" variant="body" className={VARIANT_STYLE[tires[3].variant].text}>{formatPressure(tires[3].value)}</Text>
             </div>
           </div>
-
-          {/* Footer: status badge + unit + reading time */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-2">
             <Badge variant={allNormal ? 'success' : hasDanger ? 'danger' : hasWarning ? 'warning' : 'neutral'}>
               {allNormal
                 ? t('widget.tireAllNormal', 'All normal')
                 : hasDanger || hasWarning ? t('widget.tireWarning', 'Check pressure') : t('hero.unknownStatus', 'Unknown')}
             </Badge>
-            {hasUnknown && (hasWarning || hasDanger) && <Text variant="caption">{t('hero.unknownStatus', 'Unknown')}</Text>}
-            <Text variant="caption" title={formatTimestamp(latestReading, t)}>
-              {pressureUnit}
-            </Text>
+            <Text variant="caption">{pressureUnit}</Text>
           </div>
         </div>
       ) : (

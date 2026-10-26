@@ -70,8 +70,9 @@ func (s *Store) ListSites(ctx context.Context, q string, limit int) ([]*Site, er
 }
 
 // History loads the demand aggregates + session spans for one site over
-// the trailing history window.
-func (s *Store) History(ctx context.Context, site string) (SiteHistory, error) {
+// the trailing history window. Demand cells are attributed by wall time
+// in timezone (validated IANA upstream; UTC default).
+func (s *Store) History(ctx context.Context, site, timezone string) (SiteHistory, error) {
 	h := SiteHistory{Site: site}
 	if site == "" {
 		return h, ErrNoHistory
@@ -95,13 +96,13 @@ func (s *Store) History(ctx context.Context, site string) (SiteHistory, error) {
 	h.Weeks = max(maxStart.Sub(minStart).Hours()/24/7, 1)
 
 	rows, err := s.db.Pool.Query(ctx, `
-		SELECT EXTRACT(DOW FROM charge_start_datetime)::int,
-			EXTRACT(HOUR FROM charge_start_datetime)::int,
+		SELECT EXTRACT(DOW FROM charge_start_datetime AT TIME ZONE $3)::int,
+			EXTRACT(HOUR FROM charge_start_datetime AT TIME ZONE $3)::int,
 			COUNT(*),
 			COUNT(*) FILTER (WHERE COALESCE(congestion_fee, 0) > 0)
 		FROM tesla_charging_sessions
 		WHERE site_location_name = $1 AND charge_start_datetime >= $2
-		GROUP BY 1, 2`, site, since)
+		GROUP BY 1, 2`, site, since, timezone)
 	if err != nil {
 		return h, fmt.Errorf("waitoracle: demand: %w", err)
 	}

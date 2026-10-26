@@ -59,20 +59,20 @@ function show(trend: AutomationHistoryTrendPoint[]) {
   return render(<QueryClientProvider client={new QueryClient()}><Subject /></QueryClientProvider>);
 }
 
-describe('AutomationHistoryTrend UTC daily buckets', () => {
+describe('AutomationHistoryTrend server-scoped daily buckets', () => {
   beforeEach(() => {
     cleanup();
     saved.locale = 'de-DE';
     saved.settings.timezone_user = 'America/Los_Angeles';
   });
 
-  it('discloses daily UTC resolution and localizes every label without shifting day boundaries', () => {
+  it('discloses daily resolution and localizes returned day keys without shifting their calendar dates', () => {
     show([
       { day: '2026-01-01', status: 'success', count: 2 },
       { day: '2025-12-31', status: 'failed', count: 3 },
       { day: '2026-01-01', status: 'partial', count: 4 },
     ]);
-    expect(screen.getByText('Daily (UTC)')).toBeTruthy();
+    expect(screen.getByText('Daily execution counts')).toBeTruthy();
     expect(chartProps.data).toEqual([
       { period: '2025-12-31', success: 0, failed: 3, other: 0 },
       { period: '2026-01-01', success: 2, failed: 0, other: 4 },
@@ -86,7 +86,7 @@ describe('AutomationHistoryTrend UTC daily buckets', () => {
     }
   });
 
-  it('honors another saved locale and eastern timezone while preserving UTC calendar dates', () => {
+  it('honors another saved locale and eastern timezone while preserving returned calendar dates', () => {
     saved.locale = 'ja-JP';
     saved.settings.timezone_user = 'Pacific/Kiritimati';
     show([{ day: '2026-03-08', status: 'success', count: 1 }]);

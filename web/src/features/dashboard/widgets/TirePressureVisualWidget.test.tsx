@@ -1,95 +1,27 @@
 /**
- * TirePressureVisualWidget — behaviour + hardening tests.
- *
- * TirePressureVisualWidget is a dashboard tile that resolves a target vehicle
- * (`vehicleId` prop → first vehicle from `useVehicles` → 0) and renders that
- * vehicle's latest TPMS snapshot (`useLatestTirePressure`, polled every 10s).
- * Inside `WidgetShell` it draws a top-down car diagram with four colour-coded
- * tire rects, a FL/FR/RL/RR value column on each side, and a footer with a
- * status Badge + the pressure unit + the most-recent reading time.
- *
- * Backend contract (the crux of this suite): tire pressure is stored and
- * served in **SI Pascals** (`front_left` ≈ 200 000–350 000 Pa). Two facets of
- * the widget therefore have to bridge Pa → display:
- *   - the corner VALUES convert Pa → kPa (`paToKpa`) before the pressure
- *     formatter (which expects the frontend kPa SI floor), then to the user's
- *     unit — so 290 000 Pa renders "2.9" (bar), never "2,900.0";
- *   - the tire COLOURS come from the shared, Pa-aware `tirePressureVariant`
- *     helper (success/warning/danger/neutral), so a healthy 250 000 Pa tire is
- *     green — not the critical-red every reading used to get when raw Pascals
- *     were compared against bar thresholds.
- *
- * The two data hooks are mocked at the `@/api/hooks/useVehicles` boundary so
- * every orchestration branch is deterministic and the network is never touched.
- * `usePressureFormat` + the `paToKpa`/`tirePressureVariant` helpers run for real
- * against the global `useSettings` stub (metric → bar) from src/test-setup.ts,
- * so the Pa→bar conversion is exercised end-to-end. `react-i18next` is
- * echo-mocked (returns the English fallback); `matchMedia` is polyfilled because
- * `<FreshnessDot>` reads it via `useMotionPreference`.
- *
- * Facets covered:
- *   - vehicle resolution: explicit prop wins → first vehicle → 0, always with
- *     the 10s poll interval.
- *   - shell states: loading skeleton, error `QueryError`, and empty state —
- *     never a blank panel.
- *   - standard vs compact layout (identifying title retained at every width).
- *   - Pa→display conversion (the hardening): 290 000 Pa → "2.9", not "2,900.0".
- *   - status colour bands from the Pa value: green / amber / red / grey across
- *     the shared helper's thresholds, plus the aggregate All-Normal vs
- *     Check-Pressure badge.
- *   - null-safety: null corners render "—" + a neutral grey tile (never red),
- *     and the aggregate badge flips to Check Pressure.
- *   - relative reading-time footer: no-reading / just-now / m / h / d / invalid
- *     branches, and "latest wins" across the four corners.
- *   - refresh wiring from both the standard and compact tiles.
+ * Own-suite tests for the TirePressureVisualWidget redesign.
+ * Keeps vehicle resolution, SI pressure conversion, honest empty/error/retained
+ * states, four-corner status, FreshnessDot refresh, and i18n/a11y behavior.
  */
-
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { COLOR, CHART_NEUTRAL } from '@/lib/colors';
 
-// i18n echo mock: returns the fallback string (or key when none), interpolating
-// {{var}} tokens from the options object so assertions target rendered English.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fb?: unknown, opts?: unknown) => {
-      const options = (opts && typeof opts === 'object' ? opts : undefined) as
-        | Record<string, unknown>
-        | undefined;
-      let base = typeof fb === 'string' ? fb : key;
-      if (options) {
-        base = base.replace(/{{\s*(\w+)\s*}}/g, (_m, n: string) =>
-          n in options && options[n] != null ? String(options[n]) : `{{${n}}}`,
-        );
-      }
-      return base;
-    },
+    t: (key: string, fallback?: unknown) => typeof fallback === 'string' ? fallback : key,
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
   Trans: ({ children }: { children?: unknown }) => <>{children as never}</>,
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
 
-// Both vehicle hooks are mocked so the widget's orchestration is deterministic.
 vi.mock('@/api/hooks/useVehicles', async (importActual) => {
   const actual = await importActual<typeof import('@/api/hooks/useVehicles')>();
   return { ...actual, useVehicles: vi.fn(), useLatestTirePressure: vi.fn() };
 });
-
-// jsdom lacks matchMedia; useMotionPreference (via <FreshnessDot>) reads it.
-if (typeof window.matchMedia !== 'function') {
-  window.matchMedia = ((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => false,
-  })) as unknown as typeof window.matchMedia;
-}
 
 import TirePressureVisualWidget from './TirePressureVisualWidget';
 import { useVehicles, useLatestTirePressure } from '@/api/hooks/useVehicles';
@@ -99,17 +31,12 @@ import type { WidgetProps, WidgetSize } from './types';
 const mockVehicles = vi.mocked(useVehicles);
 const mockLatest = vi.mocked(useLatestTirePressure);
 
-const STANDARD: WidgetSize = { cols: 2, rows: 2 };
-const COMPACT: WidgetSize = { cols: 1, rows: 1 };
+const GREEN = COLOR.GOOD;
+const AMBER = COLOR.WARN;
+const RED = COLOR.BAD;
+const GREY = CHART_NEUTRAL;
 
-// Tire-rect fill hexes from the widget's VARIANT_STYLE map (Pa-derived band).
-const GREEN = '#22c55e'; // success
-const AMBER = '#f59e0b'; // warning
-const RED = '#ef4444'; // danger
-const GREY = '#6b7280'; // neutral / unknown
-
-/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
-function qr(over: Record<string, unknown> = {}): never {
+function queryResult(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,
     isLoading: false,
@@ -123,15 +50,6 @@ function qr(over: Record<string, unknown> = {}): never {
   } as never;
 }
 
-/** `useVehicles()` stub — the widget only reads `.data[0].id`. */
-function vehicles(ids: number[]): never {
-  return { data: ids.map((id) => ({ id })) } as never;
-}
-
-/**
- * A TirePressureSnapshot with all four corners at a healthy 250 000 Pa
- * (≈ 2.5 bar / 36 psi → 'success'). Override per test.
- */
 function makeSnap(over: Partial<TirePressureSnapshot> = {}): TirePressureSnapshot {
   return {
     id: 1,
@@ -143,11 +61,6 @@ function makeSnap(over: Partial<TirePressureSnapshot> = {}): TirePressureSnapsho
     created_at: '2026-07-06T00:00:00Z',
     ...over,
   };
-}
-
-/** ISO timestamp `ms` milliseconds in the past. */
-function agoIso(ms: number): string {
-  return new Date(Date.now() - ms).toISOString();
 }
 
 function renderWidget(size: WidgetSize, props: Partial<WidgetProps> = {}) {
@@ -162,8 +75,8 @@ function renderWidget(size: WidgetSize, props: Partial<WidgetProps> = {}) {
 }
 
 beforeEach(() => {
-  mockVehicles.mockReturnValue(vehicles([1]));
-  mockLatest.mockReturnValue(qr({ data: makeSnap() }));
+  mockVehicles.mockReturnValue({ data: [{ id: 7 }, { id: 9 }] } as never);
+  mockLatest.mockReturnValue(queryResult({ data: makeSnap() }));
 });
 
 afterEach(() => {
@@ -171,313 +84,106 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe.each([1, 2, 3])('TirePressureVisualWidget — identifying heading at cols=%i', (cols) => {
-  it.each(['populated', 'loading', 'empty', 'initial failure', 'retained failure'] as const)(
-    'keeps exactly one visible shell heading when %s',
-    (state) => {
-      const populated = state === 'populated' || state === 'retained failure';
-      const failed = state === 'initial failure' || state === 'retained failure';
-      mockLatest.mockReturnValue(qr({
-        data: populated ? makeSnap() : undefined,
-        isLoading: state === 'loading',
-        isError: failed,
-        error: failed ? new Error('offline') : null,
-      }));
-      const { container } = renderWidget({ cols, rows: 2 });
-      const headings = screen.getAllByRole('heading', { name: 'Tire pressure', level: 3 });
-      expect(headings).toHaveLength(1);
-      expect(headings[0]).toBeVisible();
-      if (populated) {
-        expect(screen.getAllByText('2.50')).toHaveLength(4);
-        expect(container.querySelectorAll(`rect[fill="${GREEN}"]`)).toHaveLength(4);
-        expect(screen.getByText('All normal')).toBeInTheDocument();
-      }
-      if (state === 'loading') expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
-      if (state === 'empty') expect(screen.getByText('No tire pressure data')).toBeInTheDocument();
-      if (state === 'initial failure') expect(screen.getByRole('alert')).toBeInTheDocument();
-      if (state === 'retained failure') expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    },
-  );
-});
-
-describe('TirePressureVisualWidget — vehicle resolution', () => {
-  it('prefers the explicit vehicleId prop over the vehicle list (with the 10s poll)', () => {
-    mockVehicles.mockReturnValue(vehicles([7, 9]));
-    renderWidget(STANDARD, { vehicleId: 42 });
-
+describe('TirePressureVisualWidget redesign', () => {
+  it('uses the selected vehicle and 10-second polling', () => {
+    renderWidget({ cols: 2, rows: 2 }, { vehicleId: 42 });
     expect(mockLatest).toHaveBeenCalledWith(42, 10_000);
   });
 
-  it('falls back to the first vehicle id when no vehicleId prop is given', () => {
-    mockVehicles.mockReturnValue(vehicles([7, 9]));
-    renderWidget(STANDARD);
-
-    expect(mockLatest).toHaveBeenCalledWith(7, 10_000);
-  });
-
-  it('falls back to 0 when there is neither a prop nor any vehicle', () => {
-    mockVehicles.mockReturnValue(vehicles([]));
-    mockLatest.mockReturnValue(qr({ data: null }));
-    renderWidget(STANDARD);
-
-    expect(mockLatest).toHaveBeenCalledWith(0, 10_000);
-    // No data → explicit empty state, never a blank panel.
-    expect(screen.getByText('No tire pressure data')).toBeInTheDocument();
-  });
-});
-
-describe('TirePressureVisualWidget — shell states', () => {
-  it('shows a skeleton (never a blank panel) and no refresh control while loading', () => {
-    mockLatest.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
-    const { container } = renderWidget(STANDARD);
-
-    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
-    expect(screen.queryByText('No tire pressure data')).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
-  });
-
-  it('renders an explicit empty state (no car diagram) when no snapshot has arrived', () => {
-    mockLatest.mockReturnValue(qr({ data: null }));
-    const { container } = renderWidget(STANDARD);
-
-    expect(screen.getByText('No tire pressure data')).toBeInTheDocument();
-    // The car diagram (tire rects) is absent — only the empty-state icon remains.
-    expect(container.querySelector('rect')).toBeNull();
-    expect(screen.queryByText('FL')).toBeNull();
-  });
-
-  it('surfaces a fetch error as a QueryError alert, not an empty state', () => {
-    mockLatest.mockReturnValue(
-      qr({ isError: true, error: new Error('tpms down'), data: undefined }),
-    );
-    renderWidget(STANDARD);
-
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('No tire pressure data')).toBeNull();
-    expect(screen.queryByText('FL')).toBeNull();
-  });
-});
-
-describe('TirePressureVisualWidget — layout', () => {
-  it('renders the title, four corner labels, values, diagram, unit and All-Normal badge', () => {
-    const { container } = renderWidget(STANDARD);
-
-    expect(screen.getByText('Tire pressure')).toBeInTheDocument();
-    expect(screen.getByText('FL')).toBeInTheDocument();
-    expect(screen.getByText('FR')).toBeInTheDocument();
-    expect(screen.getByText('RL')).toBeInTheDocument();
-    expect(screen.getByText('RR')).toBeInTheDocument();
-
-    // All four corners at 250 000 Pa → "2.5" (bar) and a green tire rect each.
-    expect(screen.getAllByText('2.50')).toHaveLength(4);
-    expect(container.querySelectorAll(`rect[fill="${GREEN}"]`)).toHaveLength(4);
-
-    // Footer shows the user's pressure unit and the aggregate status.
-    expect(container.textContent).toContain('bar');
-    expect(screen.getByText('All normal')).toBeInTheDocument();
-    expect(screen.queryByText('Check pressure')).toBeNull();
-  });
-
-  it('retains the identifying title and all values in the compact (cols ≤ 1) tile', () => {
-    renderWidget(COMPACT);
-
+  it('renders the After hierarchy with four actual Pa-derived values and no separate FL labels', () => {
+    const { container } = renderWidget({ cols: 2, rows: 2 });
     expect(screen.getByRole('heading', { name: 'Tire pressure', level: 3 })).toBeVisible();
-    expect(screen.getByText('FL')).toBeInTheDocument();
     expect(screen.getAllByText('2.50')).toHaveLength(4);
+    expect(screen.getByText('All normal')).toBeInTheDocument();
+    expect(container.textContent).toContain('bar');
+    expect(container.querySelectorAll('rect')).toHaveLength(4 + 1);
+    expect(container.querySelectorAll(`rect[fill="${GREEN}"]`)).toHaveLength(4);
+    expect(screen.queryByText('FL')).toBeNull();
+    expect(screen.queryByText('FR')).toBeNull();
+    expect(screen.queryByText('RL')).toBeNull();
+    expect(screen.queryByText('RR')).toBeNull();
   });
-});
 
-describe('TirePressureVisualWidget — Pa→display conversion (hardening)', () => {
-  it('converts SI Pascals to the user unit (290 000 Pa → "2.9"), not ~1000× too big', () => {
-    mockLatest.mockReturnValue(
-      qr({
-        data: makeSnap({
-          front_left: 290_000,
-          front_right: 290_000,
-          rear_left: 290_000,
-          rear_right: 290_000,
-        }),
+  it('converts 290000 Pa through the shared pressure format without fabrication', () => {
+    mockLatest.mockReturnValue(queryResult({
+      data: makeSnap({
+        front_left: 290_000, front_right: 290_000,
+        rear_left: 290_000, rear_right: 290_000,
       }),
-    );
-    renderWidget(STANDARD);
-
+    }));
+    renderWidget({ cols: 2, rows: 2 });
     expect(screen.getAllByText('2.90')).toHaveLength(4);
-    // Pre-fix, raw Pascals went straight through the kPa formatter (~1000×).
-    expect(screen.queryByText('2,900.00')).toBeNull();
   });
-});
 
-describe('TirePressureVisualWidget — Pa-derived status colours', () => {
-  it('paints each corner from its own Pa band and flips the aggregate badge', () => {
-    mockLatest.mockReturnValue(
-      qr({
-        data: makeSnap({
-          front_left: 250_000, // success  → green  → "2.5"
-          front_right: 240_000, // low      → amber  → "2.4"
-          rear_left: 200_000, // crit-low  → red    → "2.0"
-          rear_right: null, // unknown   → grey   → "—"
-        }),
+  it('uses each corner SI status and an honest aggregate pill', () => {
+    mockLatest.mockReturnValue(queryResult({
+      data: makeSnap({
+        front_left: 250_000,
+        front_right: 240_000,
+        rear_left: 200_000,
+        rear_right: null,
       }),
-    );
-    const { container } = renderWidget(STANDARD);
-
+    }));
+    const { container } = renderWidget({ cols: 2, rows: 2 });
     expect(container.querySelectorAll(`rect[fill="${GREEN}"]`)).toHaveLength(1);
     expect(container.querySelectorAll(`rect[fill="${AMBER}"]`)).toHaveLength(1);
     expect(container.querySelectorAll(`rect[fill="${RED}"]`)).toHaveLength(1);
     expect(container.querySelectorAll(`rect[fill="${GREY}"]`)).toHaveLength(1);
-
-    expect(screen.getByText('2.50')).toBeInTheDocument();
-    expect(screen.getByText('2.40')).toBeInTheDocument();
-    expect(screen.getByText('2.00')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
-
-    // Any non-success corner flips the aggregate badge.
-    expect(screen.getAllByText('Check pressure')).toHaveLength(3);
-    expect(screen.queryByText('All normal')).toBeNull();
+    expect(screen.getByText('Check pressure')).toBeInTheDocument();
   });
 
-  it('flags an over-inflated (critical-high) tire as red', () => {
-    mockLatest.mockReturnValue(
-      qr({
-        data: makeSnap({
-          front_left: 350_000,
-          front_right: 350_000,
-          rear_left: 350_000,
-          rear_right: 350_000,
-        }),
-      }),
-    );
-    const { container } = renderWidget(STANDARD);
-
-    expect(container.querySelectorAll(`rect[fill="${RED}"]`)).toHaveLength(4);
-    expect(screen.getAllByText('3.50')).toHaveLength(4);
-    expect(screen.getAllByText('Check pressure')).toHaveLength(5);
-  });
-
-  it('colours the value text with the same severity variant as its tire', () => {
-    mockLatest.mockReturnValue(
-      qr({
-        data: makeSnap({
-          front_left: 200_000, // danger
-          front_right: 250_000,
-          rear_left: 250_000,
-          rear_right: 250_000,
-        }),
-      }),
-    );
-    renderWidget(STANDARD);
-
-    // The unique "2.0" front-left value renders in the danger text colour.
-    expect(screen.getByText('2.00').className).toContain('text-rose-300');
-  });
-});
-
-describe('TirePressureVisualWidget — null safety', () => {
-  it('keeps tire readings and the diagram during a failed cached refresh', () => {
-    mockLatest.mockReturnValue(qr({ data: makeSnap(), isError: true, error: new Error('refresh failed') }));
-    const { container } = renderWidget(STANDARD);
+  it('does not suppress retained data on refresh failure', () => {
+    mockLatest.mockReturnValue(queryResult({
+      data: makeSnap(),
+      isError: true,
+      error: new Error('offline'),
+    }));
+    const { container } = renderWidget({ cols: 2, rows: 2 });
     expect(screen.getAllByText('2.50')).toHaveLength(4);
-    expect(container.querySelectorAll(`rect[fill="${GREEN}"]`)).toHaveLength(4);
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(container.querySelectorAll('[role="alert"]')).toHaveLength(0);
   });
-  it('renders "—" + a neutral grey tile (never red) when every corner is null', () => {
-    mockLatest.mockReturnValue(
-      qr({
-        data: makeSnap({
-          front_left: null,
-          front_right: null,
-          rear_left: null,
-          rear_right: null,
-        }),
-      }),
-    );
-    const { container } = renderWidget(STANDARD);
 
-    // Four "—" corner placeholders (the footer says "No reading", not "—").
+  it('renders null corners as unknown instead of manufactured zero or critical readings', () => {
+    mockLatest.mockReturnValue(queryResult({
+      data: makeSnap({ front_left: null, front_right: null, rear_left: null, rear_right: null }),
+    }));
+    const { container } = renderWidget({ cols: 2, rows: 2 });
     expect(screen.getAllByText('—')).toHaveLength(4);
     expect(container.querySelectorAll(`rect[fill="${GREY}"]`)).toHaveLength(4);
-    // Pre-fix this rendered four critical-red tiles; now it's calm neutral grey.
-    expect(container.querySelectorAll(`rect[fill="${RED}"]`)).toHaveLength(0);
-    expect(screen.getAllByText('Unknown')).toHaveLength(5);
-    expect(screen.queryByText('Check pressure')).toBeNull();
-  });
-});
-
-describe('TirePressureVisualWidget — reading-time footer', () => {
-  // The footer caption shows the unit; the reading age lives in its tooltip.
-  function footerCaption(): HTMLElement {
-    return screen.getByText('bar');
-  }
-
-  it('shows "No reading" when no per-corner last-seen timestamp is present', () => {
-    renderWidget(STANDARD);
-    expect(footerCaption()).toHaveAttribute('title', 'No reading');
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
   });
 
-  it('renders "Just now" for a sub-minute reading', () => {
-    mockLatest.mockReturnValue(qr({ data: makeSnap({ last_seen_time_fl: agoIso(20_000) }) }));
-    renderWidget(STANDARD);
-    expect(footerCaption()).toHaveAttribute('title', 'Just now');
+  it('keeps explicit loading and empty states', () => {
+    mockLatest.mockReturnValue(queryResult({ isLoading: true, data: undefined }));
+    const first = renderWidget({ cols: 2, rows: 2 });
+    expect(first.container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    first.unmount();
+
+    mockLatest.mockReturnValue(queryResult({ data: null }));
+    renderWidget({ cols: 1, rows: 1 });
+    expect(screen.getByText('No tire pressure data')).toBeInTheDocument();
   });
 
-  it('renders a minutes-ago label', () => {
-    mockLatest.mockReturnValue(qr({ data: makeSnap({ last_seen_time_fl: agoIso(5 * 60_000) }) }));
-    renderWidget(STANDARD);
-    expect(footerCaption()).toHaveAttribute('title', '5m ago');
+  it('shows fatal fetch errors rather than an empty panel', () => {
+    mockLatest.mockReturnValue(queryResult({
+      isError: true,
+      error: new Error('TPMS unavailable'),
+      data: undefined,
+    }));
+    renderWidget({ cols: 2, rows: 2 });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No tire pressure data')).toBeNull();
   });
 
-  it('renders an hours-ago label', () => {
-    mockLatest.mockReturnValue(qr({ data: makeSnap({ last_seen_time_fl: agoIso(3 * 3_600_000) }) }));
-    renderWidget(STANDARD);
-    expect(footerCaption()).toHaveAttribute('title', '3h ago');
-  });
-
-  it('renders a days-ago label', () => {
-    mockLatest.mockReturnValue(qr({ data: makeSnap({ last_seen_time_fl: agoIso(2 * 86_400_000) }) }));
-    renderWidget(STANDARD);
-    expect(footerCaption()).toHaveAttribute('title', '2d ago');
-  });
-
-  it('surfaces the most-recent timestamp across the four corners', () => {
-    mockLatest.mockReturnValue(
-      qr({
-        data: makeSnap({
-          last_seen_time_fl: agoIso(3 * 86_400_000), // 3 days ago
-          last_seen_time_rr: agoIso(20_000), // 20s ago — should win
-        }),
-      }),
-    );
-    renderWidget(STANDARD);
-    expect(footerCaption()).toHaveAttribute('title', 'Just now');
-    expect(footerCaption().getAttribute('title')).not.toContain('3d ago');
-  });
-
-  it('degrades an unparseable timestamp to a "—" placeholder', () => {
-    mockLatest.mockReturnValue(qr({ data: makeSnap({ last_seen_time_fl: 'not-a-date' }) }));
-    renderWidget(STANDARD);
-    expect(footerCaption()).toHaveAttribute('title', '—');
-  });
-});
-
-describe('TirePressureVisualWidget — refresh wiring', () => {
-  it('invokes the query refetch when the freshness control is activated (standard)', () => {
+  it('keeps one title and four values in compact size and wires FreshnessDot refresh', () => {
     const refetch = vi.fn();
-    mockLatest.mockReturnValue(qr({ data: makeSnap(), refetch }));
-    renderWidget(STANDARD);
-
+    mockLatest.mockReturnValue(queryResult({ data: makeSnap(), refetch }));
+    const { container } = renderWidget({ cols: 1, rows: 1 });
+    expect(screen.getAllByRole('heading', { name: 'Tire pressure', level: 3 })).toHaveLength(1);
+    expect(screen.getAllByText('2.50')).toHaveLength(4);
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
-
     expect(refetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('invokes the query refetch from the compact tile too', () => {
-    const refetch = vi.fn();
-    mockLatest.mockReturnValue(qr({ data: makeSnap(), refetch }));
-    renderWidget(COMPACT);
-
-    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
-
-    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(container.querySelectorAll('svg')).not.toHaveLength(0);
   });
 });

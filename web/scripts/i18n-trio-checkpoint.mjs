@@ -360,6 +360,7 @@ export function checkpointCatalog(catalog) {
   const names = { canonical: 'src/i18n/authorized-canonical-recovery.test.ts', owner: 'src/i18n/authorized-owner-recovery.test.ts', feature: 'src/i18n/excluded-feature-owned-producers.test.ts', consistent: 'src/i18n/excluded-consistent-defaults.test.ts', resolved: 'src/i18n/resolved-baseline-producer.test.ts', copyOwner: 'src/i18n/copy-owner-contracts.test.ts', final: 'src/i18n/final-four-localization-gaps.test.ts' };
   const fixture = (file, name) => literal(declarations(file).get(name).node);
   const canonical = fixture(names.canonical, 'authorizedCanonicalAdditions'), owner = fixture(names.owner, 'ownerRecoveryAdditions'), finalFour = fixture(names.owner, 'finalFourAdditions');
+  for (const [key, value] of canonical) if (valueAt(catalog, key) !== value) throw new Error('Unverified canonical fixture: ' + key);
   const feature = fixture(names.feature, 'featureOwnedAdditions'), copy = fixture(names.feature, 'copyOwnerAdditions'), drives = fixture(names.feature, 'drivesEmptyAddition');
   const later = fixture(names.feature, 'interveningAdditions'), consistent = fixture(names.consistent, 'additions'), resolved = fixture(names.resolved, 'additions');
   const copyPairs = fixture(names.copyOwner, 'pairs'), copyLater = fixture(names.copyOwner, 'interveningAdditions');
@@ -409,11 +410,12 @@ export function checkpointCatalog(catalog) {
         if (method === 'toHaveLength' && receiver === 'expect(' + variable + ')') edits.push({ start: argument.getStart(tree), end: argument.end, value: String(predecessor.length) });
         if (method === 'toHaveLength' && receiver === form.total) edits.push({ start: argument.getStart(tree), end: argument.end, value: String(entries.length) });
         if (method === 'toBe' && ts.isStringLiteralLike(argument) && /^[a-f0-9]{64}$/.test(argument.text) && receiver.includes('JSON.stringify(' + variable + ')')) edits.push({ start: argument.getStart(tree), end: argument.end, value: JSON.stringify(digest(JSON.stringify(predecessor))) });
+        if (group === 'canonical' && method === 'toBe' && ts.isStringLiteralLike(argument) && /^[a-f0-9]{64}$/.test(argument.text) && receiver.includes('JSON.stringify(authorizedCanonicalAdditions)')) edits.push({ start: argument.getStart(tree), end: argument.end, value: JSON.stringify(digest(JSON.stringify(canonical))) });
       }
       ts.forEachChild(node, visit);
     }
     visit(tree);
-    if (edits.length !== 3) throw new Error('Expected exactly partition count/hash and total count: ' + file + ', got ' + edits.length);
+    if (edits.length !== (group === 'canonical' ? 4 : 3)) throw new Error('Expected partition count/hash, total count and canonical fixture hash where applicable: ' + file + ', got ' + edits.length);
     let updated = text;
     for (const edit of edits.sort((a, b) => b.start - a.start)) updated = updated.slice(0, edit.start) + edit.value + updated.slice(edit.end);
     fs.writeFileSync(path.resolve(root, file), updated);

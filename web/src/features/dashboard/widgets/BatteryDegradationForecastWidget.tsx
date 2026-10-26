@@ -3,6 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { TrendingDown, AlertTriangle, Lightbulb, Zap, Thermometer, Battery } from 'lucide-react';
 import { Badge, Caption, Subhead, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
+import {
+  LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine,
+  chartGrid, axisTickSm, useThemeChartPalette, EmbeddedChart, ChartTooltip, ChartLegend,
+} from '@/components/charts';
 import { useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
 
@@ -10,9 +14,11 @@ import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import type { StatMetric } from '@/components/data-display';
 import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
-import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { gaugeTone } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetTipCards, type TipItem } from './shared';
+import { WidgetBigNumber, WidgetChartSummary, WidgetTipCards, type TipItem } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -53,31 +59,13 @@ function impactVariant(impact: 'high' | 'medium' | 'low'): 'danger' | 'warning' 
   return 'success';
 }
 
-/**
- * Format an ISO date string as a localized "MMM YYYY" label. Returns an em
- * dash for a missing or unparseable date so a malformed API value never
- * throws a RangeError out of `Intl.DateTimeFormat` (which would crash the
- * whole widget render).
- */
-export function formatProjectedMonth(dateStr: string | null | undefined, locale: string): string {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return '—';
-  try {
-    return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short' }).format(d);
-  } catch {
-    // Malformed BCP-47 locale tag — fall back to en-US so we still render.
-    return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short' }).format(d);
-  }
-}
-
 export default function BatteryDegradationForecastWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
   const idStr = id != null ? String(id) : null;
-  const { locale } = useDateFormat();
+  const { formatMonthYear } = useDateLabels();
 
   const query = useBatteryDegradation(idStr);
   const { data, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = query;
@@ -85,14 +73,32 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
 
   const isCompact = size.cols <= 1;
 
+  const { reduce } = useMotionPreference();
+  const palette = useThemeChartPalette();
+
   const rate = knownNumber(data?.degradation_rate_pct_per_month);
   const tier = rate != null ? healthTier(rate) : null;
   const currentHealthPct = knownNumber(data?.current_health_pct) ?? knownNumber(data?.current_health);
-  const projectedDate = formatProjectedMonth(data?.projected_80pct_date, locale);
+  const projectedDate = formatMonthYear(data?.projected_80pct_date);
+  // After-spec trend: solid history from monthly_trend, dashed forecast from
+  // projections. Projection dates go through the shared date layer; history
+  // month keys are already calendar labels (same convention as the trend widget).
+  const chartData = useMemo(() => {
+    const history = (data?.monthly_trend ?? [])
+      .map((entry) => ({ month: entry.month ?? '', health: knownNumber(entry.avg_health), forecast: null as number | null }))
+      .filter((point) => point.health != null);
+    const forecast = (data?.projections ?? [])
+      .map((point) => ({ month: formatMonthYear(point.date), health: null as number | null, forecast: knownNumber(point.health_pct) }))
+      .filter((point) => point.forecast != null && point.month !== '—');
+    if (history.length > 0 && forecast.length > 0) {
+      forecast[0] = { ...forecast[0], health: history[history.length - 1].health };
+    }
+    return [...history, ...forecast];
+  }, [data, formatMonthYear]);
   const summaryMetrics: StatMetric[] = [
     { metricId: 'percent', occurrenceId: 'forecast-current-health', rawValue: currentHealthPct,
       label: t('widget.forecast.currentHealth', 'Current health'),
-      display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } },
+      display: { formatter: raw => ({ value: `${fmtNumber(raw, 0)}%`, unit: '' }) } },
     { metricId: 'rate', occurrenceId: 'forecast-degradation-rate', rawValue: data?.degradation_rate_pct_per_month,
       label: t('widget.degradation', 'Degradation'),
       description: t('widget.forecast.rateSource', 'Returned percentage-point degradation rate per month; the existing displayed loss sign is retained.'),
@@ -145,7 +151,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
       {isCompact ? (
           /* ── Compact layout (1×2) ── */
           <div className="flex min-w-0 flex-col gap-2">
-            <WidgetBigNumber value={currentHealthPct != null ? `${fmtNumber(currentHealthPct)}%` : null} label={t('widget.forecast.currentHealth', 'Current health')} />
+            <WidgetBigNumber value={currentHealthPct != null ? `${fmtNumber(currentHealthPct, 0)}%` : null} label={t('widget.forecast.currentHealth', 'Current health')} />
             {tier && <Badge variant={tier.variant} size="sm" className="self-start">
               {t(`widget.forecast.${tier.key}`, tier.label)}
             </Badge>}
@@ -155,10 +161,10 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
         ) : (
           /* ── Standard layout (2×4) ── */
           <div className="flex min-w-0 flex-col gap-3">
-            {/* Projected 80% date — hero section */}
-            <div className="flex min-w-0 flex-col gap-2">
+            {/* Projected 80% date — hero section (After: headline + status pill) */}
+            <div className="flex min-w-0 items-start justify-between gap-3">
               <WidgetBigNumber value={projectedDate === '—' ? null : projectedDate} label={t('widget.forecast.projected80', 'Projected 80% capacity')} animated={false} />
-              {tier && <Badge variant={tier.variant} size="sm" className="self-start">
+              {tier && <Badge variant={tier.variant} size="sm" className="mt-1 shrink-0">
                   {t(`widget.forecast.${tier.key}`, tier.label)}
               </Badge>}
             </div>
@@ -170,6 +176,46 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
               description={t('widget.forecast.summaryDescription', 'Current health and monthly degradation retain their separate meanings; the projected date, horizon intervals, risks and recommendations remain separate model outputs.')}
               scope={t('widget.forecast.summaryScope', 'Vehicle {{id}} · returned inferred forecast; the response does not establish continuous recording coverage.', { id: id ?? '—' })}
               loading={isLoading && !data} testId="dashboard-battery-forecast-brief" />
+
+            {/* After-spec history + forecast line (85–100% health band) */}
+            <WidgetChartSummary
+              stats={[]}
+              legend={[
+                { label: t('widget.healthPct', 'Health %') },
+                { label: t('widget.costForecast.forecast', 'Forecast') },
+              ]}
+              chart={(
+                <EmbeddedChart
+                  title={t('widget.batteryDegradation', 'Battery degradation')}
+                  ariaLabel={t('widget.batteryDegradationChart.aria', 'Monthly battery health trend')}
+                  empty={chartData.filter((point) => point.health != null || point.forecast != null).length <= 1}
+                  emptyMessage={data ? t('widget.needMoreData', 'More data needed for trend') : t('widget.noDegradation', 'No degradation data')}
+                  data={chartData}
+                  dataColumns={[
+                    { key: 'month', label: t('widget.batteryDegradationChart.month', 'Month') },
+                    { key: 'health', label: t('widget.healthPct', 'Health %') },
+                    { key: 'forecast', label: t('widget.costForecast.forecast', 'Forecast') },
+                  ]}
+                  chartKey="dashboard-battery-degradation-forecast"
+                  height={140}
+                >
+                  {({ hiddenSeries }) => (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+                      {chartGrid}
+                      <XAxis dataKey="month" {...axisTickSm} />
+                      <YAxis domain={['dataMin - 2', 100]} tickFormatter={(v: number) => `${v}%`} {...axisTickSm} tick={axisTickSm} width={44} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <ReferenceLine y={80} stroke={gaugeTone.danger} strokeDasharray="4 4" strokeOpacity={0.4} />
+                      <ChartLegend />
+                      <Line type="monotone" dataKey="health" stroke={palette.series[1]} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={!reduce} name={t('widget.healthPct', 'Health %')} hide={hiddenSeries?.isHidden('health')} />
+                      <Line type="monotone" dataKey="forecast" stroke={palette.series[1]} strokeWidth={2} strokeDasharray="5 4" dot={false} connectNulls={false} isAnimationActive={!reduce} name={t('widget.costForecast.forecast', 'Forecast')} hide={hiddenSeries?.isHidden('forecast')} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  )}
+                </EmbeddedChart>
+              )}
+            />
 
             {/* Horizon outlook: 1/3/5-year twin readout */}
               <div className="flex flex-col gap-1.5">
@@ -186,10 +232,10 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
                         {t('widget.forecast.years', '{{n}} yr', { n: p.years })}
                       </Caption>
                       <Text as="p" size="lg" weight="semibold" color="primary" className="break-words tabular-nums">
-                        {knownNumber(p.health_pct) != null ? `${fmtNumber(p.health_pct)}%` : '—'}
+                        {knownNumber(p.health_pct) != null ? `${fmtNumber(p.health_pct, 0)}%` : '—'}
                       </Text>
                       <Caption className="block break-words tabular-nums">
-                        {knownNumber(p.confidence_low) != null ? fmtNumber(p.confidence_low) : '—'}–{knownNumber(p.confidence_high) != null ? fmtNumber(p.confidence_high) : '—'}
+                        {knownNumber(p.confidence_low) != null ? fmtNumber(p.confidence_low, 0) : '—'}–{knownNumber(p.confidence_high) != null ? fmtNumber(p.confidence_high, 0) : '—'}
                       </Caption>
                     </li>
                   ))}
@@ -225,7 +271,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
                           </Caption>
                         </div>
                         <Badge variant={impact != null ? impactVariant(impact) : 'neutral'} size="sm">
-                          {score != null ? fmtNumber(score) : '—'}
+                          {score != null ? fmtNumber(score, 0) : '—'}
                         </Badge>
                       </li>
                     );

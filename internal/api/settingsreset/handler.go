@@ -12,12 +12,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // MaxSettingsResetBodyBytes caps the inbound JSON body. The body is
@@ -108,7 +108,7 @@ func (h *SettingsResetHandler) Reset(w http.ResponseWriter, r *http.Request) {
 		sections = []settingsdb.SettingsResetSection{s}
 	}
 
-	userID := actorFromRequest(r, h.authHdr)
+	userID := httputil.ActorIdentity(r, h.authHdr)
 	result, err := h.repo.ResetSections(r.Context(), userID, sections)
 	if err != nil {
 		if errors.Is(err, settingsdb.ErrSettingsResetQuietHoursRequiresUser) {
@@ -130,11 +130,4 @@ func (h *SettingsResetHandler) Reset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, result)
-}
-
-func actorFromRequest(r *http.Request, headerName string) string {
-	if r == nil || headerName == "" {
-		return ""
-	}
-	return strings.TrimSpace(r.Header.Get(headerName))
 }

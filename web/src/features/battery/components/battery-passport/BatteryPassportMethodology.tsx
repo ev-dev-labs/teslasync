@@ -32,7 +32,7 @@ export function BatteryPassportMethodology() {
       ),
       body: t(
         'batteryPassport.method.trendCapBody',
-        'The server returns at most 180 qualifying UTC daily points. Reaching the maximum means earlier qualifying history may be absent; it does not establish a continuous 180-day observation window.',
+        'The server returns at most 180 qualifying daily points in the fixed certificate calendar. Reaching the maximum means earlier qualifying history may be absent; it does not establish a continuous 180-day observation window.',
       ),
     },
     {
@@ -76,11 +76,11 @@ export function BatteryPassportMethodology() {
       icon: <CalendarClock className="h-5 w-5" aria-hidden="true" />,
       title: t(
         'batteryPassport.method.utcTitle',
-        'UTC trend calendar',
+        'Fixed certificate calendar',
       ),
       body: t(
         'batteryPassport.method.utcBody',
-        'degradation_trend.date is explicitly a UTC calendar date. The workspace does not relabel these dates as vehicle-local; issue instants may be displayed in vehicle time separately.',
+        'degradation_trend.date is a source-owned calendar date, not an instant. Display settings never shift these dates or canonical hash days; issue and observation instants use the selected display clock separately.',
       ),
     },
     {
@@ -116,7 +116,7 @@ export function BatteryPassportMethodology() {
       ),
       body: t(
         'batteryPassport.method.hashBody',
-        'tsbp-v1 hashes seven ordered facts with fixed numeric precision. first_observed_at and issued_at enter as UTC days, so verification rebuilds the current certificate and compares today’s canonical digest with the supplied hash.',
+        'tsbp-v1 hashes seven ordered facts with fixed numeric precision. first_observed_at and issued_at enter as canonical certificate days, so verification rebuilds the current certificate and compares its canonical digest with the supplied hash. Display settings never change these hash inputs.',
       ),
     },
     {
@@ -140,7 +140,7 @@ export function BatteryPassportMethodology() {
       ),
       body: t(
         'batteryPassport.method.fitBody',
-        'The frontend withholds an annualized least-squares description until at least 12 valid unique points span at least 90 UTC days. A displayed line summarizes this returned window and is not a forecast.',
+        'The frontend withholds an annualized least-squares description until at least 12 valid unique points span at least 90 certificate days. A displayed line summarizes this returned window and is not a forecast.',
       ),
     },
     {
@@ -176,7 +176,7 @@ export function BatteryPassportMethodology() {
             'Methodology and interpretation limits',
           )} description={t(
             'batteryPassport.method.subtitle',
-            'Server rules, frontend diagnostics, UTC semantics, persistence behavior, and explicit non-claims.',
+            'Server rules, frontend diagnostics, source-calendar semantics, persistence behavior, and explicit non-claims.',
           )} actions={<FileWarning className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {items.map((item) => (

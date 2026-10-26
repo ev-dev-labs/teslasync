@@ -5,10 +5,8 @@
  * The widget fetches the last 30 days of charging sessions and renders one of
  * three layouts driven by `size`:
  *   • compact (cols ≤ 1 && rows ≤ 1): a single big 30-day total-cost figure;
- *   • full non-tall (rows === 1): energy + cost cards plus an inline
- *     cost/distance + savings summary;
- *   • full tall (rows ≥ 2): the two cards above plus a cost/distance and a
- *     vs-gas-savings card.
+ *   • full: headline 30-day cost with saved-vs-gas delta, plus a 3-stat grid
+ *     (energy, cost/distance, avg rate); tall adds the savings-note footer.
  *
  * What this file pins:
  *   - the pure `computeMetrics` aggregation — energy summed from SI watt-hours,
@@ -37,7 +35,7 @@
  * `<MemoryRouter>` wraps every render because the error panel navigates.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { ChargingSession } from '@/api/types';
@@ -402,23 +400,27 @@ describe('ChargeCostTrackerWidget — compact layout', () => {
 // ── Full layout ───────────────────────────────────────────────────────────────
 
 describe('ChargeCostTrackerWidget — full layout', () => {
-  it('non-tall: renders the energy + cost cards and omits the tall-only savings card', () => {
+  it('non-tall: renders the headline cost and Energy / Cost-per-distance / Avg-rate stats', () => {
     setQuery({ data: [makeSession({ total_energy_added_wh: 10_000, cost: 3 })] });
     renderWidget(NONTALL);
 
     expect(screen.getByText('Total energy')).toBeInTheDocument();
-    expect(screen.getByText('Total cost')).toBeInTheDocument();
-    expect(screen.getByText('10.00 kWh')).toBeInTheDocument(); // 10 kWh from 10 000 Wh
-    expect(screen.queryByText('vs gas savings')).toBeNull();
+    expect(screen.getByText('30-day cost')).toBeInTheDocument();
+    expect(screen.getByText('$3.00')).toBeInTheDocument();
+    expect(screen.getByText('10.00')).toBeInTheDocument(); // 10 kWh from 10 000 Wh
+    expect(screen.getByText('kWh')).toBeInTheDocument();
+    expect(screen.getByText('Avg rate')).toBeInTheDocument();
+    expect(screen.queryByText('30-day estimate')).toBeNull();
   });
 
-  it('tall: adds the cost/distance and gas-savings cards and exposes the title heading', () => {
+  it('tall: adds the savings-note footer and exposes the title heading', () => {
     setQuery({ data: [makeSession({ total_energy_added_wh: 10_000, cost: 1 })] });
     renderWidget(FULL);
 
     expect(screen.getByRole('heading', { name: /Charge cost tracker/i })).toBeInTheDocument();
     expect(screen.getByText('Cost / mi')).toBeInTheDocument(); // distanceUnit = 'mi'
-    expect(screen.getByText('vs gas savings')).toBeInTheDocument();
+    expect(screen.getByText(/Saved .* vs gas/)).toBeInTheDocument();
+    expect(screen.getByText('30-day estimate')).toBeInTheDocument();
   });
 
   it('renders realistic gas savings because SI meters (not miles) reach the helpers', () => {
@@ -426,24 +428,22 @@ describe('ChargeCostTrackerWidget — full layout', () => {
     renderWidget(FULL);
 
     // 10 kWh → ~35 mi of range → gas ≈ $4.08 → savings ≈ $3.08 vs the $1 charge cost.
-    expect(screen.getByText('$3.08')).toBeInTheDocument();
+    expect(screen.getByText('Saved $3.08 vs gas')).toBeInTheDocument();
 
     const distArg = costPerDistanceUnit.mock.calls[costPerDistanceUnit.mock.calls.length - 1]?.[1] as number;
     expect(distArg).toBeCloseTo(10 * AVG_M_PER_KWH, 1); // ~56 327 m, not 35
     expect(estimateGasCost.mock.calls[estimateGasCost.mock.calls.length - 1]?.[0]).toBeCloseTo(10 * AVG_M_PER_KWH, 1);
   });
 
-  it('falls back to "—" for gas savings when no gas price is configured (helper returns null)', () => {
+  it('falls back to "—" for cost/distance when no gas price is configured (helper returns null)', () => {
     estimateGasCost.mockReturnValue(null);
     costPerDistanceUnit.mockReturnValue(null);
     setQuery({ data: [makeSession()] });
     renderWidget(FULL);
 
     expect(screen.getByText('Set gas price in settings')).toBeInTheDocument();
-    expect(screen.queryByText('—')).not.toBeInTheDocument();
-    const gasBrief = screen.getByTestId('charge-cost-operational-brief');
-    fireEvent.click(within(gasBrief).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('2 empty fields are hidden.')).toBeInTheDocument();
+    expect(screen.queryByText(/Saved .* vs gas/)).toBeNull();
+    expect(screen.getByText('—')).toBeInTheDocument();
   });
 });
 
@@ -476,19 +476,13 @@ describe('ChargeCostTrackerWidget — request contract', () => {
 // ── Interactions & accessibility ──────────────────────────────────────────────
 
 describe('ChargeCostTrackerWidget — interactions & a11y', () => {
-  it('reviews actual charging quantities with capped-window and estimate limitations', () => {
+  it('shows actual charging quantities in the headline and stat grid', () => {
     renderWidget(FULL, 42);
-    const brief = screen.getByTestId('charge-cost-operational-brief');
-    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText('10.00 kWh')).toBeInTheDocument();
-    expect(within(drawer).getByText('$5.00')).toBeInTheDocument();
-    expect(within(drawer).getByText(/3.5 miles per kWh assumption/)).toBeInTheDocument();
-    expect(within(drawer).getByText(/^Vehicle 42.*at most 100 returned sessions, no explicit end bound$/)).toBeInTheDocument();
-    const provenance = within(drawer).getByRole('region', { name: 'How this was calculated' });
-    expect(within(provenance).getByText(/Vehicle 42.*at most 100 returned sessions, no explicit end bound/)).toBeInTheDocument();
-    expect(within(provenance).getByText(/Recorded and inferred charging costs remain distinct from measured drive costs; configured gas and electricity assumptions are retained\./)).toBeInTheDocument();
+    expect(screen.queryByTestId('charge-cost-operational-brief')).toBeNull();
+    expect(screen.getByText('10.00')).toBeInTheDocument();
+    expect(screen.getByText('$5.00')).toBeInTheDocument();
+    expect(screen.getByText('Avg rate')).toBeInTheDocument();
+    expect(screen.getByText('$0.12')).toBeInTheDocument();
   });
   it('preserves signed recorded costs and real zero energy without inventing unknown costs', () => {
     const metrics = computeMetrics([

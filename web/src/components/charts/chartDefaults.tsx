@@ -83,7 +83,7 @@ function clampOpacity(value: number): number {
  * Place inside <AreaChart> before <Area> components.
  *
  * @param id      Unique gradient ID (use per-chart to avoid SVG ID collisions)
- * @param color   Hex color string (e.g., '#3b82f6'). Falls back to
+ * @param color   Hex color string (e.g., palette.DATA_VISUAL_COLORS.blue). Falls back to
  *                `currentColor` when a caller passes an empty / undefined value
  *                (e.g., `palette[0]` on an empty palette) so the stop never
  *                collapses to opaque black.

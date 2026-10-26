@@ -1,4 +1,5 @@
 import type { FeedbackCategory, FeedbackStatus } from '@/api/types'
+import { COLOR, DATA_VISUAL_COLORS, CHART_NEUTRAL } from '@/lib/colors'
 
 /**
  * Segment colours for the status-distribution bar + category-mix bars.
@@ -13,15 +14,15 @@ import type { FeedbackCategory, FeedbackStatus } from '@/api/types'
  * consumer that reads from it.
  */
 export const STATUS_COLORS: Record<FeedbackStatus, string> = Object.freeze({
-  new: '#f59e0b',
-  triaged: '#10b981',
-  closed: '#64748b',
+  new: COLOR.WARN,
+  triaged: COLOR.GOOD,
+  closed: CHART_NEUTRAL,
 })
 
 export const CATEGORY_COLORS: Record<FeedbackCategory, string> = Object.freeze({
-  bug: '#f43f5e',
-  feature: '#22d3ee',
-  other: '#a78bfa',
+  bug: COLOR.BAD,
+  feature: DATA_VISUAL_COLORS.info,
+  other: DATA_VISUAL_COLORS.purple,
 })
 
 /** Whole-queue facet counts (status + category). A value may be `undefined`

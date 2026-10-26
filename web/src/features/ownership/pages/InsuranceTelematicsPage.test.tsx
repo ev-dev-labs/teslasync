@@ -127,6 +127,7 @@ function makeMutation(overrides: Record<string, unknown> = {}) {
 function makeProfile(overrides: Partial<InsuranceRiskProfile> = {}): InsuranceRiskProfile {
   return {
     vehicle_id: 7,
+    timezone: 'UTC',
     window: { from: '2026-01-01T00:00:00Z', to: '2026-03-01T00:00:00Z', days: 60 },
     policy: makePolicy(),
     exposure_distance_m: 10000, exposure_duration_s: 3600,
@@ -223,8 +224,9 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     const trend = card('Risk trajectory');
     const premium = card('Premium simulation');
     expect(trend).toHaveTextContent('Feb 28, 2026');
-    expect(trend).toHaveTextContent('America/Los_Angeles');
-    expect(premium).toHaveTextContent('Coverage Feb 28, 2026 → Mar 1, 2026 · America/Los_Angeles');
+    expect(mockProfile).toHaveBeenLastCalledWith(7, 90, 'America/Los_Angeles');
+    expect(trend).not.toHaveTextContent('America/Los_Angeles');
+    expect(premium).toHaveTextContent('Coverage Feb 28, 2026 → Mar 1, 2026');
     assertOperationalBriefDisclosure(
       briefByTitle('Underwriting position', 'Recorded driving exposure'),
       'Recorded bounds Feb 28, 2026, 04:30 PM',
@@ -238,12 +240,12 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     view.rerender(<InsuranceTelematicsPage />);
     expect(trend).toHaveTextContent('Mar 1, 2026');
     expect(trend).not.toHaveTextContent('Feb 28, 2026');
-    expect(premium).toHaveTextContent('Coverage Mar 1, 2026 → Mar 2, 2026 · UTC');
+    expect(premium).toHaveTextContent('Coverage Mar 1, 2026 → Mar 2, 2026');
 
     datePreferences.override = { locale: 'de-DE', timezone: 'UTC' };
     view.rerender(<InsuranceTelematicsPage />);
     expect(trend).toHaveTextContent('1. März 2026');
-    expect(premium).toHaveTextContent('Coverage 1. März 2026 → 2. März 2026 · UTC');
+    expect(premium).toHaveTextContent('Coverage 1. März 2026 → 2. März 2026');
     assertOperationalBriefDisclosure(
       briefByTitle('Underwriting position', 'Recorded driving exposure'),
       'Recorded bounds 1. März 2026',
@@ -444,22 +446,22 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     expect(summaryMetric('Premium simulation', 'delta')).toHaveTextContent(delta < 0 ? '-$12.50' : '$12.50');
   });
 
-  it.each([1000, 0])('labels %s m as a UTC trip-start proxy without claiming measured night distance', (nightDistance) => {
+  it.each([1000, 0])('labels %s m as a selected-clock trip-start proxy without claiming measured night distance', (nightDistance) => {
     datePreferences.override = { locale: 'en-US', timezone: 'America/Los_Angeles' };
-    const profile = makeProfile({ night_distance_m: nightDistance });
+    const profile = makeProfile({ night_distance_m: nightDistance, timezone: 'America/Los_Angeles' });
     const source = JSON.stringify(profile);
     mockProfile.mockReturnValue(makeQuery(profile));
     renderPage();
 
     const metric = summaryMetric('Underwriting position', 'night');
     expect(metric).toHaveAttribute('data-value-state', 'value');
-    expect(metric).toHaveTextContent('Distance of trips starting overnight (UTC)');
+    expect(metric).toHaveTextContent('Distance of trips starting overnight');
     expect(metric).toHaveTextContent(nightDistance ? '1.00 km' : '0.00 km');
     const exposureBrief = briefByTitle('Underwriting position', 'Recorded driving exposure');
     fireEvent.click(within(exposureBrief).getByRole('button', { name: 'Review details' }));
     const group = within(screen.getByRole('dialog'))
-      .getByRole('group', { name: 'Distance of trips starting overnight (UTC)' });
-    expect(group).toHaveTextContent('at or after 22:00 or before 05:00 UTC');
+      .getByRole('group', { name: 'Distance of trips starting overnight' });
+    expect(group).toHaveTextContent('at or after 22:00 or before 05:00 in the selected clock');
     expect(group).toHaveTextContent('Includes distance outside the band on qualifying trips');
     expect(group).toHaveTextContent('excludes distance inside the band on other trips');
     expect(group).toHaveTextContent('neither an upper nor a lower bound on actual night distance');
@@ -481,7 +483,7 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     ]);
     fireEvent.click(within(exposureBrief).getByRole('button', { name: 'Review details' }));
     const exposureDrawer = screen.getByRole('dialog');
-    expect(within(exposureDrawer).getByRole('group', { name: 'Distance of trips starting overnight (UTC)' }))
+    expect(within(exposureDrawer).getByRole('group', { name: 'Distance of trips starting overnight' }))
       .toHaveTextContent(/10(?:\.0+)?%/);
     fireEvent.keyDown(exposureDrawer, { key: 'Escape' });
     expect(summaryMetric('Premium simulation', 'perDistance')).toHaveTextContent('$5.00 / 1000 m');
@@ -712,7 +714,7 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     const exposureDrawer = screen.getByRole('dialog');
     expect(within(exposureDrawer).getByRole('group', { name: 'Exposure distance' }))
       .toHaveTextContent('4 drives');
-    expect(within(exposureDrawer).getByRole('group', { name: 'Distance of trips starting overnight (UTC)' }))
+    expect(within(exposureDrawer).getByRole('group', { name: 'Distance of trips starting overnight' }))
       .toHaveTextContent(/10(?:\.0+)?%/);
     fireEvent.keyDown(exposureDrawer, { key: 'Escape' });
     assertOperationalBriefDisclosure(exposureBrief, 'Recorded bounds', { contains: true });

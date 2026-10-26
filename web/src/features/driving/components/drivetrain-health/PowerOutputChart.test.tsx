@@ -41,6 +41,7 @@
  *                      empty state instead of throwing on `.length`.
  *  11. HARDENING     — nullish peak/regen samples coerce to 0 in the table cells.
  */
+import { CHART_COLORS, COLOR } from '@/lib/colors';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -274,13 +275,13 @@ describe('PowerOutputChart — ready state', () => {
     // Peak Power → violet, filled from the max gradient.
     expect(areas[0]).toHaveAttribute('data-key', 'powerMax');
     expect(areas[0]).toHaveAttribute('data-name', 'Peak Power (kW)');
-    expect(areas[0]).toHaveAttribute('data-stroke', '#8b5cf6');
+    expect(areas[0]).toHaveAttribute('data-stroke', CHART_COLORS[6]);
     expect(areas[0]).toHaveAttribute('data-fill', 'url(#dtPwrMaxGrad)');
 
     // Regen Power → red, filled from the min gradient.
     expect(areas[1]).toHaveAttribute('data-key', 'powerMin');
     expect(areas[1]).toHaveAttribute('data-name', 'Regen Power (kW)');
-    expect(areas[1]).toHaveAttribute('data-stroke', '#ef4444');
+    expect(areas[1]).toHaveAttribute('data-stroke', COLOR.BAD);
     expect(areas[1]).toHaveAttribute('data-fill', 'url(#dtPwrMinGrad)');
   });
 
@@ -291,8 +292,8 @@ describe('PowerOutputChart — ready state', () => {
     const byId = Object.fromEntries(
       grads.map((g) => [g.getAttribute('data-id'), g.getAttribute('data-color')]),
     );
-    expect(byId.dtPwrMaxGrad).toBe('#8b5cf6');
-    expect(byId.dtPwrMinGrad).toBe('#ef4444');
+    expect(byId.dtPwrMaxGrad).toBe(CHART_COLORS[6]);
+    expect(byId.dtPwrMinGrad).toBe(COLOR.BAD);
 
     expect(screen.getByTestId('x-axis')).toHaveAttribute('data-key', 'date');
     expect(screen.getByTestId('y-axis')).toHaveAttribute('data-label', 'kW');

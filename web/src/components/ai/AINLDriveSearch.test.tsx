@@ -1,3 +1,5 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
+import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 // Comprehensive unit + wiring coverage for AINLDriveSearch.
 //
 // AINLDriveSearch is the natural-language drive-search AI surface.
@@ -30,7 +32,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
 
-import type { AppSettings } from '@/api/types';
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -43,36 +47,10 @@ const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>;
 
 // A complete AppSettings with realistic non-AI defaults. Per-test
 // overrides flip ai_mode + the per-feature toggle to walk the gate.
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-};
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } };
-}
-
 // enableFeature turns the gate fully on so the inner card renders.
 function enableFeature() {
   mockUseSettings.mockReturnValue(
-    settingsPayload({
+    appSettingsPayload({
       ai_mode: 'cloud',
       ai_features: { 'nl-drive-search-replay': true },
     }),
@@ -81,26 +59,7 @@ function enableFeature() {
 
 // makeReadableStream turns text chunks into the byte stream shape
 // useAiStream's reader consumes.
-function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
-  let i = 0;
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (i < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[i]));
-        i++;
-      } else {
-        controller.close();
-      }
-    },
-  });
-}
-
 // sseFrame formats one SSE event exactly like internal/ai/stream/writer.go.
-function sseFrame(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-}
-
 const ROOT_TESTID = 'ai-feature-nl-drive-search-replay-root';
 // The card renders the universal "Ask Helix" CTA but exposes the
 // per-feature verb as the button's accessible name, so we can locate
@@ -126,7 +85,7 @@ afterEach(() => {
 describe('AINLDriveSearch — ADR-015 visibility gate', () => {
   it('renders nothing when ai_mode=off even with the toggle on', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'off',
         ai_features: { 'nl-drive-search-replay': true },
       }),
@@ -141,7 +100,7 @@ describe('AINLDriveSearch — ADR-015 visibility gate', () => {
 
   it('renders nothing when the per-feature toggle is off despite ai_mode=cloud', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'nl-drive-search-replay': false },
       }),

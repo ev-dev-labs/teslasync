@@ -14,6 +14,7 @@ import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis'
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 interface BatteryPassportProvenanceMatrixProps {
   analysis: BatteryPassportAnalysis;
@@ -33,6 +34,7 @@ export function BatteryPassportProvenanceMatrix({
 }: BatteryPassportProvenanceMatrixProps) {
   const { fmtInt, fmtScientificNumber, fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatDayKey } = useDateFormat();
   const passport = state.passport;
   const facts = analysis.hashFacts;
   const thermal = analysis.thermal.sumPct;
@@ -43,7 +45,7 @@ export function BatteryPassportProvenanceMatrix({
     ? passport.recommendations.length
     : 0;
   const bindingLabels = useMemo(() => ({
-    utc_day: t('batteryPassport.provenance.utcDay', 'Yes, UTC day'),
+    utc_day: t('batteryPassport.provenance.utcDay', 'Yes, canonical day'),
     value: t('batteryPassport.provenance.yes', 'Yes'),
     not_bound: t('batteryPassport.provenance.no', 'No'),
   }), [t]);
@@ -68,10 +70,12 @@ export function BatteryPassportProvenanceMatrix({
           'batteryPassport.provenance.firstObserved',
           'first_observed_at day',
         ),
-        value: facts.firstObservedDay ?? '—',
+        value: facts.firstObservedDay === '0001-01-01'
+          ? facts.firstObservedDay
+          : formatDayKey(facts.firstObservedDay),
         source: t(
           'batteryPassport.provenance.firstObservedSource',
-          'Earliest observed charging or drive day in UTC; absence canonicalizes to 0001-01-01.',
+          'Canonical earliest charging or drive day; absence canonicalizes to 0001-01-01.',
         ),
         binding: 'utc_day',
       },
@@ -133,10 +137,10 @@ export function BatteryPassportProvenanceMatrix({
           'batteryPassport.provenance.issued',
           'issued_at day',
         ),
-        value: facts.issuedAtDay ?? '—',
+        value: formatDayKey(facts.issuedAtDay),
         source: t(
           'batteryPassport.provenance.issuedSource',
-          'Certificate issue day in UTC, not the full issue instant.',
+          'Canonical certificate issue day, not the full issue instant.',
         ),
         binding: 'utc_day',
       },
@@ -216,7 +220,7 @@ export function BatteryPassportProvenanceMatrix({
         ),
         source: t(
           'batteryPassport.provenance.trendSource',
-          'Returned UTC daily SoH estimates.',
+          'Returned daily SoH estimates in the fixed certificate calendar.',
         ),
         binding: 'not_bound',
       },
@@ -242,6 +246,7 @@ export function BatteryPassportProvenanceMatrix({
       analysis.metrics.originalCapacityKwh,
       analysis.metrics.reportedGrade,
       facts,
+      formatDayKey,
       passport?.vin_masked,
       recommendationCount,
       t,

@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 /**
  * Power Flow Dashboard — shared constants.
  *
@@ -9,11 +10,11 @@
  * cannot be mutated in place by a sub-component that reads from it.
  */
 export const FLOW_COLORS = Object.freeze({
-  solar: '#f59e0b',
-  battery: '#22c55e',
-  grid: '#a855f7',
-  home: '#3b82f6',
-  soc: '#22c55e',
+  solar: palette.COLOR.WARN,
+  battery: palette.COLOR.GOOD,
+  grid: palette.DATA_VISUAL_COLORS.purple,
+  home: palette.DATA_VISUAL_COLORS.blue,
+  soc: palette.COLOR.GOOD,
 } as const);
 
 /**

@@ -29,7 +29,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlNumber } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { formatDate } from '@/lib/dateFormat';
 
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
@@ -45,7 +45,6 @@ import { TripOperationalBrief } from '../components/operationalbrief-all/TripOpe
 // Wh/km -> Wh/(display unit) conversion uses an inline factor because
 // @/lib/unitConversion does not yet expose a convertEfficiencyFromSI helper.
 // Same precedent as FleetComparePage.whPerKmToDisplay.
-const KM_PER_MILE = 1.609344;
 
 const DISTANCE_COLOR = CHART_COLORS[0];
 const ENERGY_COLOR = CHART_COLORS[1];
@@ -479,7 +478,7 @@ function TripCard({ trip }: { trip: Trip }) {
 
   const distanceDisplay = distanceM === null ? null : convertDistanceFromSI(distanceM, distancePref);
   const whPerKm = distanceM !== null && distanceM > 0 && energyWh !== null ? energyWh / (distanceM / 1000) : null;
-  const efficiencyDisplay = whPerKm === null ? null : distancePref === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
+  const efficiencyDisplay = whPerKm === null ? null : convertEfficiencyFromSI(whPerKm, distancePref);
   const efficiencyUnit = distancePref === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   return (

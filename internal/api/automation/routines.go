@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 // RoutineAction is one command in a routine template.
@@ -348,7 +349,7 @@ func (h *AutomationHandler) InstallRoutine(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if req.PlaceID <= 0 {
+	if validation.ValidatePositiveID(req.PlaceID) != nil {
 		writeError(w, http.StatusBadRequest, "place_id is required")
 		return
 	}

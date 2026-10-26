@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRef } from 'react';
 import { render, screen } from '@testing-library/react';
 import { MiniChart } from './MiniChart';
+import { CHART_COLORS } from '@/lib/colors';
 
 // Geometry reference (defaults: width=100, height=32, padding=2):
 //   x_i = (i / (n - 1)) * (width - 4) + 2      → spans [2, width - 2]
@@ -97,7 +98,7 @@ describe('MiniChart — non-finite sanitisation (regression guard)', () => {
 describe('MiniChart — styling', () => {
   it('applies the default blue stroke when no color is given', () => {
     const { container } = render(<MiniChart data={[1, 2]} />);
-    expect(polyline(container)?.getAttribute('stroke')).toBe('#3b82f6');
+    expect(polyline(container)?.getAttribute('stroke')).toBe(CHART_COLORS[0]);
   });
 
   it('applies a custom stroke color', () => {

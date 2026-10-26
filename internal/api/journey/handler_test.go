@@ -145,7 +145,7 @@ type fakeWaits struct {
 	err       error
 }
 
-func (f *fakeWaits) History(_ context.Context, site string) (waitoracle.SiteHistory, error) {
+func (f *fakeWaits) History(_ context.Context, site, _ string) (waitoracle.SiteHistory, error) {
 	if f.err != nil {
 		return waitoracle.SiteHistory{}, f.err
 	}

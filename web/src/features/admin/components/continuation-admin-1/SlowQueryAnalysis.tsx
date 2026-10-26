@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useTranslation } from 'react-i18next';
 import { HardDrive } from 'lucide-react';
 import { ChartCard, LayoutCard } from '@/components/layout';
@@ -77,7 +78,7 @@ export function SlowQueryAnalysis({
               <div key={row.query_id} className="min-w-0 space-y-1">
                 <Code className="block break-words [overflow-wrap:anywhere]">{row.fingerprint || '—'}</Code>
                 <MetricBar label={row.fingerprint.length > 30 ? `${row.fingerprint.slice(0, 29)}…` : row.fingerprint || '—'} value={ratio} max={100}
-                  color={ratio >= 90 ? '#10b981' : ratio >= 50 ? '#f59e0b' : '#ef4444'}
+                  color={ratio >= 90 ? palette.COLOR.GOOD : ratio >= 50 ? palette.COLOR.WARN : palette.COLOR.BAD}
                   sublabel={`${fmtNumber(ratio)}%`}
                   ariaLabel={row.fingerprint || '—'} />
               </div>

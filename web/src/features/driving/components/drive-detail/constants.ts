@@ -10,14 +10,13 @@
 // mis-band the map. `constants.test.ts` pins each edge to its exact mph value
 // through the real display converter and guards the ordering.
 
-/** Exact miles-per-hour → metres-per-second factor (1 mi = 1609.344 m, 1 h = 3600 s). */
-const MPH_TO_MPS = 0.44704;
+import { convertSpeedToSI } from '@/lib/unitConversion';
 
 /** Lower edge — 30 mph in SI m/s. Below this a route segment renders green. */
-export const SPEED_SEGMENT_LOW_MPS = 30 * MPH_TO_MPS;
+export const SPEED_SEGMENT_LOW_MPS = convertSpeedToSI(30, 'mph');
 
 /** Middle edge — 60 mph in SI m/s. Cyan below, amber at/above. */
-export const SPEED_SEGMENT_MED_MPS = 60 * MPH_TO_MPS;
+export const SPEED_SEGMENT_MED_MPS = convertSpeedToSI(60, 'mph');
 
 /** Upper edge — 100 mph in SI m/s. Amber below, red at/above. */
-export const SPEED_SEGMENT_HIGH_MPS = 100 * MPH_TO_MPS;
+export const SPEED_SEGMENT_HIGH_MPS = convertSpeedToSI(100, 'mph');

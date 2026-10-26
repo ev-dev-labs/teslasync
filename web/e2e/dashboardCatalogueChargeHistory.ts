@@ -12,9 +12,11 @@ export function recordCatalogueChargeHistorySources(page: Page) {
   const state = { pending: new Set<Promise<void>>(), responses: [] as Array<{ url: string; body: unknown }>, errors: [] as string[] };
   records.set(page, state);
   page.on('response', response => {
+    const pathname = new URL(response.url()).pathname;
     if (!['/api/v1/charging', '/api/v1/charging-sessions', '/api/v1/charging/701',
       '/api/v1/settings', '/api/v1/vehicles', '/api/v1/drives',
-      '/api/v1/tire-pressure/latest'].includes(new URL(response.url()).pathname)) return;
+      '/api/v1/tire-pressure/latest', '/api/v1/tire-pressure'].includes(pathname)
+      && !/^\/api\/v1\/signals\/\d+\/(?:live|[^/]+\/history)$/.test(pathname)) return;
     const task = (async () => {
       if (!response.ok()) throw new Error(`Charge source HTTP ${response.status()}: ${response.url()}`);
       state.responses.push({ url: response.url(), body: await response.json() });
@@ -49,7 +51,7 @@ export interface CatalogueChargeQueryBinding {
 export function assertCatalogueChargeQueryBinding(binding: CatalogueChargeQueryBinding,
   widgetId: string, kind: 'chart' | 'detail', source: Record<string, unknown>) {
   assertCatalogueQueryScope(binding, widgetId,
-    kind === 'chart' ? ['charging', 7, 'session-chart-10'] : ['charging-session', 701]);
+    kind === 'chart' ? ['charging', 7, 'session-chart-20'] : ['charging-session', 701]);
   const sessions = kind === 'chart' ? binding.data : [binding.data];
   if (!Array.isArray(sessions) || sessions.length !== 1 || !object(sessions[0])) {
     throw new Error('Native source observer must preserve the original single session');
@@ -91,7 +93,7 @@ export function assertCatalogueQueryScope(binding: CatalogueChargeQueryBinding,
 export async function renderedChargeBinding(panel: Locator, widgetId: string, kind: 'chart' | 'detail') {
   return renderedCatalogueQueryBinding(panel, widgetId,
     kind === 'chart' ? 'Charge sessions' : 'Charge session detail',
-    kind === 'chart' ? ['charging', 7, 'session-chart-10'] : ['charging-session', 701],
+    kind === 'chart' ? ['charging', 7, 'session-chart-20'] : ['charging-session', 701],
     kind === 'detail' ? ['charging-sessions', 'vehicle', '7'] : undefined);
 }
 
@@ -182,7 +184,12 @@ export async function assertCatalogueChargeCategories(page: Page, chart: Locator
   await expect(detail.getByText('AC / home', { exact: true })).toHaveCount(1);
   await positionCataloguePanel(chart);
   await assertCatalogueYAxisTickBounds(chart, 'charge-session-chart', info);
-  await expect(chart).toContainText('42.00');
+  const table = chart.getByRole('table', { name: 'Charge sessions — data table', exact: true });
+  await expect(table.getByRole('columnheader')).toHaveText(['Session', 'Added (kWh)', 'Charger type']);
+  const rows = table.getByRole('row');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(1).getByRole('cell').nth(1)).toHaveText('42');
+  await expect(rows.nth(1).getByRole('cell').nth(2)).toHaveText('home');
   await expect(chart.getByText('Unknown', { exact: true })).toHaveCount(0);
   const paths = chart.locator('.recharts-bar-rectangle .recharts-rectangle');
   const bars = await paths.evaluateAll(nodes => nodes.map(node => {
@@ -257,9 +264,17 @@ export async function assertCatalogueChargeHistory(page: Page, panel: Locator, w
   const expectedDate = await page.evaluate(({ instant, locale, timezone }) => new Date(instant).toLocaleString(locale, {
     timeZone: timezone, year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   }), { instant: session.started_at, locale, timezone });
+  const expectedDay = await page.evaluate(({ instant, locale, timezone }) => new Date(instant).toLocaleDateString(locale, {
+    timeZone: timezone, month: 'short', day: 'numeric',
+  }), { instant: session.started_at, locale, timezone });
+  const key = ['charging', 7, 'recent-10'] as const;
+  const binding = await renderedCatalogueQueryBinding(panel, 'review-charge-history', 'Charge history', key);
+  assertCatalogueQueryScope(binding, 'review-charge-history', key);
+  expect(binding.data, 'Recent-charge observer preserves every original source field, null and row order')
+    .toMatchObject(sessions);
   await expect(panel).toContainText('42.00');
   const contract: Record<string, unknown> = { source: charge, settings, vehicle, locale, timezone,
-    expectedDate, width, theme, compact: width === 390, originalSessionCount: 1,
+    expectedDate, expectedDay, binding, width, theme, compact: width === 390, originalSessionCount: 1,
     nullZeroSemantics: 'Payload untouched; no synthetic zero/null replacement; existing state contracts retained' };
   if (width === 390) {
     await expect(panel.locator('svg.recharts-surface')).toHaveCount(0);
@@ -268,7 +283,11 @@ export async function assertCatalogueChargeHistory(page: Page, panel: Locator, w
     await positionCataloguePanel(panel);
     await assertCatalogueYAxisTickBounds(panel, 'charge-history', info);
     const tick = panel.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value');
-    await expect(tick).toHaveText([expectedDate]);
+    await expect(tick).toHaveText([expectedDay]);
+    const table = panel.getByRole('table', { name: 'Charge history — data table', exact: true });
+    await expect(table.getByRole('columnheader')).toHaveText(['Charge history', 'kWh']);
+    await expect(table.getByRole('row')).toHaveCount(2);
+    await expect(table.getByRole('cell')).toHaveText([expectedDay, '42.00 kWh']);
     await expect(panel.getByRole('img', { name: 'Energy added per recent charge session, in kilowatt-hours', exact: true })).toBeVisible();
     const point = await tick.evaluate(node => {
       const svg = node.closest('svg');

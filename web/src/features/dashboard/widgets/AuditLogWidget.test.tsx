@@ -131,13 +131,6 @@ function renderWidget(props: Partial<WidgetProps> = {}) {
   );
 }
 
-// Inline colour style of the timeline dot for a given row title — proves the
-// severity → SEVERITY_COLOR mapping without depending on icon internals.
-function rowStyle(title: string): string {
-  const row = screen.getByText(title).closest('.flex.gap-3');
-  return row?.querySelector('[style]')?.getAttribute('style') ?? '';
-}
-
 beforeEach(() => {
   mockUseAuditLogs.mockReset();
   mockUseSecurityEvents.mockReset();
@@ -168,10 +161,7 @@ describe('AuditLogWidget — feed view (wide)', () => {
     // Subtitle joins truthy resource + details with " · "; empties collapse to "—".
     expect(screen.getByText('vehicle · vin 5YJ')).toBeInTheDocument();
 
-    // Severity → colour: delete=critical, update=warning, login=info.
-    expect(rowStyle('vehicle.delete')).toContain('color: var(--semantic-danger);');
-    expect(rowStyle('settings.update')).toContain('color: var(--semantic-warning);');
-    expect(rowStyle('user.login')).toContain('color: var(--semantic-info);');
+    // After card uses plain divider rows: severity does not add redundant UI.
   });
 
   it('renders a distinct security title for each state branch with matching severity colour', () => {
@@ -196,13 +186,6 @@ describe('AuditLogWidget — feed view (wide)', () => {
     expect(screen.getByText('Guest mode on')).toBeInTheDocument();
     expect(screen.getByText('Valet mode on')).toBeInTheDocument();
 
-    // inferSecuritySeverity: unlocked=critical, sentry active=warning, locked=info.
-    expect(rowStyle('Vehicle unlocked')).toContain('color: var(--semantic-danger);');
-    expect(rowStyle('Sentry: active')).toContain('color: var(--semantic-warning);');
-    expect(rowStyle('Vehicle locked')).toContain('color: var(--semantic-info);');
-    expect(rowStyle('Door: open')).toContain('color: var(--semantic-info);');
-    expect(rowStyle('Guest mode on')).toContain('color: var(--semantic-info);');
-    expect(rowStyle('Valet mode on')).toContain('color: var(--semantic-info);');
   });
 
   it('falls back to the generic "Security event" title when no state field is set', () => {

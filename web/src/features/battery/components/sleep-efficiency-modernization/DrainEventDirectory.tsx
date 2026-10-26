@@ -15,7 +15,7 @@ type Props = SleepEfficiencySectionProps & Pick<SleepEfficiencyFormatters, 'form
 
 export function DrainEventDirectory({ analysis, state, formatTemperature }: Props) {
   const { t } = useTranslation();
-  const { formatDateTime, tz } = useDateFormat();
+  const { formatDateTime } = useDateFormat();
   const { fmtNumber } = useNumberFormatting();
   const rows = useMemo(() => [...analysis.events.directory], [analysis.events.directory]);
   const duration = (event: ValidSleepDrainEvent) =>
@@ -91,9 +91,6 @@ export function DrainEventDirectory({ analysis, state, formatTemperature }: Prop
       <LayoutCard title={t('sleep.eventDirectory.title', 'Recent drain-event directory')}>
         <Text as="p" variant="caption">
           {t('sleep.eventDirectory.subtitle', 'Events are validated, deduplicated, future-checked against the frozen clock, and sorted newest first.')}
-        </Text>
-        <Text as="p" variant="caption">
-          {t('app.tzDisplayDefault', 'Time zone display')}: {tz}
         </Text>
         <SleepEfficiencySectionBody
           state={{ ...state, isResolved: state.isResolved && analysis.source.hasResponse }}

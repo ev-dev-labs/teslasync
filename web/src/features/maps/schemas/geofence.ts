@@ -24,13 +24,9 @@ interface NumericMessages {
 // Resolve messages during parsing, not module loading, so language changes apply.
 const numericString = (messages: NumericMessages, opts: NumericBounds) =>
   z
-    .string({
-      errorMap: (issue, ctx) => ({
-        message: issue.code === z.ZodIssueCode.too_small ? messages.required() : ctx.defaultError,
-      }),
-    })
+    .string()
     .trim()
-    .min(1)
+    .min(1, { error: () => messages.required() })
     // A single superRefine (rather than two chained `.refine`s) so the range
     // check never runs on a non-numeric value: `Number('abc')` is `NaN` and
     // `Number('1e400')` is `Infinity`, both of which would otherwise slip past
@@ -58,18 +54,12 @@ const numericString = (messages: NumericMessages, opts: NumericBounds) =>
  */
 export const geofenceFormSchema = z.object({
   name: z
-    .string({
-      errorMap: (issue, ctx) => ({
-        message: issue.code === z.ZodIssueCode.too_small
-          ? i18n.t('geofences.validation.nameRequired', 'Name is required')
-          : issue.code === z.ZodIssueCode.too_big
-            ? i18n.t('geofences.validation.nameMaxLength', 'Name must be {{max}} characters or fewer', { max: 120 })
-            : ctx.defaultError,
-      }),
-    })
+    .string()
     .trim()
-    .min(1)
-    .max(120),
+    .min(1, { error: () => i18n.t('geofences.validation.nameRequired', 'Name is required') })
+    .max(120, {
+      error: () => i18n.t('geofences.validation.nameMaxLength', 'Name must be {{max}} characters or fewer', { max: 120 }),
+    }),
   latitude: numericString({
     required: () => i18n.t('geofences.validation.latitudeRequired', 'Latitude is required'),
     number: () => i18n.t('geofences.validation.latitudeNumber', 'Latitude must be a number'),

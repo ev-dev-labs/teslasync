@@ -82,11 +82,12 @@ describe('AlignmentStats derived summary semantics', () => {
     expect(metric(container, 'alignment-avg-dwell')).toHaveTextContent('1h 15m');
     expect(metric(container, 'alignment-avg-margin')).toHaveTextContent('45.10%');
     expect(metric(container, 'alignment-misaligned-rate')).toHaveTextContent('50.00%');
-    expect(screen.getByText('3 charge source records; 2 drive source records')).toBeInTheDocument();
+    expect(screen.queryByText('3 charge source records; 2 drive source records')).not.toBeInTheDocument();
     expect(container.querySelector('[data-period-kind]')).toHaveAttribute('data-period-kind', 'unknown');
     assertOperationalBriefDisclosure(document.body, 'Derived');
     fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
     const details = screen.getByRole('dialog');
+    expect(within(details).getByText('3 charge source records; 2 drive source records')).toBeVisible();
     expect(within(details).getByText('Derived', { exact: true })).toBeInTheDocument();
     expect(within(details).getAllByText(english.chargeDepartureAlignment.modernization.inference)).toHaveLength(2);
     expect(within(details).getAllByText(/not complete lifetime coverage/).length).toBeGreaterThan(0);
@@ -163,7 +164,8 @@ describe('AlignmentStats derived summary semantics', () => {
     expect(container.querySelector('[data-retained]')).toHaveAttribute('data-retained', 'true');
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(4);
     expect(metric(container, 'alignment-avg-dwell')).toHaveTextContent('1h 15m');
-    fireEvent.click(screen.getByRole('link', { name: 'Review retained history' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('link', { name: 'Review retained history' }));
     expect(retry).toHaveBeenCalledOnce();
     expect(screen.queryByText('Retained source measurements')).not.toBeInTheDocument();
   });

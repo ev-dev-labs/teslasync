@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // MaxScheduledExportBodyBytes caps the inbound JSON body. The
@@ -59,7 +59,6 @@ func NewScheduledExportsHandler(store ScheduledExportStore, forwardAuthHeader st
 
 // scheduledExportRequest is the shared JSON body shape for create +
 // update. Note the deliberate ABSENCE of an owner_subject field —
-// that comes from actorFromRequest only.
 type scheduledExportRequest struct {
 	Name         string                           `json:"name"`
 	ExportType   string                           `json:"export_type"`
@@ -93,15 +92,8 @@ func (req scheduledExportRequest) toInput() exportdb.ScheduledExportInput {
 	}
 }
 
-func actorFromRequest(r *http.Request, headerName string) string {
-	if r == nil || headerName == "" {
-		return ""
-	}
-	return strings.TrimSpace(r.Header.Get(headerName))
-}
-
 func (h *ScheduledExportsHandler) requireOwner(w http.ResponseWriter, r *http.Request) (string, bool) {
-	owner := actorFromRequest(r, h.authHdr)
+	owner := httputil.ActorIdentity(r, h.authHdr)
 	if owner == "" {
 		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"scheduled exports require an authenticated user",

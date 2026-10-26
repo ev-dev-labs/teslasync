@@ -77,6 +77,7 @@ beforeEach(() => {
   preferences.locale = 'en-GB';
   preferences.settings.locale = 'en-GB';
   preferences.settings.tz_display_default = 'user';
+  preferences.settings.timezone_user = 'Asia/Tokyo';
   vi.mocked(OperationalBrief).mockClear();
 });
 afterEach(() => {
@@ -86,14 +87,14 @@ afterEach(() => {
 });
 
 describe('KpiSummary planning horizon dates', () => {
-  it('localizes both bounds in UTC and retains an exact 24-hour horizon across daylight saving time', () => {
+  it('localizes both bounds in the selected zone and retains the exact planning horizon', () => {
     render(<KpiSummary {...props} />);
-    const scope = 'Planning horizon: 8 Mar 2026, 00:30 — 9 Mar 2026, 00:30 (end exclusive)';
+    const scope = 'Planning horizon: 8 Mar 2026, 09:30 — 9 Mar 2026, 09:30 (end exclusive)';
     expect(briefProps().scope).toBe(scope);
     const brief = screen.getByTestId('home-energy-outcomes');
     assertOperationalBriefDisclosure(brief, scope, { contains: true });
     assertOperationalBriefDisclosure(brief,
-      '15.00-minute modeled slots · UTC · source coverage not established', { contains: true });
+      '15.00-minute modeled slots · source coverage not established', { contains: true });
     expect(screen.queryByText(/2026-03-08T00:30:00Z/)).not.toBeInTheDocument();
   });
 
@@ -145,7 +146,7 @@ describe('KpiSummary planning horizon dates', () => {
     });
   });
 
-  it('reacts to locale changes without changing UTC business timestamps or populated metrics', () => {
+  it('reacts to locale/zone changes across DST without changing wire instants or populated metrics', () => {
     const original = JSON.stringify(result);
     const { rerender } = render(<KpiSummary {...props} />);
     expect(briefProps().metrics.map(metric => metric.rawValue))
@@ -160,7 +161,7 @@ describe('KpiSummary planning horizon dates', () => {
     preferences.settings.tz_display_default = 'vehicle';
     rerender(<KpiSummary {...props} />);
     expect(briefProps().scope).toBe(
-      'Planning horizon: 8. März 2026, 00:30 — 9. März 2026, 00:30 (end exclusive)',
+      'Planning horizon: 7. März 2026, 16:30 — 8. März 2026, 17:30 (end exclusive)',
     );
     expect(briefProps().metrics.map(metric => metric.rawValue))
       .toEqual([73, 3.25, 75, 7200, 1, 2500]);
@@ -172,10 +173,10 @@ describe('KpiSummary planning horizon dates', () => {
     const { rerender } = render(<KpiSummary {...props} unavailable />);
     assertOperationalBriefDisclosure(screen.getByTestId('home-energy-outcomes'), 'Essential source unavailable');
     expect(briefProps().metrics.every(metric => metric.rawValue === null)).toBe(true);
-    expect(briefProps().scope).toContain('8 Mar 2026, 00:30');
+    expect(briefProps().scope).toContain('8 Mar 2026, 09:30');
     rerender(<KpiSummary {...props} loading />);
     assertOperationalBriefDisclosure(screen.getByTestId('home-energy-outcomes'), 'Loading source inputs');
     expect(briefProps().metrics.every(metric => metric.rawValue === null)).toBe(true);
-    expect(briefProps().scope).toContain('9 Mar 2026, 00:30 (end exclusive)');
+    expect(briefProps().scope).toContain('9 Mar 2026, 09:30 (end exclusive)');
   });
 });

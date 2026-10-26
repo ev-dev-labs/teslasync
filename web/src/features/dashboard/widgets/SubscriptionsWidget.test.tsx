@@ -74,7 +74,14 @@ vi.mock('react-i18next', async () => {
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({
     formatDate: (v: unknown) => (v == null ? '—' : `fmt:${String(v)}`),
+    formatDateShort: (v: unknown) => (v == null ? '—' : `fmt:${String(v)}`),
     formatTime: (v: unknown) => String(v),
+  }),
+}));
+
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({
+    formatCurrency: (value: number, decimals = 2) => `$${Number(value).toFixed(decimals)}`,
   }),
 }));
 

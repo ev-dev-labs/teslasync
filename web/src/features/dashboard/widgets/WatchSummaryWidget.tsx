@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Watch, Lock, Unlock } from 'lucide-react';
 import { LinearGauge } from '@/components/charts';
-import { StatusBadge, TimeStamp } from '@/components/data-display';
+import { TimeStamp } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display';
 import { AlertBanner, EmptyState, Skeleton } from '@/components/feedback';
 import { Button, Text } from '@/components/ui';
@@ -18,13 +18,14 @@ import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { COLOR, CHART_NEUTRAL } from '@/lib/colors';
 
 // Battery state-of-charge health bands → gauge/accent color:
 // healthy (>50%) emerald, low (>20%) amber, critical (≤20%) red.
 export function getBatteryColor(level: number): string {
-  if (level > 50) return '#10b981';
-  if (level > 20) return '#f59e0b';
-  return '#ef4444';
+  if (level > 50) return COLOR.GOOD;
+  if (level > 20) return COLOR.WARN;
+  return COLOR.BAD;
 }
 
 export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
@@ -99,7 +100,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
   ];
 
   const color = useMemo(
-    () => (batteryLevel != null ? getBatteryColor(batteryLevel) : '#374151'),
+    () => (batteryLevel != null ? getBatteryColor(batteryLevel) : CHART_NEUTRAL),
     [batteryLevel],
   );
 
@@ -138,6 +139,16 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
 
   // Compact (1×2): Watch-face circular display
   if (isCompact) {
+    const isCharging = complication?.charging === true || summary?.is_charging === true;
+    const compactStatusParts: string[] = [];
+    if (isCharging) compactStatusParts.push(t('widget.charging', 'Charging'));
+    if (isLocked != null) {
+      compactStatusParts.push(isLocked
+        ? t('widget.locked', 'Locked')
+        : t('widget.unlocked', 'Unlocked'));
+    }
+    const compactStatus = compactStatusParts.join(' · ');
+
     return (
       <WidgetShell
         title={t('widget.watchSummary', 'Watch summary')}
@@ -165,15 +176,14 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
                 decimals={displayPrecision}
               />}
             </div>
-            {state && <StatusBadge status={state} size="sm" />}
             {displayRange != null && (
               <span className={dashboardTokens.metricLabel}>
                 {fmtNumber(displayRange)} {distanceUnit}
               </span>
             )}
-            {complication?.charging && (
+            {compactStatus && (
               <span className={dashboardTokens.metricLabel}>
-                ⚡ {t('widget.charging', 'Charging')}
+                {compactStatus}
               </span>
             )}
             {!readsBlocked && !hasData && !summaryLoading && <p className={dashboardTokens.metricLabel}>{t('widget.noWatchData', 'No watch data')}</p>}
@@ -252,4 +262,3 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
     </WidgetShell>
   );
 }
-

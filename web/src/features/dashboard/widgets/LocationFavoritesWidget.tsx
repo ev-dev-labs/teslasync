@@ -1,18 +1,15 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin } from 'lucide-react';
-import { Badge } from '@/components/ui';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { useLocations } from '@/api/hooks/useLocations';
 import { useLocationSnapshotLatest, useVehicles } from '@/api/hooks/useVehicles';
 
-import { formatRelative } from '@/lib/dateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetRankedList, type RankedItem } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState, useCombinedDataState } from '@/hooks/useDataState';
-import { dashboardTokens } from '../lib/dashboardTokens';
 
 export function locationBadge(
   snapshot: { located_at_home?: boolean; located_at_work?: boolean; located_at_favorite?: boolean } | null | undefined,
@@ -70,31 +67,47 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
 
   const isCompact = size.cols <= 1;
 
-  const locBadge = snapshot ? locationBadge(snapshot, t) : {
-    emoji: '📍', label: '—', variant: 'neutral' as const,
-  };
-  const badgeVariant: 'success' | 'warning' | 'neutral' =
-    locBadge.variant === 'success' ? 'success' : locBadge.variant === 'warning' ? 'warning' : 'neutral';
-
   const items: RankedItem[] = useMemo(() => {
     const locs = Array.isArray(locations) ? locations : [];
-    return locs.filter((loc) => loc != null).map((loc) => ({
-      id: loc.id,
-      label: loc.addressName ?? '—',
-      value: loc.visitCount != null && Number.isFinite(loc.visitCount) ? loc.visitCount : null,
-      formattedValue: `${loc.visitCount != null && Number.isFinite(loc.visitCount) ? fmtInt(loc.visitCount) + '×' : '—'} · ${loc.lastVisited ? formatRelative(loc.lastVisited) : '—'}`,
-      barColor: 'bg-blue-400',
-    })).sort((a, b) => {
+    return locs.filter((loc) => loc != null).map((loc) => {
+      const visits = loc.visitCount != null && Number.isFinite(loc.visitCount)
+        ? loc.visitCount
+        : null;
+      const label = loc.addressName ?? '—';
+      const destinationName = snapshot?.destination_name?.trim();
+      const matchesDestination = destinationName != null && destinationName.length > 0 &&
+        label.localeCompare(destinationName, undefined, { sensitivity: 'accent' }) === 0;
+      const matchesPresence = matchesDestination;
+      const hereNow = matchesPresence && (
+        snapshot?.located_at_home === true ||
+        snapshot?.located_at_work === true ||
+        snapshot?.located_at_favorite === true
+      );
+      const visitsText = visits == null
+        ? t('widget.locationFavorites.unknownVisits', 'Visit count unavailable')
+        : t('widget.locationFavorites.visits', '{{count}} visits', { count: visits });
+
+      return {
+        id: loc.id,
+        label,
+        value: visits,
+        formattedValue: '',
+        sublabel: hereNow
+          ? `${t('widget.locationFavorites.hereNow', 'Here now')} · ${visitsText}`
+          : visitsText,
+        badge: hereNow ? {
+          text: t('widget.locationFavorites.current', 'Current'),
+          variant: 'success' as const,
+        } : undefined,
+      };
+    }).sort((a, b) => {
       if (a.value == null) return b.value == null ? 0 : 1;
       if (b.value == null) return -1;
       return b.value - a.value;
     });
-  }, [locations, fmtInt]);
+  }, [locations, fmtInt, snapshot, t]);
 
-  // Both queries feed this widget: the snapshot drives the presence badge
-  // (the only content in the compact layout) and the locations list drives
-  // the ranked list. A manual refresh must refetch BOTH so the compact badge
-  // — which is derived solely from the snapshot — actually updates.
+  // Both queries feed the ranked rows; refreshing either source updates the card.
   const handleRefresh = useCallback(() => {
     locRefetch();
     snapRefetch();
@@ -120,14 +133,23 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
   if (isCompact) {
     return (
       <WidgetShell {...shellProps}>
-        <div className="flex h-full flex-col items-center justify-center gap-1 min-h-[44px]">
-          <span className="text-2xl" role="img" aria-label={locBadge.label}>
-            {locBadge.emoji}
-          </span>
-          <Badge variant={badgeVariant} size="sm">
-            {locBadge.label}
-          </Badge>
-        </div>
+        {items.length > 0 ? (
+          <WidgetRankedList
+            items={items}
+            order="source"
+            wrapContent
+            compact
+            emptyMessage={t('widget.locationFavorites.noData', 'No favorite locations')}
+            emptyIcon={<MapPin className="h-5 w-5" />}
+          />
+        ) : (
+          <EmptyState
+            variant="informational"
+            icon={<MapPin className="h-5 w-5" />}
+            message={t('widget.locationFavorites.noData', 'No favorite locations')}
+            className="py-4"
+          />
+        )}
       </WidgetShell>
     );
   }
@@ -137,20 +159,7 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
       icon={<MapPin className="h-3.5 w-3.5 text-blue-400" />}
       {...shellProps}
     >
-      <div className="mb-3 flex items-center gap-2">
-        {snapshotState.fatalError && <QueryError error={snapshotState.fatalError} onRetry={() => { void snapRefetch(); }} />}
-        <span className="text-lg" role="img" aria-label={locBadge.label}>
-          {locBadge.emoji}
-        </span>
-        <Badge variant={badgeVariant} size="sm">
-          {locBadge.label}
-        </Badge>
-        {snapshot?.destination_name && (
-          <span className={`${dashboardTokens.metricLabel} min-w-0 break-words`}>
-            → {snapshot.destination_name}
-          </span>
-        )}
-      </div>
+      {snapshotState.fatalError && <QueryError error={snapshotState.fatalError} onRetry={() => { void snapRefetch(); }} />}
 
       {locationsState.fatalError ? (
         <QueryError error={locationsState.fatalError} onRetry={() => { void locRefetch(); }} />

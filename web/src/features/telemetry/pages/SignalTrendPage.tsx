@@ -20,6 +20,7 @@ import { useSignals, useSignalAnalysisHistory } from '@/api/hooks/useTelemetry';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateLabels } from '@/hooks/useDateLabels';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 
 import { chartTokens } from '@/lib/tokens';
@@ -32,6 +33,7 @@ const HOURS = 168;
 export default function SignalTrendPage() {
   const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatMonthDayHour } = useDateLabels();
   usePageTitle(t('signalTrend.title', 'Signal trend'));
 
   const { vehicleId } = useSelectedVehicle();
@@ -77,7 +79,7 @@ export default function SignalTrendPage() {
     const baseMs = points[0]!.ms;
     const slope = summary.slopePerHour ?? 0;
     const intercept = summary.interceptAtStart ?? 0;
-    const fmtTime = (ms: number) => new Date(ms).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit' });
+    const fmtTime = (ms: number) => formatMonthDayHour(ms);
 
     const historical = points.map((p) => ({
       ms: p.ms,
@@ -98,7 +100,7 @@ export default function SignalTrendPage() {
       bandHigh: f.high,
     }));
     return [...historical, ...forecast].sort((a, b) => a.ms - b.ms);
-  }, [historyQuery.data, summary.slopePerHour, summary.interceptAtStart, summary.forecast]);
+  }, [historyQuery.data, summary.slopePerHour, summary.interceptAtStart, summary.forecast, formatMonthDayHour]);
 
   const historyHasData = historyQuery.data !== undefined;
   const isLoading = chosen && !historyHasData && historyQuery.isLoading;

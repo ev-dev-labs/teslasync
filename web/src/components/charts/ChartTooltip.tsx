@@ -1,5 +1,6 @@
 import { memo, type ReactNode } from 'react'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import { Text } from '../ui/Typography'
 import { formatDateTime } from '../../lib/dateFormat'
 
@@ -47,7 +48,11 @@ export interface ChartTooltipProps {
     label: string | number | undefined,
     payload?: TooltipPayload[],
   ) => ReactNode
-  /** IANA timezone for ISO timestamp labels (defaults to the browser zone). */
+  /**
+   * IANA timezone for ISO timestamp labels. Defaults to the user's
+   * display zone (`useDateFormat().tz`); an explicit value wins for
+   * the rare chart that must pin a frame.
+   */
   timezone?: string
   /** Fraction digits for the default numeric formatter (0–20, defaults to settings). */
   precision?: number
@@ -125,10 +130,11 @@ export function ChartTooltipBase({
   precision,
 }: ChartTooltipProps) {
   const { fmtNumber } = useNumberFormatting()
+  const { tz } = useDateFormat()
   if (!active || !payload?.length) return null
   const displayLabel = labelFormatter
     ? labelFormatter(label, payload)
-    : defaultLabelFormatter(label, timezone)
+    : defaultLabelFormatter(label, timezone ?? tz)
 
   return (
     <div

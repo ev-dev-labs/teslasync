@@ -3,16 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 import { TimeStamp } from '../TimeStamp';
 import { useTimeFormatPreference } from '@/hooks/useTimeFormatPreference';
-import {
-  formatDate,
-  formatDateTime,
-  formatTime,
-  formatDateShort,
-  formatDateWithDay,
-  formatRelative,
-  formatRelativeTime,
-  formatRelativeDays,
-} from '@/lib/dateFormat';
+import {formatDate, formatDateTime, formatTime, formatDateShort, formatDateWithDay, formatRelative, formatRelativeTime} from '@/lib/dateFormat'
+import {formatRelativeDays} from '@/lib/dateConvert';
 
 vi.mock('@/hooks/useTimeFormatPreference', () => ({
   useTimeFormatPreference: vi.fn(),

@@ -131,7 +131,7 @@ export const alertRuleSchema = z
     escalation_severity: z.enum(ALERT_RULE_SEVERITIES).nullable().optional(),
     kind: z.enum(ALERT_RULE_KINDS).optional(),
     component_name: z.enum(SYSTEM_COMPONENTS).optional().nullable(),
-    place_id: z.number().int().positive().optional().nullable(),
+    place_id: z.number().int().positive('Number must be greater than 0').optional().nullable(),
     transition: z.enum([...SYSTEM_TRANSITIONS, ...PLACE_TRANSITIONS]).optional().nullable(),
     metric_id: z.string().trim().max(120).optional().nullable(),
     metric_window: z.string().trim().max(60).optional().nullable(),

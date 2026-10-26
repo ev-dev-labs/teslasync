@@ -11,7 +11,6 @@ export function SeasonalCalendarCoverage({
   analysis,
   state,
   locale,
-  timeZone,
 }: SeasonalSectionProps) {
   const { t } = useTranslation();
   return (
@@ -24,7 +23,7 @@ export function SeasonalCalendarCoverage({
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'seasonalEfficiency.calendar.subtitle',
-            'Month and date fields use the vehicle IANA timezone, including DST boundaries.',
+            'Month and date fields use your selected time zone, including DST boundaries.',
           )}
         </Text>
         <SeasonalSectionBody state={state}>
@@ -55,9 +54,9 @@ export function SeasonalCalendarCoverage({
                 <Text variant="caption">{t('seasonalEfficiency.calendar.activeHint', 'days / weeks')}</Text>
               </div>
               <div className="rounded-lg border border-[var(--panel-border)] p-3">
-                <Text variant="metricLabel">{t('seasonalEfficiency.calendar.zone', 'Timezone')}</Text>
-                <Text variant="metricValue" as="p" className="truncate">{timeZone}</Text>
-                <Text variant="caption">{t('seasonalEfficiency.calendar.rows', '{{count}} included rows', { count: analysis.includedCount })}</Text>
+                <Text variant="metricLabel">{t('seasonalEfficiency.calendar.zone', 'Included rows')}</Text>
+                <Text variant="metricValue" as="p">{formatInteger(analysis.includedCount, locale)}</Text>
+                <Text variant="caption">{t('seasonalEfficiency.calendar.rows', 'included rows')}</Text>
               </div>
             </div>
           )}

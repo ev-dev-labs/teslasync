@@ -1,20 +1,24 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { OperationalBrief, type OperationalBriefMetric, type StatStripProps } from '@/components/data-display';
 import { Badge, Text } from '@/components/ui';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 interface Props extends StatStripProps {
   description?: string;
   sourceStatus?: string;
   metricTones?: Readonly<Record<string, OperationalBriefMetric['tone']>>;
+  scopeDetails?: ReactNode;
 }
 
 /** Charging summaries retain their independent source periods and specialist displays. */
 export function ChargingSummaryBrief({
   metrics, period, preferences, title, id, testId, loading = false, retained = false, variant = 'embedded',
-  secondary, footer, emptyContent, className, comparisonLabel, description, sourceStatus, periodHeaderId, metricTones,
+  secondary, footer, emptyContent, className, comparisonLabel, description, sourceStatus, periodHeaderId, metricTones, scopeDetails,
 }: Props) {
   const { t } = useTranslation();
+  const { formatDateRange, formatDateTime } = useDateFormat();
   const operationalMetrics = useOperationalMetrics(metrics, preferences);
   const available = operationalMetrics.filter(metric => metric.valueState === 'value').length;
   const context = period.kind === 'unknown' ? period.reason : period.provenance;
@@ -27,11 +31,13 @@ export function ChargingSummaryBrief({
         : available < operationalMetrics.length
           ? t('charging.brief.partial', 'Some measurements unavailable')
           : t('charging.brief.available', 'Source measurements available'));
+  // One formatted range in the user's display zone: the raw ISO pair plus
+  // zone suffix showed the same span twice and an exclusive end day.
   const periodBounds = period.kind === 'analysis'
-    ? `${period.start} – ${period.endExclusive} (${period.timezone})`
+    ? formatDateRange(period.start, period.endExclusive)
     : period.kind === 'event'
-    ? [period.start, period.end].filter(Boolean).join(' – ')
-    : period.kind === 'snapshot' ? period.observedAt : undefined;
+    ? [period.start, period.end].filter(Boolean).map((bound) => formatDateTime(bound)).join(' – ')
+    : period.kind === 'snapshot' && period.observedAt ? formatDateTime(period.observedAt) : undefined;
   return (
     <div id={id} className={className} data-period-kind={period.kind}
       data-retained={retained || undefined} aria-busy={loading || undefined}>
@@ -51,7 +57,10 @@ export function ChargingSummaryBrief({
         metrics={metricTones
           ? operationalMetrics.map(metric => ({ ...metric, tone: metricTones[metric.key] }))
           : operationalMetrics}
-        scope={<Badge variant="neutral" size="sm">{period.label}</Badge>}
+        scope={<>
+          <Badge variant="neutral" size="sm">{period.label}</Badge>
+          {scopeDetails != null && <div className="w-full">{scopeDetails}</div>}
+        </>}
         freshness={periodBounds ? <Text as="span" variant="caption">{periodBounds}</Text> : undefined}
         provenance={context ?? period.label}
         narrative={{

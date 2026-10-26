@@ -33,6 +33,7 @@ import {
 } from '@/hooks/useVehicleVinFilter';
 import { useUnits } from '@/hooks/useUnits';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { toIsoString } from '@/lib/dateConvert';
 
 import { formatCurrencyValue } from '@/lib/currencyFormat';
 import { chartTokens, neonColorMap, typography } from '@/lib/tokens';
@@ -162,6 +163,7 @@ export function buildTopLocations(entries: TeslaChargingHistoryEntry[]): Locatio
 
 export default function TeslaChargingHistoryPage() {
   const { formatDateTime } = useDateFormat();
+  const historyExportFilename = `tesla-charging-history-${(toIsoString(new Date()) ?? '').slice(0, 10)}`;
   const { fmtNumber, fmtInt, precision, locale } = useNumberFormatting();
   const { t } = useTranslation();
   const formatChargingDuration = useCallback(
@@ -768,9 +770,9 @@ export default function TeslaChargingHistoryPage() {
                   virtualized
                   rowHeight={56}
                   exportable
-                  exportFilename={`tesla-charging-history-${new Date().toISOString().slice(0, 10)}`}
+                  exportFilename={historyExportFilename}
                   onExport={(format, rows) => {
-                    const filename = `tesla-charging-history-${new Date().toISOString().slice(0, 10)}`;
+                    const filename = historyExportFilename;
                     if (format === 'csv') exportSelectedCsv(rows, `${filename}.csv`);
                     else downloadJSON(filename, rows.map(chargingExportRow));
                   }}

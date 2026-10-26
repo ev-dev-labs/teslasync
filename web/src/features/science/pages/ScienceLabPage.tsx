@@ -4,8 +4,8 @@ import { useLocation } from 'react-router-dom';
 import { DataProvenanceBadge } from '@/components/data-display';
 
 import { PageLayout, SourceContent } from '@/components/layout';
-import { QueryError, StaleRefreshWarning } from '@/components/feedback';
-import { Button, CopyButton, Text } from '@/components/ui';
+import { AlertBanner, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { CopyButton, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
   ElectrochemPanel,
@@ -16,19 +16,21 @@ import {
 } from '@/features/science/components/SciencePanels';
 import { ScienceEvidenceOverview } from '@/features/science/components/ScienceEvidenceOverview';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useAnalysisWindow } from '@/hooks/useAnalysisWindow';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
 type Translate = (key: string, fallback: string, options?: Record<string, unknown>) => string;
 
-const WINDOW_PRESETS = [7, 30] as const;
 
 export default function ScienceLabPage() {
-  const { formatDateTime } = useDateFormat();
+  const { formatDateTime, tz: timezone } = useDateFormat();
   const { t: translate } = useTranslation();
   const t: Translate = (key, fallback, options) => String(translate(key, fallback, options));
-  const { selected: days, window, pickWindow } = useAnalysisWindow('days', WINDOW_PRESETS, 7);
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({ timezone });
+  const window = { start: startInstant, end: endInstantExclusive };
+  const rangeSupported = Date.parse(window.end) > Date.parse(window.start)
+    && Date.parse(window.end) - Date.parse(window.start) <= 30 * 86_400_000;
   const location = useLocation();
 
   const title = t('science.title', 'Science lab');
@@ -66,13 +68,19 @@ export default function ScienceLabPage() {
     return <PageLayout title={title}>{fleetFeedback}</PageLayout>;
   }
 
+  if (!rangeSupported) {
+    return <PageLayout title={title}>{fleetFeedback}<AlertBanner variant="warning">{t('science.rangeLimit', 'Choose a workspace range of at most 30 days to view science evidence.')}</AlertBanner></PageLayout>;
+  }
+
   const scope = { vehicleId: vehicleIdStr, start: window.start, end: window.end };
   const copyUrl = new URL(location.pathname, globalThis.window.location.origin);
   copyUrl.search = location.search;
   copyUrl.hash = location.hash;
   copyUrl.searchParams.set('vehicle_id', String(vehicleId));
-  copyUrl.searchParams.set('start', window.start);
-  copyUrl.searchParams.set('end', window.end);
+  copyUrl.searchParams.set('from', start);
+  copyUrl.searchParams.set('to', end);
+  copyUrl.searchParams.delete('start');
+  copyUrl.searchParams.delete('end');
 
   return (
     <PageLayout
@@ -95,19 +103,6 @@ export default function ScienceLabPage() {
     >
       {fleetFeedback}
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('science.window.label', 'Window')}>
-        {WINDOW_PRESETS.map((preset) => (
-          <Button
-            key={preset}
-            variant={preset === days ? 'primary' : 'secondary'}
-            size="sm"
-            wrapLabel
-            className="min-h-11 md:min-h-9"
-            onClick={() => { pickWindow(preset); }}
-            aria-pressed={preset === days}
-          >
-            {t('science.window.days', 'Last {{days}}d', { days: preset })}
-          </Button>
-        ))}
         <Text as="span" size="sm" color="secondary">
           {formatDateTime(window.start)} → {formatDateTime(window.end)}
         </Text>

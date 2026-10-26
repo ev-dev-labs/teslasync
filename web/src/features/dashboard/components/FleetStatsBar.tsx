@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
@@ -72,7 +73,7 @@ export function FleetStatsBar({
           <p className="text-xl sm:text-2xl font-bold text-cyan-300">
             <AnimatedNumber value={toDistanceDisplay(totalDistance)} kind="measurement" suffix={` ${distanceUnit}`} />
           </p>
-          <MiniChart data={driveSparkline} color="#00f0ff" height={24} width={60} />
+          <MiniChart data={driveSparkline} color={palette.DATA_VISUAL_COLORS.info} height={24} width={60} />
         </GlassPanel>
       </StaggerItem>
 
@@ -82,7 +83,7 @@ export function FleetStatsBar({
           <p className="text-xl sm:text-2xl font-bold text-emerald-300">
             <AnimatedNumber value={totalEnergy} kind="measurement" decimals={displayPrecision} suffix=" kWh" />
           </p>
-          <MiniChart data={chargeSparkline} color="#10b981" height={24} width={60} />
+          <MiniChart data={chargeSparkline} color={palette.COLOR.GOOD} height={24} width={60} />
         </GlassPanel>
       </StaggerItem>
 

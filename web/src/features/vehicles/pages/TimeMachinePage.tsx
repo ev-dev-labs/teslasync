@@ -169,7 +169,7 @@ function FieldRow({ field }: { field: TimeMachineField }) {
           {isNull ? (
             <Text color="muted">—</Text>
           ) : field.value_kind === 'time' && typeof field.value === 'string' ? (
-            <DateTime value={field.value} variant="short" showTz />
+            <DateTime value={field.value} variant="short" />
           ) : (
             formatScalar(field, t)
           )}
@@ -246,7 +246,7 @@ const SCRUB_DEBOUNCE_MS = 200;
 
 export default function TimeMachinePage() {
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat();
+  const { formatDateTime, formatDateShort } = useDateFormat();
   usePageTitle(t('timeMachine.title', 'Vehicle time machine'));
 
   const { vehicle } = useSelectedVehicle();
@@ -448,7 +448,7 @@ export default function TimeMachinePage() {
                   <div className="flex min-w-0 flex-wrap items-baseline gap-3">
                     <Icon icon={Clock} size="lg" className="text-[var(--text-secondary)]" />
                     <MetricValue className="min-w-0 break-words">
-                      <DateTime value={displayISO} variant="full" showTz />
+                      <DateTime value={displayISO} variant="full" />
                     </MetricValue>
                   </div>
                   <Slider
@@ -464,11 +464,11 @@ export default function TimeMachinePage() {
                   <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-between">
                     <Caption className="inline-flex min-w-0 flex-wrap items-center gap-1 break-words">
                       <span>{t('timeMachine.earliest', 'Earliest')}:</span>
-                      <DateTime value={range?.earliest ?? null} variant="short" showTz />
+                      <span>{formatDateShort(range?.earliest ?? null)}</span>
                     </Caption>
                     <Caption className="inline-flex min-w-0 flex-wrap items-center gap-1 break-words">
                       <span>{t('timeMachine.latest', 'Latest')}:</span>
-                      <DateTime value={range?.latest ?? null} variant="short" showTz />
+                      <span>{formatDateShort(range?.latest ?? null)}</span>
                     </Caption>
                   </div>
                 </div>
@@ -487,7 +487,7 @@ export default function TimeMachinePage() {
               description={t('timeMachine.briefDescription', 'Reconstructed signals belong to the resolved instant; tracked fields and history span come from the independent timeline source.')}
               status={summaryState.status}
               loading={vehiclesLoading || (reconstructing && !rangeState.hasData)}
-              scope={<DateTime value={stateQ.data?.at ?? null} variant="full" showTz />}
+              scope={<DateTime value={stateQ.data?.at ?? null} variant="full" />}
               provenance={t('timeMachine.summarySource', 'Historical signal reconstruction')}
               freshness={<DataProvenanceBadge provenance={summaryState.provenance} status={summaryState.status} updatedAt={summaryState.updatedAt} />}
               metrics={[

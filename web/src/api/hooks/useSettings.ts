@@ -4,7 +4,7 @@ import { useMutationToast } from './_toastHelpers';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
-import { fleetSetupKeys } from './useFleetSetup';
+import { fleetSetupKeys } from './fleetSetupKeys';
 import type {
   AppSettings,
   GasPriceStatus,
@@ -42,7 +42,11 @@ export function useSaveSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       }),
-    onSuccess: () => {
+    onSuccess: (saved) => {
+      // Push the saved settings into the cache synchronously so every
+      // subscriber (including all display-timezone formatters) re-renders
+      // in the same tick, without waiting for the confirmation refetch.
+      qc.setQueryData(settingsKeys.settings, saved);
       invalidateAndBroadcast(qc, { queryKey: settingsKeys.settings });
       success('toast.settings.save.success', 'Settings saved');
     },

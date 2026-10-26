@@ -103,4 +103,16 @@ func TestTeslaUsageSQLIsolatedTimescale(t *testing.T) {
 	if daily.Total.Signals != 1 || daily.Total.DataRequests != 0 || daily.Total.Wakes != 1 {
 		t.Errorf("half-open daily SQL boundary wrong: %+v", daily.Total)
 	}
+	loc, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	selected, err := repo.Series(ctx, boundary, boundary.Add(24*time.Hour), "day", 366, 0, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if selected.Total != daily.Total || len(selected.Points) != 1 ||
+		!selected.Points[0].BucketStart.Equal(TeslaUsageBucketStart(boundary, "day", loc)) {
+		t.Errorf("selected-calendar SQL split sources or changed full-range evidence: %+v", selected)
+	}
 }

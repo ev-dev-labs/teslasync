@@ -39,11 +39,13 @@ import { useDataState } from '@/hooks/useDataState';
 import { useAsOfDate } from '@/hooks/useAsOfDate';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { PullToRefresh } from '@/components/mobile';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { formatDateTime, formatDayKey, formatDurationMinutes, formatRelativeDayKey, formatTime } from '@/lib/dateFormat';
+import { convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
+import {formatDateTime, formatDayKey, formatTime} from '@/lib/dateFormat'
+import {formatRelativeDayKey} from '@/lib/dateConvert'
+import {formatDurationMinutes} from '@/lib/dateConvert';
 import { matchPresetId, getDatePreset, isAllTimeRange } from '@/lib/datePresets';
 
 import { buildContextHref } from '@/lib/contextNavigation';
@@ -93,7 +95,7 @@ export default function ChargingListPage() {
 
   /* ── Data ─────────────────────────────────────────────────────── */
   const { vehicleId } = useSelectedVehicle();
-  const tz = useTimezone('vehicle');
+  const { tz } = useDateFormat();
   const { unitPrefs, formatEnergy } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const toDistanceDisplay = useCallback(
@@ -266,7 +268,7 @@ export default function ChargingListPage() {
         text: (sess) => [
           sess.start_place,
           sess.charger_type,
-          fmtNumber(sess.total_energy_added_wh / 1000),
+          fmtNumber(convertEnergyFromSI(sess.total_energy_added_wh, 'kWh')),
           sess.cost_decimal != null ? fmtNumber(sess.cost_decimal) : null,
         ],
         kv: {
@@ -288,14 +290,14 @@ export default function ChargingListPage() {
           kwh: (sess, token) => {
             const target = Number(token.value);
             if (!Number.isFinite(target)) return null;
-            return compareNumeric(sess.total_energy_added_wh / 1000, token.op, target);
+            return compareNumeric(convertEnergyFromSI(sess.total_energy_added_wh, 'kWh'), token.op, target);
           },
           // power:>50 (peak power in kW)
           power: (sess, token) => {
             const target = Number(token.value);
             if (!Number.isFinite(target)) return null;
             if (sess.peak_power_w == null || !Number.isFinite(sess.peak_power_w)) return false;
-            const peak = sess.peak_power_w / 1000;
+            const peak = convertPowerFromSI(sess.peak_power_w, 'kW');
             return compareNumeric(peak, token.op, target);
           },
           // dur:>1h | dur:30m | dur:>2d
@@ -398,7 +400,10 @@ export default function ChargingListPage() {
     return Array.from(buckets.entries())
       .sort(([a], [b]) => (sortDesc ? b.localeCompare(a) : a.localeCompare(b)))
       .map(([dateKey, items]) => {
-        const totalEnergy = items.reduce((acc, s) => acc + s.total_energy_added_wh, 0) / 1000;
+        const totalEnergy = convertEnergyFromSI(
+          items.reduce((acc, s) => acc + s.total_energy_added_wh, 0),
+          'kWh',
+        );
         const noun = items.length === 1
           ? t('bulk.noun.session_one', 'session')
           : t('bulk.noun.session_other', 'sessions');
@@ -516,11 +521,11 @@ export default function ChargingListPage() {
         s.started_at,
         s.ended_at ?? '',
         s.charger_type ?? '',
-        (s.total_energy_added_wh / 1000).toFixed(3),
+        convertEnergyFromSI(s.total_energy_added_wh, 'kWh').toFixed(3),
         s.cost_decimal ?? '',
         minutes > 0 ? minutes.toFixed(1) : '',
-        power != null ? (power / 1000).toFixed(2) : '',
-        s.peak_power_w != null ? (s.peak_power_w / 1000).toFixed(2) : '',
+        power != null ? convertPowerFromSI(power, 'kW').toFixed(2) : '',
+        s.peak_power_w != null ? convertPowerFromSI(s.peak_power_w, 'kW').toFixed(2) : '',
         (s.start_place ?? '').replace(/"/g, '""'),
       ];
       lines.push(fields.map((v) => {
@@ -1486,7 +1491,7 @@ export default function ChargingListPage() {
                   {
                     key: 'energy',
                     label: t('operations.charging.deliveredEnergy', 'Delivered energy'),
-                    value: `${fmtNumber(previewSession.total_energy_added_wh / 1000)} kWh`,
+                    value: `${fmtNumber(convertEnergyFromSI(previewSession.total_energy_added_wh, 'kWh'))} kWh`,
                   },
                   {
                     key: 'battery',
@@ -1508,7 +1513,7 @@ export default function ChargingListPage() {
                     key: 'peak-power',
                     label: t('charging.preview.peakPower', 'Peak power'),
                     value: previewSession.peak_power_w != null
-                      ? `${fmtNumber(previewSession.peak_power_w / 1000)} kW`
+                      ? `${fmtNumber(convertPowerFromSI(previewSession.peak_power_w, 'kW'))} kW`
                       : '—',
                   },
                   {

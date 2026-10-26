@@ -392,7 +392,7 @@ describe('climate date display preferences', () => {
       const charts = presentationSpies.chart.mock.calls.slice(-2).map(([props]) => props);
       expect(charts).toHaveLength(2);
       for (const chart of charts) expect(chart.data![0].timestamp).toBe(expected);
-      expect(screen.getAllByText(tz)).toHaveLength(2);
+      expect(screen.queryByText(tz)).not.toBeInTheDocument();
     };
 
     assertDates('de-DE', 'America/Los_Angeles');

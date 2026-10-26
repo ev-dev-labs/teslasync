@@ -3,6 +3,7 @@ import type { DataState } from '@/api/dataState';
 import type { Drive } from '@/types/driving';
 import { OperationalBrief, type StatMetric, type StatPeriod } from '@/components/data-display';
 import { SourceContent } from '@/components/layout';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import type { MileageBudgetResult } from '../../lib/mileageBudget';
 
@@ -16,6 +17,7 @@ export function MileageBudgetBrief({
   formatCurrency: (value: number) => string;
 }) {
   const { t } = useTranslation();
+  const { formatDateRange, formatDateTime } = useDateFormat();
   const historyCapped = budget.historyCapReached;
   const paceOver = !historyCapped && budget.paceRatio != null && budget.paceRatio > 1;
   const unavailable = t('mileageBudget.cap.unavailable', 'unavailable while history is capped');
@@ -71,8 +73,9 @@ export function MileageBudgetBrief({
           : source.status === 'stale' || source.isRefreshBlocked ? t('analytics.brief.retained', 'Retained evidence')
             : historyCapped ? t('mileageBudget.brief.capped', 'History capped') : t('analytics.brief.returned', 'Returned evidence')}
       statusTone={!source.hasData || source.status === 'stale' || historyCapped ? 'warning' : 'neutral'}
-      scope={<span>{period.label}{period.kind === 'event' ? ` · ${period.start} – ${period.end ?? '—'}`
-        : period.kind === 'analysis' ? ` · ${period.start} – ${period.endExclusive} · ${period.timezone}` : null}</span>}
+      scope={<span>{period.label}{period.kind === 'event'
+        ? ` · ${formatDateTime(period.start)} – ${period.end ? formatDateTime(period.end) : '—'}`
+        : period.kind === 'analysis' ? ` · ${formatDateRange(period.start, period.endExclusive)}` : null}</span>}
       freshness={<span>{period.kind === 'unknown' ? period.reason : period.provenance}</span>}
       provenance={period.kind === 'unknown' ? period.reason : period.provenance}
     />

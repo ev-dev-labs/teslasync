@@ -22,7 +22,7 @@ import type { ReactNode } from 'react';
 
 import type { FeatureCompositionRow, FeatureFlagKind } from './parseFeatureFlags';
 import { FeatureConfigComposition } from './FeatureConfigComposition';
-import { CHART_COLORS_CB_SAFE } from '@/lib/colors';
+import { CHART_COLORS_DARK } from '@/lib/colors';
 
 // ── i18n: resolve the string fallback (2nd arg) so assertions read on copy. ──
 vi.mock('react-i18next', () => {
@@ -242,12 +242,12 @@ describe('FeatureConfigComposition — populated', () => {
     const enabled = screen.getByTestId('bar-enabled');
     expect(enabled).toHaveAttribute('data-key', 'enabled');
     expect(enabled).toHaveAttribute('data-name', 'Enabled');
-    expect(enabled).toHaveAttribute('data-fill', CHART_COLORS_CB_SAFE[0]);
+    expect(enabled).toHaveAttribute('data-fill', CHART_COLORS_DARK[0]);
 
     const disabled = screen.getByTestId('bar-disabled');
     expect(disabled).toHaveAttribute('data-key', 'disabled');
     expect(disabled).toHaveAttribute('data-name', 'Disabled');
-    expect(disabled).toHaveAttribute('data-fill', CHART_COLORS_CB_SAFE[1]);
+    expect(disabled).toHaveAttribute('data-fill', CHART_COLORS_DARK[1]);
   });
 
   it('renders one grouped bar per composition row', () => {

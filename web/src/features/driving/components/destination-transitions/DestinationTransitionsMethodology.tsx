@@ -24,7 +24,6 @@ interface DestinationTransitionsMethodologyProps {
 export function DestinationTransitionsMethodology({
   model,
   locale,
-  timeZone,
 }: DestinationTransitionsMethodologyProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
@@ -131,8 +130,8 @@ export function DestinationTransitionsMethodology({
       ),
       body: t(
         'destinationTransitions.method.calendarBody',
-        'Hour, weekday, date, week, and month use {{timeZone}}. Multiple drives on one local day remain separate visits. Only the latest {{limit}} returned rows are requested.',
-        { timeZone, limit: fmtInt(model.config.historyLimit) },
+        'Hour, weekday, date, week, and month use your selected time zone. Multiple drives on one local day remain separate visits. Only the latest {{limit}} returned rows are requested.',
+        { limit: fmtInt(model.config.historyLimit) },
       ),
     },
     {

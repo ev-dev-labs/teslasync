@@ -44,7 +44,8 @@ describe('API log summary canonical preservation', () => {
     const rangeDrawer = screen.getByRole('dialog');
     expect(within(rangeDrawer).getByRole('group', { name: 'Error rate' })).toHaveTextContent('80');
     fireEvent.keyDown(rangeDrawer, { key: 'Escape' });
-    assertOperationalBriefDisclosure(rangeSummary, '2026-10-01T00:00:00Z', { contains: true });
+    assertOperationalBriefDisclosure(rangeSummary, 'Oct 1, 2026', { contains: true });
+    expect(rangeSummary).not.toHaveTextContent('2026-10-01T00:00:00Z');
     assertOperationalBriefDisclosure(screen.getByTestId('api-logs-24h-summary'), 'does not record its exact bounds', { contains: true });
   });
 

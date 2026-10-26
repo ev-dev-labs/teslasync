@@ -117,7 +117,7 @@ test('isolated heading-descendant read-only chart/detail QueryObserver chain and
     await writeFile(path, JSON.stringify({
       mode: 'DIAGNOSTIC_ONLY_ZERO_ACCEPTANCE_CREDIT', baseURL: process.env.E2E_BASE_URL,
       exactSourceKeys: {
-        chart: ['charging', 7, 'session-chart-10'],
+        chart: ['charging', 7, 'session-chart-20'],
         detailList: ['charging-sessions', 'vehicle', '7'],
         detail: ['charging-session', 701],
       },

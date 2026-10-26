@@ -20,7 +20,6 @@ interface RangeBufferWeekdayProfileProps {
 export function RangeBufferWeekdayProfile({
   result,
   state,
-  timeZone,
 }: RangeBufferWeekdayProfileProps) {
   const { t } = useTranslation();
   const rows = useMemo<RangeBufferProfileChartRow[]>(
@@ -45,8 +44,7 @@ export function RangeBufferWeekdayProfile({
         )}
         subtitle={t(
           'rangeBuffer.weekday.subtitle',
-          'Drive-weighted arrival percentiles in {{timeZone}}; unequal sample counts remain visible.',
-          { timeZone },
+          'Drive-weighted arrival percentiles in your selected time zone; unequal sample counts remain visible.',
         )}
         ariaLabel={t(
           'rangeBuffer.weekday.aria',

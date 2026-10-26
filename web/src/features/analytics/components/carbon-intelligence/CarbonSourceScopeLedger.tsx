@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertBanner } from '@/components/feedback';
 import { LayoutCard } from '@/components/layout';
 import { Text } from '@/components/ui';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { CarbonSourceRow } from './CarbonSourceRow';
 import type { CarbonQueryStates, CarbonSectionProps } from './types';
 
@@ -12,6 +13,7 @@ export function CarbonSourceScopeLedger({
   states,
 }: CarbonSectionProps) {
   const { t } = useTranslation();
+  const { formatDateRange, formatDateTime } = useDateFormat();
   const sources: Array<{
     id: keyof CarbonQueryStates;
     name: string;
@@ -28,14 +30,7 @@ export function CarbonSourceScopeLedger({
     {
       id: 'period',
       name: t('carbon.source.period', 'Selected-period summary'),
-      scope: t(
-        'carbon.source.periodScope',
-        '{{start}} through {{end}} calendar labels',
-        {
-          start: analysis.window.startLabel,
-          end: analysis.window.endLabel,
-        },
-      ),
+      scope: formatDateRange(analysis.window.startInstant, analysis.window.endInstantExclusive),
     },
     {
       id: 'lifetime',
@@ -76,17 +71,16 @@ export function CarbonSourceScopeLedger({
               'carbon.source.requestWindow',
               'API window: {{from}} ≤ timestamp < {{to}}',
               {
-                from: analysis.window.startInstant,
-                to: analysis.window.endInstantExclusive,
+                from: formatDateTime(analysis.window.startInstant),
+                to: formatDateTime(analysis.window.endInstantExclusive),
               },
             )}
           </Text>
           <Text as="p" variant="caption">
             {t(
               'carbon.source.timezone',
-              'Calendar timezone: {{timezone}} · {{days}} calendar days',
+              '{{days}} calendar days',
               {
-                timezone: analysis.window.timezone,
                 days: analysis.window.calendarDays ?? '—',
               },
             )}

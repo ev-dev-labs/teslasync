@@ -6,6 +6,7 @@ import { useDriveCalendarHistory } from '@/api/hooks/useDriving';
 import { Grid, PageLayout } from '@/components/layout';
 import { SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -38,6 +39,7 @@ export default function DrivingRhythmPage() {
     defaultPresetId: 'all',
     inheritSharedPreference: false,
   });
+  const { formatDayKeyRange } = useDateFormat();
   const [analysisNowMs] = useState(() => Date.now());
 
   // Request the exact local window (inclusive start, exclusive end instant);
@@ -98,7 +100,7 @@ export default function DrivingRhythmPage() {
       <StaleRefreshWarning state={sourceState} label={t('rhythm.title', 'Driving Rhythm')} />
       <SectionErrorBoundary name="DrivingRhythmBrief">
         <DrivingRhythmBrief summary={summary} {...sectionState}
-          scope={t('rhythm.brief.window', '{{start}}–{{end}} · {{timezone}}', { start, end, timezone })}
+          scope={formatDayKeyRange(start, end)}
           retained={sectionState.retained} />
       </SectionErrorBoundary>
 

@@ -14,7 +14,7 @@ import {
 } from '@/components/data-display';
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/hooks/useFormatting';
-import { formatDurationMinutes } from '@/lib/dateFormat';
+import { formatDurationMinutes } from '@/lib/dateConvert';
 
 import type { ChargingSession } from '@/api/types';
 import { distanceAddedM } from './charging-curve/helpers';
@@ -29,6 +29,7 @@ import {
 } from '@/lib/chargingAggregation';
 import { Icons } from '@/lib/icons';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 
 export { getChargerCategory };
 export { formatDurationMinutes as formatDuration };
@@ -82,12 +83,12 @@ export function ChargingSessionCard({
   const durationLabel = durationMin > 0 ? formatDurationMinutes(durationMin) : '—';
   const avgRateKw = useMemo(() => {
     const w = avgPowerW(session);
-    return w > 0 ? w / 1000 : null;
+    return w > 0 ? convertPowerFromSI(w, 'kW') : null;
   }, [session]);
   const cpk = costPerKwh(session);
   const addedM = distanceAddedM(session);
   const rangeAddedDisplay = addedM != null ? toDistanceDisplay(addedM) : null;
-  const energyKwh = (session.total_energy_added_wh ?? 0) / 1000;
+  const energyDisplay = convertEnergyFromSI(session.total_energy_added_wh ?? 0, 'kWh');
   const isFree = session.cost_decimal === 0;
 
   const showCheckbox = typeof onToggleSelect === 'function';
@@ -115,10 +116,10 @@ export function ChargingSessionCard({
       <Badge variant={cat === 'supercharger' ? 'danger' : cat === 'dc' ? 'warning' : 'success'} size="sm">
         {chargerLabels[cat]}
       </Badge>
-      {energyKwh > 0 && (
-        <Badge variant="info" size="sm">{fmtWithUnit(energyKwh, 'kWh')}</Badge>
+      {energyDisplay > 0 && (
+        <Badge variant="info" size="sm">{fmtWithUnit(energyDisplay, 'kWh')}</Badge>
       )}
-      {isFree && energyKwh > 0 && (
+      {isFree && energyDisplay > 0 && (
         <Badge variant="success" size="sm">
           <Sun className="h-3 w-3" aria-hidden /> {t('free', 'Free')}
         </Badge>
@@ -151,7 +152,7 @@ export function ChargingSessionCard({
         <InlineMetric
           icon={<TrendingUp className="h-3 w-3" aria-hidden />}
           value={t('metrics.peakPower', '{{value}} kW peak', {
-            value: fmtNumber((session.peak_power_w ?? 0) / 1000),
+            value: fmtNumber(convertPowerFromSI(session.peak_power_w ?? 0, 'kW')),
           })}
         />
       )}

@@ -6,21 +6,12 @@ import { TeslaCarViz, parseModelKey } from '@/components/data-display/TeslaCarVi
 import { LinearGauge } from '@/components/charts/LinearGauge'
 import { MetricBar } from '@/components/data-display/MetricBar'
 import { useUnits } from '@/hooks/useUnits'
-import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion'
+import { convertDistanceFromSI, convertDistanceToSI, convertSpeedFromSI } from '@/lib/unitConversion'
 
-import { batteryColor } from '@/lib/colors'
+import { batteryColor, COLOR, CHART_NEUTRAL } from '@/lib/colors'
 import type { Vehicle, VehicleState } from '@/api/types'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { isFiniteNumber } from '@/lib/numberFormat';
-
-/** Color constants matching original production palette */
-const COLOR = {
-  CYAN: '#00f0ff',
-  PURPLE: '#a855f7',
-  DARK: '#374151',
-  MUTED: '#6b7280',
-  BAD: '#ef4444',
-}
 
 /**
  * Gauge upper bounds are expressed in SI so the LinearGauge percent fill
@@ -30,16 +21,16 @@ const COLOR = {
  *   250 mph ≈ 111.76 m/s        — practical upper bound for vehicle speed
  *   100 mph ≈ 160_934.4 m/h     — supercharger-class charge-rate ceiling
  */
-const MAX_RANGE_METERS = 600 * 1609.344
+const MAX_RANGE_METERS = convertDistanceToSI(600, 'mi')
 const MAX_SPEED_MPS = 250 * 0.44704
-const MAX_CHARGE_RATE_METERS_PER_HOUR = 100 * 1609.344
+const MAX_CHARGE_RATE_METERS_PER_HOUR = convertDistanceToSI(100, 'mi')
 
 function boolColor(flag: boolean): string {
-  return flag ? '#10b981' : '#ef4444'
+  return flag ? COLOR.GOOD : COLOR.BAD
 }
 
 function boolColorMuted(flag: boolean): string {
-  return flag ? '#10b981' : COLOR.MUTED
+  return flag ? COLOR.GOOD : CHART_NEUTRAL
 }
 
 interface VehicleGaugesProps {
@@ -179,7 +170,7 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                 <MetricBar
                   value={chargeRateDisplay}
                   max={chargeRateMax}
-                  color="#10b981"
+                  color={COLOR.GOOD}
                   label={t('common.chargeRate', 'Charge rate')}
                   sublabel={`${formatDistance(chargeRate)}/h`}
                 />

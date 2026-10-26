@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChartCard, LayoutCard } from '@/components/layout';
@@ -90,7 +91,7 @@ export function TripDrivesChart({ trip, isLoading, isError, error, onRetry }: Tr
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} layout="vertical" {...chartAnimation}>
           <defs>
-            <ChartGradient id="tripDriveGrad" color="#00f0ff" opacity={0.8} />
+            <ChartGradient id="tripDriveGrad" color={palette.DATA_VISUAL_COLORS.info} opacity={0.8} />
           </defs>
           {chartGrid}
           <XAxis type="number" tick={axisTickSm} />

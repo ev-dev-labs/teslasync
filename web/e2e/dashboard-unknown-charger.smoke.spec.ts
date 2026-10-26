@@ -55,23 +55,24 @@ for (const theme of ['light', 'dark'] as const) {
         }
         await positionCataloguePanel(detail);
         await expect(detail.getByText('Unknown', { exact: true })).toBeVisible();
-        const detailEnergy = width === 390 ? detail.getByText('42.00', { exact: true })
-          : detail.getByText('Energy added', { exact: true }).locator('..').getByText('42.00kWh', { exact: true });
+        const detailEnergyCard = detail.locator('[data-max-per-row] > div')
+          .filter({ has: page.getByText('Energy added', { exact: true }) });
+        const detailEnergy = width === 390 ? detail.getByText('42.0', { exact: true })
+          : detailEnergyCard.getByText('42.0', { exact: true });
         await expect(detailEnergy).toHaveCount(1);
         await expect(detailEnergy).toBeVisible();
+        if (width === 390) await expect(detail.getByText('kWh added', { exact: true })).toBeVisible();
+        else await expect(detailEnergyCard.getByText('kWh', { exact: true })).toBeVisible();
         await expect(detail.getByRole('alert')).toHaveCount(0);
         await captureCataloguePanel(page, detail, test.info(), `unknown-detail-${width}-${theme}.png`);
         await positionCataloguePanel(chart);
         await expect(chart.getByText('Unknown', { exact: true })).toHaveCount(1);
         await expect(chart.getByText('Unknown', { exact: true })).toBeVisible();
-        for (const label of ['Total', 'Avg']) {
-          const metric = chart.getByText(label, { exact: true }).locator('..').getByText('42.00kWh', { exact: true });
-          await expect(metric).toHaveCount(1);
-          await expect(metric).toBeVisible();
-        }
-        await expect(chart.getByText('Sessions', { exact: true }).locator('..').getByText('1', { exact: true })).toBeVisible();
+        await expect(chart.getByText('Energy per session · last 20', { exact: true })).toBeVisible();
         await expect(chart.getByRole('alert')).toHaveCount(0);
         const table = chart.getByRole('table', { name: 'Charge sessions — data table', exact: true });
+        await expect(table.getByRole('columnheader', { name: 'Added (kWh)', exact: true })).toHaveCount(1);
+        await expect(table.getByRole('row')).toHaveCount(2);
         await expect(table.getByRole('cell', { name: 'unknown', exact: true })).toHaveCount(1);
         await expect(table.getByRole('cell', { name: '42', exact: true })).toHaveCount(1);
         await assertCatalogueYAxisTickBounds(chart, 'charge-session-chart', test.info());

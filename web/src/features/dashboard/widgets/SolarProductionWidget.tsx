@@ -1,48 +1,35 @@
-import { useCallback, useId, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sun } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
+import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, chartAnimation, axisTick, axisTickSm, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { useTeslaEnergyHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
-import { averageKnown, knownNumber, sumKnown } from '@/api/dataState';
-import { DataProvenanceBadge } from '@/components/data-display';
+import { averageKnown, knownNumber } from '@/api/dataState';
 import { Skeleton } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 
 import { chartTokens } from '@/lib/tokens';
-import { WidgetChartSummary, type ChartSummaryStat } from './shared';
+import { WidgetChartSummary, WidgetBigNumber } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { civilDateInTimeZone } from '@/lib/dateRange';
 
 interface ChartDatum extends ChartDataRow {
   date: string;
   solar_kwh: number | null;
-}
-
-function shortDate(iso: string): string {
-  // Daily energy buckets arrive as ISO date ("2024-03-05") or datetime
-  // strings. Parse the leading calendar date directly so the axis label is
-  // timezone-stable: `new Date('2024-03-05')` is UTC midnight and shifts a
-  // day earlier when read back with local getters in negative-offset zones.
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
-  if (m) return `${Number(m[2])}/${Number(m[3])}`;
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return `${d.getMonth() + 1}/${d.getDate()}`;
-}
-
-function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+  date_key: string;
 }
 
 export default function SolarProductionWidget({ size }: WidgetProps) {
-  const { fmtNumber: fmt } = useNumberFormatting();
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
-  const gradientId = useId();
+  const dateFormat = useDateFormat();
+  const { tz } = dateFormat;
+  const formatDayKey = dateFormat.formatDayKey ?? ((value: string | null | undefined) => String(value ?? ''));
 
   const {
     data: sites,
@@ -89,41 +76,51 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
     const items = Array.isArray(history) ? history : [];
     return items.filter((entry) => entry?.timestamp).map((entry) => {
       const energy = knownNumber(entry.solar_energy_wh);
+      const dateKey = /^\d{4}-\d{2}-\d{2}$/.test(entry.timestamp)
+        ? entry.timestamp
+        : civilDateInTimeZone(new Date(entry.timestamp), tz);
       return {
-        date: shortDate(entry.timestamp),
+        date: formatDayKey(dateKey, { style: 'short' }),
         solar_kwh: energy == null ? null : convertEnergyFromSI(energy, unitPrefs.energy),
+        date_key: dateKey,
       };
     });
-  }, [history, unitPrefs.energy]);
+  }, [history, unitPrefs.energy, tz]);
 
   const todayKwh = useMemo(() => {
-    const key = todayKey();
+    const key = civilDateInTimeZone(new Date(), tz);
     const items = Array.isArray(history) ? history : [];
     const todayEntry = items.find(
-      (e) => (e?.timestamp ?? '').slice(0, 10) === key,
+      (e) => {
+        const timestamp = e?.timestamp ?? '';
+        if (!timestamp) return false;
+        const dateKey = /^\d{4}-\d{2}-\d{2}$/.test(timestamp)
+          ? timestamp
+          : civilDateInTimeZone(new Date(timestamp), tz);
+        return dateKey === key;
+      },
     );
     const energy = knownNumber(todayEntry?.solar_energy_wh);
     return energy == null ? null : convertEnergyFromSI(energy, unitPrefs.energy);
-  }, [history, unitPrefs.energy]);
-
-  const totalKwh = useMemo(
-    () => chartData.some((d) => d.solar_kwh == null) ? null : sumKnown(chartData.map((d) => d.solar_kwh)),
-    [chartData],
-  );
+  }, [history, unitPrefs.energy, tz]);
 
   const avgKwh = averageKnown(chartData.map((d) => d.solar_kwh));
 
   const isCompact = size.cols <= 1;
-  const isWide = size.cols >= 3;
   const hasData = chartData.length > 0;
+  const isWide = size.cols >= 3;
   const axisLabels = useMemo(
     () => [0, ...chartData.map((entry) => entry.solar_kwh)]
       .filter((value): value is number => value != null && Number.isFinite(value))
-      .map((value) => fmt(value)),
-    [chartData, fmt],
+      .map((value) => fmtNumber(value)),
+    [chartData, fmtNumber],
   );
   const axisWidth = useMeasuredAxisWidth({
-    labels: axisLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
+    labels: axisLabels,
+    fontSize: isWide ? 11 : 10,
+    minWidth: 40,
+    padding: 20,
+    enabled: !isCompact,
   });
 
   const handleRefresh = useCallback(() => {
@@ -186,51 +183,27 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
         isError={isError}
         onRefresh={handleRefresh}
       >
-        <WidgetChartSummary
-          compact
-          isEmpty={!hasData}
-          emptyMessage={t('widget.solarProduction.noData', 'No solar data')}
-          emptyIcon={<Sun className="h-5 w-5" />}
-          stats={hasData ? [
-            {
-              label: t('widget.solarProduction.today', 'Today'),
-              value: todayKwh == null ? null : fmtNumber(todayKwh),
-              unit: unitPrefs.energy,
-            },
-            {
-              label: t('widget.solarProduction.avg', 'Daily avg'),
-              value: avgKwh == null ? null : fmtNumber(avgKwh),
-              unit: unitPrefs.energy,
-            },
-          ] : []}
-          chart={null}
-        />
+        {hasData ? (
+          <WidgetBigNumber
+            value={todayKwh == null ? null : fmtNumber(todayKwh, 1)}
+            unit={unitPrefs.energy}
+            label={t('widget.solarProduction.today', 'Today')}
+            subtitle={avgKwh == null ? undefined : `${t('widget.solarProduction.avg', 'Daily avg')} ${fmtNumber(avgKwh, 1)} ${unitPrefs.energy}`}
+            animated={false}
+          />
+        ) : (
+          <WidgetChartSummary
+            compact
+            isEmpty
+            emptyMessage={t('widget.solarProduction.noData', 'No solar data')}
+            emptyIcon={<Sun className="h-5 w-5" />}
+            stats={[]}
+            chart={null}
+          />
+        )}
       </WidgetShell>
     );
   }
-
-  // ── Standard (2×4+): stat header + area chart ──
-  const stats: ChartSummaryStat[] = hasData
-    ? [
-        {
-          label: t('widget.solarProduction.today', 'Today'),
-          value: todayKwh == null ? null : fmtNumber(todayKwh),
-          unit: unitPrefs.energy,
-        },
-        {
-          label: t('widget.solarProduction.total30dSentence', '30-day total'),
-          value: totalKwh == null ? null : fmtNumber(totalKwh),
-          unit: unitPrefs.energy,
-        },
-        {
-          label: t('widget.solarProduction.avg', 'Daily avg'),
-          value: avgKwh == null ? null : fmtNumber(avgKwh),
-          unit: unitPrefs.energy,
-        },
-      ]
-    : [];
-
-  const tick = isWide ? axisTick : axisTickSm;
 
   return (
     <WidgetShell
@@ -238,74 +211,76 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
       loading={isLoading}
       dataState={dataState}
       loadingContent={<Skeleton className="h-full min-h-24 rounded-shape-sm" />}
-      status={<DataProvenanceBadge provenance={dataState.provenance} status={dataState.status} />}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <WidgetChartSummary
-        isEmpty={!hasData}
-        emptyMessage={t('widget.solarProduction.noData', 'No solar data')}
-        emptyIcon={<Sun className="h-5 w-5" />}
-        stats={stats}
-        chart={
-          <EmbeddedChart
-            title={t('widget.solarProduction.title', 'Solar production')}
-            ariaLabel={t(
-              'widget.solarProduction.chartLabel',
-              'Daily solar production over the last 30 days',
-            )}
-            data={chartData}
-            dataColumns={[
-              { key: 'date', label: t('widget.solarProduction.date', 'Date') },
-              { key: 'solar_kwh', label: `${t('widget.solarProduction.solar', 'Solar')} (${unitPrefs.energy})` },
-            ]}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
-                {chartGrid}
-                <XAxis
-                  dataKey="date"
-                  tick={tick}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  tick={tick}
-                  tickLine={false}
-                  axisLine={false}
-                  width={axisWidth}
-                  tickFormatter={(v: number) => fmt(v)}
-                />
-                <Tooltip
-                  content={<ChartTooltip />}
-                  formatter={(value: number) => [
-                    `${fmtNumber(value)} ${unitPrefs.energy}`,
-                    t('widget.solarProduction.solar', 'Solar'),
-                  ]}
-                  cursor={{ fill: chartTokens.gridStroke }}
-                />
-                <defs>
-                  <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={chartTokens.series[2]} stopOpacity={0.2} />
-                    <stop offset="95%" stopColor={chartTokens.series[2]} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <Area
-                  type="monotone"
-                  dataKey="solar_kwh"
-                  stroke={chartTokens.series[2]}
-                  strokeWidth={2}
-                  fill={`url(#${gradientId})`}
-                  name={t('widget.solarProduction.solar', 'Solar')}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </EmbeddedChart>
-        }
-      />
+      {hasData ? (
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="shrink-0">
+          <WidgetBigNumber
+            value={todayKwh == null ? null : fmtNumber(todayKwh, 1)}
+            unit={unitPrefs.energy}
+            label={t('widget.solarProduction.today', 'Today')}
+            subtitle={avgKwh == null ? undefined : `${t('widget.solarProduction.avg', 'Daily avg')} ${fmtNumber(avgKwh, 1)} ${unitPrefs.energy}`}
+            animated={false}
+          />
+          </div>
+          <div className="mt-2 min-h-0 flex-1">
+            <EmbeddedChart
+              className="h-full min-h-0"
+              viewportClassName="min-h-0 sm:min-h-0"
+              title={t('widget.solarProduction.title', 'Solar production')}
+              ariaLabel={t('widget.solarProduction.chartLabel', 'Daily solar production over the last 30 days')}
+              data={chartData}
+              dataColumns={[
+                { key: 'date', label: t('widget.solarProduction.date', 'Date') },
+                { key: 'solar_kwh', label: `${t('widget.solarProduction.solar', 'Solar')} (${unitPrefs.energy})` },
+              ]}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+                  {chartGrid}
+                  <XAxis dataKey="date" tick={isWide ? axisTick : axisTickSm} tickLine={false} axisLine={false} />
+                  <YAxis
+                    tick={isWide ? axisTick : axisTickSm}
+                    tickLine={false}
+                    axisLine={false}
+                    width={axisWidth}
+                    tickFormatter={(value: number) => fmtNumber(value)}
+                  />
+                  <Tooltip
+                    content={<ChartTooltip />}
+                    formatter={(value: number) => [
+                      `${fmtNumber(value, 1)} ${unitPrefs.energy}`,
+                      t('widget.solarProduction.solar', 'Solar'),
+                    ]}
+                    cursor={{ fill: chartTokens.gridStroke }}
+                  />
+                  <Bar dataKey="solar_kwh" name={t('widget.solarProduction.solar', 'Solar')} radius={[3, 3, 0, 0]} maxBarSize={32}>
+                    {chartData.map((entry, index) => (
+                      <Cell
+                        key={`${entry.date}-${index}`}
+                        fill={entry.date_key === civilDateInTimeZone(new Date(), tz) ? chartTokens.series[3] : chartTokens.axisStroke}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </EmbeddedChart>
+          </div>
+        </div>
+      ) : (
+        <WidgetChartSummary
+          isEmpty
+          emptyMessage={t('widget.solarProduction.noData', 'No solar data')}
+          emptyIcon={<Sun className="h-5 w-5" />}
+          stats={[]}
+          chart={null}
+        />
+      )}
     </WidgetShell>
   );
 }

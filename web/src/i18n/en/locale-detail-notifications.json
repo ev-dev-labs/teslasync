@@ -123,6 +123,7 @@
       "count": "Count",
       "brief": {
         "scope": "{{from}} to {{to}} (exclusive) · {{timezone}}",
+        "bounds": "[{{from}}, {{to}}) · end exclusive",
         "title": "Triggers, linked deliveries, and outbound calls",
         "available": "Report loaded",
         "unavailable": "Report unavailable"

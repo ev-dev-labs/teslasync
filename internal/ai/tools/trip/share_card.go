@@ -58,11 +58,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-	"unicode"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 // Hard caps on the typed share-card draft fields. The values mirror
@@ -199,20 +198,17 @@ func validateShareCardImageString(label, value string, maxLen int) error {
 	if value == "" {
 		return fmt.Errorf("share-card %s must not be empty", label)
 	}
-	if strings.TrimSpace(value) == "" {
+	if validation.TrimSpace(value) == "" {
 		return fmt.Errorf("share-card %s must contain at least one non-whitespace character", label)
 	}
-	if value[0] == ' ' || value[0] == '\t' || value[len(value)-1] == ' ' || value[len(value)-1] == '\t' {
+	if validation.HasLeadingOrTrailingWhitespace(value) {
 		return fmt.Errorf("share-card %s must not have leading or trailing whitespace", label)
 	}
-	runes := []rune(value)
-	if len(runes) > maxLen {
+	if validation.RuneCount(value) > maxLen {
 		return fmt.Errorf("share-card %s must be at most %d characters", label, maxLen)
 	}
-	for _, r := range runes {
-		if unicode.IsControl(r) {
-			return fmt.Errorf("share-card %s must not contain control characters", label)
-		}
+	if validation.HasControlCharacters(value) {
+		return fmt.Errorf("share-card %s must not contain control characters", label)
 	}
 	if tools.ReLatLong.MatchString(value) {
 		return fmt.Errorf("share-card %s must not contain precise lat/long coordinates", label)
@@ -257,13 +253,13 @@ func buildShareCardImageEvidence(detail *tripdb.TripDetail) shareCardImageEviden
 // draft_image_prompt to give the LLM a concrete starting point and
 // to provide a usable proposal in the no-tool-output failure mode.
 func buildShareCardImageSuggestion(trip *tripdb.TripDetail, styleHint string) *shareCardImageSuggestion {
-	style := strings.TrimSpace(styleHint)
+	style := validation.TrimSpace(styleHint)
 	if style == "" {
 		style = "illustrated postcard"
 	}
 	title := "TeslaSync Trip Share Card"
-	if trip.Name != nil && strings.TrimSpace(*trip.Name) != "" {
-		title = strings.TrimSpace(*trip.Name)
+	if trip.Name != nil && validation.TrimSpace(*trip.Name) != "" {
+		title = validation.TrimSpace(*trip.Name)
 	}
 	if runes := []rune(title); len(runes) > shareCardMaxTitleLen {
 		title = string(runes[:shareCardMaxTitleLen])

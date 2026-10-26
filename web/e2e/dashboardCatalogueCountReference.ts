@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
+import { CHART_COLORS } from '../src/lib/colors';
 import {
   assertCatalogueQueryScope, catalogueRecordedSources, renderedCatalogueQueryBinding,
 } from './dashboardCatalogueChargeHistory';
@@ -9,7 +10,7 @@ const object = (value: unknown): value is Record<string, unknown> =>
 const unwrap = (value: unknown) => object(value) && 'data' in value ? value.data : value;
 
 async function boundSource(page: Page, panel: Locator, widgetId: string, title: string,
-  path: string, limit: string, key: readonly unknown[]) {
+  path: string, limit: string | null, key: readonly unknown[]) {
   const state = catalogueRecordedSources(page);
   await Promise.all([...state.pending]);
   expect(state.errors).toEqual([]);
@@ -60,18 +61,33 @@ export async function assertCatalogueCountReference(page: Page, panel: Locator,
   }
   const speed = id === 'speed-heatmap';
   const source = await boundSource(page, panel, widgetId, speed ? 'Speed heatmap' : 'Drive efficiency',
-    '/drives', speed ? '200' : '60', ['drives', 7, speed ? 'speed-heatmap' : 'efficiency-chart-60']);
+    '/drives', speed ? null : '60', ['drives', 7, speed ? 'speed-heatmap' : 'efficiency-chart-60']);
   expect(source.source).toMatchObject({ id: 101, vehicle_id: 7, distance_m: 17400, energy_used_wh: 4200, avg_speed_mps: 18 });
   if (speed) {
+    let gridProof: unknown = null;
     if (width === 1440) {
-      await expect(panel.getByText('1 drive', { exact: true })).toHaveCount(1);
-      await expect(panel.getByText('1 drive', { exact: true })).toBeVisible();
-      await expect(panel.getByText('1 drives', { exact: true })).toHaveCount(0);
+      const grid = panel.getByRole('img', { name: 'Average speed by day of week and hour of day', exact: true });
+      await expect(grid).toBeVisible();
+      await expect(grid.locator('rect')).toHaveCount(168);
+      const titles = await grid.locator('rect > title').allTextContents();
+      expect(titles.filter(title => !title.endsWith('No data'))).toHaveLength(1);
+      expect(titles.find(title => !title.endsWith('No data'))).toMatch(/ – 64\.80 km\/h \(1 drive\)$/);
+      const table = panel.getByRole('table', { name: 'Speed heatmap — data table', exact: true });
+      const cells = await table.getByRole('row').evaluateAll(rows => rows.slice(1).map(row => {
+        const columns = row.querySelectorAll('td');
+        return { speed: columns[2]?.textContent, count: columns[3]?.textContent };
+      }));
+      expect(cells).toHaveLength(168);
+      expect(cells.filter(cell => cell.count !== '0')).toEqual([{ speed: '64.80', count: '1' }]);
+      expect(cells.filter(cell => cell.count === '0').every(cell => cell.speed === '—')).toBe(true);
+      await expect(panel).not.toContainText('1 drives');
+      gridProof = { titles, cells };
     } else {
       await expect(panel.getByText('64.80', { exact: true })).toBeVisible();
     }
     await writeFile(info.outputPath('speed-count-native-contract.json'), JSON.stringify({
-      ...source, width, theme, copyVisible: width === 1440,
+      ...source, width, theme, gridProof,
+      expandedCount: 'Exact singular count and converted speed are bound to the one populated SVG cell and all 168 accessible rows, not an obsolete summary caption.',
       compactLimit: 'Original compact layout exposes peak speed, not drive-count caption; no fixture/layout mutation.',
     }, null, 2));
     return;
@@ -129,11 +145,11 @@ export async function assertCatalogueCountReference(page: Page, panel: Locator,
     throw new Error('No same-widget native reference-line y/label source');
   });
   expect(nativeReference.y).toBe(expectedAverage);
-  expect(nativeReference.stroke).toBe('#6b7280');
+  expect(nativeReference.stroke).toBe(CHART_COLORS[3]);
   expect(nativeReference.label.value).toBe(`Avg: ${formatted} Wh/km`);
   await expect(reference.locator('.recharts-label')).toHaveText(`Avg: ${formatted} Wh/km`);
   await expect(reference.locator('.recharts-label')).toBeVisible();
-  await expect(reference.locator('.recharts-reference-line-line')).toHaveAttribute('stroke', '#6b7280');
+  await expect(reference.locator('.recharts-reference-line-line')).toHaveAttribute('stroke', CHART_COLORS[3]);
   await expect(panel.locator('.recharts-legend-wrapper')).not.toContainText('7-day avg');
   await expect(panel.locator('.recharts-area')).toHaveCount(1);
   await writeFile(info.outputPath('drive-reference-native-contract.json'), JSON.stringify({

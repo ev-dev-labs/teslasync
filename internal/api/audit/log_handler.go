@@ -9,6 +9,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
@@ -96,7 +97,7 @@ func (h *AuditHandler) UserActivity(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusServiceUnavailable, "per-user activity requires a ForwardAuth identity provider; set FORWARD_AUTH_HEADER to enable")
 		return
 	}
-	actor := actorFromRequest(r, h.forwardAuthHeader)
+	actor := httputil.ActorIdentity(r, h.forwardAuthHeader)
 	if actor == "" {
 		httpx.WriteError(w, http.StatusUnauthorized, "missing identity header for per-user activity")
 		return

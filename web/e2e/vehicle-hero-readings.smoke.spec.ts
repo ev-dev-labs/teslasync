@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import type { VehicleState } from '../src/api/types';
 import {
   assertMockApiComplete, fulfillApiFixture, installApiMocks,
@@ -31,6 +31,72 @@ function fixture(reading: ReadingCase): NullableState {
   };
 }
 
+async function installDetailsFixtures(
+  page: Page,
+  mocks: Awaited<ReturnType<typeof installApiMocks>>,
+) {
+  for (const path of [
+    '/motor/latest', '/tire-pressure/latest', '/vehicle-config/latest',
+    '/vehicles/7/silence', '/charge-autopilot/decision',
+  ]) {
+    await page.route(`**/api/v1${path}*`, (route) => fulfillApiFixture(route, mocks, { json: null }));
+  }
+  await page.route('**/api/v1/vehicles/7/settings*', (route) =>
+    fulfillApiFixture(route, mocks, { json: [] }));
+}
+
+async function openDashboardHero(page: Page, theme: 'light' | 'dark', reading: ReadingCase) {
+  await seedBrowserState(page, theme, '/', { preserveDashboardState: true });
+  await page.addInitScript(() => {
+    localStorage.setItem('teslasync-active-dashboard', 'e2e');
+    localStorage.setItem('teslasync-dashboards', JSON.stringify([{
+      id: 'e2e', name: 'E2E', isDefault: true,
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+      widgets: [{ id: 'e2e-full-hero', widgetId: 'vehicle-hero' }],
+      layouts: {},
+    }]));
+  });
+  const mocks = await installApiMocks(page, 'populated', theme);
+  await installDetailsFixtures(page, mocks);
+  const state = fixture(reading);
+  const envelope = {
+    state, live: true, observed_at: new Date().toISOString(),
+    freshness: 'fresh',
+    verified_fields: Object.keys(state).filter((key) =>
+      state[key as keyof NullableState] != null),
+  };
+  await page.route('**/api/v1/vehicles/7/state*', (route) => fulfillApiFixture(route, mocks, {
+    json: envelope,
+  }));
+  await page.route('**/api/v1/vehicles/states*', (route) => fulfillApiFixture(route, mocks, {
+    json: {
+      now: envelope.observed_at, total: 1, limit: 250,
+      vehicles: [{ vehicle_id: 7, outcome: 'resolved', ...envelope }],
+    },
+  }));
+  await page.goto('/');
+  await waitForHarnessReady(page, mocks);
+  return mocks;
+}
+
+for (const reading of ['unknown', 'zero'] as const) {
+  test(`dashboard battery accessibility preserves ${reading} readings`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 900 });
+    const mocks = await openDashboardHero(page, 'dark', reading);
+    const hero = page.locator('[data-widget-id="e2e-full-hero"]');
+    if (reading === 'unknown') {
+      await expect(hero.getByRole('meter', { name: 'Battery', exact: true })).toHaveCount(0);
+      await expect(hero.getByRole('group', { name: 'Battery', exact: true }))
+        .toHaveAccessibleDescription('Unknown');
+    } else {
+      await expect(hero.getByRole('meter', { name: 'Battery', exact: true }))
+        .toHaveAttribute('aria-valuenow', '0');
+    }
+    await assertMockApiComplete(page, mocks);
+  });
+}
+
 for (const theme of ['light', 'dark'] as const) {
   for (const width of [320, 390, 768, 1024, 1440, 2560]) {
     const readings: ReadingCase[] = width === 320 || width === 1440
@@ -38,37 +104,9 @@ for (const theme of ['light', 'dark'] as const) {
     for (const reading of readings) {
       test(`full dashboard hero preserves ${reading} readings at ${width}px in ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width, height: 900 });
-        await seedBrowserState(page, theme, '/');
-        await page.addInitScript(() => {
-          localStorage.setItem('teslasync-dashboards', JSON.stringify([{
-            id: 'e2e', name: 'E2E', isDefault: true,
-            createdAt: '2026-10-01T00:00:00.000Z',
-            updatedAt: '2026-10-01T00:00:00.000Z',
-            widgets: [{ id: 'e2e-full-hero', widgetId: 'vehicle-hero' }],
-            layouts: {},
-          }]));
-        });
-        const mocks = await installApiMocks(page, 'populated', theme);
-        const state = fixture(reading);
-        const envelope = {
-          state, live: true, observed_at: new Date().toISOString(),
-          freshness: 'fresh',
-          verified_fields: Object.keys(state).filter((key) =>
-            state[key as keyof NullableState] != null),
-        };
-        await page.route('**/api/v1/vehicles/7/state*', (route) => fulfillApiFixture(route, mocks, {
-          json: envelope,
-        }));
-        await page.route('**/api/v1/vehicles/states*', (route) => fulfillApiFixture(route, mocks, {
-          json: {
-            now: envelope.observed_at, total: 1, limit: 250,
-            vehicles: [{ vehicle_id: 7, outcome: 'resolved', ...envelope }],
-          },
-        }));
-        await page.goto('/');
-        await waitForHarnessReady(page, mocks);
+        const mocks = await openDashboardHero(page, theme, reading);
         const hero = page.locator('[data-widget-id="e2e-full-hero"]');
-        await expect(hero.getByRole('heading', { name: 'Aurora', exact: true })).toBeVisible();
+        await expect(hero.getByRole('heading', { name: 'Aurora · Model Y Long Range', exact: true })).toBeVisible();
         if (reading === 'unknown') {
           await expect(hero.getByRole('meter')).toHaveCount(0);
           for (const label of ['Battery', 'Range', 'Inside', 'Outside']) {
@@ -78,20 +116,29 @@ for (const theme of ['light', 'dark'] as const) {
           await expect(hero.getByText('Unlocked', { exact: true })).toHaveCount(0);
           await expect(hero.getByText('Off', { exact: true })).toHaveCount(0);
         } else if (reading === 'zero') {
-          for (const label of ['Battery', 'Range', 'Inside', 'Outside']) {
-            await expect(hero.getByRole('meter', { name: label, exact: true }))
-              .toHaveAttribute('aria-valuenow', '0');
+          await expect(hero.getByRole('meter')).toHaveCount(1);
+          await expect(hero.getByRole('meter', { name: 'Battery', exact: true }))
+            .toHaveAttribute('aria-valuenow', '0');
+          for (const label of ['Range', 'Inside', 'Outside']) {
+            const value = hero.getByRole('group', { name: label, exact: true });
+            await expect(value).toContainText(label === 'Range' ? '0 km' : '0°C');
+            await expect(value).not.toHaveAccessibleDescription(/unknown/i);
           }
           await expect(hero.getByText('Unlocked', { exact: true })).toBeVisible();
           await expect(hero.getByText('Off', { exact: true })).toBeVisible();
         } else {
           await expect(hero.getByRole('meter', { name: 'Battery', exact: true }))
             .toHaveAttribute('aria-valuenow', '72');
-          await expect(hero.getByRole('meter', { name: 'Outside', exact: true }))
-            .toHaveAttribute('aria-valuenow', '-8');
-          await expect(hero.getByText('-4.20 kW', { exact: true })).toBeVisible();
+          await expect(hero.getByRole('group', { name: 'Range', exact: true })).toContainText('400 km');
+          await expect(hero.getByRole('group', { name: 'Inside', exact: true })).toContainText('21°C');
+          await expect(hero.getByRole('group', { name: 'Outside', exact: true })).toContainText('-8°C');
+          await expect(hero.getByText(/-4\.20/)).toHaveCount(0);
         }
-        for (const path of ['/vehicles/7', '/commands', '/live', '/digital-twin']) {
+        await expect(hero.getByRole('link')).toHaveCount(1);
+        for (const path of ['/commands', '/live', '/digital-twin']) {
+          await expect(hero.locator(`a[href="${path}"]`)).toHaveCount(0);
+        }
+        for (const path of ['/vehicles/7']) {
           const action = hero.locator(`a[href="${path}"]`);
           await action.scrollIntoViewIfNeeded();
           await expect(action).toBeInViewport();
@@ -104,6 +151,10 @@ for (const theme of ['light', 'dark'] as const) {
         await hero.screenshot({
           path: test.info().outputPath(`full-hero-${reading}-${width}-${theme}.png`),
         });
+        await hero.getByRole('link', { name: /Details/ }).focus();
+        await page.keyboard.press('Enter');
+        await expect(page).toHaveURL(/\/vehicles\/7$/);
+        await expect(page.getByRole('heading', { name: 'Aurora', exact: true })).toBeVisible();
         await assertMockApiComplete(page, mocks);
       });
     }
@@ -117,6 +168,7 @@ for (const theme of ['light', 'dark'] as const) {
         await page.setViewportSize({ width, height: 900 });
         await seedBrowserState(page, theme, '/quick-stats');
         const mocks = await installApiMocks(page, 'populated', theme);
+        await installDetailsFixtures(page, mocks);
         const state = fixture(reading);
         await page.route('**/api/v1/analytics/fleet?days=30', (route) => fulfillApiFixture(route, mocks, {
           json: {
@@ -152,24 +204,31 @@ for (const theme of ['light', 'dark'] as const) {
           await expect(hero.getByText('Off', { exact: true })).toHaveCount(0);
           await expect(hero.getByText('0.00', { exact: true })).toHaveCount(0);
         } else if (reading === 'zero') {
-          for (const label of ['Battery', 'Range', 'Inside', 'Outside']) {
-            await expect(hero.getByRole('meter', { name: label, exact: true }))
-              .toHaveAttribute('aria-valuenow', '0');
-          }
+          await expect(hero.getByRole('meter')).toHaveCount(1);
+          await expect(hero.getByRole('meter', { name: 'Battery', exact: true }))
+            .toHaveAttribute('aria-valuenow', '0');
           await expect(hero.getByText('Unlocked', { exact: true })).toBeVisible();
-          await expect(hero.getByText('Off', { exact: true })).toBeVisible();
-          for (const label of ['Battery', 'Range', 'Inside', 'Outside']) {
-            await expect(hero.getByRole('meter', { name: label, exact: true }).getByText('0.00', { exact: true })).toBeVisible();
+          await expect(hero.getByText('Sentry Off', { exact: true })).toBeVisible();
+          await expect(hero.getByRole('meter', { name: 'Battery', exact: true }).getByText('0.00', { exact: true })).toBeVisible();
+          for (const label of ['Range', 'Inside', 'Outside']) {
+            const value = hero.getByRole('group', { name: label, exact: true });
+            await expect(value).toContainText(label === 'Range' ? '0km' : '0°C');
+            await expect(value).not.toHaveAccessibleDescription(/unknown/i);
           }
         } else {
           await expect(hero.getByRole('meter', { name: 'Battery', exact: true }))
             .toHaveAttribute('aria-valuenow', '72');
-          await expect(hero.getByRole('meter', { name: 'Outside', exact: true }))
-            .toHaveAttribute('aria-valuenow', '-8');
-          await expect(hero.getByText('-4.20', { exact: true })).toBeVisible();
+          await expect(hero.getByRole('group', { name: 'Range', exact: true })).toContainText('400km');
+          await expect(hero.getByRole('group', { name: 'Inside', exact: true })).toContainText('21°C');
+          await expect(hero.getByRole('group', { name: 'Outside', exact: true })).toContainText('-8°C');
+          await expect(hero.getByText('Power -4.20 kW', { exact: true })).toBeVisible();
         }
 
-        for (const path of ['/vehicles/7', '/vehicles/7/commands', '/vehicles/7/map']) {
+        await expect(hero.getByRole('link')).toHaveCount(1);
+        for (const path of ['/vehicles/7/commands', '/vehicles/7/map']) {
+          await expect(hero.locator(`a[href="${path}"]`)).toHaveCount(0);
+        }
+        for (const path of ['/vehicles/7']) {
           const action = hero.locator(`a[href="${path}"]`);
           await action.scrollIntoViewIfNeeded();
           await expect(action).toBeVisible();
@@ -181,6 +240,10 @@ for (const theme of ['light', 'dark'] as const) {
         }
         await expectNoHorizontalOverflow(page);
         await hero.screenshot({ path: test.info().outputPath(`vehicle-hero-${reading}-${width}-${theme}.png`) });
+        await hero.getByRole('link', { name: /Details/ }).focus();
+        await page.keyboard.press('Enter');
+        await expect(page).toHaveURL(/\/vehicles\/7$/);
+        await expect(page.getByRole('heading', { name: 'Aurora', exact: true })).toBeVisible();
         await assertMockApiComplete(page, mocks);
       });
     }

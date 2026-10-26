@@ -1,3 +1,5 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
+import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 // Behavioural test suite for AIAutoNameUnnamedLocations.
 //
 // This is the co-located Project-Apex elevation test for
@@ -29,7 +31,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
-import type { AppSettings } from '@/api/types'
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -48,59 +52,14 @@ const DRAFT_TESTID = 'ai-feature-auto-name-unnamed-locations-draft'
 const APPLY_TESTID = 'ai-feature-auto-name-unnamed-locations-apply'
 const SUGGEST_TESTID = 'ai-feature-auto-name-unnamed-locations-suggest'
 
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-}
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
-}
-
 /** Enable the feature end-to-end (mode on + per-feature toggle on). */
 function enableAi() {
   mockUseSettings.mockReturnValue(
-    settingsPayload({
+    appSettingsPayload({
       ai_mode: 'cloud',
       ai_features: { 'auto-name-unnamed-locations': true },
     }),
   )
-}
-
-function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder()
-  let i = 0
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (i < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[i]))
-        i++
-      } else {
-        controller.close()
-      }
-    },
-  })
-}
-
-function sseFrame(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
 }
 
 type FetchCall = { url: string; init: RequestInit | undefined }
@@ -167,7 +126,7 @@ afterEach(() => {
 describe('AIAutoNameUnnamedLocations — AI-off contract & gating', () => {
   it('renders nothing when ai_mode=off even if the per-feature toggle is on', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'off',
         ai_features: { 'auto-name-unnamed-locations': true },
       }),
@@ -183,7 +142,7 @@ describe('AIAutoNameUnnamedLocations — AI-off contract & gating', () => {
 
   it('renders nothing when the mode is on but the per-feature toggle is false', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'auto-name-unnamed-locations': false },
       }),

@@ -7,7 +7,7 @@ import type { Bar, ComposedChart, Line } from '@/components/charts';
 import type { ModeTheme } from '@/components/ui/ThemeProvider';
 import { themePresets } from '@/components/ui/themePresets';
 import { ToastProvider } from '@/components/feedback';
-import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors';
+import { CHART_COLORS_DARK, CHART_COLORS_NEON, CHART_COLORS_NEON_DARK } from '@/lib/colors';
 import type { MonthlyRecoveryChartRow } from '../regen-efficiency';
 
 const h = vi.hoisted(() => ({
@@ -105,19 +105,21 @@ beforeEach(() => {
 describe('monthly recovery palette adoption', () => {
   it('reacts to saved palette and light-mode changes without rewriting preferences or identities', () => {
     const view = mount({ isRatioHidden: true });
-    expect(h.bar?.fill).toBe(CHART_COLORS_CB_SAFE[1]);
-    expect(h.line?.stroke).toBe(CHART_COLORS_CB_SAFE[5]);
+    expect(h.bar?.fill).toBe(CHART_COLORS_DARK[1]);
+    expect(h.line?.stroke).toBe(CHART_COLORS_DARK[5]);
     h.settings = Object.freeze({ chart_palette: 'neon' });
     view.rerender(<MonthlyRecoveryChart {...props} isRatioHidden />);
-    expect(h.bar?.fill).toBe(CHART_COLORS_NEON[1]);
-    expect(h.line?.stroke).toBe(CHART_COLORS_NEON[5]);
+    expect(h.bar?.fill).toBe(CHART_COLORS_NEON_DARK[1]);
+    expect(h.line?.stroke).toBe(CHART_COLORS_NEON_DARK[5]);
 
     h.mode = themePresets.find(mode => mode.id === 'solarized-light') ?? null;
     expect(h.mode).not.toBeNull();
     view.rerender(<MonthlyRecoveryChart {...props} isRatioHidden
       energySeries="Recovered energy translated" ratioSeries="Recovery share translated" />);
-    expect(h.bar?.fill).not.toBe(CHART_COLORS_NEON[1]);
-    expect(h.line?.stroke).not.toBe(CHART_COLORS_NEON[5]);
+    expect(h.bar?.fill).toBe(CHART_COLORS_NEON[1]);
+    expect(h.line?.stroke).toBe(CHART_COLORS_NEON[5]);
+    expect(h.bar?.fill).not.toBe(CHART_COLORS_NEON_DARK[1]);
+    expect(h.line?.stroke).not.toBe(CHART_COLORS_NEON_DARK[5]);
     expect(h.bar?.dataKey).toBe('recoveredEnergy');
     expect(h.line?.dataKey).toBe('recoveryRatio');
     expect(h.bar?.hide).toBe(true);

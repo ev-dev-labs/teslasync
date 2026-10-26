@@ -5,9 +5,11 @@ import {
   formatTime as libFormatTime,
   formatDateShort as libFormatDateShort,
   formatDateWithDay as libFormatDateWithDay,
+  formatDateRange as libFormatDateRange,
+  formatDayKey as libFormatDayKey,
+  formatDayKeyRange as libFormatDayKeyRange,
   formatRelative as libFormatRelative,
   formatRelativeTime as libFormatRelativeTime,
-  formatRelativeDays as libFormatRelativeDays,
   type FormatOptions,
 } from '@/lib/dateFormat'
 import { useSettings } from './useSettings'
@@ -20,7 +22,7 @@ import { useTimezone, type TzMode } from '@/lib/timezone'
  * than the rest of the page).
  */
 export type DateFormatter = (
-  value: string | Date | null | undefined,
+  value: string | number | Date | null | undefined,
   override?: FormatOptions,
 ) => string
 
@@ -36,9 +38,25 @@ export interface UseDateFormatResult {
   formatTime: DateFormatter
   formatDateShort: DateFormatter
   formatDateWithDay: DateFormatter
+  /** Half-open `[start, endExclusive)` rendered with an inclusive last day. */
+  formatDateRange: (
+    start: string | Date | null | undefined,
+    endExclusive: string | Date | null | undefined,
+    override?: FormatOptions,
+  ) => string
+  /** Inclusive `YYYY-MM-DD` calendar span, zone-stable. */
+  formatDayKeyRange: (
+    startKey: string | null | undefined,
+    endKey: string | null | undefined,
+    override?: FormatOptions,
+  ) => string
+  /** Single `YYYY-MM-DD` business day without timezone conversion. */
+  formatDayKey: (
+    key: string | null | undefined,
+    override?: FormatOptions & { style?: 'short' | 'long' },
+  ) => string
   formatRelative: DateFormatter
   formatRelativeTime: DateFormatter
-  formatRelativeDays: DateFormatter
 }
 
 /**
@@ -46,7 +64,9 @@ export interface UseDateFormatResult {
  * `settings.tz_display_default` column predates the enum, is nullable, and
  * is written by older clients, so at runtime it can be `undefined`, an empty
  * string, or a legacy value outside the union — none of which the nullish
- * coalescing operator alone would sanitise.
+ * coalescing operator alone would sanitise. Local copy (mirrors the private
+ * one in `@/lib/timezone`): this hook must not gain imports from that
+ * widely-mocked module, or tests with explicit mocks break.
  */
 function isTzMode(value: unknown): value is TzMode {
   return value === 'vehicle' || value === 'user' || value === 'utc'
@@ -104,6 +124,18 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
     (value, override) => libFormatDateWithDay(value, { ...opts, ...override }),
     [opts],
   )
+  const formatDateRange = useCallback<UseDateFormatResult['formatDateRange']>(
+    (start, endExclusive, override) => libFormatDateRange(start, endExclusive, { ...opts, ...override }),
+    [opts],
+  )
+  const formatDayKeyRange = useCallback<UseDateFormatResult['formatDayKeyRange']>(
+    (startKey, endKey, override) => libFormatDayKeyRange(startKey, endKey, { ...opts, ...override }),
+    [opts],
+  )
+  const formatDayKey = useCallback<UseDateFormatResult['formatDayKey']>(
+    (key, override) => libFormatDayKey(key, { ...opts, ...override }),
+    [opts],
+  )
   const formatRelative = useCallback<DateFormatter>(
     (value, override) => libFormatRelative(value, { ...opts, ...override }),
     [opts],
@@ -112,11 +144,6 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
     (value, override) => libFormatRelativeTime(value, { ...opts, ...override }),
     [opts],
   )
-  const formatRelativeDays = useCallback<DateFormatter>(
-    (value, override) => libFormatRelativeDays(value, { ...opts, ...override }),
-    [opts],
-  )
-
   return useMemo(
     () => ({
       opts,
@@ -127,9 +154,11 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
       formatTime,
       formatDateShort,
       formatDateWithDay,
+      formatDateRange,
+      formatDayKey,
+      formatDayKeyRange,
       formatRelative,
       formatRelativeTime,
-      formatRelativeDays,
     }),
     [
       opts,
@@ -140,9 +169,11 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
       formatTime,
       formatDateShort,
       formatDateWithDay,
+      formatDateRange,
+      formatDayKey,
+      formatDayKeyRange,
       formatRelative,
       formatRelativeTime,
-      formatRelativeDays,
     ],
   )
 }

@@ -97,9 +97,10 @@ describe('API logs runtime diagnostic cards', () => {
     expect(rows[1]).toHaveTextContent('SERVICE_UNAVAILABLE');
     expect(rows[2]).toHaveTextContent('RATE_LIMITED');
     expect(within(card).getByRole('region', { name: 'Backend error categories' })).toHaveAttribute('tabindex', '0');
-    expect(card.querySelector('[title="2026-10-03T08:00:00.000Z (UTC)"]')).not.toBeNull();
-    expect(card.querySelector('[title="2026-10-03T08:01:00.000Z (UTC)"]')).not.toBeNull();
-    expect(card.querySelector('[title="2026-10-03T08:02:00.000Z (UTC)"]')).not.toBeNull();
+    expect(card.querySelector('[title="2026-10-03T08:00:00.000Z (UTC)"]')).toBeNull();
+    expect(card.querySelector('[title="2026-10-03T08:01:00.000Z (UTC)"]')).toBeNull();
+    expect(card.querySelector('[title="2026-10-03T08:02:00.000Z (UTC)"]')).toBeNull();
+    expect(card).not.toHaveTextContent('2026-10-03T08:00:00.000Z');
     expect(within(card).getAllByText('Last seen')).toHaveLength(3);
     expect(card.querySelectorAll('[data-print-card]')).toHaveLength(0);
     expect(within(card).getByRole('link', { name: 'Inspect system health' })).toHaveAttribute('href', '/system-status');
@@ -156,7 +157,8 @@ describe('API logs runtime diagnostic cards', () => {
     expect(screen.getByText('Last hour; independent of API call filters.')).toBeInTheDocument();
     const card = screen.getByRole('region', { name: 'Frontend error reports' });
     expect(card.querySelectorAll('[data-print-card]')).toHaveLength(0);
-    expect(card.querySelector('[title="2026-10-03T08:00:00.000Z (UTC)"]')).not.toBeNull();
+    expect(card.querySelector('[title="2026-10-03T08:00:00.000Z (UTC)"]')).toBeNull();
+    expect(card).not.toHaveTextContent('2026-10-03T08:00:00.000Z');
   });
 
   it('preserves and sorts reported browser sources with names, complete routes and counts', async () => {

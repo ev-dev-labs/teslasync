@@ -11,7 +11,7 @@ import {
   formatDurationMs,
   formatDurationMsCompact,
   formatDurationMsLong,
-} from '@/lib/dateFormat'
+} from '@/lib/dateConvert'
 
 /**
  * Subscribe to the settings bridge so numeric displays and memoized chart

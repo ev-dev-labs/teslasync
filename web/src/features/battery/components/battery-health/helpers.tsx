@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 import { CHART_COLORS } from '@/lib/colors';
+import { COLOR } from '@/lib/colors';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
 import type {
@@ -50,9 +51,9 @@ export function healthLabel(score: number, t: (key: string, fallback: string) =>
 }
 
 export function degradationColor(pct: number): string {
-  if (pct <= 5) return '#10b981';
-  if (pct <= 15) return '#f59e0b';
-  return '#ef4444';
+  if (pct <= 5) return COLOR.GOOD;
+  if (pct <= 15) return COLOR.WARN;
+  return COLOR.BAD;
 }
 
 export function hasHealthMeasurement(health: BatteryHealthAnalytics): boolean {
@@ -202,8 +203,8 @@ export function computeEnergyBreakdown(
   const dcEnergy = convertEnergyFromSI(charging.dc_energy_wh, 'kWh');
   return {
     pieData: [
-      { name: 'AC', value: acEnergy, fill: '#10b981' },
-      { name: 'DC', value: dcEnergy, fill: '#f59e0b' },
+      { name: 'AC', value: acEnergy, fill: COLOR.GOOD },
+      { name: 'DC', value: dcEnergy, fill: COLOR.WARN },
     ],
     acCount: charging.ac_session_count,
     dcCount: charging.dc_session_count,

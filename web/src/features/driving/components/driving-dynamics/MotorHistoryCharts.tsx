@@ -26,6 +26,7 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { useMotorHistory, type MotorHistoryQuery } from '@/api/hooks/useVehicles';
 import { INTERVALS } from '@/lib/constants';
 import { MOTOR_HISTORY_LIMIT } from './useMotorStats';
+import { CHART_COLORS } from '@/lib/colors';
 
 interface MotorHistoryChartsProps {
   vehicleId: number | null | undefined;
@@ -135,16 +136,16 @@ export default function MotorHistoryCharts({
             <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={powerChartData}>
                 <defs>
-                  <ChartGradient id="powerAreaGrad" color="#06b6d4" />
-                  <ChartGradient id="regenAreaGrad" color="#22c55e" />
+                  <ChartGradient id="powerAreaGrad" color={CHART_COLORS[1]} />
+                  <ChartGradient id="regenAreaGrad" color={CHART_COLORS[2]} />
                 </defs>
                 {chartGrid}
                 <XAxis dataKey="time" tick={axisTick} />
                 <YAxis tick={axisTick} unit=" kW" />
                 <Tooltip content={<ChartTooltip />} />
                 <ChartLegend state={powerHidden} />
-                <Area {...AREA_DEFAULTS} dataKey="power" stroke="#06b6d4" fill="url(#powerAreaGrad)" name={t('dynamics.power', 'Power')} hide={powerHidden.isHidden('power')} />
-                <Area {...AREA_DEFAULTS} dataKey="regen" stroke="#22c55e" fill="url(#regenAreaGrad)" name={t('dynamics.regen', 'Regen')} hide={powerHidden.isHidden('regen')} />
+                <Area {...AREA_DEFAULTS} dataKey="power" stroke={CHART_COLORS[1]} fill="url(#powerAreaGrad)" name={t('dynamics.power', 'Power')} hide={powerHidden.isHidden('power')} />
+                <Area {...AREA_DEFAULTS} dataKey="regen" stroke={CHART_COLORS[2]} fill="url(#regenAreaGrad)" name={t('dynamics.regen', 'Regen')} hide={powerHidden.isHidden('regen')} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
@@ -176,8 +177,8 @@ export default function MotorHistoryCharts({
                 <YAxis tick={axisTick} unit=" Nm" />
                 <Tooltip content={<ChartTooltip />} />
                 <ChartLegend state={torqueHidden} />
-                <Line {...AREA_DEFAULTS} dataKey="front" stroke="#3b82f6" name={t('dynamics.torqueFront', 'Front Torque')} hide={torqueHidden.isHidden('front')} />
-                <Line {...AREA_DEFAULTS} dataKey="rear" stroke="#a855f7" name={t('dynamics.torqueRear', 'Rear Torque')} hide={torqueHidden.isHidden('rear')} />
+                <Line {...AREA_DEFAULTS} dataKey="front" stroke={CHART_COLORS[0]} name={t('dynamics.torqueFront', 'Front Torque')} hide={torqueHidden.isHidden('front')} />
+                <Line {...AREA_DEFAULTS} dataKey="rear" stroke={CHART_COLORS[6]} name={t('dynamics.torqueRear', 'Rear Torque')} hide={torqueHidden.isHidden('rear')} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -209,8 +210,8 @@ export default function MotorHistoryCharts({
                 <YAxis tick={axisTick} unit=" rpm" />
                 <Tooltip content={<ChartTooltip />} />
                 <ChartLegend state={rpmHidden} />
-                <Line {...AREA_DEFAULTS} dataKey="front" stroke="#06b6d4" name={t('dynamics.rpmFront', 'Front RPM')} hide={rpmHidden.isHidden('front')} />
-                <Line {...AREA_DEFAULTS} dataKey="rear" stroke="#a855f7" name={t('dynamics.rpmRear', 'Rear RPM')} hide={rpmHidden.isHidden('rear')} />
+                <Line {...AREA_DEFAULTS} dataKey="front" stroke={CHART_COLORS[1]} name={t('dynamics.rpmFront', 'Front RPM')} hide={rpmHidden.isHidden('front')} />
+                <Line {...AREA_DEFAULTS} dataKey="rear" stroke={CHART_COLORS[6]} name={t('dynamics.rpmRear', 'Rear RPM')} hide={rpmHidden.isHidden('rear')} />
               </LineChart>
             </ResponsiveContainer>
           ) : (

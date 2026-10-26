@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
+import { expectNoRuntimeFailures, monitorPage } from './qualityAssertions';
 import {
   assertMockApiComplete,
+  closeMockedPage,
   installApiMocks,
   readCapturedBeacons,
   seedBrowserState,
@@ -185,4 +187,41 @@ test('late pagehide API work is routed and isolated to the current page', async 
   });
   await assertMockApiComplete(page, mockApi);
   expect([...(mockApi?.seen ?? [])]).toContain('GET /system/health?late_teardown=1');
+});
+
+test('closing a mocked document drains late requests before removing its routes', async ({ page }) => {
+  const originalDiagnostics = monitorPage(page);
+  await seedBrowserState(page, 'dark', '/');
+  const originalApi = await installApiMocks(page, 'populated');
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await waitForHarnessReady(page, originalApi);
+  const child = await page.context().newPage();
+  const childDiagnostics = monitorPage(child);
+  await seedBrowserState(child, 'dark', '/');
+  const childApi = await installApiMocks(child, 'populated');
+  await child.goto('/', { waitUntil: 'domcontentloaded' });
+  await waitForHarnessReady(child, childApi);
+  await child.evaluate(() => {
+    window.addEventListener('pagehide', () => {
+      setTimeout(() => {
+        for (const source of ['climate', 'security']) {
+          void fetch(`/api/v1/${source}/latest?vehicle_id=7&closing_document=child`, { keepalive: true });
+        }
+      }, 0);
+    }, { once: true });
+  });
+  await closeMockedPage(child, childApi);
+  await expectNoRuntimeFailures(childDiagnostics);
+  expect(child.isClosed()).toBe(true);
+  for (const source of ['climate', 'security']) {
+    const path = `/api/v1/${source}/latest`;
+    expect(childApi?.seen.has(`GET /${source}/latest?vehicle_id=7&closing_document=child`)).toBe(true);
+    expect(childApi?.requests.filter(request => request.path === path).every(
+      request => request.disposition === 'fulfilled',
+    )).toBe(true);
+    expect(originalApi?.seen.has(`GET /${source}/latest?vehicle_id=7&closing_document=child`)).toBe(false);
+  }
+  expect(await page.evaluate(() => fetch('/api/v1/system/health').then(response => response.status))).toBe(200);
+  await closeMockedPage(page, originalApi);
+  await expectNoRuntimeFailures(originalDiagnostics);
 });

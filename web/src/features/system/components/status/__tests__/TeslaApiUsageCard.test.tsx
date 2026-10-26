@@ -65,10 +65,10 @@ describe('Tesla Fleet usage estimate', () => {
     render(<MemoryRouter><TeslaApiUsageCard apiUsage={usage} now={0} compact={compact} /></MemoryRouter>)
 
     assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Cycle usage evidence' }),
-      '31. Aug. 2026 – 30. Sept. 2026 America/Los_Angeles')
+      '31. Aug. – 30. Sept. 2026')
     if (!compact) {
-      expect(screen.getByText('30. Sept. 2026 (America/Los_Angeles)')).toBeInTheDocument()
-      expect(screen.getByText(/1\. Aug\. 2026 – 31\. Aug\. 2026/)).toBeInTheDocument()
+      expect(screen.getByText('30. Sept. 2026')).toBeInTheDocument()
+      expect(screen.getByText('1.–31. Aug. 2026 · 0 events')).toBeInTheDocument()
     }
     expect(usage).toEqual(original)
   })
@@ -81,10 +81,10 @@ describe('Tesla Fleet usage estimate', () => {
       current: { ...usage.current, end: '2026-09-30T23:30:00Z' },
     }
     const { rerender } = renderCard(boundaryUsage)
-    expect(screen.getByText('2026年10月1日 (Asia/Tokyo)')).toBeInTheDocument()
+    expect(screen.getByText('2026年10月1日')).toBeInTheDocument()
     settings.tz_display_default = 'utc'
     rerender(<MemoryRouter><TeslaApiUsageCard apiUsage={boundaryUsage} now={0} /></MemoryRouter>)
-    expect(screen.getByText('2026年9月30日 (UTC)')).toBeInTheDocument()
+    expect(screen.getByText('2026年9月30日')).toBeInTheDocument()
     expect(boundaryUsage.current.end).toBe('2026-09-30T23:30:00Z')
   })
 
@@ -98,9 +98,9 @@ describe('Tesla Fleet usage estimate', () => {
     Object.assign(brokenUsage.current, { start: value, end: value })
     Object.assign(brokenUsage.history[0], { start: value, end: value })
     renderCard(brokenUsage)
-    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Cycle usage evidence' }), '— – — UTC')
-    expect(screen.getByText('— (UTC)')).toBeInTheDocument()
-    expect(screen.getByText('— – — · 0 events')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Cycle usage evidence' }), '—')
+    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.getByText('— · 0 events')).toBeInTheDocument()
     expect(screen.queryByText(/Invalid Date|1970/)).not.toBeInTheDocument()
     expect(screen.getByText('$4.00')).toBeInTheDocument()
   })

@@ -4,17 +4,16 @@ import { Users } from 'lucide-react';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates, knownString } from '@/api/dataState';
-import { VehicleAccessBody } from '../components/continuation-dashboard-3/VehicleAccessBody';
-import { VehicleAccessCompact } from '../components/continuation-dashboard-3/VehicleAccessCompact';
 import { useVehicleDrivers, useVehicleInvitations } from '@/api/hooks/useVehicleAccess';
 import { useVehicleMobileEnabled, useVehicles } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
-import type { DetailEntry } from './shared';
+import { WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
-import { formatDateShort } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { formatDateShort } = useDateFormat();
   const vehicleQuery = useVehicles();
   const { data: vehicles, isLoading: vehiclesLoading } = vehicleQuery;
   const vehicleState = useDataState(vehicleQuery);
@@ -67,9 +66,9 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
   const driverEntries = useMemo<DetailEntry[]>(
     () =>
       safeDrivers.map((d) => ({
-        id: d.id,
+        id: `driver-${d.id}`,
         label: knownString(d.driver_name) ?? knownString(d.driver_email) ?? '—',
-        value: formatDateShort(d.fetched_at),
+        value: null,
         badge: {
           text: d.role === 'owner'
             ? t('widget.vehicleAccessOwner', 'Owner')
@@ -78,6 +77,7 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
               : knownString(d.role) ?? t('widget.vehicleAccessUnknown', 'Unknown'),
           variant: (d.role === 'owner' ? 'success' : 'neutral') as 'success' | 'neutral',
         },
+        status: d.role === 'owner' ? 'success' : 'neutral',
       })),
     [safeDrivers, t],
   );
@@ -85,9 +85,12 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
   const invitationEntries = useMemo<DetailEntry[]>(
     () =>
       safeInvitations.map((inv) => ({
-        id: inv.id,
+        id: `invitation-${inv.id}`,
         label: inv.created_by ?? '—',
-        value: formatDateShort(inv.created_at),
+        sublabel: inv.created_at
+          ? formatDateShort(inv.created_at)
+          : undefined,
+        value: null,
         badge: {
           text: inv.status === 'pending'
             ? t('widget.vehicleAccessPendingStatus', 'Pending')
@@ -102,8 +105,12 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
                 : inv.status === 'expired' ? 'error' : 'neutral'
           ) as 'warning' | 'success' | 'error' | 'neutral',
         },
+        status: inv.status === 'pending' ? 'warning'
+          : inv.status === 'accepted' ? 'success'
+            : inv.status === 'expired' ? 'error'
+              : 'neutral',
       })),
-    [safeInvitations, t],
+    [safeInvitations, t, formatDateShort],
   );
 
   // Fold the vehicle-list load into the skeleton: with no explicit vehicleId
@@ -123,6 +130,12 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
 
   const hasAnyData =
     drivers !== undefined || invitations !== undefined || mobileData !== undefined || isError;
+
+  const accessEntries = useMemo<DetailEntry[]>(() => {
+    const rows = [...driverEntries];
+    rows.push(...invitationEntries);
+    return rows;
+  }, [driverEntries, invitationEntries]);
 
   const handleRefresh = useCallback(() => {
     void refetchDrivers();
@@ -149,19 +162,39 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
     >
       {hasAnyData ? (
         isCompact ? (
-          <VehicleAccessCompact
-            driverCount={drivers === undefined ? null : safeDrivers.length}
-            mobileEnabled={mobileEnabled}
-          />
+          <div className="flex min-h-[44px] min-w-0 flex-wrap items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <Users className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
+              <span className="min-w-0 text-sm font-medium text-[var(--text-primary)] [overflow-wrap:anywhere]">
+                {drivers === undefined
+                  ? `— ${t('widget.vehicleAccessDrivers', 'drivers')}`
+                  : `${safeDrivers.length} ${t('widget.vehicleAccessDrivers', 'drivers')}`}
+              </span>
+            </div>
+            <span
+              role="img"
+              aria-label={mobileEnabled === true
+                ? t('widget.vehicleAccessMobileOn', 'Mobile access enabled')
+                : mobileEnabled === false
+                  ? t('widget.vehicleAccessMobileOff', 'Mobile access disabled')
+                  : t('widget.vehicleAccessMobileUnknown', 'Mobile access unknown')}
+              className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                mobileEnabled === true
+                  ? 'bg-emerald-400'
+                  : mobileEnabled === false ? 'bg-red-400' : 'bg-[var(--surface-2)]'
+              }`}
+              title={mobileEnabled === true
+                ? t('widget.vehicleAccessMobileOn', 'Mobile access enabled')
+                : mobileEnabled === false
+                  ? t('widget.vehicleAccessMobileOff', 'Mobile access disabled')
+                  : t('widget.vehicleAccessMobileUnknown', 'Mobile access unknown')}
+            />
+          </div>
         ) : (
-          <VehicleAccessBody
-            mobileEnabled={mobileEnabled}
-            driverEntries={driverEntries}
-            invitationEntries={invitationEntries}
-            compact={isCompact}
-            driverState={{ ...driverState, status: driverState.status === 'initial' && !driversLoading ? 'unavailable' : driverState.status }}
-            invitationState={{ ...invitationState, status: invitationState.status === 'initial' && !invitationsLoading ? 'unavailable' : invitationState.status }}
-            mobileState={mobileState}
+          <WidgetDetailCard
+            entries={accessEntries}
+            compact={false}
+            emptyMessage={t('widget.vehicleAccessNoData', 'No access data available')}
           />
         )
       ) : (

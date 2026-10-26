@@ -6107,7 +6107,7 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "theme.chartPalette.neonHelp",
-    "Bright cyan/magenta — best when colour vision is unimpaired."
+    "The same calm palette in a violet-led order."
   ],
   [
     "featureConfig.errorTitle",
@@ -18993,7 +18993,7 @@ function assertTranslatorOrigin(call: ts.CallExpression, tree: ts.SourceFile, fi
 describe('authorized exact canonical catalog recovery attempt3', () => {
   it('resolves all 1921 static pairs through installed i18next and normal generated resources', async () => {
     expect(authorizedCanonicalAdditions).toHaveLength(1921)
-    expect(createHash('sha256').update(JSON.stringify(authorizedCanonicalAdditions)).digest('hex')).toBe('5d1f0a21567e6deed09a957890554ba37f67f7b65ef324cb447449de50e5e660')
+    expect(createHash('sha256').update(JSON.stringify(authorizedCanonicalAdditions)).digest('hex')).toBe("77f07cd0962ab40a656e796e4e9312f31145b97ca0ae0cb85ec2ae36dd6107a3")
     const english = createInstance()
     await english.init({ lng: 'en', fallbackLng: 'en', fallbackNS: 'translation',
       resources: { en: { translation: catalog } }, interpolation: { escapeValue: false } })
@@ -19022,9 +19022,9 @@ describe('authorized exact canonical catalog recovery attempt3', () => {
       ...finalFourAdditions, ...acceptedInterveningAdditions,
     ].map(([key]) => JSON.stringify(key.split('.'))))
     const predecessor = entries.filter(([path]) => !exactAdded.has(JSON.stringify(path)))
-    expect(predecessor).toHaveLength(30945)
-    expect(createHash('sha256').update(JSON.stringify(predecessor)).digest('hex')).toBe("541bef8ba649705697a857a7eea640216ead64e2100f5259c94ad2e7c2987e57")
-    expect(entries).toHaveLength(32977)
+    expect(predecessor).toHaveLength(31146)
+    expect(createHash('sha256').update(JSON.stringify(predecessor)).digest('hex')).toBe("d2cb5a3ea0fa77b77a920145dce8dcb64ef4f3b7be1350a31abeb24737f5cf29")
+    expect(entries).toHaveLength(33178)
     expect(preservedResolutions).toHaveLength(28)
     for (const [key, value] of preservedResolutions) expect(nested(catalog, key), key).toBe(value)
     expect(catalog.settings.title).toBe('Settings')

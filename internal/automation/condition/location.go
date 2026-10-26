@@ -6,6 +6,7 @@ import (
 	"math"
 
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
@@ -48,7 +49,7 @@ func DecodeLocationSpec(raw json.RawMessage) (*LocationConfig, error) {
 		return nil, fmt.Errorf("expected type \"location\", got %q", cfg.Type)
 	}
 
-	if cfg.GeofenceID <= 0 {
+	if validation.ValidatePositiveID(cfg.GeofenceID) != nil {
 		return nil, fmt.Errorf("geofence_id must be a positive integer, got %d", cfg.GeofenceID)
 	}
 

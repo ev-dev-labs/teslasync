@@ -1,3 +1,5 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
+import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 // Co-located unit + wiring test for AIChargingCurveFingerprintClustering.
 //
 // The module exports a single symbol: the
@@ -43,7 +45,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
-import type { AppSettings } from '@/api/types'
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -57,37 +61,11 @@ const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
 // baseSettings is a complete AppSettings with realistic non-AI
 // defaults. Per-test overrides flip ai_mode + ai_features to exercise
 // the gate's off (negative) and on (positive) paths.
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-}
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
-}
-
 // enabled() returns the fully-on settings shape (mode + toggle) so the
 // on-mode tests read one intent-revealing helper instead of repeating
 // the two-field override.
 function enabled(overrides: Partial<AppSettings> = {}) {
-  return settingsPayload({
+  return appSettingsPayload({
     ai_mode: 'cloud',
     ai_features: { 'charging-curve-fingerprint-clustering': true },
     ...overrides,
@@ -98,27 +76,8 @@ function enabled(overrides: Partial<AppSettings> = {}) {
 // arbitrarily-sized text chunks, matching the helper used by the
 // useAiStream + sibling wiring tests so the SSE parser receives
 // byte-for-byte equivalent input.
-function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder()
-  let i = 0
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (i < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[i]))
-        i++
-      } else {
-        controller.close()
-      }
-    },
-  })
-}
-
 // sseFrame formats a single SSE event the way
 // internal/ai/stream/writer.go emits it.
-function sseFrame(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
-}
-
 const ROOT_TESTID = 'ai-feature-charging-curve-fingerprint-clustering-root'
 const FEATURE_ID = 'charging-curve-fingerprint-clustering'
 const ROUTE = '/api/v1/ai/charging/curves/clusters/explain'
@@ -142,7 +101,7 @@ afterEach(() => {
 describe('AIChargingCurveFingerprintClustering — AI-off render gate', () => {
   it('renders nothing when ai_mode=off even with the feature toggle on', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'off',
         ai_features: { 'charging-curve-fingerprint-clustering': true },
       }),
@@ -161,7 +120,7 @@ describe('AIChargingCurveFingerprintClustering — AI-off render gate', () => {
 
   it('renders nothing when the per-feature toggle is off even with ai_mode=cloud', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'charging-curve-fingerprint-clustering': false },
       }),

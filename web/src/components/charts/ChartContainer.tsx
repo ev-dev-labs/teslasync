@@ -134,6 +134,8 @@ export interface ChartContainerProps {
   action?: React.ReactNode;
   children: ChartContainerChildren;
   className?: string;
+  /** Bounded hosts can override viewport minimums without changing auto-height defaults. */
+  viewportClassName?: string;
   /**
    * Render the `<ChartExportMenu>` (PNG / SVG /
    * Copy-image, plus CSV when `exportData` is supplied) in the title-bar
@@ -320,6 +322,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       action,
       children,
       className,
+      viewportClassName,
       exportable, exportFilename, exportData,
       annotations: annotationsConfig,
       ariaLabel,
@@ -795,6 +798,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             // fallback below for both forced-colors users and screen
             // readers.
             'forced-colors:hidden',
+            viewportClassName,
           )}
           // Charts with toggleable legends contain focusable controls, which
           // cannot live inside role="img". Expose those viewports as named

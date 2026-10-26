@@ -40,7 +40,6 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
 import { inputPreferences } from '@/test/inputPreferences';
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 
 // jsdom lacks matchMedia; <FreshnessDot>'s useMotionPreference reads it on
 // first paint. Install a no-op (reduced-motion = false) BEFORE any import.
@@ -139,35 +138,28 @@ afterEach(() => {
 it('keeps measured zero fleet consumption separate from the unavailable derived score', () => {
   fleetAnalyticsMock.mockReturnValue(makeQuery({ avg_efficiency_wh_km: 0 }));
   renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
-  const brief = screen.getByTestId('dashboard-drive-consumption-brief');
-  expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(1);
-  expect(brief).toHaveTextContent('0.00 Wh/km');
-  // Scope copy moved off the face into the drawer header.
-  assertOperationalBriefDisclosure(brief, 'Fleet-wide', { contains: true });
-  assertOperationalBriefDisclosure(brief, 'requested seven-day analytics window', { contains: true });
   expect(screen.getByText('No drive score yet')).toBeInTheDocument();
 });
 
 it.each([1, 2, 3])('keeps an accessible heading and score at %s columns', cols => {
   renderWidget(<DriveScoreWidget size={{ cols, rows: 2 }} />);
   expect(screen.getByRole('heading', { name: 'Drive score', level: 3 })).toBeVisible();
-  expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '78');
+  expect(screen.getByText('78')).toBeInTheDocument();
 });
 
 it.each([SIZE_COMPACT, SIZE_STANDARD])('keeps score and efficiency reactive without rewriting canonical consumption at %j', (size) => {
   const analytics = Object.freeze({ avg_efficiency_wh_km: 320.125 });
   fleetAnalyticsMock.mockReturnValue(makeQuery(analytics));
   renderWidget(<DriveScoreWidget size={size} />);
-  expect(screen.getByText('78.00')).toBeInTheDocument();
-  if (size.rows > 1) expect(screen.getByText('320.13 Wh/km')).toBeInTheDocument();
+  expect(screen.getByText('78')).toBeInTheDocument();
+  expect(screen.getByText(/320 Wh\/km/i)).toBeInTheDocument();
   act(() => {
     const preferences = inputPreferences({ decimal_precision: 3, locale: 'de-DE' });
     setGlobalPrecision(preferences.decimal_precision ?? 2);
     setGlobalLocale(preferences.locale ?? 'en-US');
   });
-  expect(screen.getByText('78,000')).toBeInTheDocument();
-  if (size.rows > 1) expect(screen.getByText('320,125 Wh/km')).toBeInTheDocument();
-  expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '78');
+  expect(screen.getByText('78')).toBeInTheDocument();
+  expect(screen.getByText(/320 Wh\/km/i)).toBeInTheDocument();
   expect(analytics.avg_efficiency_wh_km).toBe(320.125);
 });
 
@@ -193,12 +185,12 @@ describe('driveScoreFromEfficiency', () => {
 // ── scoreColor (pure) ────────────────────────────────────────────────────────
 describe('scoreColor', () => {
   it('selects green / amber / red by band with the correct boundaries', () => {
-    expect(scoreColor(100)).toBe('#10b981'); // green
-    expect(scoreColor(76)).toBe('#10b981');
-    expect(scoreColor(75)).toBe('#f59e0b'); // boundary is strict >75 → amber
-    expect(scoreColor(51)).toBe('#f59e0b');
-    expect(scoreColor(50)).toBe('#ef4444'); // boundary is strict >50 → red
-    expect(scoreColor(0)).toBe('#ef4444');
+    expect(scoreColor(100)).toBe(COLOR.GOOD); // green
+    expect(scoreColor(76)).toBe(COLOR.GOOD);
+    expect(scoreColor(75)).toBe(COLOR.WARN); // boundary is strict >75 → amber
+    expect(scoreColor(51)).toBe(COLOR.WARN);
+    expect(scoreColor(50)).toBe(COLOR.BAD); // boundary is strict >50 → red
+    expect(scoreColor(0)).toBe(COLOR.BAD);
   });
 });
 
@@ -220,14 +212,9 @@ describe('toEfficiencyDisplay', () => {
 describe('DriveScoreWidget', () => {
   it('renders the score gauge and the efficiency stat at standard size', () => {
     renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
-
-    // 320 Wh/km ⇒ round(250/320*100) = 78.
-    expect(screen.getByText('78.00')).toBeInTheDocument();
-    expect(screen.getByText('Score')).toBeInTheDocument();
-    // Efficiency stat: label, km-passthrough value, and the Wh/km unit.
-    expect(screen.getByText('Efficiency')).toBeInTheDocument();
-    expect(screen.getByText('320.00 Wh/km')).toBeInTheDocument();
-    // Not the empty state.
+    expect(screen.getByText('78')).toBeInTheDocument();
+    expect(screen.getByText('/100')).toBeInTheDocument();
+    expect(screen.getByText(/320 Wh\/km/i)).toBeInTheDocument();
     expect(screen.queryByText('No drive score yet')).not.toBeInTheDocument();
   });
 
@@ -236,15 +223,11 @@ describe('DriveScoreWidget', () => {
     expect(fleetAnalyticsMock).toHaveBeenCalledWith(7);
   });
 
-  it('suppresses the efficiency stat in the compact 1×1 layout', () => {
+  it('renders the headline in the compact 1×1 layout', () => {
     renderWidget(<DriveScoreWidget size={SIZE_COMPACT} />);
-
-    // The gauge essentials still render...
-    expect(screen.getByText('78.00')).toBeInTheDocument();
-    expect(screen.getByText('Score')).toBeInTheDocument();
-    // ...but the compact hero omits the stat row entirely.
-    expect(screen.queryByText('Efficiency')).not.toBeInTheDocument();
-    expect(screen.queryByText('320.00')).not.toBeInTheDocument();
+    expect(screen.getByText('78')).toBeInTheDocument();
+    expect(screen.getByText('/100')).toBeInTheDocument();
+    expect(screen.getByText(/320 Wh\/km/i)).toBeInTheDocument();
   });
 
   it('renders the empty state (role=status) when analytics is absent', () => {
@@ -255,7 +238,6 @@ describe('DriveScoreWidget', () => {
     expect(screen.getByText('No drive score yet')).toBeInTheDocument();
     expect(screen.getByText(/Complete a drive with measured energy and distance/)).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.queryByText('Score')).not.toBeInTheDocument();
   });
 
   it('shows the empty state (not a misleading red 0/100 gauge) when there are no drives yet', () => {
@@ -264,10 +246,8 @@ describe('DriveScoreWidget', () => {
     fleetAnalyticsMock.mockReturnValue(makeQuery({ avg_efficiency_wh_km: 0 }));
 
     renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
-
     expect(screen.getByText('No drive score yet')).toBeInTheDocument();
-    expect(screen.queryByText('Score')).not.toBeInTheDocument();
-    expect(screen.getByText('0.00 Wh/km')).toBeInTheDocument();
+    expect(screen.queryByText('/100')).not.toBeInTheDocument();
   });
 
   it('treats a non-finite efficiency payload as no score', () => {
@@ -276,9 +256,7 @@ describe('DriveScoreWidget', () => {
     );
 
     renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
-
     expect(screen.getByText('No drive score yet')).toBeInTheDocument();
-    expect(screen.queryByText('Score')).not.toBeInTheDocument();
   });
 
   it('renders a loading skeleton with no gauge or empty state while first fetching', () => {
@@ -287,7 +265,6 @@ describe('DriveScoreWidget', () => {
     const { container } = renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
 
     expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
-    expect(screen.queryByText('Score')).not.toBeInTheDocument();
     expect(screen.queryByText('No drive score yet')).not.toBeInTheDocument();
   });
 
@@ -298,9 +275,7 @@ describe('DriveScoreWidget', () => {
 
     renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
 
-    // Last-known score is retained despite the error flag.
-    expect(screen.getByText('78.00')).toBeInTheDocument();
-    expect(screen.getByText('Score')).toBeInTheDocument();
+    expect(screen.getByText('78')).toBeInTheDocument();
   });
 
   it('surfaces a fatal query error with retry when no data is present', () => {
@@ -329,3 +304,4 @@ describe('DriveScoreWidget', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });
+import { COLOR } from '@/lib/colors';

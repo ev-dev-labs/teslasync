@@ -9,6 +9,8 @@
  */
 
 import type { Drive } from '@/types/driving';
+import { zonedDateParts } from '@/lib/dateFormat';
+import { civilDateInTimeZone } from '@/lib/dateRange';
 
 export const DEFAULT_HISTORY_LIMIT = 1_000;
 export const DEFAULT_SERIES_POINT_LIMIT = 240;
@@ -49,8 +51,9 @@ export interface CumulativeOdometerPoint {
 }
 
 export interface MonthlyOdometerRollup {
-  /** UTC calendar month (`yyyy-mm`). */
+  /** Selected-zone calendar month (`yyyy-mm`). */
   month: string;
+  /** UTC-anchored calendar marker, not an observed drive instant. */
   monthStartMs: number;
   driveCount: number;
   distanceKm: number;
@@ -126,6 +129,7 @@ export interface OdometerMilestoneResult {
 }
 
 export interface OdometerMilestoneOptions {
+  timezone: string;
   baseOdometerKm: number;
   nowMs: number;
   /** Canonical kilometres represented by one selected display-distance unit. */
@@ -145,6 +149,7 @@ interface EligibleDrive {
 }
 
 interface ValidatedOptions {
+  timezone: string;
   baseOdometerKm: number;
   nowMs: number;
   milestoneUnitKm: number;
@@ -199,8 +204,12 @@ function validateOptions(options: OdometerMilestoneOptions): ValidatedOptions {
   if (!Number.isFinite(new Date(nowMs).getTime())) {
     throw new RangeError('nowMs must be a valid timestamp');
   }
+  if (typeof options.timezone !== 'string' || !zonedDateParts(nowMs, options.timezone)) {
+    throw new RangeError('timezone must be a valid time zone');
+  }
 
   return {
+    timezone: options.timezone,
     baseOdometerKm: requireNonNegativeFinite(
       options.baseOdometerKm,
       'baseOdometerKm',
@@ -372,10 +381,11 @@ function collectEligible(
 function buildMonthlyRollups(
   rows: readonly EligibleDrive[],
   baseOdometerKm: number,
+  timezone: string,
 ): MonthlyOdometerRollup[] {
   const byMonth = new Map<string, { driveCount: number; distanceKm: number }>();
   for (const row of rows) {
-    const month = new Date(row.startMs).toISOString().slice(0, 7);
+    const month = civilDateInTimeZone(new Date(row.startMs), timezone).slice(0, 7);
     const aggregate = byMonth.get(month) ?? {
       driveCount: 0,
       distanceKm: 0,
@@ -638,7 +648,7 @@ export function buildOdometerMilestones(
       validated.cumulativePointLimit,
     ),
     cumulativePointCount: fullCumulativeSeries.length,
-    monthly: buildMonthlyRollups(rows, validated.baseOdometerKm),
+    monthly: buildMonthlyRollups(rows, validated.baseOdometerKm, validated.timezone),
     segment,
     reached,
     upcoming,

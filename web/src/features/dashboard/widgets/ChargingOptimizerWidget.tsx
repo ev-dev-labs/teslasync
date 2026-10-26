@@ -16,9 +16,9 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
 import { WidgetBigNumber } from './shared';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { StatMetric } from '@/components/data-display';
 import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
-import { useDateFormat } from '@/hooks/useDateFormat';
 import { neonColorMap } from '@/lib/tokens';
 
 const PRIORITY_IMPACT: Record<string, 'high' | 'medium' | 'low'> = {
@@ -72,7 +72,6 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
   const schedule = data?.current_schedule;
   const costAnalysis = data?.cost_analysis;
   const recommendations = safeArray(data?.recommendations);
-
   const optimalStartHour = knownNumber(schedule?.most_common_start_hour);
   const targetSoc = knownNumber(schedule?.avg_charge_to_pct);
   const monthlySavings = knownNumber(costAnalysis?.potential_monthly_savings);
@@ -80,25 +79,36 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
   const offpeakHours = safeArray(costAnalysis?.offpeak_hours);
   const peakHours = safeArray(costAnalysis?.peak_hours);
 
-  const scheduleMatchesOptimal = peakPct != null && peakPct < 30;
   const summaryMetrics: StatMetric[] = [
-    { metricId: 'number', occurrenceId: 'optimizer-start-hour', rawValue: schedule?.most_common_start_hour,
+    {
+      metricId: 'number',
+      occurrenceId: 'optimizer-start-hour',
+      rawValue: schedule?.most_common_start_hour,
       label: t('widget.chargingOptimizer.optimalStart', 'Optimal start'),
       description: t('widget.chargingOptimizer.hourSource', 'Returned wall-clock hour, not an elapsed duration or timezone-shifted instant.'),
-      display: { formatter: raw => ({ value: hourLabel(raw), unit: '' }) } },
-    { metricId: 'percent', occurrenceId: 'optimizer-target-soc', rawValue: schedule?.avg_charge_to_pct,
+      display: { formatter: raw => ({ value: hourLabel(raw), unit: '' }) },
+    },
+    {
+      metricId: 'percent',
+      occurrenceId: 'optimizer-target-soc',
+      rawValue: schedule?.avg_charge_to_pct,
       label: t('widget.chargingOptimizer.targetSoc', 'Target SOC'),
-      display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) } },
-    { metricId: 'number', occurrenceId: 'optimizer-monthly-savings', rawValue: costAnalysis?.potential_monthly_savings,
+      description: t('widget.chargingOptimizer.targetSocSource', 'Returned target state of charge.'),
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) },
+    },
+    {
+      metricId: 'currency',
+      occurrenceId: 'optimizer-monthly-savings',
+      rawValue: costAnalysis?.potential_monthly_savings,
       label: t('widget.chargingOptimizer.savingsLabel', 'Savings/mo'),
-      description: t('widget.chargingOptimizer.savingsSource', 'Returned monthly savings estimate, retaining the existing currency formatting without changing its denomination.'),
-      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+      description: t('widget.chargingOptimizer.savingsSource', 'Returned potential monthly savings estimate.'),
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },
+    },
   ];
 
   const tips: TipItem[] = useMemo(
     () =>
       recommendations.map((rec, i) => {
-        // Guard each entry: a malformed payload may carry null/partial recs.
         const priority = rec?.priority;
         return {
           id: i,
@@ -163,24 +173,24 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
         />
       ) : (
         <div className="flex flex-col gap-3 h-full">
-          {/* Key metrics row */}
           <DashboardSourceBrief metrics={summaryMetrics} state={sourceState}
             eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
-            title={t('widget.chargingOptimizer.summaryTitle', 'Returned charging recommendations')}
-            description={t('widget.chargingOptimizer.summaryDescription', 'Schedule and cost estimates remain separate inferred operands; peak-use classification, the rate timeline and actionable recommendations remain below.')}
+            title={t('widget.chargingOptimizer.summaryTitle', 'Best window')}
+            description={t('widget.chargingOptimizer.summaryDescription', 'Returned start-hour, target charge and monthly savings estimates. Exact window duration and end time are not supplied.')}
             scope={t('widget.chargingOptimizer.summaryScope', 'Vehicle {{id}} · returned optimizer analysis; exact source recording bounds and completeness are not supplied.', { id: vid ?? '—' })}
             testId="dashboard-charging-optimizer-brief" />
 
-          {/* Schedule match badge */}
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
             <Caption className="min-w-0 [overflow-wrap:anywhere]">
               {t('widget.chargingOptimizer.peakUsage', 'Peak charging: {{pct}}%', { pct: peakPct == null ? '—' : fmtNumber(peakPct) })}
             </Caption>
-            <Badge variant={peakPct == null ? 'neutral' : scheduleMatchesOptimal ? 'success' : 'warning'} size="sm">
-              {peakPct == null ? '—' : scheduleMatchesOptimal
-                ? t('widget.chargingOptimizer.optimized', 'Optimized')
-                : t('widget.chargingOptimizer.canImprove', 'Can improve')}
-            </Badge>
+            {peakPct != null && (
+              <Badge variant={peakPct < 30 ? 'success' : 'warning'} size="sm">
+                {peakPct < 30
+                  ? t('widget.chargingOptimizer.optimized', 'Optimized')
+                  : t('widget.chargingOptimizer.canImprove', 'Can improve')}
+              </Badge>
+            )}
           </div>
 
           {/* Wide mode: 24h timeline bar */}

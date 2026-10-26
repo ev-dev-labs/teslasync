@@ -4,8 +4,9 @@ import { Text, Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { formatDayKey, ymdInTz } from '@/lib/dateFormat';
+import { convertDistanceFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
+import {formatDayKey} from '@/lib/dateFormat'
+import {ymdInTz} from '@/lib/dateConvert';
 import type { YearReviewDriveHighlight } from '@/api/types';
 import type { StatPeriod } from '@/lib/metric-reference';
 import { recordDuration } from './yearReviewPresentation';
@@ -24,7 +25,7 @@ export function YearDriveRecord({ drive, id, period }: {
   const durationDisplay = recordDuration((drive?.duration_s ?? 0) / 60);
   const efficiencyWhKm = drive?.efficiency_wh_km ?? 0;
   const efficiencyDisplay = efficiencyWhKm > 0
-    ? fmtInt(distanceUnit === 'mi' ? efficiencyWhKm * 1.609344 : efficiencyWhKm) : '—';
+    ? fmtInt(convertEfficiencyFromSI(efficiencyWhKm, distanceUnit)) : '—';
   const dayKey = drive?.date;
   const dateDisplay = dayKey && /^\d{4}-\d{2}-\d{2}$/.test(dayKey)
     && !dayKey.startsWith('0000-') && ymdInTz(new Date(`${dayKey}T12:00:00Z`), 'UTC') === dayKey

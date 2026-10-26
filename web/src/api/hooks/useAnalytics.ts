@@ -4,9 +4,10 @@ import { queryPolicy } from '../queryPolicy';
 import { scopeKey, scopedPath, type QueryScope } from '../scope';
 import { safeArray } from '@/lib/safeArray';
 import { STALE_TIMES } from '@/lib/constants';
-import { browserTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
 import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, WeeklyDigestData, MonthlyMileageBucket, MonthlyMileageResponse, DailyMileageBucket, DailyMileageResponse, TcoLedgerResponse, TcoLedgerCreate, TcoLedgerEntry } from '@/types/analytics';
 import { FSD_DEFAULT_PERIOD_DAYS, type FsdInsights } from '@/types/fsd';
 import type { FleetAnalytics } from '@/api/types';
@@ -29,6 +30,10 @@ export const analyticsKeys = {
   fsdInsights: (scope: QueryScope) => ['analytics', 'fsd', ...scopeKey(scope)] as const,
 };
 
+function legacyEnergyToWh(value: number | null | undefined): number {
+  return value == null ? 0 : value / convertEnergyFromSI(1, 'kWh');
+}
+
 export function useAnalyticsSummary(days = 30) {
   return useQuery({
     queryKey: analyticsKeys.summary(days),
@@ -37,7 +42,7 @@ export function useAnalyticsSummary(days = 30) {
     // once at the boundary so every consumer reads canonical units.
     select: (data) => ({
       ...data,
-      totalEnergyWh: (data.total_energy_kwh ?? 0) * 1000,
+      totalEnergyWh: legacyEnergyToWh(data.total_energy_kwh),
     }),
   });
 }
@@ -91,11 +96,17 @@ export function useMileageStats(vehicleId: string) {
 /**
  * GET /mileage/monthly unwraps the `{vehicle_id, months}` envelope so
  * callers receive a plain `MonthlyMileageBucket` array.
+ *
+ * The user's zone travels as `?timezone=`: the backend buckets months in
+ * that frame. An omitted zone resolves to the single display value
+ * (`useDateFormat().tz`); the backend defaults to UTC.
  */
-export function useMonthlyMileage(vehicleId: string) {
+export function useMonthlyMileage(vehicleId: string, timezone?: string) {
+  const { tz } = useDateFormat();
+  const zone = timezone ?? tz;
   return useQuery({
-    queryKey: analyticsKeys.monthlyMileage(vehicleId),
-    queryFn: ({ signal }) => request<MonthlyMileageResponse>(`/mileage/monthly?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
+    queryKey: [...analyticsKeys.monthlyMileage(vehicleId), zone],
+    queryFn: ({ signal }) => request<MonthlyMileageResponse>(`/mileage/monthly?vehicle_id=${encodeURIComponent(vehicleId)}&timezone=${encodeURIComponent(zone)}`, { signal }),
     enabled: !!vehicleId,
     select: (resp) => safeArray<MonthlyMileageBucket>(resp?.months),
   });
@@ -103,12 +114,16 @@ export function useMonthlyMileage(vehicleId: string) {
 
 /**
  * GET /mileage/daily unwraps the `{vehicle_id, days}` envelope into a
- * plain array for daily distance charts.
+ * plain array for daily distance charts. The zone travels for the same
+ * reason as the monthly hook: day attribution must match the user's
+ * selected zone so near-midnight drives land on the experienced day.
  */
-export function useDailyMileage(vehicleId: string, days = 90) {
+export function useDailyMileage(vehicleId: string, days = 90, timezone?: string) {
+  const { tz } = useDateFormat();
+  const zone = timezone ?? tz;
   return useQuery({
-    queryKey: analyticsKeys.dailyMileage(vehicleId, days),
-    queryFn: ({ signal }) => request<DailyMileageResponse>(`/mileage/daily?vehicle_id=${encodeURIComponent(vehicleId)}&days=${days}`, { signal }),
+    queryKey: [...analyticsKeys.dailyMileage(vehicleId, days), zone],
+    queryFn: ({ signal }) => request<DailyMileageResponse>(`/mileage/daily?vehicle_id=${encodeURIComponent(vehicleId)}&days=${days}&timezone=${encodeURIComponent(zone)}`, { signal }),
     enabled: !!vehicleId,
     select: (resp) => safeArray<DailyMileageBucket>(resp?.days),
   });
@@ -230,8 +245,8 @@ export function useWeeklyDigest(vehicleId: string) {
     // once at the boundary so every consumer reads canonical units.
     select: (data) => ({
       ...data,
-      energyWh: (data.energy_kwh ?? 0) * 1000,
-      prevEnergyWh: (data.prev_energy_kwh ?? 0) * 1000,
+      energyWh: legacyEnergyToWh(data.energy_kwh),
+      prevEnergyWh: legacyEnergyToWh(data.prev_energy_kwh),
     }),
   });
 }
@@ -522,13 +537,20 @@ export interface TemperatureImpactResponse {
  * temperature affects driving efficiency. Reads SI directly from the API;
  * the page converts temperature/distance at the render boundary via
  * `useUnits()`. Disabled until a vehicle is selected.
+ *
+ * The user's zone travels as `?timezone=`: the backend attributes the
+ * monthly trend and per-drive dates in that frame. An omitted zone
+ * resolves to the single display value (`useDateFormat().tz`); the
+ * backend defaults to UTC.
  */
-export function useTemperatureImpact(vehicleId: string) {
+export function useTemperatureImpact(vehicleId: string, timezone?: string) {
+  const { tz } = useDateFormat();
+  const zone = timezone ?? tz;
   return useQuery({
-    queryKey: analyticsKeys.temperatureImpact(vehicleId),
+    queryKey: [...analyticsKeys.temperatureImpact(vehicleId), zone],
     queryFn: ({ signal }) =>
       request<TemperatureImpactResponse>(
-        `/analytics/temperature-impact?vehicle_id=${encodeURIComponent(vehicleId)}`,
+        `/analytics/temperature-impact?vehicle_id=${encodeURIComponent(vehicleId)}&timezone=${encodeURIComponent(zone)}`,
         { signal },
       ),
     enabled: !!vehicleId,
@@ -577,10 +599,10 @@ export function useEfficiencyShift(vehicleId: string) {
  *
  * Why the timezone travels: the backend attributes each observed counter delta
  * to the LOCAL calendar day of the later sample, so the day labels only line up
- * with what the operator experienced if the browser's IANA zone is sent.
- * `browserTimezone()` falls back to `'UTC'` when `Intl` is unavailable, which is
- * also the backend's default — so a degraded environment gets a coherent (if
- * UTC-labelled) answer instead of an error.
+ * with what the operator experienced if the user's selected IANA zone is sent.
+ * An omitted zone resolves to the single display value (`useDateFormat().tz`);
+ * the backend also defaults to UTC, so a degraded environment gets a coherent
+ * (if UTC-labelled) answer instead of an error.
  *
  * Returns RAW SI: `*_m` fields are meters. Conversion belongs at the render
  * boundary (`useUnits()` + `lib/unitConversion`), never here.
@@ -591,11 +613,12 @@ export function useEfficiencyShift(vehicleId: string) {
 export function useFsdInsights(
   vehicleId: string | undefined,
   days: number = FSD_DEFAULT_PERIOD_DAYS,
-  timezone: string = browserTimezone(),
+  timezone?: string,
 ) {
+  const { tz } = useDateFormat();
   const scope: QueryScope = {
     vehicleId: vehicleId ?? null,
-    timezone,
+    timezone: timezone ?? tz,
     filters: { days },
   };
 
@@ -623,14 +646,15 @@ export function useFsdInsightsRange(
   vehicleId: string | undefined,
   start: string | undefined,
   end: string | undefined,
-  timezone: string = browserTimezone(),
+  timezone?: string,
   includeEvidence = false,
 ) {
+  const { tz } = useDateFormat();
   const scope: QueryScope = {
     vehicleId: vehicleId ?? null,
     start: start ?? null,
     end: end ?? null,
-    timezone,
+    timezone: timezone ?? tz,
     filters: includeEvidence ? { include_evidence: true } : undefined,
   };
 
@@ -655,12 +679,13 @@ export function useFsdInsightsRange(
 export function useFsdInsightsForDrive(
   vehicleId: string | undefined,
   driveId: string | undefined,
-  timezone: string = browserTimezone(),
+  timezone?: string,
   includeEvidence = false,
 ) {
+  const { tz } = useDateFormat();
   const scope: QueryScope = {
     vehicleId: vehicleId ?? null,
-    timezone,
+    timezone: timezone ?? tz,
     filters: {
       drive_id: driveId ?? null,
       ...(includeEvidence ? { include_evidence: true } : {}),

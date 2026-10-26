@@ -130,6 +130,7 @@ import { ToastProvider } from '@/components/feedback/Toast'
 import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
+import { CHART_COLORS_NEON_DARK } from '@/lib/colors'
 import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import EnergyPage from './EnergyPage'
 import type { EnergyStats } from '@/types/energy'
@@ -556,7 +557,7 @@ describe('EnergyPage', () => {
     expect(screen.getByRole('region', { name: 'Cost savings versus gas' })).toBeInTheDocument()
   })
 
-  it('uses the saved chart palette while keeping thresholds semantic and charger types neutral', async () => {
+  it('uses the saved chart palette for charger categories while keeping efficiency thresholds semantic', async () => {
     install({ chartPalette: 'neon' })
     renderPage()
 
@@ -566,11 +567,11 @@ describe('EnergyPage', () => {
 
     await waitFor(() => {
       expect(within(chargerCard).getByText('Home/AC', { selector: 'span' }).previousElementSibling)
-        .toHaveStyle({ backgroundColor: '#91b9a5' })
+        .toHaveStyle({ backgroundColor: CHART_COLORS_NEON_DARK[1] })
       expect(within(chargerCard).getByText('Supercharger', { selector: 'span' }).previousElementSibling)
-        .toHaveStyle({ backgroundColor: '#cfb481' })
+        .toHaveStyle({ backgroundColor: CHART_COLORS_NEON_DARK[3] })
       expect(within(chargerCard).getByText('DC fast', { selector: 'span' }).previousElementSibling)
-        .toHaveStyle({ backgroundColor: '#a5aac9' })
+        .toHaveStyle({ backgroundColor: CHART_COLORS_NEON_DARK[4] })
     })
     expect(screen.getByText('CCS')).toHaveClass('text-[var(--text-secondary)]')
     const meter = screen.getByRole('meter', { name: 'Efficiency' })

@@ -113,7 +113,12 @@ export interface SleepRangeAnalysis {
   status: SleepRangeStatus;
   inclusiveDays: number | null;
   startMs: number | null;
-  endMs: number | null;
+  endInstantExclusiveMs: number | null;
+}
+
+export interface SleepRangeWindow {
+  startInstant: string;
+  endInstantExclusive: string;
 }
 
 export interface SleepStateEvidence {
@@ -466,6 +471,7 @@ function parseUtcDate(value: string | null | undefined): number | null {
 export function analyzeSleepRange(
   selectedStart: string | null | undefined,
   selectedEnd: string | null | undefined,
+  window?: SleepRangeWindow,
 ): SleepRangeAnalysis {
   const requestedStart =
     typeof selectedStart === 'string' && selectedStart.length > 0
@@ -483,39 +489,45 @@ export function analyzeSleepRange(
       status: 'missing',
       inclusiveDays: null,
       startMs: null,
-      endMs: null,
+      endInstantExclusiveMs: null,
     };
   }
 
-  const startMs = parseUtcDate(requestedStart);
-  const endMs = parseUtcDate(requestedEnd);
-  if (startMs == null || endMs == null) {
+  const calendarStart = parseUtcDate(requestedStart);
+  const calendarEnd = parseUtcDate(requestedEnd);
+  const startMs = window ? Date.parse(window.startInstant) : calendarStart;
+  const endInstantExclusiveMs = window
+    ? Date.parse(window.endInstantExclusive)
+    : calendarEnd != null ? calendarEnd + DAY_MS : null;
+  if (calendarStart == null || calendarEnd == null
+    || startMs == null || !Number.isFinite(startMs)
+    || endInstantExclusiveMs == null || !Number.isFinite(endInstantExclusiveMs)) {
     return {
       requestedStart,
       requestedEnd,
       status: 'invalid',
       inclusiveDays: null,
-      startMs,
-      endMs,
+      startMs: null,
+      endInstantExclusiveMs: null,
     };
   }
-  if (endMs < startMs) {
+  if (calendarEnd < calendarStart || endInstantExclusiveMs <= startMs) {
     return {
       requestedStart,
       requestedEnd,
       status: 'reversed',
       inclusiveDays: null,
       startMs,
-      endMs,
+      endInstantExclusiveMs,
     };
   }
   return {
     requestedStart,
     requestedEnd,
     status: 'valid',
-    inclusiveDays: Math.floor((endMs - startMs) / DAY_MS) + 1,
+    inclusiveDays: Math.floor((calendarEnd - calendarStart) / DAY_MS) + 1,
     startMs,
-    endMs,
+    endInstantExclusiveMs,
   };
 }
 
@@ -828,7 +840,9 @@ function buildEventAnalysis(
     (event) => event.outsideTempC != null,
   ).length;
   const count = events.length;
-  const requestedHours = range.inclusiveDays != null ? range.inclusiveDays * 24 : null;
+  const requestedHours = range.status === 'valid' && range.startMs != null && range.endInstantExclusiveMs != null
+    ? (range.endInstantExclusiveMs - range.startMs) / 3_600_000
+    : null;
   const unionHours = (intervals: readonly { startMs: number; endMs: number }[]) => {
     let end = -Infinity;
     let totalMs = 0;
@@ -846,10 +860,10 @@ function buildEventAnalysis(
     if (row.startMs < latestEnd) overlappingRows += 1;
     latestEnd = Math.max(latestEnd, row.endMs);
   }
-  const coveredRequestedHours = range.status === 'valid' && range.startMs != null && range.endMs != null && count > 0
+  const coveredRequestedHours = range.status === 'valid' && range.startMs != null && range.endInstantExclusiveMs != null && count > 0
     ? unionHours(events.map(row => ({
         startMs: Math.max(row.startMs, range.startMs ?? row.startMs),
-        endMs: Math.min(row.endMs, (range.endMs ?? row.endMs) + DAY_MS),
+        endMs: Math.min(row.endMs, range.endInstantExclusiveMs ?? row.endMs),
       })).filter(row => row.endMs > row.startMs))
     : null;
 
@@ -1206,8 +1220,9 @@ export function analyzeSleepEfficiency(
   nowMs: number,
   selectedStart: string | null | undefined,
   selectedEnd: string | null | undefined,
+  window?: SleepRangeWindow,
 ): SleepEfficiencyAnalysis {
-  const range = analyzeSleepRange(selectedStart, selectedEnd);
+  const range = analyzeSleepRange(selectedStart, selectedEnd, window);
   const clockValid =
     Number.isFinite(nowMs)
     && nowMs >= 0

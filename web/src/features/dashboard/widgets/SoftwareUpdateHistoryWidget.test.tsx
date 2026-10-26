@@ -178,7 +178,7 @@ describe('updateStatusMeta', () => {
       labelKey: 'widget.updateStatusInstalled',
       labelDefault: 'Installed',
       variant: 'success',
-      color: '#22c55e',
+      color: COLOR.GOOD,
       severity: 'info',
     });
     // installing is the only warning-severity status (an in-flight install).
@@ -187,7 +187,7 @@ describe('updateStatusMeta', () => {
     // downloading stays info-variant (matches the legacy compact badge mapping).
     expect(updateStatusMeta('downloading').variant).toBe('info');
     expect(updateStatusMeta('available').labelDefault).toBe('Available');
-    expect(updateStatusMeta('scheduled').color).toBe('#a78bfa');
+    expect(updateStatusMeta('scheduled').color).toBe(DATA_VISUAL_COLORS.purple);
   });
 
   it('resolves case-insensitively and tolerates surrounding whitespace', () => {
@@ -314,7 +314,7 @@ describe('SoftwareUpdateHistoryWidget', () => {
     const titles = screen.getAllByText(/^2024\./).map((el) => el.textContent);
     expect(titles).toEqual(['2024.44.25', '2024.20.1', '2024.8.9']);
     expect(screen.getAllByText('Current')).toHaveLength(1);
-    expect(screen.getAllByText('Installed')).toHaveLength(2);
+    expect(screen.getAllByText(/^Installed /)).toHaveLength(3);
   });
 
   it('falls back to the first vehicle when no vehicleId prop is supplied', () => {
@@ -380,3 +380,4 @@ describe('SoftwareUpdateHistoryWidget', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });
+import { COLOR, DATA_VISUAL_COLORS } from '@/lib/colors';

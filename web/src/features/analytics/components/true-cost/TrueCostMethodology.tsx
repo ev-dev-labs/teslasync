@@ -13,7 +13,7 @@ export function TrueCostMethodology({
     t('tco.methodology.scopeMismatch', 'Charging spend and energy use a different filter and temporal scope from positive-drive distance and dates.'),
     t('tco.methodology.lifetimeGas', 'The lifetime gasoline equivalent is distance-derived from positive-drive kilometres, configured price per unit, and comparison MPG.'),
     t('tco.methodology.monthlyGas', 'Only monthly gasoline equivalents are energy-derived, using lifetime km/kWh or the endpoint 5 km/kWh fallback.'),
-    t('tco.methodology.calendar', 'Monthly labels use backend/database calendar semantics; no vehicle-local or UTC timezone is exposed.'),
+    t('tco.methodology.calendar', 'Monthly labels retain the source calendar; the response supplies no timezone metadata.'),
     t('tco.methodology.maintenance', 'Maintenance is a flat $50-per-modeled-month heuristic, not measured service spend.'),
     t('tco.methodology.scenarios', 'Break-even and sensitivity outputs are algebraic what-if scenarios, not forecasts or recommendations.'),
     t('tco.methodology.negative', 'Negative deltas are valid modeled losses and are never relabeled as savings.'),

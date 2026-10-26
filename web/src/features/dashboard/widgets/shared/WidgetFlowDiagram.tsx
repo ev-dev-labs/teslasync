@@ -17,6 +17,13 @@ export interface FlowArrow {
   value: number;
   active: boolean;
   color?: string;
+  /**
+   * Optional caller-formatted link annotation (e.g. "4.2 kW"), rendered once
+   * at the link midpoint in the After style. Omitted links render no label —
+   * the value already appears in the node caption, and values are never
+   * fabricated from the raw number here (units/i18n live at the call site).
+   */
+  label?: string;
 }
 
 interface WidgetFlowDiagramProps {
@@ -28,32 +35,51 @@ interface WidgetFlowDiagramProps {
   ariaLabel?: string;
 }
 
-/* ── position → SVG coordinate mapping (100×100 viewBox) ── */
+/* ── Slot coordinates in the After `flow` viewBox (300 wide; taller than the
+   helper's 150 so the two-line accessible caption never clips) ── */
 
 const POSITION_COORDS: Record<FlowNode['position'], { cx: number; cy: number }> = {
-  top: { cx: 50, cy: 12 },
-  bottom: { cx: 50, cy: 88 },
-  left: { cx: 12, cy: 50 },
-  right: { cx: 88, cy: 50 },
-  center: { cx: 50, cy: 50 },
+  left: { cx: 40, cy: 70 },
+  right: { cx: 260, cy: 70 },
+  center: { cx: 150, cy: 70 },
+  top: { cx: 150, cy: 30 },
+  bottom: { cx: 150, cy: 115 },
 };
 
-const NODE_RADIUS = 14;
-const NODE_RADIUS_COMPACT = 10;
-const MIN_STROKE = 1;
-const MAX_STROKE = 4;
+const NODE_RADIUS = 19;
+const NODE_RADIUS_COMPACT = 15;
+/* After link language: flowing links 3px dashed + animated, idle links 1.5px. */
+const FLOWING_STROKE_WIDTH = 3;
+const IDLE_STROKE_WIDTH = 1.5;
+const FLOW_DASH = '6 5';
+const ICON_BOX = 20;
 
-function arrowColor(value: number, override?: string): string {
-  if (override) return override;
-  if (value > 0) return 'text-emerald-400';
-  if (value < 0) return 'text-red-400';
-  return 'text-[var(--text-muted)]';
+/** A link animates only when the caller marks it active AND it carries flow. */
+function isFlowing(arrow: FlowArrow): boolean {
+  return arrow.active && (arrow.value ?? 0) !== 0;
 }
 
-function strokeForValue(value: number, maxValue: number): number {
-  if (maxValue === 0) return MIN_STROKE;
-  const ratio = Math.abs(value) / maxValue;
-  return MIN_STROKE + ratio * (MAX_STROKE - MIN_STROKE);
+function linkColor(arrow: FlowArrow, flowing: boolean): string {
+  if (arrow.color) return arrow.color;
+  // Spec rule 4: color means status only. Idle links are neutral; the flowing
+  // default is the restrained info accent — never sign-derived red/green.
+  return flowing ? 'text-[var(--semantic-info)]' : 'text-[var(--border-default)]';
+}
+
+/**
+ * Caption under a node: the After "Name value" line split into two stacked
+ * elements — the muted name, then the caller-formatted reading in primary
+ * semibold. Separate elements (not one concatenated string) so each stays
+ * individually queryable by assistive tech and by the callers' exact-text
+ * assertions (`getByText('Drive')`, `getAllByText('—')`).
+ */
+function captionFor(node: FlowNode, compact: boolean): { name: string; reading: string } {
+  const rawLabel = node.label ?? '';
+  const name = compact && rawLabel.length > 3 ? rawLabel.slice(0, 3).toUpperCase() : rawLabel;
+  // Null/undefined means unknown (em dash); an explicit '' means the caller
+  // intentionally blanks the reading (e.g. a bus node), so keep it blank.
+  const reading = node.formattedValue ?? '—';
+  return { name, reading };
 }
 
 /* ── main component ── */
@@ -77,11 +103,6 @@ export function WidgetFlowDiagram({
       .slice(0, 3);
   }, [arrows, compact]);
 
-  const maxArrowValue = useMemo(
-    () => arrows.reduce((max, a) => Math.max(max, Math.abs(a.value ?? 0)), 1),
-    [arrows],
-  );
-
   if (nodes.length === 0) {
     return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyMessage} className="py-8" />;
   }
@@ -90,102 +111,103 @@ export function WidgetFlowDiagram({
 
   return (
     <svg
-      viewBox="0 0 100 100"
-      className="h-full w-full"
+      viewBox="0 0 300 170"
+      className="mx-auto h-auto w-full"
       role="img"
       aria-label={ariaLabel}
     >
-      {/* ── arrows ── */}
+      {/* ── links (drawn first so node discs cover the endpoints) ── */}
       {visibleArrows.map((arrow) => {
         const fromNode = nodeMap.get(arrow.from);
         const toNode = nodeMap.get(arrow.to);
         if (!fromNode || !toNode) return null;
 
-        const fromPos = POSITION_COORDS[fromNode.position];
-        const toPos = POSITION_COORDS[toNode.position];
+        const fromPos = POSITION_COORDS[fromNode.position] ?? POSITION_COORDS.center;
+        const toPos = POSITION_COORDS[toNode.position] ?? POSITION_COORDS.center;
+        const midX = (fromPos.cx + toPos.cx) / 2;
+        const midY = (fromPos.cy + toPos.cy) / 2;
 
-        const dx = toPos.cx - fromPos.cx;
-        const dy = toPos.cy - fromPos.cy;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const ux = dx / dist;
-        const uy = dy / dist;
-
-        // offset start/end by node radius so lines don't overlap circles
-        const x1 = fromPos.cx + ux * r;
-        const y1 = fromPos.cy + uy * r;
-        const x2 = toPos.cx - ux * r;
-        const y2 = toPos.cy - uy * r;
-
-        const value = arrow.value ?? 0;
-        const sw = strokeForValue(value, maxArrowValue);
-        const colorClass = arrowColor(value, arrow.color);
+        const flowing = isFlowing(arrow);
+        const colorClass = linkColor(arrow, flowing);
+        const linkLabel = arrow.label?.trim() ? arrow.label : null;
 
         return (
-          <line
-            key={`${arrow.from}-${arrow.to}`}
-            x1={x1}
-            y1={y1}
-            x2={x2}
-            y2={y2}
-            className={cn('stroke-current', colorClass, arrow.active && 'flow-active')}
-            strokeWidth={sw}
-            strokeDasharray={arrow.active ? '4 8' : undefined}
-            strokeLinecap="round"
-          />
+          <g key={`${arrow.from}-${arrow.to}`}>
+            <path
+              d={`M${fromPos.cx} ${fromPos.cy} C${midX} ${fromPos.cy} ${midX} ${toPos.cy} ${toPos.cx} ${toPos.cy}`}
+              fill="none"
+              className={cn('stroke-current', colorClass, flowing && 'flow-active')}
+              strokeWidth={flowing ? FLOWING_STROKE_WIDTH : IDLE_STROKE_WIDTH}
+              strokeDasharray={flowing ? FLOW_DASH : undefined}
+              strokeLinecap="round"
+            />
+            {flowing && linkLabel && (
+              <text
+                x={midX}
+                y={midY - 6}
+                textAnchor="middle"
+                fontSize={10}
+                fontWeight={600}
+                className="fill-[var(--text-primary)] tabular-nums forced-colors:fill-[CanvasText]"
+              >
+                {linkLabel}
+              </text>
+            )}
+          </g>
         );
       })}
 
       {/* ── nodes ── */}
       {nodes.map((node) => {
         const pos = POSITION_COORDS[node.position] ?? POSITION_COORDS.center;
-        const rawLabel = node.label ?? '';
-        const label = compact && rawLabel.length > 3
-          ? rawLabel.slice(0, 3).toUpperCase()
-          : rawLabel;
+        const { name, reading } = captionFor(node, compact);
 
         return (
           <g key={node.id}>
-            {/* background circle */}
             <circle
               cx={pos.cx}
               cy={pos.cy}
               r={r}
-              className="fill-white/5 stroke-white/20"
-              strokeWidth={0.5}
+              className="fill-[var(--surface-1)] stroke-[var(--border-default)] forced-colors:fill-[Canvas] forced-colors:stroke-[CanvasText]"
+              strokeWidth={1.5}
             />
 
-            {/* icon or value */}
-            {/* fontSize is an SVG user-unit (scales with the 100×100 viewBox)
-                and cascades into the foreignObject HTML — no arbitrary px class. */}
-            <foreignObject
-              x={pos.cx - r}
-              y={pos.cy - r}
-              width={r * 2}
-              height={r * 2}
-              fontSize={compact ? 5 : 6}
-            >
-              <div className="flex h-full w-full flex-col items-center justify-center">
-                {node.icon && (
-                  <span className="text-[var(--text-primary)]">
-                    {node.icon}
-                  </span>
-                )}
-                <span className="font-semibold text-[var(--text-primary)]">
-                  {node.formattedValue ?? '—'}
-                </span>
-              </div>
-            </foreignObject>
+            {node.icon && (
+              <foreignObject
+                x={pos.cx - ICON_BOX / 2}
+                y={pos.cy - ICON_BOX / 2}
+                width={ICON_BOX}
+                height={ICON_BOX}
+              >
+                <div aria-hidden="true" className="flex h-full w-full items-center justify-center">
+                  {node.icon}
+                </div>
+              </foreignObject>
+            )}
 
-            {/* label below or above node */}
-            <text
-              x={pos.cx}
-              y={node.position === 'bottom' ? pos.cy + r + 5 : pos.cy - r - 2}
-              textAnchor="middle"
-              fontSize={compact ? 3 : 4}
-              className="fill-white/60 font-medium"
-            >
-              {label}
-            </text>
+            {name && (
+              <text
+                x={pos.cx}
+                y={pos.cy + r + 13}
+                textAnchor="middle"
+                fontSize={10.5}
+                className="fill-[var(--text-muted)] font-medium forced-colors:fill-[CanvasText]"
+              >
+                {name}
+              </text>
+            )}
+            {reading && (
+              <text
+                x={pos.cx}
+                y={pos.cy + r + 27}
+                textAnchor="middle"
+                fontSize={11.5}
+                fontWeight={600}
+                className="fill-[var(--text-primary)] tabular-nums forced-colors:fill-[CanvasText]"
+              >
+                {reading}
+              </text>
+            )}
           </g>
         );
       })}

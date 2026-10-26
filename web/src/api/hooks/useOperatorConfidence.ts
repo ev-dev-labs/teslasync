@@ -78,8 +78,9 @@ export const operatorConfidenceKeys = {
   schemaDrift: ['admin', 'observability', 'schema-drift'] as const,
   slowQueries: (orderBy: SlowQueryOrderBy, limit: number) =>
     ['admin', 'observability', 'slow-queries', orderBy, limit] as const,
-  vehicleCost: (sinceISO: string | null, limit: number) =>
-    ['admin', 'observability', 'vehicle-cost', sinceISO, limit] as const,
+  vehicleCost: (sinceISO: string | null, limit: number, untilISO: string | null = null) =>
+    untilISO ? ['admin', 'observability', 'vehicle-cost', sinceISO, limit, untilISO] as const
+      : ['admin', 'observability', 'vehicle-cost', sinceISO, limit] as const,
   diskForecast: ['admin', 'observability', 'disk-forecast'] as const,
   secretRotation: ['admin', 'observability', 'secret-rotation'] as const,
   dataQuality: ['admin', 'observability', 'data-quality'] as const,
@@ -147,18 +148,21 @@ export function useSlowQueries(orderBy: SlowQueryOrderBy = 'mean_time', limit = 
  * the last 30 days when `since` is null. Polled at SLOW (60 s) —
  * costs evolve over minutes, not seconds.
  */
-export function useVehicleCost(since: Date | null = null, limit = 100) {
+export function useVehicleCost(since: Date | null = null, limit = 100, until: Date | null = null, enabled = true) {
   const sinceISO = toISOStringOrNull(since);
+  const untilISO = toISOStringOrNull(until);
+  const untilParam = untilISO ? `&until=${encodeURIComponent(untilISO)}` : "";
   const sinceParam = sinceISO ? `&since=${encodeURIComponent(sinceISO)}` : '';
   return useQuery({
-    queryKey: operatorConfidenceKeys.vehicleCost(sinceISO, limit),
+    queryKey: operatorConfidenceKeys.vehicleCost(sinceISO, limit, untilISO),
     queryFn: ({ signal }) =>
       fetchEnvelope<VehicleCostResponse>(
         request(
-          `/admin/observability/vehicle-cost?limit=${limit}${sinceParam}`,
+          `/admin/observability/vehicle-cost?limit=${limit}${sinceParam}${untilParam}`,
           { signal },
         ),
       ),
+    enabled,
     staleTime: STALE_TIMES.STANDARD,
     refetchInterval: INTERVALS.SLOW,
     refetchIntervalInBackground: false,

@@ -101,9 +101,10 @@ async function historicalEvidence(page: Page) {
       await reading(brief, `advisor-${source}-accounting-${index}`, count);
     }
   }
-  await expect(accounting).toContainText('2025-12-05');
-  await expect(accounting).toContainText('2026-06-02');
-  await expect(accounting).toContainText('UTC');
+  await expect(accounting.getByText('Included history window: Dec 5, 2025 – Jun 2, 2026.', { exact: true })).toBeVisible();
+  await expect(accounting).not.toContainText('2025-12-05');
+  await expect(accounting).not.toContainText('2026-06-02');
+  await expect(accounting).not.toContainText('UTC');
   // Scope to the two category subsections: the bare `.space-y-1` class also
   // matches the section header title block, which is not a category list.
   for (const [testId, expected] of [
@@ -139,12 +140,12 @@ async function finish(page: Page, mocks: MockApiController, diagnostics: ReturnT
   // literals.
   const query = (entries: ReadonlyArray<readonly [string, string]>) =>
     new URLSearchParams(entries.map(([key, value]) => [key, value] as [string, string])).toString();
-  const week = query([['vehicle_id', '7'], ['limit', '1000'], ['start', '2026-05-27T00:00:00.000Z'], ['end', '2026-06-03T00:00:00.000Z']]);
+  const evidence = query([['vehicle_id', '7'], ['limit', '1000'], ['start', '2025-12-05T00:00:00.000Z'], ['end', ADVISOR_NOW]]);
   const accounting = query([['vehicle_id', '7'], ['start', '2025-12-05T00:00:00.000Z'], ['end', '2026-06-02T00:00:00.000Z'], ['limit', '1000'], ['offset', '0']]);
   for (const request of [
-    `GET /drives?${week}`,
+    `GET /drives?${evidence}`,
     `GET /drives?${accounting}`,
-    `GET /charging?${week}`,
+    `GET /charging?${evidence}`,
     'GET /signals/7/live',
   ]) expect(mocks.seen.has(request), request).toBe(true);
   await expectNoHorizontalOverflow(page);
@@ -173,7 +174,8 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(directory.locator('article')).toHaveCount(7);
       for (const [index, soc] of advisorMeanEndSoc.entries()) {
         const day = directory.locator('article').nth(index);
-        await expect(day).toContainText(`2026-06-${String(index + 3).padStart(2, '0')}`);
+        await expect(day.getByText(`Jun ${index + 3}, 2026`, { exact: true })).toBeVisible();
+        await expect(day).not.toContainText(`2026-06-${String(index + 3).padStart(2, '0')}`);
         await expect(day.getByText('Mean end SoC', { exact: true }).locator('..')).toContainText(soc);
         await expect(day.getByText('Calendar-day p75', { exact: true }).locator('..')).toContainText('0.00%');
       }

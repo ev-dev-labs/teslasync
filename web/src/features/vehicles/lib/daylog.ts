@@ -1,8 +1,11 @@
 import type { ComponentType } from 'react';
 import { Icons } from '@/lib/icons';
-import { formatTime, ymdInTz } from '@/lib/dateFormat';
+import {browserTimeZone, formatTime, isValidTimeZone, zonedDateParts} from '@/lib/dateFormat'
+import {ymdInTz} from '@/lib/dateConvert'
+import {formatGmtOffset} from '@/lib/dateConvert';
 import { getGlobalLocale } from '@/lib/numberFormat';
 import type { DayLogEvent, DayLogLayer } from '@/api/types';
+import { CHART_SEMANTIC, CHART_NEUTRAL, COLOR, DATA_VISUAL_COLORS } from '@/lib/colors';
 
 /** English fallbacks so tests and missing catalogs still read as labels. */
 export const DAY_LOG_LAYER_LABEL: Record<DayLogLayer, string> = {
@@ -238,18 +241,16 @@ export function formatTimeSeconds(iso: string | null | undefined, tz?: string): 
   if (!iso) return formatTime(iso);
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return formatTime(iso);
-  const locale = getGlobalLocale();
+  if (tz && !isValidTimeZone(tz)) return iso;
   try {
+    const locale = getGlobalLocale();
     const time = formatTime(iso, {
       locale,
       tz: tz || undefined,
       clock: { hour: '2-digit', minute: '2-digit', second: '2-digit' },
     });
-    const offset = new Intl.DateTimeFormat(locale, {
-      timeZone: tz || undefined,
-      timeZoneName: 'shortOffset',
-    }).formatToParts(d).find((part) => part.type === 'timeZoneName')?.value;
-    return offset ? `${time} ${offset}` : time;
+    const offset = formatGmtOffset(d, { locale, tz: tz || undefined });
+    return `${time} ${offset}`;
   } catch (error) {
     if (!(error instanceof RangeError)) throw error;
     return iso;
@@ -260,15 +261,10 @@ export function formatTimeSeconds(iso: string | null | undefined, tz?: string): 
 export function hourKeyInTz(iso: string, tz?: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  try {
-    return new Intl.DateTimeFormat('en-GB', {
-      hour: '2-digit',
-      hourCycle: 'h23',
-      timeZone: tz || undefined,
-    }).format(d);
-  } catch {
-    return String(d.getUTCHours()).padStart(2, '0');
-  }
+  const zone = tz || browserTimeZone();
+  const parts = zonedDateParts(d, zone);
+  if (!parts) return String(d.getUTCHours()).padStart(2, '0');
+  return String(parts.hour).padStart(2, '0');
 }
 
 /**
@@ -354,38 +350,38 @@ export function eventIcon(type: string): ComponentType<{ className?: string }> {
 
 /** Timeline-dot accent per event type (solid dot hues, no gradients). */
 export const DAY_LOG_ACCENT: Record<string, string> = {
-  drive_start: '#0891b2',
-  drive_end: '#0891b2',
-  charge_start: '#34d399',
-  charge_end: '#34d399',
-  parked: '#94a3b8',
-  online: '#38bdf8',
-  asleep: '#64748b',
-  offline: '#78716c',
-  state_change: '#94a3b8',
-  locked: '#fbbf24',
-  unlocked: '#fbbf24',
-  lock_unknown: '#78716c',
-  sentry_on: '#f87171',
-  sentry_off: '#34d399',
-  sentry_unknown: '#78716c',
-  valet_on: '#fbbf24',
-  valet_off: '#34d399',
-  valet_unknown: '#78716c',
-  security: '#f87171',
-  signal: '#94a3b8',
-  remote_start_on: '#38bdf8',
-  remote_start_off: '#64748b',
-  sw_update: '#38bdf8',
-  sw_update_installed: '#34d399',
+  drive_start: DATA_VISUAL_COLORS.info,
+  drive_end: DATA_VISUAL_COLORS.info,
+  charge_start: COLOR.GOOD,
+  charge_end: COLOR.GOOD,
+  parked: CHART_SEMANTIC.vehicle.parked,
+  online: CHART_SEMANTIC.vehicle.online,
+  asleep: CHART_SEMANTIC.vehicle.asleep,
+  offline: CHART_SEMANTIC.vehicle.offline,
+  state_change: CHART_NEUTRAL,
+  locked: COLOR.WARN,
+  unlocked: COLOR.WARN,
+  lock_unknown: CHART_NEUTRAL,
+  sentry_on: COLOR.BAD,
+  sentry_off: COLOR.GOOD,
+  sentry_unknown: CHART_NEUTRAL,
+  valet_on: COLOR.WARN,
+  valet_off: COLOR.GOOD,
+  valet_unknown: CHART_NEUTRAL,
+  security: COLOR.BAD,
+  signal: CHART_NEUTRAL,
+  remote_start_on: DATA_VISUAL_COLORS.info,
+  remote_start_off: CHART_NEUTRAL,
+  sw_update: DATA_VISUAL_COLORS.info,
+  sw_update_installed: COLOR.GOOD,
   // Tire warnings are the only optional-layer types with accents:
   // safety severity needs the red/green signal, mirroring sentry.
-  tire_warning_on: '#f87171',
-  tire_warning_off: '#34d399',
+  tire_warning_on: COLOR.BAD,
+  tire_warning_off: COLOR.GOOD,
 };
 
 export function eventAccent(type: string): string {
-  return DAY_LOG_ACCENT[type] ?? '#94a3b8';
+  return DAY_LOG_ACCENT[type] ?? CHART_NEUTRAL;
 }
 
 /**

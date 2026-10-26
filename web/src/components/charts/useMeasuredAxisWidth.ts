@@ -50,7 +50,7 @@ export function useMeasuredAxisWidth({
     measure();
     void document.fonts?.ready.then(measure);
     return () => { active = false; };
-  }, [enabled, fontSize, key, labels, minWidth, padding]);
+  }, [enabled, fontSize, key, minWidth, padding]);
 
   return enabled && measurement?.key === key ? measurement.width : fallback;
 }

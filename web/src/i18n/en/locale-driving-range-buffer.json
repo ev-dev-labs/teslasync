@@ -664,7 +664,7 @@
     },
     "hour": {
       "aria": "Local completion-time chart of arrival battery percentiles and drive counts",
-      "subtitle": "Four-hour completion windows in {{timeZone}}; each drive is one observation.",
+      "subtitle": "Four-hour completion windows in your selected time zone; each drive is one observation.",
       "title": "Arrival buffer by local completion time"
     },
     "kpis": {
@@ -712,7 +712,7 @@
       "thresholdBody": "Below-threshold means strictly less than {{threshold}}%. The selector is a descriptive planning lens, not a battery safety limit or charging recommendation.",
       "thresholdTitle": "Planning threshold",
       "title": "Methodology and limitations",
-      "windowBody": "The selected {{start}} through {{end}} calendar window becomes a half-open drive-start filter in {{timeZone}}. Profiles use completion time in the same timezone, so a drive starting near the end boundary can complete just outside the final local day.",
+      "windowBody": "The selected {{start}} through {{end}} calendar window becomes a half-open drive-start filter in your selected time zone. Profiles use completion time in the same zone, so a drive starting near the end boundary can complete just outside the final local day.",
       "windowTitle": "Vehicle-local date window"
     },
     "month": {
@@ -785,7 +785,7 @@
     "title": "Range buffer",
     "weekday": {
       "aria": "Weekday chart of arrival battery percentiles and drive counts",
-      "subtitle": "Drive-weighted arrival percentiles in {{timeZone}}; unequal sample counts remain visible.",
+      "subtitle": "Drive-weighted arrival percentiles in your selected time zone; unequal sample counts remain visible.",
       "title": "Arrival buffer by local weekday"
     },
     "weekdays": {

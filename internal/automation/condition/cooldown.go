@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 // CooldownConfig prevents an automation from firing again within N minutes of its last execution.
@@ -35,7 +37,7 @@ func DecodeCooldownSpec(raw json.RawMessage) (*CooldownConfig, error) {
 		return nil, fmt.Errorf("expected type \"cooldown\", got %q", cfg.Type)
 	}
 
-	if cfg.Minutes <= 0 {
+	if validation.ValidatePositiveID(int64(cfg.Minutes)) != nil {
 		return nil, fmt.Errorf("minutes must be a positive integer, got %d", cfg.Minutes)
 	}
 

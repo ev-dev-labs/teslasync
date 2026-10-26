@@ -24,8 +24,8 @@ type tempImpactPool interface {
 // matching the sleep / mileage handler precedent.
 type tempImpactRepository interface {
 	EfficiencyBuckets(ctx context.Context, vehicleID int64) ([]tempEfficiencyBucket, error)
-	MonthlyTrend(ctx context.Context, vehicleID int64) ([]monthlyTempTrend, error)
-	DrivePoints(ctx context.Context, vehicleID int64) ([]drivePoint, error)
+	MonthlyTrend(ctx context.Context, vehicleID int64, zone string) ([]monthlyTempTrend, error)
+	DrivePoints(ctx context.Context, vehicleID int64, zone string) ([]drivePoint, error)
 }
 
 // efficiencyBucketsSQL groups drives into ambient-temperature bands and
@@ -57,9 +57,12 @@ const efficiencyBucketsSQL = `
 
 // monthlyTrendSQL rolls the last 12 months of drives into per-month
 // averages. total_distance is returned in km to preserve the legacy
-// response semantics while distance_m stays SI on disk.
+// response semantics while distance_m stays SI on disk. Months are
+// attributed in the caller's `?timezone` frame ($4, UTC when omitted)
+// so the trend lines up with the user's selected zone instead of the
+// database session timezone.
 const monthlyTrendSQL = `
-		SELECT DATE_TRUNC('month', started_at) as month,
+		SELECT DATE_TRUNC('month', started_at AT TIME ZONE $4) AT TIME ZONE $4 as month,
 		       AVG(ambient_temp_c_avg) as avg_temp,
 		       AVG(CASE WHEN distance_m > 0
 		                THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
@@ -75,13 +78,16 @@ const monthlyTrendSQL = `
 // drivePointsSQL returns the most recent 500 drives as a scatter series.
 // distance_km is derived in SQL from SI distance_m; efficiency_wh_km
 // applies the same legacy 0.75 factor the pre-refactor endpoint used.
+// The per-drive calendar date is taken in the caller's `?timezone`
+// frame ($4, UTC when omitted) so points near midnight land on the day
+// the user experienced.
 const drivePointsSQL = `
 		SELECT ambient_temp_c_avg,
 		       CASE WHEN distance_m > 0
 		            THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100 * 0.75
 		            ELSE 0 END as efficiency_wh_km,
 		       distance_m / 1000.0 as distance_km,
-		       started_at::date
+		       (started_at AT TIME ZONE $4)::date
 		FROM drives
 		WHERE vehicle_id = $1 AND distance_m > $3 AND ambient_temp_c_avg IS NOT NULL
 		ORDER BY started_at DESC
@@ -143,8 +149,8 @@ func (r *dbTempImpactRepo) EfficiencyBuckets(ctx context.Context, vehicleID int6
 
 // MonthlyTrend returns per-month temperature/efficiency aggregates for the
 // trailing 12 months. Values are returned raw; the handler rounds.
-func (r *dbTempImpactRepo) MonthlyTrend(ctx context.Context, vehicleID int64) ([]monthlyTempTrend, error) {
-	rows, err := r.pool.Query(ctx, monthlyTrendSQL, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters)
+func (r *dbTempImpactRepo) MonthlyTrend(ctx context.Context, vehicleID int64, zone string) ([]monthlyTempTrend, error) {
+	rows, err := r.pool.Query(ctx, monthlyTrendSQL, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters, zone)
 	if err != nil {
 		return nil, fmt.Errorf("query monthly temperature trend: %w", err)
 	}
@@ -181,8 +187,8 @@ func (r *dbTempImpactRepo) MonthlyTrend(ctx context.Context, vehicleID int64) ([
 // rather than failing the whole series (best-effort scatter), preserving
 // the pre-refactor resilience; a transport-level iteration error is still
 // surfaced so the caller can decide how to degrade.
-func (r *dbTempImpactRepo) DrivePoints(ctx context.Context, vehicleID int64) ([]drivePoint, error) {
-	rows, err := r.pool.Query(ctx, drivePointsSQL, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters)
+func (r *dbTempImpactRepo) DrivePoints(ctx context.Context, vehicleID int64, zone string) ([]drivePoint, error) {
+	rows, err := r.pool.Query(ctx, drivePointsSQL, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters, zone)
 	if err != nil {
 		return nil, fmt.Errorf("query drive points: %w", err)
 	}

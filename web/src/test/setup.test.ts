@@ -26,6 +26,13 @@ import {
   MockEventSource,
   installTestPolyfills,
   patchMatchMedia,
+  interpolateTranslation,
+  createTranslationT,
+  createReactI18nextMock,
+  MockBroadcastChannel,
+  patchBroadcastChannel,
+  patchServiceWorkerLifecycle,
+  TestCleanupRegistry,
 } from './setup'
 
 afterEach(() => {
@@ -288,5 +295,132 @@ describe('patchMatchMedia', () => {
 
     ctrl.restore()
     expect(window.matchMedia).toBe(sentinel)
+  })
+})
+
+describe('translation utilities', () => {
+  it('interpolates spaced placeholders and converts nullish values safely', () => {
+    expect(interpolateTranslation('Hello {{ name }} from {{place}}', {
+      name: 'Ada',
+      place: null,
+    })).toBe('Hello Ada from ')
+    expect(interpolateTranslation('Hello {{name}}', undefined)).toBe('Hello {{name}}')
+  })
+
+  it('supports fallback, plural, replace, resources, and language switching', () => {
+    const translations = createTranslationT({
+      resources: {
+        en: { translation: { hello: 'Hello {{name}}' } },
+        fr: { translation: { hello: 'Bonjour {{name}}' } },
+      },
+    })
+
+    expect(translations.t('hello', { replace: { name: 'Ada' } })).toBe('Hello Ada')
+    expect(translations.t('missing', 'Fallback {{name}}', { replace: { name: 'Sam' } }))
+      .toBe('Fallback Sam')
+    expect(translations.t('counted', {
+      count: 1,
+      defaultValue_one: '{{count}} item',
+      defaultValue_other: '{{count}} items',
+    })).toBe('1 item')
+    expect(translations.t('counted', {
+      count: 2,
+      defaultValue_one: '{{count}} item',
+      defaultValue_other: '{{count}} items',
+    })).toBe('2 items')
+
+    return translations.i18n.changeLanguage('fr').then((language) => {
+      expect(language).toBe('fr')
+      expect(translations.i18n.language).toBe('fr')
+      expect(translations.t('hello', { replace: { name: 'Ada' } })).toBe('Bonjour Ada')
+    })
+  })
+
+  it('creates a reusable react-i18next module mock shape', () => {
+    const mock = createReactI18nextMock({
+      resources: { en: { translation: { greeting: 'Hi {{name}}' } } },
+    })
+    const hook = mock.useTranslation()
+    expect(hook.t('greeting', { replace: { name: null } })).toBe('Hi ')
+    expect(mock.Trans({ children: 'child' })).toBe('child')
+    expect(mock.I18nextProvider({ children: 'provider' })).toBe('provider')
+  })
+})
+
+describe('MockBroadcastChannel', () => {
+  it('posts between same-name peers, excludes the sender, and closes cleanly', async () => {
+    const restore = patchBroadcastChannel()
+    const first = new BroadcastChannel('shared')
+    const second = new BroadcastChannel('shared')
+    const firstMessage = vi.fn()
+    const secondMessage = vi.fn()
+    first.addEventListener('message', firstMessage)
+    second.addEventListener('message', secondMessage)
+
+    first.postMessage({ online: true })
+    await Promise.resolve()
+    expect(firstMessage).not.toHaveBeenCalled()
+    expect(secondMessage).toHaveBeenCalledTimes(1)
+    expect(secondMessage.mock.calls[0][0].data).toEqual({ online: true })
+
+    second.close()
+    first.close()
+    restore()
+    expect(MockBroadcastChannel.instances.size).toBe(0)
+  })
+
+  it('reset closes every tracked instance and can restore the prior global', () => {
+    const restore = patchBroadcastChannel()
+    const channel = new MockBroadcastChannel('reset-me')
+    expect(MockBroadcastChannel.instances.get('reset-me')?.has(channel)).toBe(true)
+    MockBroadcastChannel.reset()
+    expect(channel.closed).toBe(true)
+    expect(MockBroadcastChannel.instances.size).toBe(0)
+    restore()
+  })
+})
+
+describe('service-worker lifecycle utility', () => {
+  it('supports waiting, activation, update rejection, messages, ready, and cleanup', async () => {
+    const nav = {} as Navigator
+    const controller = patchServiceWorkerLifecycle(nav)
+    const lifecycle = controller.lifecycle
+
+    expect(await lifecycle.container.getRegistrations()).toHaveLength(1)
+    expect(lifecycle.registration.waiting).toBeNull()
+    lifecycle.installWaiting()
+    expect(lifecycle.registration.waiting).toBe(lifecycle.controller)
+
+    lifecycle.activate()
+    expect(lifecycle.registration.waiting).toBeNull()
+    expect(lifecycle.registration.active).toBe(lifecycle.controller)
+    expect(lifecycle.container.controller).toBe(lifecycle.controller)
+
+    const listener = vi.fn()
+    lifecycle.container.addEventListener('message', listener)
+    lifecycle.emitMessage({ type: 'cache-status' })
+    expect(listener).toHaveBeenCalledTimes(1)
+
+    await expect(lifecycle.updateFailure(new Error('offline'))).rejects.toThrow('offline')
+    await lifecycle.container.ready.then((registration) => {
+      expect(registration).toBe(lifecycle.registration)
+    })
+
+    controller.restore()
+    expect(Object.prototype.hasOwnProperty.call(nav, 'serviceWorker')).toBe(false)
+  })
+})
+
+describe('TestCleanupRegistry', () => {
+  it('runs registered cleanup functions once in reverse order and clears itself', () => {
+    const cleanup = new TestCleanupRegistry()
+    const calls: string[] = []
+    cleanup.add(() => calls.push('match-media'))
+    cleanup.add(() => calls.push('service-worker'))
+
+    cleanup.cleanup()
+    cleanup.cleanup()
+
+    expect(calls).toEqual(['service-worker', 'match-media'])
   })
 })

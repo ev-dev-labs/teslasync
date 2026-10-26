@@ -4,12 +4,13 @@ import { MemoryRouter } from 'react-router-dom';
 import type { AutomationHistory, AutomationHistoryListResponse } from '@/api/types';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import '../../../i18n';
-import { formatDurationMs } from '@/lib/dateFormat';
+import { formatDurationMs } from '@/lib/dateConvert';
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import AutomationHistoryPage from './AutomationHistoryPage';
 
 const state = vi.hoisted(() => ({
   filters: vi.fn(),
+  timezone: 'UTC',
   data: null as AutomationHistoryListResponse | null,
   isLoading: false,
   isPending: false,
@@ -56,7 +57,7 @@ vi.mock('@/hooks/useRangeState', () => ({
   }),
 }));
 vi.mock('@/hooks/useSettings', () => ({
-  useSettings: () => ({ settings: { unit_of_length: 'km', unit_of_temp: 'C',
+  useSettings: () => ({ locale: 'en-US', settings: { tz_display_default: 'user', timezone_user: state.timezone, unit_of_length: 'km', unit_of_temp: 'C',
     unit_of_pressure: 'bar', locale: 'en-US', decimal_precision: 2, currency_symbol: '$' } }),
 }));
 
@@ -90,6 +91,7 @@ describe('Automation History', () => {
     state.isError = false;
     state.error = null;
     state.filters.mockClear();
+    state.timezone = 'UTC';
     state.refetch.mockClear();
     state.rulesData = [{ id: 7, name: 'Home arrival' }];
     state.rulesError = null;
@@ -219,11 +221,27 @@ describe('Automation History', () => {
       since: '2026-09-01T07:00:00.000Z',
       until: '2026-10-01T07:00:00.000Z',
       page: 1,
+      timezone: 'UTC',
     }));
     expect(screen.getByRole('region', { name: 'Execution summary' })).toBeInTheDocument();
     expect(screen.getByText('Execution activity')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Automation history' })).toBeInTheDocument();
     expect(screen.queryByLabelText(/Filter.*date|Start date|End date/i)).not.toBeInTheDocument();
+  });
+
+  it('requests new server-side daily buckets on a settings clock change without rewriting source bounds', () => {
+    state.data = response([row]);
+    const original = JSON.stringify(state.data);
+    const { rerender } = render(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
+    state.timezone = 'America/Los_Angeles';
+    rerender(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
+    expect(state.filters).toHaveBeenLastCalledWith(expect.objectContaining({
+      since: '2026-09-01T07:00:00.000Z',
+      until: '2026-10-01T07:00:00.000Z',
+      timezone: 'America/Los_Angeles',
+    }));
+    expect(JSON.stringify(state.data)).toBe(original);
+    expect(screen.getByRole('table', { name: 'Automation history' })).toBeInTheDocument();
   });
 
   it('passes rule and status filters and page index to the server', () => {

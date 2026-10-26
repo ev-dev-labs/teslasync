@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge, Table, Text } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
@@ -11,6 +12,7 @@ export function ShareCardSourceScopeLedger({
   display,
 }: ShareCardSectionProps) {
   const { t } = useTranslation();
+  const { formatDateRange, formatDateTime } = useDateFormat();
 
   return (
     <section
@@ -51,15 +53,7 @@ export function ShareCardSourceScopeLedger({
               </th>
               <td>
               <Text as="p" variant="caption" className="mt-2">
-                {t(
-                  'shareCard.source.calendarRange',
-                  '{{start}} through {{end}} in {{timezone}}',
-                  {
-                    start: analysis.window.startLabel,
-                    end: analysis.window.endLabel,
-                    timezone: analysis.window.resolvedTimezone,
-                  },
-                )}
+                {formatDateRange(analysis.window.startInstant, analysis.window.endInstantExclusive)}
               </Text>
               </td>
             </tr>
@@ -75,8 +69,8 @@ export function ShareCardSourceScopeLedger({
                   'shareCard.source.apiBounds',
                   '{{start}} ≤ start_ts < {{end}}',
                   {
-                    start: analysis.window.startInstant,
-                    end: analysis.window.endInstantExclusive,
+                    start: formatDateTime(analysis.window.startInstant),
+                    end: formatDateTime(analysis.window.endInstantExclusive),
                   },
                 )}
               </Text>

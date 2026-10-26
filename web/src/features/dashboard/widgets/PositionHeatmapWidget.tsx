@@ -1,13 +1,12 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Map as MapIcon } from 'lucide-react';
 import { CircleMarker } from '@/components/maps';
-import { Badge } from '@/components/ui';
 import { useVehiclePositions, useVehicles } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
 import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
 import { useDataState } from '@/hooks/useDataState';
+import { useRangeState } from '@/hooks/useRangeState';
 
 export interface ClusterPoint {
   lat: number;
@@ -59,8 +58,8 @@ export function clusterPositions(
   return result;
 }
 
-export function centroid(points: ClusterPoint[]): [number, number] {
-  if (points.length === 0) return [37.7749, -122.4194]; // fallback SF
+export function centroid(points: ClusterPoint[]): [number, number] | null {
+  if (points.length === 0) return null;
   let latSum = 0;
   let lonSum = 0;
   for (const p of points) {
@@ -97,8 +96,19 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
     dataUpdatedAt,
     refetch,
   } = query;
-
-  const safePositions = useMemo(() => Array.isArray(positions) ? positions : [], [positions]);
+  const { startInstant, endInstantExclusive } = useRangeState({ defaultPresetId: '30d' });
+  const safePositions = useMemo(() => {
+    const items = Array.isArray(positions) ? positions : [];
+    const startMs = Date.parse(startInstant);
+    const endMs = Date.parse(endInstantExclusive);
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return items;
+    return items.filter((position) => {
+      const timestamp = position.ts;
+      if (!timestamp) return true;
+      const timestampMs = Date.parse(timestamp);
+      return !Number.isFinite(timestampMs) || (timestampMs >= startMs && timestampMs < endMs);
+    });
+  }, [positions, startInstant, endInstantExclusive]);
   const dataState = useDataState({
     ...query,
     data: (error || isError) && safePositions.length === 0 ? undefined : !isLoading && !query.isPending ? query.data ?? null : query.data,
@@ -114,9 +124,7 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
     [safePositions, precision],
   );
 
-  const center = useMemo(() => centroid(clusters), [clusters]);
-
-  const totalPositions = clusters.reduce((total, cluster) => total + cluster.count, 0);
+  const center = useMemo<[number, number]>(() => centroid(clusters) ?? [0, 0], [clusters]);
   const isEmpty = clusters.length === 0;
 
   const shellProps = {
@@ -165,17 +173,7 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
   // ─── Standard / Wide layout ───
   return (
     <WidgetShell
-      icon={<MapIcon className="h-3.5 w-3.5 text-cyan-300" />}
       noPadding
-      actions={
-        isWide && totalPositions > 0 ? (
-          <Badge variant="neutral" size="sm">
-            {t('widget.positionHeatmap.count', '{{count}} positions', {
-              count: totalPositions,
-            })}
-          </Badge>
-        ) : undefined
-      }
       {...shellProps}
     >
       <WidgetMapView

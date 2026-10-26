@@ -207,8 +207,8 @@ describe('SoftwareUpdateStatusWidget — shell states', () => {
     renderWidget(TALL);
     expect(screen.getByText(current)).toBeInTheDocument();
     expect(screen.getByText(update)).not.toHaveClass('truncate');
-    expect(screen.getByText(`Scheduled: ${scheduled}`)).toBeInTheDocument();
-    expect(screen.getByText(/Est\. time.*37\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Scheduled:/)).toBeInTheDocument();
+    expect(screen.getByText(/Est\. time.*37\b/)).toBeInTheDocument();
     expect(screen.getByText('Ready to install')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /install/i })).not.toBeInTheDocument();
   });
@@ -233,7 +233,7 @@ describe('SoftwareUpdateStatusWidget — shell states', () => {
     const { container } = renderWidget();
     expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
     expect(screen.getByText('2025.30.1')).toBeInTheDocument();
-    expect(screen.getByText('45.00%')).toBeInTheDocument();
+    expect(screen.getByText('45%')).toBeInTheDocument();
   });
 
   it.each([Number.NaN, Number.POSITIVE_INFINITY, -1, 101])('keeps invalid progress %s out of known percentage readouts', progress => {
@@ -336,7 +336,7 @@ describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () 
 
     // "Downloading" appears twice: the status badge AND the MetricBar label.
     expect(screen.getAllByText('Downloading')).toHaveLength(2);
-    expect(screen.getByText('45.00%')).toBeInTheDocument();
+    expect(screen.getByText('45%')).toBeInTheDocument();
     expect(screen.getByText('2025.26.5')).toBeInTheDocument();
     // The install bar must not be present.
     expect(screen.queryByText('Installing')).toBeNull();
@@ -353,7 +353,7 @@ describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () 
     renderWidget(FULL);
 
     expect(screen.getAllByText('Installing')).toHaveLength(2);
-    expect(screen.getByText('60.00%')).toBeInTheDocument();
+    expect(screen.getByText('60%')).toBeInTheDocument();
     expect(screen.queryByText('Downloading')).toBeNull();
   });
 
@@ -395,9 +395,9 @@ describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () 
     renderWidget(FULL);
 
     expect(screen.getAllByText('Installing')).toHaveLength(2);
-    expect(screen.getByText('30.00%')).toBeInTheDocument();
+    expect(screen.getByText('30%')).toBeInTheDocument();
     // The download percentage must not leak through.
-    expect(screen.queryByText('50.00%')).toBeNull();
+    expect(screen.queryByText('50%')).toBeNull();
     expect(screen.queryByText('Downloading')).toBeNull();
   });
 });
@@ -417,7 +417,7 @@ describe('SoftwareUpdateStatusWidget — tall-only detail rows', () => {
     expect(container.textContent).toContain('~30');
     expect(container.textContent).toContain('min');
     expect(container.textContent).toContain('Scheduled');
-    expect(container.textContent).toContain('2025-07-01T03:00:00Z');
+    expect(container.textContent).toContain('Jul 1, 2025');
   });
 
   it('hides expected duration and scheduled start at rows = 1', () => {
@@ -433,7 +433,7 @@ describe('SoftwareUpdateStatusWidget — tall-only detail rows', () => {
     expect(container.textContent).not.toContain('Est. time');
     expect(container.textContent).not.toContain('Scheduled');
     // The download bar itself still renders regardless of height.
-    expect(screen.getByText('45.00%')).toBeInTheDocument();
+    expect(screen.getByText('45%')).toBeInTheDocument();
   });
 });
 
@@ -460,7 +460,7 @@ describe('SoftwareUpdateStatusWidget — null-safety & hardening', () => {
 
     expect(screen.queryByText('No software data')).toBeNull();
     expect(screen.getByText('2025.30.1')).toBeInTheDocument();
-    expect(screen.getByText('45.00%')).toBeInTheDocument();
+    expect(screen.getByText('45%')).toBeInTheDocument();
     // Current version degrades gracefully rather than crashing.
     expect(screen.getByText('—')).toBeInTheDocument();
   });

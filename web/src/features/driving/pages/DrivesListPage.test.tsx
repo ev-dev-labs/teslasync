@@ -38,7 +38,7 @@ import type { Drive } from '@/types/driving';
 import type { Vehicle } from '@/types/vehicle';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import { fmtCompact, fmtInt, fmtNumber } from '@/lib/numberFormat';
-import { formatDurationMinutes } from '@/lib/dateFormat';
+import { formatDurationMinutes } from '@/lib/dateConvert';
 import { getDatePreset } from '@/lib/datePresets';
 import { ToastProvider } from '@/components/feedback/Toast';
 

@@ -428,7 +428,10 @@ describe('ShareCardPage persistent composition', () => {
       end: '2026-08-03T07:00:00.000Z',
       limit: 1_000,
     });
-    expect(within(screen.getByTestId('share-card-source-scope')).getByText(/2015-01-01 through 2026-08-02/)).toBeInTheDocument();
+    // The hooks above still receive exact RFC3339 instants; the ledger shows
+    // the range once, end-inclusive, in the vehicle zone (no raw labels).
+    expect(within(screen.getByTestId('share-card-source-scope')).getByText('Jan 1, 2015 – Aug 2, 2026')).toBeInTheDocument();
+    expect(within(screen.getByTestId('share-card-source-scope')).queryByText(/2015-01-01 through 2026-08-02/)).not.toBeInTheDocument();
   });
 
   it('keeps every section mounted when no vehicle is selected', () => {

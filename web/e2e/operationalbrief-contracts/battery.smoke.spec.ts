@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { ROUTE_REGISTRY } from '../../src/lib/routeRegistry';
 import type { SleepEfficiencyData } from '../../src/types/energy';
 import {
-  assertMockApiComplete, expectThemeApplied, fulfillApiFixture, installApiMocks,
+  assertMockApiComplete, expectThemeApplied, fulfillApiFixture, installApiMocks, mockAppSettings,
   seedBrowserState, waitForHarnessReady, type MockApiController,
 } from '../mockApi';
 import {
@@ -13,7 +13,7 @@ import {
   capacitySessions, careDrives, careSessions, cells, energyStats, equalCells, healthFixture, installBatteryEndpoint,
   installExistingBatterySources, installExistingEnergySources, ledgerDrive, missingHealth, noBrickCells, park, passport,
   passportVerification, powerLive, range, selectedEnergySession,
-  sleepTransitionOnly, sleepWithDwell, sleepZeroAsleep, solarAdvice, split, trailingHistoryWindow,
+  sleepTransitionOnly, sleepWindowParams, sleepWithDwell, sleepZeroAsleep, solarAdvice, split, trailingHistoryWindow,
   trailingWeekWindow, vehicleFlow,
 } from './battery.fixtures';
 
@@ -272,7 +272,9 @@ for (const theme of ['light', 'dark'] as const) {
     test(`energy flow preserves returned period denominator and SI energy/distance/efficiency ${width} ${theme}`, async ({ page }) => {
       const path = '/energy-flow?from=2026-08-04&to=2026-08-06';
       const mocks = await setup(page, theme, width, path);
-      await installBatteryEndpoint(page, mocks, '/vehicles/7/energy', energyStats, { days: '3' });
+      await installBatteryEndpoint(page, mocks, '/vehicles/7/energy', energyStats, {
+        start: '2026-08-04T00:00:00.000Z', end: '2026-08-07T00:00:00.000Z',
+      });
       await installBatteryEndpoint(page, mocks, '/vehicles/7/energy/flow', vehicleFlow, {});
       const diagnostics = monitorPage(page);
       await ready(page, mocks, path, theme);
@@ -290,9 +292,8 @@ for (const theme of ['light', 'dark'] as const) {
       // The returned 30-day denominator is not the two visible daily rows or
       // the requested 3-day window. The source limitation remains explicit.
       await reading(drivers, 'average-per-day', /0\.40\s*kWh/);
-      // Trailing-window label is period scope: drawer-only without showRange.
-      await review(page, overview, /Trailing 3 days/);
-      await review(page, overview, /custom calendar bounds are not applied by this source/i);
+      await review(page, overview, /Selected workspace range/);
+      await review(page, overview, /Completed drives are filtered by the workspace start and exclusive end/i);
       await review(page, drivers, /Estimated avoided CO₂, not a vehicle emissions measurement/i);
       await finish(page, mocks, diagnostics);
     });
@@ -425,9 +426,7 @@ for (const theme of ['light', 'dark'] as const) {
     ] as const) {
       test(`sleep ${name} ${width} ${theme}`, async ({ page }) => {
         const mocks = await setup(page, theme, width, sleepPath);
-        await installBatteryEndpoint(page, mocks, '/analytics/sleep', fixture, {
-          vehicle_id: '7', days: '3', start: '2026-08-04', end: '2026-08-06',
-        });
+        await installBatteryEndpoint(page, mocks, '/analytics/sleep', fixture, sleepWindowParams);
         const diagnostics = monitorPage(page);
         await ready(page, mocks, sleepPath, theme);
         const summary = band(page, 'sleep-efficiency-evidence');
@@ -505,15 +504,19 @@ for (const theme of ['light', 'dark'] as const) {
     });
 
     test(`charge advisor retains separate current snapshot and empty-history count evidence ${width} ${theme}`, async ({ page }) => {
+      const planningNow = new Date('2026-08-27T12:00:00.000Z');
+      await page.clock.setFixedTime(planningNow);
+      const completeHistory = trailingHistoryWindow(180, planningNow.getTime());
+      const planningEvidence = { start: completeHistory.start, end: planningNow.toISOString() };
       const mocks = await setup(page, theme, width, '/charge-advisor');
       await installExistingEnergySources(page, mocks);
       await installBatteryEndpoint(page, mocks, '/charging', [],
-        { vehicle_id: '7', limit: '1000', ...trailingWeekWindow() });
-      // The advisor issues both the 7-day evidence window and the 180-day
-      // accounting window (exclusive of partial today) for drives.
+        { vehicle_id: '7', limit: '1000', ...planningEvidence });
+      // Planning owns its clock and history. The evidence query includes
+      // today's observations; the calendar separately certifies complete days.
       await installBatteryEndpoint(page, mocks, '/drives', [], [
-        { vehicle_id: '7', limit: '1000', ...trailingWeekWindow() },
-        { vehicle_id: '7', limit: '1000', offset: '0', ...trailingHistoryWindow() },
+        { vehicle_id: '7', limit: '1000', ...planningEvidence },
+        { vehicle_id: '7', limit: '1000', offset: '0', ...completeHistory },
       ]);
       const diagnostics = monitorPage(page);
       await ready(page, mocks, '/charge-advisor', theme);
@@ -585,6 +588,51 @@ for (const theme of ['light', 'dark'] as const) {
   }
 }
 
+for (const clock of [
+  { zone: 'America/Los_Angeles', issued: 'Aug 7, 2026, 05:30 PM', observed: 'Jan 2, 2024, 11:30 PM' },
+  { zone: 'Asia/Tokyo', issued: 'Aug 8, 2026, 09:30 AM', observed: 'Jan 3, 2024, 04:30 PM' },
+]) {
+  test(`passport preserves canonical days and raw export with the selected ${clock.zone} clock`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-08-08T12:00:00Z'));
+    const mocks = await setup(page, 'dark', 1440, '/battery-passport');
+    await page.route('**/api/v1/settings', route => fulfillApiFixture(route, mocks, {
+      json: { ...mockAppSettings, tz_display_default: 'user', timezone_user: clock.zone },
+    }));
+    const source = {
+      ...passport,
+      issued_at: '2026-08-08T00:30:00Z',
+      first_observed_at: '2024-01-02T23:30:00-08:00',
+    };
+    await installBatteryEndpoint(page, mocks, '/vehicles/7/battery-passport', source, {});
+    await installBatteryEndpoint(page, mocks, '/vehicles/7/battery-passport/verify', passportVerification, {
+      hash: source.provenance_hash,
+    });
+    const diagnostics = monitorPage(page);
+    await ready(page, mocks, '/battery-passport', 'dark');
+    const row = (section: string, field: string) => page.getByTestId(section)
+      .getByRole('row').filter({ has: page.getByText(field, { exact: true }) });
+    await expect(row('battery-passport-field-directory', 'issued_at')).toContainText(clock.issued);
+    await expect(row('battery-passport-field-directory', 'first_observed_at')).toContainText(clock.observed);
+    await expect(row('battery-passport-provenance-matrix', 'issued_at day')).toContainText('Aug 8, 2026');
+    await expect(row('battery-passport-provenance-matrix', 'first_observed_at day')).toContainText('Jan 3, 2024');
+    const trend = page.getByTestId('battery-passport-trend-timeline').getByRole('table');
+    await expect(trend).toContainText('May 1, 2026');
+    await expect(trend).toContainText('Aug 1, 2026');
+    await expect(page.locator('main')).not.toContainText(/\bUTC\b|America\/Los_Angeles|Asia\/Tokyo|20\d\d-\d\d-\d\dT\d\d:/);
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Export certificate', exact: true }).click(),
+    ]);
+    const stream = await download.createReadStream();
+    if (!stream) throw new Error('Certificate download stream is unavailable');
+    let json = '';
+    for await (const chunk of stream) json += chunk.toString();
+    expect(JSON.parse(json)).toEqual(source);
+    expect(download.suggestedFilename()).toBe('battery-passport-7-aaaaaaaaaaaa.json');
+    await finish(page, mocks, diagnostics);
+  });
+}
+
 test('sleep source refresh holds published values until success without inventing duration evidence', async ({ page }) => {
   const mocks = await setup(page, 'dark', 320, sleepPath);
   let response: SleepEfficiencyData = sleepTransitionOnly;
@@ -595,9 +643,7 @@ test('sleep source refresh holds published values until success without inventin
   await page.route(url => url.pathname === '/api/v1/analytics/sleep', async route => {
     expect(route.request().method()).toBe('GET');
     const params = new URL(route.request().url()).searchParams;
-    expect(Object.fromEntries(params)).toEqual({
-      vehicle_id: '7', days: '3', start: '2026-08-04', end: '2026-08-06',
-    });
+    expect(Object.fromEntries(params)).toEqual(sleepWindowParams);
     reads++;
     if (hold) await held;
     await fulfillApiFixture(route, mocks, { json: response });

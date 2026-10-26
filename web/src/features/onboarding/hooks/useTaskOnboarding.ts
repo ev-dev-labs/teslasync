@@ -14,6 +14,7 @@ import {
   type OnboardingTaskDefinition,
 } from '@/lib/onboardingTasks'
 import { useCachedOnboardingEvidence } from './useCachedOnboardingEvidence'
+import { resolveRoutePattern } from '@/lib/contextNavigation'
 
 /**
  * Opt-in, task-specific onboarding (HELP-01).
@@ -53,6 +54,7 @@ export interface UseTaskOnboardingResult {
 
 export function useTaskOnboarding(): UseTaskOnboardingResult {
   const location = useLocation()
+  const routePattern = resolveRoutePattern(location.pathname) ?? location.pathname
   const { data: vehicles } = useVehicles()
   const evidence = useCachedOnboardingEvidence()
 
@@ -67,7 +69,7 @@ export function useTaskOnboarding(): UseTaskOnboardingResult {
 
   const ctx: OnboardingTaskContext = useMemo(
     () => ({
-      pathname: location.pathname,
+      pathname: routePattern,
       // `-1` is the "not observed" sentinel for vehicles: it satisfies neither
       // `=== 0` (link-vehicle) nor `> 0` (every downstream task), so an
       // unresolved fleet query suppresses everything rather than guessing.
@@ -81,7 +83,7 @@ export function useTaskOnboarding(): UseTaskOnboardingResult {
       daysSinceFirstUse,
       completedTourCount: 0,
     }),
-    [location.pathname, vehicles?.length, evidence, daysSinceFirstUse],
+    [routePattern, vehicles?.length, evidence, daysSinceFirstUse],
   )
 
   const task = useMemo(() => {

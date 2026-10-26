@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Popover } from '@/components/ui/Popover';
 import { cn } from '@/lib/cn';
+import { formatDayKeyRange } from '@/lib/dateFormat';
 import {
   DATE_PRESETS,
   DEFAULT_PRESET_IDS,
@@ -114,18 +115,7 @@ function diffDaysInclusive(start: string, end: string): number {
 }
 
 function formatRange(start: string, end: string, locale: string): string {
-  const s = dateFromIso(start);
-  const e = dateFromIso(end);
-  const sameYear = s.getFullYear() === e.getFullYear();
-  const sameDay = start === end;
-  const fmt = (d: Date, withYear: boolean) =>
-    new Intl.DateTimeFormat(locale, {
-      month: 'short',
-      day: 'numeric',
-      ...(withYear ? { year: 'numeric' } : {}),
-    }).format(d);
-  if (sameDay) return fmt(s, true);
-  return `${fmt(s, !sameYear)} – ${fmt(e, true)}`;
+  return formatDayKeyRange(start, end, { locale });
 }
 
 export function RangePicker({

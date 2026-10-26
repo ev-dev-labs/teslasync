@@ -52,8 +52,7 @@ export function DrivingRhythmMethodology({
           )
         : t(
             'rhythm.method.timeSemantics',
-            'The selected local dates are requested as exact instants in {{timezone}} (start inclusive, end exclusive). Returned instants are then grouped consistently by weekday, hour, day, and month in {{timezone}}.',
-            { timezone: summary.timeZone },
+            'The selected local dates are requested as exact instants in your selected time zone (start inclusive, end exclusive). Returned instants are then grouped consistently by weekday, hour, day, and month in the same zone.',
           ),
     },
     {

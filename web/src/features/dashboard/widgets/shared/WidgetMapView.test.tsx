@@ -20,7 +20,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import { type ReactNode } from 'react';
 
 // i18n echo mock — returns the English fallback so the default empty message
@@ -73,7 +73,12 @@ vi.mock('@/components/maps', () => ({
 
 import { WidgetMapView } from './WidgetMapView';
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  // The theme-parity tests toggle the app's light-mode marker on
+  // <html>; never leak it into neighbouring tests.
+  document.documentElement.classList.remove('light-mode');
+});
 
 const CENTER: [number, number] = [37.7749, -122.4194];
 
@@ -89,8 +94,10 @@ describe('WidgetMapView — map rendering', () => {
     expect(map).toBeInTheDocument();
     expect(map).toHaveAttribute('data-center', JSON.stringify(CENTER));
     expect(map).toHaveAttribute('data-zoom', '15');
-    // Tiles are always the dark theme layer.
+    // No light-mode marker on <html> here, so the dark raster is resolved.
     expect(screen.getByTestId('map-tile-layer')).toHaveAttribute('data-style', 'dark');
+    // The tile well is the quiet theme surface, never a hardcoded color.
+    expect(map).toHaveClass('bg-[var(--surface-2)]');
     expect(map).toContainElement(screen.getByTestId('map-invalidator'));
     // Children are projected into the map, not dropped on the floor.
     expect(screen.getByTestId('marker')).toHaveTextContent('pin');
@@ -118,8 +125,11 @@ describe('WidgetMapView — accessibility & styling', () => {
     expect(region).toBeInTheDocument();
     // The caller className merges with the base frame classes (via cn()).
     expect(region).toHaveClass('custom-frame');
-    expect(region).toHaveClass('rounded-lg');
-    expect(region).toHaveClass('flex', 'flex-col', 'flex-1', 'min-h-0');
+    // After `mapSvg` language: 10px corners, hairline border, 160px floor.
+    expect(region).toHaveClass('rounded-shape-lg');
+    expect(region).toHaveClass('border', 'border-[var(--border-subtle)]');
+    expect(region).toHaveClass('min-h-40');
+    expect(region).toHaveClass('flex', 'flex-col', 'flex-1');
     expect(screen.getByTestId('map-container')).toHaveClass('flex-1', 'min-h-0');
     expect(screen.getByTestId('map-container')).not.toHaveClass('h-full');
     // The region wraps the leaflet container.
@@ -189,5 +199,31 @@ describe('WidgetMapView — empty & invalid states', () => {
 
     expect(screen.queryByTestId('map-container')).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+});
+
+describe('WidgetMapView — light/dark tile parity', () => {
+  it('resolves plain street tiles when the app runs its light theme', () => {
+    // ThemeProvider mirrors the resolved scheme onto <html> as
+    // `light-mode`; the primitive reads that marker provider-free.
+    document.documentElement.classList.add('light-mode');
+    render(<WidgetMapView center={CENTER} />);
+
+    expect(screen.getByTestId('map-tile-layer')).toHaveAttribute('data-style', 'streets');
+  });
+
+  it('follows a mid-session theme switch without a remount', async () => {
+    render(<WidgetMapView center={CENTER} />);
+    expect(screen.getByTestId('map-tile-layer')).toHaveAttribute('data-style', 'dark');
+
+    document.documentElement.classList.add('light-mode');
+    await waitFor(() =>
+      expect(screen.getByTestId('map-tile-layer')).toHaveAttribute('data-style', 'streets'),
+    );
+
+    document.documentElement.classList.remove('light-mode');
+    await waitFor(() =>
+      expect(screen.getByTestId('map-tile-layer')).toHaveAttribute('data-style', 'dark'),
+    );
   });
 });

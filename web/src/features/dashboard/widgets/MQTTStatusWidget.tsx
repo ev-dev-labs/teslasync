@@ -6,13 +6,12 @@ import { EmptyState } from '@/components/feedback';
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
 
 import { deriveDataState, knownNumber } from '@/api/dataState';
-import { formatRelative } from '@/lib/dateFormat';
 import type { VehicleTelemetry } from '@/types/telemetry';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatusGrid, type StatusCell } from './shared';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
+import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 export interface MqttWidgetStats {
   /** Sum of per-vehicle signal counts across the streaming fleet. */
@@ -70,8 +69,9 @@ export function deriveMqttStats(
 }
 
 export default function MQTTStatusWidget({ size }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const { formatRelative } = useDateFormat();
   const query = useMQTTStatus();
   const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
   const state = deriveDataState({ ...query, data: data ?? (isLoading || query.isError || query.error ? undefined : null) });
@@ -81,14 +81,8 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
   const stats = useMemo(() => deriveMqttStats(data?.vehicles), [data]);
 
   const connected = data?.connected;
-  const status: StatusCell = {
-    id: 'mqtt', label: t('widget.mqtt.status', 'Status'),
-    status: connected == null ? 'unknown' : connected ? 'ok' : 'error',
-    statusLabel: connected == null ? t('widget.mqtt.unknown', 'Unknown')
-      : connected ? t('widget.mqtt.online', 'Online') : t('widget.mqtt.offline', 'Offline'),
-  };
-  // `|| '—'` (not `??`) so an empty-string broker also degrades to the
-  // placeholder rather than rendering a blank value.
+  const statusLabel = connected == null ? t('widget.mqtt.unknown', 'Unknown')
+      : connected ? t('widget.mqtt.online', 'Online') : t('widget.mqtt.offline', 'Offline');
   const broker = data?.broker || '—';
 
   return (
@@ -104,34 +98,29 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
       onRefresh={() => refetch()}
     >
       {isCompact ? (
-          /* ── Compact layout (1×2) ── */
           <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
             <WidgetBigNumber
               value={stats.messagesPerSec == null ? null : fmtNumber(stats.messagesPerSec)}
               unit={t('widget.mqtt.msgSec', 'msg/s')}
-              badge={{ text: status.statusLabel ?? '—', variant: connected == null ? 'neutral' : connected ? 'success' : 'error' }}
+              badge={{ text: statusLabel, variant: connected == null ? 'neutral' : connected ? 'success' : 'error' }}
             />
           </div>
         ) : (
-          /* ── Standard layout (2×2+) ── */
           <div className="flex flex-col gap-3 h-full">
-            {/* Connection status row */}
-            <WidgetStatusGrid cells={[status]} />
-
-            {/* Stats grid */}
-            <DashboardSourceBrief
-              metrics={[
-                { metricId: 'rate', rawValue: stats.messagesPerSec, label: t('widget.mqtt.msgRate', 'Messages/sec'), description: t('widget.mqtt.rateDescription', 'Sum of returned per-vehicle signal rates; one missing operand makes the total unknown.'), display: { formatter: raw => ({ value: fmtNumber(Number(raw)), unit: '' }) } },
-                { metricId: 'count', rawValue: stats.totalMessages, label: t('widget.mqtt.totalToday', 'Total messages'), description: t('widget.mqtt.countDescription', 'Sum of returned signal counters; counter reset periods are not supplied by the source.') },
-              ]}
-              state={state} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
-              title={t('widget.mqtt.summaryTitle', 'MQTT source counters')}
-              description={t('widget.mqtt.summaryDescription', 'Fleet counters retain complete-operand checks; connection presence and newest valid observation remain separate evidence.')}
-              scope={t('widget.mqtt.summaryScope', 'Returned streaming-fleet rows; no complete calendar-day or verified-live coverage is inferred')}
-              loading={isLoading && !data} testId="mqtt-operational-brief"
+            <WidgetBigNumber
+              label={t('widget.mqtt.msgRate', 'Messages/sec')}
+              value={stats.messagesPerSec == null ? null : fmtNumber(stats.messagesPerSec)}
+              unit={t('widget.mqtt.msgSec', 'msg/s')}
+              badge={{ text: statusLabel, variant: connected == null ? 'neutral' : connected ? 'success' : 'error' }}
             />
-
-            {/* Last message & broker */}
+            <WidgetStatGrid
+              stats={[{
+                label: t('widget.mqtt.totalToday', 'Total messages'),
+                  value: stats.totalMessages == null ? null : fmtInt(stats.totalMessages),
+              }]}
+              cols={2}
+              maxPerRow={2}
+            />
             <div className="mt-auto pt-2 border-t border-[var(--border-subtle)] space-y-1.5">
               <KVList layout="responsive" wrap items={[
                 {

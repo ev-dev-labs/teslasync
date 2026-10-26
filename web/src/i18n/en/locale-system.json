@@ -171,6 +171,7 @@
     "reapply": "Re-apply to my dashboard"
   },
   "dataExport": {
+    "dateBounds": "Dates use the selected clock. Start is inclusive; the end date includes its whole day.",
     "csvPreview": "CSV preview",
     "csvDesc": "Comma-separated values, compatible with Excel and Google Sheets",
     "jsonPreview": "JSON preview",
@@ -345,6 +346,393 @@
       "processing": "Processing",
       "ready": "Ready",
       "expired": "Expired"
+    }
+  },
+  "dataRepair": {
+    "title": "Data repair",
+    "readOnly": {
+      "title": "Data repair is read-only"
+    },
+    "aiSuggestions": {
+      "title": "Helix repair suggestions",
+      "description": "Propose a typed repair plan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory below. Helix never writes; review the proposal and use the matching baseline form to apply it.",
+      "button": "Draft repair plan",
+      "badge": "Helix"
+    },
+    "kpis": "Repair summary",
+    "worklist": "Repair worklist",
+    "suggestionsRegion": "Suggested repairs",
+    "callout": "Suggestions come from durable history only: a session is listed when its stored state is contradicted by a later signal, never because it is simply old. Applying a repair rewrites the end timestamp (and, for drives, the derived duration) of that one session, is recorded in the audit log, and is never done automatically.",
+    "truncated": "The scan hit its per-request limit, so more sessions may need repair than are listed here. Apply what is shown and refresh.",
+    "subtitle": {
+      "count": "{{count}} incomplete session(s) found",
+      "suggestions": "{{count}} session boundary(s) contradicted by later evidence",
+      "clean": "Find and repair broken drive and charging session boundaries",
+      "workspace": "Review evidence-backed anomalies, coordinate decisions, and apply reversible corrections."
+    },
+    "diagnostics": {
+      "title": "Direct evidence diagnostics",
+      "description": "Inspect durable signal contradictions and manually review incomplete sessions. These deeper scans run only while this workspace is open.",
+      "loading": "Loading diagnostics workspace",
+      "scanning": "Scanning",
+      "ready": "Ready",
+      "attention": "Attention needed"
+    },
+    "kpi": {
+      "total": "Total stale",
+      "charging": "Stale charging",
+      "drives": "Stale drives",
+      "status": "Status",
+      "suggestions": "Suggested repairs",
+      "driveSuggestions": "Drive boundaries",
+      "chargingSuggestions": "Charging boundaries",
+      "blocked": "Blocked"
+    },
+    "status": {
+      "clean": "Clean",
+      "needsRepair": "Needs repair"
+    },
+    "kind": {
+      "drive": "Drive",
+      "charging": "Charging session"
+    },
+    "badge": {
+      "open": "Open"
+    },
+    "confidence": {
+      "high": "High confidence",
+      "medium": "Medium confidence",
+      "unknown": "Unrated confidence"
+    },
+    "source": {
+      "signalLog": "Signal history",
+      "driveTelemetry": "Drive telemetry",
+      "chargingTelemetry": "Charging telemetry",
+      "drives": "Drive record",
+      "chargingSessions": "Charging record",
+      "unknown": "Durable history"
+    },
+    "rule": {
+      "driveOpenChargingStarted": {
+        "label": "Drive left open, then charging started",
+        "why": "The car was last seen driving, and the next durable event is a charging session starting. A car cannot drive and charge at once, so the Park signal that should have ended this drive was never recorded."
+      },
+      "driveOpenParkObserved": {
+        "label": "Drive left open after the car parked",
+        "why": "Drive telemetry recorded the car shifting into Park after this drive started, but the drive was never closed. The signal arrived; the completion write did not."
+      },
+      "driveEndAfterContradiction": {
+        "label": "Drive ends long after it really finished",
+        "why": "This drive is already closed, but its end time is well after durable evidence shows the drive had finished — so it swallowed time that belongs to another session."
+      },
+      "chargingOpenChargeEnded": {
+        "label": "Charging left open after it stopped",
+        "why": "A later charge-state observation shows charging had stopped, but the session is still recorded as in progress."
+      },
+      "chargingOpenDriveStarted": {
+        "label": "Charging left open, then the car drove away",
+        "why": "The car shifted into a driving gear (or a drive was recorded) while this charging session was still open. Charging and driving are mutually exclusive."
+      },
+      "chargingEndAfterContradiction": {
+        "label": "Charging ends long after it really finished",
+        "why": "This charging session is already closed, but its end time is well after durable evidence shows charging had finished."
+      },
+      "unknown": {
+        "label": "Session boundary looks wrong",
+        "why": "Stored session state contradicts later durable evidence."
+      }
+    },
+    "blocked": {
+      "overlapsNextSession": "Applying this would still leave the session overlapping the next one for this vehicle. Fix the neighbouring session first.",
+      "unknown": "This suggestion cannot be applied right now."
+    },
+    "timeline": {
+      "start": "Session started",
+      "startDetail": "Stored start of {{kind}} #{{id}}",
+      "lastInSession": "Last evidence the session was still running",
+      "noInSession": "No in-session evidence recorded",
+      "noInSessionDetail": "Nothing durable was written between the session start and the contradiction.",
+      "contradiction": "Contradicting evidence",
+      "proposed": "Proposed end",
+      "proposedDetail": "Never later than the contradicting evidence"
+    },
+    "detail": {
+      "vehicle": "Vehicle",
+      "storedEnd": "Stored end",
+      "stillOpen": "Still open",
+      "proposedEnd": "Proposed end",
+      "storedDuration": "Stored duration",
+      "proposedDuration": "Proposed duration",
+      "evidenceGap": "Unobserved gap"
+    },
+    "card": {
+      "label": "Repair suggestion for {{kind}} #{{id}}",
+      "evidence": "Evidence timeline",
+      "details": "Proposed change",
+      "risk": "Applying rewrites only the end timestamp (and the derived duration for drives). Measured totals such as distance, energy and speed are left untouched, so they may still reflect the original window.",
+      "applied": "Applied. Refresh to re-check the remaining suggestions.",
+      "manualOnly": "Nothing is applied until you confirm.",
+      "genericError": "The repair was rejected. Refresh and review again."
+    },
+    "confirm": {
+      "title": "Apply this repair?",
+      "message": "This rewrites {{kind}} #{{id}} to end at {{end}}. Distance, energy and speed totals are NOT recomputed — they were measured over the original window. This is recorded in the audit log and is not undone automatically.",
+      "caseImpactDescription": "Review the exact server-calculated impact before applying this boundary.",
+      "apply": "Apply repair"
+    },
+    "manualConfirm": {
+      "saveTitle": "Save these corrections?",
+      "saveMessage": "This updates the entered measurements without changing the session boundary. The correction is recorded in the audit log.",
+      "closeTitle": "Apply this manual boundary?",
+      "closeMessage": "This uses the exact end timestamp you entered. The server will reject overlaps or concurrent changes and record the boundary in the audit log.",
+      "quarantineTitle": "Move this session to quarantine?",
+      "quarantineMessage": "This removes {{kind}} #{{id}} from active data, but preserves a checksummed snapshot for verified restore. The reason and operator are recorded in the audit log.",
+      "quarantineReasonPlaceholder": "Explain why this session should be removed from active data"
+    },
+    "stale": {
+      "intro": "Incomplete sessions with no contradicting evidence. These are listed for manual inspection only — nothing in the recorded history establishes where they should end."
+    },
+    "cases": {
+      "workspaceTitle": "Integrity command center",
+      "workspaceDescription": "Continuous detection creates durable, assignable cases. No repair is applied without operator review.",
+      "lastScan": "Last scan: {{time}}",
+      "noScan": "No completed scan recorded yet",
+      "scanNow": "Run integrity scan",
+      "metricsResource": "Repair case metrics",
+      "workspaceTabs": "Repair workspace views",
+      "tabCases": "Case queue",
+      "tabQuarantine": "Quarantine ledger",
+      "tabDiagnostics": "Diagnostics",
+      "refreshing": "Refreshing",
+      "monitoring": "Monitoring",
+      "metricsUnavailable": "Metrics unavailable",
+      "updating": "Updating",
+      "metricsLabel": "Repair case metrics",
+      "open": "Open cases",
+      "openHint": "Awaiting operator review",
+      "inReview": "In review",
+      "inReviewHint": "Actively triaged",
+      "quarantined": "Quarantined",
+      "quarantinedHint": "Reversible removals",
+      "active": "Active cases",
+      "activeHint": "Active review workload",
+      "queueTitle": "Repair case queue",
+      "queueDescription": "Durable findings stay visible until an operator reviews and resolves them.",
+      "resourceName": "Repair cases",
+      "loading": "Loading repair cases…",
+      "refreshFailed": "Repair cases could not refresh. Showing the most recently loaded queue.",
+      "empty": "No repair cases match these filters.",
+      "pageCount": "{{count}} cases on this page",
+      "caseNumber": "Case #{{id}}",
+      "sessionReference": "{{kind}} #{{id}}",
+      "vehicleNumber": "Vehicle #{{id}}",
+      "reviewCaseLabel": "Review case {{id}}",
+      "review": "Review",
+      "drawerTitle": "Case #{{id}}",
+      "drawerLoadingTitle": "Repair case",
+      "drawerDescription": "{{kind}} session #{{id}} · vehicle #{{vehicle}}",
+      "drawerLoading": "Loading durable evidence and operator history",
+      "beginReview": "Begin review",
+      "reopen": "Reopen",
+      "resolve": "Resolve case",
+      "confidenceBadge": "{{confidence}} confidence",
+      "lastSeen": "Last seen {{time}}",
+      "findingTitle": "Integrity finding",
+      "actionable": "Actionable",
+      "blocked": "Blocked",
+      "vehicle": "Vehicle",
+      "relatedSession": "Related session",
+      "confidence": "Confidence",
+      "firstDetected": "First detected",
+      "lastDetected": "Last detected",
+      "suggestedBoundary": "Suggested boundary",
+      "evidenceGap": "Evidence gap",
+      "evidenceTitle": "Evidence chain",
+      "evidenceDescription": "Durable observations used to establish the session boundary.",
+      "lastInSession": "Last in-session observation",
+      "contradiction": "Contradicting observation",
+      "assignmentTitle": "Ownership",
+      "assignee": "Assignee",
+      "unassignedValue": "Unassigned",
+      "assigneePlaceholder": "Operator name",
+      "saveAssignment": "Save assignment",
+      "activityTitle": "Review notes",
+      "noComments": "No review notes yet.",
+      "commentLabel": "Add review note",
+      "addComment": "Add note",
+      "controlledActions": "Controlled actions",
+      "controlledDescription": "Apply a verified boundary, dismiss a false positive, or move the source session into reversible quarantine.",
+      "dismiss": "Dismiss finding",
+      "quarantineAction": "Move to quarantine",
+      "restoreTitle": "Restore quarantined session",
+      "restoreDescription": "The original row and linked relationships will be verified and restored atomically.",
+      "restoreAction": "Restore session",
+      "confirmQuarantine": "Move session to quarantine?",
+      "confirmRestore": "Restore this session?",
+      "confirmDismiss": "Dismiss this finding?",
+      "confirmResolve": "Resolve this case?",
+      "reasonRequiredDescription": "Provide an operator note. This action is recorded in the audit trail.",
+      "reasonLabel": "Operator note",
+      "reasonPlaceholder": "Explain the evidence and decision",
+      "findings": {
+        "endedBeforeStarted": "Session ends before it starts",
+        "durationMismatch": "Stored duration does not match the session window",
+        "driveOverlap": "Drive overlaps another drive",
+        "chargingOverlap": "Charging session overlaps another charging session",
+        "driveChargingOverlap": "Drive and charging windows overlap",
+        "duplicateWindow": "Duplicate session window",
+        "odometerRollback": "Odometer moves backwards during the session",
+        "socInconsistent": "State of charge changes in the wrong direction",
+        "negativeDistance": "Distance is negative",
+        "negativeDuration": "Duration is negative",
+        "negativeEnergyUsed": "Energy used is negative",
+        "negativeRegenEnergy": "Regenerated energy is negative",
+        "negativeEnergyAdded": "Energy added is negative",
+        "manualQuarantine": "Operator-requested quarantine"
+      },
+      "blockedReasons": {
+        "structuralCorrection": "This structural anomaly requires a manual correction",
+        "operatorAction": "This case records an explicit operator action",
+        "notApplicable": "No safe automatic boundary is available"
+      },
+      "status": {
+        "open": "Open",
+        "inReview": "In review",
+        "applied": "Applied",
+        "dismissed": "Dismissed",
+        "quarantined": "Quarantined",
+        "restored": "Restored",
+        "resolved": "Resolved"
+      },
+      "filters": {
+        "allStatuses": "All statuses",
+        "allKinds": "All session types",
+        "allConfidence": "All confidence levels",
+        "status": "Filter by status",
+        "kind": "Filter by session type",
+        "confidence": "Filter by confidence",
+        "owner": "Filter by owner",
+        "ownerPlaceholder": "Owner",
+        "clear": "Clear filters"
+      },
+      "columns": {
+        "case": "Case",
+        "finding": "Finding",
+        "status": "Status",
+        "confidence": "Confidence",
+        "owner": "Owner",
+        "lastDetected": "Last detected",
+        "actions": "Actions"
+      },
+      "bulk": {
+        "beginReview": "Begin review",
+        "dismiss": "Dismiss selected",
+        "noReviewable": "Only open cases can begin review.",
+        "noDismissible": "Only open or in-review cases can be dismissed.",
+        "confirmDismiss": "Dismiss selected findings?",
+        "confirmDismissDescription": "Dismissal changes case metadata only. Source sessions remain untouched and the decision is audited.",
+        "reasonPlaceholder": "Explain why these findings are false positives"
+      },
+      "metricsRetained": "Retained metrics",
+      "readOnly": "Repair controls are read-only",
+      "rowLabel": "Case #{{id}}, {{rule}}",
+      "briefDescription": "Server-reported repair case workload; active cases are open plus in-review cases.",
+      "briefScope": "Repair case statistics response; separate from the filtered queue and diagnosis scan.",
+      "transitionFailed": "The case could not be updated. {{message}}",
+      "manualResolutionHint": "Resolution records your review; it does not correct the source data. Document the manual correction in the operator note."
+    },
+    "quarantine": {
+      "all": "All records",
+      "active": "Awaiting restore",
+      "restored": "Restored",
+      "held": "Held safely",
+      "title": "Quarantine ledger",
+      "description": "Every removal retains a checksummed recovery snapshot and a complete operator trail.",
+      "filterStatus": "Filter quarantine status",
+      "resourceName": "Quarantine records",
+      "loading": "Loading quarantine ledger…",
+      "refreshFailed": "Quarantine records could not refresh. Showing the most recently loaded ledger.",
+      "empty": "No quarantine records match this filter.",
+      "pageCount": "{{count}} records on this page",
+      "confirmRestore": "Restore quarantined session?",
+      "confirmRestoreDescription": "The snapshot checksum and schema version will be verified before the session and its relationships are restored.",
+      "restoreReasonPlaceholder": "Explain why this session should be restored",
+      "columns": {
+        "session": "Session",
+        "status": "Status",
+        "reason": "Reason",
+        "quarantinedAt": "Quarantined",
+        "operator": "Operator",
+        "actions": "Actions"
+      }
+    },
+    "preview": {
+      "title": "Verified impact",
+      "ready": "Ready to apply",
+      "alreadyApplied": "Already applied",
+      "noChanges": "No database fields would change.",
+      "preserved": "{{count}} measured fields stay unchanged",
+      "revalidated": "The server revalidated the current row, evidence, concurrency pin, and overlap guard."
+    },
+    "metric": {
+      "energy": "Energy",
+      "peak": "Peak",
+      "distance": "Distance",
+      "maxSpeed": "Max"
+    },
+    "row": {
+      "toggle": "Open repair form for record #{{id}}",
+      "vehicle": "Vehicle {{id}}",
+      "open": "Open",
+      "readOnly": "Repair is unavailable for record #{{id}}"
+    },
+    "field": {
+      "endedAt": "End date/time (ISO)",
+      "energyWh": "Energy added (Wh)",
+      "endSoc": "End battery (%)",
+      "peakPowerW": "Peak power (W)",
+      "avgPowerW": "Avg power (W)",
+      "cost": "Cost",
+      "distanceM": "Distance (m)",
+      "durationS": "Duration (s)",
+      "maxSpeedMps": "Max speed (m/s)",
+      "avgSpeedMps": "Avg speed (m/s)",
+      "invalidEndedAt": "Use RFC3339 format, including a timezone.",
+      "validEndedAtRequired": "Enter a valid RFC3339 end timestamp first."
+    },
+    "action": {
+      "closeSession": "Close session",
+      "closeDrive": "Close drive",
+      "quarantine": "Move to quarantine",
+      "reviewApply": "Review & apply"
+    },
+    "charging": {
+      "title": "Charging sessions",
+      "resource": "Charging sessions",
+      "emptyTitle": "All charging sessions are complete",
+      "empty": "No stale charging sessions found.",
+      "formLabel": "Repair charging session #{{id}}",
+      "suggestionsTitle": "Charging boundaries",
+      "suggestionsEmptyTitle": "No contradicted charging boundaries",
+      "suggestionsEmpty": "Every charging session in the scanned window agrees with the durable signal history."
+    },
+    "drives": {
+      "title": "Drives",
+      "resource": "Drives",
+      "emptyTitle": "All drives are complete",
+      "empty": "No stale drives found.",
+      "suggestionsTitle": "Drive boundaries",
+      "suggestionsEmptyTitle": "No contradicted drive boundaries",
+      "suggestionsEmpty": "Every drive in the scanned window agrees with the durable signal history."
+    },
+    "drive": {
+      "formLabel": "Repair drive #{{id}}",
+      "distanceMi": "Distance (mi)",
+      "maxSpeedMph": "Max speed (mph)"
+    },
+    "brief": {
+      "description": "Suggested session boundary repairs and blocked cases from the durable-history diagnosis response.",
+      "scope": "Current diagnosis response; not a complete lifetime count."
     }
   },
   "dbHealth": {
@@ -1791,7 +2179,7 @@
     "openPage": "Explore Tesla API usage",
     "methodTitle": "How the estimate is calculated",
     "methodText": "Counts come only from locally observed Tesla Fleet Telemetry emissions and qualifying outbound Fleet API responses. Retransmitted signals are deduplicated. Missing deliveries or audit writes can undercount, and Tesla can make billing adjustments.",
-    "cycleCaveat": "These are fixed UTC 30-day windows, not Tesla calendar-month billing cycles. No monthly credit, rounding or invoice adjustments are assumed.",
+    "cycleCaveat": "These are fixed 30-day observation windows anchored to the server epoch, not Tesla calendar-month billing cycles. No monthly credit, rounding or invoice adjustments are assumed.",
     "commandRate": "1,000 / $1",
     "dataRate": "500 / $1",
     "wakeRate": "50 / $1",
@@ -1805,23 +2193,23 @@
     "historyWakes": "Wakes",
     "historyRequests": "Billable API requests",
     "historySection": "Tesla usage history",
-    "historyDisclaimer": "Local observations only, not a Tesla invoice. Missing deliveries or audit logs can undercount; these UTC windows are not Tesla calendar-month billing cycles.",
+    "historyDisclaimer": "Local observations only, not a Tesla invoice. Missing deliveries or audit logs can undercount; these selected-calendar windows are not Tesla calendar-month billing cycles.",
     "historyLoading": "Loading selected usage…",
     "historyError": "Usage history could not be loaded. Try again.",
     "historyEmpty": "No observed Tesla billable traffic in this range. Try an older range.",
-    "invalidRange": "Select 1 to 366 UTC days, with the end on or after the start.",
+    "invalidRange": "Select 1 to 366 calendar days, with the end on or after the start.",
     "granularity": "Group by",
-    "daily": "Daily (UTC)",
-    "weekly": "Weekly (UTC, Monday start)",
+    "daily": "Daily",
+    "weekly": "Weekly (Monday start)",
     "selectedEstimate": "Selected range estimate",
     "observedBuckets": "{{count}} observed buckets",
     "observedBuckets_one": "{{count}} observed bucket",
     "observedBuckets_other": "{{count}} observed buckets",
     "notInvoice": "Local estimate, not an invoice",
     "trendTitle": "Tesla usage cost over time",
-    "trendSubtitle": "Observed USD estimate per UTC bucket; gaps are not filled with zeroes.",
+    "trendSubtitle": "Observed USD estimate per selected-calendar bucket; gaps are not filled with zeroes.",
     "trendAria": "Stacked daily or weekly estimated Tesla usage cost for streaming signals, commands, data requests and wakes",
-    "bucketStart": "UTC bucket start",
+    "bucketStart": "Bucket start",
     "loading": "Loading Tesla usage…",
     "error": "Tesla usage could not be loaded. Try refreshing.",
     "upgradeApi": "Tesla usage requires a newer API service. Update the API service and refresh.",
@@ -1834,7 +2222,7 @@
     "commands": "Commands · 1,000 / $1",
     "data": "Data requests · 500 / $1",
     "wakes": "Wakes · 50 / $1",
-    "reset": "Next cycle (UTC)",
+    "reset": "Next cycle",
     "history": "Prior 30-day cycles",
     "eventsShort": "events",
     "noHistory": "No prior cycles recorded",
@@ -2983,378 +3371,6 @@
       "title": "Narrate the charging-cost forecast"
     }
   },
-  "dataRepair": {
-    "action": {
-      "closeDrive": "Close drive",
-      "closeSession": "Close session",
-      "quarantine": "Move to quarantine",
-      "reviewApply": "Review & apply"
-    },
-    "aiSuggestions": {
-      "badge": "Helix",
-      "button": "Draft repair plan",
-      "description": "Propose a typed repair plan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory below. Helix never writes; review the proposal and use the matching baseline form to apply it.",
-      "title": "Helix repair suggestions"
-    },
-    "badge": {
-      "open": "Open"
-    },
-    "blocked": {
-      "overlapsNextSession": "Applying this would still leave the session overlapping the next one for this vehicle. Fix the neighbouring session first.",
-      "unknown": "This suggestion cannot be applied right now."
-    },
-    "brief": {
-      "description": "Suggested session boundary repairs and blocked cases from the durable-history diagnosis response.",
-      "scope": "Current diagnosis response; not a complete lifetime count."
-    },
-    "callout": "Suggestions come from durable history only: a session is listed when its stored state is contradicted by a later signal, never because it is simply old. Applying a repair rewrites the end timestamp (and, for drives, the derived duration) of that one session, is recorded in the audit log, and is never done automatically.",
-    "card": {
-      "applied": "Applied. Refresh to re-check the remaining suggestions.",
-      "details": "Proposed change",
-      "evidence": "Evidence timeline",
-      "genericError": "The repair was rejected. Refresh and review again.",
-      "label": "Repair suggestion for {{kind}} #{{id}}",
-      "manualOnly": "Nothing is applied until you confirm.",
-      "risk": "Applying rewrites only the end timestamp (and the derived duration for drives). Measured totals such as distance, energy and speed are left untouched, so they may still reflect the original window."
-    },
-    "cases": {
-      "actionable": "Actionable",
-      "active": "Active cases",
-      "activeHint": "Active review workload",
-      "activityTitle": "Review notes",
-      "addComment": "Add note",
-      "assignee": "Assignee",
-      "assigneePlaceholder": "Operator name",
-      "assignmentTitle": "Ownership",
-      "beginReview": "Begin review",
-      "blocked": "Blocked",
-      "blockedReasons": {
-        "notApplicable": "No safe automatic boundary is available",
-        "operatorAction": "This case records an explicit operator action",
-        "structuralCorrection": "This structural anomaly requires a manual correction"
-      },
-      "briefDescription": "Server-reported repair case workload; active cases are open plus in-review cases.",
-      "briefScope": "Repair case statistics response; separate from the filtered queue and diagnosis scan.",
-      "bulk": {
-        "beginReview": "Begin review",
-        "confirmDismiss": "Dismiss selected findings?",
-        "confirmDismissDescription": "Dismissal changes case metadata only. Source sessions remain untouched and the decision is audited.",
-        "dismiss": "Dismiss selected",
-        "noDismissible": "Only open or in-review cases can be dismissed.",
-        "noReviewable": "Only open cases can begin review.",
-        "reasonPlaceholder": "Explain why these findings are false positives"
-      },
-      "caseNumber": "Case #{{id}}",
-      "columns": {
-        "actions": "Actions",
-        "case": "Case",
-        "confidence": "Confidence",
-        "finding": "Finding",
-        "lastDetected": "Last detected",
-        "owner": "Owner",
-        "status": "Status"
-      },
-      "commentLabel": "Add review note",
-      "confidence": "Confidence",
-      "confirmDismiss": "Dismiss this finding?",
-      "confirmQuarantine": "Move session to quarantine?",
-      "confirmResolve": "Resolve this case?",
-      "confirmRestore": "Restore this session?",
-      "contradiction": "Contradicting observation",
-      "controlledActions": "Controlled actions",
-      "controlledDescription": "Apply a verified boundary, dismiss a false positive, or move the source session into reversible quarantine.",
-      "dismiss": "Dismiss finding",
-      "drawerDescription": "{{kind}} session #{{id}} · vehicle #{{vehicle}}",
-      "drawerLoading": "Loading durable evidence and operator history",
-      "drawerLoadingTitle": "Repair case",
-      "drawerTitle": "Case #{{id}}",
-      "empty": "No repair cases match these filters.",
-      "evidenceDescription": "Durable observations used to establish the session boundary.",
-      "evidenceGap": "Evidence gap",
-      "evidenceTitle": "Evidence chain",
-      "filters": {
-        "allConfidence": "All confidence levels",
-        "allKinds": "All session types",
-        "allStatuses": "All statuses",
-        "clear": "Clear filters",
-        "confidence": "Filter by confidence",
-        "kind": "Filter by session type",
-        "owner": "Filter by owner",
-        "ownerPlaceholder": "Owner",
-        "status": "Filter by status"
-      },
-      "findingTitle": "Integrity finding",
-      "findings": {
-        "chargingOverlap": "Charging session overlaps another charging session",
-        "driveChargingOverlap": "Drive and charging windows overlap",
-        "driveOverlap": "Drive overlaps another drive",
-        "duplicateWindow": "Duplicate session window",
-        "durationMismatch": "Stored duration does not match the session window",
-        "endedBeforeStarted": "Session ends before it starts",
-        "manualQuarantine": "Operator-requested quarantine",
-        "negativeDistance": "Distance is negative",
-        "negativeDuration": "Duration is negative",
-        "negativeEnergyAdded": "Energy added is negative",
-        "negativeEnergyUsed": "Energy used is negative",
-        "negativeRegenEnergy": "Regenerated energy is negative",
-        "odometerRollback": "Odometer moves backwards during the session",
-        "socInconsistent": "State of charge changes in the wrong direction"
-      },
-      "firstDetected": "First detected",
-      "inReview": "In review",
-      "inReviewHint": "Actively triaged",
-      "lastDetected": "Last detected",
-      "lastInSession": "Last in-session observation",
-      "lastScan": "Last scan: {{time}}",
-      "lastSeen": "Last seen {{time}}",
-      "loading": "Loading repair cases…",
-      "manualResolutionHint": "Resolution records your review; it does not correct the source data. Document the manual correction in the operator note.",
-      "metricsLabel": "Repair case metrics",
-      "metricsResource": "Repair case metrics",
-      "metricsRetained": "Retained metrics",
-      "metricsUnavailable": "Metrics unavailable",
-      "monitoring": "Monitoring",
-      "noComments": "No review notes yet.",
-      "noScan": "No completed scan recorded yet",
-      "open": "Open cases",
-      "openHint": "Awaiting operator review",
-      "pageCount": "{{count}} cases on this page",
-      "quarantineAction": "Move to quarantine",
-      "quarantined": "Quarantined",
-      "quarantinedHint": "Reversible removals",
-      "queueDescription": "Durable findings stay visible until an operator reviews and resolves them.",
-      "queueTitle": "Repair case queue",
-      "readOnly": "Repair controls are read-only",
-      "reasonLabel": "Operator note",
-      "reasonPlaceholder": "Explain the evidence and decision",
-      "reasonRequiredDescription": "Provide an operator note. This action is recorded in the audit trail.",
-      "refreshFailed": "Repair cases could not refresh. Showing the most recently loaded queue.",
-      "refreshing": "Refreshing",
-      "relatedSession": "Related session",
-      "reopen": "Reopen",
-      "resolve": "Resolve case",
-      "resourceName": "Repair cases",
-      "restoreAction": "Restore session",
-      "restoreDescription": "The original row and linked relationships will be verified and restored atomically.",
-      "restoreTitle": "Restore quarantined session",
-      "review": "Review",
-      "reviewCaseLabel": "Review case {{id}}",
-      "rowLabel": "Case #{{id}}, {{rule}}",
-      "saveAssignment": "Save assignment",
-      "scanNow": "Run integrity scan",
-      "sessionReference": "{{kind}} #{{id}}",
-      "status": {
-        "applied": "Applied",
-        "dismissed": "Dismissed",
-        "inReview": "In review",
-        "open": "Open",
-        "quarantined": "Quarantined",
-        "resolved": "Resolved",
-        "restored": "Restored"
-      },
-      "suggestedBoundary": "Suggested boundary",
-      "tabCases": "Case queue",
-      "tabDiagnostics": "Diagnostics",
-      "tabQuarantine": "Quarantine ledger",
-      "transitionFailed": "The case could not be updated. {{message}}",
-      "unassignedValue": "Unassigned",
-      "updating": "Updating",
-      "vehicle": "Vehicle",
-      "vehicleNumber": "Vehicle #{{id}}",
-      "workspaceDescription": "Continuous detection creates durable, assignable cases. No repair is applied without operator review.",
-      "workspaceTabs": "Repair workspace views",
-      "workspaceTitle": "Integrity command center"
-    },
-    "charging": {
-      "empty": "No stale charging sessions found.",
-      "emptyTitle": "All charging sessions are complete",
-      "formLabel": "Repair charging session #{{id}}",
-      "resource": "Charging sessions",
-      "suggestionsEmpty": "Every charging session in the scanned window agrees with the durable signal history.",
-      "suggestionsEmptyTitle": "No contradicted charging boundaries",
-      "suggestionsTitle": "Charging boundaries",
-      "title": "Charging sessions"
-    },
-    "confidence": {
-      "high": "High confidence",
-      "medium": "Medium confidence",
-      "unknown": "Unrated confidence"
-    },
-    "confirm": {
-      "apply": "Apply repair",
-      "message": "This rewrites {{kind}} #{{id}} to end at {{end}}. Distance, energy and speed totals are NOT recomputed — they were measured over the original window. This is recorded in the audit log and is not undone automatically.",
-      "title": "Apply this repair?"
-    },
-    "detail": {
-      "evidenceGap": "Unobserved gap",
-      "proposedDuration": "Proposed duration",
-      "proposedEnd": "Proposed end",
-      "stillOpen": "Still open",
-      "storedDuration": "Stored duration",
-      "storedEnd": "Stored end",
-      "vehicle": "Vehicle"
-    },
-    "diagnostics": {
-      "attention": "Attention needed",
-      "description": "Inspect durable signal contradictions and manually review incomplete sessions. These deeper scans run only while this workspace is open.",
-      "loading": "Loading diagnostics workspace",
-      "ready": "Ready",
-      "scanning": "Scanning",
-      "title": "Direct evidence diagnostics"
-    },
-    "drive": {
-      "formLabel": "Repair drive #{{id}}"
-    },
-    "drives": {
-      "empty": "No stale drives found.",
-      "emptyTitle": "All drives are complete",
-      "resource": "Drives",
-      "suggestionsEmpty": "Every drive in the scanned window agrees with the durable signal history.",
-      "suggestionsEmptyTitle": "No contradicted drive boundaries",
-      "suggestionsTitle": "Drive boundaries",
-      "title": "Drives"
-    },
-    "field": {
-      "avgPowerW": "Avg power (W)",
-      "avgSpeedMps": "Avg speed (m/s)",
-      "cost": "Cost",
-      "distanceM": "Distance (m)",
-      "durationS": "Duration (s)",
-      "endSoc": "End battery (%)",
-      "endedAt": "End date/time (ISO)",
-      "energyWh": "Energy added (Wh)",
-      "invalidEndedAt": "Use RFC3339 format, including a timezone.",
-      "maxSpeedMps": "Max speed (m/s)",
-      "peakPowerW": "Peak power (W)",
-      "validEndedAtRequired": "Enter a valid RFC3339 end timestamp first."
-    },
-    "kind": {
-      "charging": "Charging session",
-      "drive": "Drive"
-    },
-    "kpi": {
-      "blocked": "Blocked",
-      "chargingSuggestions": "Charging boundaries",
-      "driveSuggestions": "Drive boundaries",
-      "suggestions": "Suggested repairs"
-    },
-    "kpis": "Repair summary",
-    "manualConfirm": {
-      "closeMessage": "This uses the exact end timestamp you entered. The server will reject overlaps or concurrent changes and record the boundary in the audit log.",
-      "closeTitle": "Apply this manual boundary?",
-      "quarantineMessage": "This removes {{kind}} #{{id}} from active data, but preserves a checksummed snapshot for verified restore. The reason and operator are recorded in the audit log.",
-      "quarantineReasonPlaceholder": "Explain why this session should be removed from active data",
-      "quarantineTitle": "Move this session to quarantine?",
-      "saveMessage": "This updates the entered measurements without changing the session boundary. The correction is recorded in the audit log.",
-      "saveTitle": "Save these corrections?"
-    },
-    "metric": {
-      "distance": "Distance",
-      "energy": "Energy",
-      "maxSpeed": "Max",
-      "peak": "Peak"
-    },
-    "preview": {
-      "alreadyApplied": "Already applied",
-      "noChanges": "No database fields would change.",
-      "preserved": "{{count}} measured fields stay unchanged",
-      "ready": "Ready to apply",
-      "revalidated": "The server revalidated the current row, evidence, concurrency pin, and overlap guard.",
-      "title": "Verified impact"
-    },
-    "quarantine": {
-      "active": "Awaiting restore",
-      "all": "All records",
-      "columns": {
-        "actions": "Actions",
-        "operator": "Operator",
-        "quarantinedAt": "Quarantined",
-        "reason": "Reason",
-        "session": "Session",
-        "status": "Status"
-      },
-      "confirmRestore": "Restore quarantined session?",
-      "confirmRestoreDescription": "The snapshot checksum and schema version will be verified before the session and its relationships are restored.",
-      "description": "Every removal retains a checksummed recovery snapshot and a complete operator trail.",
-      "empty": "No quarantine records match this filter.",
-      "filterStatus": "Filter quarantine status",
-      "held": "Held safely",
-      "loading": "Loading quarantine ledger…",
-      "pageCount": "{{count}} records on this page",
-      "refreshFailed": "Quarantine records could not refresh. Showing the most recently loaded ledger.",
-      "resourceName": "Quarantine records",
-      "restoreReasonPlaceholder": "Explain why this session should be restored",
-      "restored": "Restored",
-      "title": "Quarantine ledger"
-    },
-    "readOnly": {
-      "title": "Data repair is read-only"
-    },
-    "row": {
-      "open": "Open",
-      "readOnly": "Repair is unavailable for record #{{id}}",
-      "toggle": "Open repair form for record #{{id}}",
-      "vehicle": "Vehicle {{id}}"
-    },
-    "rule": {
-      "chargingEndAfterContradiction": {
-        "label": "Charging ends long after it really finished",
-        "why": "This charging session is already closed, but its end time is well after durable evidence shows charging had finished."
-      },
-      "chargingOpenChargeEnded": {
-        "label": "Charging left open after it stopped",
-        "why": "A later charge-state observation shows charging had stopped, but the session is still recorded as in progress."
-      },
-      "chargingOpenDriveStarted": {
-        "label": "Charging left open, then the car drove away",
-        "why": "The car shifted into a driving gear (or a drive was recorded) while this charging session was still open. Charging and driving are mutually exclusive."
-      },
-      "driveEndAfterContradiction": {
-        "label": "Drive ends long after it really finished",
-        "why": "This drive is already closed, but its end time is well after durable evidence shows the drive had finished — so it swallowed time that belongs to another session."
-      },
-      "driveOpenChargingStarted": {
-        "label": "Drive left open, then charging started",
-        "why": "The car was last seen driving, and the next durable event is a charging session starting. A car cannot drive and charge at once, so the Park signal that should have ended this drive was never recorded."
-      },
-      "driveOpenParkObserved": {
-        "label": "Drive left open after the car parked",
-        "why": "Drive telemetry recorded the car shifting into Park after this drive started, but the drive was never closed. The signal arrived; the completion write did not."
-      },
-      "unknown": {
-        "label": "Session boundary looks wrong",
-        "why": "Stored session state contradicts later durable evidence."
-      }
-    },
-    "source": {
-      "chargingSessions": "Charging record",
-      "chargingTelemetry": "Charging telemetry",
-      "driveTelemetry": "Drive telemetry",
-      "drives": "Drive record",
-      "signalLog": "Signal history",
-      "unknown": "Durable history"
-    },
-    "stale": {
-      "intro": "Incomplete sessions with no contradicting evidence. These are listed for manual inspection only — nothing in the recorded history establishes where they should end."
-    },
-    "subtitle": {
-      "workspace": "Review evidence-backed anomalies, coordinate decisions, and apply reversible corrections."
-    },
-    "suggestionsRegion": "Suggested repairs",
-    "timeline": {
-      "contradiction": "Contradicting evidence",
-      "lastInSession": "Last evidence the session was still running",
-      "noInSession": "No in-session evidence recorded",
-      "noInSessionDetail": "Nothing durable was written between the session start and the contradiction.",
-      "proposed": "Proposed end",
-      "proposedDetail": "Never later than the contradicting evidence",
-      "start": "Session started",
-      "startDetail": "Stored start of {{kind}} #{{id}}"
-    },
-    "title": "Data repair",
-    "truncated": "The scan hit its per-request limit, so more sessions may need repair than are listed here. Apply what is shown and refresh.",
-    "worklist": "Repair worklist"
-  },
   "dataState": {
     "status": {
       "paused": "Refresh paused"
@@ -3809,7 +3825,6 @@
     "autoRefresh": "Live 10s",
     "avgInterval": "Avg interval",
     "brief": {
-      "bounds": "{{label}} · [{{start}}, {{end}}) · {{timezone}}",
       "description": "Inspect page-scoped transitions and flap evidence alongside the matching server total and independently fetched current state.",
       "eyebrow": "State-machine observability",
       "freshness": "Transitions: {{history}} · Live state: {{live}}",

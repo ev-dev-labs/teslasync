@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from 'react';
 
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import {formatDateTime} from '@/lib/dateFormat'
+import {formatMonthYear} from '@/lib/dateConvert';
 
 import {
   convertDistanceFromSI,
@@ -77,26 +78,7 @@ export function useDriveArchetypeDisplay(timeZone: string): ArchetypeDisplay {
     [timeZone, unitPrefs.locale],
   );
   const formatMonth = useCallback(
-    (month: string) => {
-      const [year, monthNumber] = month.split('-').map(Number);
-      if (
-        !Number.isInteger(year)
-        || !Number.isInteger(monthNumber)
-        || monthNumber! < 1
-        || monthNumber! > 12
-      ) {
-        return '—';
-      }
-      try {
-        return new Intl.DateTimeFormat(unitPrefs.locale, {
-          month: 'short',
-          year: 'numeric',
-          timeZone: 'UTC',
-        }).format(new Date(Date.UTC(year!, monthNumber! - 1, 1)));
-      } catch {
-        return month;
-      }
-    },
+    (month: string) => formatMonthYear(month, { locale: unitPrefs.locale }),
     [unitPrefs.locale],
   );
   const formatHour = useCallback((hour: number) => {

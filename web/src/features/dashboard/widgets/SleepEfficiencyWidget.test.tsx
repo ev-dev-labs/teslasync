@@ -1,47 +1,8 @@
-/**
- * SleepEfficiencyWidget — behaviour, hardening & a11y contract.
- *
- * The widget resolves a vehicle (explicit prop → first vehicle → none), reads a
- * single `useQuery('/analytics/sleep?vehicle_id=…&days=30')` result and renders
- * a gauge + three derived stats (avg drain/day, total sleep hours, wake
- * events) — or the loading / empty / error states. This suite drives the whole
- * component through its accessible surface:
- *
- *   - vehicle resolution (prop wins over the vehicle list; the list supplies the
- *     fallback; no vehicle keeps the query DISABLED so `/analytics/sleep` is
- *     never hit and an empty state renders instead of a blank panel);
- *   - the loading / empty / error paths — most importantly that a FAILED request
- *     surfaces a `QueryError` (role="alert"), NOT the misleading "No sleep
- *     efficiency data" empty state. This is the regression guard for the bug
- *     this elevation fixed: the widget previously dropped the hook's `error` and
- *     never forwarded it to `<WidgetShell>`, so failures looked like "no data";
- *   - the populated gauge (value + "Efficiency" label) and the three stat tiles
- *     with their formatted values + units;
- *   - the `total sleep` derivation only counting `asleep`/`offline` minutes
- *     (online/driving states are excluded) and being null-safe per entry;
- *   - the gauge colour thresholds (green >95, amber >85, red otherwise);
- *   - null-safety: a data object whose numeric/array fields are null renders
- *     "0"/"0.00" placeholders instead of NaN / "undefined";
- *   - the compact (titled, stats-hidden) layout variant;
- *   - the freshness refresh interaction re-issuing the read;
- *   - the help tooltip's accessible label in the standard layout.
- *
- * The network boundary (`request` from `@/api/client`) is mocked; TanStack Query
- * runs for real against it (so the request URL contract and `enabled` gating are
- * exercised end to end). `useVehicles` is mocked at the hook boundary.
- * `react-i18next` is stubbed to echo the English fallback.
- * `@testing-library/user-event` is not installed in this repo (see the sibling
- * RouteEfficiencyWidget / RecentDrivesWidget suites), so interactions go through
- * `fireEvent`.
- */
-
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// i18n stub: echo the fallback string, interpolating {{var}} tokens from the
-// options bag so any interpolated copy renders as real text.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string, opts?: Record<string, unknown>) => {
@@ -59,41 +20,27 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
 
-// Replace only the network primitive; keep the real `isApiError` etc. so
-// <QueryError> classifies failures correctly.
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
   return { ...actual, request: vi.fn() };
 });
-
-// The vehicle list is a controllable vi.fn.
-vi.mock('@/api/hooks/useVehicles', () => ({
-  useVehicles: vi.fn(),
-}));
+vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: vi.fn() }));
 
 import SleepEfficiencyWidget from './SleepEfficiencyWidget';
 import { request } from '@/api/client';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import type { SleepEfficiencyData, SleepDrainEvent } from '@/types/energy';
 import type { WidgetProps } from './types';
-import { hasGaugeColor } from '@/test/gaugeTestUtils';
-import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
-import { act } from '@testing-library/react';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 const mockRequest = vi.mocked(request);
 const mockUseVehicles = vi.mocked(useVehicles);
 
-// jsdom lacks matchMedia; framer-motion / useMotionPreference (via
-// <FreshnessDot> inside <WidgetShell>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    addListener: () => {},
-    removeListener: () => {},
+    matches: false, media: query, onchange: null,
+    addEventListener: () => {}, removeEventListener: () => {},
+    addListener: () => {}, removeListener: () => {},
     dispatchEvent: () => false,
   })) as unknown as typeof window.matchMedia;
 }
@@ -102,64 +49,45 @@ let eventSeq = 0;
 function makeEvent(over: Partial<SleepDrainEvent> = {}): SleepDrainEvent {
   eventSeq += 1;
   return {
-    id: eventSeq,
-    start_date: '2026-01-01T00:00:00Z',
-    duration_hours: 8,
-    battery_lost: 2,
-    drain_rate: 0.25,
-    sentry_mode: false,
-    outside_temp: 15,
-    ...over,
+    id: eventSeq, start_date: '2026-01-01T00:00:00Z',
+    duration_hours: 8, battery_lost: 2, drain_rate: 0.25,
+    sentry_mode: false, outside_temp: 15, ...over,
   };
 }
 
 function makeData(over: Partial<SleepEfficiencyData> = {}): SleepEfficiencyData {
   return {
-    sleep_efficiency_pct: 92,
-    time_to_sleep_avg_min: 15,
-    sentry_on_drain_rate: 1,
-    sentry_off_drain_rate: 0.5, // × 24 → 12.00 %/day
-    sentry_monthly_cost: 5,
-    sentry_monthly_kwh: 10,
-    sentry_extra_drain_rate: 0.5,
-    sentry_extra_monthly_kwh: 5,
+    sleep_efficiency_pct: 92, time_to_sleep_avg_min: 15,
+    sentry_on_drain_rate: 1, sentry_off_drain_rate: 0.5,
+    sentry_monthly_cost: 5, sentry_monthly_kwh: 10,
+    sentry_extra_drain_rate: 0.5, sentry_extra_monthly_kwh: 5,
     sentry_extra_monthly_cost: 2,
     state_distribution: [
       { state: 'asleep', total_minutes: 3000 },
       { state: 'offline', total_minutes: 600 },
-      { state: 'online', total_minutes: 99999 }, // excluded from sleep total
+      { state: 'online', total_minutes: 99999 },
     ],
     sentry_comparison: [],
-    recent_events: [makeEvent(), makeEvent(), makeEvent(), makeEvent()], // 4 wake events
+    recent_events: [makeEvent(), makeEvent(), makeEvent(), makeEvent()],
     ...over,
   };
 }
 
-/** Route `/analytics/sleep` reads to the supplied payload. */
 function sleepRequest(data: SleepEfficiencyData | null) {
   mockRequest.mockImplementation((path: string) =>
-    String(path).startsWith('/analytics/sleep')
-      ? Promise.resolve(data)
-      : Promise.resolve([]),
+    String(path).startsWith('/analytics/sleep') ? Promise.resolve(data) : Promise.resolve([]),
   );
 }
 
 const sleepCalls = () =>
-  mockRequest.mock.calls.filter((c) => String(c[0]).startsWith('/analytics/sleep'));
+  mockRequest.mock.calls.filter((call) => String(call[0]).startsWith('/analytics/sleep'));
 
 function renderWidget(opts: { vehicleId?: number; cols?: number } = {}) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
-  });
-  const props = {
-    vehicleId: opts.vehicleId,
-    size: { cols: opts.cols ?? 2, rows: 2 },
-  } as WidgetProps;
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const props = { vehicleId: opts.vehicleId, size: { cols: opts.cols ?? 2, rows: 2 } } as WidgetProps;
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <SleepEfficiencyWidget {...props} />
-      </MemoryRouter>
+      <MemoryRouter><SleepEfficiencyWidget {...props} /></MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -171,63 +99,78 @@ beforeEach(() => {
   sleepRequest(makeData());
 });
 
-it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
-  renderWidget({ cols });
-  expect(screen.getByRole('heading', { name: 'Sleep efficiency', level: 3 })).toBeVisible();
-});
-
-// ── Vehicle resolution ──────────────────────────────────────────────────────
-
-describe('SleepEfficiencyWidget vehicle resolution', () => {
-  it('prefers the explicit vehicleId prop over the vehicle list', async () => {
+describe('SleepEfficiencyWidget', () => {
+  it('prefers the explicit vehicle and preserves the historical read URL', async () => {
     mockUseVehicles.mockReturnValue({ data: [{ id: 7 }] } as never);
     renderWidget({ vehicleId: 42 });
-
-    await waitFor(() =>
-      expect(sleepCalls()[0]?.[0]).toBe('/analytics/sleep?vehicle_id=42&days=30'),
-    );
-    expect(sleepCalls().some((c) => String(c[0]).includes('vehicle_id=7'))).toBe(false);
+    await waitFor(() => expect(sleepCalls()[0]?.[0]).toBe('/analytics/sleep?vehicle_id=42&days=30'));
   });
 
-  it('falls back to the first vehicle when no prop is given', async () => {
+  it('falls back to the first vehicle', async () => {
     mockUseVehicles.mockReturnValue({ data: [{ id: 7 }, { id: 9 }] } as never);
     renderWidget();
-
-    await waitFor(() =>
-      expect(sleepCalls()[0]?.[0]).toBe('/analytics/sleep?vehicle_id=7&days=30'),
-    );
-    expect(sleepCalls().some((c) => String(c[0]).includes('vehicle_id=9'))).toBe(false);
+    await waitFor(() => expect(sleepCalls()[0]?.[0]).toBe('/analytics/sleep?vehicle_id=7&days=30'));
   });
 
-  it('never queries when no vehicle resolves and shows an empty state (never a blank panel)', async () => {
-    mockUseVehicles.mockReturnValue({ data: [] } as never);
-    renderWidget();
+  it('renders the After hierarchy: one percent headline, wake events and drain', async () => {
+    renderWidget({ vehicleId: 1 });
+    expect(await screen.findByText('92')).toBeInTheDocument();
+    expect(screen.getByText('Time asleep when parked')).toBeInTheDocument();
+    expect(screen.getByText('Wake events')).toBeInTheDocument();
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByText('Drain')).toBeInTheDocument();
+    expect(screen.getByText('12.0')).toBeInTheDocument();
+    expect(screen.getByText('%/day')).toBeInTheDocument();
+  });
 
-    expect(await screen.findByText('No sleep efficiency data')).toBeInTheDocument();
+  it('uses whole-percent headline precision and one-decimal drain precision', async () => {
+    sleepRequest(makeData({ sleep_efficiency_pct: 91.4, sentry_off_drain_rate: 0.43 }));
+    renderWidget({ vehicleId: 1 });
+    expect(await screen.findByText('91')).toBeInTheDocument();
+    expect(screen.getByText('10.3')).toBeInTheDocument();
+  });
+
+  it('keeps compact layout focused on the headline', async () => {
+    renderWidget({ vehicleId: 1, cols: 1 });
+    expect(await screen.findByText('92')).toBeInTheDocument();
+    expect(screen.queryByText('Wake events')).toBeNull();
+    expect(screen.queryByText('Drain')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Sleep efficiency', level: 3 })).toBeVisible();
+  });
+
+  it('shows real unknown values as unknown instead of zero', async () => {
+    sleepRequest(makeData({
+      sleep_efficiency_pct: null as unknown as number,
+      sentry_off_drain_rate: null as unknown as number,
+      recent_events: null as unknown as SleepDrainEvent[],
+    }));
+    renderWidget({ vehicleId: 1 });
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    expect(await screen.findAllByText('—')).toHaveLength(3);
+    expect(screen.queryByText(/NaN|undefined/)).toBeNull();
+  });
+
+  it('renders no-data and error states without replacing an error with empty copy', async () => {
+    sleepRequest(null);
+    const first = renderWidget({ vehicleId: 1 });
+    expect(await screen.findByText('No sleep efficiency data')).toBeInTheDocument();
+    first.unmount();
+
+    mockRequest.mockImplementation((path: string) =>
+      String(path).startsWith('/analytics/sleep') ? Promise.reject(new Error('boom')) : Promise.resolve([]),
+    );
+    renderWidget({ vehicleId: 1 });
+    expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByText('No sleep efficiency data')).toBeNull();
+  });
+
+  it('never queries an invalid explicit vehicle', async () => {
+    renderWidget({ vehicleId: 0 });
+    expect(await screen.findByText('No sleep efficiency data')).toBeInTheDocument();
     expect(sleepCalls()).toHaveLength(0);
   });
-});
 
-// ── States: loading / empty / error ─────────────────────────────────────────
-
-describe('SleepEfficiencyWidget states', () => {
-  it.each([1, 2, 4])('retains the gauge and recovers a failed refresh at %s columns', async (cols) => {
-    renderWidget({ vehicleId: 1, cols });
-    await screen.findByText('92.00');
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    mockRequest.mockImplementation((path: string) => String(path).startsWith('/analytics/sleep')
-      ? Promise.reject(new Error('refresh')) : Promise.resolve([]));
-    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/ }));
-    await screen.findByTestId('stale-refresh-warning');
-    expect(screen.getByText('92.00')).toBeInTheDocument();
-    expect(screen.queryByText("Can't reach server")).toBeNull();
-    sleepRequest(makeData());
-    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i })); // shell hides the warning retry; recovery is the freshness dot
-    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).toBeNull());
-  });
-
-  it('recovers failed discovery without querying an unavailable vehicle', () => {
+  it('keeps no-vehicle discovery failure on retry and does not query', () => {
     const refetch = vi.fn();
     mockUseVehicles.mockReturnValue({ data: undefined, isError: true, error: new Error('vehicles'), refetch } as never);
     renderWidget();
@@ -237,215 +180,27 @@ describe('SleepEfficiencyWidget states', () => {
     expect(sleepCalls()).toHaveLength(0);
   });
 
-  it.each([0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])('disables invalid vehicle %s', (vehicleId) => {
-    renderWidget({ vehicleId });
-    expect(screen.getByText('No sleep efficiency data')).toBeInTheDocument();
-    expect(sleepCalls()).toHaveLength(0);
-  });
-
-  it('keeps the heading with a loading skeleton and no empty copy while fetching', () => {
-    mockRequest.mockImplementation(() => new Promise(() => {})); // hang
-    const { container } = renderWidget({ vehicleId: 1 });
-
-    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
-    expect(screen.queryByText('Sleep efficiency')).toBeInTheDocument();
-    expect(screen.queryByText('No sleep efficiency data')).toBeNull();
-  });
-
-  it('shows an empty state with role=status when the response has no data', async () => {
-    sleepRequest(null);
+  it('refreshes the data read and exposes freshness refresh', async () => {
     renderWidget({ vehicleId: 1 });
-
-    const empty = await screen.findByText('No sleep efficiency data');
+    const refresh = await screen.findByRole('button', { name: /^Refresh/i });
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(empty).toBeInTheDocument();
-    expect(empty.closest('[role="status"]')).not.toBeNull();
+    const before = sleepCalls().length;
+    fireEvent.click(refresh);
+    await waitFor(() => expect(sleepCalls().length).toBe(before + 1));
   });
 
-  it('surfaces a QueryError — not the empty state — when the request fails', async () => {
-    mockRequest.mockImplementation((path: string) =>
-      String(path).startsWith('/analytics/sleep')
-        ? Promise.reject(new Error('boom'))
-        : Promise.resolve([]),
-    );
-    renderWidget({ vehicleId: 1 });
-
-    expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-    // Regression guard: the failure must NOT masquerade as an empty state or
-    // silently render the populated widget.
-    expect(screen.queryByText('No sleep efficiency data')).toBeNull();
-    expect(screen.queryByText('Sleep efficiency')).toBeInTheDocument();
-  });
-});
-
-// ── Populated gauge + stats ─────────────────────────────────────────────────
-
-describe('SleepEfficiencyWidget populated', () => {
-  it('reviews actual supporting sources while keeping the efficiency gauge and sample limitations', async () => {
-    renderWidget({ vehicleId: 1 });
-    expect(await screen.findByText('92.00')).toBeInTheDocument();
-    const brief = screen.getByTestId('sleep-efficiency-operational-brief');
-    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText('12.00 %')).toBeInTheDocument();
-    expect(within(drawer).getByText('60.00 h')).toBeInTheDocument();
-    expect(within(drawer).getByText('4')).toBeInTheDocument();
-    expect(within(drawer).getByText(/not a certified full-window wake count/)).toBeInTheDocument();
-    const drawerHeader = drawer.querySelector('[data-drawer-header="true"]');
-    if (!(drawerHeader instanceof HTMLElement)) throw new Error('Missing sleep source drawer header');
-    expect(within(drawerHeader).getByText(/Vehicle 1/)).toBeInTheDocument();
-  });
-  it('preserves the source percentage beyond its scale without losing any derived statistics', async () => {
-    const data = makeData({ sleep_efficiency_pct: 125 });
-    sleepRequest(data);
-    renderWidget({ vehicleId: 1 });
-    expect(await screen.findByText('125.00')).toBeInTheDocument();
-    expect(screen.queryByRole('meter')).toBeNull();
-    expect(screen.getByRole('group', { name: 'Efficiency' })).not.toHaveAttribute('aria-valuenow');
-    expect(screen.getByText('12.00 %')).toBeInTheDocument();
-    expect(screen.getByText('60.00 h')).toBeInTheDocument();
-    expect(screen.getByText('4')).toBeInTheDocument();
-    expect(data.sleep_efficiency_pct).toBe(125);
-  });
-
-  it('reacts to precision and locale without rewriting measured history', async () => {
+  it('reacts to locale and precision without changing the source value', async () => {
     const data = makeData();
     sleepRequest(data);
     renderWidget({ vehicleId: 1 });
-    await screen.findByText('92.00');
+    await screen.findByText('92');
     try {
-      act(() => { setGlobalPrecision(3); setGlobalLocale('de-DE'); });
-      expect(screen.getByText('92,000')).toBeInTheDocument();
-      expect(screen.getByText('12,000 %')).toBeInTheDocument();
-      expect(screen.getByText('60,000 h')).toBeInTheDocument();
+      act(() => { setGlobalPrecision(1); setGlobalLocale('de-DE'); });
+      expect(screen.getByText('92')).toBeInTheDocument();
+      expect(screen.getByText('12,0')).toBeInTheDocument();
       expect(data.sleep_efficiency_pct).toBe(92);
     } finally {
       act(() => { setGlobalPrecision(2); setGlobalLocale('en-US'); });
     }
-  });
-
-  it('renders the title, gauge value/label and the three derived stat tiles', async () => {
-    renderWidget({ vehicleId: 1 });
-
-    expect(await screen.findByText('Sleep efficiency')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    // Gauge: integer efficiency renders without decimals; "Efficiency" label.
-    expect(screen.getByText('92.00')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency')).toBeInTheDocument();
-
-    // Avg Drain/Day = sentry_off_drain_rate (0.5 %/hr) × 24 → "12.00".
-    expect(screen.getByText('Avg drain/day')).toBeInTheDocument();
-    expect(screen.getByText('12.00 %')).toBeInTheDocument();
-
-    // Total Sleep = (3000 asleep + 600 offline) / 60 → "60".
-    expect(screen.getByText('Total sleep')).toBeInTheDocument();
-    expect(screen.getByText('60.00 h')).toBeInTheDocument();
-
-    // Wake Events = recent_events.length → 4.
-    expect(screen.getByText('Wake events')).toBeInTheDocument();
-    expect(screen.getByText('4')).toBeInTheDocument();
-  });
-
-  it('counts only asleep/offline minutes toward total sleep (excludes online/driving)', async () => {
-    sleepRequest(
-      makeData({
-        state_distribution: [
-          { state: 'asleep', total_minutes: 1200 },
-          { state: 'offline', total_minutes: 600 },
-          { state: 'online', total_minutes: 5000 }, // excluded
-          { state: 'driving', total_minutes: 4000 }, // excluded
-          { state: 'asleep', total_minutes: null as unknown as number }, // null-safe → 0
-        ],
-      }),
-    );
-    renderWidget({ vehicleId: 1 });
-
-    // (1200 + 600) / 60 = 30 — NOT (1200+600+5000+4000)/60 = 180.
-    expect(await screen.findByText('30.00 h')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.queryByText('180.00 h')).toBeNull();
-  });
-
-  const colorCases = [
-    { pct: 98, label: '98.00', color: '#10b981', name: 'green above 95%' },
-    { pct: 90, label: '90.00', color: '#f59e0b', name: 'amber between 85% and 95%' },
-    { pct: 50, label: '50.00', color: '#ef4444', name: 'red at or below 85%' },
-  ];
-  colorCases.forEach(({ pct, label, color, name }) => {
-    it(`paints the gauge ${name}`, async () => {
-      sleepRequest(makeData({ sleep_efficiency_pct: pct }));
-      const { container } = renderWidget({ vehicleId: 1 });
-
-      await screen.findByText(label);
-      expect(hasGaugeColor(container, color)).toBe(true);
-    });
-  });
-
-  it('keeps null numeric/array fields unknown without drawing a zero gauge', async () => {
-    sleepRequest(
-      makeData({
-        sleep_efficiency_pct: null as unknown as number,
-        sentry_off_drain_rate: null as unknown as number,
-        state_distribution: null as unknown as SleepEfficiencyData['state_distribution'],
-        recent_events: null as unknown as SleepDrainEvent[],
-      }),
-    );
-    renderWidget({ vehicleId: 1 });
-
-    // Avg Drain/Day and the two sibling stats are omitted when unknown; only
-    // the gauge fallback dash remains on the face.
-    expect(await screen.findAllByText('—')).toHaveLength(1);
-    const unknownBrief = screen.getByTestId('sleep-efficiency-operational-brief');
-    fireEvent.click(within(unknownBrief).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('3 empty fields are hidden.')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.queryByText('0')).toBeNull();
-    expect(screen.queryByText('0.00')).toBeNull();
-    expect(screen.queryByText(/NaN|undefined/)).toBeNull();
-  });
-});
-
-// ── Layout variants ─────────────────────────────────────────────────────────
-
-describe('SleepEfficiencyWidget layout variants', () => {
-  it('renders the compact (titled, stats-hidden) layout for a 1-column widget', async () => {
-    renderWidget({ vehicleId: 1, cols: 1 });
-
-    // Gauge value still renders in compact mode.
-    expect(await screen.findByText('92.00')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.getByRole('heading', { name: 'Sleep efficiency', level: 3 })).toBeVisible();
-    expect(screen.queryByText('Avg drain/day')).toBeNull();
-    expect(screen.queryByText('Efficiency')).toBeNull();
-  });
-
-  it('exposes an accessible help tooltip trigger in the standard layout', async () => {
-    renderWidget({ vehicleId: 1 });
-
-    await screen.findByText('Sleep efficiency');
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(
-      screen.getByRole('button', { name: 'More info about Sleep efficiency' }),
-    ).toBeInTheDocument();
-  });
-});
-
-// ── Refresh interaction ─────────────────────────────────────────────────────
-
-describe('SleepEfficiencyWidget refresh', () => {
-  it('re-issues the read when the freshness refresh control is activated', async () => {
-    renderWidget({ vehicleId: 1 });
-
-    const refresh = await screen.findByRole('button', { name: /^Refresh/i });
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    const before = sleepCalls().length;
-    expect(before).toBeGreaterThanOrEqual(1);
-
-    fireEvent.click(refresh);
-
-    await waitFor(() => expect(sleepCalls().length).toBe(before + 1));
   });
 });

@@ -1,3 +1,5 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
+import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 // Comprehensive unit + behaviour coverage for
 // AICabinTemperatureImpactNarrative — the co-located Project Apex
 // elevation test.
@@ -36,7 +38,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
-import type { AppSettings } from '@/api/types'
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -53,37 +57,11 @@ const EMPTY_HINT = 'Select a vehicle to narrate its temperature impact.'
 
 // A complete AppSettings with realistic non-AI defaults. Per-test
 // cases override `ai_mode` + `ai_features` to flip the gate.
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-}
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
-}
-
 // enableFeature flips the gate fully on: ai_mode != off AND the
 // per-feature toggle true. Most on-mode tests below start here.
 function enableFeature() {
   mockUseSettings.mockReturnValue(
-    settingsPayload({
+    appSettingsPayload({
       ai_mode: 'cloud',
       ai_features: { 'cabin-temperature-impact-narrative': true },
     }),
@@ -92,26 +70,7 @@ function enableFeature() {
 
 // makeReadableStream constructs a ReadableStream<Uint8Array> from text
 // chunks — byte-for-byte the input useAiStream's parser consumes.
-function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder()
-  let i = 0
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (i < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[i]))
-        i++
-      } else {
-        controller.close()
-      }
-    },
-  })
-}
-
 // sseFrame formats one SSE event exactly as the backend writer emits it.
-function sseFrame(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
-}
-
 // installStreamingFetch wires globalThis.fetch to reply once with the
 // given SSE body and records every call for URL/body assertions.
 function installStreamingFetch(
@@ -174,7 +133,7 @@ afterEach(() => {
 describe('AICabinTemperatureImpactNarrative — AI-off visibility gate (ADR-015)', () => {
   it('renders nothing when ai_mode=off even with the per-feature toggle on', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'off',
         ai_features: { 'cabin-temperature-impact-narrative': true },
       }),
@@ -193,7 +152,7 @@ describe('AICabinTemperatureImpactNarrative — AI-off visibility gate (ADR-015)
 
   it('renders nothing when ai_mode!=off but the per-feature toggle is false', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'cabin-temperature-impact-narrative': false },
       }),

@@ -2,7 +2,7 @@ import { GlassPanel, PanelTitle } from '@/components/ui';
 import { KVList } from '@/components/data-display';
 import { SourceContent } from '@/components/layout';
 import { Skeleton } from '@/components/feedback';
-import { formatDurationMinutes } from '@/lib/dateFormat';
+import { formatDurationMinutes } from '@/lib/dateConvert';
 import type { ScoreSectionProps } from './scoreSectionTypes';
 
 type ScorePeriodStatisticsPanelProps = ScoreSectionProps<

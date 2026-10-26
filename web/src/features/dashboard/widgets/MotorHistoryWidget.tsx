@@ -1,84 +1,73 @@
-import { cloneElement, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cog } from 'lucide-react';
-import { ComposedChart, Line, XAxis, YAxis, Tooltip, ReferenceArea, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartLegend, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
-import { useMotorHistory } from '@/api/hooks/useVehicles';
-import { useVehicles } from '@/api/hooks/useVehicles';
-import { useUnits } from '@/hooks/useUnits';
-import { useDataState } from '@/hooks/useDataState';
-import { knownNumber } from '@/api/dataState';
+import {
+  ComposedChart, Line, XAxis, YAxis, Tooltip, ReferenceArea,
+  ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm,
+  chartAnimation, EmbeddedChart, ChartTooltip, ChartLegend, useMeasuredAxisWidth, type ChartDataRow,
+} from '@/components/charts';
 import { EmptyState, Skeleton } from '@/components/feedback';
-
+import { useMotorHistory, useVehicles } from '@/api/hooks/useVehicles';
+import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { WidgetChartSummary, type ChartSummaryStat } from './shared';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useRangeState } from '@/hooks/useRangeState';
+import { useUnits } from '@/hooks/useUnits';
+import { convertTempFromSI } from '@/lib/unitConversion';
+import { WidgetBigNumber } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import { convertTempFromSI } from '@/lib/unitConversion';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { CHART_COLORS, COLOR } from '@/lib/colors';
 
-interface ChartDatum extends ChartDataRow {
+interface MotorHistoryDatum extends ChartDataRow {
   time: string;
+  temperature: number | null;
   torque: number | null;
   statorTemp: number | null;
-  gear: string | null;
-  lateralG: number | null;
-  longitudinalG: number | null;
 }
 
-/** Convert raw MotorSnapshot[] into sorted chart data. */
 function buildChartData(
   data: ReturnType<typeof useMotorHistory>['data'],
-  toTemperatureDisplay: (c: number) => number,
-): ChartDatum[] {
-  const items = data ?? [];
-  return items
-    .filter((d) => d.ts || d.created_at)
-    .map((d) => {
-      const ts = d.ts || d.created_at || '';
-      const statorRaw = d.di_stator_temp ?? d.motor_temp_c_front ?? null;
+  toDisplay: (value: number) => number,
+): MotorHistoryDatum[] {
+  return (data ?? [])
+    .map((sample) => {
+      const ts = sample.ts || sample.created_at || '';
+      const raw = sample.di_stator_temp ?? sample.motor_temp_c_rear ?? sample.motor_temp_c_front ?? null;
+      const torque = sample.di_torque ?? null;
+      const temperature = raw != null && Number.isFinite(raw) ? toDisplay(raw) : null;
       return {
         time: ts,
-        torque: d.di_torque ?? null,
-        statorTemp: statorRaw != null ? toTemperatureDisplay(statorRaw) : null,
-        gear: d.gear ?? d.shift_state ?? null,
-        lateralG: 'lateral_accel' in d ? knownNumber(d.lateral_accel) : null,
-        longitudinalG: 'longitudinal_accel' in d ? knownNumber(d.longitudinal_accel) : null,
+        temperature,
+        torque: torque != null && Number.isFinite(torque) ? torque : null,
+        statorTemp: temperature,
       };
     })
+    .filter((row) => row.time !== '')
     .sort((a, b) => a.time.localeCompare(b.time));
 }
 
-/** Danger-zone threshold in Celsius (100°C) — converted to display unit for rendering. */
-const DANGER_TEMP_C = 100;
-
 export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber: fmt } = useNumberFormatting();
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { formatDateTime: formatTime } = useDateFormat();
+  const { formatDateTime, formatTime, formatDateShort } = useDateFormat();
+  const { unitPrefs } = useUnits();
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { unitPrefs } = useUnits();
-  // Stable per temperature preference so the chartData / danger-threshold
-  // memos below actually memoize (an inline arrow would be a new reference
-  // every render and defeat them).
+  const { start, end, startInstant, endInstantExclusive, presetId } =
+    useRangeState({ defaultPresetId: '7d' });
+
   const toTemperatureDisplay = useCallback(
     (value: number) => convertTempFromSI(value, unitPrefs.temperature),
     [unitPrefs.temperature],
   );
-
   const tempUnit = unitPrefs.temperature;
-
-  const query = useMotorHistory(vid, 200);
-  const {
-    data,
-    isLoading,
-    isFetching,
-    isStale,
-    isError,
-    dataUpdatedAt,
-    refetch,
-  } = query;
+  const query = useMotorHistory(vid, {
+    limit: 200,
+    start: startInstant,
+    end: endInstantExclusive,
+  });
+  const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
   const trust = useDataState({
     ...query,
     data: data ?? (isLoading || isError ? undefined : []),
@@ -88,70 +77,53 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
     () => buildChartData(data, toTemperatureDisplay),
     [data, toTemperatureDisplay],
   );
-
-  const hasData = chartData.length > 0;
+  const hasData = chartData.some((row) => row.temperature != null || row.torque != null);
   const isCompact = size.cols <= 1;
-  const isWide = size.cols >= 3;
-
-  // Latest values for summary stats
-  const latestTorque = useMemo(() => {
-    for (let i = chartData.length - 1; i >= 0; i--) {
-      if (chartData[i].torque != null) return chartData[i].torque;
-    }
-    return null;
+  const peak = useMemo(() => {
+    const values = chartData
+      .map((row) => row.temperature)
+      .filter((value): value is number => value != null && Number.isFinite(value));
+    return values.length ? Math.max(...values) : null;
   }, [chartData]);
 
-  const latestStatorTemp = useMemo(() => {
-    for (let i = chartData.length - 1; i >= 0; i--) {
-      if (chartData[i].statorTemp != null) return chartData[i].statorTemp;
-    }
-    return null;
-  }, [chartData]);
-
-  const dangerThreshold = useMemo(() => toTemperatureDisplay(DANGER_TEMP_C), [toTemperatureDisplay]);
-
-  // Compute Y-axis domain for stator temp so ReferenceArea renders correctly
+  const dangerThreshold = toTemperatureDisplay(120);
   const tempMax = useMemo(() => {
-    let max = dangerThreshold + 20;
-    for (const d of chartData) {
-      if (d.statorTemp != null && d.statorTemp > max) max = d.statorTemp;
-    }
-    return Math.ceil(max);
+    const highest = chartData.reduce(
+      (max, row) => row.temperature != null ? Math.max(max, row.temperature) : max,
+      Math.max(dangerThreshold, -Infinity),
+    );
+    return Math.ceil(highest + 10);
   }, [chartData, dangerThreshold]);
 
-  const torqueLabels = useMemo(
-    () => [0, ...chartData.map((entry) => entry.torque)]
-      .filter((value): value is number => value != null && Number.isFinite(value))
-      .map((value) => `${fmt(value)}`),
-    [chartData, fmt],
-  );
-  const temperatureLabels = useMemo(
-    () => [0, tempMax, ...chartData.map((entry) => entry.statorTemp)]
+  const rangeLabel = presetId === '7d'
+    ? t('widget.motorHistory.last7Days', '7 days')
+    : `${formatDateShort(`${start}T00:00:00`)} – ${formatDateShort(`${end}T00:00:00`)}`;
+  const tempMin = useMemo(() => Math.min(dangerThreshold, ...chartData
+    .map((row) => row.temperature)
+    .filter((value): value is number => value != null)), [chartData, dangerThreshold]);
+  const torqueLabels = useMemo(() => [0, ...chartData.map((row) => row.torque)]
+    .filter((value): value is number => value != null && Number.isFinite(value))
+    .map((value) => fmt(value)), [chartData, fmt]);
+  const torqueWidth = useMeasuredAxisWidth({
+    labels: torqueLabels,
+    fontSize: size.cols >= 3 ? 11 : 10,
+    minWidth: 40,
+    padding: 20,
+    enabled: !isCompact,
+  });
+  const statorLabels = useMemo(
+    () => [0, dangerThreshold, tempMax, ...chartData.map((row) => row.temperature)]
       .filter((value): value is number => value != null && Number.isFinite(value))
       .map((value) => `${fmt(value)}°`),
-    [chartData, tempMax, fmt],
+    [chartData, dangerThreshold, tempMax, fmt],
   );
-  const torqueAxisWidth = useMeasuredAxisWidth({
-    labels: torqueLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
+  const statorWidth = useMeasuredAxisWidth({
+    labels: statorLabels,
+    fontSize: size.cols >= 3 ? 11 : 10,
+    minWidth: 40,
+    padding: 20,
+    enabled: !isCompact,
   });
-  const temperatureAxisWidth = useMeasuredAxisWidth({
-    labels: temperatureLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
-  });
-
-  const stats: ChartSummaryStat[] = [
-        {
-          label: t('widget.motorHistory.torque', 'Torque'),
-          value: latestTorque != null ? fmtNumber(latestTorque) : '—',
-          unit: 'Nm',
-        },
-        {
-          label: t('widget.motorHistory.statorTemp', 'Stator'),
-          value: latestStatorTemp != null ? fmtNumber(latestStatorTemp) : '—',
-          unit: tempUnit,
-        },
-      ];
-
-  const tick = isWide ? axisTick : axisTickSm;
 
   const shellProps = {
     loading: isLoading,
@@ -163,19 +135,26 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
     isError,
     onRefresh: () => refetch(),
   };
+  const noData = (
+    <EmptyState
+      variant="informational"
+      icon={<Cog className="h-5 w-5" />}
+      message={t('widget.motorHistory.noData', 'No motor history')}
+    />
+  );
 
   if (isCompact) {
     return (
       <WidgetShell title={t('widget.motorHistory.title', 'Motor history')} {...shellProps}>
-        <WidgetChartSummary
-          compact
-          emptyMessage={t('widget.motorHistory.noData', 'No motor history')}
-          emptyIcon={<Cog className="h-5 w-5" />}
-          stats={stats}
-          chart={null}
+        <WidgetBigNumber
+          value={peak == null ? null : fmt(peak, 0)}
+          unit={tempUnit}
+          label={t('widget.motorHistory.peakStator', 'Peak stator temp')}
+          subtitle={rangeLabel}
+          animated={false}
+          align="center"
         />
-        {!hasData && <EmptyState message={t('widget.motorHistory.noData', 'No motor history')}
-          action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }} />}
+        {!hasData && noData}
       </WidgetShell>
     );
   }
@@ -183,153 +162,136 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.motorHistory.title', 'Motor history')}
-      icon={<Cog className="h-3.5 w-3.5" />}
+      icon={<Cog className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
       {...shellProps}
     >
-      <WidgetChartSummary
-        emptyMessage={t('widget.motorHistory.noData', 'No motor history')}
-        emptyIcon={<Cog className="h-5 w-5" />}
-        stats={stats}
-        chart={
-          !hasData ? <EmptyState message={t('widget.motorHistory.noData', 'No motor history')}
-            action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }} /> : <EmbeddedChart
-            title={t('widget.motorHistory.title', 'Motor history')}
-            ariaLabel={t(
-              'widget.motorHistory.chartAria',
-              'Motor torque, stator temperature, and acceleration history',
-            )}
-            data={chartData}
-            dataColumns={[
-              { key: 'time', label: t('widget.motorHistory.time', 'Time'), format: (value) => formatTime(String(value ?? '')) },
-              { key: 'torque', label: t('widget.motorHistory.torqueNm', 'Torque (Nm)') },
-              { key: 'statorTemp', label: `${t('widget.motorHistory.statorTemp', 'Stator')} (${tempUnit})` },
-              { key: 'lateralG', label: t('widget.motorHistory.lateralG', 'Lateral G') },
-              { key: 'longitudinalG', label: t('widget.motorHistory.longG', 'Long. G') },
-              { key: 'gear', label: t('widget.motorPerformance.gear', 'Gear') },
-            ]}
-            chartKey="dashboard-motor-history"
-          >
-            {({ hiddenSeries }) => (
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
-              {cloneElement(chartGrid, { yAxisId: 'torque' })}
-              <XAxis
-                dataKey="time"
-                tick={tick}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v: string) => formatTime(v)}
-              />
-              {/* Left Y-axis — Torque (Nm) */}
-              <YAxis
-                yAxisId="torque"
-                tick={tick}
-                tickLine={false}
-                axisLine={false}
-                width={torqueAxisWidth}
-                tickFormatter={(v: number) => `${fmt(v)}`}
-                label={isWide ? { value: 'Nm', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 10 } : undefined}
-              />
-              {/* Right Y-axis — Stator temp */}
-              <YAxis
-                yAxisId="temp"
-                orientation="right"
-                tick={tick}
-                tickLine={false}
-                axisLine={false}
-                width={temperatureAxisWidth}
-                domain={[0, tempMax]}
-                tickFormatter={(v: number) => `${fmt(v)}°`}
-                label={isWide ? { value: tempUnit, angle: 90, position: 'insideRight', fill: 'var(--text-muted)', fontSize: 10 } : undefined}
-              />
-              {isWide && <YAxis yAxisId="acceleration" hide domain={['auto', 'auto']} />}
-              <Tooltip
-                content={<ChartTooltip />}
-                labelFormatter={(v: string) => formatTime(v)}
-                formatter={(value: number, name: string) => {
-                  if (name === 'torque' || name === t('widget.motorHistory.torque', 'Torque')) {
-                    return [`${fmtNumber(value)} Nm`, t('widget.motorHistory.torque', 'Torque')];
-                  }
-                  if (name === 'statorTemp' || name === t('widget.motorHistory.statorTemp', 'Stator')) {
-                    return [`${fmtNumber(value)}${tempUnit}`, t('widget.motorHistory.statorTemp', 'Stator')];
-                  }
-                  if (name === 'lateralG' || name === t('widget.motorHistory.lateralG', 'Lateral G')) {
-                    return [`${fmtNumber(value)} g`, t('widget.motorHistory.lateralG', 'Lateral G')];
-                  }
-                  if (name === 'longitudinalG' || name === t('widget.motorHistory.longG', 'Long. G')) {
-                    return [`${fmtNumber(value)} g`, t('widget.motorHistory.longG', 'Long. G')];
-                  }
-                  return [String(value), name];
-                }}
-              />
-              <ChartLegend />
-              {/* Danger zone band above 100°C */}
-              <ReferenceArea
-                yAxisId="temp"
-                y1={dangerThreshold}
-                y2={tempMax}
-                fill="#ef4444"
-                fillOpacity={0.1}
-              />
-              {/* Torque line — cyan */}
-              <Line
-                yAxisId="torque"
-                type="monotone"
-                dataKey="torque"
-                stroke="#06b6d4"
-                strokeWidth={2}
-                dot={false}
-                connectNulls={false}
-                name={t('widget.motorHistory.torque', 'Torque')}
-                hide={hiddenSeries?.isHidden('torque')}
-              />
-              {/* Stator temp line — orange */}
-              <Line
-                yAxisId="temp"
-                type="monotone"
-                dataKey="statorTemp"
-                stroke="#f97316"
-                strokeWidth={2}
-                dot={false}
-                connectNulls={false}
-                name={t('widget.motorHistory.statorTemp', 'Stator')}
-                hide={hiddenSeries?.isHidden('statorTemp')}
-              />
-              {/* Wide mode: g-force overlays */}
-              {isWide && (
-                <Line
-                  yAxisId="acceleration"
-                  type="monotone"
-                  dataKey="lateralG"
-                  stroke="#a78bfa"
-                  strokeWidth={1}
-                  strokeDasharray="4 2"
-                  dot={false}
-                  connectNulls={false}
-                  name={t('widget.motorHistory.lateralG', 'Lateral G')}
-                  hide={hiddenSeries?.isHidden('lateralG')}
-                />
+      <div className="flex h-full min-h-0 min-w-0 flex-col">
+        <div className="flex min-w-0 shrink-0 items-end justify-between gap-3">
+          <WidgetBigNumber
+            value={peak == null ? null : fmt(peak, 0)}
+            unit={tempUnit}
+            label={t('widget.motorHistory.statorTempRange', 'Stator temp · {{range}}', { range: rangeLabel })}
+            animated={false}
+            align="start"
+            size="secondary"
+          />
+          <span className="pb-1 text-end text-xs text-[var(--text-muted)]">
+            {peak != null
+              ? t(
+                  peak >= dangerThreshold ? 'widget.motorHistory.dangerReached' : 'widget.motorHistory.dangerNotReached',
+                  peak >= dangerThreshold ? 'Danger threshold reached' : 'Danger zone not reached',
+                )
+              : t('widget.motorHistory.awaitingReading', 'Awaiting temperature reading')}
+          </span>
+        </div>
+
+        {!hasData ? noData : (
+          <div className="mt-2 flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1">
+            <EmbeddedChart
+              title={t('widget.motorHistory.title', 'Motor history')}
+              ariaLabel={t(
+                'widget.motorHistory.chartAria',
+                'Motor torque, stator temperature, and acceleration history',
               )}
-              {isWide && (
-                <Line
-                  yAxisId="torque"
-                  type="monotone"
-                  dataKey="longitudinalG"
-                  stroke="#34d399"
-                  strokeWidth={1}
-                  strokeDasharray="4 2"
-                  dot={false}
-                  connectNulls={false}
-                  name={t('widget.motorHistory.longG', 'Long. G')}
-                  hide={hiddenSeries?.isHidden('longitudinalG')}
-                />
+              data={chartData}
+              dataColumns={[
+                { key: 'time', label: t('widget.motorHistory.time', 'Time'), format: (value) => formatDateTime(String(value ?? '')) },
+                { key: 'temperature', label: `${t('widget.motorHistory.statorTemp', 'Stator')} (${tempUnit})`, format: value => value == null ? '—' : fmt(Number(value)) },
+                { key: 'torque', label: `${t('widget.motorHistory.torque', 'Torque')} (N·m)`, format: value => value == null ? '—' : fmt(Number(value)) },
+              ]}
+              chartKey="dashboard-motor-history"
+              className="h-full min-h-0"
+            >
+              {({ hiddenSeries }) => (
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+                    {chartGrid}
+                    <XAxis
+                      dataKey="time"
+                      tick={size.cols >= 3 ? axisTick : axisTickSm}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value: string) => formatTime(value)}
+                    />
+                    <YAxis
+                      yAxisId="torque"
+                      tick={size.cols >= 3 ? axisTick : axisTickSm}
+                      tickLine={false}
+                      axisLine={false}
+                      width={torqueWidth}
+                      tickFormatter={(value: number) => fmt(value)}
+                    />
+                    <YAxis
+                      yAxisId="temp"
+                      orientation="right"
+                      tick={size.cols >= 3 ? axisTick : axisTickSm}
+                      tickLine={false}
+                      axisLine={false}
+                      width={statorWidth}
+                      domain={[tempMin, tempMax]}
+                      tickFormatter={(value: number) => `${fmt(value)}°`}
+                    />
+                    <YAxis
+                      yAxisId="acceleration"
+                      hide={true}
+                      tick={size.cols >= 3 ? axisTick : axisTickSm}
+                    />
+                    <Tooltip
+                      content={<ChartTooltip />}
+                      labelFormatter={(value: string) => formatDateTime(value)}
+                      formatter={(value: number, name: string | number) => [
+                        name === t('widget.motorHistory.torque', 'Torque')
+                          ? `${fmt(value)} N·m`
+                          : `${fmt(value)} ${tempUnit}`,
+                        name,
+                      ]}
+                    />
+                    <ReferenceArea
+                      yAxisId="temp"
+                      y1={dangerThreshold}
+                      y2={tempMax}
+                      fill={COLOR.BAD}
+                      fillOpacity={0.1}
+                    />
+                    <ChartLegend />
+                    <Line
+                      yAxisId="torque"
+                      type="monotone"
+                      dataKey="torque"
+                      stroke={CHART_COLORS[3]}
+                      strokeWidth={2}
+                      dot={false}
+                      connectNulls={false}
+                      name={t('widget.motorHistory.torque', 'Torque')}
+                      hide={hiddenSeries?.isHidden('torque')}
+                    />
+                    <Line
+                      yAxisId="temp"
+                      type="monotone"
+                      dataKey="temperature"
+                      stroke={CHART_COLORS[1]}
+                      strokeWidth={2}
+                      dot={false}
+                      connectNulls={false}
+                      name={t('widget.motorHistory.statorTemp', 'Stator')}
+                      hide={hiddenSeries?.isHidden('temperature')}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
               )}
-                </ComposedChart>
-              </ResponsiveContainer>
-            )}
-          </EmbeddedChart>
-        }
-      />
+            </EmbeddedChart>
+            </div>
+            <div className="mt-1 shrink-0 text-xs text-[var(--text-muted)]">
+              {t(
+                'widget.motorHistory.dangerThreshold',
+                'Danger zone above {{value}} {{unit}}',
+                { value: fmt(dangerThreshold, 0), unit: tempUnit },
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </WidgetShell>
   );
 }

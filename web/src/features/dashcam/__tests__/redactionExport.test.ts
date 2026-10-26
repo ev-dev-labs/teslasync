@@ -1,3 +1,4 @@
+import { DATA_VISUAL_COLORS } from '@/lib/colors';
 import { describe, it, expect, vi } from 'vitest';
 import { buildIncidentManifest, drawRedactedFrame, type RedactionDrawContext } from '../lib/redactionExport';
 import type { ClipRecord } from '../lib/types';
@@ -72,7 +73,8 @@ describe('drawRedactedFrame', () => {
     ]);
     expect(ctx.drawImage).toHaveBeenCalledWith('video-source', 0, 0, 200, 100);
     expect(ctx.fillRect).toHaveBeenCalledWith(50, 50, 20, 20);
-    expect(ctx.fillStyle).toBe('#000000');
+    expect(ctx.fillStyle).toBe(DATA_VISUAL_COLORS.canvasInk);
+    expect(ctx.fillStyle).toMatch(/^#[0-9a-f]{6}$/i);
   });
 
   it('draws nothing extra when there are no regions', () => {

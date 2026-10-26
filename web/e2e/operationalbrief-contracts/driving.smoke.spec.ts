@@ -322,14 +322,21 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
         await value(calendar, 'calendar-months', '1/12');
         await value(calendar, 'observed-span', '0 d');
         await value(calendar, 'active-local-periods', '1 / 1');
-        await value(calendar, 'timezone', 'UTC');
+        await value(calendar, 'included-rows', '1');
+        await expect(metric(calendar, 'timezone')).toHaveCount(0);
+        const localDate = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric',
+        }).format(new Date(drivingRecord.startTs));
+        const accountingSection = page.getByTestId('seasonal-accounting');
+        await expect(accountingSection.getByText(`First included local date: ${localDate}`, { exact: true })).toBeVisible();
+        await expect(accountingSection.getByText(`Last included local date: ${localDate}`, { exact: true })).toBeVisible();
         await value(accounting, 'accounting-included', '1');
         await value(accounting, 'accounting-missingEnergy', '1');
         await value(accounting, 'accounting-future', '0');
         const source = 'Returned vehicle history; descriptive local-calendar fit, not a forecast.';
         await review(page, summary, 'Observed seasonal evidence', source,
           ['2 returned', '1 excluded', 'Returned window below the 1,000-row cap']);
-        await review(page, calendar, 'Vehicle-local calendar coverage', source, ['1 included rows']);
+        await review(page, calendar, 'Vehicle-local calendar coverage', source, ['Included rows', 'UTC']);
         await review(page, support, 'Evidence support and fit eligibility', source, ['samples per parameter']);
         await review(page, accounting, 'Returned-row accounting and recency', source);
         const historyCalls = context.fixtures.calls.filter(call => call.pathname === '/drives');

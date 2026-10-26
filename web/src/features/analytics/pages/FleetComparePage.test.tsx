@@ -559,7 +559,7 @@ describe('FleetComparePage evidence preservation', () => {
     await waitFor(() => expect(table.getAllByText(`${unit === 'mi' ? '3,106.86' : '5,000.00'} ${unit}`)).toHaveLength(2))
     expect(table.getByText(unit === 'mi' ? '273.59 Wh/mi' : '170.00 Wh/km')).toBeInTheDocument()
     expect(screen.getByText(new RegExp(`Distances are in ${unit};`))).toBeInTheDocument()
-    expect(client.getQueryData(analyticsKeys.monthlyMileage('1'))).toEqual(monthlyA)
+    expect(client.getQueryData([...analyticsKeys.monthlyMileage('1'), 'UTC'])).toEqual(monthlyA)
     expect(monthlyA.months[0].total_km).toBe(400)
   })
 

@@ -7,7 +7,7 @@ import { Heading, Text } from '@/components/ui';
 import { ChargeAdvisorSection } from './ChargeAdvisorSection';
 import type { ChargeAdvisorComponentProps } from './types';
 
-export function ChargeAdvisorMethodology({ analysis, state }: ChargeAdvisorComponentProps) {
+export function ChargeAdvisorMethodology({ state }: ChargeAdvisorComponentProps) {
   const { t } = useTranslation();
   const items = [
     {
@@ -64,9 +64,7 @@ export function ChargeAdvisorMethodology({ analysis, state }: ChargeAdvisorCompo
               <Heading level="sub">{item.title}</Heading>
             </div>
             <Text as="p" variant="caption" className="mt-4">
-              {t('chargeAdvisor.method.timeZone', 'Calendar calculations use {{timeZone}}.', {
-                timeZone: analysis.timeZone,
-              })}
+              {t('chargeAdvisor.method.timeZone', 'Calendar calculations use your selected time zone.')}
             </Text>
             <Text as="p" variant="bodySm">{item.body}</Text>
           </article>

@@ -1,3 +1,5 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
+import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 // Auto-name unnamed locations AI-off contract test.
 //
 // `TestAutoNameLocationsAIOffManualNamingWorks` is the React-side
@@ -38,7 +40,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 import { useState } from 'react'
 
-import type { AppSettings } from '@/api/types'
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -50,51 +54,6 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
-
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-}
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
-}
-
-function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder()
-  let i = 0
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (i < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[i]))
-        i++
-      } else {
-        controller.close()
-      }
-    },
-  })
-}
-
-function sseFrame(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
-}
 
 beforeEach(() => {
   mockUseSettings.mockReset()
@@ -110,7 +69,7 @@ afterEach(() => {
 describe('TestAutoNameLocationsAIOffManualNamingWorks (auto-name-unnamed-locations AI-off contract)', () => {
   it('keeps the manual naming form usable with AI off and makes no AI or persistence request', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'off',
         ai_features: { 'auto-name-unnamed-locations': true },
       }),
@@ -148,7 +107,7 @@ describe('TestAutoNameLocationsAIOffManualNamingWorks (auto-name-unnamed-locatio
 
   it('TestAutoNameLocationsAIOffManualNamingWorks: renders nothing when ai_mode=off even with the auto-name-unnamed-locations toggle on', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'off',
         ai_features: { 'auto-name-unnamed-locations': true },
       }),
@@ -170,7 +129,7 @@ describe('TestAutoNameLocationsAIOffManualNamingWorks (auto-name-unnamed-locatio
 
   it('TestAutoNameLocationsAIOffManualNamingWorks: renders nothing when ai_mode is non-off but the auto-name-unnamed-locations toggle is false', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'auto-name-unnamed-locations': false },
       }),
@@ -191,7 +150,7 @@ describe('TestAutoNameLocationsAIOffManualNamingWorks (auto-name-unnamed-locatio
 
   it('TestAutoNameLocationsAIOffManualNamingWorks: renders the section when ai_mode=cloud AND auto-name-unnamed-locations toggle is on (positive control)', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'auto-name-unnamed-locations': true },
       }),
@@ -218,7 +177,7 @@ describe('TestAutoNameLocationsAIOffManualNamingWorks (auto-name-unnamed-locatio
 describe('TestAutoNameUnnamedLocationsAIOnWiredCallsRoute (auto-name-unnamed-locations on-mode SPA wiring)', () => {
   it('TestAutoNameUnnamedLocationsAIOnWiredCallsRoute: clicking Suggest POSTs once to /api/v1/ai/locations/501/name/draft and renders the first delta', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'auto-name-unnamed-locations': true },
       }),
@@ -282,7 +241,7 @@ describe('TestAutoNameUnnamedLocationsAIOnWiredCallsRoute (auto-name-unnamed-loc
 
   it('TestAutoNameUnnamedLocationsAIOnWiredCallsRoute: suggest button is disabled when locationId is non-positive (computed disabled, never literal)', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'auto-name-unnamed-locations': true },
       }),
@@ -300,7 +259,7 @@ describe('TestAutoNameUnnamedLocationsAIOnWiredCallsRoute (auto-name-unnamed-loc
 
   it('TestAutoNameUnnamedLocationsAIOnWiredCallsRoute: a second click while streaming is a no-op (double-submit guard)', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'auto-name-unnamed-locations': true },
       }),
@@ -344,7 +303,7 @@ describe('TestAutoNameUnnamedLocationsAIOnWiredCallsRoute (auto-name-unnamed-loc
 
   it('TestAutoNameUnnamedLocationsAIOnWiredCallsRoute: tool_result draft envelope renders the proposal card and Apply calls onApplyName with the proposed name', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'auto-name-unnamed-locations': true },
       }),
@@ -427,7 +386,7 @@ describe('TestAutoNameUnnamedLocationsAIOnWiredCallsRoute (auto-name-unnamed-loc
 
   it('TestAutoNameUnnamedLocationsAIOnWiredCallsRoute: rejected envelope shows the rejected label, disables Apply, and never invokes onApplyName', async () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'auto-name-unnamed-locations': true },
       }),

@@ -174,20 +174,20 @@ describe('formatCommandName', () => {
 describe('commandStatusVisual', () => {
   it('maps each known status to its colour + severity with an icon', () => {
     const success = commandStatusVisual('success');
-    expect(success.color).toBe('#22c55e');
+    expect(success.color).toBe(COLOR.GOOD);
     expect(success.severity).toBe('info');
     expect(success.icon).toBeTruthy();
 
-    expect(commandStatusVisual('failed').color).toBe('#ef4444');
+    expect(commandStatusVisual('failed').color).toBe(COLOR.BAD);
     expect(commandStatusVisual('failed').severity).toBe('critical');
-    expect(commandStatusVisual('pending').color).toBe('#f59e0b');
+    expect(commandStatusVisual('pending').color).toBe(COLOR.WARN);
     expect(commandStatusVisual('pending').severity).toBe('warning');
   });
 
   it('falls back to a neutral visual for unknown / missing statuses', () => {
     for (const s of ['queued', '', null, undefined] as const) {
       const v = commandStatusVisual(s);
-      expect(v.color).toBe('#6b7280');
+      expect(v.color).toBe(CHART_NEUTRAL);
       expect(v.severity).toBe('info');
       expect(v.icon).toBeTruthy();
     }
@@ -378,11 +378,14 @@ describe('CommandHistoryWidget vehicle resolution', () => {
       // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
       fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
       expect(refetch).toHaveBeenCalledTimes(1);
-      if (size.cols > 1) expect(screen.getByText('Failed · Vehicle unavailable')).toBeInTheDocument();
+      if (size.cols > 1) {
+        expect(screen.getByText('Failed')).toBeInTheDocument();
+        expect(screen.getByText('Vehicle unavailable')).toBeInTheDocument();
+      }
     });
 
     it('treats prototype-colliding statuses as neutral and missing time as unknown', () => {
-      expect(commandStatusVisual('constructor').color).toBe('#6b7280');
+      expect(commandStatusVisual('constructor').color).toBe(CHART_NEUTRAL);
       mockUseCommandHistory.mockReturnValue(qr({ data: [makeCmd({ created_at: null } as unknown as Partial<CommandLogEntry>)] }));
       renderWidget(STANDARD);
       expect(screen.getByText('—')).toBeInTheDocument();
@@ -418,3 +421,4 @@ describe('CommandHistoryWidget refresh', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });
+import { COLOR, CHART_NEUTRAL } from '@/lib/colors';

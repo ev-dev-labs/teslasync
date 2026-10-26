@@ -107,7 +107,7 @@
     "trend": {
       "section": "Supervised self-driving distance trend",
       "title": "Distance trend",
-      "subtitle": "Counter movement attributed to each local calendar day in {{timezone}}.",
+      "subtitle": "Counter movement attributed to each local calendar day.",
       "aria": "Daily supervised self-driving distance compared with total observed driving distance",
       "colDay": "Local day",
       "fsdSeries": "Supervised self-driving",
@@ -162,7 +162,7 @@
       "reduced": "Reduced confidence",
       "good": "Usable counter basis",
       "window": "Observation window",
-      "windowValue": "{{start}} – {{end}} ({{timezone}})",
+      "windowValue": "{{start}} – {{end}}",
       "fsdReported": "Self-driving counter reported",
       "fsdReportedYes": "Yes — distance is derivable",
       "fsdReportedNotDerivable": "Reported once, but no second reading to difference against",

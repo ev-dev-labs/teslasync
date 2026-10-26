@@ -407,7 +407,8 @@
       }
     },
     "idealRange": "Ideal Range",
-    "ratedRange": "Rated Range"
+    "ratedRange": "Rated Range",
+    "reviewDetails": "Review details"
   },
   "compat": {
     "banner": {
@@ -446,7 +447,6 @@
   "contextMenu": {
     "menuLabel": "Context menu"
   },
-  "dataRepair": {},
   "dataSources": {
     "partialMessage": "Available sections remain visible. Source status is tracked independently below.",
     "staleMessage": "Previously loaded data remains visible while affected sources recover.",
@@ -2226,19 +2226,6 @@
     }
   },
   "tour": {
-    "launcher": {
-      "close": "Close",
-      "completed": "Completed",
-      "empty": "No tours are available yet.",
-      "recommendedHere": "Recommended for this page",
-      "replay": "Replay",
-      "replayAria": "Replay {{tour}} tour",
-      "resetAll": "Reset all tours",
-      "start": "Start",
-      "startAria": "Start {{tour}} tour",
-      "subtitle": "Guided walkthroughs for every major feature.",
-      "title": "Take a tour"
-    },
     "tours": {
       "alerts": {
         "description": "Filter, snooze, and design alert rules with conditions, channels, and test runs.",

@@ -232,7 +232,6 @@ export default function VampireDrainPage() {
       query={[statsQuery, eventsQuery]}
       dataSources={dataSources}
     >
-      <Caption>{timeZone}</Caption>
       {/* AI narrator — opt-in, never replaces the deterministic stats below (ADR-015 §I3/§I5). */}
       <FadeIn>
         <SectionErrorBoundary name="VampireDrainNarration">
@@ -388,7 +387,7 @@ export default function VampireDrainPage() {
           <CardGrid label={t('vampireDrain.startDateGroups.section', 'Sessions by start date and reduction tips')} items={[
             { id: 'daily-drain', size: 'half', content: (
           <LayoutCard title={t('vampireDrain.startDateGroups.title', 'Parked sessions by start date')}>
-            <Caption>{t('vampireDrain.startDateGroups.scope', 'Whole-session battery loss and duration are grouped by start date in {{timeZone}}, not distributed across calendar days. Sessions with missing or invalid start dates are excluded from this chart.', { timeZone })}</Caption>
+            <Caption>{t('vampireDrain.startDateGroups.scope', 'Whole-session battery loss and duration are grouped by start date in your selected time zone, not distributed across calendar days. Sessions with missing or invalid start dates are excluded from this chart.')}</Caption>
             <SectionErrorBoundary name="VampireDrainDaily">
             {!enabled ? (
               <EmptyState

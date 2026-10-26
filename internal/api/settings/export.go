@@ -9,13 +9,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // SettingsExportHandler serves GET /settings/export.
@@ -31,13 +31,6 @@ func NewSettingsExportHandler(serializer *settingsdb.SettingsSerializer, forward
 	return &SettingsExportHandler{serializer: serializer, authHdr: forwardAuthHeader}
 }
 
-func actorFromRequest(r *http.Request, headerName string) string {
-	if r == nil || headerName == "" {
-		return ""
-	}
-	return strings.TrimSpace(r.Header.Get(headerName))
-}
-
 // Export streams an indented settings bundle as an attachment so users can
 // diff it outside the app. Serializer and wiring failures use the standard
 // error envelope.
@@ -46,7 +39,7 @@ func (h *SettingsExportHandler) Export(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusInternalServerError, "settings export: serializer not configured")
 		return
 	}
-	userID := actorFromRequest(r, h.authHdr)
+	userID := httputil.ActorIdentity(r, h.authHdr)
 	bundle, err := h.serializer.ExportSettings(r.Context(), userID)
 	if err != nil {
 		log.Error().Err(err).Msg("settings export: failed to assemble bundle")

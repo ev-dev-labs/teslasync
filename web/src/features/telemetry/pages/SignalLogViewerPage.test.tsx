@@ -113,6 +113,15 @@ vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
   return { ...actual, useSelectedVehicle: vi.fn() };
 });
 
+// Display zone for the range hook. Defaults to UTC (what the global timezone
+// mock resolves for bare renders); the DST test sets a non-UTC zone to keep
+// its 23-hour-day coverage. Spread keeps every other timezone export real.
+const savedZone = vi.hoisted(() => ({ tz: 'UTC' }));
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
+  return { ...actual, useTimezone: () => savedZone.tz };
+});
+
 // jsdom lacks matchMedia; useMotionPreference (via <FreshnessDotAuto>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
@@ -535,9 +544,9 @@ describe('SignalLogViewerPage shared range and catalog adoption', () => {
   });
 
   it('preserves the canonical 23-hour calendar day across the spring DST boundary', async () => {
-    const options = Intl.DateTimeFormat().resolvedOptions();
-    const timezone = vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions')
-      .mockReturnValue({ ...options, timeZone: 'America/Los_Angeles' });
+    // The range follows the saved display zone (not the browser zone), so
+    // set a non-UTC saved zone to keep the 23-hour-day coverage.
+    savedZone.tz = 'America/Los_Angeles';
     try {
       mockedRequest.mockResolvedValue(resp('speed', []));
       renderPage('?signals=speed&from=2026-03-08&to=2026-03-08');
@@ -550,7 +559,7 @@ describe('SignalLogViewerPage shared range and catalog adoption', () => {
         from: params.get('from'), to: params.get('to'),
       });
     } finally {
-      timezone.mockRestore();
+      savedZone.tz = 'UTC';
     }
   });
 

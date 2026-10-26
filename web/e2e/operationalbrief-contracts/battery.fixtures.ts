@@ -62,6 +62,11 @@ export const range: RangeProjection = {
   accuracy_note: 'Synthetic model snapshot; no complete-history or accuracy claim.',
 };
 
+export const sleepWindowParams = {
+  vehicle_id: '7', days: '3',
+  start: '2026-08-04T00:00:00.000Z', end: '2026-08-07T00:00:00.000Z',
+} as const;
+
 // Reuses the released page's duration/count counterexample: 4/10 destinations
 // are asleep, but 90/120 dwell minutes are asleep. Reported 74% is not the KPI.
 export const sleepWithDwell: SleepEfficiencyData = {

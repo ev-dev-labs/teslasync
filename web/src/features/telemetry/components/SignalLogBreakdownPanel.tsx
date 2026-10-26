@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 /**
  * SignalLogBreakdownPanel — value-type composition for a query result.
  *
@@ -32,9 +33,9 @@ export interface SignalLogBreakdownPanelProps {
 }
 
 const BAR_COLORS = {
-  numeric: '#22d3ee',
-  text: '#34d399',
-  boolean: '#fbbf24',
+  numeric: palette.DATA_VISUAL_COLORS.info,
+  text: palette.COLOR.GOOD,
+  boolean: palette.COLOR.WARN,
 } as const;
 
 export function SignalLogBreakdownPanel({

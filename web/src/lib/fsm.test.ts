@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { CHART_SEMANTIC } from './colors';
 import {
   getStateConfig,
   vehicleStates,
@@ -61,7 +62,11 @@ describe('fsm state maps — data integrity', () => {
   it('assigns semantically correct variants to representative states', () => {
     expect(vehicleStates.online.variant).toBe('success');
     expect(vehicleStates.charging.variant).toBe('warning');
-    expect(vehicleStates.offline.variant).toBe('danger');
+    expect(vehicleStates.offline).toEqual({
+      label: 'Offline',
+      color: CHART_SEMANTIC.vehicle.offline,
+      variant: 'neutral',
+    });
     expect(vehicleStates.unknown.variant).toBe('neutral');
     expect(chargingStates.failed.variant).toBe('danger');
     expect(tripStates.cancelled.variant).toBe('danger');

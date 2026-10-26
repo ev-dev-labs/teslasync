@@ -60,10 +60,10 @@ for (const theme of ['light', 'dark'] as const) {
         await page.goto('/');
         await expect(panel.getByRole('heading').first()).toBeVisible();
         await expect(panel.locator('[aria-busy]').first()).toHaveAttribute('aria-busy', 'true');
-        await expect(panel).not.toContainText('42.00');
+        await expect(panel.getByText(/^42\s*km$/)).toHaveCount(0);
         mode = 'ok';
         release();
-        await expect(panel).toContainText('42.00');
+        await expect(panel.getByText(/^42\s*km$/)).toBeVisible();
         await waitForHarnessReady(page, mocks);
         mode = 'failed';
         const beforeFailure = reads;
@@ -71,13 +71,13 @@ for (const theme of ['light', 'dark'] as const) {
         await expect.poll(() => reads).toBeGreaterThan(beforeFailure);
         await expect(panel.locator('[data-data-state]').first()).toHaveAttribute('data-data-state', 'stale');
         await expect(panel.getByRole('status').filter({ hasText: /Previously loaded|Data may be stale/ }).first()).toBeVisible();
-        await expect(panel).toContainText('42.00');
+        await expect(panel.getByText(/^42\s*km$/)).toBeVisible();
         await expect(panel).not.toContainText('No weekly data yet');
         await captureCataloguePanel(page, panel, test.info(), `retained-${width}-${theme}.png`);
         mode = 'ok';
         recovered = true;
         await panel.getByRole('button', { name: /^Refresh data/ }).click();
-        await expect(panel).toContainText('84.00');
+        await expect(panel.getByText(/^84\s*km$/)).toBeVisible();
         await expect(panel.locator('[data-data-state]').first()).toHaveAttribute('data-data-state', 'ok');
         await expect(panel).not.toContainText('Previously loaded data remains visible');
         await expectNoHorizontalOverflow(page);
@@ -102,14 +102,14 @@ for (const theme of ['light', 'dark'] as const) {
         await page.goto('/');
         await expect(panel.getByRole('heading').first()).toBeVisible();
         await expect(panel.getByRole('alert')).toBeVisible();
-        await expect(panel).not.toContainText('42.00');
-        await expect(panel).not.toContainText('0.00 km');
+        await expect(panel.getByText(/^42\s*km$/)).toHaveCount(0);
+        await expect(panel.getByText(/^0\s*km$/)).toHaveCount(0);
         const retry = panel.getByRole('button', { name: 'Retry', exact: true });
         await retry.focus();
         await expect(retry).toBeFocused();
         fail = false;
         await retry.press('Enter');
-        await expect(panel).toContainText('42.00');
+        await expect(panel.getByText(/^42\s*km$/)).toBeVisible();
         await expect(panel.getByRole('alert')).toHaveCount(0);
         await waitForHarnessReady(page, mocks);
         await expectNoHorizontalOverflow(page);
@@ -195,8 +195,9 @@ for (const theme of ['light', 'dark'] as const) {
             await expect(panel).toContainText('4.00');
             await expect(panel).toContainText('—');
           } else {
-            await expect(panel).toContainText('150.00');
-            await expect(panel).toContainText('kW');
+            await expect(panel).toContainText(/Power\s*150\.0\s*kW/);
+            await expect(panel).toContainText(/Voltage\s*400\s*V/);
+            await expect(panel).toContainText(/Current\s*375\s*A/);
           }
           await expect(panel.getByRole('alert')).toHaveCount(0);
           await captureCataloguePanel(page, panel, test.info(), `extreme-${id}-${width}-${theme}.png`);

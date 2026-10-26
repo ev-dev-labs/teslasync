@@ -146,6 +146,14 @@ function renderHero(overrides: Partial<Props> = {}) {
 afterEach(() => cleanup());
 
 describe('VehicleHero', () => {
+  it('keeps the charging badge without a body freshness or status dot', () => {
+    const { container } = renderHero({ state: { ...baseState, state: 'charging', is_charging: true } });
+    const badge = screen.getByText('charging');
+    expect(badge).toBeInTheDocument();
+    expect(badge.parentElement?.querySelector('[aria-hidden="true"]')).toBeNull();
+    expect(container.querySelector('[data-role="freshness-dot"]')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Data freshness|Refresh data/ })).toBeNull();
+  });
   it('preserves out-of-scale measurements without changing gauge scales or hiding identity and actions', () => {
     const state = {
       ...baseState,

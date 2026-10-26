@@ -44,6 +44,7 @@
  * page tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { COLOR } from '@/lib/colors';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -366,10 +367,10 @@ describe('SafetySettingsPage helpers', () => {
   });
 
   it('scoreColor applies the 80 / 50 threshold bands incl. boundaries', () => {
-    expect(scoreColor(80)).toBe('#10b981'); // ≥80 green
-    expect(scoreColor(79.9)).toBe('#f59e0b'); // just under 80 → amber
-    expect(scoreColor(50)).toBe('#f59e0b'); // ≥50 amber
-    expect(scoreColor(49.9)).toBe('#ef4444'); // under 50 → red
+    expect(scoreColor(80)).toBe(COLOR.GOOD); // ≥80 green
+    expect(scoreColor(79.9)).toBe(COLOR.WARN); // just under 80 → amber
+    expect(scoreColor(50)).toBe(COLOR.WARN); // ≥50 amber
+    expect(scoreColor(49.9)).toBe(COLOR.BAD); // under 50 → red
   });
 
   it('scoreBadgeVariant mirrors the same bands', () => {

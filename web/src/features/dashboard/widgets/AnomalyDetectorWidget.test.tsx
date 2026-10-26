@@ -302,6 +302,16 @@ describe('AnomalyDetectorWidget — states', () => {
 // ── Populated list (full size) ───────────────────────────────────────────────
 
 describe('AnomalyDetectorWidget — populated', () => {
+  it('renders real anomalies as divider-style detail rows rather than fabricated cards', () => {
+    useAnomaliesMock.mockReturnValue(
+      makeResult({ data: makeData([makeEntry({ signal: 'real_signal', message: 'Measured evidence' })]) }),
+    );
+    renderWidget();
+    expect(screen.getByText(/real_signal · z=/)).toBeInTheDocument();
+    expect(screen.getByText('Measured evidence')).toBeInTheDocument();
+    expect(screen.getByText('warning')).toBeInTheDocument();
+  });
+
   it('renders one tip per anomaly, sorted most-severe first', () => {
     useAnomaliesMock.mockReturnValue(
       makeResult({
@@ -368,7 +378,7 @@ describe('AnomalyDetectorWidget — populated', () => {
     expect(screen.getAllByText(/· z=/)).toHaveLength(3);
   });
 
-  it('hides the decorative severity icons from the accessibility tree', () => {
+  it('uses text and status badges rather than severity-only decorative icons', () => {
     useAnomaliesMock.mockReturnValue(
       makeResult({
         data: makeData([
@@ -379,10 +389,8 @@ describe('AnomalyDetectorWidget — populated', () => {
       }),
     );
     const { container } = renderWidget();
-    // One aria-hidden icon per tip (+ the header icon).
-    expect(
-      container.querySelectorAll('svg[aria-hidden="true"]').length,
-    ).toBeGreaterThanOrEqual(3);
+    expect(screen.getAllByText(/^(critical|warning|info)$/)).toHaveLength(3);
+    expect(container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThanOrEqual(1);
   });
 
   it('refetches when the freshness control is activated', () => {
@@ -428,4 +436,14 @@ describe('AnomalyDetectorWidget — compact', () => {
     renderWidget({ cols: 1, rows: 1 });
     expect(screen.getByText('No anomalies')).toBeInTheDocument();
   });
+});
+
+it('uses localized structured anomaly facts in dashboard tips while retaining the prose fallback', () => {
+ useAnomaliesMock.mockReturnValue(makeResult({data:makeData([makeEntry({
+  signal:'ModuleTempMax',unit:'°C',message:'Legacy detector prose.',
+  explanation_code:'above_maximum',explanation_params:{value:60,baseline:17.5,maximum:55},
+ })])}));
+ renderWidget();
+ expect(screen.getByText('ModuleTempMax value 60.00°C exceeds the safe maximum (55.00°C).')).toBeVisible();
+ expect(screen.queryByText('Legacy detector prose.')).not.toBeInTheDocument();
 });

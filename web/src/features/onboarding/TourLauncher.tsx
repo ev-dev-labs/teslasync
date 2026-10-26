@@ -25,21 +25,23 @@ import {
  *  - The {@link TOUR_OPEN_LAUNCHER_EVENT} CustomEvent (dispatched by the
  *    sidebar help button, the command palette command `tour.openLauncher`,
  *    and the Settings page tour card).
- *  - Direct controlled use via the `open` prop is intentionally not
- *    supported — keeping ownership of state inside this component avoids
- *    threading additional props through Layout for what is essentially a
- *    one-off modal.
+ *  - `initialOpen` retains the first request when the host loads this dialog
+ *    on demand. Subsequent events and close actions remain owned here.
  *
  * Each row exposes the tour title + one-line description, marks completed
  * tours with a check, and highlights the tour matching the current route as
  * "Recommended for this page". Starting a tour dispatches
  * {@link TOUR_START_EVENT} so Layout can promote it to active state.
  */
-export function TourLauncher() {
+export function TourLauncher({ initialOpen = false }: { initialOpen?: boolean }) {
   const { t } = useTranslation()
   const location = useLocation()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(initialOpen)
   const [, setVersionTick] = useState(0)
+
+  useEffect(() => {
+    if (initialOpen) markTourListSeen()
+  }, [initialOpen])
 
   // Listen for the global open event so any caller (palette, help button,
   // settings page) can pop the launcher without a ref.

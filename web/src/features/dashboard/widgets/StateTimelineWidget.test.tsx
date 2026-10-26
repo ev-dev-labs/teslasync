@@ -30,6 +30,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { CHART_SEMANTIC, CHART_NEUTRAL } from '@/lib/colors';
 import type { WidgetProps } from './types';
 
 // ── i18n stub: return the fallback string, interpolating {{var}} options ──
@@ -149,8 +150,8 @@ describe.each([1, 2, 3])('StateTimelineWidget — identifying heading at cols=%i
       expect(headings).toHaveLength(1);
       expect(headings[0]).toBeVisible();
       if (populated) {
-        expect(screen.getByRole('img', { name: 'driving: 3h 0m, 75.00%; idle: 1h 0m, 25.00%' })).toBeInTheDocument();
-        if (cols === 3) expect(screen.getByText('24h timeline')).toBeInTheDocument();
+        expect(screen.getByRole('img', { name: 'driving: 3h 0m, 75%; idle: 1h 0m, 25%' })).toBeInTheDocument();
+        if (cols === 3) expect(screen.getByText('Last 24 hours')).toBeInTheDocument();
       }
       if (state === 'loading') expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
       if (state === 'empty') expect(screen.getByText('No state data available')).toBeInTheDocument();
@@ -198,18 +199,18 @@ describe('buildSegments (utility)', () => {
 
 describe('stateColor (utility)', () => {
   it('maps each known state to its palette colour, case-insensitively', () => {
-    expect(stateColor('driving')).toBe('#22d3ee');
-    expect(stateColor('CHARGING')).toBe('#22c55e');
-    expect(stateColor('Asleep')).toBe('#a855f7');
-    expect(stateColor('idle')).toBe('#f59e0b');
-    expect(stateColor('offline')).toBe('#ef4444');
+    expect(stateColor('driving')).toBe(CHART_SEMANTIC.vehicle.driving);
+    expect(stateColor('CHARGING')).toBe(CHART_SEMANTIC.vehicle.charging);
+    expect(stateColor('Asleep')).toBe(CHART_SEMANTIC.vehicle.asleep);
+    expect(stateColor('idle')).toBe(CHART_SEMANTIC.vehicle.charging);
+    expect(stateColor('offline')).toBe(CHART_SEMANTIC.vehicle.offline);
   });
 
   it('falls back to neutral grey for unknown or absent states (no throw)', () => {
-    expect(stateColor('teleporting')).toBe('#6b7280');
-    expect(stateColor('')).toBe('#6b7280');
-    expect(stateColor(undefined)).toBe('#6b7280');
-    expect(stateColor(null)).toBe('#6b7280');
+    expect(stateColor('teleporting')).toBe(CHART_NEUTRAL);
+    expect(stateColor('')).toBe(CHART_NEUTRAL);
+    expect(stateColor(undefined)).toBe(CHART_NEUTRAL);
+    expect(stateColor(null)).toBe(CHART_NEUTRAL);
   });
 });
 
@@ -246,11 +247,11 @@ describe('StateTimelineWidget — standard layout (≥2 col)', () => {
     expect(screen.getByText('idle')).toBeInTheDocument();
     expect(screen.getAllByText('3h 0m').every(element => element.textContent === '3h 0m')).toBe(true);
     expect(screen.getAllByText('1h 0m').every(element => element.textContent === '1h 0m')).toBe(true);
-    expect(screen.getAllByText('75.00%').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('25.00%').length).toBeGreaterThan(0);
-    expect(screen.getByRole('img', { name: 'driving: 3h 0m, 75.00%; idle: 1h 0m, 25.00%' })).toBeInTheDocument();
+    expect(screen.getAllByText('75%').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('25%').length).toBeGreaterThan(0);
+    expect(screen.getByRole('img', { name: 'driving: 3h 0m, 75%; idle: 1h 0m, 25%' })).toBeInTheDocument();
     // The 24h stripe is wide-only — it must NOT appear here even with timeline data.
-    expect(screen.queryByText('24h timeline')).not.toBeInTheDocument();
+    expect(screen.queryByText('Last 24 hours')).not.toBeInTheDocument();
   });
 });
 
@@ -264,11 +265,11 @@ describe('StateTimelineWidget — compact layout (≤1 col)', () => {
     // Legend: label + integer percentage (no decimals, no duration rows).
     expect(screen.getByText('driving')).toBeInTheDocument();
     expect(screen.getByText('idle')).toBeInTheDocument();
-    expect(screen.getByText('75.00%')).toBeInTheDocument();
-    expect(screen.getByText('25.00%')).toBeInTheDocument();
+    expect(screen.getByText('75%')).toBeInTheDocument();
+    expect(screen.getByText('25%')).toBeInTheDocument();
     expect(screen.queryByText('3h 0m')).not.toBeInTheDocument();
     // Stacked bar is still present in the compact slot.
-    expect(screen.getByTitle('driving: 75.00%')).toBeInTheDocument();
+    expect(screen.getByTitle('driving: 75%')).toBeInTheDocument();
   });
 });
 
@@ -278,8 +279,8 @@ describe('StateTimelineWidget — wide layout (≥3 col)', () => {
     mockTimeline.mockReturnValue(makeQuery({ data: timelineRows() }));
     renderWidget({ size: { cols: 4, rows: 3 } });
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.getByText('24h timeline')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'driving: 100.00 min; idle: 50.00 min' })).toBeInTheDocument();
+    expect(screen.getByText('Last 24 hours')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /Vehicle state transitions over the last 24 hours/ })).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   });
   it('keeps the summary readable while the independent transition query loads', () => {
@@ -287,7 +288,7 @@ describe('StateTimelineWidget — wide layout (≥3 col)', () => {
     mockTimeline.mockReturnValue(makeQuery({ isLoading: true }));
     const { container } = renderWidget({ size: { cols: 4, rows: 3 } });
     expect(screen.getAllByText('3h 0m').length).toBeGreaterThan(0);
-    expect(screen.getByText('75.00%')).toBeInTheDocument();
+    expect(screen.getByText('75%')).toBeInTheDocument();
     expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
   });
 
@@ -297,7 +298,7 @@ describe('StateTimelineWidget — wide layout (≥3 col)', () => {
     renderWidget({ size: { cols: 4, rows: 3 } });
     expect(screen.getByText('3h 0m')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'driving: 3h 0m, 75.00%; idle: 1h 0m, 25.00%' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'driving: 3h 0m, 75%; idle: 1h 0m, 25%' })).toBeInTheDocument();
   });
   it('adds the 24h transition stripe alongside the state rows', () => {
     mockSummary.mockReturnValue(makeQuery({ data: summaryRows() }));
@@ -308,8 +309,8 @@ describe('StateTimelineWidget — wide layout (≥3 col)', () => {
     // Full row list is shared with the standard layout.
     expect(screen.getAllByText('3h 0m').length).toBeGreaterThan(0);
     // Wide-only stripe: label + per-transition tooltips.
-    expect(screen.getByText('24h timeline')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'driving: 100.00 min; idle: 50.00 min' })).toBeInTheDocument();
+    expect(screen.getByText('Last 24 hours')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /Vehicle state transitions over the last 24 hours/ })).toBeInTheDocument();
   });
 });
 
@@ -360,7 +361,7 @@ describe('StateTimelineWidget — refresh + vehicle resolution', () => {
     fireEvent.click(within(empty).getByRole('button', { name: 'Refresh' }));
     expect(summaryRefetch).toHaveBeenCalledOnce();
     expect(timelineRefetch).not.toHaveBeenCalled();
-    expect(screen.getByText('24h timeline')).toBeInTheDocument();
+    expect(screen.getByText('Last 24 hours')).toBeInTheDocument();
   });
 
   it('retries only the empty wide timeline while preserving the state summary', () => {
@@ -400,7 +401,7 @@ describe('StateTimelineWidget — refresh + vehicle resolution', () => {
     );
     fireEvent.click(screen.getByRole('link', { name: 'Fleet' }));
     expect(screen.getByText('Fleet destination')).toBeInTheDocument();
-    expect(mockSummary).toHaveBeenCalledWith('');
+    expect(mockSummary).toHaveBeenCalledWith('', expect.objectContaining({ start: expect.any(String), end: expect.any(String) }));
     expect(mockTimeline).toHaveBeenCalledWith('');
   });
 
@@ -418,21 +419,21 @@ describe('StateTimelineWidget — refresh + vehicle resolution', () => {
 
   it('queries both hooks for the vehicleId prop (as a string)', () => {
     renderWidget({ vehicleId: 7 });
-    expect(mockSummary).toHaveBeenCalledWith('7');
+    expect(mockSummary).toHaveBeenCalledWith('7', expect.objectContaining({ start: expect.any(String), end: expect.any(String) }));
     expect(mockTimeline).toHaveBeenCalledWith('7');
   });
 
   it('falls back to the first vehicle id when no vehicleId prop is given', () => {
     mockVehicles.mockReturnValue({ data: [{ id: 42 }] });
     renderWidget();
-    expect(mockSummary).toHaveBeenCalledWith('42');
+    expect(mockSummary).toHaveBeenCalledWith('42', expect.objectContaining({ start: expect.any(String), end: expect.any(String) }));
     expect(mockTimeline).toHaveBeenCalledWith('42');
   });
 
   it('passes an empty string (disabling the queries) when no vehicle is available', () => {
     mockVehicles.mockReturnValue({ data: [] });
     renderWidget();
-    expect(mockSummary).toHaveBeenCalledWith('');
+    expect(mockSummary).toHaveBeenCalledWith('', expect.objectContaining({ start: expect.any(String), end: expect.any(String) }));
     expect(mockTimeline).toHaveBeenCalledWith('');
   });
 });

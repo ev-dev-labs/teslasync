@@ -140,6 +140,7 @@ function ComparisonPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
+  const { formatDateRange, formatDayKeyRange } = useDateFormat();
   const comparison = insights?.drive_analytics?.comparison;
   const metrics: StatMetric[] = [
     { metricId: 'distance', occurrenceId: 'period-fsd-distance', rawValue: insights?.totals.fsd_distance_m,
@@ -160,7 +161,7 @@ function ComparisonPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
     { metricId: 'distance', occurrenceId: 'previous-fsd-distance', rawValue: comparison?.previous_fsd_distance_m,
       label: t('fsd.comparison.previous', 'Previous FSD distance'),
       display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) },
-      context: comparison ? `${comparison.previous_period.start_date} - ${comparison.previous_period.end_date} · ${comparison.previous_period.timezone}`
+      context: comparison ? formatDayKeyRange(comparison.previous_period.start_date, comparison.previous_period.end_date)
         : t('fsd.comparison.notLoaded', 'Previous period not loaded') },
   ];
 
@@ -181,7 +182,7 @@ function ComparisonPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
           title={t('fsd.brief.periodQuantities', 'Current and previous period quantities')}
           description={t('fsd.comparison.subtitle', 'The immediately preceding window uses the same duration and timezone.')}
           loading={state.isLoading} unavailable={state.error != null || insights == null}
-          period={{ kind: 'unknown', label: insights ? `${insights.period.start_at} – ${insights.period.end_at} · ${insights.period.timezone}` : t('fsd.notMeasured', 'Not measured'),
+          period={{ kind: 'unknown', label: insights ? formatDateRange(insights.period.start_at, insights.period.end_at) : t('fsd.notMeasured', 'Not measured'),
             reason: t('fsd.comparison.subtitle', 'The immediately preceding window uses the same duration and timezone.') }} />
       </FsdSectionBody>
     </GlassPanel>

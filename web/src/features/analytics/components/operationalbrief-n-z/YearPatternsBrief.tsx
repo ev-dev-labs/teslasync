@@ -4,8 +4,9 @@ import { Text, Caption } from '@/components/ui';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { formatTime } from '@/lib/dateFormat';
+import { convertDistanceFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
+import {formatTime} from '@/lib/dateFormat'
+import {formatWeekdayName} from '@/lib/dateConvert';
 import type { StatPeriod } from '@/lib/metric-reference';
 import type { YearReview } from '@/api/types';
 import { to12Hour } from '../year-review-modernization/yearReviewPresentation';
@@ -24,8 +25,7 @@ export function YearPatternsBrief({ data, period, retained }: { data: YearReview
   const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const weekday = weekdays.indexOf(data.most_active_day_of_week ?? '');
   const dayDisplay = weekday >= 0
-    ? new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' })
-      .format(new Date(Date.UTC(2000, 0, 2 + weekday)))
+    ? formatWeekdayName(new Date(Date.UTC(2000, 0, 2 + weekday)), { locale, tz: 'UTC', weekdayStyle: 'long' })
     : data.most_active_day_of_week || '—';
   const metrics: StatMetric[] = [
     { metricId: 'rate', occurrenceId: 'year-drives-per-week', rawValue: data.avg_drives_per_week,
@@ -37,7 +37,7 @@ export function YearPatternsBrief({ data, period, retained }: { data: YearReview
     { metricId: 'efficiency', occurrenceId: 'year-average-efficiency',
       rawValue: data.avg_efficiency_wh_km == null ? null : data.avg_efficiency_wh_km / 1000,
       label: `${efficiencyUnit} ${t('yearReview.avg', 'avg')}`,
-      display: { formatter: raw => ({ value: fmtInt(distanceUnit === 'mi' ? raw * 1000 * 1.609344 : raw * 1000), unit: '' }) } },
+      display: { formatter: raw => ({ value: fmtInt(convertEfficiencyFromSI(raw * 1000, distanceUnit)), unit: '' }) } },
   ];
   const operationalMetrics = useOperationalMetrics(metrics);
   return <div id="year-review-patterns" className="space-y-3">

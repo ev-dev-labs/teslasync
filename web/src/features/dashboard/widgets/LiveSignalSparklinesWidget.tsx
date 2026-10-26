@@ -7,12 +7,19 @@ import { Caption, Text } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSignals, useSignalGaps, useSignalHistory } from '@/api/hooks/useTelemetry';
 
-import { NEON_COLORS } from '@/components/charts';
+import { CHART_COLORS } from '@/lib/colors';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useUnits } from '@/hooks/useUnits';
+import {
+  convertDistanceFromSI,
+  convertSpeedFromSI,
+  convertTempFromSI,
+} from '@/lib/unitConversion';
 import { useDataState, useCombinedDataState } from '@/hooks/useDataState';
 import { dashboardTokens } from '../lib/dashboardTokens';
+import { cn } from '@/lib/cn';
 
 const DEFAULT_SIGNALS = [
   'BatteryLevel',
@@ -23,17 +30,15 @@ const DEFAULT_SIGNALS = [
   'PackCurrent',
 ];
 
-// Six visually distinct series colours. NEON_COLORS is [cyan, emerald, purple,
-// amber, indigo, red, …]; index directly so the assignments match the comments
-// (previously NEON_COLORS[1]/[2] were mislabelled "purple"/"amber", which made
-// index 1 and index 3 both resolve to emerald `#10b981` — a duplicate colour).
+// Categorical signals need distinct teal/violet/amber/green/blue/rose marks,
+// not vehicle-state colors that may resolve to the same blue.
 export const SIGNAL_COLORS = [
-  NEON_COLORS[0], // cyan    (#00f0ff)
-  NEON_COLORS[2], // purple  (#a855f7)
-  NEON_COLORS[3], // amber   (#f59e0b)
-  '#10b981',      // emerald
-  '#3b82f6',      // blue
-  '#f43f5e',      // rose
+  CHART_COLORS[1],
+  CHART_COLORS[6],
+  CHART_COLORS[3],
+  CHART_COLORS[2],
+  CHART_COLORS[0],
+  CHART_COLORS[5],
 ];
 
 /** Pretty-print a PascalCase signal name as spaced words */
@@ -52,6 +57,17 @@ export function extractNumericValue(value: unknown): number | null {
   return null;
 }
 
+export type SignalDisplayKind = 'percent' | 'speed' | 'temperature' | 'distance' | 'current' | 'number';
+
+export function getSignalDisplayKind(signal: string): SignalDisplayKind {
+  if (signal === 'BatteryLevel') return 'percent';
+  if (signal === 'VehicleSpeed' || signal.toLowerCase().includes('speed')) return 'speed';
+  if (signal === 'OutsideTemp' || signal === 'InsideTemp' || signal.toLowerCase().includes('temp')) return 'temperature';
+  if (signal === 'Odometer' || signal.toLowerCase().includes('odometer') || signal.toLowerCase().includes('distance')) return 'distance';
+  if (signal === 'PackCurrent' || signal.toLowerCase().includes('current')) return 'current';
+  return 'number';
+}
+
 interface SignalRowProps {
   vehicleId: number;
   signal: string;
@@ -62,6 +78,7 @@ interface SignalRowProps {
 
 function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: SignalRowProps) {
   const { fmtNumber } = useNumberFormatting();
+  const { unitPrefs, formatSpeed, formatTemperature, formatDistance } = useUnits();
   const historyQuery = useSignalHistory(vehicleId, encodeURIComponent(signal), 1);
   const { data: history } = historyQuery;
   const historyState = useDataState({
@@ -72,10 +89,15 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
 
   const numericPoints = useMemo(() => {
     const points = Array.isArray(history?.data) ? history.data : [];
-    return points
+    const raw = points
       .map((p) => p?.value)
       .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
-  }, [history]);
+    const kind = getSignalDisplayKind(signal);
+    if (kind === 'speed') return raw.map((value) => convertSpeedFromSI(value, unitPrefs.speed));
+    if (kind === 'temperature') return raw.map((value) => convertTempFromSI(value, unitPrefs.temperature));
+    if (kind === 'distance') return raw.map((value) => convertDistanceFromSI(value, unitPrefs.distance));
+    return raw;
+  }, [history, signal, unitPrefs.speed, unitPrefs.temperature, unitPrefs.distance]);
 
   const currentValue = extractNumericValue(liveValue);
   const hasSparkline = numericPoints.length >= 2;
@@ -94,7 +116,6 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
   }, [numericPoints]);
 
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
-  const trendColor = trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#6b7280';
   const trendLabel =
     trend === 'up'
       ? t('widget.trendUp', 'Trending up')
@@ -103,28 +124,33 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
         : t('widget.trendFlat', 'No change');
 
   const label = formatSignalName(signal);
+  const kind = getSignalDisplayKind(signal);
+  const formattedValue = useMemo(() => {
+    if (currentValue == null) return null;
+    if (kind === 'percent') return `${fmtNumber(currentValue, 1)}%`;
+    if (kind === 'speed') return formatSpeed(currentValue, { precision: 1 });
+    if (kind === 'temperature') return formatTemperature(currentValue, { precision: 1 });
+    if (kind === 'distance') return formatDistance(currentValue, { precision: 1 });
+    if (kind === 'current') return `${fmtNumber(currentValue, 1)} A`;
+    return fmtNumber(currentValue);
+  }, [currentValue, fmtNumber, formatDistance, formatSpeed, formatTemperature, kind]);
 
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2 py-1.5 border-b border-[var(--border-subtle)] last:border-b-0">
-      {/* Color indicator (decorative — the row label carries the meaning) */}
-      <div
-        aria-hidden="true"
-        className="w-1 h-6 rounded-full flex-shrink-0"
-        style={{ backgroundColor: color }}
-      />
-
-      {/* Label + value */}
-      <div className="min-w-0 flex-[1_1_5rem]">
-        <Caption className="block break-words">
+    <div className={cn(
+      'grid min-w-0 items-center border-b border-[var(--border-subtle)] py-2 last:border-b-0',
+      isWide ? 'grid-cols-[minmax(0,1fr)_minmax(56px,80px)_16px]' : 'grid-cols-[minmax(0,1fr)_56px_16px]',
+      'gap-2.5',
+    )}>
+      <div className="min-w-0">
+        <Caption className="block truncate" title={label}>
           {label}
         </Caption>
-        <Text as="p" size="lg" weight="semibold" color="primary" className="break-all tabular-nums">
-          {currentValue != null ? fmtNumber(currentValue) : '—'}
+        <Text as="p" size="lg" weight="semibold" color="primary" className="truncate tabular-nums" title={formattedValue ?? undefined}>
+          {formattedValue ?? '—'}
         </Text>
       </div>
 
-      {/* Sparkline */}
-      {historyState.fatalError ? <QueryError error={historyState.fatalError} onRetry={() => { void historyQuery.refetch(); }} /> : hasSparkline ? (
+      {!historyState.fatalError && (hasSparkline ? (
         <Sparkline
           data={numericPoints}
           color={color}
@@ -136,13 +162,22 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
         <Caption className="w-14 break-words text-center">
           {t('widget.noHistory', 'no data')}
         </Caption>
-      )}
+      ))}
 
-      {/* Trend indicator — icon-only, so announce the direction to AT */}
-      <span role="img" aria-label={numericPoints.length >= 4 ? trendLabel : t('widget.noHistory', 'no data')} className="flex-shrink-0">
-        <TrendIcon className="h-3 w-3" style={{ color: trendColor }} aria-hidden="true" />
+      <span role="img" aria-label={numericPoints.length >= 4 ? trendLabel : t('widget.noHistory', 'no data')} className="col-start-3 row-start-1 flex-shrink-0">
+        <TrendIcon className={cn(
+          'h-3.5 w-3.5',
+          trend === 'up' && 'text-emerald-300',
+          trend === 'down' && 'text-rose-300',
+          trend === 'flat' && 'text-[var(--text-muted)]',
+        )} aria-hidden="true" />
       </span>
-      <StaleRefreshWarning state={historyState} className="w-full min-w-0" />
+      {historyState.fatalError && (
+        <div className="col-span-full min-w-0">
+          <QueryError error={historyState.fatalError} onRetry={() => { void historyQuery.refetch(); }} />
+        </div>
+      )}
+      <StaleRefreshWarning state={historyState} className="col-span-full w-full min-w-0" />
     </div>
   );
 }

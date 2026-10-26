@@ -53,6 +53,15 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => selectedVehicleMock(),
 }));
 
+// Display zone for the range hook. Defaults to UTC (what the global timezone
+// mock resolves for bare renders) so other tests are unaffected; the DST
+// test sets a non-UTC zone to keep its transition coverage. This file has
+// no QueryClient, so mock useTimezone directly instead of settings.
+const savedZone = vi.hoisted(() => ({ tz: 'UTC' }));
+vi.mock('@/lib/timezone', () => ({
+  useTimezone: () => savedZone.tz,
+}));
+
 vi.mock('@/hooks/usePageTitle', () => ({
   usePageTitle: (title: string) => pageTitleMock(title),
 }));
@@ -258,6 +267,7 @@ beforeAll(async () => {
 beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
+  savedZone.tz = 'UTC';
   route = '/explorer?from=2026-01-01&to=2026-01-07&time_scope=custom';
   sectionStates.length = 0;
   failedSectionMock.mockReturnValue(null);
@@ -292,9 +302,9 @@ describe('ExplorerPage', () => {
   });
 
   it('passes custom non-UTC midnight boundaries across daylight saving time', () => {
-    const resolved = Intl.DateTimeFormat().resolvedOptions();
-    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions')
-      .mockReturnValue({ ...resolved, timeZone: 'America/Los_Angeles' });
+    // The range follows the saved display zone (not the browser zone), so
+    // set a non-UTC saved zone to keep the DST-transition coverage.
+    savedZone.tz = 'America/Los_Angeles';
     route = '/explorer?from=2024-03-09&to=2024-03-10&time_scope=custom';
     render(<ExplorerPage />);
 

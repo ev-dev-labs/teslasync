@@ -36,7 +36,6 @@ export function DepartureForecastHourDistribution({
   forecast,
   state,
   locale,
-  timeZone,
 }: DepartureForecastHourDistributionProps) {
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
@@ -184,8 +183,7 @@ export function DepartureForecastHourDistribution({
           <Text as="p" variant="caption" className="mt-2">
             {t(
               'departure.hourDistribution.timezone',
-              'All hour and daypart labels use {{timeZone}}.',
-              { timeZone },
+              'All hour and daypart labels use your selected time zone.',
             )}
           </Text>
         </DepartureForecastSectionBody>

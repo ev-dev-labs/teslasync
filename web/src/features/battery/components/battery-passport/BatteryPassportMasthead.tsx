@@ -188,7 +188,7 @@ export function BatteryPassportMasthead({
             role="status"
             aria-label={t(
               'batteryPassport.states.loadingAria',
-              'Loading Battery Passport evidence',
+              'Loading battery passport evidence',
             )}
           >
             <Skeleton height={128} />
@@ -245,7 +245,7 @@ export function BatteryPassportMasthead({
                     <Caption>
                       {t(
                         'batteryPassport.masthead.issued',
-                        'Issued in vehicle time',
+                        'Issued',
                       )}
                     </Caption>
                     <Text as="p" size="sm" color="secondary">

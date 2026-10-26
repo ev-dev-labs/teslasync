@@ -53,6 +53,14 @@
     }
   },
   "powerSql": {
+    "timestampColumns": {
+      "driveStart": "Drive start instant.",
+      "driveEnd": "Drive end instant.",
+      "sessionStart": "Session start instant.",
+      "sessionEnd": "Session end instant.",
+      "alertFired": "Alert firing instant.",
+      "sample": "Sample instant."
+    },
     "editor": {
       "copyFailed": "Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C.",
       "run": "Run",
@@ -1379,6 +1387,14 @@
       "empty": "No tables available.",
       "intro": "These tables are the only tables the curated catalog exposes for postgres-target rawSql. The Helix natural-language drafter refuses any postgres query referencing tables outside this list.",
       "title": "Curated table catalog (postgres targets)"
+    },
+    "timestampColumns": {
+      "alertFired": "Alert firing instant.",
+      "driveEnd": "Drive end instant.",
+      "driveStart": "Drive start instant.",
+      "sample": "Sample instant.",
+      "sessionEnd": "Session end instant.",
+      "sessionStart": "Session start instant."
     },
     "title": "Grafana panel builder",
     "workflow": {

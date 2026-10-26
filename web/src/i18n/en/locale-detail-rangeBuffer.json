@@ -71,12 +71,12 @@
     },
     "weekday": {
       "title": "Arrival buffer by local weekday",
-      "subtitle": "Drive-weighted arrival percentiles in {{timeZone}}; unequal sample counts remain visible.",
+      "subtitle": "Drive-weighted arrival percentiles in your selected time zone; unequal sample counts remain visible.",
       "aria": "Weekday chart of arrival battery percentiles and drive counts"
     },
     "hour": {
       "title": "Arrival buffer by local completion time",
-      "subtitle": "Four-hour completion windows in {{timeZone}}; each drive is one observation.",
+      "subtitle": "Four-hour completion windows in your selected time zone; each drive is one observation.",
       "aria": "Local completion-time chart of arrival battery percentiles and drive counts"
     },
     "distanceProfile": {
@@ -199,7 +199,7 @@
       "arrivalTitle": "Arrival definition",
       "arrivalBody": "One observation is a completed drive with parseable start/end order, completion at or before the frozen clock, and finite end SoC from 0% through 100%.",
       "windowTitle": "Vehicle-local date window",
-      "windowBody": "The selected {{start}} through {{end}} calendar window becomes a half-open drive-start filter in {{timeZone}}. Profiles use completion time in the same timezone, so a drive starting near the end boundary can complete just outside the final local day.",
+      "windowBody": "The selected {{start}} through {{end}} calendar window becomes a half-open drive-start filter in your selected time zone. Profiles use completion time in the same zone, so a drive starting near the end boundary can complete just outside the final local day.",
       "percentileTitle": "Observed percentiles",
       "percentileBody": "p10, p25, median, p75, and p90 use linear interpolation over included drive arrivals. They are drive-weighted historical summaries, not probability forecasts.",
       "thresholdTitle": "Planning threshold",

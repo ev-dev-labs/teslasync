@@ -17,6 +17,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { useRef, useState, type ReactNode } from 'react'
 import type { ThemeId, ModeId, ModeTheme, ColorTheme } from './ThemeProvider'
+import { COLOR, DATA_VISUAL_COLORS } from '@/lib/colors'
 
 interface TestThemeContext {
   themeId: ThemeId
@@ -83,8 +84,8 @@ vi.mock('react-i18next', async () => {
 
 import { ThemePicker, type ThemePickerProps } from './ThemePicker'
 
-const DEFAULT_PRIMARY = '#00b4d8'
-const DEFAULT_ACCENT = '#e63946'
+const DEFAULT_PRIMARY = DATA_VISUAL_COLORS.info
+const DEFAULT_ACCENT = COLOR.BAD
 
 function makeMode(id: string, name: string, colorScheme: 'dark' | 'light', category?: string): ModeTheme {
   return {

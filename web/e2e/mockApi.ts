@@ -1218,6 +1218,15 @@ export async function readCapturedBeacons(page: Page): Promise<CapturedBeacon[]>
   ).__TESLASYNC_E2E_BEACONS__ ?? []);
 }
 
+export async function closeMockedPage(
+  page: Page,
+  controller: MockApiController | null,
+): Promise<void> {
+  await assertMockApiComplete(page, controller);
+  await page.goto('about:blank');
+  await page.close();
+}
+
 export async function cleanupServiceWorkers(page: Page): Promise<void> {
   await page.evaluate(async () => {
     if (!('serviceWorker' in navigator)) return;
@@ -1234,6 +1243,8 @@ export async function seedBrowserState(
 ): Promise<void> {
   const density = options.density ?? 'comfortable';
   await page.addInitScript(({ selectedTheme, selectedDensity, activePath, allowedBeaconPaths, maxBeaconBytes, preserveDashboardState, disableServiceWorker }) => {
+    // Blank teardown documents have no origin-backed storage to seed.
+    if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
     // Hermetic runs block workers; disable the capability instead of giving
     // Workbox an undefined registration that looks like a production failure.
     if (disableServiceWorker && !Reflect.deleteProperty(Navigator.prototype, 'serviceWorker')) {

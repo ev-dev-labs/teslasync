@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useTranslation } from 'react-i18next';
 import { Text, Caption } from '@/components/ui';
 import { MetricBar, Currency } from '@/components/data-display';
@@ -5,8 +6,8 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useFormatting } from '@/hooks/useFormatting';
 
 /* Preserve the original semantic comparison palette and specialist currency. */
-const EV_COLOR = '#10b981';
-const GAS_COLOR = '#f43f5e';
+const EV_COLOR = palette.COLOR.GOOD;
+const GAS_COLOR = palette.COLOR.BAD;
 
 export function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
   evCost: number; gasCost: number; savings: number; co2Kg: number;

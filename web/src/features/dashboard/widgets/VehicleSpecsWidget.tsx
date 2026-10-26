@@ -4,9 +4,10 @@ import { FileText } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { deriveDataState } from '@/api/dataState';
-import { useVehicles, useVehicleSpecs, useVehicleOptions, useVehicleConfigLatest } from '@/api/hooks/useVehicles';
+import { useVehicles, useVehicleSpecs, useVehicleConfigLatest } from '@/api/hooks/useVehicles';
+import { useUnits } from '@/hooks/useUnits';
 import { WidgetShell } from './WidgetShell';
-import { WidgetDetailCard, WidgetStatGrid, type DetailEntry } from './shared';
+import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 
 export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
@@ -27,17 +28,6 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
   } = useVehicleSpecs(stringId);
 
   const {
-    data: optionsEnvelope,
-    isLoading: optionsLoading,
-    isFetching: optionsFetching,
-    isStale: optionsStale,
-    isError: optionsError,
-    error: optionsErrorObj,
-    dataUpdatedAt: optionsUpdatedAt,
-    refetch: refetchOptions,
-  } = useVehicleOptions(stringId);
-
-  const {
     data: configData,
     isLoading: configLoading,
     isFetching: configFetching,
@@ -47,98 +37,86 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
     dataUpdatedAt: configUpdatedAt,
     refetch: refetchConfig,
   } = useVehicleConfigLatest(numericId, 60_000);
+  const { formatEnergy } = useUnits();
 
-  const isLoading = (vehiclesLoading && !numericId) || specsLoading || optionsLoading || configLoading;
-  const isFetching = specsFetching || optionsFetching || configFetching;
-  const isStale = specsStale || optionsStale || configStale;
-  const isError = specsError || optionsError || configError;
-  const queryError = specsErrorObj ?? optionsErrorObj ?? configErrorObj ?? (!numericId ? vehiclesError : null) ?? null;
-  const updatedAt = Math.max(specsUpdatedAt ?? 0, optionsUpdatedAt ?? 0, configUpdatedAt ?? 0);
+  const isLoading = (vehiclesLoading && !numericId) || specsLoading || configLoading;
+  const isFetching = specsFetching || configFetching;
+  const isStale = specsStale || configStale;
+  const isError = specsError || configError;
+  const queryError = specsErrorObj ?? configErrorObj ?? (!numericId ? vehiclesError : null) ?? null;
+  const updatedAt = Math.max(specsUpdatedAt ?? 0, configUpdatedAt ?? 0);
 
   const specs = specsEnvelope?.data ?? null;
-  const options = optionsEnvelope?.data ?? null;
 
   const isCompact = size.cols <= 1;
 
   const entries: DetailEntry[] = useMemo(() => {
     const items: DetailEntry[] = [];
 
-    // Model from specs
-    const model = asString(specs?.car_type) ?? asString(specs?.model) ?? asString(configData?.car_type);
+    const baseModel = asString(specs?.car_type) ?? asString(specs?.model) ?? asString(configData?.car_type);
+    const trim = asString(specs?.trim_badging) ?? asString(specs?.trim) ?? asString(configData?.trim);
+    const model = baseModel && trim && !baseModel.toLowerCase().includes(trim.toLowerCase())
+      ? `${baseModel} ${trim}`
+      : baseModel ?? trim;
     items.push({
       label: t('widget.specs.model', 'Model'),
       value: model ?? '—',
     });
 
-    // Trim from specs or config
-    const trim = asString(specs?.trim_badging) ?? asString(specs?.trim) ?? asString(configData?.trim);
     items.push({
-      label: t('widget.specs.trim', 'Trim'),
-      value: trim ?? '—',
+      label: t('widget.specs.year', 'Year'),
+      value: asString(specs?.model_year) ?? asString(specs?.year),
     });
 
-    // Paint color
     const paint = asString(specs?.exterior_color) ?? asString(configData?.exterior_color);
     items.push({
       label: t('widget.specs.paint', 'Paint color'),
       value: paint ?? '—',
     });
 
-    // Wheels
     const wheels = asString(specs?.wheel_type) ?? asString(configData?.wheel_type);
     items.push({
       label: t('widget.specs.wheels', 'Wheels'),
       value: wheels ?? '—',
     });
 
-    // Interior
+    const capacityWh = asNumber(specs?.battery_capacity_wh);
+    const capacity = capacityWh != null ? formatEnergy(capacityWh, { precision: 0 }) : null;
+    const batteryType = asString(specs?.battery_type) ?? asString(specs?.battery_pack);
+    const battery = capacity && batteryType ? `${capacity} · ${batteryType}` : capacity ?? batteryType;
+    items.push({
+      label: t('widget.specs.battery', 'Battery'),
+      value: battery ?? '—',
+    });
+
+    const motors = asString(specs?.motor_type) ?? asString(specs?.drivetrain)
+      ?? (typeof specs?.dual_motor === 'boolean'
+        ? specs.dual_motor
+          ? t('widget.specs.dualMotor', 'Dual')
+          : t('widget.specs.singleMotor', 'Single')
+        : null);
+    items.push({
+      label: t('widget.specs.motors', 'Motors'),
+      value: motors ?? '—',
+    });
+
     const interior = asString(specs?.interior) ?? asString(specs?.interior_color);
     items.push({
       label: t('widget.specs.interior', 'Interior'),
       value: interior ?? '—',
     });
 
-    // Aux battery from specs (not on config snapshot type)
-    const auxBattery = asString(specs?.aux_battery_type);
-    items.push({
-      label: t('widget.specs.auxBattery', 'Aux battery'),
-      value: auxBattery ?? '—',
-    });
-
-    // Car version from config
-    const carVersion = asString(configData?.version) ?? asString(specs?.car_version);
-    items.push({
-      label: t('widget.specs.carVersion', 'Car version'),
-      value: carVersion ?? '—',
-      mono: true,
-    });
-
-    // Options as badges (decoded option codes)
-    if (options && typeof options === 'object') {
-      const optionKeys = Object.keys(options);
-      for (const key of optionKeys.slice(0, isCompact ? 0 : 8)) {
-        const decoded = asString(options[key]) ?? key;
-        items.push({
-          label: key,
-          value: decoded,
-          badge: { text: t('widget.specs.option', 'Option'), variant: 'neutral' as const },
-        });
-      }
-    }
-
     return items;
-  }, [specs, options, configData, isCompact, t]);
+  }, [specs, configData, formatEnergy, t]);
 
-  const hasOptions = options != null && Object.keys(options).length > 0;
-  const hasAnyData = specs != null || hasOptions || configData != null;
+  const hasAnyData = specs != null || configData != null;
 
   const handleRefresh = useCallback(() => {
     refetchSpecs();
-    refetchOptions();
     refetchConfig();
-  }, [refetchSpecs, refetchOptions, refetchConfig]);
+  }, [refetchSpecs, refetchConfig]);
   const dataState = deriveDataState({
-    data: hasAnyData ? { specs, options, configData } : isLoading || queryError || isError ? undefined : null,
+    data: hasAnyData ? { specs, configData } : isLoading || queryError || isError ? undefined : null,
     error: queryError,
     isError,
     isFetching,
@@ -182,7 +160,7 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
   );
 }
 
-/* ── Compact: 1-col layout — Model + Trim centered ── */
+/* ── Compact: 1-col layout — model/value centered ── */
 function CompactView({
   specs,
   configData,
@@ -192,14 +170,19 @@ function CompactView({
   configData: Record<string, unknown> | null;
   t: (k: string, f: string) => string;
 }) {
-  const model = asString(specs?.car_type) ?? asString(specs?.model) ?? asString(configData?.car_type) ?? '—';
   const trim = asString(specs?.trim_badging) ?? asString(specs?.trim) ?? asString(configData?.trim) ?? '—';
+  const base = asString(specs?.car_type) ?? asString(specs?.model) ?? asString(configData?.car_type) ?? '—';
+  const model = base !== '—' && trim !== '—' && !base.toLowerCase().includes(trim.toLowerCase())
+    ? `${base} ${trim}`
+    : base;
 
   return (
-    <WidgetStatGrid compact stats={[
-      { label: t('widget.specs.model', 'Model'), value: model },
-      { label: t('widget.specs.trim', 'Trim'), value: trim },
-    ]} />
+    <WidgetBigNumber
+      value={model}
+      label={t('widget.specs.model', 'Model')}
+      align="center"
+      animated={false}
+    />
   );
 }
 
@@ -209,4 +192,10 @@ function asString(val: unknown): string | null {
   if (typeof val === 'string' && val.length > 0) return val;
   if (typeof val === 'number' && Number.isFinite(val)) return String(val);
   return null;
+}
+
+/** Read an energy value only when the payload identifies SI watt-hours. */
+function asNumber(val: unknown): number | null {
+  if (typeof val !== 'number' || !Number.isFinite(val) || val < 0) return null;
+  return val;
 }

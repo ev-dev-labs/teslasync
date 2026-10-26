@@ -1,3 +1,4 @@
+import { COLOR, CHART_NEUTRAL, DATA_VISUAL_COLORS } from '@/lib/colors';
 import { afterEach, describe, it, expect } from 'vitest';
 import { getGlobalLocale, setGlobalLocale } from '@/lib/numberFormat';
 import {
@@ -101,11 +102,11 @@ describe('daylog lib', () => {
   });
 
   it('falls back to neutral styling for unknown types', () => {
-    expect(eventAccent('drive_start')).toBe('#0891b2');
-    expect(eventAccent('tire_warning_on')).toBe('#f87171');
-    expect(eventAccent('tire_warning_off')).toBe('#34d399');
-    expect(eventAccent('destination_changed')).toBe('#94a3b8');
-    expect(eventAccent('nope')).toBe('#94a3b8');
+    expect(eventAccent('drive_start')).toBe(DATA_VISUAL_COLORS.info);
+    expect(eventAccent('tire_warning_on')).toBe(COLOR.BAD);
+    expect(eventAccent('tire_warning_off')).toBe(COLOR.GOOD);
+    expect(eventAccent('destination_changed')).toBe(CHART_NEUTRAL);
+    expect(eventAccent('nope')).toBe(CHART_NEUTRAL);
   });
 
   it('builds lowercase keyword haystacks', () => {

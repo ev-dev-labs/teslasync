@@ -325,6 +325,17 @@ describe('MileagePage — populated (km)', () => {
     expect(mockMonthly).toHaveBeenCalledWith('7');
     expect(mockDaily).toHaveBeenCalledWith('7', 90);
   });
+
+  it('describes selected-calendar monthly buckets without claiming complete history or UTC grouping', () => {
+    renderPage();
+    expect(screen.getAllByText(
+      'Calendar-month buckets in the selected time zone from the server’s default 24-month window. This is not a full-history total; recording completeness is unknown.',
+    ).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(
+      'The same selected-calendar monthly source as the chart. Distance / drive divides monthly recorded distance by monthly drive count; a zero drive count yields zero. No totals are inferred from these limited rows.',
+    ).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/UTC calendar-month|same UTC monthly/)).not.toBeInTheDocument();
+  });
 });
 
 describe('MileagePage — unit boundary (miles)', () => {

@@ -138,7 +138,7 @@
       "cachedRefreshError": "Refresh failed; the most recently loaded evidence remains visible.",
       "cachedRefreshPaused": "The network is unavailable; cached evidence remains visible while refresh is paused.",
       "requestWindow": "API window: {{from}} ≤ timestamp < {{to}}",
-      "timezone": "Calendar timezone: {{timezone}} · {{days}} calendar days",
+      "timezone": "{{days}} calendar days",
       "invalidWindow": "The date-window labels or RFC3339 boundaries are invalid; period interpretation is withheld.",
       "status": {
         "disabled": "Vehicle required",
@@ -287,7 +287,7 @@
       "gasTitle": "Gas comparison",
       "gasBody": "The comparison is distance × 0.192 kg CO₂/km. It is a fixed generic baseline, not the user’s prior vehicle. Gas less charging may be negative and is shown as excess rather than clipped.",
       "rangeTitle": "Selected range",
-      "rangeBody": "URL calendar labels {{start}} through {{end}} are interpreted in {{timezone}} and sent as RFC3339 instants using an exclusive upper bound. Period charts never substitute lifetime rows.",
+      "rangeBody": "The selected range ({{range}}) is interpreted in your selected time zone and queried with an exclusive upper bound. Period charts never substitute lifetime rows.",
       "scenarioTitle": "Recommendation boundary",
       "scenarioBody": "The recommendation is full-history only and shifts all observed lifetime charging energy into the fixed greenest three-hour model window. It is a counterfactual estimate, not selected-period evidence or a schedule guarantee."
     }

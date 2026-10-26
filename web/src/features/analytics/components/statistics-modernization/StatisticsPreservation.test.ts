@@ -75,7 +75,7 @@ describe('statistics modernization source contracts', () => {
     expect(battery).toContain('formatEnergy(batteryHealth.estimated_capacity_wh ?? 0)');
     expect(mileage).toContain('fromKm(((mileage.last_30d_km ?? 0) / 30) * 365)');
     expect(page).toContain('convertDistanceFromSI(km * METERS_PER_KM, distanceUnit)');
-    expect(page).toContain('whPerKm * KM_PER_MILE');
+    expect(page).toContain('convertEfficiencyFromSI(whPerKm, distanceUnit)');
   });
 
   it('keeps chart series, legend state, export identities and source aggregation', () => {

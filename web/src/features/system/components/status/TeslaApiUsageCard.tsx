@@ -18,17 +18,17 @@ interface Props {
 
 export function TeslaApiUsageCard({ apiUsage, loading, error, compact = false }: Props) {
   const { fmtInt, locale, precision } = useNumberFormatting();
-  const { formatDate: date, tz } = useDateFormat()
+  const { formatDate: date, formatDateRange } = useDateFormat()
   const { t } = useTranslation()
   const formatUsd = (amount: number) => formatCurrencyValue(amount, 'USD', locale, precision, { useGrouping: true })
   const currentSource = apiUsage?.current
-  const disclaimer = t('teslaUsage.disclaimer', 'Estimate from locally observed Tesla Fleet traffic; not a Tesla invoice. Missing deliveries or logging failures may undercount.')
+  const disclaimer = t('teslaUsage.disclaimer', "Estimate from locally observed Tesla Fleet traffic; not a Tesla invoice or Tesla's calendar-month billing cycle. Missing deliveries or logging failures may undercount.")
   const summary = (
     <SystemSummaryBrief
       title={t('teslaUsage.brief.cycleTitle', 'Cycle usage evidence')}
       description={disclaimer}
-      scope={currentSource ? `${date(currentSource.start)} – ${date(currentSource.end)} ${tz}`
-        : t('teslaUsage.cycleCaveat', 'These are fixed UTC 30-day windows, not Tesla calendar-month billing cycles. No monthly credit, rounding or invoice adjustments are assumed.')}
+      scope={currentSource ? formatDateRange(currentSource.start, currentSource.end)
+        : t('teslaUsage.cycleCaveat', 'These are fixed 30-day observation windows anchored to the server epoch, not Tesla calendar-month billing cycles. No monthly credit, rounding or invoice adjustments are assumed.')}
       available={!!currentSource} loading={!!loading && !currentSource} retained={!!error && !!currentSource}
       statusLabel={t('teslaUsage.estimated', 'Estimated')}
       metrics={[
@@ -70,7 +70,7 @@ export function TeslaApiUsageCard({ apiUsage, loading, error, compact = false }:
     <>{summary}
     <UsageCard
       banner={{ title: t('teslaUsage.estimated', 'Estimated'),
-        description: t('teslaUsage.disclaimer', 'Estimate from locally observed Tesla Fleet traffic; not a Tesla invoice. Missing deliveries or logging failures may undercount.'),
+        description: t('teslaUsage.disclaimer', "Estimate from locally observed Tesla Fleet traffic; not a Tesla invoice or Tesla's calendar-month billing cycle. Missing deliveries or logging failures may undercount."),
         intent: 'warn' }}
       footer={pageLink}
     />
@@ -83,7 +83,7 @@ export function TeslaApiUsageCard({ apiUsage, loading, error, compact = false }:
         { label: t('teslaUsage.commands', 'Commands · 1,000 / $1'), value: fmtInt(current.commands) },
         { label: t('teslaUsage.data', 'Data requests · 500 / $1'), value: fmtInt(current.data_requests) },
         { label: t('teslaUsage.wakes', 'Wakes · 50 / $1'), value: fmtInt(current.wakes) },
-        { label: t('teslaUsage.reset', 'Next cycle (UTC)'), value: `${date(current.end)} (${tz})` },
+        { label: t('teslaUsage.reset', 'Next cycle'), value: date(current.end) },
       ]}
       topLists={[
         {
@@ -92,7 +92,7 @@ export function TeslaApiUsageCard({ apiUsage, loading, error, compact = false }:
           items: apiUsage.history.length
             ? apiUsage.history.map(c => ({
                 key: c.start,
-                label: `${date(c.start)} – ${date(c.end)} · ${fmtInt(count(c))} ${t('teslaUsage.eventsShort', 'events')}`,
+                label: `${formatDateRange(c.start, c.end)} · ${fmtInt(count(c))} ${t('teslaUsage.eventsShort', 'events')}`,
                 value: formatUsd(c.estimated_usd),
               }))
             : [{ key: 'none', label: t('teslaUsage.noHistory', 'No prior cycles recorded'), value: '—' }],
@@ -102,7 +102,7 @@ export function TeslaApiUsageCard({ apiUsage, loading, error, compact = false }:
           title: t('teslaUsage.source', 'Source and limitations'),
           items: [{
             key: 'estimate',
-            label: t('teslaUsage.disclaimer', 'Estimate from locally observed Tesla Fleet traffic; not a Tesla invoice. Missing deliveries or logging failures may undercount.'),
+            label: t('teslaUsage.disclaimer', "Estimate from locally observed Tesla Fleet traffic; not a Tesla invoice or Tesla's calendar-month billing cycle. Missing deliveries or logging failures may undercount."),
             value: t('teslaUsage.estimated', 'Estimated'),
           }, {
             key: 'rates',

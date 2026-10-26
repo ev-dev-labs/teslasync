@@ -48,4 +48,7 @@ test('installed mobile navigation opens and follows a shortcut in secondary engi
   await expect(page).toHaveURL(/\/explore$/);
   await expect(sheet).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Open sidebar' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Explore features', exact: true })).toBeVisible();
+  await waitForHarnessReady(page, mockApi);
+  await assertMockApiComplete(page, mockApi);
 });

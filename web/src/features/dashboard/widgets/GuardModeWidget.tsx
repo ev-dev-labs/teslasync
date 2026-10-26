@@ -2,22 +2,23 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Shield, ShieldAlert, ShieldCheck, ShieldOff,
-  CarFront, Unlock, Siren, Eye, FlaskConical, Move,
+  CarFront, Unlock, Siren, Eye, FlaskConical, Move, Volume2,
 } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Button } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
 import { dashboardTokens } from '../lib/dashboardTokens';
-import { useGuardConfig, useGuardEvents, isGuardEventAcknowledged } from '@/api/hooks/useGuard';
+import { useGuardConfig, useGuardEvents, useGuardPanic, isGuardEventAcknowledged } from '@/api/hooks/useGuard';
 import type { GuardEvent } from '@/api/hooks/useGuard';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
-import { WidgetEventFeed, WidgetStatusGrid } from './shared';
+import { WidgetEventFeed } from './shared';
 import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { COLOR, DATA_VISUAL_COLORS, CHART_NEUTRAL } from '@/lib/colors';
 
 // ── Event type → visual mapping ──────────────────────────────────────
 
@@ -28,15 +29,15 @@ const EVENT_TYPE_MAP: Record<
   string,
   { icon: React.ReactNode; label: string; color: string; severity: EventFeedItem['severity'] }
 > = {
-  vehicle_moved:       { icon: <Move className="h-3.5 w-3.5" />,        label: 'Vehicle moved',       color: '#f59e0b', severity: 'warning' },
-  unauthorized_unlock: { icon: <Unlock className="h-3.5 w-3.5" />,      label: 'Unauthorized unlock', color: '#ef4444', severity: 'critical' },
-  unauthorized_drive:  { icon: <CarFront className="h-3.5 w-3.5" />,    label: 'Unauthorized drive',  color: '#ef4444', severity: 'critical' },
-  sentry_triggered:    { icon: <Eye className="h-3.5 w-3.5" />,         label: 'Sentry triggered',    color: '#06b6d4', severity: 'warning' },
-  manual_panic:        { icon: <Siren className="h-3.5 w-3.5" />,       label: 'Panic alert',         color: '#ef4444', severity: 'critical' },
-  test_alert:          { icon: <FlaskConical className="h-3.5 w-3.5" />,label: 'Test alert',          color: '#8b5cf6', severity: 'info' },
-  locked:              { icon: <ShieldCheck className="h-3.5 w-3.5" />, label: 'Lock state changed',  color: '#06b6d4', severity: 'info' },
-  sentry_mode:         { icon: <Eye className="h-3.5 w-3.5" />,         label: 'Sentry mode',         color: '#f59e0b', severity: 'warning' },
-  valet_mode_enabled:  { icon: <ShieldAlert className="h-3.5 w-3.5" />, label: 'Valet mode',          color: '#06b6d4', severity: 'info' },
+  vehicle_moved:       { icon: <Move className="h-3.5 w-3.5" />,        label: 'Vehicle moved',       color: COLOR.WARN, severity: 'warning' },
+  unauthorized_unlock: { icon: <Unlock className="h-3.5 w-3.5" />,      label: 'Unauthorized unlock', color: COLOR.BAD, severity: 'critical' },
+  unauthorized_drive:  { icon: <CarFront className="h-3.5 w-3.5" />,    label: 'Unauthorized drive',  color: COLOR.BAD, severity: 'critical' },
+  sentry_triggered:    { icon: <Eye className="h-3.5 w-3.5" />,         label: 'Sentry triggered',    color: DATA_VISUAL_COLORS.info, severity: 'warning' },
+  manual_panic:        { icon: <Siren className="h-3.5 w-3.5" />,       label: 'Panic alert',         color: COLOR.BAD, severity: 'critical' },
+  test_alert:          { icon: <FlaskConical className="h-3.5 w-3.5" />,label: 'Test alert',          color: DATA_VISUAL_COLORS.purple, severity: 'info' },
+  locked:              { icon: <ShieldCheck className="h-3.5 w-3.5" />, label: 'Lock state changed',  color: DATA_VISUAL_COLORS.info, severity: 'info' },
+  sentry_mode:         { icon: <Eye className="h-3.5 w-3.5" />,         label: 'Sentry mode',         color: COLOR.WARN, severity: 'warning' },
+  valet_mode_enabled:  { icon: <ShieldAlert className="h-3.5 w-3.5" />, label: 'Valet mode',          color: DATA_VISUAL_COLORS.info, severity: 'info' },
 };
 
 function mapEventToFeedItem(ev: GuardEvent, t: (key: string, fallback: string) => string): EventFeedItem {
@@ -52,7 +53,7 @@ function mapEventToFeedItem(ev: GuardEvent, t: (key: string, fallback: string) =
   const mapped = known ?? {
     icon: <ShieldAlert className="h-3.5 w-3.5" />,
     label: eventType || '—',
-    color: '#6b7280',
+    color: CHART_NEUTRAL,
     severity: 'info' as const,
   };
 
@@ -75,29 +76,49 @@ function mapEventToFeedItem(ev: GuardEvent, t: (key: string, fallback: string) =
 function CompactView({
   enabled,
   eventCount,
+  autoPanic,
+  onPanic,
+  panicPending,
+  panicDisabled,
   t,
 }: {
   enabled: boolean | null;
   eventCount: number | null;
+  autoPanic: boolean | null;
+  onPanic: () => void;
+  panicPending: boolean;
+  panicDisabled: boolean;
   t: (key: string, fallback: string) => string;
 }) {
   const { fmtInt } = useNumberFormatting();
   return (
-    <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 min-h-[44px]">
-      <div className="flex items-center gap-2 min-w-0">
-        {enabled ? (
-          <ShieldCheck className="h-4 w-4 flex-shrink-0" />
-        ) : (
-          <ShieldOff className="h-4 w-4 flex-shrink-0 text-[var(--text-muted)]" />
-        )}
-        <Badge variant={enabled ? 'success' : 'neutral'}>
-          {enabled === null ? t('widget.guardUnknown', 'Unknown')
-            : enabled ? t('widget.guardArmed', 'Armed') : t('widget.guardDisarmed', 'Disarmed')}
+    <div className="flex min-w-0 flex-col gap-3">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 min-h-[44px]">
+        <div className="flex items-center gap-2 min-w-0">
+          {enabled ? (
+            <ShieldCheck className="h-4 w-4 flex-shrink-0" />
+          ) : (
+            <ShieldOff className="h-4 w-4 flex-shrink-0 text-[var(--text-muted)]" />
+          )}
+          <Badge variant={enabled ? 'success' : 'neutral'}>
+            {enabled === null ? t('widget.guardUnknown', 'Unknown')
+              : enabled ? t('widget.guardArmed', 'Armed') : t('widget.guardDisarmed', 'Disarmed')}
+          </Badge>
+        </div>
+        <Badge variant={eventCount !== null && eventCount > 0 ? 'warning' : 'neutral'}>
+          {eventCount === null ? '—' : fmtInt(eventCount)} {t('widget.guardEvents', 'events')}
         </Badge>
       </div>
-      <Badge variant={eventCount !== null && eventCount > 0 ? 'warning' : 'neutral'}>
-        {eventCount === null ? '—' : fmtInt(eventCount)} {t('widget.guardEvents', 'events')}
-      </Badge>
+      <Button variant="danger" size="sm" onClick={onPanic} loading={panicPending}
+        disabled={enabled === null || panicPending || panicDisabled} className="w-full">
+        <Volume2 className="h-4 w-4" aria-hidden="true" />
+        {panicPending ? t('widget.guardPanicSending', 'Sending…') : t('widget.guardPanicAlarm', 'Panic alarm')}
+      </Button>
+      {autoPanic !== null && (
+        <span className="text-xs text-[var(--text-muted)]">
+          {t('widget.guardAutoPanic', 'Auto-panic')}: {autoPanic ? t('widget.guardOn', 'On') : t('widget.guardOff', 'Off')}
+        </span>
+      )}
     </div>
   );
 }
@@ -106,28 +127,29 @@ function CompactView({
 
 function StandardView({
   enabled,
-  sensitivity,
   autoPanic,
   feedItems,
-  isCompact,
   eventsError,
   eventsLoading,
   onRetryEvents,
+  onPanic,
+  panicPending,
+  panicDisabled,
   t,
 }: {
   enabled: boolean | null;
-  sensitivity: string;
   autoPanic: boolean | null;
   feedItems: EventFeedItem[];
-  isCompact: boolean;
   eventsError: Error | null;
   eventsLoading: boolean;
   onRetryEvents: () => void;
+  onPanic: () => void;
+  panicPending: boolean;
+  panicDisabled: boolean;
   t: (key: string, fallback: string) => string;
 }) {
   return (
     <div className="flex flex-col gap-3 h-full">
-      {/* Status card */}
       <div className="flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           {enabled ? (
@@ -136,32 +158,37 @@ function StandardView({
             <ShieldOff className="h-5 w-5 flex-shrink-0 text-[var(--text-muted)]" />
           )}
           <div className="min-w-0">
-            <p className={dashboardTokens.title}>
+            <p className={dashboardTokens.metric}>
               {enabled === null ? t('widget.guardUnknown', 'Unknown')
                 : enabled ? t('widget.guardArmed', 'Armed') : t('widget.guardDisarmed', 'Disarmed')}
             </p>
+            {autoPanic !== null && (
+              <p className="text-xs text-[var(--text-muted)]">
+                {t('widget.guardAutoPanic', 'Auto-panic')}: {autoPanic ? t('widget.guardOn', 'On') : t('widget.guardOff', 'Off')}
+              </p>
+            )}
           </div>
         </div>
-        <Badge variant={enabled ? 'success' : 'neutral'}>
-          {enabled === null ? '—' : enabled ? t('widget.guardOn', 'On') : t('widget.guardOff', 'Off')}
-        </Badge>
+        {enabled === true && (
+          <Badge variant="success">{t('widget.guardProtected', 'Protected')}</Badge>
+        )}
       </div>
-      <WidgetStatusGrid cols={2} cells={[
-        { id: 'sensitivity', label: t('widget.guardSensitivity', 'Sensitivity'), value: sensitivity, status: sensitivity === '—' ? 'unknown' : 'inactive' },
-        { id: 'auto-panic', label: t('widget.guardAutoPanic', 'Auto-panic'), value: autoPanic === null ? '—' : autoPanic ? t('widget.guardOn', 'On') : t('widget.guardOff', 'Off'), status: autoPanic === null ? 'unknown' : autoPanic ? 'ok' : 'inactive' },
-      ]} />
-
-      {/* Event feed */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         {eventsError ? <QueryError error={eventsError} onRetry={onRetryEvents} />
           : eventsLoading ? <Skeleton className="h-16" /> : <WidgetEventFeed
           items={feedItems}
-          maxItems={isCompact ? 3 : 5}
-          compact={isCompact}
+          maxItems={1}
+          compact={false}
           emptyMessage={t('widget.guardNoEvents', 'No guard events')}
           emptyIcon={<Shield className="h-5 w-5" />}
         />}
       </div>
+      <Button variant="danger" size="sm" onClick={onPanic} loading={panicPending}
+        disabled={enabled === null || panicPending || panicDisabled}
+        className="w-full">
+        <Volume2 className="h-4 w-4" aria-hidden="true" />
+        {panicPending ? t('widget.guardPanicSending', 'Sending…') : t('widget.guardPanicAlarm', 'Panic alarm')}
+      </Button>
     </div>
   );
 }
@@ -199,6 +226,7 @@ export default function GuardModeWidget({ vehicleId, size }: WidgetProps) {
   } = eventsQuery;
   const eventsState = useDataState(eventsQuery, { provenance: 'historical' });
   const combined = combineDataStates([configState, eventsState]);
+  const panicMutation = useGuardPanic();
 
   const isCompact = size.cols <= 1;
 
@@ -215,7 +243,6 @@ export default function GuardModeWidget({ vehicleId, size }: WidgetProps) {
   const updatedAt = combined.updatedAt ?? Math.min(configUpdatedAt ?? 0, eventsUpdatedAt ?? 0);
 
   const enabled = config?.enabled ?? null;
-  const sensitivity = config?.sensitivity ?? '—';
   const autoPanic = config?.auto_panic ?? null;
   const eventCount = events === undefined ? null : events.length;
 
@@ -238,17 +265,20 @@ export default function GuardModeWidget({ vehicleId, size }: WidgetProps) {
     >
       {configState.fatalError ? <QueryError error={configState.fatalError} onRetry={() => { void refetchConfig(); }} /> : configLoading && !config ? <Skeleton className="h-16" /> : config ? (
         isCompact ? (
-          <CompactView enabled={enabled} eventCount={eventCount} t={t} />
+          <CompactView enabled={enabled} eventCount={eventCount} autoPanic={autoPanic}
+            onPanic={() => panicMutation.mutate(id)} panicPending={panicMutation.isPending}
+            panicDisabled={id === 0} t={t} />
         ) : (
           <StandardView
             enabled={enabled}
-            sensitivity={sensitivity}
             autoPanic={autoPanic}
             feedItems={feedItems}
-            isCompact={isCompact}
             eventsError={eventsState.fatalError}
             eventsLoading={eventsLoading && events === undefined}
             onRetryEvents={() => { void refetchEvents(); }}
+            onPanic={() => panicMutation.mutate(id)}
+            panicPending={panicMutation.isPending}
+            panicDisabled={id === 0}
             t={t}
           />
         )
@@ -259,7 +289,7 @@ export default function GuardModeWidget({ vehicleId, size }: WidgetProps) {
           className="py-4"
         />
       )}
-      {(isCompact || !config) && (eventsState.fatalError ? (
+      {!config && (eventsState.fatalError ? (
         <QueryError error={eventsState.fatalError} onRetry={() => { void refetchEvents(); }} />
       ) : eventsLoading && events === undefined ? <Skeleton className="h-16" /> : !config && (
         <WidgetEventFeed items={feedItems} maxItems={5} emptyMessage={t('widget.guardNoEvents', 'No guard events')} />

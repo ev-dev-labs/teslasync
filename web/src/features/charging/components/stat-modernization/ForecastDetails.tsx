@@ -12,6 +12,7 @@ import type { StatPeriod } from '@/lib/metric-reference';
 import { CostStatSection } from './CostStatSection';
 import { useStatFormatting } from './useStatFormatting';
 import { kmToCanonicalMeters } from './displayBoundary';
+import { COLOR } from '@/lib/colors';
 
 interface ForecastDetailsProps {
   forecastData: CostForecastData | undefined;
@@ -67,8 +68,8 @@ export function ForecastDetails({ forecastData, isLoading, error, onRetry, perio
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={breakdownData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} dataKey="value">
-                    <Cell fill="#22c55e" />
-                    <Cell fill="#f59e0b" />
+                    <Cell fill={COLOR.GOOD} />
+                    <Cell fill={COLOR.WARN} />
                   </Pie>
                   <Tooltip content={<ChartTooltip />} />
                 </PieChart>

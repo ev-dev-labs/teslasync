@@ -266,7 +266,7 @@ describe('TeslaAccountSection — connected branch', () => {
     const { rerender } = renderSection()
     const initial = formatDateTime(expires, datePreferences.current)
     expect(screen.getByText(initial)).toHaveAttribute('datetime', expires)
-    expect(screen.getByText(initial)).toHaveAttribute('title', expires)
+    expect(screen.getByText(initial)).not.toHaveAttribute('title')
 
     datePreferences.current = { locale: 'de-DE', tz: 'America/Los_Angeles' }
     rerender()
@@ -320,7 +320,7 @@ describe('TeslaAccountSection — connected branch', () => {
       })
       const initial = formatDateTime(timestamp, datePreferences.current)
       expect(screen.getByText(initial)).toHaveAttribute('datetime', timestamp)
-      expect(screen.getByText(initial)).toHaveAttribute('title', timestamp)
+      expect(screen.getByText(initial)).not.toHaveAttribute('title')
       expect(screen.getByText(message, { exact: true, collapseWhitespace: false })).toHaveTextContent(
         'Certificate rejected: full diagnostic detail. Retry after replacing the complete CA chain.',
       )

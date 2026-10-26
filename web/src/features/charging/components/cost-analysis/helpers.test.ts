@@ -17,7 +17,8 @@
  * follows the repo's existing `helpers.test.ts` convention (plain Vitest, no
  * RTL / MSW needed).
  */
-import { describe, it, expect } from 'vitest';
+import { chargerCategoryCode, chargerCategoryLabel } from './helpers';
+import { describe, it, expect, vi } from 'vitest';
 import type { ChargingSession } from '@/api/types';
 import { categorizeCharger, gasEquivalentCost } from './helpers';
 import { KWH_PER_GALLON } from './constants';
@@ -126,4 +127,22 @@ describe('gasEquivalentCost', () => {
     expect(gasEquivalentCost(100, 30, Number.NaN)).toBe(0);
     expect(gasEquivalentCost(Number.POSITIVE_INFINITY, 30, 3.5)).toBe(0);
   });
+});
+
+describe('charger category labels', () => {
+ it('translates only known stable category codes', () => {
+  const t=vi.fn((key:string)=>`translated:${key}`);
+  for(const code of ['home','supercharger','public','public_dc','work_l2','other']) expect(chargerCategoryLabel(t,code)).toMatch(/^translated:/);
+  expect(t).toHaveBeenCalledTimes(6);
+  expect(chargerCategoryLabel(t,'future_charger')).toBe('future_charger');
+  expect(t).toHaveBeenCalledTimes(6);
+ });
+ it.each(['Home','Supercharger','Public','Other','Chez moi','  Garage A  '])('preserves supplied name %s byte for byte',name=>{
+  const t=vi.fn(()=> 'translated'); expect(chargerCategoryLabel(t,'home',name)).toBe(name); expect(t).not.toHaveBeenCalled();
+ });
+});
+
+it('retains unknown category codes even when other fields could suggest a category',()=>{
+ expect(chargerCategoryCode(makeSession({charger_type:'SpacePort',peak_power_w:250000,start_place:'Home'}))).toBe('SpacePort');
+ expect(chargerCategoryCode(makeSession({charger_type:'other'}))).toBe('other');
 });

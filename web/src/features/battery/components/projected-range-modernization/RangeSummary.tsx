@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { knownNumber } from '@/api/dataState';
+import { toIsoString } from '@/lib/dateConvert';
 import { type StatMetric } from '@/components/data-display/stat-reference';
 import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import { LayoutCard } from '@/components/layout/layout-reference';
@@ -33,7 +34,7 @@ export function RangeSummary({ source, loading }: RangeSectionProps) {
           loading={loading && !source.hasData} retained={source.status === 'stale'}
           period={{ kind: 'snapshot',
             label: t('range.modernization.snapshot', 'Range projection snapshot'),
-            observedAt: source.updatedAt == null ? null : new Date(source.updatedAt).toISOString(),
+            observedAt: toIsoString(source.updatedAt),
             provenance: t('range.modernization.snapshotSource', 'Current battery state and the existing driving-history model; not scoped to a selected date window.') }} />
       )}
     </section>

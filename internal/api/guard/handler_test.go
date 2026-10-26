@@ -464,7 +464,7 @@ func TestGuard_Acknowledge_EmptyActorAllowed(t *testing.T) {
 		},
 	}
 	h := newGuardHandlerForTest(repo, nil, nil, false, now)
-	// No X-Forwarded-User header — actorFromRequest returns "" in
+	// No X-Forwarded-User header — ActorIdentity returns "" in
 	// open-mode. The empty actor must be passed through as-is rather
 	// than rejected or replaced with a fabricated identity.
 	rec := httptest.NewRecorder()

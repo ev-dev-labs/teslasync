@@ -6,6 +6,9 @@
  * substitutes a missing measurement with a measured zero.
  */
 
+import { isValidTimeZone, zonedDateParts } from '@/lib/dateFormat';
+import { CHART_NEUTRAL, COLOR, DATA_VISUAL_COLORS } from '@/lib/colors';
+
 export const SHARE_CARD_HISTORY_LIMIT = 1_000;
 export const SHARE_CARD_SVG_REVOKE_DELAY_MS = 1_500;
 
@@ -297,23 +300,16 @@ function resolveTimeZone(timezone: string): {
   resolvedTimezone: string;
   timezoneValid: boolean;
 } {
-  try {
-    new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(0);
-    return { resolvedTimezone: timezone, timezoneValid: true };
-  } catch {
-    return { resolvedTimezone: 'UTC', timezoneValid: false };
-  }
+  if (isValidTimeZone(timezone)) return { resolvedTimezone: timezone, timezoneValid: true };
+  return { resolvedTimezone: 'UTC', timezoneValid: false };
 }
 
 function localDay(timestampMs: number, timezone: string): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(timestampMs);
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}`;
+  const parts = zonedDateParts(timestampMs, timezone);
+  if (!parts) {
+    throw new RangeError(`unable to derive calendar parts in ${timezone}`);
+  }
+  return `${String(parts.year).padStart(4, '0')}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
 }
 
 function monthRange(startLabel: string, endLabel: string): string[] {
@@ -850,9 +846,9 @@ export const SHARE_CARD_THEMES: Record<
   ShareCardTheme,
   { bg: string; accent: string; soft: string }
 > = {
-  midnight: { bg: '#0b1220', accent: '#22d3ee', soft: '#38bdf8' },
-  aurora: { bg: '#071a12', accent: '#34d399', soft: '#a7f3d0' },
-  ember: { bg: '#1c0f0a', accent: '#fb923c', soft: '#fdba74' },
+  midnight: { bg: DATA_VISUAL_COLORS.canvasMidnight, accent: DATA_VISUAL_COLORS.info, soft: DATA_VISUAL_COLORS.info },
+  aurora: { bg: DATA_VISUAL_COLORS.canvasAurora, accent: COLOR.GOOD, soft: COLOR.GOOD },
+  ember: { bg: DATA_VISUAL_COLORS.canvasEmber, accent: COLOR.WARN, soft: COLOR.WARN },
 };
 
 export interface ShareCardLine {
@@ -957,14 +953,14 @@ export function renderShareCardSvg(
     const y = 216 + row * 88;
     return [
       `<text x="${x}" y="${y}" fill="${selectedTheme.accent}" font-size="32" font-weight="700" font-family="Segoe UI, Arial, sans-serif">${escapeXml(line.value)}</text>`,
-      `<text x="${x}" y="${y + 25}" fill="#94a3b8" font-size="14" font-family="Segoe UI, Arial, sans-serif">${escapeXml(line.label)}</text>`,
+      `<text x="${x}" y="${y + 25}" fill="${CHART_NEUTRAL}" font-size="14" font-family="Segoe UI, Arial, sans-serif">${escapeXml(line.label)}</text>`,
     ].join('');
   }).join('');
   const disclosure = metadata.disclosure
     ? renderWrappedSvgText(metadata.disclosure, {
       x: 48,
       y: 132,
-      fill: '#cbd5e1',
+      fill: CHART_NEUTRAL,
       fontSize: 13,
       lineHeight: 17,
       maxCharacters: 88,
@@ -990,11 +986,11 @@ export function renderShareCardSvg(
     `<rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="22.5" fill="none" stroke="${selectedTheme.accent}" stroke-opacity="0.35" stroke-width="3"/>`,
     `<circle cx="${width - 84}" cy="84" r="120" fill="${selectedTheme.soft}" opacity="0.08"/>`,
     `<circle cx="${width - 44}" cy="44" r="60" fill="${selectedTheme.accent}" opacity="0.1"/>`,
-    `<text x="48" y="72" fill="#f8fafc" font-size="38" font-weight="700" font-family="Segoe UI, Arial, sans-serif"${titleFit}>${escapeXml(title)}</text>`,
+    `<text x="48" y="72" fill="${DATA_VISUAL_COLORS.canvasWhite}" font-size="38" font-weight="700" font-family="Segoe UI, Arial, sans-serif"${titleFit}>${escapeXml(title)}</text>`,
     renderWrappedSvgText(subtitle, {
       x: 48,
       y: 105,
-      fill: '#94a3b8',
+      fill: CHART_NEUTRAL,
       fontSize: 17,
       lineHeight: 20,
       maxCharacters: 76,
@@ -1006,7 +1002,7 @@ export function renderShareCardSvg(
     renderWrappedSvgText(footer, {
       x: 48,
       y: height - 20,
-      fill: '#64748b',
+      fill: CHART_NEUTRAL,
       fontSize: 12,
       lineHeight: 14,
       maxCharacters: 96,

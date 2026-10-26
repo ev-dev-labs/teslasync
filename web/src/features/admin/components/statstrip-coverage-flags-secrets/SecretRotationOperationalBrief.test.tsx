@@ -8,16 +8,28 @@ import { ApiError } from '@/lib/resilience';
 import type { SecretRotationResponse, SecretRotationStatus } from '@/types/admin-operator-confidence';
 import { useSecretRotationPage } from '../../hooks/useSecretRotationPage';
 import { SecretRotationOperationalBrief } from './SecretRotationOperationalBrief';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dateFormat';
 
 vi.mock('@/api/client', async importOriginal => {
   const actual = await importOriginal<typeof import('@/api/client')>();
   return { ...actual, request: vi.fn() };
 });
 
+const savedSettings = vi.hoisted(() => ({
+  locale: 'en-US', timezone_user: 'America/Los_Angeles', tz_display_default: 'user',
+}));
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings: savedSettings, locale: savedSettings.locale }),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: null }),
+}));
+
 const mockedRequest = vi.mocked(request);
 const clients: QueryClient[] = [];
 const queryKey = ['admin', 'observability', 'secret-rotation'];
 const fetchedAt = Date.UTC(2026, 9, 1, 12);
+const expectedFetched = `Fetched ${formatDateTimeShared(new Date(fetchedAt), { locale: 'en-US', tz: 'America/Los_Angeles' })}`;
 const provenance = 'Returned credentials and server-computed per-kind thresholds; not a selected date-range aggregate.';
 const items: SecretRotationStatus[] = [
   {
@@ -183,7 +195,7 @@ describe('SecretRotationOperationalBrief trust and recovery', () => {
     expect(summary()).not.toHaveAttribute('aria-busy');
     expect(summary()).not.toHaveTextContent('Retained source data');
     expect(screen.getByRole('status')).toHaveTextContent('Showing retained measurements');
-    expect(summary()).not.toHaveTextContent(`Fetched ${new Date(fetchedAt).toLocaleString()}`);
+    expect(summary()).not.toHaveTextContent(expectedFetched);
     expect(screen.getByText('1 tracked credentials have unknown severity')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText('fixture refresh query failure')).not.toBeInTheDocument();
@@ -194,7 +206,7 @@ describe('SecretRotationOperationalBrief trust and recovery', () => {
     expect(within(drawer).getAllByText(provenance)).toHaveLength(1);
     expect(within(drawer).getAllByText('Retained source data')).toHaveLength(1);
     expect(within(drawer).getByText('Retained source data')).toHaveClass('text-[var(--semantic-warning)]');
-    expect(within(drawer).getByText(`Fetched ${new Date(fetchedAt).toLocaleString()}`)).toBeInTheDocument();
+    expect(within(drawer).getByText(expectedFetched)).toBeInTheDocument();
   });
 
   it('keeps retained values during an active refresh without inventing a failure or a newer fetch time', async () => {
@@ -207,12 +219,12 @@ describe('SecretRotationOperationalBrief trust and recovery', () => {
     expect(summary()).not.toHaveAttribute('aria-busy');
     expect(summary()).not.toHaveTextContent('Snapshot loaded');
     expect(screen.getByRole('status')).toHaveTextContent('Showing retained measurements');
-    expect(summary()).not.toHaveTextContent(`Fetched ${new Date(fetchedAt).toLocaleString()}`);
+    expect(summary()).not.toHaveTextContent(expectedFetched);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     fireEvent.click(within(summary()).getByRole('button', { name: 'Review details' }));
     const drawer = await screen.findByRole('dialog');
     expect(drawer).toHaveTextContent('Snapshot loaded');
-    expect(within(drawer).getByText(`Fetched ${new Date(fetchedAt).toLocaleString()}`)).toBeInTheDocument();
+    expect(within(drawer).getByText(expectedFetched)).toBeInTheDocument();
   });
 });

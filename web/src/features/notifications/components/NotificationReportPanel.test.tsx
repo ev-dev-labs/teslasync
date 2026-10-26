@@ -8,7 +8,13 @@ import type { ChartContainerProps } from '@/components/charts';
 const chartBoundary = vi.hoisted(() => ({
   container: vi.fn(),
   isHidden: vi.fn<(key: string) => boolean>(() => false),
+  displayZone: 'UTC',
 }));
+
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
+  return { ...actual, useTimezone: () => chartBoundary.displayZone };
+});
 
 vi.mock('@/api/hooks/useNotifications', () => ({ useNotificationReport: vi.fn() }));
 vi.mock('@/hooks/useChartPalette', async (importOriginal) => ({
@@ -87,6 +93,7 @@ function renderPanel() {
 }
 
 beforeEach(() => {
+  chartBoundary.displayZone = 'UTC';
   chartBoundary.container.mockClear();
   chartBoundary.isHidden.mockReset().mockReturnValue(false);
   usePalette.mockReset().mockReturnValue(resolveChartPalette('cb_safe'));
@@ -94,6 +101,41 @@ beforeEach(() => {
 });
 
 describe('NotificationReportPanel', () => {
+  it.each([false, true])('keeps exact localized requested bounds when report unavailable=%s', unavailable => {
+    if (unavailable) {
+      useReport.mockReturnValue({
+        data: undefined, isLoading: false, isError: true, error: new Error('Report unavailable'),
+      } as ReturnType<typeof useNotificationReport>);
+    }
+    renderPanel();
+    fireEvent.click(within(screen.getByTestId('notification-report-brief')).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    const period = within(drawer).getByText('Analysis period').closest('dt')?.nextElementSibling;
+    expect(period).toHaveTextContent('[Jan 1, 2026, 08:00 AM, Jan 31, 2026, 08:00 AM) · end exclusive');
+    expect(drawer).not.toHaveTextContent('2026-01-01T08:00:00Z');
+    expect(drawer).not.toHaveTextContent('(exclusive) · UTC');
+    expect(useReport).toHaveBeenLastCalledWith('2026-01-01T08:00:00Z', '2026-01-31T08:00:00Z', 'America/Los_Angeles');
+  });
+
+  it('keeps a DST-length query half open while displaying both bounds in the selected zone', () => {
+    chartBoundary.displayZone = 'America/Los_Angeles';
+    const from = '2026-03-08T08:00:00Z';
+    const to = '2026-03-09T07:00:00Z';
+    useReport.mockReturnValue({
+      data: { ...report, from: '2026-03-08', to: '2026-03-08', from_instant: from, to_exclusive: to,
+        daily: [{ day: '2026-03-08', triggered: 3, deliveries: 5 }] },
+      isLoading: false, isError: false,
+    } as ReturnType<typeof useNotificationReport>);
+    render(<MemoryRouter><NotificationReportPanel fromInstant={from} toExclusive={to} timezone="America/Los_Angeles" /></MemoryRouter>);
+    fireEvent.click(within(screen.getByTestId('notification-report-brief')).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    const period = within(drawer).getByText('Analysis period').closest('dt')?.nextElementSibling;
+    expect(period).toHaveTextContent('[Mar 8, 2026, 12:00 AM, Mar 9, 2026, 12:00 AM) · end exclusive');
+    expect(drawer).not.toHaveTextContent(from);
+    expect(drawer).not.toHaveTextContent(to);
+    expect(useReport).toHaveBeenLastCalledWith(from, to, 'America/Los_Angeles');
+  });
+
   it.each(['cb_safe', 'neon', undefined, 'unknown'])('uses the accepted saved palette for both series (%s)', (preference) => {
     const palette = resolveChartPalette(preference);
     usePalette.mockReturnValue(palette);
@@ -250,7 +292,7 @@ describe('NotificationReportPanel', () => {
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 
-  it('reviews raw-count evidence, attribution limits, HTTP scope, and exact exclusive bounds in the actual drawer', () => {
+  it('reviews raw-count evidence, attribution limits, HTTP scope, and one formatted range in the actual drawer', () => {
     renderPanel();
     const brief = screen.getByTestId('notification-report-brief');
     expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
@@ -260,10 +302,10 @@ describe('NotificationReportPanel', () => {
     expect(drawer).toHaveTextContent('1.67');
     expect(drawer).toHaveTextContent('Older deliveries without an event identifier');
     expect(drawer).toHaveTextContent('Outbound HTTP calls include retries and failures');
-    expect(drawer).toHaveTextContent('2026-01-01T08:00:00Z');
-    expect(drawer).toHaveTextContent('2026-01-31T08:00:00Z');
-    expect(drawer).toHaveTextContent('America/Los_Angeles');
-    expect(drawer).toHaveTextContent('2026-01-01T08:00:00Z to 2026-01-31T08:00:00Z (exclusive) · America/Los_Angeles');
+    expect(drawer).toHaveTextContent('Jan 1 – 31, 2026');
+    expect(drawer).not.toHaveTextContent('2026-01-01T08:00:00Z');
+    expect(drawer).not.toHaveTextContent('2026-01-31T08:00:00Z');
+    expect(drawer).not.toHaveTextContent('America/Los_Angeles');
     fireEvent.click(within(drawer).getAllByRole('button', { name: 'Close' }).at(-1)!);
     expect(screen.getAllByRole('table')).toHaveLength(5);
   });

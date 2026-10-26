@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Route, ChevronRight } from 'lucide-react'
 
-import { GlassPanel, DataTable, PanelTitle, Caption, BUTTON_BASE, useSortToggle, type Column, type MobileDataTablePresentation } from '@/components/ui'
+import { GlassPanel, DataTable, PanelTitle, BUTTON_BASE, useSortToggle, type Column, type MobileDataTablePresentation } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { useUnits } from '@/hooks/useUnits'
 import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion'
@@ -96,7 +96,6 @@ export function RecentDrivesSection({ drives }: RecentDrivesSectionProps) {
             <Route className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
             {t('common.recentDrives', 'Recent drives')}
           </PanelTitle>
-          <Caption>{dateFormat.tz}</Caption>
         </div>
         <Link
           to="/drives"

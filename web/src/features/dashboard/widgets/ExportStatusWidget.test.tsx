@@ -414,6 +414,22 @@ describe('ExportStatusWidget states', () => {
 // ── Component: standard layout (row list) ───────────────────────────────────
 
 describe('ExportStatusWidget standard layout', () => {
+  it('matches the After row hierarchy without fabricating progress or status data', () => {
+    mockUseExports.mockReturnValue(qr({ data: [
+      makeExport({ id: 'drives', fsmState: 'processing', filePath: '/exports/drives.csv', format: 'csv' }),
+      makeExport({ id: 'charging', fsmState: 'ready', filePath: '/exports/charging.json', format: 'json', fileSize: 3172 }),
+      makeExport({ id: 'archive', fsmState: 'failed', filePath: '/exports/archive.zip', format: 'csv', failedReason: 'Disk quota' }),
+    ] }));
+    renderWidget(STANDARD);
+
+    const rows = screen.getAllByRole('listitem');
+    expect(rows).toHaveLength(3);
+    expect(within(rows[0]).getByText('Running')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('Done')).toBeInTheDocument();
+    expect(within(rows[2]).getByText(/Disk quota/)).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
   it('preserves status priority before chronology in the rich canonical feed', () => {
     mockUseExports.mockReturnValue(qr({ data: [
       makeExport({ id: 'failed', fsmState: 'failed', filePath: '/exports/new-failure.csv', createdAt: '2026-10-04T12:00:00Z' }),

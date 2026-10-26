@@ -1,32 +1,20 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileSearch, Info, AlertTriangle, AlertOctagon, ShieldAlert } from 'lucide-react';
+import { FileSearch } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useAuditLogs, useSecurityEvents } from '@/api/hooks/useAdmin';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
-import { WidgetEventFeed, WidgetBigNumber } from './shared';
-import type { EventFeedItem } from './shared';
+import { WidgetDetailCard, WidgetBigNumber, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates, type DataState } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
-import { gaugeTone } from '@/lib/tokens';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateLabels } from '@/hooks/useDateLabels';
 
 // ── Severity → visual mapping ────────────────────────────────────────
-
-const SEVERITY_ICON = {
-  info:     <Info className="h-3.5 w-3.5" />,
-  warning:  <AlertTriangle className="h-3.5 w-3.5" />,
-  critical: <AlertOctagon className="h-3.5 w-3.5" />,
-} as const;
-
-const SEVERITY_COLOR = {
-  info:     gaugeTone.info,
-  warning:  gaugeTone.warning,
-  critical: gaugeTone.danger,
-} as const;
 
 type Severity = 'info' | 'warning' | 'critical';
 
@@ -122,6 +110,8 @@ function CompactView({
 
 export default function AuditLogWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { formatDateShort, formatTime } = useDateFormat();
+  const { formatRelativeDays } = useDateLabels();
   const vehiclesQuery = useVehicles();
   const vid = vehicleId ?? safeArray(vehiclesQuery.data)[0]?.id;
   const vidStr = Number.isSafeInteger(vid) && Number(vid) > 0 ? String(vid) : '';
@@ -177,37 +167,48 @@ export default function AuditLogWidget({ vehicleId, size }: WidgetProps) {
     retry: handleRefresh,
   };
 
-  const feedItems = useMemo<EventFeedItem[]>(() => {
+  const formatRowTime = useCallback((timestamp: string): string => {
+    const ms = new Date(timestamp).getTime();
+    if (!Number.isFinite(ms)) return '—';
+    const day = formatRelativeDays(timestamp);
+    if (day === 'Today') return formatTime(timestamp);
+    if (day === 'Yesterday') return day;
+    return formatDateShort(timestamp);
+  }, [formatDateShort, formatRelativeDays, formatTime, t]);
+
+  const feedItems = useMemo(() => {
     const logs = safeArray(auditLogs).map((entry) => {
       const sev = inferAuditSeverity(entry.action);
       return {
         id: `audit-${entry.id}`,
-        icon: SEVERITY_ICON[sev],
         title: entry.action ?? '—',
         subtitle: [entry.resource, entry.details].filter(Boolean).join(' · ') || '—',
+        value: formatRowTime(entry.createdAt ?? ''),
         timestamp: entry.createdAt ?? '',
-        color: SEVERITY_COLOR[sev],
         severity: sev,
-        wrap: true,
-      } satisfies EventFeedItem;
+      };
     });
 
     const events = (vidStr ? safeArray(securityEvents) : []).map((event) => {
       const sev = inferSecuritySeverity(event);
       return {
         id: `sec-${event.id}`,
-        icon: <ShieldAlert className="h-3.5 w-3.5" />,
         title: buildSecurityTitle(event, t),
         subtitle: t('widget.auditSecurityEvent', 'Security event'),
+        value: formatRowTime(event.createdAt ?? ''),
         timestamp: event.createdAt ?? '',
-        color: SEVERITY_COLOR[sev],
         severity: sev,
-        wrap: true,
-      } satisfies EventFeedItem;
+      };
     });
 
-    return [...logs, ...events];
-  }, [auditLogs, securityEvents, t, vidStr]);
+    return [...logs, ...events].sort((a, b) => {
+      const left = new Date(a.timestamp).getTime();
+      const right = new Date(b.timestamp).getTime();
+      if (!Number.isFinite(left)) return Number.isFinite(right) ? 1 : 0;
+      if (!Number.isFinite(right)) return -1;
+      return right - left;
+    });
+  }, [auditLogs, securityEvents, formatRowTime, t, vidStr]);
 
   // Compute 24h stats for compact view
   const { totalEvents24h, worstSeverity } = useMemo(() => {
@@ -252,10 +253,13 @@ export default function AuditLogWidget({ vehicleId, size }: WidgetProps) {
         )
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <WidgetEventFeed
-            items={feedItems}
-            maxItems={15}
-            compact={false}
+          <WidgetDetailCard
+            entries={feedItems.slice(0, 15).map((item): DetailEntry => ({
+              id: item.id,
+              label: item.title,
+              sublabel: item.subtitle,
+              value: item.value,
+            }))}
             emptyMessage={t('widget.noAuditEvents', 'No audit events')}
             emptyIcon={<FileSearch className="h-5 w-5" />}
           />

@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { useTranslation } from 'react-i18next';
 import { DollarSign, Fuel, Zap } from 'lucide-react';
 
@@ -55,14 +56,14 @@ export function YearSavingsPanel({ data }: Props) {
         <MetricBar
           value={gasEquiv}
           max={barMax}
-          color="#fb7185"
+          color={palette.COLOR.BAD}
           label={t('yearReview.gasCost', 'Gas would cost')}
           sublabel={formatCurrency(gasEquiv)}
         />
         <MetricBar
           value={electric}
           max={barMax}
-          color="#34d399"
+          color={palette.COLOR.GOOD}
           label={t('yearReview.electricCost', 'Electric cost')}
           sublabel={formatCurrency(electric)}
         />

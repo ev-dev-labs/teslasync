@@ -255,7 +255,7 @@ describe('RouteMapSection — saved date preferences', () => {
     const start = screen.getAllByTestId('popup')[0].querySelector('time');
     expect(start).toHaveTextContent(formatDateTime(startTs, { locale: 'de-DE', tz: 'America/Los_Angeles' }));
     expect(start).toHaveAttribute('datetime', startTs);
-    expect(start).toHaveAttribute('title', startTs);
+    expect(start).not.toHaveAttribute('title');
     expect(screen.getAllByTestId('popup')[1].querySelector('time')).toHaveTextContent('2. Apr. 2026');
   });
 });

@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 
 import { useUnits } from '@/hooks/useUnits';
-import { formatDate } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import {formatMonthYear} from '@/lib/dateConvert';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { getGlobalPrecision } from '@/lib/numberFormat';
@@ -9,6 +10,7 @@ import { getGlobalPrecision } from '@/lib/numberFormat';
 export function useOdometerMilestoneDisplay() {
   const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { formatDistance, unitPrefs } = useUnits();
+  const { formatDate } = useDateFormat();
   const { distance: distanceUnit, locale } = unitPrefs;
 
   const formatDistanceKm = useCallback(
@@ -22,24 +24,12 @@ export function useOdometerMilestoneDisplay() {
   );
   const formatDateMs = useCallback(
     (ms: number | null | undefined) =>
-      ms == null ? '—' : formatDate(new Date(ms), { locale }),
-    [locale],
+      ms == null ? '—' : formatDate(new Date(ms)),
+    [formatDate],
   );
   const formatMonth = useCallback(
-    (monthStartMs: number) => {
-      try {
-        return new Intl.DateTimeFormat(locale, {
-          month: 'short',
-          year: 'numeric',
-          timeZone: 'UTC',
-        }).format(new Date(monthStartMs));
-      } catch {
-        return formatDate(new Date(monthStartMs), {
-          locale: 'en-US',
-          tz: 'UTC',
-        });
-      }
-    },
+    // Calendar markers encode the already-grouped month, not an observed instant.
+    (monthStartMs: number) => formatMonthYear(new Date(monthStartMs), { locale, tz: 'UTC' }),
     [locale],
   );
 

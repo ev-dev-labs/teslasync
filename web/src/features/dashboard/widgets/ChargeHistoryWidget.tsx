@@ -2,18 +2,24 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart3 } from 'lucide-react';
-import { AreaChartWrapper } from '@/components/charts';
+import {
+  Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  ChartTooltip, EmbeddedChart, axisTickSm, chartAnimation, chartGrid, chartMargin,
+  Cell, useMeasuredAxisWidth,
+} from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { request } from '@/api/client';
-import { averageKnown, deriveDataState, knownNumber, sumKnown } from '@/api/dataState';
-import { WidgetChartSummary, type ChartSummaryStat } from './shared';
+import { deriveDataState, knownNumber, sumKnown } from '@/api/dataState';
+import { WidgetBigNumber, WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import type { ChargingSession } from '../types';
+import type { ChargingSession } from '@/api/types';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { classifyChargingSource } from '@/lib/chargerKind';
+import { CHARGER_COLORS } from '@/lib/colors';
 
 export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber: fmt } = useNumberFormatting();
@@ -22,7 +28,7 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = vehiclesQuery;
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
-  const { formatDateTime } = useDateFormat();
+  const { formatDateShort } = useDateFormat();
 
   const query = useQuery({
     queryKey: ['charging', id, 'recent-10'],
@@ -40,6 +46,7 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
         .map((s) => ({
           started_at: s.started_at,
           energy: knownNumber(s.total_energy_added_wh) == null ? null : convertEnergyFromSI(s.total_energy_added_wh, unitPrefs.energy),
+          type: classifyChargingSource(s.charger_type),
         })),
     [charges, unitPrefs.energy],
   );
@@ -53,14 +60,21 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
   const dataState = id > 0 ? sourceState : deriveDataState(vehiclesQuery);
   const handleRefresh = () => { if (id > 0) void refetch(); else void vehiclesQuery.refetch(); };
 
+  const axisWidth = useMeasuredAxisWidth({
+    labels: chartData.map(d => (d.energy == null ? '—' : `${fmt(d.energy)} ${unitPrefs.energy}`)),
+    fontSize: 10, minWidth: 40, padding: 32, enabled: !isCompact,
+  });
+
+  // Summary totals only known readings: measured zero remains zero and
+  // missing readings do not become zero or inflate the average.
   const stats: ChartSummaryStat[] = useMemo(() => {
     if (!hasData) return [];
     const total = sumKnown(chartData.map(d => d.energy));
-    const avg = averageKnown(chartData.map(d => d.energy));
-    return [
-      { label: t('widget.chargeHistory.total', 'Total'), value: total == null ? null : fmt(total), unit: unitPrefs.energy },
-      { label: t('widget.chargeHistory.avg', 'Avg'), value: avg == null ? null : fmt(avg), unit: unitPrefs.energy },
-    ];
+    return [{
+      label: t('widget.chargeHistory.lastSessions', 'Last {{count}} sessions', { count: chartData.length }),
+      value: total == null ? null : fmt(total),
+      unit: unitPrefs.energy,
+    }];
   }, [chartData, hasData, t, unitPrefs.energy, fmt]);
 
   if (isCompact) {
@@ -76,14 +90,17 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
         isError={isError}
         onRefresh={handleRefresh}
       >
-        <WidgetChartSummary
-          compact
-          isEmpty={!hasData}
-          emptyMessage={t('widget.noChargeHistory', 'No charge sessions yet')}
-          emptyIcon={<BarChart3 className="h-5 w-5" />}
-          stats={stats}
-          chart={null}
-        />
+        {hasData ? (
+          <WidgetBigNumber
+            value={stats[0]?.value == null ? null : String(stats[0].value)}
+            unit={unitPrefs.energy}
+            label={t('widget.chargeHistory.total', 'Total')}
+            animated={false}
+            align="center"
+          />
+        ) : (
+          <WidgetChartSummary compact isEmpty emptyMessage={t('widget.noChargeHistory', 'No charge sessions yet')} emptyIcon={<BarChart3 className="h-5 w-5" />} stats={[]} chart={null} />
+        )}
       </WidgetShell>
     );
   }
@@ -91,7 +108,7 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.chargeHistory.title', 'Charge history')}
-      icon={<BarChart3 className="h-3.5 w-3.5 text-emerald-300" />}
+      icon={<BarChart3 className="h-3.5 w-3.5" />}
       loading={isLoading && !charges}
       error={!charges && error ? String(error) : null}
       dataState={dataState}
@@ -106,19 +123,49 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
         emptyMessage={t('widget.noChargeHistory', 'No charge sessions yet')}
         emptyIcon={<BarChart3 className="h-5 w-5" />}
         stats={stats}
+        yAxisLabel={undefined}
+        legend={[
+          { label: t('widget.chargeHistory.home', 'Home'), color: CHARGER_COLORS.home },
+          { label: t('widget.chargeHistory.supercharger', 'Supercharger'), color: CHARGER_COLORS.supercharger },
+          { label: t('widget.chargeHistory.dcFast', 'DC fast'), color: CHARGER_COLORS.dc },
+        ]}
         chart={
-          <AreaChartWrapper
-            data={chartData}
-            xKey="started_at"
-            xFormatter={(value) => formatDateTime(value)}
-            series={[{ key: 'energy', label: unitPrefs.energy, color: '#10b981' }]}
-            height={200}
-            yFormatter={(v) => `${v} ${unitPrefs.energy}`}
+          <EmbeddedChart
+            title={t('widget.chargeHistory.title', 'Charge history')}
             ariaLabel={t(
               'widget.chargeHistory.chartLabel',
               'Energy added per recent charge session, in kilowatt-hours',
             )}
-          />
+            data={chartData}
+            dataColumns={[
+              { key: 'started_at', label: t('widget.chargeHistory.title', 'Charge history'), format: (v) => formatDateShort(typeof v === 'string' ? v : null) },
+              { key: 'energy', label: unitPrefs.energy, format: (v) => (knownNumber(v) == null ? '—' : `${fmt(knownNumber(v) as number)} ${unitPrefs.energy}`) },
+            ]}
+            className="h-full w-full"
+            empty={!hasData}
+            emptyMessage={t('widget.noChargeHistory', 'No charge sessions yet')}
+          >
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+                {chartGrid}
+                <XAxis dataKey="started_at" tick={axisTickSm} tickLine={false} axisLine={false} tickFormatter={(v: string) => formatDateShort(v)} />
+                <YAxis tick={{ ...axisTickSm, width: undefined }} tickLine={false} axisLine={false} width={axisWidth} tickFormatter={(v: number) => `${fmt(v)} ${unitPrefs.energy}`} />
+                <Tooltip content={<ChartTooltip />} formatter={(value: number, _name: string, props: { payload?: { type?: string } }) => [
+                  knownNumber(value) == null ? '—' : `${fmt(value)} ${unitPrefs.energy}`,
+                  t(`widget.chargeHistory.type.${props.payload?.type ?? 'unknown'}`, props.payload?.type === 'supercharger' ? 'Supercharger' : props.payload?.type === 'dcFast' ? 'DC fast' : props.payload?.type === 'acHome' ? 'Home' : 'Unknown'),
+                ]} cursor={{ fill: 'var(--border-subtle)', fillOpacity: 0.08 }} />
+                <Bar dataKey="energy" name={unitPrefs.energy} radius={[4, 4, 0, 0]} maxBarSize={32}>
+                  {chartData.map((datum, index) => {
+                    const color = datum.type === 'supercharger' ? CHARGER_COLORS.supercharger
+                      : datum.type === 'dcFast' ? CHARGER_COLORS.dc
+                      : datum.type === 'acHome' ? CHARGER_COLORS.home
+                      : CHARGER_COLORS.Other;
+                    return <Cell key={index} fill={color} />;
+                  })}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </EmbeddedChart>
         }
       />
     </WidgetShell>

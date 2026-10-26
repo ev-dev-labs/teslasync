@@ -61,11 +61,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"strings"
-	"unicode"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 // LocationSource is the narrow visited-location read interface the
@@ -215,20 +214,17 @@ func validateLocationNameShape(proposed string) error {
 	if proposed == "" {
 		return errors.New("location name must not be empty")
 	}
-	if strings.TrimSpace(proposed) == "" {
+	if validation.TrimSpace(proposed) == "" {
 		return errors.New("location name must contain at least one non-whitespace character")
 	}
-	if proposed[0] == ' ' || proposed[0] == '\t' || proposed[len(proposed)-1] == ' ' || proposed[len(proposed)-1] == '\t' {
+	if validation.HasLeadingOrTrailingWhitespace(proposed) {
 		return errors.New("location name must not have leading or trailing whitespace")
 	}
-	runes := []rune(proposed)
-	if len(runes) > autoNameUnnamedLocationsMaxNameLen {
+	if validation.RuneCount(proposed) > autoNameUnnamedLocationsMaxNameLen {
 		return errors.New("location name must be at most 200 characters")
 	}
-	for _, r := range runes {
-		if unicode.IsControl(r) {
-			return errors.New("location name must not contain control characters")
-		}
+	if validation.HasControlCharacters(proposed) {
+		return errors.New("location name must not contain control characters")
 	}
 	return nil
 }

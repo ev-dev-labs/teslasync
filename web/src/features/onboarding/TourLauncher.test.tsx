@@ -165,6 +165,17 @@ afterEach(() => {
 })
 
 describe('TourLauncher', () => {
+  it('preserves the opening request delivered before its lazy mount and reopens normally', () => {
+    render(<MemoryRouter><TourLauncher initialOpen /></MemoryRouter>);
+    expect(screen.getByRole('dialog', { name: 'Take a tour' })).toBeInTheDocument();
+    expect(markTourListSeenMock).toHaveBeenCalledTimes(1);
+    fireEvent.click(footerCloseButton());
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    openLauncher();
+    expect(screen.getByRole('dialog', { name: 'Take a tour' })).toBeInTheDocument();
+    expect(markTourListSeenMock).toHaveBeenCalledTimes(2);
+  });
+
   it('stays hidden until the open event fires, then records the list as seen', () => {
     renderLauncher()
 

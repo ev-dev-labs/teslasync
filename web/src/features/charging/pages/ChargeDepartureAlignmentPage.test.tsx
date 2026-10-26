@@ -208,6 +208,7 @@ describe('Charge departure page contract adoption', () => {
       const page = mountPage();
       const plottedBefore = structuredClone(source.plotted);
       const accessibleBefore = structuredClone(source.chart?.data);
+      const csvDataBefore = structuredClone(source.chart?.exportData);
       const csvBefore = objectsToCSV(source.chart?.exportData ?? []);
 
       source.palette = savedPalette;
@@ -233,7 +234,7 @@ describe('Charge departure page contract adoption', () => {
       expect(source.chart?.chartKey).toBe('charge-departure-alignment');
       expect(source.plotted).toEqual(plottedBefore);
       expect(source.chart?.data).toEqual(accessibleBefore);
-      expect(source.chart?.exportData).toEqual(accessibleBefore);
+      expect(source.chart?.exportData).toEqual(csvDataBefore);
       expect(objectsToCSV(source.chart?.exportData ?? [])).toBe(csvBefore);
       expect(source.sessions.data).toEqual(sessionsBefore);
       expect(source.drives.data).toEqual(drivesBefore);
@@ -276,7 +277,16 @@ describe('Charge departure page contract adoption', () => {
       { dwellMin: 0, margin: 0 },
       { dwellMin: 60, margin: null },
     ]);
-    expect(source.chart?.data).toEqual(source.chart?.exportData);
+    expect(source.chart?.data?.map(row => row.date)).toEqual([
+      'Sep 1, 2026, 09:00:00 AM',
+      'Sep 1, 2026, 09:00:00 AM',
+      'Sep 1, 2026, 09:00:00 AM',
+    ]);
+    expect(source.chart?.exportData?.map(row => row.date)).toEqual([
+      '2026-09-01T09:00:00.000Z',
+      '2026-09-01T09:00:00.000Z',
+      '2026-09-01T09:00:00.000Z',
+    ]);
     expect(objectsToCSV(source.chart?.exportData ?? [])).toBe(rawCSV);
     expect(toCSV(source.chart?.exportData ?? [], [
       { key: 'dwellMin' }, { key: 'margin' },
@@ -298,13 +308,15 @@ describe('Charge departure page contract adoption', () => {
     expect(source.chart?.chartKey).toBe('charge-departure-alignment');
     expect(source.chart?.height).toBe(340);
     expect(source.chart?.dataColumns?.map(column => column.key)).toEqual(['date', 'dwellMin', 'margin', 'flags']);
-    expect(source.chart?.exportData).toEqual([
-      { date: `${formatDateTime('2026-09-01T09:00:00Z', { locale: 'en-US', tz: 'UTC', clock: { second: '2-digit' } })} (UTC) · 2026-09-01T09:00:00.000Z`,
-        dwellMin: 60, margin: 45, flags: 'Well matched' },
-      { date: `${formatDateTime('2026-09-01T09:00:00Z', { locale: 'en-US', tz: 'UTC', clock: { second: '2-digit' } })} (UTC) · 2026-09-01T09:00:00.000Z`,
-        dwellMin: 90, margin: null, flags: 'Heuristic flags, not confirmed faults' },
+    const friendly = formatDateTime('2026-09-01T09:00:00Z', { locale: 'en-US', tz: 'UTC', clock: { second: '2-digit' } });
+    expect(source.chart?.data).toEqual([
+      { date: friendly, dwellMin: 60, margin: 45, flags: 'Well matched' },
+      { date: friendly, dwellMin: 90, margin: null, flags: 'Heuristic flags, not confirmed faults' },
     ]);
-    expect(source.chart?.data).toEqual(source.chart?.exportData);
+    expect(source.chart?.exportData).toEqual([
+      { date: '2026-09-01T09:00:00.000Z', dwellMin: 60, margin: 45, flags: 'Well matched' },
+      { date: '2026-09-01T09:00:00.000Z', dwellMin: 90, margin: null, flags: 'Heuristic flags, not confirmed faults' },
+    ]);
     expect(source.chargeHook).toHaveBeenLastCalledWith('4');
     expect(source.driveHook).toHaveBeenLastCalledWith('4');
     expect(source.analyze).toHaveBeenLastCalledWith(source.sessions.data, source.drives.data);
@@ -322,7 +334,7 @@ describe('Charge departure page contract adoption', () => {
     expect(within(history).getByText('1 records loaded', { selector: 'dd' })).toBeInTheDocument();
     expect(history).toHaveTextContent('Observed charge-end timestamps');
     expect(history).toHaveTextContent('Observed drive-start timestamps');
-    expect(history).toHaveTextContent('1 valid timestamps');
+    expect(history).toHaveTextContent('valid timestamp count: 1');
     expect(history).toHaveTextContent(formatDateTime('2026-09-01T09:00:00Z', {
       locale: 'en-US', tz: 'UTC', clock: { second: '2-digit' },
     }));
@@ -333,7 +345,7 @@ describe('Charge departure page contract adoption', () => {
       ['utc', 'en-US'],
       ['user', 'en-GB'],
       ['vehicle', 'de-DE'],
-    ] as const)('preserves year, time and exact identity in %s mode with %s locale', (mode, locale) => {
+    ] as const)('preserves year and time in %s mode with %s locale and keeps exact identity in CSV', (mode, locale) => {
       source.mode = mode;
       source.locale = locale;
       const instants = [
@@ -349,17 +361,17 @@ describe('Charge departure page contract adoption', () => {
       mountPage();
       const zone = resolveTimezone(mode, source.vehicleZone, source.userZone);
       const labels = instants.map(iso =>
-        `${formatDateTime(iso, { locale, tz: zone, clock: { second: '2-digit' } })} (${zone}) · ${iso}`,
+        formatDateTime(iso, { locale, tz: zone, clock: { second: '2-digit' } }),
       );
       expect(source.chart?.data?.map(row => row.date)).toEqual(labels);
-      expect(source.chart?.exportData?.map(row => row.date)).toEqual(labels);
-      expect(new Set(labels).size).toBe(instants.length);
+      expect(source.chart?.exportData?.map(row => row.date)).toEqual(instants);
+      expect(new Set(source.chart?.exportData?.map(row => row.date)).size).toBe(instants.length);
       instants.forEach((iso, index) => {
         expect(source.tooltip?.labelFormatter?.(iso)).toBe(labels[index]);
         expect(source.axis?.tickFormatter?.(iso, index)).toBe(formatDateShort(iso, { locale, tz: zone }));
       });
       expect(source.tooltip?.labelFormatter?.(undefined)).toBe('—');
-      expect(source.chart?.subtitle).toContain(`Chart timestamps use ${zone}.`);
+      expect(source.chart?.subtitle).toContain('Chart timestamps use your selected time zone.');
       expect(source.chart?.subtitle).toContain('Pairing uses elapsed instants within 24 hours');
       expect(source.analyze).toHaveBeenLastCalledWith(source.sessions.data, source.drives.data);
     });

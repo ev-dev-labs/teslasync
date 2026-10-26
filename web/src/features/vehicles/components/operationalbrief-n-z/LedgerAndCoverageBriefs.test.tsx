@@ -132,7 +132,7 @@ describe('Coverage accounting brief boundaries', () => {
   });
 
   it('does not present empty model defaults as source counts during unresolved utilization loading', () => {
-    const summary = summarizeUtilization([], null, window);
+    const summary = summarizeUtilization([], null, { ...window, timezone: 'UTC' });
     render(<MemoryRouter><UtilizationMethodology summary={summary} historyLimit={1000}
       state={{ ...state, isLoading: true }} sourceStatus="initial" hasSource={false} /></MemoryRouter>);
     const brief = screen.getByTestId('utilization-coverage-summary');
@@ -142,7 +142,7 @@ describe('Coverage accounting brief boundaries', () => {
   });
 
   it('retains timestamp/field methodology tables and a stale source status without zeroing a returned payload', () => {
-    const summary = summarizeUtilization([], null, window);
+    const summary = summarizeUtilization([], null, { ...window, timezone: 'UTC' });
     render(<MemoryRouter><UtilizationMethodology summary={summary} historyLimit={1000}
       state={state} sourceStatus="stale" hasSource /></MemoryRouter>);
     const brief = screen.getByTestId('utilization-coverage-summary');

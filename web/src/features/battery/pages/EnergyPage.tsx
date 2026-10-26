@@ -59,14 +59,15 @@ import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useDataState } from '@/hooks/useDataState';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
-import { formatDateShort, formatDayKey, ymdInTz } from '@/lib/dateFormat';
+import {formatDateShort, formatDayKey, zonedDateParts} from '@/lib/dateFormat'
+import {ymdInTz} from '@/lib/dateConvert';
 
 import { chartTokens, gaugeTone, typography, type NeonColor } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 import type { ChargingSession } from '@/api/types';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
-import { convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
-import { useTimezone } from '@/lib/timezone';
+import { convertDistanceFromSI, convertDistanceToSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ── Local: Cost Comparison Card ────────────────────────────────── */
@@ -123,15 +124,7 @@ export default function EnergyPage() {
   const palette = useChartPalette();
   const { reduce, durationMs } = useMotionPreference();
   const { formatCurrency, currencySymbol, estimateGasCost } = useFormatting();
-  const timezone = useTimezone();
-  const sessionHourFormatter = useMemo(
-    () => new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      hour: 'numeric',
-      hourCycle: 'h23',
-    }),
-    [timezone],
-  );
+  const { tz: timezone } = useDateFormat();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
   const toEnergyDisplay = (wh: number) => convertEnergyFromSI(wh, unitPrefs.energy);
 
@@ -139,7 +132,7 @@ export default function EnergyPage() {
   const energyUnit = unitPrefs.energy;
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
   const toEfficiencyDisplay = useCallback(
-    (whPerM: number) => unitPrefs.distance === 'mi' ? whPerM * 1609.344 : whPerM * 1000,
+    (whPerM: number) => whPerM * convertDistanceToSI(1, unitPrefs.distance === 'mi' ? 'mi' : 'km'),
     [unitPrefs.distance],
   );
   const savedView = useSavedViewUrl();
@@ -312,10 +305,10 @@ export default function EnergyPage() {
     () =>
       dailyEnergy.map((d) => ({
         date: d.date,
-        efficiency: (d.efficiency_wh_per_m ?? 0) * (distanceUnit === 'mi' ? 1609.344 : 1000),
+        efficiency: toEfficiencyDisplay(d.efficiency_wh_per_m ?? 0),
         distance: convertDistanceFromSI(d.distance_m ?? 0, distanceUnit),
       })),
-    [dailyEnergy, distanceUnit],
+    [dailyEnergy, distanceUnit, toEfficiencyDisplay],
   );
 
   /* Consumption comes from the drive aggregate; recorded cost comes from
@@ -489,8 +482,8 @@ export default function EnergyPage() {
     const buckets: Record<string, { count: number; energy: number }> = {};
     labels.forEach((l) => { buckets[l] = { count: 0, energy: 0 }; });
     sessions.forEach((s) => {
-      const hour = Number(sessionHourFormatter.format(new Date(s.started_at)));
-      if (!Number.isFinite(hour)) return;
+      const hour = zonedDateParts(s.started_at, timezone)?.hour;
+      if (hour == null) return;
       const idx = hour < 6 ? 0 : hour < 12 ? 1 : hour < 18 ? 2 : 3;
       buckets[labels[idx]].count++;
       buckets[labels[idx]].energy += s.total_energy_added_wh ?? 0;
@@ -502,7 +495,7 @@ export default function EnergyPage() {
       count: buckets[name].count,
       energy: convertEnergyFromSI(buckets[name].energy, energyUnit),
     }));
-  }, [sessions, t, energyUnit, sessionHourFormatter]);
+  }, [sessions, t, energyUnit, timezone]);
 
   /* ── Charger-type breakdown ───────────────────────────────────── */
   const chargerBreakdown = useMemo(() => {
@@ -1465,7 +1458,7 @@ export default function EnergyPage() {
                 <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
                   <Caption className="flex items-center gap-1">
                     <Icon icon={Moon} size="xs" />
-                    {t('energy.tip.timezone', 'Buckets use {{timezone}} session start time.', { timezone })}
+                    {t('energy.tip.timezone', 'Buckets use session start time in your selected time zone.')}
                   </Caption>
                   <Caption className="flex items-center gap-1">
                     <Icon icon={Sun} size="xs" />

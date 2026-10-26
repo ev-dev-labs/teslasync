@@ -8,7 +8,8 @@ import { InlineMetric } from '@/components/data-display/InlineMetric';
 import {
   HistoryListRow, ScoreBadge, BatteryDelta, RouteDisplay,
 } from '@/components/data-display';
-import { formatDateTime, formatTime, formatDurationMinutes } from '@/lib/dateFormat';
+import {formatDateTime, formatTime} from '@/lib/dateFormat'
+import {formatDurationMinutes} from '@/lib/dateConvert';
 
 import { getEfficiency, gradeFromEfficiency } from '@/lib/drivesAggregation';
 import type { Drive } from '@/types/driving';

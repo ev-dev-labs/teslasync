@@ -328,7 +328,7 @@ describe('AppearanceSettings — chart palette', () => {
       within(group).getByRole('radio', { name: /Color-blind safe/i }),
     ).toBeChecked()
     expect(
-      within(group).getByRole('radio', { name: /Stylistic neon/i }),
+      within(group).getByRole('radio', { name: /Alternate order/i }),
     ).not.toBeChecked()
     // Each palette renders one swatch per colour constant.
     expect(group.querySelectorAll('[data-chart-palette-swatch]')).toHaveLength(
@@ -346,7 +346,7 @@ describe('AppearanceSettings — chart palette', () => {
     renderPanel()
     openMoreOptions()
     const group = screen.getByRole('radiogroup', { name: 'Chart palette' })
-    fireEvent.click(within(group).getByRole('radio', { name: /Stylistic neon/i }))
+    fireEvent.click(within(group).getByRole('radio', { name: /Alternate order/i }))
 
     await waitFor(() => expect(findPutCall()).toBeTruthy())
     expect(JSON.parse((findPutCall()![1] as RequestInit).body as string)).toEqual({

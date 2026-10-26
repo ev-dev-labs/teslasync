@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 /**
  * Ingest X-Ray — bucketed sample-count chart.
  *
@@ -128,7 +129,7 @@ export function XRayBucketChart({ buckets, loading }: XRayBucketChartProps) {
                 valueFormatter={(v) => fmtInt(v)}
               />
             }
-            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+            cursor={{ fill: palette.DATA_VISUAL_COLORS.glassWash }}
           />
           <Bar
             dataKey="count"

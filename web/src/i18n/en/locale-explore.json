@@ -163,9 +163,6 @@
     "removeChip": "Remove {{label}}",
     "removedChip": "Removed {{label}}"
   },
-  "dataRepair": {
-    "truncated": "The scan hit its per-request limit, so more sessions may need repair than are listed here. Apply what is shown and refresh."
-  },
   "date": {
     "preset": {
       "all": "All time",
@@ -825,59 +822,6 @@
       },
       "updated": {
         "success": "Annotation updated"
-      }
-    },
-    "dataRepair": {
-      "case": {
-        "assign": {
-          "success": "Case assignment updated"
-        },
-        "bulk": {
-          "success": "Updated {{count}} repair cases"
-        },
-        "comment": {
-          "success": "Comment added"
-        },
-        "transition": {
-          "success": "Repair case updated"
-        }
-      },
-      "charging": {
-        "apply": {
-          "success": "Charging boundary repaired"
-        },
-        "close": {
-          "success": "Charging session closed"
-        },
-        "quarantine": {
-          "success": "Charging session moved to quarantine"
-        },
-        "update": {
-          "success": "Charging session updated"
-        }
-      },
-      "drive": {
-        "apply": {
-          "success": "Drive boundary repaired"
-        },
-        "close": {
-          "success": "Drive closed"
-        },
-        "quarantine": {
-          "success": "Drive moved to quarantine"
-        },
-        "update": {
-          "success": "Drive updated"
-        }
-      },
-      "quarantine": {
-        "success": "Session moved to quarantine"
-      },
-      "restore": {
-        "success": "Session restored"
-      },
-      "scan": {
-        "success": "Data integrity scan completed"
       }
     },
     "export": {

@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import {
   Flame,
   Snowflake,
@@ -50,11 +51,11 @@ function thermalLabel(
 function thermalColor(band: BatteryPassportThermalBand): string {
   switch (band.key) {
     case 'cold':
-      return '#3b82f6';
+      return palette.DATA_VISUAL_COLORS.blue;
     case 'nominal':
-      return '#10b981';
+      return palette.COLOR.GOOD;
     default:
-      return '#ef4444';
+      return palette.COLOR.BAD;
   }
 }
 

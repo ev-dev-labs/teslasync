@@ -20,7 +20,6 @@ interface RangeBufferHourProfileProps {
 export function RangeBufferHourProfile({
   result,
   state,
-  timeZone,
 }: RangeBufferHourProfileProps) {
   const { t } = useTranslation();
   const rows = useMemo<RangeBufferProfileChartRow[]>(
@@ -45,8 +44,7 @@ export function RangeBufferHourProfile({
         )}
         subtitle={t(
           'rangeBuffer.hour.subtitle',
-          'Four-hour completion windows in {{timeZone}}; each drive is one observation.',
-          { timeZone },
+          'Four-hour completion windows in your selected time zone; each drive is one observation.',
         )}
         ariaLabel={t(
           'rangeBuffer.hour.aria',

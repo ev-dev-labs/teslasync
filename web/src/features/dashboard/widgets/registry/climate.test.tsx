@@ -26,6 +26,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 
 import { CLIMATE_WIDGETS } from './climate';
 import { WIDGET_REGISTRY, getWidgetDef } from './index';
@@ -54,6 +55,12 @@ vi.mock('@/api/hooks/useVehicleSystems', () => ({
 }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
 vi.mock('@/hooks/useDateFormat', () => ({ useDateFormat: vi.fn() }));
+vi.mock('@/hooks/useRangeState', () => ({
+  useRangeState: vi.fn(() => ({
+    startInstant: '2026-01-01T00:00:00.000Z',
+    endInstantExclusive: '2026-01-02T00:00:00.000Z',
+  })),
+}));
 
 import { useVehicles, useClimateLatest, useVehicleState } from '@/api/hooks/useVehicles';
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
@@ -193,7 +200,11 @@ describe('CLIMATE_WIDGETS — lazy component wiring', () => {
       expect(typeof mod.default).toBe('function');
 
       const Widget = mod.default as ComponentType<WidgetProps>;
-      render(<Widget size={byId(id).defaultSize} />);
+      render(
+        <MemoryRouter>
+          <Widget size={byId(id).defaultSize} />
+        </MemoryRouter>,
+      );
       // The widget mounts into its titled WidgetShell even with no data,
       // proving the registry id maps to the intended component.
       expect(await screen.findByText(EXPECTED_TITLES[id])).toBeInTheDocument();

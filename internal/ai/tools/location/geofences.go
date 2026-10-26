@@ -80,10 +80,10 @@ import (
 	"math"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 // GeofenceValidator is the narrow validation interface the
@@ -248,21 +248,17 @@ func validateGeofenceShape(proposedName string, radiusM float64) error {
 	if proposedName == "" {
 		return errors.New("geofence name must not be empty")
 	}
-	if strings.TrimSpace(proposedName) == "" {
+	if validation.TrimSpace(proposedName) == "" {
 		return errors.New("geofence name must contain at least one non-whitespace character")
 	}
-	if proposedName[0] == ' ' || proposedName[0] == '\t' ||
-		proposedName[len(proposedName)-1] == ' ' || proposedName[len(proposedName)-1] == '\t' {
+	if validation.HasLeadingOrTrailingWhitespace(proposedName) {
 		return errors.New("geofence name must not have leading or trailing whitespace")
 	}
-	runes := []rune(proposedName)
-	if len(runes) > suggestNewGeofencesMaxNameLen {
+	if validation.RuneCount(proposedName) > suggestNewGeofencesMaxNameLen {
 		return errors.New("geofence name must be at most 200 characters")
 	}
-	for _, r := range runes {
-		if unicode.IsControl(r) {
-			return errors.New("geofence name must not contain control characters")
-		}
+	if validation.HasControlCharacters(proposedName) {
+		return errors.New("geofence name must not contain control characters")
 	}
 	if math.IsNaN(radiusM) || math.IsInf(radiusM, 0) {
 		return errors.New("geofence radius must be a finite number of meters")
@@ -321,7 +317,7 @@ func buildGeofenceEvidence(loc *geomodel.VisitedLocation) geofenceEvidence {
 // Anything else returns (0, 0, false) and the caller treats it as
 // "no usable centroid".
 func parseCentroidFromAddress(addressName string) (lat, lon float64, ok bool) {
-	s := strings.TrimSpace(addressName)
+	s := validation.TrimSpace(addressName)
 	if s == "" {
 		return 0, 0, false
 	}
@@ -337,8 +333,8 @@ func parseCentroidFromAddress(addressName string) (lat, lon float64, ok bool) {
 	if len(parts) != 2 {
 		return 0, 0, false
 	}
-	latStr := strings.TrimSpace(parts[0])
-	lonStr := strings.TrimSpace(parts[1])
+	latStr := validation.TrimSpace(parts[0])
+	lonStr := validation.TrimSpace(parts[1])
 	if latStr == "" || lonStr == "" {
 		return 0, 0, false
 	}

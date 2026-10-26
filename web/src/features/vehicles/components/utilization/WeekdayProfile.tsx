@@ -99,11 +99,11 @@ export function WeekdayProfile({
         )}
         subtitle={t(
           'utilization.weekday.subtitle',
-          'UTC weekday active-day rate and average distance on days with eligible drives.',
+          'Selected-calendar weekday active-day rate and average distance on days with eligible drives.',
         )}
         ariaLabel={t(
           'utilization.weekday.aria',
-          'Active-day rate bars and average active-day distance by UTC weekday',
+          'Active-day rate bars and average active-day distance by selected-calendar weekday',
         )}
         action={
           <Badge variant={guard.sufficient ? 'success' : 'warning'} dot>

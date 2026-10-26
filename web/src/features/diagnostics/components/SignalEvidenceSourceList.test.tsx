@@ -80,7 +80,7 @@ describe('complete signal evidence source presentation', () => {
     expect(button).toHaveClass('focus-visible:outline-2', 'focus-visible:outline-offset-2');
     for (const caption of screen.getAllByText(/Requested window:|Actually recorded:|^Fetched /)) {
       expect(caption).toHaveClass('block', 'break-words');
-      expect(caption).toHaveAttribute('title');
+      expect(caption).not.toHaveAttribute('title');
     }
     await user.tab();
     expect(button).toHaveFocus();
@@ -300,7 +300,7 @@ describe('complete signal evidence source presentation', () => {
     const { rerender } = render(<SignalEvidenceSourceList label="History" sources={sources} />);
     const assertTimes = () => {
       expect(within(row('Speed')).getByText(`Requested window: ${formatDateTime(retained.from, datePreferences)} → ${formatDateTime(retained.to, datePreferences)}`)).toBeInTheDocument();
-      expect(within(row('Speed')).getByText(`Actually recorded: ${formatDateTime(retained.data[2].ts, datePreferences)} → ${formatDateTime(retained.data[0].ts, datePreferences)}`)).toHaveAttribute('title', `${retained.data[2].ts} → ${retained.data[0].ts}`);
+      expect(within(row('Speed')).getByText(`Actually recorded: ${formatDateTime(retained.data[2].ts, datePreferences)} → ${formatDateTime(retained.data[0].ts, datePreferences)}`)).not.toHaveAttribute('title');
       expect(within(row('Speed')).getByText(`Fetched ${formatDateTime(new Date(updatedAt), datePreferences)}`)).toBeInTheDocument();
     };
     assertTimes();

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
-import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
+import { closeMockedPage, fulfillApiFixture, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
+import type { AutomationHistoryListResponse } from '../src/api/types'
 import { beginNativeDashboardDrag } from './dashboardDragPrecondition'
 import { GRID_COLS, resolveBreakpointFromWidth } from '../src/features/dashboard/hooks/useDashboardLayout'
 import { attachDiagnostics, expectNoRuntimeFailures, monitorPage, type PageDiagnostics } from './qualityAssertions'
@@ -96,7 +97,8 @@ test('drag persists on the active breakpoint without touching the others', async
   expect(reloaded).toEqual(after)
   await expectNoRuntimeFailures(diagnostics)
   await expectNoRuntimeFailures(restoredDiagnostics)
-  await restoredPage.close()
+  await closeMockedPage(restoredPage, restoredApi)
+  await closeMockedPage(page, mockApi)
   } finally {
     await test.info().attach('drag-runtime-by-document.json', {
       body: Buffer.from(JSON.stringify({ original: diagnostics, restored: restoredDiagnostics ?? null }, null, 2)),
@@ -286,6 +288,17 @@ test('resize affordances are contained grips and a real resize persists', async 
 test('new widgets fit their content across desktop, tablet, and phone widths', async ({ page }) => {
   await seedBrowserState(page, 'dark', '/', { preserveDashboardState: true })
   const mockApi = await installApiMocks(page, 'populated')
+  await page.route('**/api/v1/vehicle-config/latest?vehicle_id=7', route =>
+    fulfillApiFixture(route, mockApi, { json: null }))
+  const history: AutomationHistoryListResponse = {
+    items: [], total: 0, limit: 20, offset: 0, trend: [],
+    summary: {
+      total_executions: 0, succeeded: 0, failed: 0, partial: 0,
+      success_rate: 0, avg_duration_ms: 0,
+    },
+  }
+  await page.route('**/api/v1/automations/history?limit=20', route =>
+    fulfillApiFixture(route, mockApi, { json: history }))
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   await waitForHarnessReady(page, mockApi)
   await createCommuter(page)
@@ -389,6 +402,7 @@ test('new widgets fit their content across desktop, tablet, and phone widths', a
   ).toBe(previousHeight)
   await page.waitForTimeout(1200)
   expect((await readLayouts(page)).md.find((item) => item.i === instanceId)?.h).toBe(previousHeight)
+  await closeMockedPage(page, mockApi)
 })
 
 test('repairs oversized saved panels without undoing an explicit resize', async ({ page }) => {
@@ -443,23 +457,23 @@ test('repairs oversized saved panels without undoing an explicit resize', async 
   expect((await readLayouts(restored)).md.find((item) => item.i === saved.bloatedId)?.h)
     .toBe(healed.md.find((item) => item.i === saved.bloatedId)?.h)
   const context = page.context()
-  await restored.close()
-  await page.close()
+  await closeMockedPage(restored, restoredApi)
+  await closeMockedPage(page, mockApi)
   let reloaded = await context.newPage()
   await seedBrowserState(reloaded, 'dark', '/', { preserveDashboardState: true })
-  const reloadedApi = await installApiMocks(reloaded, 'populated')
+  let reloadedApi = await installApiMocks(reloaded, 'populated')
   await reloaded.goto('/', { waitUntil: 'domcontentloaded' })
   await waitForHarnessReady(reloaded, reloadedApi)
   expect((await readLayouts(reloaded)).md.find((item) => item.i === saved.bloatedId)?.h)
     .toBe(healed.md.find((item) => item.i === saved.bloatedId)?.h)
   for (const width of [320, 390, 480, 481, 768, 996, 1024, 1200, 1440, 1920]) {
-    await reloaded.close()
+    await closeMockedPage(reloaded, reloadedApi)
     reloaded = await context.newPage()
     await reloaded.setViewportSize({ width, height: 900 })
     await seedBrowserState(reloaded, 'dark', '/', { preserveDashboardState: true })
-    const viewportApi = await installApiMocks(reloaded, 'populated')
+    reloadedApi = await installApiMocks(reloaded, 'populated')
     await reloaded.goto('/', { waitUntil: 'domcontentloaded' })
-    await waitForHarnessReady(reloaded, viewportApi)
+    await waitForHarnessReady(reloaded, reloadedApi)
     const panel = reloaded.locator(`[data-widget-id="${saved.bloatedId}"] .widget-panel`)
     await expect.poll(() => panel.evaluate((element) => element.getBoundingClientRect().height), {
       message: `oversized saved panel should not return after reopening at ${width}px`,
@@ -471,7 +485,7 @@ test('repairs oversized saved panels without undoing an explicit resize', async 
     expect(layouts.md.find((item) => item.i === saved.deliberateId)).toMatchObject({ h: 25, userSized: true })
     for (const items of Object.values(layouts)) expect(countOverlaps(items)).toBe(0)
   }
-  await reloaded.close()
+  await closeMockedPage(reloaded, reloadedApi)
 })
 
 test('repairs oversized layouts restored from the server and syncs the healed size', async ({ page }) => {

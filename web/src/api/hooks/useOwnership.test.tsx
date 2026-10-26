@@ -10,6 +10,7 @@ import {
   useCreateWarrantyClaim,
   useDeleteWarranty,
   useRetentionRuns,
+  useInsuranceRiskProfile,
   useSimulateGovernance,
   useWarranties,
 } from './useOwnership';
@@ -193,6 +194,35 @@ function makeHarness() {
 }
 
 const fetchMock = vi.fn<typeof fetch>();
+
+describe('insurance selected-clock query ownership', () => {
+  it('keys and sends the effective clock without changing the rolling window', async () => {
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ factors: [] }), {
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    function Wrapper({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    }
+    const view = renderHook(({ timezone }) => useInsuranceRiskProfile(7, 90, timezone), {
+      initialProps: { timezone: 'UTC' }, wrapper: Wrapper,
+    });
+    await waitFor(() => expect(view.result.current.isSuccess).toBe(true));
+    view.rerender({ timezone: 'America/Los_Angeles' });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(view.result.current.isSuccess).toBe(true));
+    for (const [index, zone] of ['UTC', 'America/Los_Angeles'].entries()) {
+      const url = new URL(String(fetchMock.mock.calls[index]?.[0]), window.location.origin);
+      expect(Object.fromEntries(url.searchParams)).toEqual({
+        vehicle_id: '7', window_days: '90', timezone: zone,
+      });
+      expect(client.getQueryData(ownershipKeys.insurance(7, 90, zone))).toBeDefined();
+    }
+    view.unmount();
+    client.clear();
+  });
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
   window.history.replaceState(null, '', '/');

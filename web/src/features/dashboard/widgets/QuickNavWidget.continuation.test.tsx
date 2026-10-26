@@ -4,13 +4,17 @@ import { renderWidget } from '../components/continuation-dashboard-2/testSupport
 import QuickNavWidget from './QuickNavWidget';
 
 describe('canonical quick navigation typography', () => {
-  it('keeps native navigation, all ordered destinations and complete descriptions', () => {
+  it('keeps native navigation, all ordered destinations and label-only tiles', () => {
     renderWidget(<QuickNavWidget size={{ cols: 1, rows: 4 }} />);
     const links = screen.getAllByRole('link');
     expect(links.map(link => link.getAttribute('href'))).toEqual(['/drives', '/charging', '/analytics', '/battery']);
-    for (const label of ['Trip history', 'Sessions & costs', 'Fleet insights', 'Health & degradation']) {
+    for (const label of ['Drives', 'Charging', 'Analytics', 'Battery health']) {
       expect(screen.getByText(label)).toBeVisible();
       expect(screen.getByText(label)).not.toHaveClass('truncate');
+    }
+    // After `.lk` tiles are label-only: former descriptions stay absent.
+    for (const desc of ['Trip history', 'Sessions & costs', 'Fleet insights', 'Health & degradation']) {
+      expect(screen.queryByText(desc)).not.toBeInTheDocument();
     }
     expect(screen.getByRole('navigation', { name: 'Quick navigation' })).toBeVisible();
     expect(screen.queryByRole('tab')).not.toBeInTheDocument();

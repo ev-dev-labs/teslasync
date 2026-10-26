@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
+import { patchServiceWorkerLifecycle } from '@/test/setup'
 
 /**
  * Per-device notification preferences (PWA-05).
@@ -12,21 +13,7 @@ import { act, renderHook } from '@testing-library/react'
 const STORAGE_KEY = 'teslasync:device-notification-prefs:v1'
 
 const postMessage = vi.fn()
-
-function stubServiceWorker(available = true) {
-  Object.defineProperty(navigator, 'serviceWorker', {
-    configurable: true,
-    writable: true,
-    value: available
-      ? {
-          getRegistration: vi.fn(async () => ({ active: { postMessage } })),
-          controller: { postMessage },
-          addEventListener: vi.fn(),
-          removeEventListener: vi.fn(),
-        }
-      : undefined,
-  })
-}
+let restoreServiceWorker: (() => void) | undefined
 
 async function loadModule() {
   vi.resetModules()
@@ -36,11 +23,16 @@ async function loadModule() {
 beforeEach(() => {
   window.localStorage.clear()
   postMessage.mockClear()
-  stubServiceWorker(true)
+  restoreServiceWorker?.()
+  restoreServiceWorker = patchServiceWorkerLifecycle(navigator, {
+    postMessage,
+  }).restore
 })
 
 afterEach(() => {
   window.localStorage.clear()
+  restoreServiceWorker?.()
+  restoreServiceWorker = undefined
 })
 
 describe('persistence', () => {
@@ -116,7 +108,13 @@ describe('service-worker bridge', () => {
   })
 
   it('degrades quietly when the browser has no service worker', async () => {
-    stubServiceWorker(false)
+    restoreServiceWorker?.()
+    restoreServiceWorker = undefined
+    Object.defineProperty(navigator, 'serviceWorker', {
+      configurable: true,
+      writable: true,
+      value: undefined,
+    })
     const { postDeviceNotificationPrefsToServiceWorker, getDeviceNotificationPrefs } =
       await loadModule()
     await expect(

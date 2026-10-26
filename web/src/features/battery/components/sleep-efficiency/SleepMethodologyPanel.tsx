@@ -55,7 +55,7 @@ export function SleepMethodologyPanel({
                 <Text variant="bodySm">
                   {t(
                     'sleep.methodology.utcDates',
-                    'Date-only start and end bounds represent inclusive UTC calendar days.',
+                    'Calendar dates use the selected clock. The server and coverage calculations receive the exact start-inclusive, end-exclusive instants.',
                   )}
                 </Text>
               </li>

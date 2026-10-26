@@ -28,7 +28,17 @@ async function briefMarker(page: Page, testId: string) {
   return brief;
 }
 
-async function review(page: Page, brief: Locator, title: string, preserved: readonly string[]) {
+function reportPeriod(params: URLSearchParams) {
+  const from = params.get('from_instant');
+  const to = params.get('to_exclusive');
+  if (!from || !to) throw new Error('Report source request must contain both interval bounds');
+  const format = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+  return `[${format.format(new Date(from))}, ${format.format(new Date(to))}) · end exclusive`;
+}
+
+async function review(page: Page, brief: Locator, title: string, preserved: readonly string[], period?: string) {
   const trigger = brief.getByRole('button', { name: 'Review details', exact: true });
   await trigger.focus();
   await page.keyboard.press('Enter');
@@ -36,6 +46,13 @@ async function review(page: Page, brief: Locator, title: string, preserved: read
   await expect(drawer).toBeVisible();
   await expect(drawer).toHaveAttribute('aria-modal', 'true');
   for (const text of preserved) await expect(drawer).toContainText(text);
+  if (period) {
+    const definition = drawer.getByTestId('calculation-details').locator('dt')
+      .filter({ hasText: /^Analysis period$/ }).locator('..').locator('dd');
+    await expect(definition).toHaveText(period);
+    await expect(drawer).not.toContainText(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+    await expect(drawer).not.toContainText('(exclusive) · UTC');
+  }
   const close = drawer.locator('[data-drawer-header]').getByRole('button', { name: 'Close', exact: true });
   await expect(close).toBeFocused();
   if (title === 'Rule noise and engagement') {
@@ -91,9 +108,8 @@ for (const theme of ['light', 'dark'] as const) {
           'not the workspace period or the server total',
         ]);
         await review(page, report, 'Triggers, linked deliveries, and outbound calls', [
-          'Triggers recorded', '120', '2.50', 'retries and failures', '(exclusive) · UTC',
-          request!.params.get('from_instant')!, request!.params.get('to_exclusive')!,
-        ]);
+          'Triggers recorded', '120', '2.50', 'retries and failures',
+        ], reportPeriod(request!.params));
         const frame = table.locator('xpath=ancestor::*[@data-grid-frame][1]');
         const search = frame.getByPlaceholder('Search messages…', { exact: true });
         await search.fill('notification 83');
@@ -316,7 +332,7 @@ test('report zero counts are valid but zero-denominator fanout and absent source
 
 test('missing report source retains all five unknown measurements and breakdown shells', async ({ page }) => {
   test.setTimeout(90_000);
-  const { mocks } = await installNotificationFixtures(page, theme, INBOX_ROUTE, { reportUnavailable: true });
+  const { mocks, ledger } = await installNotificationFixtures(page, theme, INBOX_ROUTE, { reportUnavailable: true });
   await page.goto(INBOX_ROUTE);
   const brief = await briefMarker(page, 'notification-report-brief');
   await brief.getByRole('button', { name: 'Review details', exact: true }).click();
@@ -332,10 +348,12 @@ test('missing report source retains all five unknown measurements and breakdown 
   for (const heading of ['Trigger sources', 'Event types', 'Severities', 'Delivery channels', 'Delivery outcomes']) {
     await expect(activity.getByRole('heading', { name: heading, exact: true })).toBeVisible();
   }
+  const request = ledger.find(entry => entry.path === '/notifications/report');
+  expect(request).toBeDefined();
   await review(page, brief, 'Triggers, linked deliveries, and outbound calls', [
-    'Report unavailable', 'Outbound HTTP calls', '(exclusive) · UTC', 'retries and failures',
+    'Report unavailable', 'Outbound HTTP calls', 'retries and failures',
     'No metric values are available yet.',
-  ]);
+  ], reportPeriod(request!.params));
   await assertMockApiComplete(page, mocks);
 });
 

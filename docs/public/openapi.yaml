@@ -1255,6 +1255,63 @@ paths:
                       format: date-time
         "500":
           $ref: "#/components/responses/InternalError"
+  /automations/history:
+    get:
+      operationId: listAutomationHistory
+      summary: List execution history across all automation rules
+      description: |
+        Returns paginated executions plus summary and daily trend aggregates over
+        the entire filtered range, independent of pagination. The optional IANA
+        timezone controls trend day keys only; stored timestamps and filter
+        instants are unchanged. Without a timezone, day keys retain UTC semantics.
+      tags: [Automations]
+      parameters:
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+        - $ref: "#/components/parameters/automationHistoryStatus"
+        - $ref: "#/components/parameters/automationHistorySince"
+        - $ref: "#/components/parameters/automationHistoryUntil"
+        - $ref: "#/components/parameters/automationHistoryTimezone"
+      responses:
+        "200":
+          $ref: "#/components/responses/AutomationHistory"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /automations/{id}/history:
+    get:
+      operationId: listAutomationRuleHistory
+      summary: List execution history for one automation rule
+      description: |
+        Uses the same bounds, timezone and full-range aggregate semantics as
+        /automations/history, restricted to the specified rule.
+      tags: [Automations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+        - $ref: "#/components/parameters/automationHistoryStatus"
+        - $ref: "#/components/parameters/automationHistorySince"
+        - $ref: "#/components/parameters/automationHistoryUntil"
+        - $ref: "#/components/parameters/automationHistoryTimezone"
+      responses:
+        "200":
+          $ref: "#/components/responses/AutomationHistory"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   # ─── Alerts ─────────────────────────────────────────────────────────
   /alerts:
     get:
@@ -1478,6 +1535,95 @@ paths:
           $ref: "#/components/responses/InternalError"
 
   # ─── Analytics ──────────────────────────────────────────────────────
+  /insurance-telematics:
+    get:
+      operationId: getInsuranceRiskProfile
+      summary: Get the selected-clock insurance risk profile
+      description: |
+        Scores completed-drive evidence over the existing rolling UTC instant
+        window. Optional timezone changes overnight trip-start classification
+        and Sunday-start calendar-week trend grouping, not stored timestamps
+        or eligibility bounds. The night_distance_m field remains the full
+        distance of trips starting at or after 22:00 or before 05:00 in that
+        clock; it is not measured distance traveled overnight. Omitting timezone
+        preserves UTC behavior. The limited risk-summary checksum now uses a
+        v2 canonical prefix and includes timezone, not the complete evidence.
+      tags: [Analytics]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: window_days
+          in: query
+          schema:
+            type: integer
+            default: 90
+            maximum: 1095
+        - name: timezone
+          in: query
+          description: IANA location; defaults to UTC. Unknown zones and Local are rejected.
+          schema:
+            type: string
+            default: UTC
+      responses:
+        "200":
+          description: Existing risk profile plus its effective timezone; trend bucket_start remains an absolute instant
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /analytics/sleep:
+    get:
+      operationId: getSleepAnalytics
+      summary: Get vehicle sleep transition evidence
+      description: |
+        Explicit RFC3339 bounds select [start, end) at database microsecond
+        precision. Workspace callers send both shared-header instants, preserving
+        selected-clock calendar dates, DST and rolling windows. Legacy date-only
+        inputs retain their UTC calendar behavior and existing (start, end] SQL
+        representation. Without a start bound, days selects a rolling UTC window
+        (default 30, maximum 365). period_days is the rounded elapsed-day count,
+        at least one; it does not establish observed sleep duration or occupancy.
+        Transition counts remain available while dwell and per-park drain
+        reconstruction are unavailable.
+      tags: [Analytics]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: start
+          in: query
+          schema:
+            type: string
+          description: Inclusive RFC3339 instant or legacy YYYY-MM-DD UTC date.
+        - name: end
+          in: query
+          schema:
+            type: string
+          description: Exclusive RFC3339 instant or legacy inclusive YYYY-MM-DD UTC date.
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+            minimum: 1
+            maximum: 365
+          description: Used only when no explicit start bound is supplied.
+      responses:
+        "200":
+          description: Transition evidence with preserved unavailable-duration fields
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /analytics/fleet:
     get:
       operationId: getFleetAnalytics
@@ -3084,6 +3230,80 @@ paths:
                     type: integer
                   rate_limit_remaining:
                     type: integer
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /system/api-usage/history:
+    get:
+      operationId: getTeslaUsageHistory
+      summary: Observed Tesla usage in the selected calendar
+      description: |
+        Sparse daily or Monday-start weekly usage from locally observed traffic,
+        not an invoice. Both sources use the selected calendar at query time.
+        Only events in the exact half-open [start,end) interval contribute,
+        including partial calendar buckets. No missing buckets are zero-filled.
+        Totals cover the full requested interval independently of pagination.
+        Fixed 30-day observation cycles are not changed by this endpoint.
+      tags: [System]
+      parameters:
+        - name: start
+          in: query
+          required: true
+          schema: { type: string, format: date-time }
+          description: Inclusive RFC3339 instant.
+        - name: end
+          in: query
+          required: true
+          schema: { type: string, format: date-time }
+          description: Exclusive RFC3339 instant, at most 366 selected-calendar days after start and no later than tomorrow.
+        - name: bucket
+          in: query
+          required: true
+          schema: { type: string, enum: [day, week] }
+        - name: timezone
+          in: query
+          schema: { type: string, default: UTC, maxLength: 64 }
+          description: Valid IANA calendar name. Omitted or empty retains UTC; host-dependent Local and invalid names return 400.
+        - name: limit
+          in: query
+          schema: { type: integer, default: 366, minimum: 1, maximum: 366 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0, maximum: 366 }
+      responses:
+        "200":
+          description: Selected-range totals and sparse observed buckets.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [start, end, bucket, total, points]
+                properties:
+                  start: { type: string, format: date-time }
+                  end: { type: string, format: date-time }
+                  bucket: { type: string, enum: [day, week] }
+                  total:
+                    allOf:
+                      - $ref: "#/components/schemas/TeslaUsageAmounts"
+                      - type: object
+                        required: [start, end]
+                        properties:
+                          start: { type: string, format: date-time }
+                          end: { type: string, format: date-time }
+                  points:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/TeslaUsageAmounts"
+                        - type: object
+                          required: [bucket_start]
+                          properties:
+                            bucket_start:
+                              type: string
+                              format: date-time
+                              description: Absolute start instant of this selected-calendar bucket.
+        "400":
+          description: Invalid range, calendar, bucket or pagination.
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -5196,6 +5416,10 @@ paths:
                   type: string
                   enum: [csv, json]
                   default: csv
+                start:
+                  $ref: "#/components/schemas/QueuedExportStart"
+                end:
+                  $ref: "#/components/schemas/QueuedExportEnd"
       responses:
         "202":
           description: Export job submitted
@@ -5241,6 +5465,36 @@ paths:
                     completed_at:
                       type: string
                       format: date-time
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /export/jobs/account:
+    post:
+      operationId: submitAccountExportJob
+      summary: Queue an account ZIP export
+      description: |
+        Produces one CSV per allowed account table plus a manifest. Optional
+        bounds use the same instant contract as /export/jobs; omitted sides
+        remain unbounded. Existing date-only clients retain UTC midnight bounds.
+      tags: [Export]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vehicle_id:
+                  type: integer
+                start:
+                  $ref: "#/components/schemas/QueuedExportStart"
+                end:
+                  $ref: "#/components/schemas/QueuedExportEnd"
+      responses:
+        "202":
+          description: Account export queued
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -5339,6 +5593,39 @@ paths:
 # ═══════════════════════════════════════════════════════════════════════
 components:
   parameters:
+    automationHistoryTimezone:
+      name: timezone
+      in: query
+      description: |
+        IANA timezone used for full-range daily trend grouping. Does not change
+        timestamps or since/until bounds. Unknown zones and server-local "Local"
+        are rejected with HTTP 400.
+      schema:
+        type: string
+        default: UTC
+        example: America/Los_Angeles
+    automationHistorySince:
+      name: since
+      in: query
+      description: Inclusive RFC3339 instant, or legacy date-only UTC midnight.
+      schema:
+        type: string
+        example: "2026-03-08T08:00:00Z"
+    automationHistoryUntil:
+      name: until
+      in: query
+      description: |
+        Exclusive RFC3339 instant. A legacy date-only value includes that entire
+        UTC date, independent of timezone. Must be after since when both exist.
+      schema:
+        type: string
+        example: "2026-03-09T07:00:00Z"
+    automationHistoryStatus:
+      name: status
+      in: query
+      description: Restrict executions and both aggregates to this status.
+      schema:
+        type: string
     vehicleID:
       name: vehicleID
       in: path
@@ -5440,6 +5727,42 @@ components:
                 maxLength: 1000
 
   responses:
+    AutomationHistory:
+      description: Execution page and unpaginated summary and daily trend
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [items, total, limit, offset, summary, trend]
+            properties:
+              items:
+                type: array
+                items:
+                  type: object
+              total:
+                type: integer
+              limit:
+                type: integer
+              offset:
+                type: integer
+              summary:
+                type: object
+                description: Aggregate statistics across the complete filtered range.
+              trend:
+                type: array
+                items:
+                  type: object
+                  required: [day, status, count]
+                  properties:
+                    day:
+                      type: string
+                      format: date
+                      description: Civil date in the requested timezone, not a UTC timestamp.
+                    status:
+                      type: string
+                    count:
+                      type: integer
+                      minimum: 0
     BadRequest:
       description: Bad request - validation error
       content:
@@ -5547,6 +5870,33 @@ components:
             category: internal
 
   schemas:
+    TeslaUsageAmounts:
+      type: object
+      required: [signals, commands, data_requests, wakes, estimated_usd]
+      properties:
+        signals: { type: integer, format: int64 }
+        commands: { type: integer, format: int64 }
+        data_requests: { type: integer, format: int64 }
+        wakes: { type: integer, format: int64 }
+        estimated_usd:
+          type: number
+          description: Unrounded estimate from the four documented local observation rates.
+    QueuedExportStart:
+      type: string
+      description: |
+        Inclusive RFC3339 instant. Legacy YYYY-MM-DD inputs retain UTC-midnight
+        semantics. Omitted or empty values leave the lower bound unbounded.
+      example: "2026-03-08T08:00:00.000Z"
+    QueuedExportEnd:
+      type: string
+      description: |
+        Exclusive RFC3339 instant. The existing worker and inclusive SQL bounds
+        receive the preceding microsecond, matching database precision without
+        changing storage or MQTT fields. Legacy YYYY-MM-DD inputs retain their
+        inclusive UTC-midnight behavior, not end-of-day behavior. Omitted or
+        empty values leave the upper bound unbounded. Backup exports always
+        contain the complete database and do not apply date filters.
+      example: "2026-03-09T07:00:00.000Z"
     ErrorResponse:
       type: object
       required: [error, code]

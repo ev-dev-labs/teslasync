@@ -147,7 +147,7 @@ export function TeslaAccountSection() {
                 {auth.expires_at && (
                   <HelperText as="p">
                     {t('tesla.tokenExpires', 'Token expires')}{' '}
-                    <time dateTime={auth.expires_at} title={auth.expires_at}>
+                    <time dateTime={auth.expires_at}>
                       {formatDateTime(auth.expires_at)}
                     </time>
                   </HelperText>

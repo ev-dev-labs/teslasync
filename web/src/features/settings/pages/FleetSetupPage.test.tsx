@@ -359,7 +359,7 @@ describe('FleetSetupPage source recovery', () => {
       return original(...args)
     })
     renderPage()
-    expect(await screen.findByRole('button', { name: 'Refresh data · Error' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Refresh data · error' })).toBeInTheDocument()
     expect(await screen.findByText('Auto-refresh on')).toBeInTheDocument()
     const steps = screen.getByRole('list', { name: 'Onboarding steps' })
     expect(within(steps).getByText('Unknown')).toBeInTheDocument()

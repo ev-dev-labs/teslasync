@@ -1,5 +1,8 @@
-import { ReferenceLine } from 'recharts';
-import { severityTokens, normalizeSeverity, type Severity } from '@/lib/tokens';
+import { ReferenceLine } from '@/components/charts';
+import { normalizeSeverity, type Severity } from '@/lib/tokens';
+import { COLOR } from '@/lib/colors';
+
+export { severityTokens } from '@/lib/tokens';
 
 /**
  * TimeMarker — vertical reference line on a time-series chart marking the
@@ -40,10 +43,10 @@ export interface TimeMarkerProps {
 }
 
 const SEVERITY_STROKE: Record<Severity, string> = {
-  info: '#0ea5e9',
-  warn: '#f59e0b',
-  critical: '#ef4444',
-  success: '#10b981',
+  info: COLOR.CYAN,
+  warn: COLOR.WARN,
+  critical: COLOR.BAD,
+  success: COLOR.GOOD,
 };
 
 export function TimeMarker({
@@ -82,7 +85,3 @@ export function TimeMarker({
     />
   );
 }
-
-// Re-export severityTokens to make it easier for charts to color-coordinate
-// other elements (e.g. background tints) with the marker.
-export { severityTokens };

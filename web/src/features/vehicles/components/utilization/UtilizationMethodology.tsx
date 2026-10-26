@@ -27,6 +27,7 @@ import type { DataStatus } from '@/api/dataState';
 import { VehicleEvidenceBrief } from '../operationalbrief-n-z/VehicleEvidenceBrief';
 import { cn } from '@/lib/cn';
 import { neonColorMap } from '@/lib/tokens';
+import { useUtilizationDisplay } from './useUtilizationDisplay';
 
 interface UtilizationMethodologyProps {
   summary: UtilizationSummary;
@@ -45,6 +46,7 @@ export function UtilizationMethodology({
 }: UtilizationMethodologyProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatDay } = useUtilizationDisplay();
   const accounting = summary.accounting;
   const status = sourceStatus ?? (state.isLoading ? 'initial' : state.error ? 'initialFailure' : hasSource ? 'ok' : 'unavailable');
   const exclusions = [
@@ -109,7 +111,7 @@ export function UtilizationMethodology({
       icon: <CalendarRange className="h-4 w-4" aria-hidden="true" />,
       text: t(
         'utilization.method.scope',
-        'The API request uses the selected inclusive UTC dates. The model converts the selected end to exclusive next-midnight and never analyzes past the frozen page clock.',
+        'The API request and model use the exact selected bounds. Calendar days follow the selected clock, including daylight-saving changes; analysis never extends past the frozen page clock.',
       ),
     },
     {
@@ -130,7 +132,7 @@ export function UtilizationMethodology({
       icon: <Database className="h-4 w-4" aria-hidden="true" />,
       text: t(
         'utilization.method.rollups',
-        'Drive counts are attributed to the UTC start day, and logged duration is clipped at the analysis boundary and split across crossed UTC days. For a boundary-crossing drive, full-drive distance, energy, and duration-band evidence are withheld because they cannot be apportioned safely.',
+        'Drive counts follow the selected-calendar start day. Logged duration is clipped at the analysis boundary and split at local midnight. For a boundary-crossing drive, full-drive distance, energy, and duration-band evidence are withheld because they cannot be apportioned safely.',
       ),
     },
     {
@@ -204,7 +206,7 @@ export function UtilizationMethodology({
         status={status === 'ok' && accounting.historyCapReached ? 'partial' : status}
         loading={state.isLoading}
         provenance={t('utilization.briefSource', 'Returned drive history and configured energy price')}
-        scope={t('utilization.method.selectedScope', 'Selected UTC scope: {{start}} to {{end}}. Analysis as-of is frozen for this page mount.', { start: summary.window.rangeStart, end: summary.window.rangeEnd })}
+        scope={t('utilization.method.selectedScope', 'Selected scope: {{start}} to {{end}}. Analysis as-of is frozen within this header window.', { start: formatDay(summary.window.rangeStart), end: formatDay(summary.window.rangeEnd) })}
         metrics={[
           { metricId: 'count', occurrenceId: 'returned', label: t('utilization.method.returned', 'Rows returned'), rawValue: hasSource ? accounting.returnedRows : null },
           { metricId: 'count', occurrenceId: 'eligible', label: t('utilization.method.eligible', 'Eligible drives'), rawValue: hasSource ? accounting.eligibleRows : null },
@@ -227,18 +229,6 @@ export function UtilizationMethodology({
               />
             ) : (
               <>
-                <div className="mt-4 rounded-xl border border-[var(--border-subtle)] p-3">
-                  <Text as="p" variant="bodySm">
-                    {t(
-                      'utilization.method.selectedScope',
-                      'Selected UTC scope: {{start}} to {{end}}. Analysis as-of is frozen for this page mount.',
-                      {
-                        start: summary.window.rangeStart,
-                        end: summary.window.rangeEnd,
-                      },
-                    )}
-                  </Text>
-                </div>
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                   <div className="rounded-xl border border-[var(--border-subtle)] p-3">
                     <Text as="p" variant="label">

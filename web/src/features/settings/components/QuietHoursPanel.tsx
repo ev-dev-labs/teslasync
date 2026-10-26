@@ -31,6 +31,8 @@ import {
   useDeleteQuietHours,
 } from '@/api/hooks/useNotifications'
 import type { QuietHoursWindow, QuietHoursWindowInput } from '@/api/hooks/useNotifications'
+import {browserTimeZone} from '@/lib/dateFormat'
+import {supportedTimeZones} from '@/lib/dateConvert'
 
 // Quiet hours / Do-Not-Disturb settings panel.
 //
@@ -82,17 +84,11 @@ function makeDraft(initial?: QuietHoursWindow): DraftWindow {
       bypass_severities: initial.bypass_severities ?? [],
     }
   }
-  let tz = 'UTC'
-  try {
-    tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-  } catch {
-    tz = 'UTC'
-  }
   return {
     enabled: true,
     start_local: '23:00',
     end_local: '07:00',
-    timezone: tz,
+    timezone: browserTimeZone(),
     weekdays: ALL_WEEKDAYS,
     bypass_severities: [...DEFAULT_BYPASS],
   }
@@ -116,13 +112,9 @@ function listTimezones(currentTz: string): SelectOption[] {
     'Australia/Sydney',
   ]
   let zones: string[] = fallback
-  const intlAny = Intl as unknown as { supportedValuesOf?: (key: string) => string[] }
-  if (typeof intlAny.supportedValuesOf === 'function') {
-    try {
-      zones = intlAny.supportedValuesOf('timeZone')
-    } catch {
-      zones = fallback
-    }
+  const runtimeZones = supportedTimeZones()
+  if (runtimeZones.length > 0) {
+    zones = runtimeZones
   }
   if (currentTz && !zones.includes(currentTz)) {
     zones = [currentTz, ...zones]

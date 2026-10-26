@@ -249,7 +249,7 @@ describe('MaintenanceTrackerWidget — compact layout', () => {
 });
 
 describe('MaintenanceTrackerWidget — standard layout', () => {
-  it('renders the title, next-service panel, urgency badge, and cost', () => {
+  it('renders the After-card Upcoming and Last service sections', () => {
     mockMaintenance.mockReturnValue(
       qr({
         data: [
@@ -266,12 +266,10 @@ describe('MaintenanceTrackerWidget — standard layout', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('Maintenance')).toBeInTheDocument();
-    expect(screen.getByText('Shortest configured interval')).toBeInTheDocument();
+    expect(screen.getByText('Upcoming')).toBeInTheDocument();
+    expect(screen.getByText('Last service')).toBeInTheDocument();
     expect(screen.getByText('Brake Fluid')).toBeInTheDocument();
-    // intervalMonths 2 → 'soon' → 'Soon' badge.
     expect(screen.getByText('Unknown')).toBeInTheDocument();
-    // estimatedCostUsd 120 → currency (real useFormatting, '$' + 2 dp).
-    expect(screen.getByText('$120.00')).toBeInTheDocument();
   });
 
   it('preserves a real zero estimated cost', () => {
@@ -281,7 +279,7 @@ describe('MaintenanceTrackerWidget — standard layout', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('Brake Fluid')).toBeInTheDocument();
-    expect(screen.getByText('$0.00')).toBeInTheDocument();
+    expect(screen.getByText('Upcoming')).toBeInTheDocument();
   });
 
   it('maps the three most-recent service records into the timeline (name via itemId)', () => {
@@ -302,11 +300,12 @@ describe('MaintenanceTrackerWidget — standard layout', () => {
     );
     const { container } = renderWidget(STANDARD);
 
-    expect(screen.getByText('Recent service')).toBeInTheDocument();
+    expect(screen.getByText('Last service')).toBeInTheDocument();
     // The record's itemId 'tires' resolves to the maintenance item name.
     expect(screen.getByText('Tire Rotation')).toBeInTheDocument();
     // Subtitle carries the (converted) odometer + notes.
-    expect(container).toHaveTextContent('15,000.00 km · Rotated');
+    expect(container).toHaveTextContent('15,000.00 km');
+    expect(container).toHaveTextContent('Rotated');
   });
 
   it('shows a "no records yet" note when there are items but no history', () => {
@@ -328,7 +327,7 @@ describe('MaintenanceTrackerWidget — standard layout', () => {
 
     // No next-service panel (no items) but the history still renders.
     expect(screen.queryByText('Next service')).toBeNull();
-    expect(screen.getByText('Recent service')).toBeInTheDocument();
+    expect(screen.getByText('Last service')).toBeInTheDocument();
     // itemId falls back to its own value when no matching item exists.
     expect(screen.getByText('wipers')).toBeInTheDocument();
     expect(container).toHaveTextContent('New blades');
@@ -397,7 +396,7 @@ describe('MaintenanceTrackerWidget — shell states', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('No maintenance data')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Recent service' })).toBeInTheDocument();
+    expect(screen.getByText('Last service')).toBeInTheDocument();
     expect(screen.getByText('No service records yet')).toBeInTheDocument();
   });
 
@@ -450,7 +449,7 @@ describe('MaintenanceTrackerWidget — null-safety & hardening', () => {
     const { container } = renderWidget(STANDARD);
 
     // The history section still renders; the null odometer degrades to "0 km".
-    expect(screen.getByText('Recent service')).toBeInTheDocument();
+    expect(screen.getByText('Last service')).toBeInTheDocument();
     expect(container).not.toHaveTextContent('0.00 km');
   });
 });
@@ -460,7 +459,7 @@ describe('MaintenanceTrackerWidget — forecast banner', () => {
     mockMaintenance.mockReturnValue(qr({ data: undefined, isError: true, error: new Error('refresh') }));
     mockRecords.mockReturnValue(qr({ data: [makeRecord({ notes: 'Verified service' })] }));
     renderWidget(STANDARD);
-    expect(screen.getByText('Recent service')).toBeInTheDocument();
+    expect(screen.getByText('Last service')).toBeInTheDocument();
     expect(screen.getByText(/Verified service/)).toBeInTheDocument();
   });
 
@@ -471,7 +470,7 @@ describe('MaintenanceTrackerWidget — forecast banner', () => {
       overdue_count: 1, due_soon_count: 0, km_per_day: 0, vehicle_id: 7,
     } }));
     renderWidget(STANDARD);
-    expect(screen.getAllByText('Overdue')).toHaveLength(2);
+    expect(screen.getByRole('status', { name: 'Maintenance forecast status' })).toHaveTextContent('Overdue: 1');
     expect(screen.queryByText('Good')).not.toBeInTheDocument();
   });
 

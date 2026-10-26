@@ -12,6 +12,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 // tripRepository is the narrow port the handler depends on. Declared at the
@@ -111,7 +112,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 	if vehicleIDStr != "" {
 		vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
-		if err != nil || vehicleID <= 0 {
+		if err != nil || validation.ValidateVehicleID(vehicleID) != nil {
 			httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 			return
 		}

@@ -37,6 +37,7 @@
  * Network is never touched (this component has no data source of its own).
  */
 import { describe, it, expect, vi } from 'vitest';
+import { CHART_COLORS, CHART_NEUTRAL } from '@/lib/colors';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
@@ -250,7 +251,7 @@ describe('TorqueHistoryChart — populated trace', () => {
 
     const [torque] = series;
     expect(torque).toHaveAttribute('data-key', 'torque');
-    expect(torque).toHaveAttribute('data-stroke', '#00f0ff');
+    expect(torque).toHaveAttribute('data-stroke', CHART_COLORS[0]);
     expect(torque).toHaveAttribute('data-fill', 'url(#dtTorqueGrad)');
     expect(torque.getAttribute('data-name')).toContain('Torque');
     expect(torque.getAttribute('data-name')).toContain('(Nm)');
@@ -261,7 +262,7 @@ describe('TorqueHistoryChart — populated trace', () => {
 
     const gradient = screen.getByTestId('chart-gradient');
     expect(gradient).toHaveAttribute('data-id', 'dtTorqueGrad');
-    expect(gradient).toHaveAttribute('data-color', '#00f0ff');
+    expect(gradient).toHaveAttribute('data-color', CHART_COLORS[0]);
   });
 
   it('binds the x-axis to the snapshot time', () => {
@@ -275,7 +276,7 @@ describe('TorqueHistoryChart — populated trace', () => {
 
     const refLine = screen.getByTestId('reference-line');
     expect(refLine).toHaveAttribute('data-y', '0');
-    expect(refLine).toHaveAttribute('data-stroke', '#64748b');
+    expect(refLine).toHaveAttribute('data-stroke', CHART_NEUTRAL);
   });
 
   it('projects { time, torque } into the a11y fallback table (dropping stator/speed/axle)', () => {

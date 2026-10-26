@@ -29,6 +29,7 @@
  * `fireEvent` drives the interaction. Network is never touched — this
  * component has no data source of its own.
  */
+import { CHART_COLORS, CHART_SEMANTIC } from '@/lib/colors';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -179,9 +180,9 @@ describe('classifyHour', () => {
 describe('hourColor + TOU_PERIOD_COLORS', () => {
   it('maps each period to its canonical swatch hex', () => {
     expect(TOU_PERIOD_COLORS).toEqual({
-      peak: '#ef4444',
-      'mid-peak': '#22d3ee',
-      'off-peak': '#10b981',
+      peak: CHART_COLORS[5],
+      'mid-peak': CHART_COLORS[0],
+      'off-peak': CHART_SEMANTIC.charger.home,
     });
   });
 

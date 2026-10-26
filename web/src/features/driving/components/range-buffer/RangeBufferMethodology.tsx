@@ -48,11 +48,10 @@ export function RangeBufferMethodology({
       ),
       body: t(
         'rangeBuffer.method.windowBody',
-        'The selected {{start}} through {{end}} calendar window becomes a half-open drive-start filter in {{timeZone}}. Profiles use completion time in the same timezone, so a drive starting near the end boundary can complete just outside the final local day.',
+        'The selected {{start}} through {{end}} calendar window becomes a half-open drive-start filter in your selected time zone. Profiles use completion time in the same zone, so a drive starting near the end boundary can complete just outside the final local day.',
         {
           start: startDate,
           end: endDate,
-          timeZone: result.timeZone,
         },
       ),
     },

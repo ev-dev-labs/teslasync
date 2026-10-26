@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
+import { StrictMode, useEffect } from 'react'
 import { ToastProvider, useToast } from './Toast'
 
 // Mock framer-motion to render children immediately without animations
@@ -41,6 +42,14 @@ function _ToastTriggerWithDuration({ duration }: { duration: number }) {
       fire
     </button>
   )
+}
+
+function ToastOnMount() {
+  const { toast } = useToast()
+  useEffect(() => {
+    toast({ type: 'info', title: 'Mount feedback', duration: 2000 })
+  }, [toast])
+  return null
 }
 
 const renderWithProvider = (ui: React.ReactElement) =>
@@ -99,8 +108,56 @@ describe('Toast', () => {
     expect(screen.queryByText('Bye soon')).not.toBeInTheDocument()
   })
 
+  it('cancels pending dismissal timers when its provider unmounts', () => {
+    const view = renderWithProvider(<_ToastTriggerWithDuration duration={60_000} />)
+    const initialTimers = vi.getTimerCount()
+    fireEvent.click(screen.getByText('fire'))
+    expect(screen.getByText('timed')).toBeInTheDocument()
+    expect(vi.getTimerCount()).toBe(initialTimers + 1)
+    view.unmount()
+    expect(vi.getTimerCount()).toBe(initialTimers)
+    act(() => { vi.advanceTimersByTime(60_001) })
+  })
+
+  it('does not extend older toast lifetimes when another toast arrives', () => {
+    renderWithProvider(<ToastTrigger type="info" title="First" />)
+    fireEvent.click(screen.getByText('fire'))
+    act(() => { vi.advanceTimersByTime(2000) })
+    fireEvent.click(screen.getByText('fire'))
+    expect(screen.getAllByText('First')).toHaveLength(2)
+    act(() => { vi.advanceTimersByTime(2001) })
+    expect(screen.getAllByText('First')).toHaveLength(1)
+    act(() => { vi.advanceTimersByTime(2000) })
+    expect(screen.queryByText('First')).not.toBeInTheDocument()
+  })
+
+  it('keeps dismissal deadlines through StrictMode effect replay', () => {
+    render(<StrictMode><ToastProvider><ToastOnMount /></ToastProvider></StrictMode>)
+    expect(screen.getAllByText('Mount feedback')).toHaveLength(2)
+    act(() => { vi.advanceTimersByTime(2001) })
+    expect(screen.queryByText('Mount feedback')).not.toBeInTheDocument()
+  })
+
+  it('does not schedule a dismissal for persistent toasts', () => {
+    renderWithProvider(<_ToastTriggerWithDuration duration={0} />)
+    const initialTimers = vi.getTimerCount()
+    fireEvent.click(screen.getByText('fire'))
+    expect(vi.getTimerCount()).toBe(initialTimers)
+    act(() => { vi.advanceTimersByTime(60_000) })
+    expect(screen.getByText('timed')).toBeInTheDocument()
+  })
+
+  it('cancels the timer for a toast evicted by the five-toast limit', () => {
+    renderWithProvider(<ToastTrigger type="info" title="Recent" />)
+    const initialTimers = vi.getTimerCount()
+    for (let index = 0; index < 6; index += 1) fireEvent.click(screen.getByText('fire'))
+    expect(screen.getAllByText('Recent')).toHaveLength(5)
+    expect(vi.getTimerCount()).toBe(initialTimers + 5)
+  })
+
   it('can be manually dismissed via the close button', () => {
     const { container } = renderWithProvider(<ToastTrigger type="info" title="Dismiss me" />)
+    const initialTimers = vi.getTimerCount()
     fireEvent.click(screen.getByText('fire'))
     expect(screen.getByText('Dismiss me')).toBeInTheDocument()
 
@@ -112,6 +169,7 @@ describe('Toast', () => {
     expect(dismissBtn).toBeTruthy()
     fireEvent.click(dismissBtn!)
     expect(screen.queryByText('Dismiss me')).not.toBeInTheDocument()
+    expect(vi.getTimerCount()).toBe(initialTimers)
   })
 
   it('falls back to a no-op toast API outside ToastProvider in tests', () => {

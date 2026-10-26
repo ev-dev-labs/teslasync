@@ -302,20 +302,20 @@ describe('RecentDrivesSection — cell rendering', () => {
     expect(cellText(bodyRows()[0], 0)).toContain('2026')
   })
 
-  it('updates populated date cells and the disclosed zone when date preferences change', () => {
+  it('updates populated date cells without disclosing zone labels when date preferences change', () => {
     const drives = [makeDrive({ start_ts: '2026-06-15T00:30:00Z' })]
     const { rerender } = renderSection(drives)
     const expectedDate = () => formatDateTime(drives[0].start_ts, datePreferences)
 
     expect(cellText(bodyRows()[0], 0)).toBe(expectedDate())
-    expect(screen.getByText('UTC')).toBeInTheDocument()
+    expect(screen.queryByText('UTC')).not.toBeInTheDocument()
 
     datePreferences.tz = 'America/Los_Angeles'
     rerender(<MemoryRouter><RecentDrivesSection drives={drives} /></MemoryRouter>)
 
     expect(cellText(bodyRows()[0], 0)).toBe(expectedDate())
     expect(cellText(bodyRows()[0], 0)).toContain('Jun 14')
-    expect(screen.getByText('America/Los_Angeles')).toBeInTheDocument()
+    expect(screen.queryByText('America/Los_Angeles')).not.toBeInTheDocument()
     expect(screen.queryByText('UTC')).not.toBeInTheDocument()
 
     datePreferences.locale = 'de-DE'

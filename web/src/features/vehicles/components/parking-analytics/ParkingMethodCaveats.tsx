@@ -43,7 +43,7 @@ export function ParkingMethodCaveats({
           {t(
             'parking.coverage.utcWindow',
             'The server filters drive starts from {{start}} (inclusive) to {{end}} (exclusive) as exact instants; parking before the first returned drive cannot be reconstructed.',
-            { start: rangeStart, end: rangeEnd },
+            { start: formatDateTime(new Date(rangeStart)), end: formatDateTime(new Date(rangeEnd)) },
           )}
         </Text>
       </div>
@@ -55,8 +55,7 @@ export function ParkingMethodCaveats({
         <Text as="p" variant="bodySm">
           {t(
             'parking.coverage.localTime',
-            'Hour, weekday, month, and the 22:00–06:00 split use {{timeZone}}. Dwell is assigned to the period in which parking starts.',
-            { timeZone: coverage.timeZone },
+            'Hour, weekday, month, and the 22:00–06:00 split use your selected time zone. Dwell is assigned to the period in which parking starts.',
           )}
         </Text>
       </div>

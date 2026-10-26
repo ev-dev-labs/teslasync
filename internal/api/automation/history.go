@@ -11,6 +11,7 @@ import (
 
 	dbauto "github.com/ev-dev-labs/teslasync/internal/database/automation"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 	"go.opentelemetry.io/otel"
 )
 
@@ -18,7 +19,7 @@ import (
 
 // ListHistory returns paginated execution history across all automations.
 //
-//	GET /automations/history?limit=50&offset=0&status=failed&since=2026-04-01&until=2026-04-30
+//	GET /automations/history?limit=50&offset=0&status=failed&since=2026-04-01&until=2026-04-30&timezone=America/Los_Angeles
 func (h *AutomationHandler) ListHistory(w http.ResponseWriter, r *http.Request) {
 	ctx, span := otel.Tracer("api").Start(r.Context(), "api.automation.history_list")
 	defer span.End()
@@ -68,12 +69,12 @@ func (h *AutomationHandler) ListHistory(w http.ResponseWriter, r *http.Request) 
 
 // ListAutomationHistory returns execution history for a single automation.
 //
-//	GET /automations/{id}/history?limit=50&offset=0&status=failed&since=2026-04-01&until=2026-04-30
+//	GET /automations/{id}/history?limit=50&offset=0&status=failed&since=2026-04-01&until=2026-04-30&timezone=America/Los_Angeles
 func (h *AutomationHandler) ListAutomationHistory(w http.ResponseWriter, r *http.Request) {
 	ctx, span := otel.Tracer("api").Start(r.Context(), "api.automation.history_by_rule")
 	defer span.End()
 	id, err := urlParamInt64(r, "id")
-	if err != nil || id <= 0 {
+	if err != nil || validation.ValidatePositiveID(id) != nil {
 		span.RecordError(fmt.Errorf("invalid automation ID"))
 		writeError(w, http.StatusBadRequest, "invalid automation ID")
 		return
@@ -145,7 +146,7 @@ func (h *AutomationHandler) GetHistoryDetail(w http.ResponseWriter, r *http.Requ
 	ctx, span := otel.Tracer("api").Start(r.Context(), "api.automation.history_detail")
 	defer span.End()
 	historyID, err := urlParamInt64(r, "historyId")
-	if err != nil || historyID <= 0 {
+	if err != nil || validation.ValidatePositiveID(historyID) != nil {
 		span.RecordError(fmt.Errorf("invalid history ID"))
 		writeError(w, http.StatusBadRequest, "invalid history ID")
 		return
@@ -231,10 +232,21 @@ func executionTransitionAvailability(record *automationmodel.AutomationHistory, 
 	}
 }
 
-// parseHistoryFilter accepts an inclusive date-only upper bound, or an exclusive RFC3339 instant.
+// parseHistoryFilter preserves legacy UTC date bounds and exact RFC3339 instants.
+// Timezone controls daily trend grouping, independently of those absolute bounds.
 func parseHistoryFilter(r *http.Request) (dbauto.HistoryFilter, error) {
 	f := dbauto.HistoryFilter{
-		Status: r.URL.Query().Get("status"),
+		Status:   r.URL.Query().Get("status"),
+		Timezone: r.URL.Query().Get("timezone"),
+	}
+	if f.Timezone == "" {
+		f.Timezone = "UTC"
+	}
+	if f.Timezone == "Local" {
+		return f, fmt.Errorf("invalid timezone: expected an IANA time zone")
+	}
+	if _, err := time.LoadLocation(f.Timezone); err != nil {
+		return f, fmt.Errorf("invalid timezone: expected an IANA time zone")
 	}
 	if s := r.URL.Query().Get("since"); s != "" {
 		if t, err := time.Parse(time.RFC3339, s); err == nil {

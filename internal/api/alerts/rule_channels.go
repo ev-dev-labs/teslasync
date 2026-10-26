@@ -3,6 +3,7 @@ package alerts
 import (
 	"net/http"
 
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 )
@@ -22,7 +23,7 @@ func (h *AlertHandler) checkRuleChannelSets(w http.ResponseWriter, r *http.Reque
 		}
 		ruleIDs := make(map[int64]bool, len(ids))
 		for _, id := range ids {
-			if id <= 0 || ruleIDs[id] {
+			if validation.ValidatePositiveID(id) != nil || ruleIDs[id] {
 				writeError(w, http.StatusBadRequest, "channel IDs must be positive and unique")
 				return false
 			}

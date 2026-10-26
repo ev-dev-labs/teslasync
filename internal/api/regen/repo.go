@@ -53,7 +53,7 @@ type monthlyRegenRow struct {
 // fake without a live database — the codebase does not vendor pgxmock.
 type regenRepository interface {
 	DriveRegens(ctx context.Context, vehicleID int64, hasRange bool, start, end time.Time) ([]driveRegenRow, error)
-	MonthlyRegens(ctx context.Context, vehicleID int64, hasRange bool, start, end time.Time) ([]monthlyRegenRow, error)
+	MonthlyRegens(ctx context.Context, vehicleID int64, hasRange bool, start, end time.Time, zone string) ([]monthlyRegenRow, error)
 	LifetimeEnergy(ctx context.Context, vehicleID int64, hasRange bool, start, end time.Time) (regenWh, driveWh float64, err error)
 	VehicleModel(ctx context.Context, vehicleID int64) (vin, model string, err error)
 }
@@ -83,14 +83,15 @@ const driveRegenSQL = `
 
 // monthlyRegenSQL rolls the same drive set into month buckets. avg_power_w
 // is averaged in SI watts; the handler keeps it in watts (see
-// monthlyRegenRow) rather than converting to kW. Buckets are UTC calendar
-// months, independent of the database session timezone; the instant filter
+// monthlyRegenRow) rather than converting to kW. Buckets are calendar
+// months in the caller's `?timezone` frame ($6, UTC when omitted),
+// independent of the database session timezone; the instant filter
 // still selects the exact requested population before bucketing. DriveCount
 // counts all detail-eligible drives; each AVG denominator counts only its
 // own valid measurements (not DriveCount). These are not recovered-energy
 // totals: average power is signed drive power, not minimum braking power.
 const monthlyRegenSQL = `
-		SELECT DATE_TRUNC('month', started_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' as month,
+		SELECT DATE_TRUNC('month', started_at AT TIME ZONE $6) AT TIME ZONE $6 as month,
 			COUNT(*) as drive_count,
 			AVG(avg_power_w) FILTER (WHERE avg_power_w > '-Infinity'::float8
 			                             AND avg_power_w < 'Infinity'::float8) as avg_regen_power_w,
@@ -181,10 +182,10 @@ func (r *regenRepo) DriveRegens(ctx context.Context, vehicleID int64, hasRange b
 // MonthlyRegens returns the month-bucketed regen summary rows for a
 // vehicle, optionally scoped to [start, end]. Scan/iteration failure
 // handling mirrors DriveRegens.
-func (r *regenRepo) MonthlyRegens(ctx context.Context, vehicleID int64, hasRange bool, start, end time.Time) ([]monthlyRegenRow, error) {
+func (r *regenRepo) MonthlyRegens(ctx context.Context, vehicleID int64, hasRange bool, start, end time.Time, zone string) ([]monthlyRegenRow, error) {
 	rows, err := r.db.Pool.Query(ctx, monthlyRegenSQL,
 		vehicleID, metersPerMile, twoMilesMeters,
-		apiparams.NullableTime(hasRange, start), apiparams.NullableTime(hasRange, end))
+		apiparams.NullableTime(hasRange, start), apiparams.NullableTime(hasRange, end), zone)
 	if err != nil {
 		return nil, fmt.Errorf("query monthly regen rows: %w", err)
 	}

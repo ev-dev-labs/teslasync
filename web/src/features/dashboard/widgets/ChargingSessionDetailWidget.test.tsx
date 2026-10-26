@@ -9,8 +9,8 @@
  *   1. Two responsive layouts driven by `size.cols`:
  *        - compact (cols <= 1): a large kWh number + "kWh added" label + charger
  *          Badge and section title; no stat grid.
- *        - standard/wide (cols >= 2): a titled shell + a four-stat summary
- *          (Energy Added, Duration, Peak Power, Charger) + the chart.
+ *        - standard/wide (cols >= 2): a titled shell + a three-stat summary
+ *          (Energy Added, Peak Power, SoC) + the chart.
  *   2. The derivations:
  *        - energy: `convertEnergyFromSI(total_energy_added_wh, 'kWh')`
  *        - duration: minutes → "45m" / "1h 30m" / "2h" (no dangling "0m")
@@ -145,7 +145,7 @@ function makeSession(overrides: Partial<ChargingSession> = {}): ChargingSession 
 function makeDetail(overrides: Partial<ApiChargingSession> = {}): ApiChargingSession {
   return {
     total_energy_added_wh: 0,
-    duration_min: 0,
+    duration_s: 0,
     charger_type: null,
     ...overrides,
   } as ApiChargingSession;
@@ -234,7 +234,7 @@ describe('ChargingSessionDetailWidget — standard layout', () => {
       makeDetailQuery({
         data: makeDetail({
           total_energy_added_wh: 25000,
-          duration_min: 45,
+          duration_s: 2700,
           charger_type: 'Supercharger',
         }),
       }),
@@ -253,29 +253,27 @@ describe('ChargingSessionDetailWidget — standard layout', () => {
 
     expect(screen.getByText('Charge session detail')).toBeInTheDocument();
 
-    // Energy Added: 25000 Wh → 25 kWh → "25.0" kWh.
+    // Energy Added: 25000 Wh → 25 kWh, with the redesign's one-decimal precision.
     expect(screen.getByText('Energy added')).toBeInTheDocument();
-    expect(screen.getByText('25.00')).toBeInTheDocument();
+    expect(screen.getByText('25.0')).toBeInTheDocument();
     expect(screen.getByText('kWh')).toBeInTheDocument();
 
-    // Duration under an hour renders bare minutes.
-    expect(screen.getByText('Duration')).toBeInTheDocument();
+    // Session duration belongs in the headline context, not a repeated stat.
     expect(screen.getByText('45m')).toBeInTheDocument();
 
     // Peak Power is the max power_w across the telemetry series, displayed in kW.
     expect(screen.getByText('Peak power')).toBeInTheDocument();
-    expect(screen.getByText('72.00')).toBeInTheDocument();
+    expect(screen.getByText('72.0')).toBeInTheDocument();
     expect(screen.getByText('kW')).toBeInTheDocument();
 
-    // Charger label is the classified, translated value.
-    expect(screen.getByText('Charger')).toBeInTheDocument();
+    // Charger context is classified, but remains source-backed.
     expect(screen.getByText('Supercharger')).toBeInTheDocument();
   });
 
   it('still renders the titled shell + stats for a wide widget (cols >= 3)', () => {
     useChargingSessionDetailMock.mockReturnValue(
       makeDetailQuery({
-        data: makeDetail({ total_energy_added_wh: 10000, duration_min: 30, charger_type: 'DC' }),
+        data: makeDetail({ total_energy_added_wh: 10000, duration_s: 1800, charger_type: 'DC' }),
       }),
     );
 
@@ -283,7 +281,7 @@ describe('ChargingSessionDetailWidget — standard layout', () => {
 
     expect(screen.getByText('Charge session detail')).toBeInTheDocument();
     expect(screen.getByText('Energy added')).toBeInTheDocument();
-    expect(screen.getByText('10.00')).toBeInTheDocument();
+    expect(screen.getByText('10.0')).toBeInTheDocument();
     expect(screen.getByText('DC fast')).toBeInTheDocument();
   });
 });
@@ -291,7 +289,7 @@ describe('ChargingSessionDetailWidget — standard layout', () => {
 describe('ChargingSessionDetailWidget — duration formatting', () => {
   function renderWithDuration(mins: number) {
     useChargingSessionDetailMock.mockReturnValue(
-      makeDetailQuery({ data: makeDetail({ duration_min: mins }) }),
+      makeDetailQuery({ data: makeDetail({ duration_s: mins * 60 }) }),
     );
     renderWidget({ cols: 2, rows: 2 });
   }
@@ -346,7 +344,7 @@ describe('ChargingSessionDetailWidget — charger classification', () => {
       }));
       renderWidget({ cols, rows: 4 });
       expect(screen.getByText(label)).toBeInTheDocument();
-      expect(screen.getByText('25.00')).toBeInTheDocument();
+      expect(screen.getByText('25.0')).toBeInTheDocument();
       if (chargerType !== 'DC') expect(screen.queryByText('DC fast')).not.toBeInTheDocument();
       if (chargerType !== 'AC') expect(screen.queryByText('AC / home')).not.toBeInTheDocument();
       expect(useChargingSessionDetailMock).toHaveBeenCalledWith(701);
@@ -474,7 +472,7 @@ describe('ChargingSessionDetailWidget — formatted axis fitting', () => {
       data: [makeReading({ power_w: 1_234_500 })],
     }));
     renderWidget({ cols: 1, rows: 2 });
-    expect(screen.getByText('25.00')).toBeInTheDocument();
+    expect(screen.getByText('25.0')).toBeInTheDocument();
     expect(screen.getByText('AC / home')).toBeInTheDocument();
     expect(axisMock).not.toHaveBeenCalled();
     expect(HTMLCanvasElement.prototype.getContext).not.toHaveBeenCalled();
@@ -549,12 +547,12 @@ describe('ChargingSessionDetailWidget — peak power derivation', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('Peak power')).toBeInTheDocument();
-    expect(screen.getByText('33.30')).toBeInTheDocument();
+    expect(screen.getByText('33.3')).toBeInTheDocument();
   });
 
   it('keeps peak power unknown when there is no telemetry', () => {
     useChargingSessionDetailMock.mockReturnValue(
-      makeDetailQuery({ data: makeDetail({ total_energy_added_wh: 5000, duration_min: 10 }) }),
+      makeDetailQuery({ data: makeDetail({ total_energy_added_wh: 5000, duration_s: 600 }) }),
     );
     useChargeTelemetryMock.mockReturnValue(makeTelemetryQuery({ data: [] }));
 
@@ -564,7 +562,7 @@ describe('ChargingSessionDetailWidget — peak power derivation', () => {
     // Energy "5.0" is distinct from peak "0.0", so this asserts the null-safe
     // reduce produced a numeric zero rather than NaN / a crash.
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByText('5.00')).toBeInTheDocument();
+    expect(screen.getByText('5.0')).toBeInTheDocument();
   });
 });
 
@@ -579,7 +577,7 @@ describe('ChargingSessionDetailWidget — compact layout', () => {
     renderWidget({ cols: 1, rows: 1 });
 
     // 42000 Wh → 42 kWh → "42.0".
-    expect(screen.getByText('42.00')).toBeInTheDocument();
+    expect(screen.getByText('42.0')).toBeInTheDocument();
     expect(screen.getByText('kWh added')).toBeInTheDocument();
     expect(screen.getByText('Supercharger')).toBeInTheDocument();
 
@@ -695,7 +693,7 @@ describe('ChargingSessionDetailWidget — graceful degradation on transient erro
       makeDetailQuery({
         data: makeDetail({
           total_energy_added_wh: 30000,
-          duration_min: 20,
+          duration_s: 1200,
           charger_type: 'DC',
         }),
         error: new Error('transient'),
@@ -709,12 +707,12 @@ describe('ChargingSessionDetailWidget — graceful degradation on transient erro
 
     // Data is still on screen …
     expect(screen.getByText('Charge session detail')).toBeInTheDocument();
-    expect(screen.getByText('30.00')).toBeInTheDocument();
+    expect(screen.getByText('30.0')).toBeInTheDocument();
     expect(screen.getByText('DC fast')).toBeInTheDocument();
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     // … and the freshness indicator exposes the error state and semantic danger dot.
-    expect(screen.getByRole('button', { name: /^Refresh data · Error/ })
+    expect(screen.getByRole('button', { name: /^Refresh data · error/ })
       .querySelector('[class*="--semantic-danger"]')).toBeTruthy();
   });
 });
@@ -781,7 +779,7 @@ describe('ChargingSessionDetailWidget — vehicle + session resolution', () => {
 describe('ChargingSessionDetailWidget — freshness interaction', () => {
   it('preserves signed peak power and exposes telemetry refresh failures without hiding detail', () => {
     useChargingSessionDetailMock.mockReturnValue(makeDetailQuery({
-      data: makeDetail({ total_energy_added_wh: 0, duration_min: 0 }),
+      data: makeDetail({ total_energy_added_wh: 0, duration_s: 0 }),
     }));
     useChargeTelemetryMock.mockReturnValue({
       ...makeTelemetryQuery({ data: [makeReading({ power_w: -2000 }), makeReading({ power_w: null })] }),
@@ -789,8 +787,8 @@ describe('ChargingSessionDetailWidget — freshness interaction', () => {
       error: new Error('telemetry failed'),
     });
     renderWidget({ cols: 2, rows: 2 });
-    expect(screen.getByText('-2.00')).toBeInTheDocument();
-    expect(screen.getByText('0.00')).toBeInTheDocument();
+    expect(screen.getByText('-2.0')).toBeInTheDocument();
+    expect(screen.getByText('0.0')).toBeInTheDocument();
     expect(screen.getByText('0m')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   });

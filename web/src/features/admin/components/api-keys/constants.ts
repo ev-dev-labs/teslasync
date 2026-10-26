@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import { Shield, ShieldAlert, Crown, Key, type LucideIcon } from 'lucide-react';
 import type { NeonColor } from '@/lib/tokens';
 import type { APIKey } from '@/types/admin';
@@ -29,7 +30,7 @@ export const PERMISSION_META: Record<ApiKeyPermission, PermissionMeta> = {
   read: {
     icon: Shield,
     color: 'green',
-    barColor: '#10b981',
+    barColor: palette.COLOR.GOOD,
     labelKey: 'apiKeys.perm.read',
     labelFallback: 'Read',
     descKey: 'apiKeys.perm.readDesc',
@@ -38,7 +39,7 @@ export const PERMISSION_META: Record<ApiKeyPermission, PermissionMeta> = {
   'read-write': {
     icon: ShieldAlert,
     color: 'amber',
-    barColor: '#f59e0b',
+    barColor: palette.COLOR.WARN,
     labelKey: 'apiKeys.perm.readWrite',
     labelFallback: 'Read-write',
     descKey: 'apiKeys.perm.readWriteDesc',
@@ -47,7 +48,7 @@ export const PERMISSION_META: Record<ApiKeyPermission, PermissionMeta> = {
   admin: {
     icon: Crown,
     color: 'purple',
-    barColor: '#a855f7',
+    barColor: palette.DATA_VISUAL_COLORS.purple,
     labelKey: 'apiKeys.perm.admin',
     labelFallback: 'Admin',
     descKey: 'apiKeys.perm.adminDesc',

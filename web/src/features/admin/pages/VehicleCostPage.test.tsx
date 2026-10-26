@@ -24,7 +24,7 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import i18n from 'i18next';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
 import type { DataStateSource } from '@/api/dataState';
 import type { VehicleCostStatStrip } from '../components/statstrip-audit-vehicle-cost/VehicleCostStatStrip';
@@ -112,7 +112,7 @@ vi.mock('@/api/hooks/useOperatorConfidence', async () => {
   >('@/api/hooks/useOperatorConfidence');
   return {
     ...actual,
-    useVehicleCost: (since: Date | null, limit: number) => useVehicleCostMock(since, limit),
+    useVehicleCost: (...args: Parameters<typeof import('@/api/hooks/useOperatorConfidence').useVehicleCost>) => useVehicleCostMock(...args),
   };
 });
 
@@ -239,14 +239,19 @@ const RESPONSE: VehicleCostResponse = {
   },
 };
 
-function renderPage() {
+function HeaderRangeControl() {
+ const [, setParams] = useSearchParams();
+ return <button data-testid="header-cost-range" onClick={() => setParams({from:'2026-09-01',to:'2026-09-07'})}>Choose a workspace range.</button>;
+}
+function renderPage(route = '/admin/vehicle-cost') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[route]}>
         <VehicleCostPage />
+        <HeaderRangeControl />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -281,23 +286,19 @@ describe('VehicleCostPage', () => {
     expect(screen.getByTestId('stub-talkers')).toBeInTheDocument();
     expect(screen.getByTestId('stub-table')).toBeInTheDocument();
     // Real toolbar rendered (native window <select> + refresh button).
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Refresh vehicle cost data' }),
     ).toBeInTheDocument();
   });
 
-  it('calls useVehicleCost with a ~30d "since" Date and a limit of 100', () => {
+  it('passes both header instants and the unchanged limit to useVehicleCost', () => {
     useVehicleCostMock.mockReturnValue(makeQuery({ data: RESPONSE }));
-    renderPage();
-
-    expect(useVehicleCostMock).toHaveBeenCalled();
-    const [since, limit] = useVehicleCostMock.mock.calls[0];
-    expect(since).toBeInstanceOf(Date);
-    expect(limit).toBe(100);
-    if (!(since instanceof Date)) throw new Error('Expected a since instant');
-    const daysAgo = (Date.now() - since.getTime()) / 86_400_000;
-    expect(Math.round(daysAgo)).toBe(30);
+    renderPage('/admin/vehicle-cost?from=2026-09-01&to=2026-09-07');
+    const [since, limit, until, enabled] = useVehicleCostMock.mock.calls[0];
+    expect(since).toEqual(new Date('2026-09-01T00:00:00Z'));
+    expect(until).toEqual(new Date('2026-09-08T00:00:00Z'));
+    expect(limit).toBe(100); expect(enabled).toBe(true);
   });
 
   it('feeds cost bars sorted by BYTES and top talkers sorted by ROWS', () => {
@@ -320,7 +321,7 @@ describe('VehicleCostPage', () => {
 
     expect(captured.kpis.totals).toEqual(RESPONSE.totals);
     expect(captured.kpis.vehicleCount).toBe(3);
-    expect(captured.kpis.windowDays).toBe(30);
+    expect(captured.kpis.windowDays).toBe(7);
     expect(captured.kpis.loading).toBe(false);
     expect(captured.kpis.error).toBeNull();
     // Table receives the untouched rows array (same reference — no copy).
@@ -396,25 +397,19 @@ describe('VehicleCostPage', () => {
     expect(captured.talkers.totalRows).toBe(RESPONSE.totals.total_rows);
   });
 
-  it('narrows the trailing window when the operator picks a shorter preset', async () => {
-    useVehicleCostMock.mockReturnValue(makeQuery({ data: RESPONSE }));
-    renderPage();
-
-    const firstSince = useVehicleCostMock.mock.calls[0][0];
-    if (!(firstSince instanceof Date)) throw new Error('Expected initial since instant');
-
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: '7' } });
-
-    await waitFor(() => expect(captured.kpis.windowDays).toBe(7));
-
-    const calls = useVehicleCostMock.mock.calls;
-    const lastSince = calls[calls.length - 1][0];
-    if (!(lastSince instanceof Date)) throw new Error('Expected updated since instant');
-    // 7 days ago is more recent than 30 days ago ⇒ the window really narrowed.
-    expect(lastSince.getTime()).toBeGreaterThan(firstSince.getTime());
-    expect(calls[calls.length - 1][1]).toBe(100);
-    const daysAgo = (Date.now() - lastSince.getTime()) / 86_400_000;
-    expect(Math.round(daysAgo)).toBe(7);
+  it('re-queries when the operator chooses a historical header range', async () => {
+    useVehicleCostMock.mockReturnValue(makeQuery({data:RESPONSE})); renderPage();
+    fireEvent.click(screen.getByTestId('header-cost-range'));
+    await waitFor(() => expect(useVehicleCostMock).toHaveBeenLastCalledWith(
+      new Date('2026-09-01T00:00:00Z'),100,new Date('2026-09-08T00:00:00Z'),true));
+    expect(captured.kpis.windowDays).toBe(7);
+  });
+  it('disables unsupported header windows and explains the retained 90-day limit', () => {
+    useVehicleCostMock.mockReturnValue(makeQuery());
+    renderPage('/admin/vehicle-cost?from=2025-01-01&to=2026-01-01');
+    expect(useVehicleCostMock.mock.calls.at(-1)?.[3]).toBe(false);
+    expect(screen.getByText('Choose a workspace range of at most 90 days to view vehicle ingest cost.')).toBeVisible();
+    expect(screen.getByRole('button',{name:'Refresh vehicle cost data'})).toBeDisabled();
   });
 
   it('triggers a refetch when the refresh button is pressed', () => {

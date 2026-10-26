@@ -3,7 +3,7 @@ import { StatGroup } from '@/components/data-display/stat-reference';
 import { Text, Caption } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 import type { StatPeriod } from '@/lib/metric-reference';
 import type { YearReview } from '@/api/types';
 import { to12Hour } from './yearReviewPresentation';
@@ -16,8 +16,7 @@ export function YearPatterns({ data, period }: { data: YearReview; period: StatP
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
   // Retain the existing specialist averages and their integer rounding.
   const avgDistance = convertDistanceFromSI((data.avg_distance_per_drive_km ?? 0) * 1000, distanceUnit);
-  const avgEfficiency = distanceUnit === 'mi'
-    ? (data.avg_efficiency_wh_km ?? 0) * 1.609344 : (data.avg_efficiency_wh_km ?? 0);
+  const avgEfficiency = convertEfficiencyFromSI(data.avg_efficiency_wh_km ?? 0, distanceUnit);
   const { hour12, isPM } = to12Hour(data.most_active_hour);
   const meridiem = isPM ? t('yearReview.pm', 'PM') : t('yearReview.am', 'AM');
 

@@ -16,7 +16,7 @@ import (
 
 type teslaUsageReader interface {
 	Cycles(context.Context, time.Time, int, int) (*models.TeslaUsageResponse, error)
-	Series(context.Context, time.Time, time.Time, string, int, int) (*models.TeslaUsageSeriesResponse, error)
+	Series(context.Context, time.Time, time.Time, string, int, int, ...*time.Location) (*models.TeslaUsageSeriesResponse, error)
 }
 
 type TeslaUsageHandler struct{ repo teslaUsageReader }
@@ -56,15 +56,28 @@ func (h *TeslaUsageHandler) Get(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, result)
 }
 
-// History exposes actual daily/weekly observations in a bounded half-open UTC interval.
+// History applies the selected calendar at read time inside an exact half-open interval.
 func (h *TeslaUsageHandler) History(w http.ResponseWriter, r *http.Request) {
 	ctx, span := otel.Tracer("api").Start(r.Context(), "tesla.usage_history")
 	defer span.End()
 	q := r.URL.Query()
+	loc := time.UTC
+	if zone := q.Get("timezone"); zone != "" {
+		var err error
+		if len(zone) > 64 || zone == "Local" {
+			httpx.WriteError(w, http.StatusBadRequest, "timezone must be a valid IANA timezone")
+			return
+		}
+		loc, err = time.LoadLocation(zone)
+		if err != nil {
+			httpx.WriteError(w, http.StatusBadRequest, "timezone must be a valid IANA timezone")
+			return
+		}
+	}
 	start, startErr := time.Parse(time.RFC3339, q.Get("start"))
 	end, endErr := time.Parse(time.RFC3339, q.Get("end"))
 	if startErr != nil || endErr != nil || !start.Before(end) ||
-		end.Sub(start) > 366*24*time.Hour || end.After(time.Now().UTC().Add(24*time.Hour)) {
+		end.After(start.In(loc).AddDate(0, 0, 366)) || end.After(time.Now().UTC().Add(24*time.Hour)) {
 		httpx.WriteError(w, http.StatusBadRequest, "start and end must be RFC3339 timestamps defining at most 366 days, ending no later than tomorrow")
 		return
 	}
@@ -91,7 +104,7 @@ func (h *TeslaUsageHandler) History(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	result, err := h.repo.Series(ctx, start.UTC(), end.UTC(), bucket, limit, offset)
+	result, err := h.repo.Series(ctx, start.UTC(), end.UTC(), bucket, limit, offset, loc)
 	if err != nil {
 		span.RecordError(err)
 		log.Ctx(ctx).Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("Tesla usage history read failed")

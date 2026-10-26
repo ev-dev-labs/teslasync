@@ -41,6 +41,7 @@ type fakeMileageRepo struct {
 type monthlyCall struct {
 	vehicleID   int64
 	windowStart time.Time
+	zone        string
 }
 
 type statsCall struct {
@@ -51,6 +52,7 @@ type statsCall struct {
 type dailyCall struct {
 	vehicleID   int64
 	windowStart time.Time
+	zone        string
 }
 
 func (f *fakeMileageRepo) VehicleExists(ctx context.Context, vehicleID int64) (bool, error) {
@@ -65,8 +67,8 @@ func (f *fakeMileageRepo) VehicleExists(ctx context.Context, vehicleID int64) (b
 	return v, nil
 }
 
-func (f *fakeMileageRepo) Monthly(ctx context.Context, vehicleID int64, windowStart time.Time) ([]drivedb.MileageMonthlyRow, error) {
-	f.gotMonthlyCalls = append(f.gotMonthlyCalls, monthlyCall{vehicleID, windowStart})
+func (f *fakeMileageRepo) Monthly(ctx context.Context, vehicleID int64, windowStart time.Time, zone string) ([]drivedb.MileageMonthlyRow, error) {
+	f.gotMonthlyCalls = append(f.gotMonthlyCalls, monthlyCall{vehicleID, windowStart, zone})
 	if f.monthlyErr != nil {
 		return nil, f.monthlyErr
 	}
@@ -81,8 +83,8 @@ func (f *fakeMileageRepo) Stats(ctx context.Context, vehicleID int64, since7d, s
 	return f.stats, nil
 }
 
-func (f *fakeMileageRepo) Daily(ctx context.Context, vehicleID int64, windowStart time.Time) ([]drivedb.MileageDailyRow, error) {
-	f.gotDailyCalls = append(f.gotDailyCalls, dailyCall{vehicleID, windowStart})
+func (f *fakeMileageRepo) Daily(ctx context.Context, vehicleID int64, windowStart time.Time, zone string) ([]drivedb.MileageDailyRow, error) {
+	f.gotDailyCalls = append(f.gotDailyCalls, dailyCall{vehicleID, windowStart, zone})
 	if f.dailyErr != nil {
 		return nil, f.dailyErr
 	}
@@ -632,7 +634,7 @@ func TestMonthsAgo_SnapsToFirstOfMonth(t *testing.T) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			got := monthsAgo(c.now, c.months)
+			got := monthsAgo(c.now, time.UTC, c.months)
 			if !got.Equal(c.want) {
 				t.Errorf("monthsAgo(%v, %d) = %v, want %v", c.now, c.months, got, c.want)
 			}
@@ -905,7 +907,7 @@ func TestDaysAgo_SnapsToMidnightUTC(t *testing.T) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			got := daysAgo(c.now, c.days)
+			got := daysAgo(c.now, time.UTC, c.days)
 			if !got.Equal(c.want) {
 				t.Errorf("daysAgo(%s, %d) = %s, want %s", c.now, c.days, got, c.want)
 			}
@@ -918,4 +920,184 @@ func TestDaysAgo_SnapsToMidnightUTC(t *testing.T) {
 			}
 		})
 	}
+}
+
+// ---------- time-zone framing (TZ-4) ----------
+
+func TestMonthsAgo_SnapsInZoneFrame(t *testing.T) {
+	t.Parallel()
+	la, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 2026-05-01T00:30:00Z is still Apr 30 in Los Angeles: the window
+	// must snap to Mar 1 at LA midnight (PST, UTC-8), not to the April
+	// UTC framing (2026-04-01T00:00:00Z) or the May UTC month.
+	now := time.Date(2026, 5, 1, 0, 30, 0, 0, time.UTC)
+	got := monthsAgo(now, la, 1)
+	want := time.Date(2026, 3, 1, 0, 0, 0, 0, la)
+	if !got.Equal(want) {
+		t.Errorf("monthsAgo(now, LA, 1) = %v, want %v", got, want)
+	}
+	if d := got.In(la); d.Day() != 1 || d.Month() != time.March || d.Hour() != 0 {
+		t.Errorf("LA wall = %v, want 2026-03-01 00:00", d)
+	}
+}
+
+func TestDaysAgo_SnapsInZoneFrame(t *testing.T) {
+	t.Parallel()
+	la, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 2026-05-06T06:30:00Z is May 5 23:30 in Los Angeles (PDT): minus one
+	// day is May 4, snapped to LA midnight — a full day before the UTC
+	// framing (2026-05-05T00:00:00Z).
+	now := time.Date(2026, 5, 6, 6, 30, 0, 0, time.UTC)
+	got := daysAgo(now, la, 1)
+	want := time.Date(2026, 5, 4, 0, 0, 0, 0, la)
+	if !got.Equal(want) {
+		t.Errorf("daysAgo(now, LA, 1) = %v, want %v", got, want)
+	}
+	if d := got.In(la); d.Day() != 4 || d.Hour() != 0 {
+		t.Errorf("LA wall = %v, want 2026-05-04 00:00", d)
+	}
+}
+
+func TestMileage_Monthly_TimezonePropagation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("forwards_timezone_and_snaps_window_in_zone", func(t *testing.T) {
+		t.Parallel()
+		now := time.Date(2026, 5, 1, 0, 30, 0, 0, time.UTC)
+		repo := &fakeMileageRepo{exists: map[int64]bool{42: true}}
+		h := newHandlerForTest(repo, now)
+		rec := httptest.NewRecorder()
+		h.Monthly(rec, mileageRequest("/mileage/monthly?vehicle_id=42&months=1&timezone=America%2FLos_Angeles"))
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", rec.Code)
+		}
+		if len(repo.gotMonthlyCalls) != 1 {
+			t.Fatalf("got %d Monthly calls, want 1", len(repo.gotMonthlyCalls))
+		}
+		call := repo.gotMonthlyCalls[0]
+		if call.zone != "America/Los_Angeles" {
+			t.Errorf("zone = %q, want America/Los_Angeles", call.zone)
+		}
+		la, _ := time.LoadLocation("America/Los_Angeles")
+		wantWindow := time.Date(2026, 3, 1, 0, 0, 0, 0, la)
+		if !call.windowStart.Equal(wantWindow) {
+			t.Errorf("windowStart = %v, want %v", call.windowStart, wantWindow)
+		}
+	})
+
+	t.Run("defaults_to_utc_when_omitted", func(t *testing.T) {
+		t.Parallel()
+		now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
+		repo := &fakeMileageRepo{exists: map[int64]bool{42: true}}
+		h := newHandlerForTest(repo, now)
+		rec := httptest.NewRecorder()
+		h.Monthly(rec, mileageRequest("/mileage/monthly?vehicle_id=42&months=12"))
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", rec.Code)
+		}
+		if len(repo.gotMonthlyCalls) != 1 {
+			t.Fatalf("got %d Monthly calls, want 1", len(repo.gotMonthlyCalls))
+		}
+		call := repo.gotMonthlyCalls[0]
+		if call.zone != "UTC" {
+			t.Errorf("zone = %q, want UTC", call.zone)
+		}
+		wantWindow := time.Date(2025, 5, 1, 0, 0, 0, 0, time.UTC)
+		if !call.windowStart.Equal(wantWindow) {
+			t.Errorf("windowStart = %v, want %v", call.windowStart, wantWindow)
+		}
+	})
+
+	t.Run("invalid_timezone_is_bad_request", func(t *testing.T) {
+		t.Parallel()
+		now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
+		repo := &fakeMileageRepo{exists: map[int64]bool{42: true}}
+		h := newHandlerForTest(repo, now)
+		rec := httptest.NewRecorder()
+		h.Monthly(rec, mileageRequest("/mileage/monthly?vehicle_id=42&timezone=Not%2FAZone"))
+
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want 400", rec.Code)
+		}
+		if len(repo.gotMonthlyCalls) != 0 {
+			t.Fatalf("got %d Monthly calls, want 0", len(repo.gotMonthlyCalls))
+		}
+	})
+}
+
+func TestMileage_Daily_TimezonePropagation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("forwards_timezone_and_snaps_window_in_zone", func(t *testing.T) {
+		t.Parallel()
+		now := time.Date(2026, 5, 6, 6, 30, 0, 0, time.UTC)
+		repo := &fakeMileageRepo{exists: map[int64]bool{42: true}}
+		h := newHandlerForTest(repo, now)
+		rec := httptest.NewRecorder()
+		h.Daily(rec, mileageRequest("/mileage/daily?vehicle_id=42&days=1&timezone=America%2FLos_Angeles"))
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", rec.Code)
+		}
+		if len(repo.gotDailyCalls) != 1 {
+			t.Fatalf("got %d Daily calls, want 1", len(repo.gotDailyCalls))
+		}
+		call := repo.gotDailyCalls[0]
+		if call.zone != "America/Los_Angeles" {
+			t.Errorf("zone = %q, want America/Los_Angeles", call.zone)
+		}
+		la, _ := time.LoadLocation("America/Los_Angeles")
+		wantWindow := time.Date(2026, 5, 4, 0, 0, 0, 0, la)
+		if !call.windowStart.Equal(wantWindow) {
+			t.Errorf("windowStart = %v, want %v", call.windowStart, wantWindow)
+		}
+	})
+
+	t.Run("defaults_to_utc_when_omitted", func(t *testing.T) {
+		t.Parallel()
+		now := time.Date(2026, 5, 6, 14, 23, 45, 0, time.UTC)
+		repo := &fakeMileageRepo{exists: map[int64]bool{42: true}}
+		h := newHandlerForTest(repo, now)
+		rec := httptest.NewRecorder()
+		h.Daily(rec, mileageRequest("/mileage/daily?vehicle_id=42&days=90"))
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", rec.Code)
+		}
+		if len(repo.gotDailyCalls) != 1 {
+			t.Fatalf("got %d Daily calls, want 1", len(repo.gotDailyCalls))
+		}
+		call := repo.gotDailyCalls[0]
+		if call.zone != "UTC" {
+			t.Errorf("zone = %q, want UTC", call.zone)
+		}
+		wantWindow := time.Date(2026, 2, 5, 0, 0, 0, 0, time.UTC)
+		if !call.windowStart.Equal(wantWindow) {
+			t.Errorf("windowStart = %v, want %v", call.windowStart, wantWindow)
+		}
+	})
+
+	t.Run("invalid_timezone_is_bad_request", func(t *testing.T) {
+		t.Parallel()
+		now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
+		repo := &fakeMileageRepo{exists: map[int64]bool{42: true}}
+		h := newHandlerForTest(repo, now)
+		rec := httptest.NewRecorder()
+		h.Daily(rec, mileageRequest("/mileage/daily?vehicle_id=42&timezone=Not%2FAZone"))
+
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want 400", rec.Code)
+		}
+		if len(repo.gotDailyCalls) != 0 {
+			t.Fatalf("got %d Daily calls, want 0", len(repo.gotDailyCalls))
+		}
+	})
 }

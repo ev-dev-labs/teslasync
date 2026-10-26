@@ -16,8 +16,8 @@
  *   - the fence-status branches in the standard body — Inside (success),
  *     Outside (neutral), and Disabled (wins even when geometrically inside),
  *     plus the SI→preferred radius formatting through `useUnits`;
- *   - null-safety — a geofence missing its name / radius renders an em dash and
- *     "0.0 km" with no `undefined`/`NaN` leak, and a vehicle parked on the
+ *   - null-safety — a geofence missing its name renders no `undefined`/`NaN`
+ *     leak, and a vehicle parked on the
  *     null island (0,0) is treated as position-unknown (every fence "Outside");
  *   - the compact (1×1) variant — the current-zone success badge, the "No zone"
  *     fallback, and that the widget title is suppressed;
@@ -55,7 +55,7 @@ import type { WidgetSize } from './types';
 
 // i18n passthrough: returns the English default so the widget's copy
 // ("Geofence Status", "No geofences configured", "Inside"/"Outside"/"Disabled",
-// "No zone", "Radius", "Refresh") is asserted verbatim.
+// "No zone", "Refresh") is asserted verbatim.
 const markerTranslation = vi.hoisted(() => ({
   label: undefined as string | undefined,
   calls: vi.fn(),
@@ -127,6 +127,21 @@ vi.mock('./shared', async () => {
         { 'data-testid': 'widget-map', 'data-center': JSON.stringify(center), 'data-zoom': zoom },
         children,
       ),
+    WidgetDetailCard: ({
+      entries,
+    }: {
+      entries: Array<{ id?: string | number; label: string; value?: string | number | null; badge?: { text: string; variant?: string } }>;
+    }) => React.createElement(
+      'ul',
+      null,
+      entries.map((entry) => React.createElement(
+        'li',
+        { key: entry.id },
+        React.createElement('span', null, entry.label),
+        entry.badge && React.createElement('span', null, entry.badge.text),
+        entry.value != null && !entry.badge && React.createElement('span', null, entry.value),
+      )),
+    ),
   };
 });
 
@@ -362,13 +377,11 @@ describe('GeofenceWidget — states', () => {
 // ── Populated body + fence-status branches (standard, cols=2 rows=2) ──────────
 
 describe('GeofenceWidget — fence status branches', () => {
-  it('renders each configured fence with its name and preferred-unit radius', () => {
+  it('renders each configured fence with its name and status, without inventing a radius', () => {
     renderWidget({ cols: 2, rows: 2 });
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Work')).toBeInTheDocument();
-    // useUnits (real) reads the global km setting: 500 m → "0.5 km", 2000 m → "2.0 km".
-    expect(screen.getByText('Radius: 0.50 km')).toBeInTheDocument();
-    expect(screen.getByText('Radius: 2.00 km')).toBeInTheDocument();
+    expect(screen.queryByText(/Radius:/)).not.toBeInTheDocument();
   });
 
   it('marks a fence the vehicle is within as Inside and a distant one as Outside', () => {
@@ -391,7 +404,7 @@ describe('GeofenceWidget — fence status branches', () => {
     useVehicleStateMock.mockReturnValue(makeState({ lat: 0, lon: 0 }));
     renderWidget({ cols: 2, rows: 4 });
     expect(screen.queryByText('Outside')).not.toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.queryByText('Outside')).not.toBeInTheDocument();
     expect(screen.queryByText('Inside')).toBeNull();
     // Position unknown also suppresses the map even at a tall height.
     expect(screen.queryByTestId('widget-map')).toBeNull();
@@ -404,7 +417,6 @@ describe('GeofenceWidget — fence status branches', () => {
     useGeofencesMock.mockReturnValue(makeFenceResult([partial]));
     renderWidget({ cols: 2, rows: 2 });
     expect(screen.getAllByText('—')).toHaveLength(2);
-    expect(screen.getByText('Radius: —')).toBeInTheDocument();
     expect(screen.queryByText(/undefined|NaN/)).toBeNull();
   });
 });
@@ -549,8 +561,8 @@ describe('GeofenceWidget — map', () => {
     const circles = screen.getAllByTestId('fence-circle');
     expect(circles).toHaveLength(2);
     const colors = circles.map((c) => c.getAttribute('data-color'));
-    expect(colors).toContain('#22c55e'); // inside → green
-    expect(colors).toContain('#6b7280'); // outside → grey
+    expect(colors).toContain(CHART_SEMANTIC.vehicle.online); // inside → green
+    expect(colors).toContain(CHART_NEUTRAL); // outside → grey
 
     expect(screen.getByTestId('vehicle-marker')).toHaveAttribute(
       'data-pos',
@@ -588,3 +600,4 @@ describe('GeofenceWidget — a11y', () => {
     expect(container.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 });
+import { CHART_SEMANTIC, CHART_NEUTRAL } from '@/lib/colors';

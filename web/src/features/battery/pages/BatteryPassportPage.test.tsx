@@ -25,7 +25,7 @@ import type {
   BatteryPassportVerifyResponse,
 } from '@/api/hooks/useBatteryPassport';
 import { ToastProvider } from '@/components/feedback';
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDateTime, formatDayKey, formatDayKeyRange } from '@/lib/dateFormat';
 import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const FROZEN_NOW = Date.parse('2026-08-08T12:00:00.000Z');
@@ -126,7 +126,7 @@ describe('BatteryPassportPage retained trust and raw export regressions', () => 
     expectEverySection();
     const warning = screen.getByTestId('stale-refresh-warning');
     expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
-    expect(warning).toHaveTextContent('Battery Passport may be out of date');
+    expect(warning).toHaveTextContent('Battery passport may be out of date');
     expect(warning).toHaveTextContent('Previously loaded data remains visible.');
     expect(warning).not.toHaveTextContent(/device is offline/i);
     expect(screen.getByRole('button', { name: 'Export certificate' })).toBeEnabled();
@@ -520,6 +520,40 @@ afterEach(() => {
 
 describe('BatteryPassportPage', () => {
   it.each([
+    ['de-DE', 'vehicle', 'America/Los_Angeles'],
+    ['ja-JP', 'user', 'Asia/Tokyo'],
+  ])('keeps certificate days fixed while formatting %s wire instants in the %s clock', (locale, mode, tz) => {
+    h.savedLocale = locale;
+    h.savedMode = mode;
+    const facts = certificate({
+      issued_at: '2026-08-08T00:30:00Z',
+      first_observed_at: '2024-01-02T23:30:00-08:00',
+    });
+    const snapshot = structuredClone(facts);
+    h.passportQuery = passportQuery({ data: facts });
+    renderPage();
+    const row = (section: string, field: string) => {
+      const element = within(screen.getByTestId(section)).getByText(field, { exact: true }).closest('tr');
+      if (!(element instanceof HTMLElement)) throw new Error(`Missing certificate row: ${field}`);
+      return within(element);
+    };
+    const directory = 'battery-passport-field-directory';
+    expect(row(directory, 'issued_at').getByText(formatDateTime(facts.issued_at, { locale, tz }))).toBeInTheDocument();
+    expect(row(directory, 'first_observed_at').getByText(formatDateTime(facts.first_observed_at, { locale, tz }))).toBeInTheDocument();
+    expect(row(directory, 'degradation_trend[].date').getByText(
+      formatDayKeyRange('2026-05-01', '2026-08-01', { locale }),
+    )).toBeInTheDocument();
+    const matrix = 'battery-passport-provenance-matrix';
+    expect(row(matrix, 'first_observed_at day').getByText(formatDayKey('2024-01-03', { locale }))).toBeInTheDocument();
+    expect(row(matrix, 'issued_at day').getByText(formatDayKey('2026-08-08', { locale }))).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(facts.issued_at);
+    expect(document.body).not.toHaveTextContent(facts.first_observed_at!);
+    expect(document.body).not.toHaveTextContent(/\bUTC\b|America\/Los_Angeles|Asia\/Tokyo|GMT[+-]/);
+    expect(facts).toEqual(snapshot);
+    expectEverySection();
+  });
+
+  it.each([
     ['de-DE', 'vehicle', 'America/Los_Angeles', '7'],
     ['ja-JP', 'user', 'Asia/Tokyo', '8'],
     ['fr-FR', 'utc', 'UTC', '8'],
@@ -610,7 +644,7 @@ describe('BatteryPassportPage', () => {
           expect(dialog).toHaveTextContent('Vehicle identifier; exact integer is in the v1 canonical string.');
           expect(dialog).toHaveTextContent('Yes');
         }
-        if (field === 'first_observed_at day') expect(dialog).toHaveTextContent('Yes, UTC day');
+        if (field === 'first_observed_at day') expect(dialog).toHaveTextContent('Yes, canonical day');
         if (field === 'recommendations') expect(dialog).toHaveTextContent('0 server outputs');
         fireEvent.keyDown(dialog, { key: 'Escape' });
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -690,7 +724,7 @@ describe('BatteryPassportPage', () => {
     expectEverySection();
     expect(
       screen.getAllByRole('status', {
-        name: 'Loading Battery Passport evidence',
+        name: 'Loading battery passport evidence',
       }).length,
     ).toBeGreaterThan(0);
     expect(
@@ -984,7 +1018,7 @@ describe('BatteryPassportPage', () => {
     expectEverySection();
     expect(masthead.getByText(facts.vin_masked)).toBeInTheDocument();
     expect(masthead.queryByRole('alert')).not.toBeInTheDocument();
-    expect(masthead.queryByRole('status', { name: 'Loading Battery Passport evidence' }))
+    expect(masthead.queryByRole('status', { name: 'Loading battery passport evidence' }))
       .not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Export certificate' })).toBeEnabled();
 
@@ -1033,7 +1067,7 @@ describe('BatteryPassportPage', () => {
       screen.getByTestId('battery-passport-trend-diagnostics'),
     );
     const before = diagnostics
-      .getByText('Future UTC dates')
+      .getByText('Future certificate dates')
       .closest('div');
 
     expect(before).toHaveTextContent('1');
@@ -1049,7 +1083,7 @@ describe('BatteryPassportPage', () => {
     const after = within(
       screen.getByTestId('battery-passport-trend-diagnostics'),
     )
-      .getByText('Future UTC dates')
+      .getByText('Future certificate dates')
       .closest('div');
     expect(after).toHaveTextContent('1');
   });

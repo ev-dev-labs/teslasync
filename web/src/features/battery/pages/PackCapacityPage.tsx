@@ -9,7 +9,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { ChargingSession } from '@/types/charging';
 
 import {
@@ -45,7 +45,7 @@ export default function PackCapacityPage() {
   usePageTitle(t('packCapacity.title', 'Pack Capacity'));
 
   const { vehicleId } = useSelectedVehicle();
-  const selectedTimeZone = useTimezone('vehicle');
+  const { tz: selectedTimeZone } = useDateFormat();
   const { unitPrefs, formatEnergy } = useUnits();
   const vehicleIdStr =
     vehicleId != null ? String(vehicleId) : undefined;

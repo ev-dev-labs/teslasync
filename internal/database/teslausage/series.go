@@ -9,23 +9,38 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// TeslaUsageBucketStart anchors daily rows at UTC midnight and weekly rows at
-// UTC Monday midnight. It is independent of the fixed 30-day cycle anchor.
-func TeslaUsageBucketStart(at time.Time, bucket string) time.Time {
-	utc := at.UTC()
-	day := time.Date(utc.Year(), utc.Month(), utc.Day(), 0, 0, 0, 0, time.UTC)
+// TeslaUsageBucketStart uses the selected calendar, defaulting to UTC for
+// existing callers. Fixed 30-day observation cycles are independent.
+func TeslaUsageBucketStart(at time.Time, bucket string, locations ...*time.Location) time.Time {
+	loc := usageSeriesLocation(locations)
+	local := at.In(loc)
+	civil := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
 	if bucket == "week" {
-		daysFromMonday := (int(day.Weekday()) + 6) % 7
-		return day.AddDate(0, 0, -daysFromMonday)
+		civil = civil.AddDate(0, 0, -(int(civil.Weekday())+6)%7)
 	}
-	return day
+	day := time.Date(civil.Year(), civil.Month(), civil.Day(), 0, 0, 0, 0, loc)
+	if day.Day() != civil.Day() || day.Month() != civil.Month() || day.Year() != civil.Year() {
+		// Some calendars skip midnight; Go can resolve it into the previous day.
+		_, before := day.Zone()
+		_, after := day.Add(12 * time.Hour).Zone()
+		day = day.Add(time.Duration(after-before) * time.Second)
+	}
+	return day.UTC()
 }
 
-// Series returns only observed UTC buckets inside [start,end). Empty periods
+func usageSeriesLocation(locations []*time.Location) *time.Location {
+	if len(locations) > 0 && locations[0] != nil {
+		return locations[0]
+	}
+	return time.UTC
+}
+
+// Series returns only observed selected-calendar buckets inside [start,end). Empty periods
 // outside the known history are not fabricated as zero-usage records. The
 // caller validates bucket and range before this repository method is invoked.
-func (r *TeslaUsageRepo) Series(ctx context.Context, start, end time.Time, bucket string, limit, offset int) (*models.TeslaUsageSeriesResponse, error) {
-	acc := newTeslaUsageSeriesAccumulator(bucket)
+func (r *TeslaUsageRepo) Series(ctx context.Context, start, end time.Time, bucket string, limit, offset int, locations ...*time.Location) (*models.TeslaUsageSeriesResponse, error) {
+	loc := usageSeriesLocation(locations)
+	acc := newTeslaUsageSeriesAccumulator(bucket, loc)
 
 	// Both sinks are outbound client callbacks; proxy responses require more
 	// conservative attribution than direct Fleet API responses.
@@ -54,11 +69,11 @@ func (r *TeslaUsageRepo) Series(ctx context.Context, start, end time.Time, bucke
 		return nil, err
 	}
 
-	// PostgreSQL date_trunc on timestamptz with the UTC timezone handles
-	// weeks crossing calendar years and days crossing local DST boundaries.
-	// Only the validated literal "day" or "week" is passed as $3.
-	rows, err = r.db.Pool.Query(ctx, `SELECT date_trunc($3, received_at, 'UTC'), count(*)
-		FROM tesla_stream_usage WHERE received_at >= $1 AND received_at < $2 GROUP BY 1`, start, end, bucket)
+	// A representative source instant lets the same Go calendar assign both
+	// sources, including ambiguous midnights, without expanding individual signals.
+	rows, err = r.db.Pool.Query(ctx, `SELECT min(received_at), count(*)
+		FROM tesla_stream_usage WHERE received_at >= $1 AND received_at < $2
+		GROUP BY date_trunc($3, received_at, $4)`, start, end, bucket, loc.String())
 	if err != nil {
 		return nil, fmt.Errorf("read Tesla signal usage series: %w", err)
 	}
@@ -85,15 +100,16 @@ func (r *TeslaUsageRepo) Series(ctx context.Context, start, end time.Time, bucke
 
 type teslaUsageSeriesAccumulator struct {
 	bucket string
+	loc    *time.Location
 	points map[time.Time]*models.TeslaUsagePoint
 }
 
-func newTeslaUsageSeriesAccumulator(bucket string) *teslaUsageSeriesAccumulator {
-	return &teslaUsageSeriesAccumulator{bucket: bucket, points: make(map[time.Time]*models.TeslaUsagePoint)}
+func newTeslaUsageSeriesAccumulator(bucket string, locations ...*time.Location) *teslaUsageSeriesAccumulator {
+	return &teslaUsageSeriesAccumulator{bucket: bucket, loc: usageSeriesLocation(locations), points: make(map[time.Time]*models.TeslaUsagePoint)}
 }
 
 func (a *teslaUsageSeriesAccumulator) pointAt(at time.Time) *models.TeslaUsagePoint {
-	key := TeslaUsageBucketStart(at, a.bucket)
+	key := TeslaUsageBucketStart(at, a.bucket, a.loc)
 	if point, exists := a.points[key]; exists {
 		return point
 	}

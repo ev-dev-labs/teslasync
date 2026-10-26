@@ -116,8 +116,7 @@ export function FsdDistanceTrend({ insights, state }: FsdDistanceTrendProps) {
         title={t('fsd.trend.title', 'Distance trend')}
         subtitle={t(
           'fsd.trend.subtitle',
-          'Counter movement attributed to each local calendar day in {{timezone}}.',
-          { timezone: insights?.period.timezone ?? 'UTC' },
+          'Counter movement attributed to each local calendar day.',
         )}
         ariaLabel={t(
           'fsd.trend.aria',

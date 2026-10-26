@@ -1,17 +1,18 @@
+import * as palette from '@/lib/colors';
 import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { fmtNumber } from '@/lib/numberFormat';
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateConvert';
 
 export function getStatusColor(status: string): string {
   switch ((status ?? '').toLowerCase()) {
     case 'healthy': case 'ok': case 'online': case 'connected': case 'ready': case 'sent': case 'completed':
-      return '#22c55e';
+      return palette.COLOR.GOOD;
     case 'degraded': case 'warning': case 'pending': case 'queued': case 'processing':
-      return '#f59e0b';
+      return palette.COLOR.WARN;
     case 'unhealthy': case 'offline': case 'error': case 'down': case 'failed':
-      return '#ef4444';
+      return palette.COLOR.BAD;
     default:
-      return '#6b7280';
+      return palette.CHART_NEUTRAL;
   }
 }
 

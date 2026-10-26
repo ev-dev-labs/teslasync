@@ -12,12 +12,9 @@ import { gaugeTone } from '@/lib/tokens';
 
 export function AutomationHistoryTrend({ query }: { query: UseQueryResult<AutomationHistoryListResponse> }) {
   const { t } = useTranslation();
-  const { formatDate } = useDateFormat('utc');
+  const { formatDayKey } = useDateFormat();
   const periodLabel = (period: unknown) => {
-    if (typeof period !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(period)) return formatDate(null);
-    const date = new Date(`${period}T00:00:00Z`);
-    if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== period) return formatDate(null);
-    return formatDate(date);
+    return formatDayKey(typeof period === 'string' ? period : null);
   };
   const trend = query.data?.trend;
   const source = useDataState({ ...query, data: query.data ?? undefined });
@@ -36,7 +33,7 @@ export function AutomationHistoryTrend({ query }: { query: UseQueryResult<Automa
   return (
     <ChartContainer
       title={t('automations.historyPage.trend', 'Execution activity')}
-      subtitle={t('teslaUsage.daily', 'Daily (UTC)')}
+      subtitle={t('automations.historyPage.daily', 'Daily execution counts')}
       ariaLabel={t('automations.historyPage.trendAria', 'Execution outcomes across the selected period')}
       chartKey="automation-history-trend"
       loading={query.isLoading && !source.hasData}

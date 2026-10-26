@@ -22,6 +22,7 @@ import { parseSettingEnum } from '@/lib/parseSettingEnum'
 import type { VehicleState, Position, VehicleConfigSnapshot, UserPreferenceSnapshot } from '@/api/types'
 import { convertSpeedFromSI } from '@/lib/unitConversion'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { CHART_COLORS } from '@/lib/colors';
 
 interface VehicleChartsProps {
   state: VehicleState
@@ -103,7 +104,7 @@ export function VehicleCharts({
                 {trail.length > 1 && (
                   <Polyline
                     positions={trail}
-                    pathOptions={{ color: '#00f0ff', weight: 3, opacity: 0.6 }}
+                    pathOptions={{ color: CHART_COLORS[0], weight: 3, opacity: 0.6 }}
                   />
                 )}
               </MapContainer>
@@ -285,7 +286,7 @@ export function VehicleCharts({
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={speedSeries}>
-                    {areaGradient('vehicleSpeedGrad', '#00f0ff', 0.1)}
+                    {areaGradient('vehicleSpeedGrad', CHART_COLORS[0], 0.1)}
                     <CartesianGrid
                       strokeDasharray="3 3"
                       stroke="var(--glass-border)"
@@ -300,7 +301,7 @@ export function VehicleCharts({
                     <Area
                       {...AREA_DEFAULTS}
                       dataKey="speed"
-                      stroke="#00f0ff"
+                      stroke={CHART_COLORS[0]}
                       fill="url(#vehicleSpeedGrad)"
                       name={t('vehicles.detail.speedSeries', 'Speed {{unit}}', { unit: speedUnit })}
                     />

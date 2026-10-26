@@ -159,7 +159,8 @@
       "provenance": "Historical inputs and derived fits; source eligibility, assumptions and uncertainty apply. Counts are not a health grade.",
       "pressureImbalance": "Reported corner-pressure imbalance in the selected source window.",
       "underinflation": "Source underinflation fraction relative to the assumed placard pressure."
-    }
+    },
+    "rangeLimit": "Choose a workspace range of at most 30 days to view science evidence."
   },
   "achievements": {
     "dismiss": "Dismiss achievement notification",
@@ -259,6 +260,23 @@
     "col": {
       "date": "Date",
       "value": "Value"
+    }
+  },
+  "date": {
+    "preset": {
+      "all": "All time",
+      "last1y": "Last year",
+      "last24h": "Last 24 hours",
+      "last30": "Last 30 days",
+      "last6h": "Last 6 hours",
+      "last90": "Last 90 days",
+      "lastMonth": "Last month",
+      "live": "Live",
+      "mtd": "Month to date",
+      "qtd": "Quarter to date",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "ytd": "Year to date"
     }
   },
   "delta": {

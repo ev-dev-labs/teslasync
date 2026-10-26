@@ -1,763 +1,198 @@
-/**
- * VehicleHeroCard — behaviour, hardening & a11y coverage.
- *
- * VehicleHeroCard renders one fleet hero card: an optional user photo, the
- * vehicle identity (name / VIN / model badge) with a live status pill, four
- * gauges (battery / range / inside / outside), a detail-card grid, and
- * three navigation links (details / commands / live map). SI base units
- * (meters, °C) are converted to the user's display preference via the real
- * `convertDistanceFromSI` / `convertTempFromSI`, with the unit suffix supplied
- * by `useUnits`.
- *
- * Strategy (mirrors the sibling VehicleCard / HeroGauges suites):
- *   - `react-i18next` echoes the English fallback and interpolates `{{name}}`
- *     so alt text / labels read naturally in assertions.
- *   - `useUnits` is mocked with a mutable km/°C ↔ mi/°F switch so both display
- *     branches are exercised while the pure SI converters run for REAL.
- *   - `LinearGauge` is a thin prop-surfacing stub (value / max / unit / colour
- *     as data-attributes) so the converted numbers, gauge scaling and battery
- *     colour threshold are asserted precisely and without text collisions with
- *     the detail cards.
- *   - `StatCard`, `StatusBadge`, `Badge`, `Grid`, `GlassPanel` and `EmptyState`
- *     stay REAL, so the display-unit conversions, `toStatus` derivation and the
- *     empty-state placeholder are exercised end-to-end. `<Link>` is wrapped in a
- *     MemoryRouter.
- *
- * It also locks in the hardening applied while elevating the file:
- *   - `toStatus` uses an own-property check, so an inherited object key such as
- *     `constructor` fails closed to `offline` instead of leaking through the
- *     old `in`-operator branch;
- *   - missing readings stay unknown, without fabricated zero gauges;
- *   - blank firmware falls back to an em dash;
- *   - a role="status" placeholder replaces the previously-hidden gauges/stats
- *     when there is no live vehicle state.
- */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
 import { createRef } from 'react';
-import userEvent from '@testing-library/user-event';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { VehicleHeroCard, type VehicleHeroCardProps } from './VehicleHeroCard';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
-import type { LinearGaugeProps } from '@/components/charts/LinearGauge';
-import { deriveDataState, type DataState, type DataProvenance } from '@/api/dataState';
-import { formatRelative, formatDateTime } from '@/lib/dateFormat';
-import type { UseDateFormatResult } from '@/hooks/useDateFormat';
-import { TELEMETRY_STALE_AFTER_MS } from '@/hooks/useTelemetryFreshness';
 
-vi.mock('@/hooks/useDateFormat', () => ({
-  useDateFormat: () => ({
-    formatRelative: (value) => formatRelative(value, { locale: 'en', tz: 'UTC' }),
-    formatDateTime: (value) => formatDateTime(value, { locale: 'en', tz: 'UTC' }),
-  } satisfies Pick<UseDateFormatResult, 'formatRelative' | 'formatDateTime'>),
-}));
-
-type Vehicle = VehicleHeroCardProps['vehicle'];
-type State = NonNullable<VehicleHeroCardProps['vehicleState']>;
-
-// Mutable display-unit switch shared with the `useUnits` mock. `vi.mock`
-// factories are hoisted above the imports, so the handle must be created via
-// `vi.hoisted` to be referenceable inside the factory.
-const h = vi.hoisted(() => ({
-  units: { distance: 'km' as 'km' | 'mi', temperature: '°C' as '°C' | '°F', power: 'kW' as 'W' | 'kW' },
-}));
+const units = vi.hoisted(() => ({ distance: 'km' as 'km' | 'mi', temperature: '°C' as '°C' | '°F', power: 'kW' as 'W' | 'kW' }));
 
 vi.mock('@/hooks/useUnits', () => ({
-  useUnits: () => ({
-    unitPrefs: { distance: h.units.distance, temperature: h.units.temperature, power: h.units.power },
-  }),
+  useUnits: () => ({ unitPrefs: units }),
 }));
-
-// Echo the English fallback; interpolate `{{name}}` so the photo alt text reads
-// naturally. A bare key (no string fallback) echoes the key.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: unknown, opts?: unknown) => {
-      if (typeof fallback === 'string') {
-        if (opts && typeof opts === 'object') {
-          const o = opts as Record<string, unknown>;
-          return fallback.replace(/{{(\w+)}}/g, (_m, name: string) =>
-            name in o ? String(o[name]) : `{{${name}}}`,
-          );
-        }
-        return fallback;
-      }
-      return key;
+    t: (key: string, fallback?: unknown, opts?: Record<string, unknown>) => {
+      if (typeof fallback !== 'string') return key;
+      return fallback.replace(/{{(\w+)}}/g, (_match, name: string) =>
+        opts && name in opts ? String(opts[name]) : `{{${name}}}`,
+      );
     },
-    i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
-  initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
-
-// Surface the gauge props as data-attributes so the SI→display conversion,
-// gauge scaling and battery tone threshold are directly assertable.
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({
+    formatRelative: () => 'just now',
+    formatDateTime: () => '2026-10-22 20:05 UTC',
+  }),
+}));
 vi.mock('@/components/charts/LinearGauge', () => ({
-  LinearGauge: (p: LinearGaugeProps) => (
-    <div
-      data-testid="gauge"
-      data-label={p.label}
-      data-value={String(p.value)}
-      data-max={String(p.max)}
-      data-min={String(p.min)}
-      data-preserve-reading={String(p.preserveReadingAndScale)}
-      data-unit={String(p.unit)}
-      data-tone={String(p.tone)}
-      data-color={String(p.color)}
-    />
+  LinearGauge: ({ value, max, min, unit, label, preserveReadingAndScale, tone }: {
+    value: number | null; max: number; min?: number; unit?: string; label: string;
+    preserveReadingAndScale?: boolean; tone?: string;
+  }) => (
+    <div data-testid="gauge" data-label={label} data-value={String(value)}
+      data-max={max} data-min={min} data-unit={unit}
+      data-preserve-reading={String(preserveReadingAndScale)} data-tone={tone ?? ''} />
   ),
 }));
 
-function makeVehicle(over: Partial<Vehicle> = {}): Vehicle {
-  return {
-    id: 7,
-    display_name: 'Garage Queen',
-    model: 'Model 3',
-    vin: '5YJ3E1EA7KF000123',
-    state: 'online',
-    ...over,
-  };
-}
-
-function makeState(over: Partial<State> = {}): State {
-  return {
-    battery_level: 72,
-    rated_range: 400_000, // 400 km
-    inside_temp: 21,
-    outside_temp: 14,
-    odometer: 12_345_678, // 12,345.678 km → 12,346
-    is_charging: false,
-    is_locked: true,
-    sentry_mode: false,
-    software_version: '2024.44.25',
-    power: 42_000,
-    state: 'online',
-    ...over,
-  };
-}
-
-function renderCard(
-  over: {
-    vehicle?: Partial<Vehicle>;
-    vehicleState?: State | null;
-    photoUrl?: string | null;
-    dataState?: VehicleHeroCardProps['dataState'];
-    observation?: VehicleHeroCardProps['observation'];
-  } = {},
-) {
-  const vehicle = makeVehicle(over.vehicle);
-  const vehicleState = 'vehicleState' in over ? over.vehicleState : makeState();
-  const utils = render(
-    <MemoryRouter>
-      <VehicleHeroCard vehicle={vehicle} vehicleState={vehicleState} photoUrl={over.photoUrl}
-        dataState={over.dataState} observation={over.observation} />
-    </MemoryRouter>,
-  );
-  return { ...utils, vehicle };
-}
-
-/** Resolve one gauge stub by its (i18n-echoed) label. */
-function gauge(label: string): HTMLElement {
-  const el = screen.getAllByTestId('gauge').find((g) => g.getAttribute('data-label') === label);
-  if (!el) throw new Error(`gauge "${label}" not rendered`);
-  return el;
-}
+const makeVehicle = (over: Partial<VehicleHeroCardProps['vehicle']> = {}): VehicleHeroCardProps['vehicle'] => ({
+  id: 7,
+  display_name: 'Aurora',
+  model: 'Model Y Long Range',
+  vin: '5YJ3E1EA7KF000123',
+  state: 'online',
+  ...over,
+});
+const makeState = (over: Partial<NonNullable<VehicleHeroCardProps['vehicleState']>> = {}): NonNullable<VehicleHeroCardProps['vehicleState']> => ({
+  battery_level: 72,
+  rated_range: 660_000,
+  inside_temp: 21,
+  outside_temp: 18,
+  odometer: 12_345_678,
+  is_locked: true,
+  sentry_mode: true,
+  software_version: '2024.44.25',
+  power: 42_000,
+  state: 'driving',
+  ...over,
+});
 
 beforeEach(() => {
-  h.units.distance = 'km';
-  h.units.temperature = '°C';
-  h.units.power = 'kW';
+  units.distance = 'km';
+  units.temperature = '°C';
+  units.power = 'kW';
 });
 
-afterEach(() => {
-  vi.useRealTimers();
-});
+function renderCard(props: Partial<VehicleHeroCardProps> = {}) {
+  return render(
+    <MemoryRouter>
+      <VehicleHeroCard
+        vehicle={makeVehicle()}
+        vehicleState={makeState()}
+        {...props}
+      />
+    </MemoryRouter>,
+  );
+}
 
-describe('VehicleHeroCard — identity & header', () => {
-  it('renders the display name heading, VIN and model badge', () => {
-    renderCard();
-    expect(screen.getByRole('heading', { name: 'Garage Queen' })).toBeInTheDocument();
-    expect(screen.getByText('5YJ3E1EA7KF000123')).toBeInTheDocument();
-    expect(screen.getByText('Model 3')).toBeInTheDocument();
+describe('VehicleHeroCard redesigned contract', () => {
+  it.each([null, Number.NaN])('announces unavailable range and temperatures (%s) without numeric meters', (value) => {
+    renderCard({ vehicleState: makeState({
+      rated_range: value, inside_temp: value, outside_temp: value,
+    }) });
+    for (const label of ['Range', 'Inside', 'Outside']) {
+      expect(screen.getByRole('group', { name: label, exact: true }))
+        .toHaveAccessibleDescription('Unknown');
+      expect(screen.queryByRole('meter', { name: label, exact: true })).not.toBeInTheDocument();
+    }
   });
 
-  it('derives the status pill from the live vehicleState.state', () => {
-    renderCard({ vehicleState: makeState({ state: 'driving' }) });
+  it('keeps genuine zero range and temperatures readable without fabricated scales', () => {
+    renderCard({ vehicleState: makeState({ rated_range: 0, inside_temp: 0, outside_temp: 0 }) });
+    for (const label of ['Range', 'Inside', 'Outside']) {
+      const reading = screen.getByRole('group', { name: label, exact: true });
+      expect(reading).toHaveTextContent(label === 'Range' ? '0km' : '0°C');
+      expect(reading).not.toHaveAccessibleDescription('Unknown');
+    }
+  });
+
+  it('matches the compact After layout: identity, battery, range, chips, and details footer', () => {
+    renderCard({ verifiedFields: ['state', 'battery_level', 'rated_range'] });
+    expect(screen.getByRole('heading', { name: 'Aurora' })).toBeInTheDocument();
+    expect(screen.getByText(/Model Y Long Range ·/)).toBeInTheDocument();
     expect(screen.getByText('driving')).toBeInTheDocument();
-  });
-});
-
-describe('VehicleHeroCard — status derivation (toStatus)', () => {
-  it('falls back to vehicle.state when the live state has no state field', () => {
-    renderCard({
-      vehicle: { state: 'charging' },
-      vehicleState: makeState({ state: undefined }),
-    });
-    expect(screen.getByText('charging')).toBeInTheDocument();
-  });
-
-  it('maps an unrecognised state to offline', () => {
-    renderCard({ vehicle: { state: 'wat' }, vehicleState: null });
-    expect(screen.getByText('offline')).toBeInTheDocument();
+    expect(screen.getByTestId('gauge')).toHaveAttribute('data-label', 'Battery');
+    expect(screen.getByTestId('gauge')).toHaveAttribute('data-value', '72');
+    expect(screen.getByText('660')).toBeInTheDocument();
+    expect(screen.getByText('km')).toBeInTheDocument();
+    expect(screen.getByText(/Locked/)).toBeInTheDocument();
+    expect(screen.getByText(/Sentry On/)).toBeInTheDocument();
+    expect(screen.getByText(/Inside 21°C/)).toBeInTheDocument();
+    expect(screen.getByText(/Outside 18°C/)).toBeInTheDocument();
+    expect(screen.getByText('3 verified fields')).toBeInTheDocument();
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+    expect(screen.getByRole('link', { name: /Details/ })).toHaveAttribute('href', '/vehicles/7');
   });
 
-  it('fails closed to offline for an inherited object key (regression guard for the `in` bug)', () => {
-    // `'constructor' in states` is TRUE via the prototype chain — the old code
-    // leaked it through as a "valid" status. The own-property check rejects it.
-    renderCard({ vehicle: { state: 'constructor' }, vehicleState: null });
-    expect(screen.getByText('offline')).toBeInTheDocument();
-    expect(screen.queryByText('constructor')).not.toBeInTheDocument();
-  });
-});
-
-describe('VehicleHeroCard — gauges (SI→display conversion, scaling & tone)', () => {
-  it('renders four gauges with km/°C values, unit suffixes and scaled maxima', () => {
-    renderCard({
-      vehicleState: makeState({
-        battery_level: 72,
-        rated_range: 400_000,
-        inside_temp: 21,
-        outside_temp: 14,
-      }),
-    });
-
-    expect(screen.getAllByTestId('gauge')).toHaveLength(4);
-
-    const battery = gauge('Battery');
-    expect(battery).toHaveAttribute('data-value', '72');
-    expect(battery).toHaveAttribute('data-max', '100');
-    expect(battery).toHaveAttribute('data-unit', '%');
-    expect(battery).toHaveAttribute('data-tone', 'info'); // >20 → restrained headline, not a health verdict
-    // No raw hex is passed: the tone map owns the colour so warm /
-    // light presets re-tint the bar instead of pinning it to a fixed cyan.
-    expect(battery).toHaveAttribute('data-color', 'undefined');
-
-    const range = gauge('Range');
-    expect(range).toHaveAttribute('data-value', '400'); // 400,000 m → 400 km
-    expect(range).toHaveAttribute('data-max', '644');
-    expect(range).toHaveAttribute('data-unit', 'km');
-
-    expect(gauge('Inside')).toHaveAttribute('data-value', '21');
-    expect(gauge('Inside')).toHaveAttribute('data-max', '50');
-    expect(gauge('Outside')).toHaveAttribute('data-value', '14');
+  it('uses SI conversion and shared user unit preferences without fabrication', () => {
+    units.distance = 'mi';
+    units.temperature = '°F';
+    renderCard({ vehicleState: makeState({ rated_range: 400_000, inside_temp: 21, outside_temp: 14 }) });
+    expect(screen.getByText(String(Math.round(convertDistanceFromSI(400_000, 'mi'))))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`${Math.round(convertTempFromSI(21, '°F'))}°F`))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`${Math.round(convertTempFromSI(14, '°F'))}°F`))).toBeInTheDocument();
   });
 
-  it('tones the battery gauge danger at or below the 20% threshold', () => {
-    renderCard({ vehicleState: makeState({ battery_level: 20 }) });
-    expect(gauge('Battery')).toHaveAttribute('data-tone', 'danger');
-    expect(gauge('Battery')).toHaveAttribute('data-value', '20');
+  it('keeps zero readings and false flags real and missing readings unknown', () => {
+    units.distance = 'km';
+    units.temperature = '°C';
+    renderCard({ vehicleState: makeState({
+      battery_level: 0, rated_range: 0, inside_temp: null, outside_temp: NaN,
+      is_locked: false, sentry_mode: false,
+    }) });
+    expect(screen.getByTestId('gauge')).toHaveAttribute('data-value', '0');
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText(/Unlocked/)).toBeInTheDocument();
+    expect(screen.getByText(/Sentry Off/)).toBeInTheDocument();
+    expect(screen.queryByText(/0°C/)).not.toBeInTheDocument();
   });
 
-  it('converts to miles / °F and rescales the maxima when the display unit changes', () => {
-    h.units.distance = 'mi';
-    h.units.temperature = '°F';
-    renderCard({ vehicleState: makeState({ rated_range: 400_000, inside_temp: 21 }) });
-
-    const expectedMi = String(Math.round(convertDistanceFromSI(400_000, 'mi')));
-    const range = gauge('Range');
-    expect(range).toHaveAttribute('data-value', expectedMi);
-    expect(range).toHaveAttribute('data-max', '400');
-    expect(range).toHaveAttribute('data-unit', 'mi');
-
-    const expectedF = String(Math.round(convertTempFromSI(21, '°F'))); // 70
-    const inside = gauge('Inside');
-    expect(inside).toHaveAttribute('data-value', expectedF);
-    expect(inside).toHaveAttribute('data-max', '122');
-    expect(inside).toHaveAttribute('data-unit', '°F');
-  });
-});
-
-describe('VehicleHeroCard — detail stat cards', () => {
-  it('converts the SI odometer through the real convertDistanceFromSI + fmtInt', () => {
-    renderCard({ vehicleState: makeState({ odometer: 12_345_678 }) });
-    // 12,345,678 m ÷ 1000 = 12,345.678 km → round → fmtInt → "12,346".
-    expect(screen.getByText('12,346')).toBeInTheDocument();
-    // km appears on both the range and odometer cards.
-    expect(screen.getAllByText('km').length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('shows Locked / Unlocked from the lock flag', () => {
-    renderCard({ vehicleState: makeState({ is_locked: true }) });
-    expect(screen.getByText('Locked')).toBeInTheDocument();
-    expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
-  });
-
-  it('shows Unlocked when the vehicle is unlocked', () => {
-    renderCard({ vehicleState: makeState({ is_locked: false }) });
-    expect(screen.getByText('Unlocked')).toBeInTheDocument();
-  });
-
-  it('shows sentry On / Off from the sentry flag', () => {
-    renderCard({ vehicleState: makeState({ sentry_mode: true }) });
-    expect(screen.getByText('On')).toBeInTheDocument();
-  });
-
-  it('renders the firmware and power values through fmtNumber', () => {
-    renderCard({ vehicleState: makeState({ software_version: '2024.44.25', power: 42_000 }) });
-    expect(screen.getByText('2024.44.25')).toBeInTheDocument();
-    expect(screen.getByText('42.00')).toBeInTheDocument(); // precision 2
-    expect(screen.getByText('kW')).toBeInTheDocument();
-  });
-
-  it('preserves negative regeneration while converting SI watts to kilowatts', () => {
-    renderCard({ vehicleState: makeState({ power: -4_200 }) });
-    expect(screen.getByText('-4.20')).toBeInTheDocument();
-    expect(screen.getByText('kW')).toBeInTheDocument();
-  });
-
-  it('uses the configured watts display preference without scaling the reading', () => {
-    h.units.power = 'W';
-    renderCard({ vehicleState: makeState({ power: 4_200 }) });
-    expect(screen.getByText('4,200.00')).toBeInTheDocument();
-    expect(screen.getByText('W')).toBeInTheDocument();
-    expect(screen.queryByText('kW')).not.toBeInTheDocument();
-  });
-});
-
-describe('VehicleHeroCard — hero photo', () => {
-  it('renders the photo with an interpolated alt when a photoUrl is supplied', () => {
-    renderCard({ photoUrl: 'https://cdn.example/car.jpg' });
-    const img = screen.getByRole('img', { name: 'Garage Queen photo' });
-    expect(img).toHaveAttribute('src', 'https://cdn.example/car.jpg');
-    expect(img).toHaveAttribute('loading', 'lazy');
-  });
-
-  it('renders no image when photoUrl is absent', () => {
-    renderCard({ photoUrl: null });
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
-  });
-});
-
-describe('VehicleHeroCard — empty-state hardening', () => {
-  it('shows a role=status placeholder (no gauges/cards) when there is no live state', () => {
+  it('renders an explicit unavailable state and retains identity/actions', () => {
     renderCard({ vehicleState: null });
     expect(screen.getByRole('status')).toHaveTextContent('Live telemetry unavailable');
-    expect(screen.queryAllByTestId('gauge')).toHaveLength(0);
-    expect(screen.queryByText('Firmware')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('gauge')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Aurora' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Details/ })).toBeInTheDocument();
   });
 
-  it('renders the gauges (and no placeholder) when live state is present', () => {
-    renderCard({ vehicleState: makeState() });
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    expect(screen.getAllByTestId('gauge')).toHaveLength(4);
-  });
-});
-
-describe('VehicleHeroCard — navigation actions', () => {
-  it('exposes details / commands / live-map links with the correct hrefs', () => {
-    renderCard();
-    expect(screen.getByRole('link', { name: 'Details' })).toHaveAttribute('href', '/vehicles/7');
-    expect(screen.getByRole('link', { name: 'Commands' })).toHaveAttribute(
-      'href',
-      '/vehicles/7/commands',
-    );
-    expect(screen.getByRole('link', { name: 'Live map' })).toHaveAttribute(
-      'href',
-      '/vehicles/7/map',
-    );
-  });
-});
-
-describe('VehicleHeroCard — null safety (regression guards)', () => {
-  it('keeps a missing battery unknown rather than presenting an empty battery', () => {
-    renderCard({ vehicleState: makeState({ battery_level: null }) });
-    const battery = gauge('Battery');
-    expect(battery).toHaveAttribute('data-value', 'null');
-    expect(battery).toHaveAttribute('data-tone', 'undefined');
-    expect(battery.getAttribute('data-value')).not.toContain('NaN');
+  it('does not turn historical provenance or unknown observation into live freshness', () => {
+    renderCard({
+      dataState: { provenance: 'historical', status: 'stale', hasData: true } as never,
+      observation: { observedAt: Date.UTC(2026, 9, 22, 20, 5), freshness: 'fresh' },
+    });
+    expect(screen.queryByText('Up to date')).not.toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText(/Last real observation/)).toBeInTheDocument();
   });
 
-  it('keeps missing power unknown rather than inventing zero power', () => {
-    renderCard({ vehicleState: makeState({ power: null }) });
-    expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
-  });
-
-  it('keeps missing range and temperatures unknown in Fahrenheit as well as Celsius', () => {
-    h.units.temperature = '°F';
-    renderCard({ vehicleState: makeState({ rated_range: undefined, inside_temp: null, outside_temp: NaN }) });
-    for (const label of ['Range', 'Inside', 'Outside']) {
-      expect(gauge(label)).toHaveAttribute('data-value', 'null');
-    }
-    expect(screen.getAllByText('—')).toHaveLength(3);
-    expect(screen.queryByText('32')).not.toBeInTheDocument();
-  });
-
-  it('does not infer an unlocked vehicle or disabled Sentry from missing flags', () => {
-    renderCard({ vehicleState: makeState({ is_locked: null, sentry_mode: undefined }) });
-    expect(screen.getAllByText('—')).toHaveLength(2);
-    expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
-    expect(screen.queryByText('Off')).not.toBeInTheDocument();
-  });
-
-  it('preserves genuine zero readings and false security flags', () => {
-    renderCard({ vehicleState: makeState({
-      battery_level: 0, rated_range: 0, inside_temp: 0, outside_temp: 0,
-      odometer: 0, power: 0, is_locked: false, sentry_mode: false,
-    }) });
-    for (const label of ['Battery', 'Range', 'Inside', 'Outside']) {
-      expect(gauge(label)).toHaveAttribute('data-value', '0');
-    }
-    expect(screen.getByText('0.00')).toBeInTheDocument();
-    expect(screen.getByText('Unlocked')).toBeInTheDocument();
-    expect(screen.getByText('Off')).toBeInTheDocument();
-    expect(screen.queryByText('—')).not.toBeInTheDocument();
-  });
-
-  it('falls back to an em dash when the firmware string is blank', () => {
-    renderCard({ vehicleState: makeState({ software_version: '' }) });
-    expect(screen.getByText('Firmware')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
-  });
-});
-
-describe('VehicleHeroCard — restrained presentation and public contracts', () => {
-  it('preserves exact out-of-scale readings and both converted temperature bounds', () => {
-    h.units.temperature = '°F';
-    renderCard({ vehicleState: makeState({ rated_range: 700_000, inside_temp: 60, outside_temp: -30 }) });
-    expect(gauge('Range')).toHaveAttribute('data-value', '700');
-    expect(gauge('Range')).toHaveAttribute('data-max', '644');
-    expect(gauge('Inside')).toHaveAttribute('data-value', '140');
-    expect(gauge('Outside')).toHaveAttribute('data-value', '-22');
-    for (const label of ['Inside', 'Outside']) {
-      expect(gauge(label)).toHaveAttribute('data-min', '-4');
-      expect(gauge(label)).toHaveAttribute('data-max', '122');
-    }
-    for (const label of ['Battery', 'Range', 'Inside', 'Outside']) {
-      expect(gauge(label)).toHaveAttribute('data-preserve-reading', 'true');
-    }
-  });
-
-  it('keeps supporting gauges neutral without inventing success or temperature warnings', () => {
-    renderCard({ vehicleState: makeState({ inside_temp: -12, outside_temp: 0, rated_range: 0 }) });
-    for (const label of ['Range', 'Inside', 'Outside']) {
-      expect(gauge(label)).toHaveAttribute('data-tone', 'neutral');
-      expect(gauge(label)).toHaveAttribute('data-color', 'undefined');
-    }
-    expect(gauge('Inside')).toHaveAttribute('data-value', '-12');
-    expect(gauge('Outside')).toHaveAttribute('data-value', '0');
-    expect(gauge('Range')).toHaveAttribute('data-value', '0');
-  });
-
-  it('retains a neutral panel and shared keyboard, reduced-motion and forced-colors link chrome', () => {
-    renderCard();
-    const panel = screen.getByRole('group', { name: 'Garage Queen' });
-    expect(panel).toHaveClass('min-w-0', 'p-4', 'sm:p-6', 'hover:border-[var(--panel-border-hover)]');
-    expect(panel).not.toHaveClass('hover:border-[var(--semantic-info-border)]');
-    for (const link of screen.getAllByRole('link')) {
-      expect(link).toHaveClass(
-        'min-h-11', 'min-w-11', 'max-w-full', 'break-words',
-        'focus-visible:outline-2', 'focus-visible:outline-offset-2',
-        'focus-visible:outline-[var(--focus-ring)]',
-        'forced-colors:focus-visible:outline-[Highlight]',
-        'motion-reduce:transition-none',
-      );
-      expect(link).not.toHaveClass('text-cyan-400', 'bg-cyan-500/10');
-    }
-    expect(screen.getByRole('link', { name: 'Details' })).toHaveClass('text-[var(--semantic-info)]');
-    expect(screen.getByRole('link', { name: 'Commands' })).toHaveClass('bg-[var(--control-bg)]');
-    expect(screen.getByRole('link', { name: 'Live map' })).toHaveClass('bg-[var(--control-bg)]');
-  });
-
-  it('forwards its ref, caller attributes and events while retaining exact long vehicle identity and photo', () => {
+  it('renders photo, forwards ref and attributes, and keeps identity text intact', () => {
     const ref = createRef<HTMLDivElement>();
     const onClick = vi.fn();
-    const name = 'Vehicle identity '.repeat(12);
-    const vin = 'A'.repeat(80);
     render(
       <MemoryRouter>
         <VehicleHeroCard
           ref={ref}
-          vehicle={makeVehicle({ display_name: name, vin, model: 'Actual Model Y' })}
+          vehicle={makeVehicle({ display_name: 'Vehicle identity '.repeat(12), vin: 'A'.repeat(80) })}
           vehicleState={makeState()}
           photoUrl="https://cdn.example/actual-paint.jpg"
           dir="rtl"
-          data-testid="caller-panel"
-          className="caller-card"
+          data-testid="hero"
           onClick={onClick}
         />
       </MemoryRouter>,
     );
-    const panel = screen.getByTestId('caller-panel');
-    expect(ref.current).toBe(panel);
-    expect(panel).toHaveAttribute('dir', 'rtl');
-    expect(panel).toHaveClass('caller-card');
-    expect(screen.getByRole('heading')).toHaveTextContent(name.trim());
-    expect(screen.getByText(vin)).toHaveClass('break-all');
-    expect(screen.getByText('Actual Model Y')).toBeInTheDocument();
+    expect(ref.current).toBe(screen.getByTestId('hero'));
     expect(screen.getByRole('img')).toHaveAttribute('src', 'https://cdn.example/actual-paint.jpg');
-    expect(screen.getByRole('img')).toHaveAttribute('decoding', 'async');
-    fireEvent.click(panel);
+    fireEvent.click(screen.getByTestId('hero'));
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
-  it('retains tab order and real keyboard navigation to the vehicle details route', async () => {
-    const user = userEvent.setup();
+  it('navigates through the one Details link with keyboard activation', async () => {
+    const user = await import('@testing-library/user-event').then((m) => m.default.setup());
     render(
       <MemoryRouter initialEntries={['/fleet']}>
         <Routes>
           <Route path="/fleet" element={<VehicleHeroCard vehicle={makeVehicle()} vehicleState={makeState()} />} />
-          <Route path="/vehicles/7" element={<div data-testid="details-destination" />} />
+          <Route path="/vehicles/7" element={<div>Details destination</div>} />
         </Routes>
       </MemoryRouter>,
     );
     await user.tab();
-    expect(screen.getByRole('link', { name: 'Details' })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole('link', { name: 'Commands' })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole('link', { name: 'Live map' })).toHaveFocus();
-    await user.tab({ shift: true });
-    await user.tab({ shift: true });
+    expect(screen.getByRole('link', { name: /Details/ })).toHaveFocus();
     await user.keyboard('{Enter}');
-    expect(screen.getByTestId('details-destination')).toBeInTheDocument();
-  });
-});
-
-const OBSERVATION_LIMITATION = 'Telemetry stream observation does not verify individual reading timestamps or completeness.';
-const OBSERVATION_NOW = Date.UTC(2026, 9, 8, 20, 30);
-
-function trust(over: Partial<DataState<unknown>> = {}): DataState<unknown> {
-  return {
-    ...deriveDataState({ data: { opaque: 'not Hero readings' }, dataUpdatedAt: OBSERVATION_NOW }, {
-      provenance: 'live', now: () => OBSERVATION_NOW,
-    }),
-    ...over,
-  };
-}
-
-describe('VehicleHeroCard — optional stream observation and source trust', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(OBSERVATION_NOW);
-  });
-
-  it('keeps the original layout and assertions when both optional props are omitted', () => {
-    renderCard();
-    expect(screen.queryByText('Telemetry stream')).not.toBeInTheDocument();
-    expect(screen.queryByText(OBSERVATION_LIMITATION)).not.toBeInTheDocument();
-    expect(screen.getAllByTestId('gauge')).toHaveLength(4);
-    expect(screen.getAllByRole('link')).toHaveLength(3);
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
-  });
-
-  it('renders server observation rather than fetch time without blanket fresh or complete assurance', () => {
-    const observedAt = OBSERVATION_NOW - 7 * 60_000;
-    renderCard({ dataState: trust(), observation: { observedAt, freshness: 'fresh' } });
-    expect(screen.getByText('Telemetry stream')).toBeInTheDocument();
-    expect(screen.getByText('Last real observation 7m ago')).toHaveAttribute(
-      'title', formatDateTime(new Date(observedAt), { locale: 'en', tz: 'UTC' }),
-    );
-    expect(screen.getByText('Stale')).toBeInTheDocument();
-    expect(screen.getByText(OBSERVATION_LIMITATION)).toBeInTheDocument();
-    expect(screen.queryByText('Up to date')).not.toBeInTheDocument();
-    expect(screen.queryByText(/Last updated/)).not.toBeInTheDocument();
-    expect(screen.getByText('online')).toBeInTheDocument();
-    expect(gauge('Battery')).toHaveAttribute('data-value', '72');
-  });
-
-  it.each([null, undefined, NaN, Infinity, -Infinity, 8.65e15])(
-    'keeps absent or invalid observation %s unknown instead of borrowing a fetch clock',
-    (observedAt) => {
-      renderCard({
-        dataState: trust(),
-        observation: observedAt === undefined ? undefined : { observedAt, freshness: 'fresh' },
-      });
-      expect(screen.getByText('No verified observation time for this vehicle')).toBeInTheDocument();
-      expect(screen.getByText('Unknown')).toBeInTheDocument();
-      expect(screen.queryByText(/Last real observation/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Invalid Date|NaN|Up to date/)).not.toBeInTheDocument();
-      expect(screen.getAllByTestId('gauge')).toHaveLength(4);
-    },
-  );
-
-  it('treats explicit null metadata as unknown and consumes both props without forwarding them', () => {
-    renderCard({ dataState: trust(), observation: null });
-    const panel = screen.getByRole('group', { name: 'Garage Queen' });
-    expect(panel).not.toHaveAttribute('dataState');
-    expect(panel).not.toHaveAttribute('observation');
-    expect(panel.querySelector('[data-stream-freshness]')).toHaveAttribute('data-stream-freshness', 'unknown');
-    expect(screen.getByText('No verified observation time for this vehicle')).toBeInTheDocument();
-  });
-
-  it('preserves an actual epoch-zero observation rather than treating it as absent', () => {
-    renderCard({ observation: { observedAt: 0, freshness: 'fresh' } });
-    expect(screen.getByText(/Last real observation/)).toHaveAttribute(
-      'title', formatDateTime(new Date(0), { locale: 'en', tz: 'UTC' }),
-    );
-    expect(screen.getByText('Stale')).toBeInTheDocument();
-    expect(screen.queryByText('No verified observation time for this vehicle')).not.toBeInTheDocument();
-  });
-
-  it('ages a retained observation across the existing stream freshness window and cleans up its ticker', () => {
-    const { unmount } = renderCard({
-      dataState: trust(),
-      observation: { observedAt: OBSERVATION_NOW, freshness: 'fresh' },
-    });
-    expect(screen.getByText('Last real observation just now')).toBeInTheDocument();
-    expect(screen.queryByText('Stale')).not.toBeInTheDocument();
-    act(() => { vi.advanceTimersByTime(TELEMETRY_STALE_AFTER_MS + 30_000); });
-    expect(screen.getByText('Last real observation 2m ago')).toBeInTheDocument();
-    expect(screen.getByText('Stale')).toBeInTheDocument();
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    act(() => { vi.advanceTimersByTime(60_000); });
-    expect(screen.getByText('Last real observation 3m ago')).toBeInTheDocument();
-    unmount();
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it('retains recent stream evidence on fetch error with one source-specific retry, then recovers', () => {
-    const retry = vi.fn();
-    const observation = { observedAt: OBSERVATION_NOW, freshness: 'fresh' } satisfies NonNullable<VehicleHeroCardProps['observation']>;
-    const { rerender } = renderCard({
-      dataState: trust({ status: 'stale', provenance: 'cached', refreshError: new Error('refresh failed'), retry }),
-      observation,
-      vehicleState: makeState({ state: 'driving' }),
-    });
-    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
-    expect(screen.getAllByRole('button')).toHaveLength(1);
-    expect(screen.getByText('Last real observation just now')).toBeInTheDocument();
-    expect(screen.queryByText('Stale')).not.toBeInTheDocument();
-    expect(screen.getByText('driving')).toBeInTheDocument();
-    expect(screen.getAllByTestId('gauge')).toHaveLength(4);
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    expect(retry).toHaveBeenCalledTimes(1);
-    rerender(<MemoryRouter><VehicleHeroCard vehicle={makeVehicle()} vehicleState={makeState({ state: 'driving' })}
-      dataState={trust()} observation={observation} /></MemoryRouter>);
-    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
-    expect(screen.getByText('driving')).toBeInTheDocument();
-  });
-
-  it('keeps paused refresh distinct from errors and vehicle offline, with a single retry', () => {
-    const retry = vi.fn();
-    renderCard({
-      dataState: trust({ status: 'stale', provenance: 'cached', isRefreshBlocked: true, retry }),
-      observation: { observedAt: OBSERVATION_NOW, freshness: 'fresh' },
-    });
-    expect(screen.getByText('Paused')).toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
-    expect(screen.getAllByRole('button')).toHaveLength(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    expect(retry).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText(/offline|refresh failed|device is offline/i)).not.toBeInTheDocument();
-    expect(screen.getByText('online')).toBeInTheDocument();
-    expect(screen.getAllByTestId('gauge')).toHaveLength(4);
-  });
-
-  it('retains source-stale content without duplicating retained notices or retries', () => {
-    const retry = vi.fn();
-    renderCard({ dataState: trust({ status: 'stale', provenance: 'cached', retry }) });
-    expect(screen.getAllByRole('status')).toHaveLength(1);
-    expect(screen.getByRole('status')).toHaveTextContent('Previously loaded data remains visible');
-    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(retry).toHaveBeenCalledTimes(1);
-    expect(screen.getAllByTestId('gauge')).toHaveLength(4);
-  });
-
-  it('disables refresh during in-flight retained recovery', () => {
-    const retry = vi.fn();
-    renderCard({ dataState: trust({ status: 'stale', refreshError: new Error('refresh failed'), isRefreshing: true, retry }) });
-    const button = screen.getByRole('button', { name: 'Updating…' });
-    expect(button).toBeDisabled();
-    expect(button).toHaveAttribute('aria-busy', 'true');
-    fireEvent.click(button);
-    expect(retry).not.toHaveBeenCalled();
-    expect(screen.getAllByTestId('gauge')).toHaveLength(4);
-  });
-
-  it('retains observation and retry when the retained source envelope has no reading payload', () => {
-    const retry = vi.fn();
-    renderCard({
-      vehicleState: null,
-      dataState: trust({ status: 'stale', refreshError: new Error('refresh failed'), retry }),
-      observation: { observedAt: OBSERVATION_NOW - 60_000, freshness: 'fresh' },
-    });
-    expect(screen.getByText('Live telemetry unavailable')).toBeInTheDocument();
-    expect(screen.getByText('Last real observation 1m ago')).toBeInTheDocument();
-    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
-    expect(screen.queryAllByTestId('gauge')).toHaveLength(0);
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    expect(retry).toHaveBeenCalledTimes(1);
-    expect(screen.getAllByRole('link')).toHaveLength(3);
-  });
-
-  it('keeps partial zero and false readings while missing/nonfinite readings remain unknown', () => {
-    renderCard({
-      dataState: trust({ status: 'partial' }),
-      observation: { observedAt: OBSERVATION_NOW, freshness: 'unknown' },
-      vehicleState: { battery_level: 0, rated_range: null, inside_temp: NaN, outside_temp: Infinity,
-        odometer: null, power: 0, is_locked: false, sentry_mode: false },
-    });
-    expect(gauge('Battery')).toHaveAttribute('data-value', '0');
-    for (const label of ['Range', 'Inside', 'Outside']) {
-      expect(gauge(label)).toHaveAttribute('data-value', 'null');
-    }
-    expect(screen.getByText('0.00')).toBeInTheDocument();
-    expect(screen.getByText('Unlocked')).toBeInTheDocument();
-    expect(screen.getByText('Off')).toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-data-state', 'partial');
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
-    expect(screen.queryByText('Up to date')).not.toBeInTheDocument();
-  });
-
-  it.each<DataProvenance>(['historical', 'unknown', 'inferred', 'repaired'])(
-    'never turns %s provenance into a live-stream assurance or an FSM decision',
-    (provenance) => {
-      renderCard({
-        dataState: trust({ provenance }),
-        observation: { observedAt: OBSERVATION_NOW, freshness: 'fresh' },
-        vehicleState: makeState({ state: 'charging' }),
-      });
-      const panel = screen.getByRole('group', { name: 'Garage Queen' });
-      expect(panel.querySelector('[data-stream-freshness]')).toHaveAttribute('data-stream-freshness', 'unknown');
-      expect(panel.querySelector('[data-provenance]')).toHaveAttribute('data-provenance', provenance);
-      expect(screen.getByText('Unknown')).toBeInTheDocument();
-      expect(screen.queryByText('Live')).not.toBeInTheDocument();
-      expect(screen.queryByText('Up to date')).not.toBeInTheDocument();
-      expect(screen.getByText('charging')).toBeInTheDocument();
-      expect(screen.getAllByTestId('gauge')).toHaveLength(4);
-    },
-  );
-
-  it('preserves authoritative unavailable evidence without dropping retained readings', () => {
-    renderCard({ dataState: trust({ status: 'unavailable' }) });
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-data-state', 'unavailable');
-    expect(screen.getAllByTestId('gauge')).toHaveLength(4);
-    expect(screen.getAllByRole('link')).toHaveLength(3);
-  });
-
-  it('localizes initial failure and retry inside the source body, not identity/photo/actions', () => {
-    const retry = vi.fn();
-    renderCard({
-      vehicleState: null, photoUrl: 'https://cdn.example/car.jpg',
-      dataState: deriveDataState({ error: new Error('state failed'), isError: true, refetch: retry }),
-    });
-    expect(screen.getByText('The live-state request failed. This is a fact about our pipeline, not about the vehicle.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Garage Queen' })).toBeInTheDocument();
-    expect(screen.getByRole('img')).toBeInTheDocument();
-    expect(screen.getAllByRole('link')).toHaveLength(3);
-    expect(screen.queryAllByTestId('gauge')).toHaveLength(0);
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(retry).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not replace usable reading props even if the opaque DataState has no retained payload', () => {
-    renderCard({
-      dataState: deriveDataState({ error: new Error('state failed'), isError: true }),
-      vehicleState: makeState({ power: -4_200 }),
-    });
-    expect(screen.getAllByTestId('gauge')).toHaveLength(4);
-    expect(screen.getByText('-4.20')).toBeInTheDocument();
-    expect(screen.getByText('online')).toBeInTheDocument();
-  });
-
-  it('shows source-shaped initial loading without manufacturing zero readings', () => {
-    renderCard({ vehicleState: null, dataState: deriveDataState({ isPending: true }) });
-    expect(screen.getByRole('status', { name: 'Loading Telemetry stream' })).toBeInTheDocument();
-    expect(screen.queryAllByTestId('gauge')).toHaveLength(0);
-    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('link')).toHaveLength(3);
-    expect(screen.getByText('No verified observation time for this vehicle')).toBeInTheDocument();
+    expect(screen.getByText('Details destination')).toBeInTheDocument();
   });
 });

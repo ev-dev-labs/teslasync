@@ -3,13 +3,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataStateSource } from '@/api/dataState';
 import type { FleetStateEntry } from '@/api/hooks/useVehicles';
 import type { Vehicle } from '@/types/vehicle';
+import type { TeslaEnergyHistoryEntry } from '@/types/energy';
 import { useHomeEnergyOrchestration } from './useHomeEnergyOrchestration';
 import { optimizeHomeEnergy } from '../lib/optimizer';
 
 const sources = vi.hoisted(() => ({
+  timezone: 'UTC',
+  history: undefined as TeslaEnergyHistoryEntry[] | undefined,
   vehicles: {} as DataStateSource<Vehicle[]>,
   fleet: {} as DataStateSource<FleetStateEntry[]>,
   refetch: vi.fn(),
+}));
+
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({ tz: sources.timezone }),
 }));
 
 vi.mock('@/api/hooks/useVehicles', async (importOriginal) => ({
@@ -22,7 +29,7 @@ vi.mock('@/api/hooks/useEnergy', () => ({
   useTeslaEnergySites: () => ({ data: [], isSuccess: true }),
   useTeslaEnergySiteInfo: () => ({}),
   useTeslaEnergyLiveStatus: () => ({}),
-  useTeslaEnergyHistory: () => ({}),
+  useTeslaEnergyHistory: () => ({ data: sources.history, isSuccess: sources.history !== undefined }),
 }));
 
 function vehicle(id: number): Vehicle {
@@ -65,9 +72,69 @@ function stateOf(value: ReturnType<typeof useHomeEnergyOrchestration>, id = 'fle
 describe('useHomeEnergyOrchestration fleet source trust', () => {
   beforeEach(() => {
     localStorage.clear();
+    sources.timezone = 'UTC';
+    sources.history = undefined;
     sources.refetch.mockClear();
     sources.vehicles = { data: [vehicle(1)], isSuccess: true };
     setFleet(undefined);
+  });
+
+  it('recomputes tariff/departure clock hours on a zone change without changing stored assumptions or wire instants', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-01T00:00:00Z'));
+    try {
+      setFleet([entry(1)]);
+      const { result, rerender } = renderHook(() => useHomeEnergyOrchestration());
+      const start = result.current.startTimeIso;
+      const scenario = result.current.scenario;
+      const source = JSON.stringify(sources.fleet.data);
+      expect(result.current.input.tariff[0].importPricePerKwh).toBe(0.14);
+      expect(result.current.input.vehicles[0].departureSlot).toBe(28);
+      sources.timezone = 'America/Los_Angeles';
+      rerender();
+      expect(result.current.input.tariff[0].importPricePerKwh).toBe(0.42);
+      expect(result.current.input.vehicles[0].departureSlot).toBe(56);
+      expect(result.current.scenario).toBe(scenario);
+      expect(result.current.scenario.tariff.peakStartHour).toBe(16);
+      expect(result.current.startTimeIso).toBe(start);
+      expect(result.current.input.startTimeIso).toBe(start);
+      expect(result.current.result.meta.startTimeIso).toBe(start);
+      expect(JSON.stringify(sources.fleet.data)).toBe(source);
+      expect(result.current.result).toEqual(optimizeHomeEnergy(result.current.input));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('recomputes both forecast memos when the selected zone crosses historical/projected DST offsets', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-08T08:00:00Z'));
+    try {
+      sources.history = Array.from({ length: 24 }, (_, hour) => ({
+        id: hour, energy_site_id: 1, period: 'day',
+        timestamp: `2025-11-01T${String(hour).padStart(2, '0')}:00:00Z`,
+        fetched_at: '2025-11-02T00:00:00Z',
+        solar_energy_wh: hour * 100, consumer_energy_wh: 1000 + hour * 100,
+        battery_energy_in_wh: null,
+        battery_energy_out_wh: null, grid_energy_in_wh: null, grid_energy_out_wh: null,
+      }));
+      const original = JSON.stringify(sources.history);
+      const { result, rerender } = renderHook(() => useHomeEnergyOrchestration());
+      const start = result.current.startTimeIso;
+      expect(result.current.input.solarForecastW[0]).toBe(800);
+      expect(result.current.input.loadForecastW[0]).toBe(1800);
+      sources.timezone = 'America/Los_Angeles';
+      rerender();
+      expect(result.current.input.solarForecastW[0]).toBe(700);
+      expect(result.current.input.loadForecastW[0]).toBe(1700);
+      expect(result.current.input.solarForecastW[8]).toBe(1000);
+      expect(result.current.solarForecast.sourceSampleCount).toBe(24);
+      expect(result.current.loadForecast.sourceSampleCount).toBe(24);
+      expect(result.current.startTimeIso).toBe(start);
+      expect(JSON.stringify(sources.history)).toBe(original);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   describe('useHomeEnergyOrchestration SOC observations', () => {

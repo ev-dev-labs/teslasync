@@ -1,5 +1,5 @@
 import { fmtCompact, fmtNumber, formatBytes, getFormatterPreferences } from '@/lib/numberFormat';
-import { formatDurationMinutes } from '@/lib/dateFormat';
+import { formatDurationMinutes } from '@/lib/dateConvert';
 import { formatCurrencyValue } from '@/lib/currencyFormat';
 import {
   convertDistanceFromSI, convertDistanceToSI, convertDurationFromSI,

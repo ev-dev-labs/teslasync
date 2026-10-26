@@ -75,7 +75,7 @@ export function DriveDnaFingerprintPanel({
               cy={DNA_CENTER}
               r={DNA_CENTER - 2}
               fill="none"
-              stroke="rgba(255,255,255,0.08)"
+              stroke="var(--border-subtle)"
               strokeWidth={0.5}
             />
             {model.genome.rings.map((ring, index) => (

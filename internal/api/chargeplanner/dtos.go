@@ -2,6 +2,8 @@ package chargeplanner
 
 import (
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/api/tou"
 )
 
 // ── Request/Response types ───────────────────────────────────
@@ -33,21 +35,15 @@ type costComparison struct {
 }
 
 type optimizeResponse struct {
-	PlanID           int64          `json:"plan_id"`
-	CurrentSOC       int            `json:"current_soc"`
-	TargetSOC        int            `json:"target_soc"`
-	KWhNeeded        float64        `json:"kwh_needed"`
-	EstDurationHours float64        `json:"estimated_duration_hours"`
-	Schedule         chargeWindow   `json:"schedule"`
-	Comparison       costComparison `json:"comparison"`
-	Alternatives     []chargeWindow `json:"alternative_windows"`
-	HourlyRates      []hourlyRate   `json:"hourly_rates"`
-}
-
-type hourlyRate struct {
-	Hour      int     `json:"hour"`
-	RateCents float64 `json:"rate_cents"`
-	Tier      string  `json:"tier"`
+	PlanID           int64            `json:"plan_id"`
+	CurrentSOC       int              `json:"current_soc"`
+	TargetSOC        int              `json:"target_soc"`
+	KWhNeeded        float64          `json:"kwh_needed"`
+	EstDurationHours float64          `json:"estimated_duration_hours"`
+	Schedule         chargeWindow     `json:"schedule"`
+	Comparison       costComparison   `json:"comparison"`
+	Alternatives     []chargeWindow   `json:"alternative_windows"`
+	HourlyRates      []tou.HourlyRate `json:"hourly_rates"`
 }
 
 type applyRequest struct {

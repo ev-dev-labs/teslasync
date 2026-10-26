@@ -2,8 +2,9 @@
  * WidgetDetailCard contract + hardening tests.
  *
  * WidgetDetailCard is a pure presentational tile primitive: it projects a list
- * of `DetailEntry` label/value rows (each optionally carrying a status badge and
- * a monospace flag) into an accessible description list, and falls back to an
+ * of `DetailEntry` label/value rows (each optionally carrying a muted
+ * subtitle, a right-aligned hint, a status dot, a status pill, and a
+ * monospace flag) into an accessible description list, and falls back to an
  * accessible empty state when there is nothing to show. Its whole shape is a
  * function of three inputs — the `entries` array, the `compact` flag, and the
  * `emptyMessage`/`emptyIcon` empty-state overrides.
@@ -20,9 +21,13 @@
  *   4. Badges: the badge text renders and the DetailEntry→Badge variant remap is
  *      honoured end-to-end (`error`→danger palette, `success`→success palette),
  *      and an entry without a badge renders none.
- *   5. Compact mode: the row list is capped at the first four entries; the full
+ *   5. Spec row language: `sublabel` renders as a muted second line under the
+ *      label, `hint` as a muted second line under the value, and `status` as a
+ *      decorative leading dot that never carries meaning alone (adjacent text
+ *      always names the state).
+ *   6. Compact mode: the row list is capped at the first four entries; the full
  *      view renders them all.
- *   6. Presentation details: the `mono` flag applies the monospace class and only
+ *   7. Presentation details: the `mono` flag applies the monospace class and only
  *      the inter-row separators (n-1 of them) carry the divider border.
  *
  * i18n is stubbed to echo the English fallback so every copy assertion is real.
@@ -154,6 +159,16 @@ describe('WidgetDetailCard — badges', () => {
     expect(screen.getByText('Good').className).toContain('bg-[var(--semantic-success-bg)]');
   });
 
+  it('maps the info badge variant onto the info palette', () => {
+    render(
+      <WidgetDetailCard
+        entries={[entry({ label: 'Update', value: 'Ready', badge: { text: 'New', variant: 'info' } })]}
+      />,
+    );
+
+    expect(screen.getByText('New').className).toContain('bg-[var(--semantic-info-bg)]');
+  });
+
   it('renders no badge when an entry omits one', () => {
     const { container } = render(
       <WidgetDetailCard entries={[entry({ label: 'Plain', value: 'x' })]} />,
@@ -161,6 +176,106 @@ describe('WidgetDetailCard — badges', () => {
 
     // The rounded-full pill is the Badge's signature class.
     expect(container.querySelector('.rounded-full')).toBeNull();
+  });
+});
+
+// ── Spec row language: sublabel / hint / status ─────────────────────────────
+
+describe('WidgetDetailCard — spec row language', () => {
+  it('renders the sublabel as a muted second line under the label', () => {
+    const { container } = render(
+      <WidgetDetailCard
+        entries={[entry({ label: 'Premium Connectivity', sublabel: 'Renews Nov 14', value: '$9.99' })]}
+      />,
+    );
+
+    const sub = screen.getByText('Renews Nov 14');
+    expect(sub).toBeInTheDocument();
+    expect(sub.className).toContain('text-[var(--text-muted)]');
+    // The title keeps primary emphasis; the subtitle recedes.
+    expect(screen.getByText('Premium Connectivity').className).toContain(
+      'text-[var(--text-primary)]',
+    );
+    // Subtitle rows add no truncation — long translations must wrap.
+    expect(container.querySelector('.truncate')).toBeNull();
+  });
+
+  it('renders the hint as a muted second line under the value', () => {
+    render(
+      <WidgetDetailCard
+        entries={[entry({ label: 'Premium Connectivity', value: '$9.99', hint: '/mo' })]}
+      />,
+    );
+
+    const hint = screen.getByText('/mo');
+    expect(hint).toBeInTheDocument();
+    expect(hint.className).toContain('text-[var(--text-muted)]');
+    expect(screen.getByText('$9.99')).toBeInTheDocument();
+  });
+
+  it('omits subtitle, hint, and dot lines when an entry does not set them', () => {
+    const { container } = render(
+      <WidgetDetailCard entries={[entry({ label: 'Model', value: 'Model 3' })]} />,
+    );
+
+    expect(container.querySelectorAll('dt')).toHaveLength(1);
+    expect(container.querySelectorAll('dd')).toHaveLength(1);
+    // No muted second lines and no status dot on a plain row.
+    expect(screen.getByText('Model 3').closest('dd')?.querySelector('.text-xs')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"].rounded-full')).toBeNull();
+  });
+
+  it('renders a decorative status dot per variant and never color-alone', () => {
+    const { container, rerender } = render(
+      <WidgetDetailCard
+        entries={[entry({ label: 'Row', value: 'v', status: 'warning' })]}
+      />,
+    );
+
+    const dot = container.querySelector('dt [aria-hidden="true"].rounded-full');
+    expect(dot).not.toBeNull();
+    expect(dot?.className).toContain('bg-[var(--semantic-warning)]');
+    // The adjacent text still names the row — meaning never travels by color alone.
+    expect(screen.getByText('Row')).toBeInTheDocument();
+    expect(screen.getByText('v')).toBeInTheDocument();
+
+    rerender(
+      <WidgetDetailCard entries={[entry({ label: 'Row', value: 'v', status: 'success' })]} />,
+    );
+    expect(
+      container.querySelector('dt [aria-hidden="true"].rounded-full')?.className,
+    ).toContain('bg-[var(--semantic-success)]');
+  });
+
+  it('renders no dot when an entry omits status', () => {
+    const { container } = render(
+      <WidgetDetailCard entries={[entry({ label: 'Plain', value: 'x' })]} />,
+    );
+
+    expect(container.querySelector('[aria-hidden="true"].rounded-full')).toBeNull();
+  });
+
+  it('pairs a status dot with its status word in the same row', () => {
+    const { container } = render(
+      <WidgetDetailCard
+        entries={[
+          entry({
+            label: 'Dad',
+            sublabel: 'Invitation pending · sent Oct 19',
+            value: 'Resend',
+            status: 'warning',
+            badge: { text: 'Pending', variant: 'warning' },
+          }),
+        ]}
+      />,
+    );
+
+    // Dot (decorative) + word (badge text): dot + word, not color alone.
+    expect(
+      container.querySelector('dt [aria-hidden="true"].rounded-full'),
+    ).not.toBeNull();
+    expect(screen.getByText('Pending')).toBeInTheDocument();
+    expect(screen.getByText('Invitation pending · sent Oct 19')).toBeInTheDocument();
   });
 });
 

@@ -13,7 +13,8 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { toLocalDatetimeStr } from '@/lib/dateFormat';
+import { toZonedDatetimeStr, zonedWallTimeToUtc } from '@/lib/dateConvert';
+import { useConversionTimezone } from '@/lib/dateConvert';
 
 import { glassCardClasses } from '@/lib/tokens';
 import { SI } from '@/lib/unitConversion';
@@ -30,26 +31,23 @@ type JourneyForm = Omit<JourneyAssuranceRequest,
   reserve_target_pct: number | null;
 };
 
-function defaultDeparture(): string {
-  // datetime-local values are local wall-clock: build the default from local
-  // fields, not a UTC slice (SmartCharge defaultDepartBy precedent).
+function defaultDeparture(conversionTz: string): string {
+  // datetime-local values are wall-clock in the conversion zone: build the
+  // default from zoned fields, not a UTC slice.
   const date = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  return toLocalDatetimeStr(date).slice(0, 16);
+  return toZonedDatetimeStr(date, conversionTz);
 }
 
 export default function JourneyAssurancePage() {
   const { fmtNumber } = useNumberFormatting();
   const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
-  // The entry parser uses browser-local time even when Intl cannot name it.
-  // Do not label that unknown zone UTC via the display helper's fallback.
-  let departureTimeZone: string;
-  try {
-    departureTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || t('common.unknown', 'Unknown');
-  } catch {
-    departureTimeZone = t('common.unknown', 'Unknown');
-  }
   const { vehicleId } = useSelectedVehicle();
+  // Conversion (not display): the datetime-local draft is wall-clock in the
+  // selected zone. Resolve raw so bare renders use the browser zone exactly
+  // like the display fallback, and an invalid saved zone reaches the
+  // conversion helper instead of being pre-guessed by the display layer.
+  const conversionTz = useConversionTimezone();
   const units = useUnits();
   const mutation = useRunJourneyAssurance();
   const publication = useRetainedMutation(mutation, vehicleId, {
@@ -57,7 +55,7 @@ export default function JourneyAssurancePage() {
   });
   const [form, setForm] = useState<JourneyForm>({
     route_distance_m: 250000,
-    departure_at: defaultDeparture(),
+    departure_at: defaultDeparture(conversionTz),
     reserve_target_pct: 15,
     outside_temp_c: null,
     average_speed_mps: null,
@@ -70,8 +68,9 @@ export default function JourneyAssurancePage() {
     const { route_distance_m, reserve_target_pct } = form;
     if (vehicleId == null || publication.pending || route_distance_m == null || reserve_target_pct == null
       || !event.currentTarget.reportValidity()) return;
-    const departure = new Date(form.departure_at);
-    if (!Number.isFinite(departure.getTime())) return;
+    // The entry is wall-clock in the conversion zone (DST-aware).
+    const departure = zonedWallTimeToUtc(form.departure_at, conversionTz);
+    if (departure == null) return;
     mutation.mutate({
       ...form,
       route_distance_m,
@@ -151,8 +150,7 @@ export default function JourneyAssurancePage() {
                 type="datetime-local"
                 label={t('advancedIntelligence.journey.form.departure', 'Departure')}
                 hint={t('advancedIntelligence.journey.form.departureZone',
-                  'Enter departure in your browser time zone ({{timeZone}}). Display time zone preferences do not change this entry.',
-                  { timeZone: departureTimeZone })}
+                  'Enter departure in your selected time zone.')}
                 value={form.departure_at}
                 required
                 onChange={(event) => setForm((current) => ({ ...current, departure_at: event.target.value }))}

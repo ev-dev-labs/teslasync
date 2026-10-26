@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -17,6 +16,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // MaxImpersonationStartBodyBytes caps the JSON body of POST
@@ -258,7 +258,7 @@ func (h *Handler) Start(w http.ResponseWriter, r *http.Request) {
 		if writeErr := h.audit.WriteImpersonationStart(r.Context(), auditdb.AuditImpersonationEvent{
 			Actor:     actor,
 			Target:    target,
-			IP:        impersonationClientIP(r),
+			IP:        httputil.ClientIP(r, httputil.ClientIPOptions{TrustXForwardedFor: true}),
 			UserAgent: r.UserAgent(),
 		}); writeErr != nil {
 			httpx.WriteErrorCode(w, http.StatusInternalServerError,
@@ -302,7 +302,7 @@ func (h *Handler) End(w http.ResponseWriter, r *http.Request) {
 		if writeErr := h.audit.WriteImpersonationEnd(r.Context(), auditdb.AuditImpersonationEvent{
 			Actor:     claim.OriginalAdmin,
 			Target:    claim.Target,
-			IP:        impersonationClientIP(r),
+			IP:        httputil.ClientIP(r, httputil.ClientIPOptions{TrustXForwardedFor: true}),
 			UserAgent: r.UserAgent(),
 		}); writeErr != nil {
 			// Audit failure should NOT block end — the cookie is
@@ -389,30 +389,4 @@ func containsString(haystack []string, needle string) bool {
 		}
 	}
 	return false
-}
-
-// impersonationClientIP extracts the best-effort client IP for r,
-// preferring X-Forwarded-For (left-most) then RemoteAddr. Mirrors the
-// helper in audit.go but lives in this file so the impersonation
-// audit-write path has zero cross-file dependencies on the legacy
-// audit helpers.
-func impersonationClientIP(r *http.Request) string {
-	if r == nil {
-		return ""
-	}
-	if xff := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); xff != "" {
-		if i := strings.IndexByte(xff, ','); i >= 0 {
-			xff = xff[:i]
-		}
-		if ip := strings.TrimSpace(xff); ip != "" {
-			return ip
-		}
-	}
-	if r.RemoteAddr == "" {
-		return ""
-	}
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		return host
-	}
-	return r.RemoteAddr
 }

@@ -7,7 +7,7 @@ import { SHARED_RANGE_STORAGE_KEY, useRangeState } from '@/hooks/useRangeState';
 import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
 import { getDatePreset } from '@/lib/datePresets';
 import { formatDateTime as formatTimestamp } from '@/lib/dateFormat';
-import { resolveTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useAuditLog, useAuditCategories, useAuditActions, useAuditChainVerify } from '@/api/hooks/useOperatorConfidence';
 import { isApiError } from '@/lib/resilience';
 import { deriveDataState } from '@/api/dataState';
@@ -20,8 +20,8 @@ export function useAuditLogPage() {
 
   const { pathname } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { settings, locale } = useSettings();
-  const tz = resolveTimezone(settings.tz_display_default === 'utc' ? 'utc' : 'user', null, settings.timezone_user);
+  const { locale } = useSettings();
+  const { tz } = useDateFormat();
   const formatDateTime = (value: string | Date) => formatTimestamp(value, { locale, tz });
   const range = useRangeState({ timezone: tz });
   const workspaceRangeAvailable = getWorkspaceRouteScope(pathname).range;

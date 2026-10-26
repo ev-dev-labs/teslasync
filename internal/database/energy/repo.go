@@ -234,3 +234,33 @@ func (r *EnergyStatsRepo) GetTotalEnergy(ctx context.Context, vehicleID int64, d
 	}
 	return energy, cost, distance, nil
 }
+
+// Exact half-open bounds select completed drives at their recorded start, as
+// cagg_fleet_stats does, without rounding either request bound to a UTC day.
+const energyDailyRangeSQL = `SELECT
+ TO_CHAR(started_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date,
+ COALESCE(SUM(energy_used_wh), 0),
+ COALESCE(SUM(distance_m), 0),
+ CASE WHEN COALESCE(SUM(distance_m), 0) > 0
+  THEN COALESCE(SUM(energy_used_wh), 0) / SUM(distance_m) ELSE 0 END,
+ 0 AS cost
+ FROM drives
+ WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3 AND ended_at IS NOT NULL
+ GROUP BY 1 ORDER BY 1`
+
+func (r *EnergyStatsRepo) GetDailyRange(ctx context.Context, vehicleID int64, start, end time.Time) ([]*energymodel.EnergyStatsRow, error) {
+	rows, err := r.db.Pool.Query(ctx, energyDailyRangeSQL, vehicleID, start, end)
+	if err != nil {
+		return nil, fmt.Errorf("query bounded energy breakdown: %w", err)
+	}
+	defer rows.Close()
+	stats := make([]*energymodel.EnergyStatsRow, 0)
+	for rows.Next() {
+		row := &energymodel.EnergyStatsRow{}
+		if err := rows.Scan(&row.Date, &row.EnergyWh, &row.DistanceM, &row.EfficiencyWhPerM, &row.Cost); err != nil {
+			return nil, err
+		}
+		stats = append(stats, row)
+	}
+	return stats, rows.Err()
+}

@@ -56,6 +56,7 @@ export interface OperationalBriefProps {
   freshness?: ReactNode
   actions?: ReactNode
   provenance?: string
+  analysisPeriod?: string | null
   narrative?: OperationalNarrative
   className?: string
   testId?: string
@@ -141,6 +142,7 @@ export function OperationalBrief({
   freshness,
   actions,
   provenance,
+  analysisPeriod,
   narrative,
   className,
   testId,
@@ -292,7 +294,7 @@ export function OperationalBrief({
         }
       >
         <div className="space-y-6">
-          <OperationalNarrativeDetails narrative={resolvedNarrative} />
+          <OperationalNarrativeDetails narrative={resolvedNarrative} analysisPeriod={analysisPeriod} />
 
           <div className="space-y-3">
             <PanelTitle>{t('operations.metrics', 'Operational metrics')}</PanelTitle>

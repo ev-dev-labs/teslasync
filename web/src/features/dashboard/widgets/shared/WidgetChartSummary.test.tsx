@@ -2,12 +2,15 @@
  * WidgetChartSummary — behaviour + hardening coverage.
  *
  * The component is the shared "stat row + chart body" layout used by the
- * dashboard's chart widgets. It has one runtime export (the component) plus a
- * type export (`ChartSummaryStat`). Every branch is exercised through the
- * component:
+ * dashboard's chart widgets. It has one runtime export (the component) plus
+ * type exports (`ChartSummaryStat`, `ChartSummaryLegendItem`). Every branch
+ * is exercised through the component:
  *   - `isEmpty` short-circuits to an <EmptyState> (default vs. caller message + icon).
  *   - the stat row renders label / value / optional unit for each stat.
  *   - `compact` hides the chart body (stats-only), otherwise the chart renders.
+ *   - `yAxisLabel` / `xAxisLabel` render quiet chart captions (hidden with the chart).
+ *   - `legend` renders a dot + word series key defaulting to the
+ *     `chartTokens.series` dark/light pairs (hidden with the chart).
  *
  * It also locks in the elevation's hardening:
  *   - a nullish `stats` array no longer throws on `.length` / `.map` (degrades to
@@ -20,8 +23,9 @@
  * render suffices.
  */
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import '@/i18n';
+import { chartTokens } from '@/lib/tokens';
 import { WidgetChartSummary, type ChartSummaryStat } from './WidgetChartSummary';
 
 const chartNode = <div data-testid="chart">chart-body</div>;
@@ -146,6 +150,138 @@ describe('WidgetChartSummary — null safety (hardening)', () => {
 
     expect(screen.getByText('10')).toBeInTheDocument();
     expect(screen.getByText('20')).toBeInTheDocument();
+    expect(screen.getAllByText('Avg')).toHaveLength(2);
+  });
+});
+
+describe('WidgetChartSummary — axis labels', () => {
+  it('reserves caption and legend height around a bounded, shrinkable chart slot', () => {
+    render(<WidgetChartSummary stats={sampleStats} chart={chartNode}
+      yAxisLabel="kW" xAxisLabel="Speed range" legend={[{ label: 'Recorded energy' }]} />);
+
+    const slot = screen.getByTestId('chart').parentElement;
+    expect(slot).toHaveClass('min-h-0', 'flex-1');
+    expect(slot?.parentElement).toHaveClass('flex', 'flex-col', 'min-h-0');
+    expect(screen.getByText('kW')).toHaveClass('shrink-0');
+    expect(screen.getByText('Speed range')).toHaveClass('shrink-0');
+    expect(screen.getByRole('list')).toHaveClass('shrink-0');
+    expect(screen.getByText('Most Common')).toBeInTheDocument();
+    expect(screen.getByText('45')).toBeInTheDocument();
+  });
+
+  it('renders the axis titles around the chart body when provided', () => {
+    render(
+      <WidgetChartSummary
+        stats={sampleStats}
+        chart={chartNode}
+        yAxisLabel="kW"
+        xAxisLabel="Speed range"
+      />,
+    );
+
+    expect(screen.getByText('kW')).toBeInTheDocument();
+    expect(screen.getByText('Speed range')).toBeInTheDocument();
+    expect(screen.getByTestId('chart')).toBeInTheDocument();
+  });
+
+  it('renders no axis captions by default', () => {
+    const { container } = render(<WidgetChartSummary stats={sampleStats} chart={chartNode} />);
+
+    expect(container.querySelector('p')).not.toBeInTheDocument();
+  });
+
+  it('hides the axis titles in compact mode with the chart', () => {
+    render(
+      <WidgetChartSummary
+        compact
+        stats={sampleStats}
+        chart={chartNode}
+        yAxisLabel="kW"
+        xAxisLabel="Speed range"
+      />,
+    );
+
+    expect(screen.queryByText('kW')).not.toBeInTheDocument();
+    expect(screen.queryByText('Speed range')).not.toBeInTheDocument();
+  });
+});
+
+describe('WidgetChartSummary — legend (dark-mode pairs)', () => {
+  it('renders each series as a dot + word key with the chartTokens dark/light pair by default', () => {
+    const { container } = render(
+      <WidgetChartSummary
+        stats={sampleStats}
+        chart={chartNode}
+        legend={[{ label: 'Solar' }, { label: 'Home' }]}
+      />,
+    );
+
+    const list = container.querySelector('ul');
+    expect(list).toBeInTheDocument();
+    const items = within(list as HTMLElement).getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    expect(within(items[0]).getByText('Solar')).toBeInTheDocument();
+    expect(within(items[1]).getByText('Home')).toBeInTheDocument();
+    // Dots are decorative: the adjacent word carries the meaning.
+    // (jsdom serializes hex constituents as rgb; the light-dark() pairing
+    // itself must survive — that pairing is the dark-mode behavior.)
+    const dots = container.querySelectorAll('li > span[aria-hidden="true"]');
+    expect(dots).toHaveLength(2);
+    const first = dots[0].getAttribute('style') ?? '';
+    const second = dots[1].getAttribute('style') ?? '';
+    const expectedColors = chartTokens.series.slice(0, 2).map(color => {
+      const swatch = document.createElement('span');
+      swatch.style.backgroundColor = color;
+      return swatch.style.backgroundColor;
+    });
+    expect(first).toContain('light-dark(');
+    expect((dots[0] as HTMLElement).style.backgroundColor).toBe(expectedColors[0]);
+    expect((dots[1] as HTMLElement).style.backgroundColor).toBe(expectedColors[1]);
+    expect(second).toContain('light-dark(');
+    expect(second).not.toBe(first);
+    expect(chartTokens.series).toHaveLength(8);
+  });
+
+  it('honours an explicit caller color override', () => {
+    const { container } = render(
+      <WidgetChartSummary
+        stats={sampleStats}
+        chart={chartNode}
+        legend={[{ label: 'Solar', color: '#123456' }]}
+      />,
+    );
+
+    const dot = container.querySelector('li > span[aria-hidden="true"]');
+    // #123456 serialized by the CSSOM as rgb(18, 52, 86).
+    expect(dot?.getAttribute('style')).toContain('18, 52, 86');
+  });
+
+  it('renders no legend by default and hides it in compact mode with the chart', () => {
+    const { container, rerender } = render(
+      <WidgetChartSummary stats={sampleStats} chart={chartNode} />,
+    );
+    expect(container.querySelector('ul')).not.toBeInTheDocument();
+
+    rerender(
+      <WidgetChartSummary
+        compact
+        stats={sampleStats}
+        chart={chartNode}
+        legend={[{ label: 'Solar' }]}
+      />,
+    );
+    expect(screen.queryByText('Solar')).not.toBeInTheDocument();
+  });
+
+  it('renders every legend entry when labels collide (index-disambiguated keys)', () => {
+    render(
+      <WidgetChartSummary
+        stats={sampleStats}
+        chart={chartNode}
+        legend={[{ label: 'Avg' }, { label: 'Avg' }]}
+      />,
+    );
+
     expect(screen.getAllByText('Avg')).toHaveLength(2);
   });
 });

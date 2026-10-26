@@ -11,9 +11,10 @@
  *      `settings.tz_display_default`, and any missing / blank / out-of-union
  *      persisted value is sanitised back to the `'vehicle'` default (the
  *      hardening `isTzMode` guard replaces an unsafe `as TzMode` cast).
- *   2. Delegation — each of the eight formatters forwards `(value,
+ *   2. Delegation — each of the seven formatters forwards `(value,
  *      { locale, tz })` to its `@/lib/dateFormat` sibling, and a per-call
  *      `override` is merged on top (override wins) without a second hook.
+ *      (Route-side labels live on `useDateLabels`, tested separately.)
  *   3. Behaviour — a handful of end-to-end renders prove real, deterministic
  *      output (explicit locale + tz make ICU output stable) and that the
  *      override actually shifts the wall-clock day.
@@ -70,7 +71,6 @@ vi.mock('@/lib/dateFormat', async () => {
     formatDateWithDay: vi.fn(actual.formatDateWithDay),
     formatRelative: vi.fn(actual.formatRelative),
     formatRelativeTime: vi.fn(actual.formatRelativeTime),
-    formatRelativeDays: vi.fn(actual.formatRelativeDays),
   }
 })
 
@@ -85,7 +85,6 @@ const LIB_FNS = [
   dateLib.formatDateWithDay,
   dateLib.formatRelative,
   dateLib.formatRelativeTime,
-  dateLib.formatRelativeDays,
 ] as const
 
 const FORMATTER_KEYS = [
@@ -96,7 +95,6 @@ const FORMATTER_KEYS = [
   'formatDateWithDay',
   'formatRelative',
   'formatRelativeTime',
-  'formatRelativeDays',
 ] as const
 
 beforeEach(() => {
@@ -199,9 +197,6 @@ describe('useDateFormat — delegation to @/lib/dateFormat', () => {
 
     result.current.formatRelativeTime(VALUE)
     expect(dateLib.formatRelativeTime).toHaveBeenCalledWith(VALUE, opts)
-
-    result.current.formatRelativeDays(VALUE)
-    expect(dateLib.formatRelativeDays).toHaveBeenCalledWith(VALUE, opts)
   })
 
   it('merges a per-call override on top of the resolved opts (tz override wins)', () => {
@@ -268,23 +263,6 @@ describe('useDateFormat — relative formatters (faked clock)', () => {
     expect(result.current.formatRelativeTime('2026-04-04T09:00:00Z')).toBe('3h ago')
   })
 
-  it('anchors formatRelativeDays day boundaries to the resolved tz', () => {
-    const { result } = renderHook(() => useDateFormat())
-    // Same UTC day → Today; previous UTC day → Yesterday.
-    expect(result.current.formatRelativeDays('2026-04-04T02:30:00Z')).toBe('Today')
-    expect(result.current.formatRelativeDays('2026-04-03T23:00:00Z')).toBe('Yesterday')
-  })
-
-  it('lets an override tz roll formatRelativeDays across the day boundary', () => {
-    const { result } = renderHook(() => useDateFormat())
-    // In UTC this is Today; in LA the same instant is the previous day.
-    expect(result.current.formatRelativeDays('2026-04-04T02:30:00Z')).toBe('Today')
-    expect(
-      result.current.formatRelativeDays('2026-04-04T02:30:00Z', {
-        tz: 'America/Los_Angeles',
-      }),
-    ).toBe('Yesterday')
-  })
 })
 
 describe('useDateFormat — reference stability', () => {

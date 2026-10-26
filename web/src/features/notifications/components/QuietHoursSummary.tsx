@@ -8,6 +8,7 @@ import { QueryError, StatGridSkeleton, StaleRefreshWarning } from '@/components/
 import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import type { QuietHoursWindow } from '@/api/hooks/useNotifications';
+import { zonedDateParts } from '@/lib/dateFormat';
 
 export interface QuietHoursSummaryProps {
   /** The quiet-hours-windows query (TanStack result) from the page. */
@@ -35,20 +36,10 @@ function isWindowActiveNow(w: QuietHoursWindow, now: Date): boolean | null {
   const end = parseHHMM(w.end_local ?? '');
   if (start == null || end == null || start === end || !w.timezone
     || !Number.isInteger(w.weekdays) || w.weekdays < 0 || w.weekdays > 127) return null;
-  let parts: Intl.DateTimeFormatPart[];
-  try {
-    parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: w.timezone, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-    }).formatToParts(now);
-  } catch (error) {
-    if (error instanceof RangeError) return null;
-    throw error;
-  }
-  const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    .indexOf(parts.find(part => part.type === 'weekday')?.value ?? '');
-  const minutes = Number(parts.find(part => part.type === 'hour')?.value) * 60
-    + Number(parts.find(part => part.type === 'minute')?.value);
-  if (day < 0 || !Number.isFinite(minutes)) return null;
+  const parts = zonedDateParts(now, w.timezone);
+  if (!parts) return null;
+  const day = parts.weekday;
+  const minutes = parts.hour * 60 + parts.minute;
   const todayBit = 1 << day;
   const yesterdayBit = 1 << ((day + 6) % 7);
   const weekdays = w.weekdays;

@@ -24,7 +24,7 @@ import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { chartTokens, typography } from '@/lib/tokens';
 import { formatDateShort, formatDateTime } from '@/lib/dateFormat';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { analyzeCommandReliability, type ReliabilityGrade } from '../lib/commandReliability';
 import { commandReliabilityMetrics } from '../components/statstrip-command-summaries/commandSummaryMetrics';
@@ -53,7 +53,7 @@ export default function CommandReliabilityPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const { preferences } = useProductPreferences();
-  const timeZone = useTimezone('vehicle');
+  const { tz: timeZone } = useDateFormat();
   const { startInstant, endInstantExclusive } = useRangeState({
     defaultPresetId: preferences.defaultAnalysisRange,
     timezone: timeZone,
@@ -148,7 +148,7 @@ export default function CommandReliabilityPage() {
                       : t('commandReliability.brief.recorded', 'Recorded command outcomes')}
               statusTone={state.status === 'stale' ? 'warning' : 'neutral'}
               freshness={state.updatedAt != null
-                ? formatDateTime(new Date(state.updatedAt).toISOString(), dateOptions) : undefined}
+                ? formatDateTime(state.updatedAt, dateOptions) : undefined}
             />
           )}
         </section>
@@ -304,7 +304,7 @@ export default function CommandReliabilityPage() {
                       {t('commandReliability.lastUsed', 'Last used')}
                     </Text>
                     <Text as="dd" variant="bodySm" className="min-w-0 break-words">
-                      {formatDateShort(new Date(c.lastMs).toISOString(), dateOptions)}
+                      {formatDateShort(c.lastMs, dateOptions)}
                     </Text>
                     {c.topError != null ? (
                       <>

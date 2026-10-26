@@ -1,13 +1,12 @@
 /**
  * Pure utilization analytics derived from the ranged drive-history response.
  *
- * Calendar scope and rollups use UTC because the drives endpoint applies its
- * `start` and `end` calendar-date filters to UTC `started_at` values. The
- * selected end date is inclusive at the UI/API boundary and becomes an
- * exclusive next-midnight boundary in this model.
+ * Exact API bounds remain absolute instants. Calendar scope, attribution and
+ * elapsed-time splitting use the selected zone, including variable-length days.
  */
 
 import type { Drive } from '@/types/driving';
+import { addCivilDays, calendarRangeToInstants, civilDateInTimeZone, localMidnightToInstant } from '@/lib/dateRange';
 
 export const UTILIZATION_DRIVE_LIMIT = 1000;
 
@@ -80,7 +79,7 @@ export interface UtilizationWeek {
 
 export interface WeekdayUtilization {
   coverage?: UtilizationFieldCoverage;
-  /** UTC weekday index: 0 = Sunday, 6 = Saturday. */
+  /** Selected-calendar weekday index: 0 = Sunday, 6 = Saturday. */
   weekday: number;
   observedDays: number;
   activeDays: number;
@@ -168,9 +167,9 @@ export interface UtilizationSummary {
   drivingShare: number | null;
   distanceM: number;
   energyWh: number;
-  /** Average SI distance per observed UTC calendar day. */
+  /** Average SI distance per observed selected-calendar day. */
   distancePerDayM: number | null;
-  /** Active UTC calendar days ÷ observed UTC calendar days. */
+  /** Active selected-calendar days ÷ observed selected-calendar days. */
   activeDayShare: number | null;
   /** Energy-priced distance among rows that also have usable energy. */
   pricedDistanceM: number;
@@ -190,6 +189,10 @@ export interface UtilizationSummary {
 export interface UtilizationOptions {
   rangeStart: string;
   rangeEnd: string;
+  timezone: string;
+  /** Exact header bounds override calendar-midnight bounds for rolling ranges. */
+  startInstant?: string;
+  endInstantExclusive?: string;
   asOfMs: number;
   historyLimit?: number;
 }
@@ -288,28 +291,23 @@ function parseUtcCalendarDate(value: string): number | null {
   return ms;
 }
 
-function parseRange(start: string, end: string): DateRange | null {
-  const startMs = parseUtcCalendarDate(start);
-  const endMs = parseUtcCalendarDate(end);
-  if (startMs == null || endMs == null || endMs < startMs) return null;
-  return { startMs, endExclusiveMs: endMs + DAY_MS };
-}
-
-function utcDayStart(ms: number): number {
-  const date = new Date(ms);
-  return Date.UTC(
-    date.getUTCFullYear(),
-    date.getUTCMonth(),
-    date.getUTCDate(),
-  );
+function parseRange(options: UtilizationOptions): DateRange | null {
+  const startDay = parseUtcCalendarDate(options.rangeStart);
+  const endDay = parseUtcCalendarDate(options.rangeEnd);
+  if (startDay == null || endDay == null || endDay < startDay) return null;
+  const bounds = options.startInstant != null || options.endInstantExclusive != null
+    ? options
+    : calendarRangeToInstants({
+      startDate: options.rangeStart, endDate: options.rangeEnd, timezone: options.timezone,
+    });
+  const startMs = Date.parse(bounds.startInstant ?? '');
+  const endExclusiveMs = Date.parse(bounds.endInstantExclusive ?? '');
+  return Number.isFinite(startMs) && Number.isFinite(endExclusiveMs) && startMs < endExclusiveMs
+    ? { startMs, endExclusiveMs } : null;
 }
 
 function dayKey(dayStartMs: number): string {
   return new Date(dayStartMs).toISOString().slice(0, 10);
-}
-
-function monthKey(dayStartMs: number): string {
-  return new Date(dayStartMs).toISOString().slice(0, 7);
 }
 
 function mondayStart(dayStartMs: number): number {
@@ -458,7 +456,7 @@ export function summarizeUtilization(
   costPerKwh: number | null,
   options: UtilizationOptions,
 ): UtilizationSummary {
-  const range = parseRange(options.rangeStart, options.rangeEnd);
+  const range = parseRange(options);
   const asOfValid = Number.isFinite(options.asOfMs);
   const asOfMs = asOfValid ? options.asOfMs : 0;
   if (range == null) {
@@ -540,22 +538,33 @@ export function summarizeUtilization(
 
   const observedStartMs = eligible[0]!.startMs;
   const observedDurationS = (analysisEndMs - observedStartMs) / 1000;
-  const firstDayMs = utcDayStart(observedStartMs);
-  const finalDayMs = utcDayStart(analysisEndMs - 1);
+  const civilDay = (instantMs: number) => civilDateInTimeZone(new Date(instantMs), options.timezone);
+  const firstDay = civilDay(observedStartMs);
+  const finalDay = civilDay(analysisEndMs - 1);
+  const boundaries = new Map<string, number>();
+  const dayBoundary = (key: string): number => {
+    const cached = boundaries.get(key);
+    if (cached != null) return cached;
+    const instant = localMidnightToInstant(key, options.timezone).getTime();
+    boundaries.set(key, instant);
+    return instant;
+  };
   const mutableDays = new Map<string, MutableDay>();
 
   for (
-    let cursor = firstDayMs;
-    cursor <= finalDayMs;
-    cursor += DAY_MS
+    let key = firstDay;
+    key <= finalDay;
+    key = addCivilDays(key, 1)
   ) {
-    const key = dayKey(cursor);
+    const cursor = dayBoundary(key);
+    const next = dayBoundary(addCivilDays(key, 1));
+    if (next <= cursor) continue;
     mutableDays.set(key, {
       coverage: emptyCoverage(),
       day: key,
       dayStartMs: cursor,
       observedS:
-        (Math.min(cursor + DAY_MS, analysisEndMs) -
+        (Math.min(next, analysisEndMs) -
           Math.max(cursor, observedStartMs)) /
         1000,
       driveCount: 0,
@@ -579,7 +588,7 @@ export function summarizeUtilization(
   const distanceValues: number[] = [];
 
   for (const item of eligible) {
-    const startDay = mutableDays.get(dayKey(utcDayStart(item.startMs)));
+    const startDay = mutableDays.get(civilDay(item.startMs));
     if (startDay) {
       startDay.driveCount += 1;
     }
@@ -640,9 +649,9 @@ export function summarizeUtilization(
 
     let cursor = item.startMs;
     while (cursor < cappedEndMs) {
-      const cursorDayMs = utcDayStart(cursor);
-      const segmentEndMs = Math.min(cursorDayMs + DAY_MS, cappedEndMs);
-      const day = mutableDays.get(dayKey(cursorDayMs));
+      const key = civilDay(cursor);
+      const segmentEndMs = Math.min(dayBoundary(addCivilDays(key, 1)), cappedEndMs);
+      const day = mutableDays.get(key);
       if (day) {
         day.drivingS += (segmentEndMs - cursor) / 1000;
       }
@@ -682,13 +691,13 @@ export function summarizeUtilization(
   );
 
   for (const day of days) {
-    const month = monthKey(day.dayStartMs);
+    const month = day.day.slice(0, 7);
     const monthRow = monthsByKey.get(month) ?? {
       coverage: emptyCoverage(),
       month,
       monthStartMs: Date.UTC(
-        new Date(day.dayStartMs).getUTCFullYear(),
-        new Date(day.dayStartMs).getUTCMonth(),
+        Number(day.day.slice(0, 4)),
+        Number(day.day.slice(5, 7)) - 1,
         1,
       ),
       observedDays: 0,
@@ -708,8 +717,9 @@ export function summarizeUtilization(
     addCoverage(monthRow.coverage!, day.coverage!);
     monthsByKey.set(month, monthRow);
 
-    const weekStartMs = mondayStart(day.dayStartMs);
-    const weekStart = dayKey(weekStartMs);
+    const calendarMarker = parseUtcCalendarDate(day.day)!;
+    const weekStart = dayKey(mondayStart(calendarMarker));
+    const weekStartMs = dayBoundary(weekStart);
     const weekRow = weeksByKey.get(weekStart) ?? {
       coverage: emptyCoverage(),
       weekStart,
@@ -732,7 +742,7 @@ export function summarizeUtilization(
     addCoverage(weekRow.coverage!, day.coverage!);
     weeksByKey.set(weekStart, weekRow);
 
-    const weekday = new Date(day.dayStartMs).getUTCDay();
+    const weekday = new Date(calendarMarker).getUTCDay();
     const weekdayRow = weekdayRows[weekday]!;
     weekdayRow.observedDays += 1;
     weekdayRow.activeDays += day.active ? 1 : 0;
@@ -760,7 +770,8 @@ export function summarizeUtilization(
         week.observedCalendarDays > 0
           ? week.activeDays / week.observedCalendarDays
           : 0,
-      isPartial: week.observedDays < 7,
+      isPartial: observedStartMs > week.weekStartMs ||
+        analysisEndMs < dayBoundary(addCivilDays(week.weekStart, 7)),
     }));
   const weekdays = weekdayRows.map((weekday) => ({
     ...weekday,

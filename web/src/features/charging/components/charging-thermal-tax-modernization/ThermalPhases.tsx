@@ -4,7 +4,7 @@ import { LayoutCard } from '@/components/layout';
 import { Badge, HelpTooltip, DataTable, Text, type Column } from '@/components/ui';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateConvert';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import type { DataState } from '@/api/dataState';
 import type { ChargingThermalTaxSummary, ThermalEnergySource, ThermalPhase, ThermalTaxSample } from '../../lib/chargingThermalTax';

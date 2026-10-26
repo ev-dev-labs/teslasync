@@ -22,7 +22,7 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 vi.mock('@/hooks/useSettings', () => ({
-  useSettings: () => ({ locale: state.locale }),
+  useSettings: () => ({ locale: state.locale, settings: { timezone_user: '', tz_display_default: 'vehicle' } }),
 }));
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
@@ -124,9 +124,11 @@ describe('weekly digest localization', () => {
 
   it('uses the saved date locale independently of the translation language and responds to changes', () => {
     const { result, rerender } = renderHook(() => useWeeklyDigest());
-    const [start, end] = getWeekRange(0);
+    // Mirror the hook: weeks framed in the resolved zone (UTC under these
+    // stubs: vehicle mode, no vehicle zone, empty override).
+    const [start, end] = getWeekRange(0, 'UTC');
     const expected = (locale: string) =>
-      `${formatDateShort(start, { locale })} – ${formatDateShort(end, { locale })}`;
+      `${formatDateShort(start, { locale, tz: 'UTC' })} – ${formatDateShort(end, { locale, tz: 'UTC' })}`;
     expect(result.current.weekLabel).toBe(expected('de-DE'));
     state.locale = 'fr-FR';
     rerender();

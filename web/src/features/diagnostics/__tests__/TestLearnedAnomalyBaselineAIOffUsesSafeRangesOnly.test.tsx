@@ -1,3 +1,4 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
 // Learned per-vehicle anomaly baselines AI-off contract test.
 //
 // `TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly` is the React-side
@@ -25,7 +26,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-import type { AppSettings } from '@/api/types';
+
+
+
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -39,32 +42,6 @@ const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>;
 // baseSettings is a complete AppSettings with realistic non-AI defaults.
 // Per-test cases override `ai_mode` + `ai_features` to exercise the
 // off-mode (negative) and on-mode (positive control) paths.
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-};
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } };
-}
-
 beforeEach(() => {
   mockUseSettings.mockReset();
 });
@@ -76,7 +53,7 @@ describe('TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly (learned-per-vehicle
     // is off". The mode='off' check MUST trump the per-feature
     // toggle (ADR-015 §I7).
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'off',
         ai_features: { 'learned-per-vehicle-anomaly-baselines': true },
       }),
@@ -94,7 +71,7 @@ describe('TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly (learned-per-vehicle
     // The other half of the gate: even with mode='cloud', a
     // toggle=false MUST hide the surface (per-feature opt-in).
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'learned-per-vehicle-anomaly-baselines': false },
       }),
@@ -112,7 +89,7 @@ describe('TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly (learned-per-vehicle
     // trivially true (they would pass even if the section were
     // permanently hidden by a typo in the registry/HOC).
     mockUseSettings.mockReturnValue(
-      settingsPayload({
+      appSettingsPayload({
         ai_mode: 'cloud',
         ai_features: { 'learned-per-vehicle-anomaly-baselines': true },
       }),

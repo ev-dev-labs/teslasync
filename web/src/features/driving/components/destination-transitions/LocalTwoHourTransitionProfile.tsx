@@ -25,7 +25,6 @@ export function LocalTwoHourTransitionProfile({
   model,
   state,
   locale,
-  timeZone,
 }: LocalTwoHourTransitionProfileProps) {
   const { t } = useTranslation();
   const rows = useMemo<DestinationTransitionProfileRow[]>(
@@ -64,8 +63,7 @@ export function LocalTwoHourTransitionProfile({
         )}
         subtitle={t(
           'destinationTransitions.twoHour.subtitle',
-          'Accepted transitions use the current drive start in {{timeZone}}; multiple drives per day remain separate samples.',
-          { timeZone },
+          'Accepted transitions use the current drive start in your selected time zone; multiple drives per day remain separate samples.',
         )}
         ariaLabel={t(
           'destinationTransitions.twoHour.aria',

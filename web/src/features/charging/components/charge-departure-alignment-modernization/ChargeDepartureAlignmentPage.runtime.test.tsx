@@ -12,7 +12,8 @@ import type { Drive } from '@/types/driving';
 import {
   fmtInt, fmtNumber, getFormatterPreferences, isFiniteNumber, setGlobalLocale, setGlobalPrecision,
 } from '@/lib/numberFormat';
-import { formatDateTime, formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import {formatDateTime} from '@/lib/dateFormat'
+import {formatDurationSecondsAsMinutes} from '@/lib/dateConvert';
 import { analyzeChargeDepartureAlignment } from '../../lib/chargeDepartureAlignment';
 import ChargeDepartureAlignmentPage from '../../pages/ChargeDepartureAlignmentPage';
 
@@ -74,10 +75,11 @@ vi.mock('@/components/charts', async importOriginal => {
   };
 });
 
-// Mirrors the page's instantLabel: locale rendering plus zone and ISO
-// provenance. The global timezone mock pins the zone to UTC.
+// Mirrors the page's instantLabel: the single user-zone rendering shown in
+// UI rows, bounds and tooltips (no zone suffix, no ISO duplicate). The
+// global timezone mock pins the zone to UTC. CSV keeps raw ISO (see below).
 function instantLabel(iso: string) {
-  return `${formatDateTime(iso, { locale: 'en-US', tz: 'UTC', clock: { second: '2-digit' } })} (UTC) · ${new Date(iso).toISOString()}`;
+  return formatDateTime(iso, { locale: 'en-US', tz: 'UTC', clock: { second: '2-digit' } });
 }
 
 function session(index: number, overrides: Partial<ChargingSession> = {}): ChargingSession {
@@ -184,16 +186,18 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     expect(stats[3]?.querySelector('[data-operational-value]')).toHaveTextContent('15');
     expect(result.container.querySelector('[data-layout-reference]')).toHaveClass('w-full', 'min-w-0');
     expect(result.container.querySelector('[data-period-kind]')).toHaveAttribute('data-period-kind', 'unknown');
-    expect(result.container.querySelector('[data-alignment-bounds="charging-history"]'))
-      .toHaveTextContent(instantLabel(charges[0]!.ended_at!));
-    expect(result.container.querySelector('[data-alignment-bounds="drive-history"]'))
-      .toHaveTextContent('15 valid timestamps');
+    expect(result.container.querySelector('[data-alignment-bounds="charging-history"]')).toBeNull();
+    expect(result.container.querySelector('[data-alignment-bounds="drive-history"]')).toBeNull();
     expect(figure()).toBeInTheDocument();
     expect(screen.getByTestId('alignment-search')).toHaveTextContent('existing=kept');
     expect(screen.getByTestId('alignment-search')).toHaveTextContent('hidden_charge-departure-alignment=margin');
     expect(screen.queryByRole('combobox', { name: /Vehicle|Date range|Time range/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
     const details = screen.getByRole('dialog', { name: 'Charge departure alignment metrics details' });
+    expect(details.querySelector('[data-alignment-bounds="charging-history"]'))
+      .toHaveTextContent(instantLabel(charges[0]!.ended_at!));
+    expect(details.querySelector('[data-alignment-bounds="drive-history"]'))
+      .toHaveTextContent('15 valid timestamps');
     expect(within(details).getByRole('group', { name: 'Misaligned Rate' }))
       .toHaveTextContent('15 of 15 paired sessions');
     expect(within(details).getByRole('group', { name: 'Paired Sessions' }))
@@ -220,6 +224,25 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     expect(within(provenanceContext).getByText(historyScope, { exact: true })).toBeInTheDocument();
   });
 
+  it('keeps single-instant source bounds once in the existing details drawer', () => {
+    source.sessions = { ...source.sessions, data: [charges[0]!] };
+    source.drives = { ...source.drives, data: [drives[0]!] };
+    const { container } = mountPage();
+    expect(container.querySelector('[data-alignment-bounds]')).toBeNull();
+    expect(screen.getByRole('table', { name: 'Recent Pairs' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
+    const details = screen.getByRole('dialog');
+    for (const [id, iso] of [
+      ['charging-history', charges[0]!.ended_at!],
+      ['drive-history', drives[0]!.startTs],
+    ]) {
+      const context = details.querySelector(`[data-alignment-bounds="${id}"]`);
+      expect(context).toHaveTextContent('valid timestamp count: 1');
+      expect(context?.textContent?.split(instantLabel(iso))).toHaveLength(2);
+      expect(context).not.toHaveTextContent('→');
+    }
+  });
+
   it('keeps all loaded pairs reachable beyond the original twelve and every field in desktop columns', () => {
     mountPage();
     const table = screen.getByRole('table', { name: 'Recent Pairs' });
@@ -229,7 +252,7 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
       'SoC drift', 'Already-full dwell (min)', 'Pairing signals', 'Charge ID', 'Drive ID',
     ];
     for (const header of expected) {
-      expect(within(table).getByRole('columnheader', { name: new RegExp(header.replace(/[()]/g, '\\$&')) })).toBeInTheDocument();
+      expect(within(table).getByRole('columnheader', { name: header, exact: true })).toBeInTheDocument();
     }
     expect(within(table).getAllByRole('row')).toHaveLength(13);
     expect(within(table).getByText('charge-14')).toBeInTheDocument();
@@ -340,7 +363,7 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     expect(pairsHeading()).toBeInTheDocument();
     expect(screen.queryByText('sensitive backend detail')).not.toBeInTheDocument();
     const healthyId = id === 'charging-history' ? 'drive-history' : 'charging-history';
-    expect(result.container.querySelector(`[data-alignment-bounds="${healthyId}"]`)).toHaveTextContent('15 records loaded');
+    expect(details.querySelector(`[data-alignment-bounds="${healthyId}"]`)).toHaveTextContent('15 records loaded');
     fireEvent.click(within(sourcePanel(result.container, id)).getByRole('button', { name: 'Retry' }));
     expect(id === 'charging-history' ? source.chargeRetry : source.driveRetry).toHaveBeenCalledTimes(1);
     expect(id === 'charging-history' ? source.driveRetry : source.chargeRetry).not.toHaveBeenCalled();
@@ -525,7 +548,9 @@ describe('Charge departure chart flag alternatives (AUTHORED_NOTRUN)', () => {
       expect(lines[0]).toBe('date,dwellMin,margin,flags');
       expect(lines).toHaveLength(16);
       expect(lines.slice(1)).toEqual(pairs.map(pair => [
-        `"${instantLabel(new Date(pair.chargeEndedMs).toISOString())}"`,
+        // CSV keeps the full raw ISO instant (unquoted: no commas), while
+        // the on-screen rows show only the friendly user-zone label.
+        new Date(pair.chargeEndedMs).toISOString(),
         Math.round(pair.dwellS / 60),
         pair.readinessMarginPct,
         pair.flags.length > 0 ? '"Heuristic flags, not confirmed faults"' : 'Well matched',

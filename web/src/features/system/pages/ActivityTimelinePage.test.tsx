@@ -45,6 +45,7 @@ const h = vi.hoisted(() => ({
   useActivityMock: vi.fn(),
   rangeMock: vi.fn(),
   useActualRange: false,
+  tz: 'America/Los_Angeles',
   refetch: vi.fn(),
   setRange: vi.fn(),
   asOf: null as string | null,
@@ -96,7 +97,7 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
 }));
 
 vi.mock('@/lib/timezone', () => ({
-  useTimezone: () => 'America/Los_Angeles',
+  useTimezone: () => h.tz,
 }));
 
 vi.mock('@/hooks/useUnits', () => ({
@@ -238,6 +239,7 @@ beforeEach(() => {
   h.rangeMock.mockReset();
   h.rangeMock.mockImplementation(() => ({ ...h.range, setRange: h.setRange }));
   h.useActualRange = false;
+  h.tz = 'America/Los_Angeles';
   h.useActivityMock.mockReset();
   h.asOf = null;
   h.downloadCsv.mockReset();
@@ -460,10 +462,9 @@ describe('ActivityTimelinePage actual shared range authority', () => {
     },
   ])('uses the same $label half-open instants as the header range hook, not the vehicle timezone', scope => {
     h.useActualRange = true;
-    const resolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
-    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
-      return { ...resolvedOptions.call(this), timeZone: scope.timezone };
-    });
+    // The hook resolves its zone through useTimezone (the display zone),
+    // so drive the zone through the mock instead of stubbing Intl.
+    h.tz = scope.timezone || 'UTC';
     const item = makeItem({ occurred_at: scope.startInstant });
     h.useActivityMock.mockReturnValue(mockQueryResult({
       data: { items: [item], total: 1, limit: 50, offset: 0, generated_at: '' },
@@ -496,10 +497,7 @@ describe('ActivityTimelinePage actual shared range authority', () => {
 
   it('inherits a committed shared custom range and resets paging while ignoring the old page-specific preference', () => {
     h.useActualRange = true;
-    const resolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
-    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
-      return { ...resolvedOptions.call(this), timeZone: 'America/New_York' };
-    });
+    h.tz = 'America/New_York';
     localStorage.setItem('activity.timeline.range', JSON.stringify({
       version: 2, start: '2024-01-01', end: '2024-12-31',
     }));
@@ -540,10 +538,7 @@ describe('ActivityTimelinePage actual shared range authority', () => {
     h.useActualRange = true;
     const end = '2026-03-08T16:34:56.789Z';
     vi.spyOn(Date, 'now').mockReturnValue(Date.parse(end));
-    const resolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
-    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
-      return { ...resolvedOptions.call(this), timeZone: 'America/New_York' };
-    });
+    h.tz = 'America/New_York';
     const item = makeItem({ occurred_at: start });
     h.useActivityMock.mockReturnValue(mockQueryResult({
       data: { items: [item], total: 1, limit: 50, offset: 0, generated_at: '' },

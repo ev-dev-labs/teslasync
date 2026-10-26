@@ -17,6 +17,7 @@ import {
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -24,6 +25,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
 import { isFiniteNumber } from '@/lib/numberFormat';
+import { toIsoString } from '@/lib/dateConvert';
 import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 import { chartTokens } from '@/lib/tokens';
 import type { Drive } from '@/types/driving';
@@ -51,6 +53,7 @@ export default function MileageBudgetPage() {
 
   const { formatDistance, unitPrefs } = useUnits();
   const { formatCurrency } = useFormatting();
+  const { formatDayKey } = useDateFormat();
   const { fmtNumber } = useNumberFormatting();
   const { config, update } = useMileageBudget();
   const nowMs = Date.now();
@@ -162,9 +165,9 @@ export default function MileageBudgetPage() {
             kind: 'event',
             eventId: `mileage-budget:${config.termStartIso}`,
             start: config.termStartIso,
-            end: Number.isFinite(budget.termEndMs) ? new Date(budget.termEndMs).toISOString() : null,
+            end: toIsoString(budget.termEndMs),
             provenance: t('mileageBudget.termProvenance', 'Configured term; observed drive-history coverage may be incomplete.'),
-            label: t('mileageBudget.termPeriod', 'Term starting {{start}} · {{months}} months', { start: config.termStartIso, months: config.termMonths }),
+            label: t('mileageBudget.termPeriod', 'Term starting {{start}} · {{months}} months', { start: formatDayKey(config.termStartIso), months: config.termMonths }),
           }}
         />
       </FadeIn>

@@ -227,6 +227,8 @@ for (const width of [320, 1440]) {
       const bounds = new URL(historyRequest!.slice(4), 'http://fixture.invalid').searchParams;
       expect(bounds.get('since')).toMatch(/^2026-08-01T/);
       expect(bounds.get('until')).toMatch(/^2026-08-27T/);
+      expect(bounds.get('timezone')).toBe('UTC');
+      await expect(page.getByText('Daily execution counts', { exact: true })).toBeVisible();
       await review(page, brief, 'Execution summary', [
         'Server summary across the selected period and rule/status filters, not just this page of rows.',
         '40', '75.00%', '1.50s',

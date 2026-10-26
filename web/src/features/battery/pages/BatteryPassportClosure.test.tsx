@@ -194,8 +194,8 @@ describe('Battery Passport bounded closure — actual evidence and export', () =
     const view = mount();
     const beforeRows = trendRows();
     expect(beforeRows).toHaveLength(37);
-    expect(beforeRows[0]).toEqual(['2026-06-01', '95.00%']);
-    expect(beforeRows[beforeRows.length - 1]).toEqual(['2026-07-07', '91.40%']);
+    expect(beforeRows[0]).toEqual(['Jun 1, 2026', '95.00%']);
+    expect(beforeRows[beforeRows.length - 1]).toEqual(['Jul 7, 2026', '91.40%']);
     h.passport.mockReturnValue(query(raw, new Error('certificate refresh failed')));
     h.verify.mockReturnValue(query(verification, new Error('verification refresh failed')));
     view.update();

@@ -35,7 +35,7 @@ const (
 )
 
 type service interface {
-	InsuranceRiskProfile(context.Context, string, int64, int) (*domain.InsuranceRiskProfile, error)
+	InsuranceRiskProfile(context.Context, string, int64, int, string) (*domain.InsuranceRiskProfile, error)
 	UpsertInsurancePolicy(context.Context, string, domain.UpsertInsurancePolicyRequest) (*domain.InsurancePolicy, error)
 	DeleteInsurancePolicy(context.Context, string, int64) error
 
@@ -212,7 +212,7 @@ func (h *Handler) InsuranceRiskProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	span.SetAttributes(attribute.Int64("vehicle_id", vehicleID), attribute.Int("window_days", windowDays))
-	response, err := h.service.InsuranceRiskProfile(ctx, subject, vehicleID, windowDays)
+	response, err := h.service.InsuranceRiskProfile(ctx, subject, vehicleID, windowDays, r.URL.Query().Get("timezone"))
 	if err != nil {
 		h.handleError(w, span, "build insurance risk profile", err)
 		return

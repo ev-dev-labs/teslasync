@@ -35,6 +35,7 @@
  *   - accessible names on the icon-only open / remove controls and the
  *     lock / sentry status icons.
  */
+import { COLOR } from '@/lib/colors'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -297,7 +298,7 @@ describe('VehicleCard — live stats', () => {
     expect(screen.getByText('72%')).toBeInTheDocument()
     const ring = screen.getByTestId('progress-ring')
     expect(ring).toHaveAttribute('data-value', '72')
-    expect(ring).toHaveAttribute('data-color', '#10b981') // batteryColor(72) → good/green
+    expect(ring).toHaveAttribute('data-color', COLOR.GOOD) // batteryColor(72) → good/green
 
     // SI values are forwarded verbatim to the display boundary.
     expect(mocks.formatDistance).toHaveBeenCalledWith(400_000)
@@ -317,7 +318,7 @@ describe('VehicleCard — live stats', () => {
   it('colours the gauge red for a low battery', () => {
     mockUseVehicleState.mockReturnValue(withState({ battery_level: 8 }))
     renderCard()
-    expect(screen.getByTestId('progress-ring')).toHaveAttribute('data-color', '#ef4444')
+    expect(screen.getByTestId('progress-ring')).toHaveAttribute('data-color', COLOR.BAD)
   })
 })
 

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import { createInstance } from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -8,6 +8,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildOdometerMilestones } from '../../lib/odometerMilestones';
 import { MilestoneProgress } from './MilestoneProgress';
 import type { MilestoneSectionState } from './types';
+import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
+
+const datePreferences = vi.hoisted(() => ({ tz: 'UTC' }));
+vi.mock('@/hooks/useDateFormat', async () => {
+  const { formatDate } = await import('@/lib/dateFormat');
+  return {
+    useDateFormat: () => ({
+      formatDate: (value: Date) => formatDate(value, { locale: 'en-US', tz: datePreferences.tz }),
+    }),
+  };
+});
 
 vi.unmock('react-i18next');
 
@@ -25,6 +36,7 @@ const ready: MilestoneSectionState = {
 };
 const summary = (baseOdometerKm = 12_500) =>
   buildOdometerMilestones([], {
+    timezone: 'UTC',
     baseOdometerKm,
     nowMs: Date.parse('2026-08-01T00:00:00Z'),
     milestoneUnitKm: 1,
@@ -32,6 +44,7 @@ const summary = (baseOdometerKm = 12_500) =>
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  datePreferences.tz = 'UTC';
   await i18n.use(initReactI18next).init({
     lng: 'en',
     fallbackLng: false,
@@ -41,6 +54,19 @@ beforeEach(async () => {
 });
 
 describe('MilestoneProgress definition and help contract', () => {
+  it('uses the selected formatter for instants without shifting already-grouped calendar month markers', () => {
+    const instant = Date.parse('2026-08-01T00:30:00Z');
+    const marker = Date.parse('2026-08-01T00:00:00Z');
+    const { result, rerender } = renderHook(() => useOdometerMilestoneDisplay());
+    expect(result.current.formatDateMs(instant)).toBe('Aug 1, 2026');
+    expect(result.current.formatMonth(marker)).toBe('Aug 2026');
+    datePreferences.tz = 'America/Los_Angeles';
+    rerender();
+    expect(result.current.formatDateMs(instant)).toBe('Jul 31, 2026');
+    expect(result.current.formatMonth(marker)).toBe('Aug 2026');
+    expect(result.current.formatDateMs(null)).toBe('—');
+  });
+
   it('keeps one native list with four valid term-definition groups in source', () => {
     const source = readFileSync(resolve(
       process.cwd(), 'src', 'features', 'analytics', 'components',

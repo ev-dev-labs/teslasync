@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 import { useNumberFormatting } from '../useNumberFormatting'
-import { formatDurationClock } from '@/lib/dateFormat'
+import { formatDurationClock } from '@/lib/dateConvert'
 
 beforeEach(() => {
   setGlobalLocale('en-US')

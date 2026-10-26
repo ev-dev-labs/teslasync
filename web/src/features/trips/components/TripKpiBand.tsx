@@ -6,7 +6,7 @@ import { TripOperationalBrief } from './operationalbrief-all/TripOperationalBrie
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateConvert';
 
 import type { TripDetail } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';

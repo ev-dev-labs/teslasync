@@ -1,6 +1,6 @@
 import type { SecurityEvent } from '@/types/admin';
 import { asNonEmptyString } from '@/lib/typeGuards';
-import { ymdInTz } from '@/lib/dateFormat';
+import { ymdInTz } from '@/lib/dateConvert';
 
 /** Minimal translator shape — matches react-i18next's `t` for the
  *  `(key, defaultValue, options?)` call form these formatters use so the

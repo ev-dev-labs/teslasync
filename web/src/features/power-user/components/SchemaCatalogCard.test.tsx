@@ -39,6 +39,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 
+const translations = vi.hoisted(() => ({ values: {} as Record<string, string> }));
+
 // Deterministic i18n: t(key, fallback, opts) returns the English fallback and
 // interpolates {{name}} placeholders from opts, so both the static copy and the
 // "{{count}} cols" chip resolve without the translation bundle. Mirrors the
@@ -50,7 +52,7 @@ vi.mock('react-i18next', async () => {
     ...actual,
     useTranslation: () => ({
       t: (key: string, fallback?: unknown, opts?: Record<string, unknown>) => {
-        let str = typeof fallback === 'string' ? fallback : key;
+        let str = translations.values[key] ?? (typeof fallback === 'string' ? fallback : key);
         if (opts) {
           str = str.replace(/\{\{(\w+)\}\}/g, (_m, k: string) =>
             String(opts[k] ?? ''),
@@ -64,7 +66,7 @@ vi.mock('react-i18next', async () => {
 });
 
 import { SchemaCatalogCard } from './SchemaCatalogCard';
-import type { CuratedColumn, CuratedTable } from './sqlCatalog';
+import { CURATED_CATALOG, type CuratedColumn, type CuratedTable } from './sqlCatalog';
 
 // The em dash the source uses for null-safe placeholders (U+2014).
 const EM_DASH = '—';
@@ -98,6 +100,33 @@ function renderCard(table: CuratedTable) {
 // ── Header & layout ─────────────────────────────────────────────────────────────
 
 describe('SchemaCatalogCard — header & layout', () => {
+  it('translates all six timestamp descriptions without changing protocol names or types', () => {
+    translations.values = {
+      'powerSql.timestampColumns.driveStart': 'Inicio del viaje.',
+      'powerSql.timestampColumns.driveEnd': 'Fin del viaje.',
+      'powerSql.timestampColumns.sessionStart': 'Inicio de la carga.',
+      'powerSql.timestampColumns.sessionEnd': 'Fin de la carga.',
+      'powerSql.timestampColumns.alertFired': 'Instante de la alerta.',
+      'powerSql.timestampColumns.sample': 'Instante de la muestra.',
+    };
+    try {
+      render(<>{CURATED_CATALOG.map(table => <SchemaCatalogCard key={table.name} table={table} />)}</>);
+      for (const [tableName, columnName, key] of [
+        ['drives', 'started_at', 'driveStart'], ['drives', 'ended_at', 'driveEnd'],
+        ['charging_sessions', 'started_at', 'sessionStart'], ['charging_sessions', 'ended_at', 'sessionEnd'],
+        ['alerts', 'fired_at', 'alertFired'], ['signal_log_view', 'ts', 'sample'],
+      ]) {
+        const table = screen.getByRole('table', { name: tableName, exact: true });
+        const row = within(table).getByRole('rowheader', { name: columnName, exact: true }).closest('tr')!;
+        expect(within(row).getByText('timestamptz')).toBeInTheDocument();
+        expect(row).toHaveTextContent(translations.values[`powerSql.timestampColumns.${key}`]!);
+        expect(row).not.toHaveTextContent(/\bUTC\b/);
+      }
+    } finally {
+      translations.values = {};
+    }
+  });
+
   it('uses neutral surface and text roles without losing populated catalog semantics', () => {
     const { container } = renderCard(makeTable());
 

@@ -28,7 +28,7 @@ import type {
   TOUSettingsPayload,
 } from '@/types/energy';
 
-export type EnergyStatsWindow = number | { start: string };
+export type EnergyStatsWindow = number | { start: string; end?: string };
 
 /** Live-state power is already normalized to watts; EnergyRemaining has no verified unit. */
 export interface EnergyFlowSnapshot {
@@ -46,10 +46,10 @@ export function useEnergyStats(
   vehicleId: string | null,
   window: EnergyStatsWindow = 30,
 ) {
-  const windowKey = typeof window === 'number' ? `days:${window}` : `start:${window.start}`;
+  const windowKey = typeof window === 'number' ? `days:${window}` : `start:${window.start}${window.end ? `:end:${window.end}` : ""}`;
   const query = typeof window === 'number'
     ? `days=${window}`
-    : `start=${encodeURIComponent(window.start)}`;
+    : `start=${encodeURIComponent(window.start)}${window.end ? `&end=${encodeURIComponent(window.end)}` : ""}`;
 
   return useQuery({
     queryKey: ['energy-stats', vehicleId, windowKey],
@@ -195,12 +195,8 @@ export function useSleepEfficiency(
   startDate?: string,
   endDate?: string,
 ) {
-  // When the caller passes an explicit start/end (canonical RangePicker
-  // window), prefer those over the rolling-from-now `days` so historical
-  // presets like `yesterday`/`lastMonth` and custom calendar picks return
-  // the actual chosen window. The `days` param is still sent for backward
-  // compatibility with backends that may not yet support start/end (and is
-  // ignored by the modern handler when start/end are present).
+  // Workspace callers pass exact [start, end) instants from useRangeState.
+  // Date-only callers retain the endpoint's legacy UTC calendar behavior.
   const params = new URLSearchParams({
     vehicle_id: vehicleId ?? '',
     days: String(days),

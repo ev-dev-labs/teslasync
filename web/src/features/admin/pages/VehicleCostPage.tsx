@@ -20,19 +20,22 @@
  * operational (counts / bytes / rates) — no physical measurement units, so no
  * unit conversion is required; bytes are formatted at the display boundary.
  */
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui';
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { DataStateNotice, SectionErrorBoundary } from '@/components/feedback';
+import { AlertBanner, DataStateNotice, SectionErrorBoundary } from '@/components/feedback';
+import { useRangeState } from '@/hooks/useRangeState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicleCost } from '@/api/hooks/useOperatorConfidence';
 import { isApiError } from '@/lib/resilience';
 import {
   CostByVehicleChart,
   VehicleCostTable,
-  VehicleCostToolbar,
   rankVehicles,
   vehicleName,
   TOP_N,
@@ -52,13 +55,13 @@ export default function VehicleCostPage() {
   const { t } = useTranslation();
   usePageTitle(t('admin.vehicleCost.pageTitle', 'Vehicle ingest cost'));
 
-  const [windowDays, setWindowDays] = useState<number>(30);
-  const since = useMemo(
-    () => new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000),
-    [windowDays],
-  );
-
-  const query = useVehicleCost(since, 100);
+  const { tz: timezone } = useDateFormat();
+  const { startInstant, endInstantExclusive } = useRangeState({ timezone });
+  const since = useMemo(() => new Date(startInstant), [startInstant]);
+  const until = useMemo(() => new Date(endInstantExclusive), [endInstantExclusive]);
+  const windowDays = Math.ceil((until.getTime() - since.getTime()) / 86_400_000);
+  const rangeSupported = windowDays > 0 && windowDays <= 90;
+  const query = useVehicleCost(since, 100, until, rangeSupported);
   const costState = deriveDataState(query);
   const subsystemMissing = isApiError(costState.fatalError)
     && costState.fatalError.status === 503
@@ -91,12 +94,11 @@ export default function VehicleCostPage() {
   );
 
   const actions = (
-    <VehicleCostToolbar
-      windowDays={windowDays}
-      onWindowChange={setWindowDays}
-      onRefresh={retry}
-      refreshing={query.isFetching}
-    />
+    <Button variant="ghost" className="min-h-11 min-w-11 md:min-h-10" onClick={retry}
+      disabled={query.isFetching || !rangeSupported} aria-busy={query.isFetching || undefined}
+      aria-label={t('admin.vehicleCost.refresh', 'Refresh vehicle cost data')}>
+      <RefreshCw className={query.isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />
+    </Button>
   );
 
   return (
@@ -113,6 +115,7 @@ export default function VehicleCostPage() {
         : undefined}
     >
       <div className="min-w-0 space-y-6">
+        {!rangeSupported && <AlertBanner variant="warning">{t('admin.vehicleCost.rangeLimit', 'Choose a workspace range of at most 90 days to view vehicle ingest cost.')}</AlertBanner>}
         {subsystemMissing && (
           <DataStateNotice
             state="unsupported"

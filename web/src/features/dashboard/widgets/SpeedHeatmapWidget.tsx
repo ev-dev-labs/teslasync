@@ -4,19 +4,21 @@ import { useQuery } from '@tanstack/react-query';
 import { Grid3X3 } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { EmbeddedChart } from '@/components/charts';
-import { Caption } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
+import { useTimezone } from '@/lib/timezone';
 
 import { convertSpeedFromSI, type SpeedUnitPref } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetChartSummary } from './shared';
+import { WidgetBigNumber } from './shared';
 import { safeArray } from '@/lib/safeArray';
 import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
 import type { Drive } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { zonedDateParts } from '@/lib/dateFormat';
+import { formatHourName, formatWeekdayName } from '@/lib/dateConvert';
 
 /** 7 rows (Mon–Sun) × 24 cols (0h–23h) */
 const ROWS = 7;
@@ -30,7 +32,11 @@ export interface HeatCell {
 }
 
 /** Build a 7×24 grid of average speeds from drive start times. */
-export function buildHeatmap(drives: Drive[], speedUnit: SpeedUnitPref): HeatCell[][] {
+export function buildHeatmap(
+  drives: Drive[],
+  speedUnit: SpeedUnitPref,
+  timezone?: string,
+): HeatCell[][] {
   // Accumulator: [day][hour] → { total, count }
   const acc: { total: number; count: number }[][] = Array.from({ length: ROWS }, () =>
     Array.from({ length: COLS }, () => ({ total: 0, count: 0 })),
@@ -48,10 +54,19 @@ export function buildHeatmap(drives: Drive[], speedUnit: SpeedUnitPref): HeatCel
     // are NaN; indexing acc[NaN][NaN] would throw and crash the whole widget.
     if (Number.isNaN(dt.getTime())) continue;
 
-    // JS getDay: 0=Sun … 6=Sat → remap to 0=Mon … 6=Sun
-    const jsDay = dt.getDay();
-    const day = jsDay === 0 ? 6 : jsDay - 1;
-    const hour = dt.getHours();
+    let day: number;
+    let hour: number;
+    if (timezone) {
+      const parts = zonedDateParts(dt, timezone);
+      if (!parts) continue;
+      day = parts.weekday === 0 ? 6 : parts.weekday - 1;
+      hour = parts.hour;
+    } else {
+      // Local wall-clock fallback for direct helper callers/tests.
+      const jsDay = dt.getDay();
+      day = jsDay === 0 ? 6 : jsDay - 1;
+      hour = dt.getHours();
+    }
 
     acc[day][hour].total += speed;
     acc[day][hour].count += 1;
@@ -75,46 +90,35 @@ export function lerpColor(a: [number, number, number], b: [number, number, numbe
   return `rgb(${r},${g},${bl})`;
 }
 
-// 4-stop gradient: empty → cool teal → warm amber → hot red
-const COLOR_STOPS: [number, number, number][] = [
-  [20, 184, 166],   // teal-500
-  [6, 182, 212],    // cyan-500
-  [245, 158, 11],   // amber-500
-  [239, 68, 68],    // red-500
-];
-
 export function speedToColor(speed: number, maxSpeed: number): string {
-  // Guard non-finite inputs too: a NaN would slip past `<= 0` and then index
-  // COLOR_STOPS[NaN] → undefined → crash inside lerpColor.
   if (!Number.isFinite(speed) || !Number.isFinite(maxSpeed) || speed <= 0 || maxSpeed <= 0) {
-    return 'rgba(255,255,255,0.03)';
+    return 'color-mix(in srgb, var(--text-primary) 3%, transparent)';
   }
-  const t = Math.min(speed / maxSpeed, 1);
-  // Map t to a position across 3 segments (4 stops)
-  const segCount = COLOR_STOPS.length - 1;
-  const seg = Math.min(Math.floor(t * segCount), segCount - 1);
-  const localT = (t * segCount) - seg;
-  return lerpColor(COLOR_STOPS[seg], COLOR_STOPS[seg + 1], localT);
+  const t = Math.max(0, Math.min(speed / maxSpeed, 1));
+  const opacity = 0.06 + 0.94 * t;
+  return `color-mix(in srgb, var(--accent) ${Math.round(opacity * 100)}%, var(--surface-2))`;
 }
 
-const DAY_LABELS_SHORT = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const DAY_LABELS_FULL = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
-  const { t } = useTranslation('dashboard');
+  const { t, i18n } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
+  const timezone = useTimezone('vehicle');
 
   const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['drives', id, 'speed-heatmap'],
-    queryFn: () => request<Drive[]>(`/drives?vehicle_id=${id}&limit=200`),
+    queryFn: () => request<Drive[]>(`/drives?vehicle_id=${id}`),
     enabled: id > 0,
     staleTime: 120_000,
   });
 
-  const grid = useMemo(() => buildHeatmap(safeArray(drives), unitPrefs.speed), [drives, unitPrefs.speed]);
+  const grid = useMemo(
+    () => buildHeatmap(safeArray(drives), unitPrefs.speed, timezone),
+    [drives, unitPrefs.speed, timezone],
+  );
   const trust = useDataState({
     data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch,
   }, { provenance: 'historical' });
@@ -163,7 +167,15 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
     );
   }
 
-  const dayLabels = isWide ? DAY_LABELS_FULL : DAY_LABELS_SHORT;
+  const dayLabelsFull = Array.from({ length: 7 }, (_, day) =>
+    formatWeekdayName(
+      new Date(Date.UTC(2024, 0, 1 + day, 12)),
+      { locale: i18n?.language ?? 'en-US', tz: timezone ?? 'UTC', weekdayStyle: 'short' },
+    ),
+  );
+  const dayLabels = isWide
+    ? dayLabelsFull
+    : dayLabelsFull.map((label) => label.slice(0, 1));
 
   return (
     <WidgetShell
@@ -172,7 +184,6 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
       loading={isLoading}
       dataState={trust.hasData ? trust : undefined}
       error={trust.fatalError?.message ?? null}
-      description={t('widget.speedHeatmap.sampleScope', 'Recorded drive averages by start time · up to 200 drives')}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -180,12 +191,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
       onRefresh={() => refetch()}
     >
       {totalDrives > 0 ? (
-        <WidgetChartSummary
-          stats={[
-            { label: t('widget.speedHeatmap.drives', '{{count}} drives', { count: totalDrives }), value: fmtInt(totalDrives) },
-            { label: t('widget.speedHeatmap.peakSpeed', 'Peak avg {{speed}} {{unit}}', { speed: fmtNumber(maxSpeed), unit: unitPrefs.speed }), value: fmtNumber(maxSpeed), unit: unitPrefs.speed },
-          ]}
-          chart={
+        <div className="flex min-h-36 h-full flex-col">
           <EmbeddedChart
             title={t('widget.speedHeatmap.title', 'Speed heatmap')}
             ariaLabel={t('widget.speedHeatmap.gridLabel', 'Average speed by day of week and hour of day')}
@@ -193,13 +199,12 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
             className="min-h-36 h-full"
             data={cellData}
             dataColumns={[
-              { key: 'day', label: t('widget.speedHeatmap.day', 'Day'), format: (value) => DAY_LABELS_FULL[Number(value)] ?? '—' },
+              { key: 'day', label: t('widget.speedHeatmap.day', 'Day'), format: (value) => dayLabelsFull[Number(value)] ?? '—' },
               { key: 'hour', label: t('widget.speedHeatmap.hour', 'Hour'), format: (value) => `${value}:00` },
               { key: 'avgSpeed', label: `${t('widget.speedHeatmap.averageSpeed', 'Average speed')} (${unitPrefs.speed})`, format: (value) => value == null ? '—' : fmtNumber(Number(value)) },
               { key: 'count', label: t('widget.speedHeatmap.driveCount', 'Drive count'), format: (value) => fmtInt(Number(value)) },
             ]}
           >
-          <div className="flex min-h-36 h-full flex-col">
           <div className="flex-1 min-h-28">
             <HeatmapGrid
               grid={grid}
@@ -208,31 +213,11 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
               isWide={isWide}
               speedUnit={unitPrefs.speed}
               t={t}
+              locale={i18n?.language ?? 'en-US'}
             />
           </div>
-
-          {/* Legend */}
-          <div className="flex items-center justify-between pt-1 flex-shrink-0">
-            <Caption>
-              {t('widget.speedHeatmap.slow', 'Slow')}
-            </Caption>
-            <div className="flex gap-px">
-              {[0, 0.25, 0.5, 0.75, 1].map((stop) => (
-                <div
-                  key={stop}
-                  className="h-2 w-4 rounded-sm"
-                  style={{ background: speedToColor(stop * (maxSpeed || 1), maxSpeed || 1) }}
-                />
-              ))}
-            </div>
-            <Caption>
-              {t('widget.speedHeatmap.fast', 'Fast')}
-            </Caption>
-          </div>
-          </div>
           </EmbeddedChart>
-          }
-        />
+        </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Grid3X3 aria-hidden="true" className="h-5 w-5" />}
@@ -252,16 +237,32 @@ interface HeatmapGridProps {
   dayLabels: string[];
   isWide: boolean;
   speedUnit: string;
-  t: (key: string, fallback: string) => string;
+  t: (key: string, fallback: string, options?: Record<string, unknown>) => string;
+  locale: string;
 }
 
-function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t }: HeatmapGridProps) {
+function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t, locale }: HeatmapGridProps) {
   const { fmtNumber } = useNumberFormatting();
   const leftMargin = isWide ? 30 : 14;
   const topMargin = 14;
+  const hourLabel = (hour: number) => formatHourName(hour, {
+    locale,
+    showMinutes: true,
+  });
   const hourLabels = isWide
-    ? [0, 3, 6, 9, 12, 15, 18, 21]
-    : [0, 6, 12, 18];
+    ? [
+        { hour: 0, label: hourLabel(0) },
+        { hour: 6, label: hourLabel(6) },
+        { hour: 12, label: hourLabel(12) },
+        { hour: 18, label: hourLabel(18) },
+        { hour: 23, label: hourLabel(23) },
+      ]
+    : [
+        { hour: 0, label: hourLabel(0) },
+        { hour: 6, label: hourLabel(6) },
+        { hour: 12, label: hourLabel(12) },
+        { hour: 18, label: hourLabel(18) },
+      ];
 
   return (
     <svg
@@ -272,16 +273,16 @@ function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t }: Heatma
       aria-label={t('widget.speedHeatmap.gridLabel', 'Average speed by day of week and hour of day')}
     >
       {/* Hour labels along top */}
-      {hourLabels.map((h) => (
+      {hourLabels.map(({ hour, label }) => (
         <text
-          key={`h-${h}`}
-          x={leftMargin + h * 10 + 5}
+          key={`h-${hour}`}
+          x={leftMargin + hour * 10 + 5}
           y={topMargin - 3}
           textAnchor="middle"
           className="fill-[var(--text-secondary)]"
           fontSize={6}
         >
-          {h}
+          {label}
         </text>
       ))}
 
@@ -313,7 +314,11 @@ function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t }: Heatma
           >
             <title>
               {dayLabels[day]} {cell.hour}:00 – {cell.count > 0
-                ? `${fmtNumber(cell.avgSpeed)} ${speedUnit} (${cell.count} ${t('widget.speedHeatmap.drivesSuffix', 'drives')})`
+                ? `${fmtNumber(cell.avgSpeed)} ${speedUnit} (${t(
+                    cell.count === 1 ? 'widget.speedHeatmap.drive_one' : 'widget.speedHeatmap.drive_other',
+                    cell.count === 1 ? '{{count}} drive' : '{{count}} drives',
+                    { count: cell.count },
+                  )})`
                 : t('widget.speedHeatmap.noData', 'No data')}
             </title>
           </rect>

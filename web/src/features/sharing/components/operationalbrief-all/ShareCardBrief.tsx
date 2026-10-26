@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { OperationalBrief } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import type { ShareCardSectionProps } from '../share-card/types';
 
@@ -12,6 +13,7 @@ interface Props extends ShareCardSectionProps {
 
 export function ShareCardBrief({ analysis, state, title, description, metrics }: Props) {
   const { t } = useTranslation();
+  const { formatDateRange } = useDateFormat();
   const values = useOperationalMetrics(metrics);
   const status = !state.enabled
     ? t('shareCard.states.noVehicle', 'Select a vehicle to load this selected-window evidence.')
@@ -40,11 +42,7 @@ export function ShareCardBrief({ analysis, state, title, description, metrics }:
       metrics={values}
       statusLabel={status}
       statusTone={state.initialError || state.cachedRefreshError ? 'warning' : 'neutral'}
-      scope={t('shareCard.source.calendarRange', '{{start}} through {{end}} in {{timezone}}', {
-        start: analysis.window.startLabel,
-        end: analysis.window.endLabel,
-        timezone: analysis.window.resolvedTimezone,
-      })}
+      scope={<span>{formatDateRange(analysis.window.startInstant, analysis.window.endInstantExclusive)}</span>}
       freshness={t('shareCard.brief.freshness', 'Drive timestamps describe the evidence window, not query freshness.')}
       provenance={t('shareCard.source.contract', 'One request, vehicle_id scoped, limit {{limit}}; the API can return at most {{limit}} rows.', { limit: 1_000 })}
     />

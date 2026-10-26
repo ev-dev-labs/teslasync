@@ -1,3 +1,5 @@
+import { appSettingsPayload } from '@/test/fixtures/appSettings'
+import { makeReadableStream, sseFrame } from '@/test/fixtures/aiPayloads'
 // Behaviour + hardening coverage for the cost-forecast narrator
 // (AICostForecastNarration).
 //
@@ -37,11 +39,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
-import type { AppSettings } from '@/api/types'
 
 // File-level mock wins over the global useSettings stub registered in
 // src/test-setup.ts (which defaults ai_mode='off'). Each test drives
 // the render gate explicitly via mockUseSettings.mockReturnValue.
+
+
+
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
 }))
@@ -57,37 +61,11 @@ const NARRATE_URL = '/api/v1/ai/charging/costs/forecast/narrate'
 
 // A complete AppSettings with realistic non-AI defaults. Individual
 // tests override ai_mode / ai_features to walk the gate branches.
-const baseSettings: AppSettings = {
-  unit_of_length: 'km',
-  unit_of_temp: 'C',
-  unit_of_pressure: 'bar',
-  preferred_range: 'rated',
-  language: 'en',
-  base_cost_per_kwh: 0.12,
-  api_suspended: false,
-  theme: 'neon-cyan',
-  mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
-  gas_price_per_unit: 0,
-  gas_unit: 'gallon',
-  gas_efficiency_mpg: 25,
-  decimal_precision: 2,
-  quiet_hours_enabled: false,
-  quiet_hours_start: '22:00',
-  quiet_hours_end: '07:00',
-  alert_digest_mode: 'instant',
-}
-
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
-}
-
 // enableFeature flips the gate on (ai_mode='cloud' + the per-feature
 // toggle) so the always-on inner card renders.
 function enableFeature(extra: Partial<AppSettings> = {}) {
   mockUseSettings.mockReturnValue(
-    settingsPayload({
+    appSettingsPayload({
       ai_mode: 'cloud',
       ai_features: { [FEATURE_ID]: true },
       ...extra,
@@ -98,27 +76,8 @@ function enableFeature(extra: Partial<AppSettings> = {}) {
 // makeReadableStream builds a ReadableStream<Uint8Array> out of text
 // chunks, mirroring the helper useAiStream's own tests use so the SSE
 // parser receives byte-for-byte equivalent input.
-function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder()
-  let i = 0
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (i < chunks.length) {
-        controller.enqueue(encoder.encode(chunks[i]))
-        i++
-      } else {
-        controller.close()
-      }
-    },
-  })
-}
-
 // sseFrame formats one SSE event the way internal/ai/stream/writer.go
 // emits it (`event: <name>\ndata: <json>\n\n`).
-function sseFrame(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
-}
-
 // installStreamingFetch records every request and returns the given
 // SSE body as a 200 text/event-stream response.
 function installStreamingFetch(body: string) {
@@ -155,7 +114,7 @@ describe('AICostForecastNarration — render gate (ADR-015)', () => {
     // The toggle is intentionally true to defeat the "hidden because
     // nothing is enabled" shortcut — mode=off must trump it.
     mockUseSettings.mockReturnValue(
-      settingsPayload({ ai_mode: 'off', ai_features: { [FEATURE_ID]: true } }),
+      appSettingsPayload({ ai_mode: 'off', ai_features: { [FEATURE_ID]: true } }),
     )
 
     const { container } = render(<AICostForecastNarration vehicleId={42} />)
@@ -166,7 +125,7 @@ describe('AICostForecastNarration — render gate (ADR-015)', () => {
 
   it('renders nothing when the per-feature toggle is false even with mode=cloud', () => {
     mockUseSettings.mockReturnValue(
-      settingsPayload({ ai_mode: 'cloud', ai_features: { [FEATURE_ID]: false } }),
+      appSettingsPayload({ ai_mode: 'cloud', ai_features: { [FEATURE_ID]: false } }),
     )
 
     const { container } = render(<AICostForecastNarration vehicleId={42} />)
@@ -176,7 +135,7 @@ describe('AICostForecastNarration — render gate (ADR-015)', () => {
   })
 
   it('renders nothing when ai_features is undefined (settings not yet resolved)', () => {
-    mockUseSettings.mockReturnValue(settingsPayload({ ai_mode: 'cloud' }))
+    mockUseSettings.mockReturnValue(appSettingsPayload({ ai_mode: 'cloud' }))
 
     const { container } = render(<AICostForecastNarration vehicleId={42} />)
 

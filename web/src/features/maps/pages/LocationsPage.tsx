@@ -209,7 +209,7 @@ export default function LocationsPage() {
 
   const shownCount = locations?.length ?? 0;
   const hasLocations = shownCount > 0;
-  const briefScope = t('locations.brief.scope', 'Selected vehicle · {{from}} to {{to}} (exclusive) · loaded page {{page}}, up to {{limit}} places; not server-wide totals.', { from: startInstant, to: endInstantExclusive, page, limit: pageSize });
+  const briefScope = t('locations.brief.scope', 'Selected vehicle · {{from}} to {{to}} (exclusive) · loaded page {{page}}, up to {{limit}} places; not server-wide totals.', { from: formatDateTime(startInstant), to: formatDateTime(endInstantExclusive), page, limit: pageSize });
   const durationDisplay = { formatter: (raw: number) => ({ value: formatDuration(raw), unit: '' }) };
   const briefMetrics = [
     { metricId: 'count', occurrenceId: 'locations-places', rawValue: source.hasData ? uniquePlaces : null, label: t('locations.uniquePlaces', 'Unique places'), description: briefScope },

@@ -17,23 +17,11 @@ interface RecentChargesSectionProps {
   sessions: ChargingSession[] | undefined
 }
 
-/**
- * Resolve a charging session's duration in minutes.
- *
- * The `/charging?vehicle_id=…` list endpoint that feeds this section serializes
- * the raw `charging_sessions` row — `started_at` + `ended_at`, with NO
- * precomputed `duration_min` (that field only exists on the dashboard-activity
- * shape). Reading `s.duration_min` verbatim therefore rendered a permanent
- * "0m" for every row. Prefer an explicit, positive `duration_min` when a caller
- * does supply one, otherwise derive it from the start/end timestamps. An
- * in-progress session (no `ended_at`), a reversed pair, or an unparseable
- * timestamp collapses to 0 so `durationStr` renders "0m" instead of throwing or
- * printing "NaN".
- */
+/** Resolve a charging session duration in minutes from canonical SI seconds. */
 export function chargeDurationMinutes(session: ChargingSession): number {
-  const explicit = session.duration_min
-  if (typeof explicit === 'number' && Number.isFinite(explicit) && explicit > 0) {
-    return explicit
+  const seconds = session.duration_s
+  if (typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0) {
+    return seconds / 60
   }
   const start = session.started_at ?? session.start_ts
   const end = session.ended_at ?? session.end_ts

@@ -20,10 +20,9 @@
  *
  * Known, documented approximations (surfaced via `confidence` / `quality`,
  * never hidden):
- *  - Time-of-day bucketing uses UTC minute-of-day, not the site's local
- *    timezone/DST offset (`TeslaEnergySiteInfo.time_zone_offset` is not
- *    consulted). Forecasts built from history that spans a DST transition
- *    may be shifted by up to an hour.
+ *  - Time-of-day buckets follow the selected display clock. Repeated local
+ *    hours share a measured day-shape bucket; missing local hours do not
+ *    acquire synthetic observations.
  *  - Only a single generic "day shape" is modeled — weekday/weekend or
  *    seasonal variation is not distinguished.
  *  - `consumer_energy_wh` is the whole-home load measured at the Tesla
@@ -33,6 +32,7 @@
  */
 
 import type { TeslaEnergyHistoryEntry } from '@/types/energy';
+import { zonedDateParts } from '@/lib/dateFormat';
 
 export type ForecastQuality = 'none' | 'low' | 'medium' | 'high';
 
@@ -62,12 +62,10 @@ function slotsPerDay(slotMinutes: number): number {
   return Math.max(1, Math.round(MINUTES_PER_DAY / m));
 }
 
-/** UTC-based slot-of-day index — see the timezone caveat in the module doc comment. */
-function utcSlotOfDay(iso: string, slotMinutes: number): number {
-  const ms = Date.parse(iso);
-  if (Number.isNaN(ms)) return 0;
-  const d = new Date(ms);
-  const minuteOfDay = d.getUTCHours() * 60 + d.getUTCMinutes();
+function slotOfDay(instant: string | number, slotMinutes: number, timezone: string): number {
+  const parts = zonedDateParts(instant, timezone);
+  if (!parts) return 0;
+  const minuteOfDay = parts.hour * 60 + parts.minute;
   return Math.floor(minuteOfDay / (slotMinutes > 0 ? slotMinutes : 15)) % slotsPerDay(slotMinutes);
 }
 
@@ -83,6 +81,7 @@ function buildDayShape(
   extract: (entry: TeslaEnergyHistoryEntry) => number | null | undefined,
   slotMinutes: number,
   allowSigned: boolean,
+  timezone: string,
 ): DayShape {
   const perDay = slotsPerDay(slotMinutes);
   const whSum = new Array<number>(perDay).fill(0);
@@ -107,7 +106,7 @@ function buildDayShape(
     const gapHours = Number.isFinite(nextMs) ? (nextMs - tMs) / 3_600_000 : NaN;
     const durationHours = gapHours > 0 && gapHours <= 1 ? gapHours : FALLBACK_SAMPLE_HOURS;
 
-    const slot = utcSlotOfDay(entry.timestamp, slotMinutes);
+    const slot = slotOfDay(entry.timestamp, slotMinutes, timezone);
     whSum[slot] += whRaw;
     hoursSum[slot] += durationHours;
     sampleCount[slot] += 1;
@@ -141,12 +140,12 @@ function fillGaps(values: number[], sampleCount: number[]): number[] {
   return filled;
 }
 
-function tileToHorizon(dayShape: number[], startTimeIso: string, slotMinutes: number, horizonSlots: number): number[] {
-  const perDay = dayShape.length || 1;
-  const startSlot = utcSlotOfDay(startTimeIso, slotMinutes);
+function tileToHorizon(dayShape: number[], startTimeIso: string, slotMinutes: number, horizonSlots: number, timezone: string): number[] {
+  const startMs = Date.parse(startTimeIso);
   const out = new Array<number>(horizonSlots);
   for (let t = 0; t < horizonSlots; t++) {
-    out[t] = dayShape[(startSlot + t) % perDay] ?? 0;
+    const slot = slotOfDay(startMs + t * slotMinutes * 60_000, slotMinutes, timezone);
+    out[t] = dayShape[slot] ?? 0;
   }
   return out;
 }
@@ -162,6 +161,7 @@ function scoreConfidence(sampleCount: number[], totalSamples: number): { confide
 }
 
 export interface ForecastOptions {
+  timezone: string;
   startTimeIso: string;
   slotMinutes: number;
   horizonSlots: number;
@@ -180,9 +180,9 @@ function buildForecast(
 ): ForecastResult {
   const slotMinutes = options.slotMinutes > 0 ? options.slotMinutes : 15;
   const horizonSlots = options.horizonSlots > 0 ? Math.floor(options.horizonSlots) : 0;
-  const shape = buildDayShape(Array.isArray(history) ? history : [], extract, slotMinutes, allowSigned);
+  const shape = buildDayShape(Array.isArray(history) ? history : [], extract, slotMinutes, allowSigned, options.timezone);
   const filled = fillGaps(shape.avgPowerW, shape.sampleCount);
-  const seriesW = horizonSlots > 0 ? tileToHorizon(filled, options.startTimeIso, slotMinutes, horizonSlots) : [];
+  const seriesW = horizonSlots > 0 ? tileToHorizon(filled, options.startTimeIso, slotMinutes, horizonSlots, options.timezone) : [];
   const { confidence, quality } = scoreConfidence(shape.sampleCount, shape.totalSamples);
   return {
     seriesW,

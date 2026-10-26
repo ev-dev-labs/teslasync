@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import type { ReactNode } from 'react';
 
 import type { GlassPanelProps } from '@/components/ui';
@@ -20,9 +21,9 @@ export const HEALTH_SCORE: Record<HealthStatus, number> = {
 };
 
 export const HEALTH_COLOR: Record<HealthStatus, string> = {
-  good: '#10b981',
-  warning: '#f59e0b',
-  critical: '#ef4444',
+  good: palette.COLOR.GOOD,
+  warning: palette.COLOR.WARN,
+  critical: palette.COLOR.BAD,
 };
 
 export const HEALTH_GLOW: Record<HealthStatus, HealthGlow> = {

@@ -1,5 +1,6 @@
 import type { VehicleState } from '@/api/types'
 import { fmtInt } from '@/lib/numberFormat'
+import { COLOR } from '@/lib/colors'
 export { deriveVehicleStatus as deriveStatus, statusVariant } from '@/api/types'
 
 export interface StateResponse {
@@ -15,10 +16,10 @@ export interface StateResponse {
  * "no data" instead of falling through to a misleading critical-red gauge.
  */
 export function batteryColor(level: number): string {
-  if (!Number.isFinite(level)) return '#6b7280'
-  if (level > 60) return '#10b981'
-  if (level > 25) return '#f59e0b'
-  return '#ef4444'
+  if (!Number.isFinite(level)) return COLOR.MUTED
+  if (level > 60) return COLOR.GOOD
+  if (level > 25) return COLOR.WARN
+  return COLOR.BAD
 }
 
 /**

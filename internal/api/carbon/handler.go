@@ -35,6 +35,33 @@ type Handler struct {
 	db carbonQuerier
 }
 
+// maxTimezoneLen rejects absurd `timezone` values before they reach
+// time.LoadLocation, which touches the filesystem zoneinfo database.
+const maxTimezoneLen = 64
+
+// defaultTimezone is the attribution frame when the caller omits
+// `?timezone=`: UTC preserves the historical session-timezone behavior.
+const defaultTimezone = "UTC"
+
+// resolveTimezone validates the optional `timezone` query parameter and
+// reports whether the handler may proceed. An invalid zone fails the
+// request: silently attributing sessions in a guessed zone would score
+// them against the wrong grid-intensity hours.
+func resolveTimezone(w http.ResponseWriter, raw string) (string, bool) {
+	if raw == "" {
+		return defaultTimezone, true
+	}
+	if len(raw) > maxTimezoneLen {
+		httpx.WriteError(w, http.StatusBadRequest, "timezone must be a valid IANA timezone")
+		return "", false
+	}
+	if _, err := time.LoadLocation(raw); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "timezone must be a valid IANA timezone")
+		return "", false
+	}
+	return raw, true
+}
+
 // NewCarbonHandler wires the handler to the pgx pool. Panics on a nil pool — a
 // nil pool is a wiring bug, not a runtime condition, so it surfaces at
 // construction rather than as a nil-deref on the first request (mirrors
@@ -56,13 +83,15 @@ FROM grid_carbon_intensity
 ORDER BY hour_of_day`
 
 // summaryChargingQuery rolls charged energy up by (month, hour) so a single
-// scan drives BOTH the totals and the monthly trend. EXTRACT(HOUR ...) uses the
-// session's clock (the intensity model is local-hour). The optional
-// [start, end] window is expressed via a NULL-guarded BETWEEN so one prepared
-// statement covers "scoped" and "full-history".
+// scan drives BOTH the totals and the monthly trend. Hour and month are
+// attributed in the caller's `?timezone` frame ($4, UTC when omitted) so the
+// buckets line up with the user's selected zone instead of the database
+// session timezone. The optional [start, end] window is expressed via a
+// NULL-guarded BETWEEN so one prepared statement covers "scoped" and
+// "full-history".
 const summaryChargingQuery = `
-SELECT TO_CHAR(started_at, 'YYYY-MM')        AS month,
-       EXTRACT(HOUR FROM started_at)::int     AS hour,
+SELECT TO_CHAR(started_at AT TIME ZONE $4, 'YYYY-MM')        AS month,
+       EXTRACT(HOUR FROM started_at AT TIME ZONE $4)::int     AS hour,
        COALESCE(SUM(total_energy_added_wh), 0) AS energy_wh,
        COUNT(*)                                AS session_count
 FROM charging_sessions
@@ -84,8 +113,10 @@ WHERE vehicle_id = $1
 // recommendationChargingQuery rolls charged energy up by hour over the vehicle's
 // full charging history — the recommendation compares the driver's realized
 // hour distribution to the greenest window, independent of any date window.
+// Hours are attributed in the caller's `?timezone` frame ($2, UTC when
+// omitted) so the recommendation lines up with the user's selected zone.
 const recommendationChargingQuery = `
-SELECT EXTRACT(HOUR FROM started_at)::int     AS hour,
+SELECT EXTRACT(HOUR FROM started_at AT TIME ZONE $2)::int     AS hour,
        COALESCE(SUM(total_energy_added_wh), 0) AS energy_wh
 FROM charging_sessions
 WHERE vehicle_id = $1
@@ -135,6 +166,11 @@ func (h *Handler) Summary(w http.ResponseWriter, r *http.Request) {
 	startTime, endTime := parseFromTo(r)
 	hasRange := !startTime.IsZero() && !endTime.IsZero()
 
+	zone, ok := resolveTimezone(w, r.URL.Query().Get("timezone"))
+	if !ok {
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), carbonDataTimeout)
 	defer cancel()
 
@@ -148,7 +184,7 @@ func (h *Handler) Summary(w http.ResponseWriter, r *http.Request) {
 	minV, maxV, _, _ := CurveStats(curve)
 
 	rows, err := h.db.Query(ctx, summaryChargingQuery, vehicleID,
-		apiparams.NullableTime(hasRange, startTime), apiparams.NullableTime(hasRange, endTime))
+		apiparams.NullableTime(hasRange, startTime), apiparams.NullableTime(hasRange, endTime), zone)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("carbon: summary: failed to query charging rollup")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to compute carbon summary")
@@ -247,6 +283,11 @@ func (h *Handler) Recommendation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	zone, ok := resolveTimezone(w, r.URL.Query().Get("timezone"))
+	if !ok {
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), carbonDataTimeout)
 	defer cancel()
 
@@ -258,7 +299,7 @@ func (h *Handler) Recommendation(w http.ResponseWriter, r *http.Request) {
 	}
 	lookup := intensityLookup(curve)
 
-	rows, err := h.db.Query(ctx, recommendationChargingQuery, vehicleID)
+	rows, err := h.db.Query(ctx, recommendationChargingQuery, vehicleID, zone)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("carbon: recommendation: failed to query charging rollup")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to compute carbon recommendation")

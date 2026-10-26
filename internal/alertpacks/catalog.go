@@ -12,6 +12,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 type Template struct {
@@ -174,8 +175,8 @@ func CustomCatalog() Pack {
 }
 
 func NameCustom(pack Pack, name string, templates []Template) (Pack, error) {
-	name = strings.TrimSpace(name)
-	if name == "" || len([]rune(name)) > 100 {
+	name = validation.TrimSpace(name)
+	if name == "" || validation.RuneCount(name) > 100 {
 		return Pack{}, errors.New("custom pack name must contain 1 to 100 characters")
 	}
 	ids := make([]string, len(templates))
@@ -206,7 +207,7 @@ func Prepare(pack Pack, req InstallRequest) ([]Template, string, error) {
 	if !req.AllVehicles {
 		parts := make([]string, len(ids))
 		for i, id := range ids {
-			if id <= 0 {
+			if validation.ValidateVehicleID(id) != nil {
 				return nil, "", errors.New("vehicle IDs must be positive")
 			}
 			parts[i] = strconv.FormatInt(id, 10)
@@ -250,8 +251,8 @@ func Prepare(pack Pack, req InstallRequest) ([]Template, string, error) {
 			t.Rule.ValueNum = ptr(v)
 		}
 		if selection.Message != nil {
-			message := strings.TrimSpace(*selection.Message)
-			if message == "" || len([]rune(message)) > alertmsg.MaxTemplateLength {
+			message := validation.TrimSpace(*selection.Message)
+			if message == "" || validation.RuneCount(message) > alertmsg.MaxTemplateLength {
 				return nil, "", fmt.Errorf("message must contain 1 to %d characters", alertmsg.MaxTemplateLength)
 			}
 			t.Rule.MsgTemplate = ptr(message)

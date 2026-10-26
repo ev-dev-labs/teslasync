@@ -24,6 +24,7 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
+import { formatMonthYear } from '@/lib/dateConvert';
 import {
   convertEnergyFromSI,
   type EnergyUnitPref,
@@ -69,11 +70,7 @@ export function PackCapacityFitDiagnostics({
                 * ((point.tsMs - fit.originMs) / DAY_MS)
             : null;
         return {
-          date: new Intl.DateTimeFormat(locale, {
-            month: 'short',
-            year: '2-digit',
-            timeZone: result.timeZone,
-          }).format(new Date(point.tsMs)),
+          date: formatMonthYear(new Date(point.tsMs), { locale, tz: result.timeZone, yearStyle: '2-digit' }),
           filtered: convertEnergyFromSI(point.capacityWh, energyUnit),
           fit:
             fittedWh == null

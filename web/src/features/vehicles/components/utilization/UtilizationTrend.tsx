@@ -80,7 +80,7 @@ export function UtilizationTrend({
         )}
         subtitle={t(
           'utilization.trend.subtitle',
-          'UTC month distance with active-day context; partial boundary months remain observed snapshots.',
+          'Calendar-month distance with active-day context; partial boundary months remain observed snapshots.',
         )}
         ariaLabel={t(
           'utilization.trend.aria',

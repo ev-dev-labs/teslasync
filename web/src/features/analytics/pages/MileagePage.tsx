@@ -154,8 +154,8 @@ export default function MileagePage() {
     [dailyRows, fromKm, locale],
   );
 
-  /* Monthly summary rows derive from /mileage/monthly which already groups
-     per UTC calendar month. The same rows drive the Monthly Distance chart. */
+  /* Monthly summary rows derive from /mileage/monthly in the selected
+     calendar. The same rows drive the Monthly Distance chart. */
   const monthlyRows: MonthRow[] = useMemo(
     () =>
       monthlyData.map((m) => {
@@ -365,7 +365,7 @@ export default function MileagePage() {
       content: (
         <LayoutCard
           title={t('mileage.monthlyDistance', 'Monthly distance')}
-          description={t('mileage.monthly.period', 'UTC calendar-month buckets from the server’s default 24-month window. This is not a full-history total; recording completeness is unknown.')}
+          description={t('mileage.monthly.period', 'Calendar-month buckets in the selected time zone from the server’s default 24-month window. This is not a full-history total; recording completeness is unknown.')}
         >
             <MileageSourceNotice source={monthlySource} onRetry={() => monthlyQuery.refetch()} />
             {monthlySource.fatalError ? (
@@ -419,7 +419,7 @@ export default function MileagePage() {
       content: (
         <LayoutCard
           title={t('mileage.monthlySummary', 'Monthly summary')}
-          description={t('mileage.monthly.method', 'The same UTC monthly source as the chart. Distance / drive divides monthly recorded distance by monthly drive count; a zero drive count yields zero. No totals are inferred from these limited rows.')}
+          description={t('mileage.monthly.method', 'The same selected-calendar monthly source as the chart. Distance / drive divides monthly recorded distance by monthly drive count; a zero drive count yields zero. No totals are inferred from these limited rows.')}
         >
           <MileageSourceNotice source={monthlySource} onRetry={() => monthlyQuery.refetch()} />
           {monthlySource.fatalError ? (

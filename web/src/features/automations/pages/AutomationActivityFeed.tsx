@@ -105,7 +105,7 @@ function LiveEventRow({ event }: { event: AutomationActivityEvent }) {
     <TimelineItem
       icon={<Icon className={cn('h-4 w-4 animate-pulse motion-reduce:animate-none', cfg.color)} aria-hidden="true" />}
       title={name}
-      time={formatRelativeTime(event.receivedAt.toISOString())}
+      time={formatRelativeTime(event.receivedAt)}
       wrap
       isLast
       badges={

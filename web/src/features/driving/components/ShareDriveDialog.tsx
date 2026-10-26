@@ -189,7 +189,7 @@ export function ShareDriveDialog({ driveId, open, onClose }: ShareDriveDialogPro
                           {isExpired
                             ? t('share.expired', 'Expired')
                             : share.expires_at
-                              ? <time dateTime={share.expires_at} title={share.expires_at}>{t('share.expiresOn', 'Expires {{date}}', { date: formatDate(share.expires_at) })}</time>
+                              ? <time dateTime={share.expires_at}>{t('share.expiresOn', 'Expires {{date}}', { date: formatDate(share.expires_at) })}</time>
                               : t('share.noExpiry', 'No expiry')}
                         </span>
                       </div>

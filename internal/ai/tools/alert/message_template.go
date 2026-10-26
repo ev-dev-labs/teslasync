@@ -21,11 +21,11 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+	"github.com/ev-dev-labs/teslasync/internal/platform/validation"
 )
 
 const relatedPresetLimit = 8
@@ -215,12 +215,12 @@ func (t *validateAlertMessageTemplate) Execute(_ context.Context, in any) (any, 
 }
 
 func validateTemplateAgainstRule(rule *alertmodel.AlertRule, template string) *alertMessageTemplateValidateOutput {
-	trimmed := strings.TrimSpace(template)
+	trimmed := validation.TrimSpace(template)
 	var errs []string
 	if trimmed == "" {
 		errs = append(errs, "template must not be empty")
 	}
-	if utf8.RuneCountInString(trimmed) > alertmsg.MaxTemplateLength {
+	if validation.RuneCount(trimmed) > alertmsg.MaxTemplateLength {
 		errs = append(errs, fmt.Sprintf("template must be at most %d characters", alertmsg.MaxTemplateLength))
 	}
 
@@ -255,7 +255,7 @@ func validateTemplateAgainstRule(rule *alertmodel.AlertRule, template string) *a
 }
 
 func ruleFromTemplateDimensions(in alertMessageTemplateInput) (*alertmodel.AlertRule, error) {
-	kind := strings.TrimSpace(in.Kind)
+	kind := validation.TrimSpace(in.Kind)
 	if kind == "" {
 		return nil, fmt.Errorf("kind is required")
 	}
@@ -263,10 +263,10 @@ func ruleFromTemplateDimensions(in alertMessageTemplateInput) (*alertmodel.Alert
 		return nil, fmt.Errorf("kind must be signal or computed_metric")
 	}
 	rule := &alertmodel.AlertRule{
-		Name:      strings.TrimSpace(in.Name),
+		Name:      validation.TrimSpace(in.Name),
 		Kind:      kind,
-		Op:        strings.TrimSpace(in.Op),
-		Severity:  strings.TrimSpace(in.Severity),
+		Op:        validation.TrimSpace(in.Op),
+		Severity:  validation.TrimSpace(in.Severity),
 		ValueNum:  in.ValueNum,
 		ValueText: in.ValueText,
 		ValueBool: in.ValueBool,
@@ -274,7 +274,7 @@ func ruleFromTemplateDimensions(in alertMessageTemplateInput) (*alertmodel.Alert
 		ValueMax:  in.ValueMax,
 	}
 	if kind == "signal" {
-		rule.SignalName = strings.TrimSpace(in.SignalName)
+		rule.SignalName = validation.TrimSpace(in.SignalName)
 		if rule.SignalName == "" {
 			return nil, fmt.Errorf("signal_name is required for kind=signal")
 		}
@@ -283,15 +283,15 @@ func ruleFromTemplateDimensions(in alertMessageTemplateInput) (*alertmodel.Alert
 		}
 	}
 	if kind == "computed_metric" {
-		metricID := strings.TrimSpace(in.MetricID)
+		metricID := validation.TrimSpace(in.MetricID)
 		if metricID == "" {
 			return nil, fmt.Errorf("metric_id is required for kind=computed_metric")
 		}
 		rule.MetricID = &metricID
-		if w := strings.TrimSpace(in.MetricWindow); w != "" {
+		if w := validation.TrimSpace(in.MetricWindow); w != "" {
 			rule.MetricWindow = &w
 		}
-		if op := strings.TrimSpace(in.MetricOp); op != "" {
+		if op := validation.TrimSpace(in.MetricOp); op != "" {
 			rule.MetricOp = &op
 		}
 		rule.MetricThreshold = in.MetricThreshold
@@ -328,7 +328,7 @@ func relatedPresetRefs(rule *alertmodel.AlertRule) []relatedPresetRef {
 	}
 	scoredPresets := make([]scored, 0, len(src))
 	for _, p := range src {
-		if strings.TrimSpace(p.Template) == "" {
+		if validation.TrimSpace(p.Template) == "" {
 			continue
 		}
 		keys := alertmsg.ExtractPlaceholderKeys(p.Template)
@@ -389,7 +389,7 @@ func presetInspirationRank(tags []string) int {
 
 func writingBrief(rule *alertmodel.AlertRule) string {
 	const forbidden = `Do NOT copy "{{SignalName}} is {{Value}} (threshold {{Threshold}})" or other bland concise/threshold presets.`
-	sev := strings.ToLower(strings.TrimSpace(rule.Severity))
+	sev := strings.ToLower(validation.TrimSpace(rule.Severity))
 	switch sev {
 	case "critical":
 		return "Tone: urgent and calm, not theatrical. Make the actual condition unmistakable; use a value and limit only for numeric comparisons. No jokes or invented danger. Suggest a safe next check, never an unsupported diagnosis or interacting with the phone while driving. " + forbidden

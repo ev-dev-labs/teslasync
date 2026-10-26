@@ -8,9 +8,11 @@ import { Badge, Text } from '@/components/ui';
 import { ChargeAdvisorSection } from './ChargeAdvisorSection';
 import type { ChargeAdvisorComponentProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 export function ChargeAdvisorScenarioDirectory({ analysis, state }: ChargeAdvisorComponentProps) {
   const { fmtPercent } = useNumberFormatting();
+  const { formatDayKey } = useDateFormat();
   const { t } = useTranslation();
   const days = analysis.scenarios.meanPath;
 
@@ -42,7 +44,7 @@ export function ChargeAdvisorScenarioDirectory({ analysis, state }: ChargeAdviso
               className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
             >
               <div className="flex items-center justify-between gap-2">
-                <Text className="font-medium">{day.localDate}</Text>
+                <Text className="font-medium">{formatDayKey(day.localDate)}</Text>
                 <Badge variant="neutral">{t(
                   `chargeAdvisor.day.${day.weekday}`,
                   ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day.weekday] ?? 'Day',

@@ -984,7 +984,7 @@ for (const theme of ['light', 'dark'] as const) {
           vehicle_id: '7', limit: '1000', offset: '0', start: '2026-08-01T00:00:00.000Z', end: '2026-09-01T00:00:00.000Z',
         }, () => ({ json: scenario.sessions }), ledger);
         await strictSourceFixture(page, run.mocks, '/analytics/cost-forecast',
-          { vehicle_id: '7', months: '6' }, () => ({ json: costForecast }), ledger);
+          { vehicle_id: '7', months: '6', timezone: 'UTC' }, () => ({ json: costForecast }), ledger);
         await strictSourceFixture(page, run.mocks, '/charging/bill-variance',
           { vehicle_id: '7' }, () => ({ json: billVariance }), ledger);
         await page.goto(route);

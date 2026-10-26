@@ -5,7 +5,6 @@ package aisignalnl
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,25 +12,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"context"
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
+	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
 )
-
-type stubGuardSettings struct {
-	mode string
-	on   map[string]bool
-}
-
-func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
-	if s.mode == "" {
-		return "off", nil
-	}
-	return s.mode, nil
-}
-
-func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
-	return s.on[id], nil
-}
 
 // TestSignalExplorerNLAIOffManualFiltersWork is the load-bearing
 // off-mode contract proof for slice 0044. It mounts the AI
@@ -59,10 +44,7 @@ func TestSignalExplorerNLAIOffManualFiltersWork(t *testing.T) {
 	t.Parallel()
 
 	// --- off-mode AI route -----------------------------------------
-	guardSettings := &stubGuardSettings{
-		mode: "off",
-		on:   map[string]bool{"signal-explorer-nl-filter": true}, // toggle on; mode trumps it
-	}
+	guardSettings := apitest.NewGuardSettings("off", map[string]bool{"signal-explorer-nl-filter": true})
 	g := guard.New(guardSettings)
 
 	router := chi.NewRouter()

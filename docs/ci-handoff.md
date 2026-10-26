@@ -1,5 +1,98 @@
 # CI handoff — PR #198 (ui/simplification)
 
+## Post-merge continuation — 2026-10-20
+
+PR #198 was squash-merged as `c353a59399`. Active work now starts from
+`origin/main` (`e6c401fba1`) on `fix/post-merge-followups`. Do not merge or
+cherry-pick any former redesign branches. The owner supplied the remaining
+product decisions; `followups-plan.md` is the active execution plan.
+
+### Latest security refresh — 2026-10-21 02:05 UTC
+
+Vite6.4.4 now replaces6.4.3 in web and the docs override, addressing the
+[Windows existence-check advisory](https://github.com/advisories/GHSA-587h-7wmj-h5pm),
+[Windows argument-escaping advisory](https://github.com/advisories/GHSA-698v-4r3x-3vcv)
+and [editor argument advisory](https://github.com/advisories/GHSA-r825-w8mm-5pxw).
+A final refresh had raised audits to web10/docs2; after sequential single-package
+updates with all tests/previews stopped, web returns9 (7 high/2 moderate), docs0.
+Only Vite versions changed; npm also normalized three web lockfile dev flags.
+Patched private/mock/docs builds and full strict perf:check pass (399.6KB/400KB).
+All20 Mermaid diagrams on seven pages render, zero browser errors; no snapshots
+changed for dependency patches.
+
+A refreshed Go scan newly reports reachable GO-2026-6809 in Go1.27.2 x509,
+fixed in1.27.3. Raised go.mod to1.27.3 and the automatic Windows toolchain is
+verified. All workflows already use go-version-file; Docker follows1.27, so
+no workflow edits. Go build/test and route generation pass. CI-pinned
+golangci-lint2.15.0 rebuilt with1.27.3 reports0 issues; govulncheck now
+reports0 reachable/0 imported-package/1 uncalled-module vulnerabilities.
+x/crypto0.58.0 remains latest; uncalled OpenPGP GO-2026-5932 has no fixed version.
+The previous fully passing header-source unit/browser sweep is preserved in
+the progress log; the full replica repeats after these environment patches.
+Tailwind v4 still waits for PR202 to pass every remote check.
+
+### Latest local correction — 2026-10-21 01:20 UTC
+
+The44px target correction exposed two driving/1440 catalogue failures:
+Speed discipline was clipped because the header line grew16px. The shared
+action cluster now keeps its28px title line while44px hit targets fit inside
+the existing header padding. This retains body space, target size, tight
+spacing and dot alignment. Eight responsive guards also check action bounds.
+Focused66 tests pass; translations/source fingerprints are generator-verified.
+Fresh mock build, all726 registry rows, eight responsive cases and eight
+repeated driving cases pass, zero escapes. Five final dashboard PNGs are byte-
+identical to the reviewed f6d6be4106 versions; restored them after comparison,
+discarding the intermediate taller-header captures. Dashboard6/6 pass. Full
+replica continues; the32-worker unit run hit two30s source-scan timeouts, so
+the entire affected shard repeats under its two-worker limit. No timeout
+change. The previous full units were
+57,191/0/4 existing pending, direct lint/Go/strict private perf all green
+(399.7KB/400KB), but previous-artifact browsers do not count for this correction.
+No per-widget patch, assertion relaxation or workflow change.
+
+Product/security work is implemented; draft PR #202 remains open to main.
+Its first pushed head ce1e14ddff completed 198 passing checks, one existing
+conditional skip, and one failure: Lighthouse's strict startup-size preflight
+(400.5 KB versus the unchanged 400 KB budget). Commits 6aadcb5913 and cad1237f5f
+load the tour launcher on request and regenerate verified preservation pins.
+The current private build and complete perf:check pass at 399.7 KB after the
+additional widget work. No workflow, budget, coverage or tolerance change.
+
+Owner-added widget-header work takes priority before the next push: remove
+DashboardGrid's pr-28 reservation and independent edit/expand overlays; put
+controls in the sole shared header before its edge-aligned dot. VehicleHero's
+body dot and status decoration are removed, preserving status/provenance.
+Static widgets get a neutral, untimestamped indicator rather than fabricated
+freshness. Title-less shells now use the same translated fallback header.
+The ownership regression fails before and passes after; affected units 230/230.
+All 121 widgets pass six min/default/large x view/edit configurations, including
+exactly one dot, <=2px inset/centering deltas and <=8px action gaps. Eight new
+375/768/1280/1920 light/dark tests also pass hover/edit geometry and save shots;
+all wrappers report zero proxy escapes. Original before/after captures and
+review output remain in D:/tmp, not Git.
+
+Full local replica is repeating before the next push. Remote head f6d6be4106
+is on fix/post-merge-followups, with main only the draft PR202 merge target.
+The preceding local full Vitest passed57,191/0 (four existing pending cases),
+all10 Windows visual shards, a11y and Firefox/WebKit passed; quality15/16
+shards passed. Quality3 exposed the existing44px Expand requirement. Shared
+Expand/edit controls now retain44px targets with8px gaps. The existing
+collision guard follows the owner's new icon-before-dot order while retaining
+hit testing, focus, readable text and minimum spacing, adding maximum8px.
+Focused230 units and all four workspace collision cases pass; registry and
+full-suite reruns continue. Verified source checkpoints are generator-produced.
+
+Reviewed and regenerated exactly five dashboard baselines again for the
+intentional44px header height:390dark/light,1440dark/light,forced-colors.
+Degraded unchanged. No masks, tolerances or coverage changed. Comparisons and
+captures remain outside Git. The remote WebKit3/3 job118970569625 passed its
+assertions but failed the strict proxy guard on late GET /api/v1/settings.
+The mobile navigation test lacked the mock-completion guard already used by
+its sibling tests; added that assertion/drain before teardown and repeating
+both engines, retaining the strict preview escape check.
+Tailwind v4 remains a separate later draft PR, conditional on A/B PR fully green.
+Historical PR #198 details below are evidence, not checkout/push instructions.
+
 ## Final CI closeout — 2026-10-20 03:25 UTC
 - Verified implementation head **f0c63853df84a507212ac637d1a6a481aa4ee586**, pushed only to `ui/simplification`: `gh pr checks 198 --json state` reports **204 SUCCESS / 3 SKIPPED**, with no pending or failed checks. All five branch-protection checks pass. Worktree was clean before this documentation closeout. Earlier pending/failure entries below are chronological history, not current blockers.
 - Successful full implementation runs: [CI39361384841](https://github.com/ev-dev-labs/teslasync/actions/runs/39361384841) and [Frontend Quality39361384951](https://github.com/ev-dev-labs/teslasync/actions/runs/39361384951). Security, performance, SI, Helm, ops and all other reported checks also completed without failure. The three skips are existing conditional jobs; no job, assertion, threshold, race check, strict audit or required aggregate was weakened.

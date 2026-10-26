@@ -30,6 +30,7 @@ import type { Drive } from '@/types/driving';
 import { SPEED_BUCKETS_RANGES } from './helpers';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { isFiniteNumber } from '@/lib/numberFormat';
+import { CHART_COLORS } from '@/lib/colors';
 
 interface SpeedBucket {
   range: string;
@@ -162,7 +163,7 @@ export default function DriveAnalyticsSection({
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={speedDistribution}>
                 <defs>
-                  <ChartGradient id="speedFill" color="#3b82f6" />
+                  <ChartGradient id="speedFill" color={CHART_COLORS[0]} />
                 </defs>
                 {chartGrid}
                 <XAxis dataKey="range" tick={axisTick} />
@@ -189,13 +190,13 @@ export default function DriveAnalyticsSection({
                 <XAxis dataKey="distance" type="number" name={t('dynamics.distance', 'Distance')} unit={` ${distanceUnit}`} tick={axisTick} />
                 <YAxis dataKey="powerMax" type="number" name={t('dynamics.avgPower', 'Avg Power')} unit=" kW" tick={axisTick} />
                 <Tooltip content={<ChartTooltip />} />
-                <Scatter data={accelPatterns} fill="#a855f7" name={t('dynamics.drives', 'Drives')} />
+                <Scatter data={accelPatterns} fill={CHART_COLORS[6]} name={t('dynamics.drives', 'Drives')} />
                 {accelAvgPower != null && (
                   <ReferenceLine
                     y={accelAvgPower}
-                    stroke="#eab308"
+                    stroke={CHART_COLORS[3]}
                     strokeDasharray="4 4"
-                    label={{ value: t('dynamics.avg', 'Avg'), fill: '#eab308', fontSize: 11 }}
+                    label={{ value: t('dynamics.avg', 'Avg'), fill: CHART_COLORS[3], fontSize: 11 }}
                   />
                 )}
               </ScatterChart>
@@ -229,8 +230,8 @@ export default function DriveAnalyticsSection({
           {({ hiddenSeries }) => (
             <ResponsiveContainer width="100%" height={320}>
               <AreaChart data={powerProfile}>
-              {areaGradient('powerMaxGrad', '#3b82f6')}
-              {areaGradient('powerMinGrad', '#ef4444', 0.25)}
+              {areaGradient('powerMaxGrad', CHART_COLORS[0])}
+              {areaGradient('powerMinGrad', CHART_COLORS[5], 0.25)}
               {chartGrid}
               <XAxis dataKey="label" tick={axisTick} />
               <YAxis tick={axisTick} unit=" kW" />
@@ -238,8 +239,8 @@ export default function DriveAnalyticsSection({
               <Tooltip content={<ChartTooltip />} />
               <ChartLegend />
               <ReferenceLine y={0} stroke="var(--border-default)" />
-              <Area {...AREA_DEFAULTS} dataKey="powerMax" stroke="#3b82f6" fill="url(#powerMaxGrad)" name={t('dynamics.contextCharts.averageKw', 'Average power (kW)')} hide={hiddenSeries?.isHidden('powerMax')} />
-              <Area {...AREA_DEFAULTS} yAxisId="energy" dataKey="powerMin" stroke="#ef4444" fill="url(#powerMinGrad)" name={t('dynamics.contextCharts.recoveredKwh', 'Recovered energy (kWh)')} hide={hiddenSeries?.isHidden('powerMin')} />
+              <Area {...AREA_DEFAULTS} dataKey="powerMax" stroke={CHART_COLORS[0]} fill="url(#powerMaxGrad)" name={t('dynamics.contextCharts.averageKw', 'Average power (kW)')} hide={hiddenSeries?.isHidden('powerMax')} />
+              <Area {...AREA_DEFAULTS} yAxisId="energy" dataKey="powerMin" stroke={CHART_COLORS[5]} fill="url(#powerMinGrad)" name={t('dynamics.contextCharts.recoveredKwh', 'Recovered energy (kWh)')} hide={hiddenSeries?.isHidden('powerMin')} />
               </AreaChart>
             </ResponsiveContainer>
           )}

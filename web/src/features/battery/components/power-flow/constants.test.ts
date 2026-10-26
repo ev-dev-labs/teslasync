@@ -1,3 +1,4 @@
+import { COLOR, DATA_VISUAL_COLORS } from '@/lib/colors'
 import { describe, expect, it } from 'vitest'
 
 import { getDatePreset } from '@/lib/datePresets'
@@ -38,11 +39,11 @@ describe('FLOW_COLORS', () => {
 
   it('pins the documented palette (regression guard on the chart colour tokens)', () => {
     expect(FLOW_COLORS).toEqual({
-      solar: '#f59e0b',
-      battery: '#22c55e',
-      grid: '#a855f7',
-      home: '#3b82f6',
-      soc: '#22c55e',
+      solar: COLOR.WARN,
+      battery: COLOR.GOOD,
+      grid: DATA_VISUAL_COLORS.purple,
+      home: DATA_VISUAL_COLORS.blue,
+      soc: COLOR.GOOD,
     })
   })
 
@@ -54,7 +55,7 @@ describe('FLOW_COLORS', () => {
 
   it('draws the SOC line in the battery hue (SOC reflects battery state)', () => {
     expect(FLOW_COLORS.soc).toBe(FLOW_COLORS.battery)
-    expect(FLOW_COLORS.soc).toBe('#22c55e')
+    expect(FLOW_COLORS.soc).toBe(COLOR.GOOD)
   })
 
   it('is frozen so a consumer reading the shared palette cannot mutate it in place', () => {
@@ -63,7 +64,7 @@ describe('FLOW_COLORS', () => {
       (FLOW_COLORS as unknown as Record<string, string>).solar = '#000000'
     }).toThrow()
     // The rejected write must not have altered the shared value.
-    expect(FLOW_COLORS.solar).toBe('#f59e0b')
+    expect(FLOW_COLORS.solar).toBe(COLOR.WARN)
   })
 })
 

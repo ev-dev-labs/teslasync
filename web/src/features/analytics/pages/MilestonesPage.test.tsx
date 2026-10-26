@@ -7,6 +7,7 @@ import type { OdometerMilestoneResult } from '../lib/odometerMilestones';
 
 const {
   historyMock,
+  datePreferences,
   pageTitleMock,
   selectedVehicleMock,
   setStoredNumberMock,
@@ -14,6 +15,7 @@ const {
   unitsMock,
 } = vi.hoisted(() => ({
   historyMock: vi.fn(),
+  datePreferences: { tz: 'UTC' },
   pageTitleMock: vi.fn(),
   selectedVehicleMock: vi.fn(),
   setStoredNumberMock: vi.fn(),
@@ -38,6 +40,10 @@ vi.mock('@/api/hooks/useDriving', () => ({
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => selectedVehicleMock(),
+}));
+
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({ tz: datePreferences.tz }),
 }));
 
 vi.mock('@/hooks/usePageTitle', () => ({
@@ -115,6 +121,7 @@ vi.mock('../components/odometer-milestones', async () => {
       data-as-of={summary.asOfMs}
       data-base-km={summary.baseOdometerKm}
       data-current-km={summary.currentOdometerKm}
+      data-months={summary.monthly.map(month => month.month).join(',')}
     >
       {status(state, summary)}
     </section>
@@ -213,6 +220,7 @@ const SECTION_IDS = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  datePreferences.tz = 'UTC';
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-08-07T17:44:07.751-07:00'));
   selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
@@ -226,6 +234,26 @@ afterEach(() => {
 });
 
 describe('MilestonesPage', () => {
+  it('recomputes selected-zone months without changing the frozen clock, raw rows or calibration owner', () => {
+    const rows = [{ ...eligibleDrive(), startTs: '2026-08-01T00:30:00Z' }];
+    const original = JSON.stringify(rows);
+    historyMock.mockReturnValue(query({ data: rows }));
+    const view = render(<MilestonesPage />);
+    const monthly = screen.getByTestId('milestone-monthly');
+    const asOf = monthly.getAttribute('data-as-of');
+    const calibrationKey = storedNumberMock.mock.calls[0][0];
+    expect(monthly).toHaveAttribute('data-months', '2026-08');
+    datePreferences.tz = 'America/Los_Angeles';
+    view.rerender(<MilestonesPage />);
+    expect(monthly).toHaveAttribute('data-months', '2026-07');
+    expect(monthly).toHaveAttribute('data-current-km', '10');
+    expect(monthly).toHaveAttribute('data-as-of', asOf);
+    expect(storedNumberMock).toHaveBeenNthCalledWith(3, calibrationKey, 0);
+    expect(historyMock).toHaveBeenLastCalledWith('42', 1000);
+    expect(JSON.stringify(rows)).toBe(original);
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+  });
+
   it('mounts every workspace section and requests the maximum history window', () => {
     render(<MilestonesPage />);
 

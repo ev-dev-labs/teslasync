@@ -82,7 +82,7 @@
     "openPage": "Explore Tesla API usage",
     "methodTitle": "How the estimate is calculated",
     "methodText": "Counts come only from locally observed Tesla Fleet Telemetry emissions and qualifying outbound Fleet API responses. Retransmitted signals are deduplicated. Missing deliveries or audit writes can undercount, and Tesla can make billing adjustments.",
-    "cycleCaveat": "These are fixed UTC 30-day windows, not Tesla calendar-month billing cycles. No monthly credit, rounding or invoice adjustments are assumed.",
+    "cycleCaveat": "These are fixed 30-day observation windows anchored to the server epoch, not Tesla calendar-month billing cycles. No monthly credit, rounding or invoice adjustments are assumed.",
     "commandRate": "1,000 / $1",
     "dataRate": "500 / $1",
     "wakeRate": "50 / $1",
@@ -96,23 +96,23 @@
     "historyWakes": "Wakes",
     "historyRequests": "Billable API requests",
     "historySection": "Tesla usage history",
-    "historyDisclaimer": "Local observations only, not a Tesla invoice. Missing deliveries or audit logs can undercount; these UTC windows are not Tesla calendar-month billing cycles.",
+    "historyDisclaimer": "Local observations only, not a Tesla invoice. Missing deliveries or audit logs can undercount; these selected-calendar windows are not Tesla calendar-month billing cycles.",
     "historyLoading": "Loading selected usage…",
     "historyError": "Usage history could not be loaded. Try again.",
     "historyEmpty": "No observed Tesla billable traffic in this range. Try an older range.",
-    "invalidRange": "Select 1 to 366 UTC days, with the end on or after the start.",
+    "invalidRange": "Select 1 to 366 calendar days, with the end on or after the start.",
     "granularity": "Group by",
-    "daily": "Daily (UTC)",
-    "weekly": "Weekly (UTC, Monday start)",
+    "daily": "Daily",
+    "weekly": "Weekly (Monday start)",
     "selectedEstimate": "Selected range estimate",
     "observedBuckets": "{{count}} observed buckets",
     "observedBuckets_one": "{{count}} observed bucket",
     "observedBuckets_other": "{{count}} observed buckets",
     "notInvoice": "Local estimate, not an invoice",
     "trendTitle": "Tesla usage cost over time",
-    "trendSubtitle": "Observed USD estimate per UTC bucket; gaps are not filled with zeroes.",
+    "trendSubtitle": "Observed USD estimate per selected-calendar bucket; gaps are not filled with zeroes.",
     "trendAria": "Stacked daily or weekly estimated Tesla usage cost for streaming signals, commands, data requests and wakes",
-    "bucketStart": "UTC bucket start",
+    "bucketStart": "Bucket start",
     "loading": "Loading Tesla usage…",
     "error": "Tesla usage could not be loaded. Try refreshing.",
     "upgradeApi": "Tesla usage requires a newer API service. Update the API service and refresh.",
@@ -125,7 +125,7 @@
     "commands": "Commands · 1,000 / $1",
     "data": "Data requests · 500 / $1",
     "wakes": "Wakes · 50 / $1",
-    "reset": "Next cycle (UTC)",
+    "reset": "Next cycle",
     "history": "Prior 30-day cycles",
     "eventsShort": "events",
     "noHistory": "No prior cycles recorded",
@@ -1225,7 +1225,7 @@
       "duplicatesTitle": "Duplicate and overlap rejection",
       "duplicatesBody": "Candidates are ordered deterministically. Repeated session identifiers and intervals beginning before the prior accepted completion are classified out rather than double-counted.",
       "calendarTitle": "Vehicle-local calendar",
-      "calendarBody": "Months, active days, and active weeks use {{timeZone}}. The analysis clock is frozen when the page mounts so future classification and recency do not drift.",
+      "calendarBody": "Months, active days, and active weeks use your selected time zone. The analysis clock is frozen when the page mounts so future classification and recency do not drift.",
       "scopeTitle": "Capped historical scope",
       "scopeBody": "The canonical charging endpoint is requested with a {{limit}}-row cap. If the cap is reached, older history may be omitted; chart and directory caps never change summary calculations.",
       "limitsTitle": "Unmodeled factors",
@@ -1251,18 +1251,18 @@
     },
     "diagnostics": {
       "annualValue": "{{value}} pp/year",
-      "cadence": "Median UTC cadence",
+      "cadence": "Median daily cadence",
       "cadenceHint": "between included dates",
-      "cap": "The response reached the 180-point server maximum. Earlier qualifying UTC dates may be absent; {{omitted}} additional valid points were omitted by the defensive display cap.",
+      "cap": "The response reached the 180-point server maximum. Earlier qualifying source dates may be absent; {{omitted}} additional valid points were omitted by the defensive display cap.",
       "change": "Start-to-end change",
       "changeHint": "descriptive endpoint difference",
-      "duplicateDate": "Duplicate UTC dates",
+      "duplicateDate": "Duplicate certificate dates",
       "fitAvailable": "Gates passed; descriptive fit available",
       "fitPoints": "Withheld: fewer than 12 points",
       "fitSpan": "Withheld: less than 90 days",
-      "futureDate": "Future UTC dates",
+      "futureDate": "Future certificate dates",
       "included": "Included points",
-      "invalidDate": "Invalid UTC dates",
+      "invalidDate": "Invalid certificate dates",
       "invalidSoh": "Invalid SoH values",
       "linear": "Annualized linear description",
       "points": "Analyzed points",
@@ -1270,11 +1270,11 @@
       "quantiles": "P10 / median / P90",
       "quantilesHint": "included certificate points",
       "recency": "Recency",
-      "recencyHint": "latest UTC date to frozen page clock",
+      "recencyHint": "latest certificate date to frozen page clock",
       "returned": "{{count}} returned before checks",
-      "span": "UTC date span",
+      "span": "Certificate date span",
       "spanHint": "first through latest included date",
-      "subtitle": "Coverage, UTC cadence, recency to the frozen page clock, variability, quantiles, and gated linear description.",
+      "subtitle": "Coverage, source-calendar cadence, recency to the frozen page clock, variability, quantiles, and gated linear description.",
       "support": "Evidence breadth",
       "supportBroad": "Broad returned evidence",
       "supportDeveloping": "Developing returned evidence",
@@ -1307,7 +1307,7 @@
       "avgLimit": "avg_charge_limit_pct",
       "avgLimitSource": "Average available end_soc_pct across charging sessions.",
       "binding": "v1 hash relationship",
-      "boundDay": "Bound UTC day",
+      "boundDay": "Bound canonical day",
       "boundValue": "Bound value",
       "capacity": "capacity_kwh",
       "capacitySource": "Median-derived reported capacity estimate in kWh.",
@@ -1319,13 +1319,13 @@
       "fastRatioSource": "Share of counted charging sessions above the server fast-charge threshold.",
       "field": "Response field",
       "firstObserved": "first_observed_at",
-      "firstObservedSource": "Earliest charging or drive instant, nullable; only the UTC day enters the v1 hash.",
+      "firstObservedSource": "Earliest charging or drive instant, nullable; only the canonical certificate day enters the v1 hash.",
       "grade": "health_grade",
       "gradeSource": "Certificate-reported grade from the server scoring rule.",
       "hash": "provenance_hash",
       "hashSource": "Lowercase SHA-256 digest derived from the seven v1 core facts.",
       "issued": "issued_at",
-      "issuedSource": "RFC 3339 server issue instant; only its UTC day enters the v1 hash.",
+      "issuedSource": "RFC 3339 server issue instant; only its canonical certificate day enters the v1 hash.",
       "notBound": "Not bound",
       "originalCapacity": "original_capacity_kwh",
       "originalCapacitySource": "Server nameplate reference selected from VIN, model, or fallback logic.",
@@ -1349,8 +1349,8 @@
       "title": "Certificate field directory",
       "trend": "degradation_trend",
       "trendDate": "degradation_trend[].date",
-      "trendDateSource": "YYYY-MM-DD calendar day explicitly defined as UTC.",
-      "trendDateSummary": "{{first}} through {{last}} UTC",
+      "trendDateSource": "YYYY-MM-DD source-calendar day; display settings never shift this certificate fact.",
+      "trendDateSummary": "{{first}} through {{last}}",
       "trendSoh": "degradation_trend[].soh_pct",
       "trendSohSource": "Daily server-derived SoH estimate.",
       "trendSohSummary": "{{count}} included finite values",
@@ -1404,7 +1404,7 @@
       "aria": "Certificate identity and controls",
       "eyebrow": "Battery evidence certificate",
       "firstObserved": "First observed date",
-      "issued": "Issued in vehicle time",
+      "issued": "Issued",
       "reportedGrade": "Certificate-reported grade",
       "subtitle": "Current server-issued certificate facts, digest status, vehicle selection, and canonical JSON export.",
       "title": "Certificate identity",
@@ -1418,9 +1418,9 @@
       "clockTitle": "Frozen diagnostic clock",
       "dailyRuleBody": "Server methodology requires a daily max-minus-min SoC swing of at least 20 percentage points and positive aggregated charged energy before deriving a daily capacity estimate.",
       "dailyRuleTitle": "20-point daily SoC rule",
-      "fitBody": "The frontend withholds an annualized least-squares description until at least 12 valid unique points span at least 90 UTC days. A displayed line summarizes this returned window and is not a forecast.",
+      "fitBody": "The frontend withholds an annualized least-squares description until at least 12 valid unique points span at least 90 certificate days. A displayed line summarizes this returned window and is not a forecast.",
       "fitTitle": "Gated linear description",
-      "hashBody": "tsbp-v1 hashes seven ordered facts with fixed numeric precision. first_observed_at and issued_at enter as UTC days, so verification rebuilds the current certificate and compares today’s canonical digest with the supplied hash.",
+      "hashBody": "tsbp-v1 hashes seven ordered facts with fixed numeric precision. first_observed_at and issued_at enter as canonical certificate days, so verification rebuilds the current certificate and compares its canonical digest with the supplied hash. Display settings never change these hash inputs.",
       "hashTitle": "Current-day hash semantics",
       "ledgerBody": "After a successful certificate read, the server attempts to append a ledger snapshot. That write is best-effort: a write failure is logged and counted while the certificate response still succeeds.",
       "ledgerTitle": "Best-effort ledger write",
@@ -1433,12 +1433,12 @@
       "referenceTitle": "Server nameplate fallback",
       "rulesBody": "Recommendation strings are deterministic outputs supplied by the server. The workspace preserves them as evidence and does not convert them into prescriptions or eligibility decisions.",
       "rulesTitle": "Rule-output directory",
-      "subtitle": "Server rules, frontend diagnostics, UTC semantics, persistence behavior, and explicit non-claims.",
+      "subtitle": "Server rules, frontend diagnostics, source-calendar semantics, persistence behavior, and explicit non-claims.",
       "title": "Methodology and interpretation limits",
-      "trendCapBody": "The server returns at most 180 qualifying UTC daily points. Reaching the maximum means earlier qualifying history may be absent; it does not establish a continuous 180-day observation window.",
+      "trendCapBody": "The server returns at most 180 qualifying daily points in the fixed certificate calendar. Reaching the maximum means earlier qualifying history may be absent; it does not establish a continuous 180-day observation window.",
       "trendCapTitle": "180-day trend maximum",
-      "utcBody": "degradation_trend.date is explicitly a UTC calendar date. The workspace does not relabel these dates as vehicle-local; issue instants may be displayed in vehicle time separately.",
-      "utcTitle": "UTC trend calendar"
+      "utcBody": "degradation_trend.date is a source-owned calendar date, not an instant. Display settings never shift these dates or canonical hash days; issue and observation instants use the selected display clock separately.",
+      "utcTitle": "Fixed certificate calendar"
     },
     "provenance": {
       "avgLimit": "avg_charge_limit_pct",
@@ -1454,11 +1454,11 @@
       "fastRatioSource": "Fast-charge session share as a fraction.",
       "field": "Certificate fact",
       "firstObserved": "first_observed_at day",
-      "firstObservedSource": "Earliest observed charging or drive day in UTC; absence canonicalizes to 0001-01-01.",
+      "firstObservedSource": "Canonical earliest charging or drive day; absence canonicalizes to 0001-01-01.",
       "grade": "health_grade",
       "gradeSource": "Certificate-reported server scoring output.",
       "issued": "issued_at day",
-      "issuedSource": "Certificate issue day in UTC, not the full issue instant.",
+      "issuedSource": "Canonical certificate issue day, not the full issue instant.",
       "no": "No",
       "originalCapacity": "original_capacity_kwh",
       "originalCapacitySource": "Server-selected nameplate reference.",
@@ -1474,8 +1474,8 @@
       "thermalSource": "Three ambient-temperature drive shares; value shown is their exact sum.",
       "title": "Provenance core-facts matrix",
       "trend": "degradation_trend",
-      "trendSource": "Returned UTC daily SoH estimates.",
-      "utcDay": "Yes, UTC day",
+      "trendSource": "Returned daily SoH estimates in the fixed certificate calendar.",
+      "utcDay": "Yes, canonical day",
       "vehicleId": "vehicle_id",
       "vehicleIdSource": "Vehicle identifier; exact integer is in the v1 canonical string.",
       "vin": "vin_masked",
@@ -1521,13 +1521,13 @@
     },
     "title": "Battery passport",
     "trend": {
-      "aria": "Certificate-reported state of health by qualifying UTC date",
-      "chartAria": "Certificate-reported state of health timeline in UTC",
-      "date": "UTC date",
+      "aria": "Certificate-reported state of health by qualifying certificate date",
+      "chartAria": "Certificate-reported state of health timeline by certificate date",
+      "date": "Certificate date",
       "description": "A descriptive timeline of returned certificate points after date, range, future, and duplicate checks.",
       "series": "Certificate-reported SoH",
       "soh": "Certificate-reported SoH",
-      "subtitle": "Qualifying daily points are calendar dates in UTC, not vehicle-local dates.",
+      "subtitle": "Qualifying daily points retain the fixed certificate calendar; display settings do not move these dates.",
       "title": "Certificate-reported SoH timeline"
     },
     "usage": {
@@ -1554,7 +1554,7 @@
       "expectedPrefix": "Expected hash prefix",
       "loading": "Verification in progress",
       "mismatch": "Digest mismatch",
-      "mismatchNotice": "The freshly recomputed digest does not match the supplied digest. Current evidence or the UTC issue day may have changed; this result alone does not identify why.",
+      "mismatchNotice": "The freshly recomputed digest does not match the supplied digest. Current evidence or the canonical issue day may have changed; this result alone does not identify why.",
       "notice": "A match means current recomputation produced the supplied digest. It does not establish that upstream telemetry, aggregates, reference capacity, or server methodology are correct.",
       "providedPrefix": "Provided hash prefix",
       "refreshingMatch": "Refreshing verification — previous result matched",
@@ -1940,7 +1940,7 @@
       "returnedRows": "Returned rows",
       "inWindowRows": "In-window rows",
       "includedRows": "Included rows",
-      "window": "Included history window: {{start}} through {{end}} in {{timeZone}}.",
+      "window": "Included history window: {{range}}.",
       "category": {
         "included": "included",
         "outside_window": "outside window",
@@ -1954,7 +1954,7 @@
         "nonpositive_soc_gain": "nonpositive SoC gain",
         "implausible_soc_drop": "implausible SoC drop"
       },
-      "summaryWindow": "Analysis window: {{start}} – {{end}} ({{timeZone}})",
+      "summaryWindow": "Analysis window: {{range}}",
       "scope": "Returned histories; qualification uses the stated local-date analysis window. Counts are not lifetime totals.",
       "driveSummary": "Drive-row evidence summary",
       "chargingSummary": "Charging-row evidence summary"
@@ -1966,7 +1966,7 @@
       "dropBody": "Completed drives need valid order, duration, and SoC. Positive start-minus-end SoC drops are summed by vehicle-local calendar day; they are not total energy use.",
       "calendarTitle": "Exact local calendar",
       "calendarBody": "IANA timezone date, weekday, hour, and week parts are explicit. Every calendar occurrence in the 180-day window contributes to weekday denominators, including zero-driving dates.",
-      "timeZone": "Calendar calculations use {{timeZone}}.",
+      "timeZone": "Calendar calculations use your selected time zone.",
       "scenarioTitle": "Tomorrow-first scenarios",
       "scenarioBody": "Seven complete local days start tomorrow from the observed current SoC. Calendar-day mean and calendar-day p75 paths include zero-use days and are historical-use scenarios, not calibrated outcomes.",
       "omittedTitle": "Omitted inputs",
@@ -2001,7 +2001,8 @@
     "weekdayEvidence": "Weekday and frequency evidence",
     "burnEvidence": "Daily trend and consumption distribution",
     "chargingEvidence": "Charging profile and timing",
-    "summaryScope": "History evidence uses the returned drive and charging windows; current SoC is a separate observed snapshot."
+    "summaryScope": "History evidence uses the returned drive and charging windows; current SoC is a separate observed snapshot.",
+    "planningWindow": "The planning window covers the next seven local days, starting tomorrow."
   },
   "driveCalendar": {
     "brief": {
@@ -2592,7 +2593,7 @@
     },
     "monthly": {
       "title": "Monthly distance & drive frequency",
-      "subtitle": "UTC calendar-month distance bars with eligible drive-count context.",
+      "subtitle": "Selected-calendar month distance bars with eligible drive-count context.",
       "aria": "Observed monthly distance bars with an eligible drive-count line",
       "distanceSeries": "Observed distance",
       "drivesSeries": "Eligible drives",
@@ -2647,7 +2648,7 @@
       "calibration": "Calibration is stored canonically in kilometres and means the odometer immediately before the chronologically first eligible returned drive.",
       "ladder": "The ladder is round in {{unit}}: every 10,000 through 100,000, then every 50,000.",
       "inclusion": "Eligible rows need a valid non-future start time and a finite, positive distance; every other row is excluded once.",
-      "months": "Monthly context groups eligible drive starts by UTC calendar month.",
+      "months": "Monthly context groups eligible drive starts in the selected display calendar.",
       "pace": "Each pace needs at least {{minimum}} eligible drives. Its denominator is the elapsed time from the later of its boundary or first eligible row through the frozen as-of time.",
       "forecast": "Roadmap dates use unrounded trailing-90-day pace; scenario ranges show sensitivity to other supported windows.",
       "horizon": "Invalid or extreme projections beyond {{days}} days are withheld.",
@@ -3016,7 +3017,7 @@
       "identity": "Rows are accepted only after record, positive-integer ID, duplicate-ID, timestamp, and half-open selected-window checks.",
       "metrics": "Each metric has an independent valid/missing denominator. Measured zero remains valid; malformed or absent values remain unknown.",
       "efficiency": "Consumption is distance-weighted only across rows with positive measured distance and nonnegative measured drive energy.",
-      "timezone": "Month, weekday, and active-day buckets use {{timezone}}; URL calendar labels remain distinct from RFC3339 query instants.",
+      "timezone": "Month, weekday, and active-day buckets use your selected time zone; calendar labels remain distinct from the queried instants.",
       "privacy": "The representative directory and SVG omit exact addresses, coordinates, paths, VINs, and vehicle location.",
       "export": "The 800×418 SVG is deterministic, XML-escaped, generated locally, and downloaded through a delayed object-URL cleanup.",
       "step": "Method {{number}}",
@@ -3062,7 +3063,7 @@
       "partial": "Partial coverage",
       "full": "Full 7-day coverage",
       "title": "Active-day consistency",
-      "subtitle": "Latest 26 UTC weeks at most; partial first or final weeks remain explicitly marked.",
+      "subtitle": "Latest 26 calendar weeks at most; partial first or final weeks remain explicitly marked.",
       "aria": "Weekly active-day counts and share of observed days with eligible drives",
       "longestStreak": "Longest active streak: {{count}} days",
       "empty": "No observed drive days are available for a consistency profile."
@@ -3132,7 +3133,7 @@
     "timeSplitCaution": "Time without a recorded drive is not labelled as waste, avoidable idle time, or any other cause.",
     "costNoEnergy": "No eligible drives include usable energy measurements for this period.",
     "costAssumption": "Energy-only estimate using the Settings electricity rate. It excludes insurance, depreciation, financing, maintenance, and charging losses.",
-    "observedCalendarDays": "{{active}} of {{days}} observed UTC days",
+    "observedCalendarDays": "{{active}} of {{days}} observed calendar days",
     "method": {
       "returned": "Rows returned",
       "eligible": "Eligible drives",
@@ -3145,17 +3146,17 @@
       "durationCoverage": "Usable duration ({{truncated}} boundary-clipped)",
       "distanceCoverage": "Usable positive distance",
       "energyCoverage": "Usable positive energy",
-      "scope": "The API request uses the selected inclusive UTC dates. The model converts the selected end to exclusive next-midnight and never analyzes past the frozen page clock.",
+      "scope": "The API request and model use the exact selected bounds. Calendar days follow the selected clock, including daylight-saving changes; analysis never extends past the frozen page clock.",
       "window": "The observed window begins at the first eligible returned drive, avoiding claims about time before the first in-range record.",
       "si": "Distance and energy remain canonical meters and watt-hours in the model; display units are applied only while rendering.",
-      "rollups": "Drive counts are attributed to the UTC start day, and logged duration is clipped at the analysis boundary and split across crossed UTC days. For a boundary-crossing drive, full-drive distance, energy, and duration-band evidence are withheld because they cannot be apportioned safely.",
+      "rollups": "Drive counts follow the selected-calendar start day. Logged duration is clipped at the analysis boundary and split at local midnight. For a boundary-crossing drive, full-drive distance, energy, and duration-band evidence are withheld because they cannot be apportioned safely.",
       "cost": "Total cost applies the Settings electricity rate to usable energy. Per-distance and per-hour costs use only energy from rows with the matching usable distance or duration, and exclude non-energy ownership costs.",
       "nonCausal": "Time without a recorded drive and inactive observed days are descriptive; this workspace does not infer waste, availability, telemetry health, or why the vehicle was not driven.",
       "title": "Coverage & methodology",
       "capReached": "{{limit}}-drive cap reached",
       "belowCap": "Ranged response below API cap",
       "empty": "Coverage will appear when ranged drive history is returned for the selected vehicle.",
-      "selectedScope": "Selected UTC scope: {{start}} to {{end}}. Analysis as-of is frozen for this page mount.",
+      "selectedScope": "Selected scope: {{start}} to {{end}}. Analysis as-of is frozen within this header window.",
       "timestampExclusions": "Timestamp eligibility",
       "fieldCoverageTitle": "Metric field coverage",
       "fieldCoverageValue": "{{usable}} usable · {{excluded}} excluded",
@@ -3169,7 +3170,7 @@
       "distanceSeries": "Observed distance",
       "activeDaysSeries": "Active days",
       "title": "Monthly utilization trend",
-      "subtitle": "UTC month distance with active-day context; partial boundary months remain observed snapshots.",
+      "subtitle": "Calendar-month distance with active-day context; partial boundary months remain observed snapshots.",
       "aria": "Monthly observed distance bars with an active-day line",
       "empty": "No eligible drives are available for a monthly trend."
     },
@@ -3184,8 +3185,8 @@
       "fri": "Fri",
       "sat": "Sat",
       "title": "Weekday profile",
-      "subtitle": "UTC weekday active-day rate and average distance on days with eligible drives.",
-      "aria": "Active-day rate bars and average active-day distance by UTC weekday",
+      "subtitle": "Selected-calendar weekday active-day rate and average distance on days with eligible drives.",
+      "aria": "Active-day rate bars and average active-day distance by selected-calendar weekday",
       "empty": "No eligible drives are available for a weekday profile."
     },
     "briefSource": "Returned drive history and configured energy price",
@@ -3265,12 +3266,12 @@
     },
     "weekday": {
       "title": "Arrival buffer by local weekday",
-      "subtitle": "Drive-weighted arrival percentiles in {{timeZone}}; unequal sample counts remain visible.",
+      "subtitle": "Drive-weighted arrival percentiles in your selected time zone; unequal sample counts remain visible.",
       "aria": "Weekday chart of arrival battery percentiles and drive counts"
     },
     "hour": {
       "title": "Arrival buffer by local completion time",
-      "subtitle": "Four-hour completion windows in {{timeZone}}; each drive is one observation.",
+      "subtitle": "Four-hour completion windows in your selected time zone; each drive is one observation.",
       "aria": "Local completion-time chart of arrival battery percentiles and drive counts"
     },
     "distanceProfile": {
@@ -3393,7 +3394,7 @@
       "arrivalTitle": "Arrival definition",
       "arrivalBody": "One observation is a completed drive with parseable start/end order, completion at or before the frozen clock, and finite end SoC from 0% through 100%.",
       "windowTitle": "Vehicle-local date window",
-      "windowBody": "The selected {{start}} through {{end}} calendar window becomes a half-open drive-start filter in {{timeZone}}. Profiles use completion time in the same timezone, so a drive starting near the end boundary can complete just outside the final local day.",
+      "windowBody": "The selected {{start}} through {{end}} calendar window becomes a half-open drive-start filter in your selected time zone. Profiles use completion time in the same zone, so a drive starting near the end boundary can complete just outside the final local day.",
       "percentileTitle": "Observed percentiles",
       "percentileBody": "p10, p25, median, p75, and p90 use linear interpolation over included drive arrivals. They are drive-weighted historical summaries, not probability forecasts.",
       "thresholdTitle": "Planning threshold",
@@ -3454,7 +3455,7 @@
     },
     "consistency": {
       "title": "Departure consistency",
-      "subtitle": "Typical 24-hour departure and median circular deviation by local weekday in {{timezone}}.",
+      "subtitle": "Typical 24-hour departure and median circular deviation by local weekday.",
       "empty": "No valid departures are available for weekday profiles.",
       "sampleBadge": "{{count}}/{{minimum}}",
       "typical": "Circular median",
@@ -3469,7 +3470,7 @@
     },
     "method": {
       "timezoneFallback": "The requested local timezone was invalid, so UTC is used for every weekday, hour, day, and month grouping.",
-      "timeSemantics": "The selected local dates are requested as exact instants in {{timezone}} (start inclusive, end exclusive). Returned instants are then grouped consistently by weekday, hour, day, and month in {{timezone}}.",
+      "timeSemantics": "The selected local dates are requested as exact instants in your selected time zone (start inclusive, end exclusive). Returned instants are then grouped consistently by weekday, hour, day, and month in the same zone.",
       "timestampRules": "Blank or malformed starts are invalid; valid starts after the page’s frozen analysis clock are counted as future and excluded.",
       "predictability": "Predictability is 100 minus normalized Shannon entropy across 24 local start hours. Overall and monthly scores require at least {{count}} valid starts.",
       "consistency": "Typical departures use a circular median so midnight-adjacent times stay close. Median circular deviation requires {{count}} starts on that weekday.",
@@ -3544,7 +3545,7 @@
     "weeklyPunchcard": {
       "scroll": "Weekly drive-start counts; scroll to see all hours",
       "day": "Day",
-      "timezone": "24-hour departures grouped in {{timezone}}",
+      "timezone": "24-hour departures grouped by local start hour.",
       "aria": "Drive starts by local weekday and hour; strongest slot {{slot}}",
       "cell": "{{day}} {{hour}} · {{count}} drives"
     },
@@ -3634,7 +3635,7 @@
       "dwellSeries": "Observed dwell ({{unit}})",
       "countSeries": "Stints",
       "title": "Monthly dwell & stint trend",
-      "subtitle": "{{count}} stints grouped by parking-start month in {{timeZone}}; observed dwell includes right-censored tails.",
+      "subtitle": "{{count}} stints grouped by parking-start month in your selected time zone; observed dwell includes right-censored tails.",
       "aria": "Monthly bars for observed parking dwell with a line for reconstructed stint counts",
       "month": "Month",
       "average": "Average stint ({{unit}})",
@@ -3643,8 +3644,8 @@
     "overnight": {
       "night": "22:00–06:00",
       "daytime": "06:00–22:00",
-      "subtitle": "{{pct}}% of observed dwell overlaps the local night window across {{count}} stints in {{timeZone}}.",
-      "subtitleEmpty": "Observed dwell will be split at 22:00 and 06:00 in {{timeZone}}.",
+      "subtitle": "{{pct}}% of observed dwell overlaps the local night window across {{count}} stints in your selected time zone.",
+      "subtitleEmpty": "Observed dwell will be split at 22:00 and 06:00 in your selected time zone.",
       "title": "Overnight vs daytime context",
       "aria": "Donut chart splitting observed parking duration into local overnight and daytime windows",
       "window": "Local window",
@@ -3661,7 +3662,7 @@
       "reconstructed": "Reconstructed stints",
       "located": "Location coverage",
       "utcWindow": "The server filters drive starts from {{start}} (inclusive) to {{end}} (exclusive) as exact instants; parking before the first returned drive cannot be reconstructed.",
-      "localTime": "Hour, weekday, month, and the 22:00–06:00 split use {{timeZone}}. Dwell is assigned to the period in which parking starts.",
+      "localTime": "Hour, weekday, month, and the 22:00–06:00 split use your selected time zone. Dwell is assigned to the period in which parking starts.",
       "ongoing": "The final stint is ongoing as of the frozen page clock ({{time}}); its duration can only increase.",
       "rangeEdge": "The final stint is right-censored at the selected range edge ({{time}}); a later drive outside this window is unknown.",
       "noTrailing": "No positive trailing stint was reconstructed; parking before the first usable drive remains unknown.",
@@ -3679,7 +3680,7 @@
       "weekdayProfile": "Weekday",
       "startsSeries": "Parking starts",
       "title": "When parking starts",
-      "subtitle": "{{count}} reconstructed starts grouped in {{timeZone}}; dwell is credited to its start period.",
+      "subtitle": "{{count}} reconstructed starts grouped by local start; dwell is credited to its start period.",
       "aria": "Bar charts of reconstructed parking starts by local hour and weekday",
       "profile": "Profile",
       "period": "Period",
@@ -3691,7 +3692,7 @@
     "startBarColTime": "Time",
     "briefDescription": "Parking is reconstructed between usable drives, not observed continuously. Missing locations and incomplete history remain explicit.",
     "briefSource": "Drive-derived parking reconstruction",
-    "briefWindow": "{{sample}} · {{start}} → {{end}} · {{timezone}}",
+    "briefWindow": "{{sample}} · {{range}}",
     "kpis.overnightSample_one": "22:00–06:00 · {{count}} stint",
     "kpis.overnightSample_other": "22:00–06:00 · {{count}} stints",
     "kpis.longestSample_one": "{{location}} · longest of {{count}} stint",
@@ -4004,7 +4005,7 @@
       },
       "daypartsAria": "Departure daypart distribution",
       "daypartValue": "{{departures}} · {{share}}%",
-      "timezone": "All hour and daypart labels use {{timeZone}}."
+      "timezone": "All hour and daypart labels use your selected time zone."
     },
     "kpis": {
       "aria": "Departure forecast evidence summary",
@@ -4065,18 +4066,20 @@
       "title": "Methodology and limitations",
       "subtitle": "What the forecast learns, what it excludes, and how to interpret every estimate.",
       "notice": "Planning aid only: no automation is created, and no departure is promised.",
-      "effectiveZone": "Effective model timezone: {{timeZone}}.",
-      "zoneMetadata": "Source: selected vehicle timezone metadata ({{timeZone}}).",
-      "zoneFallback": "Source: shared vehicle-mode fallback ({{source}}); vehicle timezone metadata is missing or UTC.",
+      "effectiveZone": "The model follows your selected time zone.",
+      "zoneMetadata": "Source: selected vehicle timezone metadata.",
+      "zoneFallback": "Source: shared vehicle-mode fallback ({{source}}); vehicle timezone metadata is unavailable or unsuitable.",
       "zoneSavedUser": "saved user timezone",
-      "zoneBrowser": "browser timezone, or UTC if unavailable",
-      "zoneInvalid": "The resolved timezone \"{{requested}}\" is missing or invalid; this model uses UTC without changing shared settings.",
+      "zoneBrowser": "browser timezone",
+      "zoneInvalid": "The selected time zone is missing or invalid; this model uses the fixed reference clock without changing shared settings.",
+      "zoneFixed": "Source: fixed reference display setting.",
+      "zoneUser": "Source: shared user display setting ({{source}}).",
       "snapshotTitle": "Fixed model snapshot",
       "snapshotBody": "The clock is captured when this page mounts and stays fixed while it remains mounted, including history refreshes and vehicle or timezone changes. The lookback, next-24-hour horizon, “in” times, and planning marker use that anchor, not the current clock or the history fetch time. Refreshed rows can change the estimates without advancing the anchor.",
       "calendarModelBody": "Each local weekday-hour is a Poisson event cell with a Gamma prior (α {{alpha}}, β {{beta}}). The rate is (recorded departures + α) / (model-assumed calendar opportunities + β), and likelihood is 1 − exp(−rate). Outputs are modeled estimates, not calibrated probabilities.",
       "opportunityTitle": "Model-assumed calendar opportunity",
       "opportunityBody": "The denominator counts matching local-hour boundaries from the hour containing the earliest included returned drive start through the fixed model anchor, including elapsed gaps. Span days and weeks measure elapsed time, not observed recording coverage. Zero-event weeks mean no included returned starts; they do not prove inactivity. No telemetry uptime, completeness, or monitoring coverage metadata is available to this model.",
-      "modelTimezoneBody": "Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use the effective model timezone: {{timeZone}}."
+      "modelTimezoneBody": "Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use your selected time zone."
     },
     "next24": {
       "likelihoodSeries": "Hourly modeled likelihood",
@@ -4109,7 +4112,7 @@
     },
     "weekdays": {
       "title": "Weekday peaks and routine support",
-      "subtitle": "Supported peak cells in {{timeZone}} from qualifying returned drive starts; unsupported days remain explicit.",
+      "subtitle": "Supported peak cells in your selected time zone from qualifying returned drive starts; unsupported days remain explicit.",
       "supported": "Supported",
       "unsupported": "Unsupported",
       "peak": "{{time}} · {{likelihood}}% modeled likelihood",
@@ -4132,7 +4135,7 @@
       "calendarSubtitle": "Monday-based local weeks include zero returned events between the earliest included drive start and the fixed model anchor; elapsed calendar opportunity is model-assumed, not verified coverage.",
       "calendarAria": "Weekly returned departure events and active local driving days across the elapsed model-timezone span",
       "returnedDescription": "Bars count returned drive starts and the line counts distinct local days containing at least one returned drive start. Zero-event buckets mean no included returned events, not confirmed inactivity or continuous recording.",
-      "elapsedSummary": "{{departures}} returned departures across {{activeDays}} active days and {{activeWeeks}} active weeks over {{observedWeeks}} elapsed weeks in {{timeZone}}. Calendar opportunity is model-assumed; gaps do not establish recording coverage."
+      "elapsedSummary": "{{departures}} returned departures across {{activeDays}} active days and {{activeWeeks}} active weeks over {{observedWeeks}} elapsed weeks in your selected time zone. Calendar opportunity is model-assumed; gaps do not establish recording coverage."
     },
     "time": {
       "inMinutes": "in {{count}} min",
@@ -4174,7 +4177,7 @@
       }
     },
     "title": "Departure forecast",
-    "subtitle": "Vehicle-timezone departure patterns from returned drive starts, expressed as modeled likelihood estimates",
+    "subtitle": "Departure patterns from returned drive starts in your selected time zone, expressed as modeled likelihood estimates",
     "brief": {
       "description": "Next-24-hour modeled likelihood uses capped observed departure history; the support index is not a calibrated probability or confidence score.",
       "window": "Next 24 hours · {{timezone}}; history coverage is limited to returned rows",
@@ -6905,7 +6908,8 @@
       }
     },
     "idealRange": "Ideal Range",
-    "ratedRange": "Rated Range"
+    "ratedRange": "Rated Range",
+    "reviewDetails": "Review details"
   },
   "units": {
     "km": "km",
@@ -6957,7 +6961,9 @@
       "badge": {
         "resolving": "Checking live state",
         "unavailable": "Live state unavailable",
-        "verified": "{{verified}} of {{total}} verified"
+        "verified": "{{verified}} of {{total}} verified",
+        "attention": "{{count}} need attention",
+        "fresh": "Fresh"
       },
       "headline": {
         "resolving": "Resolving live state for {{count}} vehicle(s).",
@@ -7045,7 +7051,16 @@
         "title": "Fleet operating posture",
         "scope": "All registered vehicles; active vehicle shown below",
         "provenance": "Verified coverage comes from the same resolved fleet-state batch. Client classification takes over when evidence ages; the oldest reading is a real backend observation, never fetch completion."
-      }
+      },
+      "row": {
+        "active": "Active",
+        "telemetryLive": "telemetry live",
+        "lastSeen": "last seen {{age}}"
+      },
+      "emptyFleet": "No vehicles registered yet. Vehicles will appear here once they are added to your fleet.",
+      "coverage": "Coverage",
+      "coverageLabel": "Coverage {{pct}}%",
+      "newestEvidence": "Newest evidence {{age}}"
     },
     "title": "Fleet operations",
     "subtitle": "Monitor readiness, investigate exceptions, and act from one workspace",
@@ -8606,7 +8621,8 @@
         "description": "Add widgets that match how you use TeslaSync.",
         "cta": "Open"
       }
-    }
+    },
+    "progressDone": "{{done}} of {{total}} done"
   },
   "onboarding": {
     "pageTitle": "Welcome to TeslaSync",
@@ -10886,7 +10902,7 @@
       "detailId": "Entry ID",
       "detailPreviousHash": "Previous row hash",
       "detailsHint": "Use “{{action}}” to view complete entry details.",
-      "rangeZone": "Filter timezone: {{timezone}}",
+      "rangeZone": "Filters use your selected time zone.",
       "boundedProof": "Bounded row-hash proof only: not adjacency proof, full-ledger verification, or the current entry filters.",
       "retainedVerification": "Verification is running; the previous receipt remains visible.",
       "verificationPaused": "Verification was requested but is paused. No verification receipt has been received.",
@@ -11019,7 +11035,8 @@
       "window1d": "Last 1 day",
       "window7d": "Last 7 days",
       "window30d": "Last 30 days",
-      "window90d": "Last 90 days"
+      "window90d": "Last 90 days",
+      "rangeLimit": "Choose a workspace range of at most 90 days to view vehicle ingest cost."
     },
     "systemStatus": {
       "clientPerformance": {
@@ -14032,8 +14049,8 @@
       "period": "Recorded daily drive distance from the trailing 90-day source. Dates use the existing date formatter. Recording completeness is unknown."
     },
     "monthly": {
-      "period": "UTC calendar-month buckets from the server’s default 24-month window. This is not a full-history total; recording completeness is unknown.",
-      "method": "The same UTC monthly source as the chart. Distance / drive divides monthly recorded distance by monthly drive count; a zero drive count yields zero. No totals are inferred from these limited rows."
+      "period": "Calendar-month buckets in the selected time zone from the server’s default 24-month window. This is not a full-history total; recording completeness is unknown.",
+      "method": "The same selected-calendar monthly source as the chart. Distance / drive divides monthly recorded distance by monthly drive count; a zero drive count yields zero. No totals are inferred from these limited rows."
     },
     "analysis": {
       "title": "Recorded mileage",
@@ -14327,7 +14344,7 @@
       "pausedRetained": "Refresh is paused; retained {{section}} remains available"
     },
     "daily": {
-      "utcNote": "Transition counts grouped by UTC day; state durations come from the summary",
+      "utcNote": "Transition counts grouped by day; state durations come from the summary",
       "groupingNote": "Idle groups idle, online and parked transitions. Sleeping groups sleeping, asleep and offline transitions; this grouping does not establish measured sleep. Other destination states are unclassified. Raw states remain in State transitions.",
       "unclassified": "Unclassified"
     },
@@ -14651,7 +14668,7 @@
       "scopeMismatch": "Charging spend and energy use a different filter and temporal scope from positive-drive distance and dates.",
       "lifetimeGas": "The lifetime gasoline equivalent is distance-derived from positive-drive kilometres, configured price per unit, and comparison MPG.",
       "monthlyGas": "Only monthly gasoline equivalents are energy-derived, using lifetime km/kWh or the endpoint 5 km/kWh fallback.",
-      "calendar": "Monthly labels use backend/database calendar semantics; no vehicle-local or UTC timezone is exposed.",
+      "calendar": "Monthly labels retain the source calendar; the response supplies no timezone metadata.",
       "maintenance": "Maintenance is a flat $50-per-modeled-month heuristic, not measured service spend.",
       "scenarios": "Break-even and sensitivity outputs are algebraic what-if scenarios, not forecasts or recommendations.",
       "negative": "Negative deltas are valid modeled losses and are never relabeled as savings.",
@@ -14872,7 +14889,7 @@
       "cachedRefreshError": "Refresh failed; the most recently loaded evidence remains visible.",
       "cachedRefreshPaused": "The network is unavailable; cached evidence remains visible while refresh is paused.",
       "requestWindow": "API window: {{from}} ≤ timestamp < {{to}}",
-      "timezone": "Calendar timezone: {{timezone}} · {{days}} calendar days",
+      "timezone": "{{days}} calendar days",
       "invalidWindow": "The date-window labels or RFC3339 boundaries are invalid; period interpretation is withheld.",
       "status": {
         "disabled": "Vehicle required",
@@ -15021,7 +15038,7 @@
       "gasTitle": "Gas comparison",
       "gasBody": "The comparison is distance × 0.192 kg CO₂/km. It is a fixed generic baseline, not the user’s prior vehicle. Gas less charging may be negative and is shown as excess rather than clipped.",
       "rangeTitle": "Selected range",
-      "rangeBody": "URL calendar labels {{start}} through {{end}} are interpreted in {{timezone}} and sent as RFC3339 instants using an exclusive upper bound. Period charts never substitute lifetime rows.",
+      "rangeBody": "The selected range ({{range}}) is interpreted in your selected time zone and queried with an exclusive upper bound. Period charts never substitute lifetime rows.",
       "scenarioTitle": "Recommendation boundary",
       "scenarioBody": "The recommendation is full-history only and shifts all observed lifetime charging energy into the fixed greenest three-hour model window. It is a counterfactual estimate, not selected-period evidence or a schedule guarantee."
     }
@@ -15058,6 +15075,7 @@
       "duration": "Average duration",
       "durationColumn": "Duration",
       "trend": "Execution activity",
+      "daily": "Daily execution counts",
       "trendAria": "Execution outcomes across the selected period",
       "period": "Period",
       "other": "Other outcomes",
@@ -15509,7 +15527,8 @@
       "active": "Active",
       "disabled": "Disabled",
       "auto-disabled": "Auto-disabled"
-    }
+    },
+    "copyName": "{{name}} (copy)"
   },
   "energy": {
     "tou": {
@@ -15620,7 +15639,7 @@
     "tip": {
       "offPeak": "Off-peak charging saves money",
       "solar": "Solar-optimal: 10am–3pm",
-      "timezone": "Buckets use {{timezone}} session start time.",
+      "timezone": "Buckets use session start time in your selected time zone.",
       "noSavingsClaim": "Timing alone does not prove tariff or solar savings."
     },
     "sources": {
@@ -16399,16 +16418,16 @@
         "valid": "Valid"
       },
       "rangeStatus": "Range status: {{status}}",
-      "requested": "Requested UTC dates",
+      "requested": "Requested dates",
       "responseIdentity": "Sanitized response identity",
       "rows": "Rows",
       "source": "Source",
       "stateCap": "State directory cap",
       "stateRows": "State rows",
-      "subtitle": "Requested UTC dates, backend coverage, exclusions, duplicate policy, display caps, and the frozen analysis clock are disclosed together.",
+      "subtitle": "Requested dates, backend coverage, exclusions, duplicate policy, display caps, and the frozen analysis clock are disclosed together.",
       "summaryScope": "Summary scope",
       "title": "Range, source coverage, and exact accounting",
-      "utcSafe": "Computed from UTC calendar dates",
+      "utcSafe": "Calendar day count; elapsed hours use the exact selected bounds",
       "vehicle": "Response vehicle_id",
       "windowValue": "{{start}} to {{end}}"
     },
@@ -16512,14 +16531,14 @@
       "minutesValue": "{{value}} min",
       "percentValue": "{{value}}%",
       "placeholderWithheld": "Placeholder zero withheld",
-      "rangeValue": "{{start}} to {{end}} UTC",
+      "rangeValue": "{{start}} to {{end}}",
       "reportedEvidence": "Positive finite response value",
       "sentryAvailability": "Sentry comparison",
       "sentrySamples": "Requires positive sample counts",
       "title": "Evidence overview",
       "transitionDestinations": "Valid transition destinations",
       "transitionSubtitle": "Destination counts from the vehicle FSM",
-      "utcWindow": "Selected UTC window"
+      "utcWindow": "Selected window"
     },
     "methodology": {
       "capacitySources": "Capacity source categories distinguish VIN estimate, model estimate, default estimate, other, and unavailable.",
@@ -16535,7 +16554,7 @@
       "support": "Evidence breadth is a transparent source-availability score, not statistical confidence or model accuracy.",
       "title": "Methodology and interpretation limits",
       "transitionSemantics": "state_distribution.count records FSM transition destinations from fsm_transitions.to_state; it is not occupancy or duration.",
-      "utcDates": "Date-only start and end bounds represent inclusive UTC calendar days."
+      "utcDates": "Calendar dates use the selected clock. The server and coverage calculations receive the exact start-inclusive, end-exclusive instants."
     },
     "analysis": "Sleep and sentry analysis",
     "avgBatteryLost": "Avg battery lost (%)",
@@ -16795,7 +16814,7 @@
     "startDateGroups": {
       "section": "Sessions by start date and reduction tips",
       "title": "Parked sessions by start date",
-      "scope": "Whole-session battery loss and duration are grouped by start date in {{timeZone}}, not distributed across calendar days. Sessions with missing or invalid start dates are excluded from this chart.",
+      "scope": "Whole-session battery loss and duration are grouped by start date in your selected time zone, not distributed across calendar days. Sessions with missing or invalid start dates are excluded from this chart.",
       "aria": "Whole-session battery loss and parked hours grouped by session start date",
       "date": "Session start date"
     }
@@ -17074,7 +17093,15 @@
     },
     "kpis": "Cost summary metrics",
     "trends": "Cost trends",
-    "impact": "Lifetime and environmental impact"
+    "impact": "Lifetime and environmental impact",
+    "category": {
+      "home": "Home",
+      "supercharger": "Supercharger",
+      "public": "Public",
+      "publicDC": "Public DC",
+      "workL2": "Work / L2",
+      "other": "Other"
+    }
   },
   "chargePlanner": {
     "modernization": {
@@ -17514,10 +17541,10 @@
     "settings": "Kiosk settings",
     "rotation": "Dashboard rotation",
     "rotationInterval": "Rotation interval",
-    "dashboardsToRotate": "Dashboards to Rotate",
+    "dashboardsToRotate": "Dashboards to rotate",
     "default": "Default",
     "display": "Display",
-    "hideCursor": "Auto-hide Cursor",
+    "hideCursor": "Auto-hide cursor",
     "cursorTimeout": "Hide after",
     "dimAfter": "Dim screen after",
     "brightness": "Dimmed brightness",
@@ -18288,6 +18315,9 @@
     "reported": "Reported",
     "digitalTwinWindows": "Windows",
     "unknownVehicle": "Unknown vehicle",
+    "comparison": {
+      "previousLabel": "Last week"
+    },
     "statusGrid": {
       "noData": "No status data available"
     },
@@ -18300,6 +18330,9 @@
     },
     "alertFeed": "Alert feed",
     "noAlerts": "No alerts yet",
+    "alertFeedNeedsAttention_one": "{{count}} needs attention",
+    "alertFeedNeedsAttention_other": "{{count}} need attention",
+    "alertFeedUnread": "{{count}} unread",
     "analyticsSummary": {
       "totalDistance": "Total distance",
       "avgEfficiency": "Avg efficiency",
@@ -18318,7 +18351,9 @@
         "description": "Fleet-wide analytics using the hook’s default source window. Exact bounds and completeness are not supplied; optional trend arrays retain their own source coverage.",
         "scope": "Fleet-wide · default analytics window"
       },
-      "trendAria": "{{metric}} trend"
+      "trendAria": "{{metric}} trend",
+      "distance30d": "Distance (30d)",
+      "costPerDist30d": "Cost / {{unit}}"
     },
     "anomalyDetector": {
       "activeCount": "{{count}} active",
@@ -18500,13 +18535,18 @@
       "savingsDescription": "Estimated gasoline cost minus charge cost; distance uses the existing 3.5 miles per kWh assumption.",
       "summaryTitle": "Charge cost sources",
       "summaryDescription": "Recorded and inferred charging costs remain distinct from measured drive costs; configured gas and electricity assumptions are retained.",
-      "summaryScope": "Vehicle {{vehicleId}}; rolling 30-day start {{start}}, at most 100 returned sessions, no explicit end bound"
+      "summaryScope": "Vehicle {{vehicleId}}; rolling 30-day start {{start}}, at most 100 returned sessions, no explicit end bound",
+      "avgRate": "Avg rate"
     },
     "chargeHistory": {
       "title": "Charge history",
       "chartLabel": "Energy added per recent charge session, in kilowatt-hours",
       "total": "Total",
-      "avg": "Avg"
+      "avg": "Avg",
+      "lastSessions": "Last {{count}} sessions",
+      "home": "Home",
+      "supercharger": "Supercharger",
+      "dcFast": "DC fast"
     },
     "noChargeHistory": "No charge sessions yet",
     "chargePlans": {
@@ -18526,12 +18566,19 @@
       "noRates": "No rate plans",
       "noData": "No charge plans or rate data",
       "plansError": "Unable to load charge plans",
-      "ratesError": "Unable to load rate plans"
+      "ratesError": "Unable to load rate plans",
+      "statusActive": "Active",
+      "statusScheduled": "Scheduled",
+      "statusCompleted": "Completed",
+      "statusFailed": "Failed",
+      "statusCancelled": "Cancelled",
+      "statusUnknown": "Unknown"
     },
     "chargeSessionChart": {
       "total": "Total",
       "avg": "Avg",
       "sessions": "Sessions",
+      "energyPerSession": "Energy per session · last {{count}}",
       "empty": "No charge sessions yet",
       "title": "Charge sessions",
       "chartLabel": "Bar chart of energy added per charge session",
@@ -18582,7 +18629,8 @@
         "low": "low",
         "medium": "medium",
         "high": "high"
-      }
+      },
+      "targetSocSource": "Returned target state of charge."
     },
     "chargingSchedule": {
       "modeStartAt": "Start at",
@@ -18607,7 +18655,8 @@
       "actualStatusDescription": "Actual charging state from the vehicle snapshot, not the scheduled mode or pending flag; an absent boolean remains unknown.",
       "contextTitle": "Returned vehicle charging context",
       "contextDescription": "Battery level and actual charging state use the independently loaded vehicle snapshot; they do not establish schedule-source freshness.",
-      "contextScope": "Vehicle {{id}} · returned state snapshot; scheduled times, mode, pending status and target limit belong to the separate live-schedule source."
+      "contextScope": "Vehicle {{id}} · returned state snapshot; scheduled times, mode, pending status and target limit belong to the separate live-schedule source.",
+      "starts": "Starts"
     },
     "chargingSessionDetail": {
       "chartAria": "Charging power and battery state of charge over the latest session",
@@ -18627,7 +18676,11 @@
       "time": "Time",
       "telemetry": "Charging telemetry",
       "telemetryError": "Charging telemetry could not be loaded.",
-      "telemetryRetained": "Previously loaded charging telemetry remains visible while it refreshes."
+      "telemetryRetained": "Previously loaded charging telemetry remains visible while it refreshes.",
+      "durationMinutes": "{{minutes}}m",
+      "durationHoursMinutes": "{{hours}}h {{minutes}}m",
+      "durationHours": "{{hours}}h",
+      "session": "Charging session"
     },
     "chargingTelemetry": {
       "voltage": "Voltage",
@@ -18644,7 +18697,9 @@
       "efficiencySource": "Existing ratio of actual power to pilot-current capacity, including the original phase fallback and upper clamp.",
       "summaryTitle": "Returned charger measurements",
       "summaryDescription": "Voltage, current, SI power and phases describe the supplied charging snapshot. Wide layouts also retain the existing capacity ratio and session-local power history.",
-      "summaryScope": "Vehicle {{id}} · source timestamp {{timestamp}}; a returned snapshot does not establish continuous coverage."
+      "summaryScope": "Vehicle {{id}} · source timestamp {{timestamp}}; a returned snapshot does not establish continuous coverage.",
+      "chargerLabel": "Charger",
+      "pilot": "Pilot"
     },
     "climatePanel": {
       "seatFL": "FL",
@@ -18669,7 +18724,12 @@
       "fanLevelDescription": "Reported fan level, not a velocity measurement.",
       "wheelLevelDescription": "Reported wheel-heater level on the 0–3 scale; zero means Off.",
       "summaryTitle": "Returned climate control readings",
-      "summaryDescription": "Cabin and outside temperatures are independent SI measurements converted only for display. Fan and wheel-heater levels are not speeds; HVAC and heater statuses remain separate."
+      "summaryDescription": "Cabin and outside temperatures are independent SI measurements converted only for display. Fan and wheel-heater levels are not speeds; HVAC and heater statuses remain separate.",
+      "set": "set",
+      "fanShort": "Fan",
+      "seats": "Seats",
+      "cabinOverheat": "Cabin overheat",
+      "on": "On"
     },
     "climateHistory": {
       "cabin": "Cabin",
@@ -18719,13 +18779,16 @@
       "savingsDescription": "Reported gasoline comparison is an estimate, not independently measured savings.",
       "summaryTitle": "Charging cost sources",
       "summaryDescription": "Lifetime totals, the existing source tariff and estimated gasoline comparison remain independent of ranked monthly rows.",
-      "summaryScope": "Vehicle {{vehicleId}}; lifetime source totals and available monthly records, exact coverage bounds unknown"
+      "summaryScope": "Vehicle {{vehicleId}}; lifetime source totals and available monthly records, exact coverage bounds unknown",
+      "gasComparisonDelta": "Gas comparison difference {{amount}}",
+      "lifetimeCost": "Lifetime charging cost"
     },
     "costForecast": {
       "avgEnergyRate": "Avg {{currency}}/{{unit}}",
       "estimate": "Forecast values are estimates.",
       "chartLabel": "Monthly charging cost history and forecast",
       "noData": "No forecast data",
+      "nextPeriod": "Next {{count}} months",
       "nextMonth": "Next month",
       "trend": "Trend",
       "avgPerKwh": "Avg $/kWh",
@@ -18756,7 +18819,10 @@
         "description": "Fleet-wide totals and the resolved vehicle’s current FSM state are independent sources. Aggregate bounds are not supplied; the wide view’s latest five transitions come from a separate 168-hour history query.",
         "scope": "Fleet counts · FSM vehicle {{id}}",
         "noScope": "Fleet counts · no resolved FSM vehicle"
-      }
+      },
+      "widgetsPlaced": "Widgets placed",
+      "dashboards": "Dashboards",
+      "carState": "Car state"
     },
     "destinationETA": {
       "home": "Home",
@@ -18769,7 +18835,8 @@
       "title": "Destination ETA",
       "noNav": "No active navigation",
       "remaining": "Remaining",
-      "progress": "Trip progress"
+      "progress": "Trip progress",
+      "noNavDescription": "Start a route in the car to see distance and arrival time here."
     },
     "digitalTwinMini": "Digital twin",
     "open": "Open",
@@ -18806,7 +18873,9 @@
       "windowsOpen": "window(s) open",
       "doors": "Doors",
       "windows": "Windows",
-      "noData": "No door/window data"
+      "noData": "No door/window data",
+      "door": "door",
+      "window": "window"
     },
     "driveEfficiencyChart": {
       "chartAria": "Daily and seven-day rolling drive efficiency",
@@ -18817,7 +18886,8 @@
       "rolling": "7-day avg",
       "title": "Drive efficiency",
       "empty": "No efficiency data yet",
-      "date": "Date"
+      "date": "Date",
+      "windowAverage": "30-day average"
     },
     "driveScoreGauge": {
       "weekly": "Weekly score",
@@ -18858,7 +18928,8 @@
       "noTelemetry": "No telemetry for this drive",
       "time": "Time",
       "telemetryRetained": "Previously loaded drive telemetry remains visible while this source recovers.",
-      "chartAria": "Speed, power, battery, and elevation during the latest drive"
+      "chartAria": "Speed, power, battery, and elevation during the latest drive",
+      "lastDrive": "Last drive"
     },
     "drivetrainHealth": {
       "statusGood": "Healthy",
@@ -18904,6 +18975,13 @@
       "distributionEmpty": "No acceleration samples yet",
       "maxG": "Max g",
       "smooth": "Smooth",
+      "severity": {
+        "smooth": "Smooth",
+        "normal": "Normal",
+        "calm": "Calm",
+        "sporty": "Sporty",
+        "aggressive": "Aggressive"
+      },
       "aggressive": "Aggressive",
       "noData": "No dynamics data",
       "title": "Driving dynamics",
@@ -18914,12 +18992,7 @@
       "gForce": "G-force",
       "samples": "Samples",
       "distributionAria": "Distribution of observed acceleration magnitudes",
-      "severity": {
-        "normal": "Normal",
-        "calm": "Calm",
-        "sporty": "Sporty",
-        "aggressive": "Aggressive"
-      }
+      "style": "Style"
     },
     "energyFlowAnimated": {
       "idle": "Idle",
@@ -18944,7 +19017,9 @@
       "timezone": "Installation timezone",
       "title": "Energy site",
       "noSite": "No Tesla energy site linked",
-      "noData": "No site info available"
+      "noData": "No site info available",
+      "backupReserve": "Backup reserve",
+      "operationMode": "Operating mode"
     },
     "energyStats": {
       "co2Estimate": "CO₂ savings are estimated.",
@@ -18982,6 +19057,7 @@
       "vehicles": "Vehicles",
       "online": "online",
       "onlineNow": "Online now",
+      "asleepCount": "{{count}} asleep/offline",
       "distance30d": "Distance (30d)",
       "energy30d": "Energy (30d)",
       "title": "Fleet stats",
@@ -19011,7 +19087,8 @@
       "statsRetained": "Previously loaded state distribution remains visible while it refreshes.",
       "transitionsError": "Recent transitions could not be loaded.",
       "transitionsRetained": "Previously loaded transitions remain visible while they refresh.",
-      "chartAria": "Time spent in each vehicle state"
+      "chartAria": "Time spent in each vehicle state",
+      "rankedStates": "State shares"
     },
     "geofence": {
       "noZone": "No zone",
@@ -19060,7 +19137,8 @@
         "eyebrow": "Lifetime history",
         "title": "Lifetime operating summary",
         "description": "Lifetime totals for the resolved vehicle, not the workspace date range. Exact history coverage and first observation are not supplied."
-      }
+      },
+      "days": "days"
     },
     "recentlyUnlocked": {
       "title": "Recently unlocked",
@@ -19095,7 +19173,11 @@
       "favorite": "Favorite",
       "other": "Other",
       "title": "Favorite locations",
-      "noData": "No favorite locations"
+      "noData": "No favorite locations",
+      "unknownVisits": "Visit count unavailable",
+      "visits": "{{count}} visits",
+      "hereNow": "Here now",
+      "current": "Current"
     },
     "locationMap": {
       "title": "Vehicle location map",
@@ -19132,7 +19214,13 @@
       "paceSource": "Source distance pace normalized to meters per day, not vehicle speed.",
       "summaryTitle": "Maintenance forecast summary",
       "summaryDescription": "Due counts and distance pace come from the returned forecast; configured intervals remain recommendations rather than countdowns.",
-      "summaryScope": "Forecast vehicle {{id}} · inferred due counts and observed daily distance; configured intervals and service records are separate sources."
+      "summaryScope": "Forecast vehicle {{id}} · inferred due counts and observed daily distance; configured intervals and service records are separate sources.",
+      "years": "years",
+      "monthsShort": "mo",
+      "left": "left",
+      "odometer": "odometer",
+      "upcoming": "Upcoming",
+      "lastService": "Last service"
     },
     "noMediaPlayed": "No tracks played",
     "mediaHistory": "Media history",
@@ -19167,7 +19255,9 @@
       "title": "Monthly mileage",
       "distance": "Distance",
       "error": "Unable to load mileage data",
-      "month": "Month"
+      "month": "Month",
+      "monthSoFar": "{{month}} so far",
+      "average12m": "12-mo avg {{value}}"
     },
     "motorHistory": {
       "torque": "Torque",
@@ -19178,7 +19268,14 @@
       "longG": "Long. G",
       "time": "Time",
       "torqueNm": "Torque (Nm)",
-      "chartAria": "Motor torque, stator temperature, and acceleration history"
+      "chartAria": "Motor torque, stator temperature, and acceleration history",
+      "last7Days": "7 days",
+      "peakStator": "Peak stator temp",
+      "statorTempRange": "Stator temp · {{range}}",
+      "awaitingReading": "Awaiting temperature reading",
+      "dangerReached": "Danger threshold reached",
+      "dangerNotReached": "Danger zone not reached",
+      "dangerThreshold": "Danger zone above {{value}} {{unit}}"
     },
     "motorPerformance": {
       "gear": "Gear",
@@ -19254,7 +19351,11 @@
       "distanceSource": "Returned driving-history distance, normalized from kilometers to meters; not the live lifetime odometer.",
       "summaryTitle": "Recorded driving distance",
       "summaryDescription": "Historical recorded distance uses its own source state and is not presented as equivalent to the independent live odometer.",
-      "summaryScope": "Vehicle {{id}} · returned driving statistics; exact history bounds and completeness are not supplied."
+      "summaryScope": "Vehicle {{id}} · returned driving statistics; exact history bounds and completeness are not supplied.",
+      "thisWeek": "This week",
+      "thisMonth": "This month",
+      "thisYear": "This year",
+      "perDay": "Per day"
     },
     "positionHeatmap": {
       "noData": "No position data",
@@ -19322,7 +19423,8 @@
       "chargesDescription": "Source-reported equivalent free-charge count; missing values remain unknown.",
       "summaryTitle": "Regenerative energy sources",
       "summaryDescription": "Recovered and used energy retain the source quantities; the existing recovery gauge is a percentage and is never scaled twice.",
-      "summaryScope": "Vehicle {{vehicleId}}; returned analytics window, exact source bounds unknown"
+      "summaryScope": "Vehicle {{vehicleId}}; returned analytics window, exact source bounds unknown",
+      "energyRecovered": "Energy recovered"
     },
     "routeEfficiency": {
       "excellent": "Excellent",
@@ -19368,7 +19470,10 @@
       "priorCount": "Returned snapshots in the preceding 30-day comparison window: {{count}}.",
       "summaryTitle": "Returned safety-history summary",
       "summaryDescription": "Counts and classifications summarize loaded snapshots; a warning setting is not a detected intervention.",
-      "summaryScope": "Vehicle {{id}} · returned snapshots in the last 30 days, compared with the preceding 30 days; loaded history is not complete event coverage."
+      "summaryScope": "Vehicle {{id}} · returned snapshots in the last 30 days, compared with the preceding 30 days; loaded history is not complete event coverage.",
+      "snapshotSingular": "snapshot",
+      "snapshotPlural": "snapshots",
+      "ldaShort": "Lane departure"
     },
     "safetyEvents": "events",
     "noSafetyEvents": "No safety events",
@@ -19394,15 +19499,21 @@
       "searchPlaceholder": "Search signals…",
       "noResults": "No matching signals",
       "observationsUnavailable": "Signal observations unavailable",
+      "noObservations": "No signal observations",
       "observationsRetained": "Previously loaded signal observations remain visible while this source recovers.",
       "searchLabel": "Search signals",
       "sampleCount": "Observations in fetched sample",
       "destination": "Destination: {{destination}}",
       "valueKind": "Value kind",
+      "categorySignals": "{{count}} signals",
+      "categoryObservations": "{{count}} obs",
+      "browse": "Browse",
+      "catalogTotal": "{{count}} signals",
       "metadataUnavailable": "Unit and description are not provided by this catalog.",
       "totalSamples": "Total observations: {{count}}",
       "vehicleCount": "Vehicles observed: {{count}}",
-      "lastSeen": "Last seen: {{timestamp}}"
+      "lastSeen": "Last seen: {{timestamp}}",
+      "categoryObservationsUnavailable": "Observations unavailable"
     },
     "signalHealth": {
       "secAgo": "{{count}}s ago",
@@ -19431,7 +19542,11 @@
       "freshnessDescription": "Age in seconds of the newest valid observation; absent observations remain unknown.",
       "summaryDescription": "Catalog, statistics and observations recover independently. The five-minute widget threshold does not certify distributed live-state freshness.",
       "summaryScope": "Vehicle {{vehicleId}}; current catalog and returned observations only",
-      "noGaps": "No observed signal gaps"
+      "noGaps": "No observed signal gaps",
+      "signalsReporting": "Signals reporting",
+      "reportingCoverage": "Reporting coverage",
+      "gap": "Gap",
+      "stale": "Stale"
     },
     "signalLog": {
       "signalsPerSec": "signals/sec",
@@ -19461,11 +19576,14 @@
       "eventsDescription": "Number of returned recent events, not a certified full-window wake count.",
       "summaryTitle": "Sleep source quantities",
       "summaryDescription": "The efficiency gauge retains its measured percentage; supporting durations, drain estimate and recent-event sample keep their source limitations.",
-      "summaryScope": "Vehicle {{vehicleId}}; returned historical distribution and recent sample, exact bounds unknown"
+      "summaryScope": "Vehicle {{vehicleId}}; returned historical distribution and recent sample, exact bounds unknown",
+      "timeAsleep": "Time asleep when parked",
+      "drain": "Drain"
     },
     "updateCurrent": "Current",
     "softwareUpdateHistory": "Update history",
     "noUpdates": "No update history",
+    "updatesThisYear": "{{count}} updates this year",
     "softwareUpdate": "Software update",
     "noSoftwareData": "No software data",
     "currentVersion": "Current version",
@@ -19503,6 +19621,8 @@
       "drives": "{{count}} drives",
       "drives_one": "{{count}} drive",
       "drives_other": "{{count}} drives",
+      "drive_one": "{{count}} drive",
+      "drive_other": "{{count}} drives",
       "peakSpeed": "Peak avg {{speed}} {{unit}}",
       "slow": "Slow",
       "fast": "Fast",
@@ -19535,13 +19655,16 @@
       "hr": "h",
       "timeline": "24h timeline",
       "title": "State timeline",
-      "noData": "No state data available"
+      "noData": "No state data available",
+      "timelineAria": "Vehicle state transitions over the last 24 hours",
+      "last24Hours": "Last 24 hours"
     },
     "subscriptions": {
       "unknown": "Unknown",
       "active": "Active",
       "expired": "Expired",
       "activeCount": "active",
+      "activeSummary": "{{count}} active",
       "noData": "No subscriptions",
       "title": "Subscriptions",
       "premiumConnectivity": "Premium Connectivity",
@@ -19549,7 +19672,10 @@
       "enhancedAutopilot": "Enhanced Autopilot",
       "standardConnectivity": "Standard Connectivity",
       "dataSharing": "Data sharing",
-      "satellite": "Satellite connectivity"
+      "satellite": "Satellite connectivity",
+      "perMonth": "/mo",
+      "monthlySummary": "{{total}} / month",
+      "manage": "Manage"
     },
     "superchargerHistory": {
       "currencyUnit": "$",
@@ -19591,7 +19717,8 @@
       "db": "Database",
       "mqtt": "MQTT",
       "teslaApi": "Tesla API",
-      "workers": "Fleet Telemetry"
+      "workers": "Fleet Telemetry",
+      "loadingServices": "Loading Services"
     },
     "telemetryErrors": {
       "unknown": "Unknown",
@@ -19614,7 +19741,9 @@
       "sampleDescription": "Returned error rows, not the total error count for a complete time range.",
       "summaryTitle": "Error source counters",
       "summaryDescription": "Active VINs and the fetched error sample remain separate sources; observed and fetched timestamps keep their original distinction.",
-      "summaryScope": "Fleet telemetry; returned VIN summary and error sample, exact coverage bounds unknown"
+      "summaryScope": "Fleet telemetry; returned VIN summary and error sample, exact coverage bounds unknown",
+      "vinsUnknown": "— VINs with errors",
+      "vinsWithErrors": "VINs with errors"
     },
     "tirePressureHistory": {
       "fl": "FL",
@@ -19626,7 +19755,8 @@
       "noData": "No tire pressure history",
       "title": "Tire pressure history",
       "time": "Time",
-      "chartAria": "Front and rear tire pressure history"
+      "chartAria": "Front and rear tire pressure history",
+      "recommended": "Recommended"
     },
     "tireNoReading": "No reading",
     "tireJustNow": "Just now",
@@ -19678,6 +19808,10 @@
       "perDay": "/day",
       "averageUnavailable": "Average unavailable",
       "title": "Vampire drain",
+      "chartTitle": "Recent parked drain",
+      "chartAria": "Battery drain rate by recent parked window",
+      "window": "Window",
+      "rate": "Drain (%/day)",
       "avgDrain": "Avg drain",
       "eventCount": "{{formattedCount}} events · {{hours}}h total",
       "trend": "Daily drain rate (last 30)",
@@ -19690,7 +19824,13 @@
       "summaryScope": "Vehicle {{id}} · returned parked-window statistics; exact aggregate recording bounds are not supplied.",
       "watchStatus": "Drain watchdog status",
       "watchOk": "Watchdog: drain healthy",
-      "watchBreach": "Watchdog: {{streak}} breach streak · {{rec}}"
+      "watchBreach": "Watchdog: {{streak}} breach streak · {{rec}}",
+      "normal": "Normal",
+      "elevated": "Elevated",
+      "high": "High",
+      "averageWhileParked": "Average while parked",
+      "highest": "Highest: {{rate}}%/day on {{date}}",
+      "emptyDescription": "Observed parked windows will appear when drain history is available."
     },
     "vehicleAccessDrivers": "drivers",
     "vehicleAccessMobileOn": "Mobile access enabled",
@@ -19722,7 +19862,12 @@
       "auxBattery": "Aux battery",
       "carVersion": "Car version",
       "option": "Option",
-      "noData": "No specs available"
+      "noData": "No specs available",
+      "year": "Year",
+      "battery": "Battery",
+      "dualMotor": "Dual",
+      "singleMotor": "Single",
+      "motors": "Motors"
     },
     "vehicleSpecs": "Vehicle specs",
     "upgrades": {
@@ -19753,7 +19898,15 @@
       "arch": "Arch",
       "noData": "No version data available",
       "versionError": "Version information could not be loaded.",
-      "versionRetained": "Previously loaded version information remains visible while it refreshes."
+      "versionRetained": "Previously loaded version information remains visible while it refreshes.",
+      "gitCommit": "Git commit",
+      "serverUptime": "Server uptime",
+      "dataCapture": "Data capture",
+      "captureEnabled": "Enabled",
+      "captureDisabled": "Disabled",
+      "documents": "documents",
+      "distinctVins": "{{count}} VINs",
+      "platform": "Platform"
     },
     "wallConnector": {
       "noSite": "No Tesla energy site linked",
@@ -19767,7 +19920,8 @@
       "energy": "Energy",
       "chartLabel": "Daily wall connector charging energy over the last 14 days",
       "date": "Date",
-      "energyKwh": "Energy (kWh)"
+      "energyKwh": "Energy (kWh)",
+      "today": "Today"
     },
     "warranty": {
       "coverageCaveat": "Cached warranty information; coverage ends at the first time or mileage limit. Confirm terms with Tesla.",
@@ -19789,7 +19943,8 @@
       "batteryDrive": "Battery/drive unit",
       "corrosion": "Corrosion",
       "emissions": "Emissions",
-      "body": "Body"
+      "body": "Body",
+      "distanceLeft": "{{distance}} {{unit}} left"
     },
     "noWatchData": "No watch data",
     "watchState": {
@@ -19844,7 +19999,7 @@
       "longestDrive": "Longest drive",
       "drivingTime": "Driving time",
       "topSpeed": "Top speed",
-      "inYear": "in {year}",
+      "inYear": "in {{year}}",
       "noData": "No year-in-review data",
       "title": "Year in review",
       "summary": {
@@ -19860,7 +20015,10 @@
         "eyebrow": "Calendar-year history",
         "title": "Year operating summary",
         "description": "Calendar-year totals for the resolved vehicle. The current year may be incomplete; exact source coverage and observation bounds are not supplied."
-      }
+      },
+      "charges": "Charges",
+      "calendarYear": "{{year}} so far",
+      "highlights": "Year highlights"
     },
     "updateStatus": "{{status}}",
     "moreInfoAbout": "More info about {{title}}",
@@ -19921,7 +20079,7 @@
     "watchDefaultVehicle": "default",
     "fsdWeekly": {
       "summary": {
-        "scope": "Vehicle {{id}} · {{start}} to {{end}} exclusive · {{timezone}}",
+        "scope": "Vehicle {{id}} · {{range}}",
         "distanceHelp": "Reported supervised-driving distance in metres for this Monday–Sunday window.",
         "shareHelp": "Source-reported FSD share, on the 0–100 percent scale.",
         "changeHelp": "Share change in percentage points versus the previous Monday–Sunday window, not a percent growth rate.",
@@ -19999,7 +20157,34 @@
     "exportFailed": "Failed",
     "exportQueued": "Queued",
     "exportRunning": "Running",
-    "exportDone": "Done"
+    "exportDone": "Done",
+    "overview": "Widget overview",
+    "recentDrivesWeekSummary": "{{count}} drives this week · {{total}}",
+    "verifiedFields": "{{count}} verified fields",
+    "batteryGauge": {
+      "limitMarker": "Charge limit {{pct}}%",
+      "chargingToLimit": "Charging · +{{pct}}% to limit",
+      "range": "{{range}} range"
+    },
+    "batteryDegradationTrend": {
+      "maxRange": "Max range at 100%",
+      "sinceNew": "since new ({{range}})"
+    },
+    "alertFeedNoUnread": "No unread alerts",
+    "allAlerts": "All alerts",
+    "recentDrivesSubMinute": "<1m",
+    "inside": "Inside",
+    "changelogs": "Changelogs",
+    "updateInstalledOn": "Installed {{date}}",
+    "tripMinuteShort": "m",
+    "energy": "Energy",
+    "stops": "Stops",
+    "doneAt": "Done",
+    "guardPanicSending": "Sending…",
+    "guardPanicAlarm": "Panic alarm",
+    "guardProtected": "Protected",
+    "noSignalsDescription": "Live values appear when the selected vehicle publishes telemetry.",
+    "car": "Car"
   },
   "operationalSummary": {
     "retained": "Retained source data",
@@ -20123,7 +20308,16 @@
       "badge": "Helix"
     },
     "colSignal": "Signal",
-    "overview": "Anomaly overview"
+    "overview": "Anomaly overview",
+    "explanation": {
+      "zScore": "{{signal}} value {{value}} is {{sigma}} standard deviations from the mean ({{baseline}}).",
+      "belowMinimum": "{{signal}} value {{value}} is below the safe minimum ({{minimum}}).",
+      "aboveMaximum": "{{signal}} value {{value}} exceeds the safe maximum ({{maximum}}).",
+      "increased": "{{signal}} increased in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}}).",
+      "decreased": "{{signal}} decreased in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}}).",
+      "increasedPercent": "{{signal}} increased by {{percent}}% in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}}).",
+      "decreasedPercent": "{{signal}} decreased by {{percent}}% in the last 24 hours compared with the seven-day average ({{baseline}} to {{value}})."
+    }
   },
   "driveDetail": {
     "report": {
@@ -20535,7 +20729,7 @@
         "warning": "warning",
         "critical": "critical"
       },
-      "selectedStatisticsBounds": "Drive start: {{start}} (inclusive) to {{end}} (exclusive) · {{timezone}}",
+      "selectedStatisticsBounds": "Drive start in {{range}} (start inclusive, end exclusive)",
       "completedStatisticsPopulation": "Server statistics cover all completed drives for the selected vehicle whose start falls within the selected bounds, not just the returned drive subset.",
       "separateHistoryPolicies": "Motor history uses the existing unbounded 200-snapshot request in source order, independent of the selected range. Drive charts and power use the last 30 returned drives within the selected range; this subset is separate from the full completed-drive statistics."
     },
@@ -22451,6 +22645,7 @@
       "count": "Count",
       "brief": {
         "scope": "{{from}} to {{to}} (exclusive) · {{timezone}}",
+        "bounds": "[{{from}}, {{to}}) · end exclusive",
         "title": "Triggers, linked deliveries, and outbound calls",
         "available": "Report loaded",
         "unavailable": "Report unavailable"
@@ -23348,11 +23543,11 @@
     },
     "chartPalette": {
       "cbSafe": "Color-blind safe",
-      "neon": "Stylistic neon",
+      "neon": "Alternate order",
       "label": "Chart palette",
       "help": "Defaults to the Okabe-Ito palette so series remain distinguishable for the ~8% of users with red-green colour vision deficiency.",
       "cbSafeHelp": "Okabe-Ito palette — distinguishable for all CVD types.",
-      "neonHelp": "Bright cyan/magenta — best when colour vision is unimpaired."
+      "neonHelp": "The same calm palette in a violet-led order."
     },
     "loadingPicker": "Loading theme picker…"
   },
@@ -25113,6 +25308,7 @@
     "noEntriesHelp": "Audit entries appear after system or account activity is recorded."
   },
   "dataExport": {
+    "dateBounds": "Dates use the selected clock. Start is inclusive; the end date includes its whole day.",
     "csvPreview": "CSV preview",
     "csvDesc": "Comma-separated values, compatible with Excel and Google Sheets",
     "jsonPreview": "JSON preview",
@@ -26477,7 +26673,7 @@
     "trend": {
       "section": "Supervised self-driving distance trend",
       "title": "Distance trend",
-      "subtitle": "Counter movement attributed to each local calendar day in {{timezone}}.",
+      "subtitle": "Counter movement attributed to each local calendar day.",
       "aria": "Daily supervised self-driving distance compared with total observed driving distance",
       "colDay": "Local day",
       "fsdSeries": "Supervised self-driving",
@@ -26532,7 +26728,7 @@
       "reduced": "Reduced confidence",
       "good": "Usable counter basis",
       "window": "Observation window",
-      "windowValue": "{{start}} – {{end}} ({{timezone}})",
+      "windowValue": "{{start}} – {{end}}",
       "fsdReported": "Self-driving counter reported",
       "fsdReportedYes": "Yes — distance is derivable",
       "fsdReportedNotDerivable": "Reported once, but no second reading to difference against",
@@ -30415,7 +30611,7 @@
       "subtitle": "Definitions, formulas, support gates, route grouping, and omitted inputs.",
       "supportBody": "Routes and route-windows need at least {{routeSamples}} and {{windowSamples}} samples. Route support = 100 × (0.45 × volume + 0.30 × active days + 0.25 × active weeks), separate from timing consistency.",
       "supportTitle": "Sample gates and support",
-      "timezoneBody": "Hour, weekday, date, week, and month use {{timeZone}}. Multiple drives on one local day count as separate observations.",
+      "timezoneBody": "Hour, weekday, date, week, and month use your selected time zone. Multiple drives on one local day count as separate observations.",
       "timezoneTitle": "Vehicle-local calendar",
       "title": "Methodology and limitations"
     },
@@ -30430,13 +30626,13 @@
         "window": "Vehicle-local window"
       },
       "monthAria": "Vehicle-local monthly trend of route-normalized duration, observed allowance share, and samples",
-      "monthDescription": "Months use {{timeZone}} and may retain residual route-mix effects when route support changes.",
+      "monthDescription": "Months use your selected time zone and may retain residual route-mix effects when route support changes.",
       "monthSubtitle": "Observed supported-route timing by vehicle-local month, normalized within each route.",
       "monthTitle": "Local-month timing trend",
       "normalizedSeries": "Route-normalized duration index",
       "samplesSeries": "Samples",
       "weekdayAria": "Seven-day vehicle-timezone profile of route-normalized duration, observed allowance share, and samples",
-      "weekdayDescription": "Multiple drives on one local day count separately; weekday labels use {{timeZone}}.",
+      "weekdayDescription": "Multiple drives on one local day count separately; weekday labels use your selected time zone.",
       "weekdaySubtitle": "Route-normalized duration, observed allowance share, and separate drive counts by local weekday.",
       "weekdayTitle": "Vehicle-timezone weekday profile",
       "windowAria": "Twelve-bin vehicle-local departure-window profile of route-normalized duration, observed allowance share, and samples",
@@ -30520,7 +30716,7 @@
       "allowance": "Observed within-allowance share",
       "consistency": "Timing consistency",
       "highestLabel": "Highest observed timing consistency",
-      "localWindow": "{{window}} in {{timeZone}}",
+      "localWindow": "{{window}}",
       "lowestLabel": "Lowest observed timing consistency",
       "p50": "Observed p50",
       "p90": "Observed p90",
@@ -30611,7 +30807,7 @@
     "method": {
       "boundariesBody": "Incomplete, invalid, future, nonpositive-duration, and unknown-end rows remain chronological boundaries whenever their start can be placed. An unplaceable start creates a source-order boundary while unrelated placed segments remain analyzable. The model never bridges over a known unusable row.",
       "boundariesTitle": "Sequence boundaries",
-      "calendarBody": "Hour, weekday, date, week, and month use {{timeZone}}. Multiple drives on one local day remain separate visits. Only the latest {{limit}} returned rows are requested.",
+      "calendarBody": "Hour, weekday, date, week, and month use your selected time zone. Multiple drives on one local day remain separate visits. Only the latest {{limit}} returned rows are requested.",
       "calendarTitle": "Vehicle-local calendar and cap",
       "continuityBody": "Adjacent rows connect only when normalized addresses match or valid coordinates are within {{meters}} m, and the current start does not overlap the previous end. {{maxGap}}",
       "continuityTitle": "Endpoint continuity",
@@ -30649,7 +30845,7 @@
         "concentration": "Transition concentration index",
         "count": "Accepted transitions"
       },
-      "subtitle": "Accepted transition starts grouped by calendar month in {{timeZone}}.",
+      "subtitle": "Accepted transition starts grouped by calendar month in your selected time zone.",
       "title": "Local-month transition trend"
     },
     "originChart": {
@@ -30785,7 +30981,7 @@
         "concentration": "Transition concentration index",
         "count": "Accepted transitions"
       },
-      "subtitle": "Accepted transitions use the current drive start in {{timeZone}}; multiple drives per day remain separate samples.",
+      "subtitle": "Accepted transitions use the current drive start in your selected time zone; multiple drives per day remain separate samples.",
       "title": "Vehicle-local two-hour transition profile"
     },
     "visitShare": {
@@ -30818,7 +31014,7 @@
         "concentration": "Transition concentration index",
         "count": "Accepted transitions"
       },
-      "subtitle": "Accepted transition starts grouped by weekday in {{timeZone}}.",
+      "subtitle": "Accepted transition starts grouped by weekday in your selected time zone.",
       "title": "Vehicle-timezone weekday profile"
     },
     "colLabel": "Category",
@@ -30923,14 +31119,14 @@
     },
     "startProfile": {
       "title": "Local two-hour journey-start profile",
-      "subtitle": "Journey starts grouped in the vehicle timezone {{timeZone}}.",
+      "subtitle": "Journey starts grouped in your selected time zone.",
       "aria": "Bar chart of observed journey starts by local two-hour period",
       "period": "Local period",
       "journeys": "Journeys"
     },
     "weekday": {
       "title": "Weekday journey-start profile",
-      "subtitle": "Local weekday counts use the normalized vehicle timezone.",
+      "subtitle": "Local weekday counts use your selected time zone.",
       "aria": "Bar chart of observed journey starts by local weekday",
       "day": "Weekday",
       "journeys": "Journeys",
@@ -30991,7 +31187,7 @@
       "continuity": "A linked pair needs adjacent included records, non-overlapping timestamps, matching normalized addresses or GPS within {{meters}} m, and a gap at or below {{minutes}} minutes.",
       "invariant": "Each included drive belongs to one observed journey, so journey count equals included drives minus linked pairs.",
       "energy": "Energy intensity uses complete-energy journeys only and is reported in canonical Wh/m before display-unit formatting; coverage and support remain visible.",
-      "clock": "The analysis clock is fixed at page load and calendar profiles use the vehicle IANA timezone: {{timeZone}}.",
+      "clock": "The analysis clock is fixed at page load and calendar profiles use your selected time zone.",
       "scope": "Returned history is capped at {{limit}} rows and is not a claim about lifetime history. Structural indicators and observed energy-intensity differences do not establish intent or causality."
     },
     "footer": {
@@ -31089,15 +31285,15 @@
     },
     "calendar": {
       "title": "Vehicle-local calendar coverage",
-      "subtitle": "Month and date fields use the vehicle IANA timezone, including DST boundaries.",
+      "subtitle": "Month and date fields use your selected time zone, including DST boundaries.",
       "months": "Calendar months",
       "monthHint": "distinct months of year",
       "span": "Observed span",
       "spanHint": "first to last included start",
       "active": "Active local periods",
       "activeHint": "days / weeks",
-      "zone": "Timezone",
-      "rows": "{{count}} included rows"
+      "zone": "Included rows",
+      "rows": "included rows"
     },
     "support": {
       "title": "Evidence support and fit eligibility",
@@ -31230,7 +31426,7 @@
       "eligibilityTitle": "Eligibility",
       "eligibility": "A completed non-live drive needs valid local calendar fields, positive duration, at least the distance floor, finite positive energy, and plausible canonical Wh/m intensity.",
       "scopeTitle": "Scope",
-      "scope": "The result describes the returned latest history in {{timeZone}}. Weather, temperature, route mix, tyres, firmware, charging losses, and driving behavior are not modeled or attributed.",
+      "scope": "The result describes the returned latest history in your selected time zone. Weather, temperature, route mix, tyres, firmware, charging losses, and driving behavior are not modeled or attributed.",
       "disclosure": "R² is an in-sample descriptive fit statistic and is null for constant observations. Residual bands and support bands describe this returned sample only; they are not a promise about an unobserved interval.",
       "accounting": "Returned: {{returned}} · included: {{included}} · excluded: {{excluded}} · fit: {{fit}}"
     },
@@ -31441,14 +31637,15 @@
       "flags": "Pairing signals",
       "chargeId": "Charge ID",
       "driveId": "Drive ID",
-      "detailsScope": "All loaded pairs, newest first. “Well matched” means no model flag was triggered, not proof of intent. Already-full dwell is inferred from charge-end SoC, not continuous parked measurements. Dates use your browser timezone.",
+      "detailsScope": "All loaded pairs, newest first. “Well matched” means no model flag was triggered, not proof of intent. Already-full dwell is inferred from charge-end SoC, not continuous parked measurements. Dates use your selected time zone.",
       "pending": "Both charging and drive history must be loaded before pairings can be evaluated.",
       "chargeBounds": "Observed charge-end timestamps",
-      "chartTime": "Chart timestamps use {{zone}}. Pairing uses elapsed instants within 24 hours, not local calendar dates or a business timezone.",
+      "chartTime": "Chart timestamps use your selected time zone. Pairing uses elapsed instants within 24 hours, not local calendar dates or a separate business timezone.",
       "driveBounds": "Observed drive-start timestamps",
       "paused": "History loading is paused. Connect to resume or retry this source.",
       "loaded": "{{count}} records loaded",
       "bounds": "{{first}} → {{last}} ({{count}} valid timestamps)",
+      "singleBound": "{{when}} (valid timestamp count: {{count}})",
       "noBounds": "No valid observed timestamps available."
     },
     "title": "Charge → Departure alignment",
@@ -31787,7 +31984,7 @@
       "metricsTitle": "Descriptive metrics",
       "metricsBody": "Equivalent full cycles sum count x depth fraction. The depth-weighted index sums count x depth fraction raised to exponent {{exponent}}. The exponent is illustrative and selectable; it is not a Tesla or cell-manufacturer damage curve.",
       "calendarTitle": "Vehicle-local calendar",
-      "calendarBody": "Cycle closure months, active days, and active weeks use {{timeZone}}. The analysis clock is frozen when the page mounts so future-row classification does not drift during the session.",
+      "calendarBody": "Cycle closure months, active days, and active weeks use your selected time zone. The analysis clock is frozen when the page mounts so future-row classification does not drift during the session.",
       "supportTitle": "Support, not confidence",
       "supportBody": "The support index combines interval volume, weighted-cycle volume, active weeks, recency, and represented source types. It describes evidence breadth, not statistical confidence or pack condition.",
       "scopeTitle": "Capped historical scope",
@@ -31815,7 +32012,7 @@
       "commonOverlap": "Common source overlap",
       "overlapHint": "calendar time covered by both sources",
       "combinedSpan": "Combined observed span",
-      "localCalendar": "{{zone}} local calendar",
+      "localCalendar": "Selected-zone local calendar",
       "activeDays": "Active local days",
       "retainedEndpoints": "days with retained endpoints",
       "requestCaps": "Per-source request cap",
@@ -32775,8 +32972,8 @@
       "title": "Archetype centroid map"
     },
     "method": {
-      "featuresBody": "The standardized feature space uses log distance, average speed, circular hour in {{timeZone}} as sine and cosine, energy per distance, and outside temperature. Missing eligible temperature uses the eligible measured median and remains marked imputed.",
-      "featuresDefaultBody": "The standardized feature space uses log distance, average speed, circular hour in {{timeZone}} as sine and cosine, energy per distance, and outside temperature. Because no eligible measured temperature exists, missing temperature uses the configured default and remains marked imputed.",
+      "featuresBody": "The standardized feature space uses log distance, average speed, circular hour in your selected time zone as sine and cosine, energy per distance, and outside temperature. Missing eligible temperature uses the eligible measured median and remains marked imputed.",
+      "featuresDefaultBody": "The standardized feature space uses log distance, average speed, circular hour in your selected time zone as sine and cosine, energy per distance, and outside temperature. Because no eligible measured temperature exists, missing temperature uses the configured default and remains marked imputed.",
       "featuresTitle": "Features and imputation",
       "labelsBody": "Rules run in order: at least {{roadTrip}} is long-distance; at least {{highwayDistance}} and {{highwaySpeed}} is highway; at most {{shortHop}} is short-hop; at most {{cold}} is cold-weather; then 05:30–10:29 and 15:30–20:29 receive morning or evening pattern labels. These are not verified commutes.",
       "labelsTitle": "Heuristic label rules",
@@ -34425,8 +34622,8 @@
       "importPeak": "Peak import price",
       "maxExport": "Max grid export",
       "maxImport": "Max grid import",
-      "peakEnd": "Peak window end (UTC hour)",
-      "peakStart": "Peak window start (UTC hour)",
+      "peakEnd": "Peak window end (hour)",
+      "peakStart": "Peak window start (hour)",
       "powerwallEnabled": "Present",
       "powerwallGroup": "Home battery (editable assumption)",
       "presetBalanced": "Balanced",
@@ -34448,7 +34645,7 @@
       "addVehicle": "Add a vehicle",
       "capacity": "Usable pack capacity",
       "currentSoc": "Current SoC (measured): {{pct}}%",
-      "departureHour": "Departure hour (UTC)",
+      "departureHour": "Departure hour",
       "empty": "No vehicles found on this account to orchestrate.",
       "hasDeadline": "Has departure deadline",
       "maxPower": "Max charge power",
@@ -34496,7 +34693,7 @@
     },
     "brief": {
       "eyebrow": "Whole-home planning",
-      "interval": "{{minutes}}-minute modeled slots · UTC · source coverage not established",
+      "interval": "{{minutes}}-minute modeled slots · source coverage not established",
       "loading": "Loading source inputs",
       "modeled": "Modeled recommendation",
       "partial": "Incomplete source inputs",
@@ -35569,7 +35766,7 @@
       "form": {
         "auxiliary": "Auxiliary load (canonical SI, optional)",
         "departure": "Departure",
-        "departureZone": "Enter departure in your browser time zone ({{timeZone}}). Display time zone preferences do not change this entry.",
+        "departureZone": "Enter departure in your selected time zone.",
         "distance": "Route distance (canonical SI)",
         "reserve": "Reserve target (%)",
         "run": "Run confirmed readiness assessment",
@@ -36707,8 +36904,8 @@
         "scoreHint": "0 = best, 100 = worst",
         "severity": "Severity index",
         "severityHint": "Expected claim size driver",
-        "overnightTripDistance": "Distance of trips starting overnight (UTC)",
-        "overnightTripDistanceHint": "Trip-start proxy: full distance of completed trips starting at or after 22:00 or before 05:00 UTC. Includes distance outside the band on qualifying trips and excludes distance inside the band on other trips; neither an upper nor a lower bound on actual night distance. Actual night-distance measurement requires owned model support for distance within time bands."
+        "overnightTripDistance": "Distance of trips starting overnight",
+        "overnightTripDistanceHint": "Trip-start proxy: full distance of completed trips starting at or after 22:00 or before 05:00 in the selected clock. Includes distance outside the band on qualifying trips and excludes distance inside the band on other trips; neither an upper nor a lower bound on actual night distance. Actual night-distance measurement requires owned model support for distance within time bands."
       },
       "subtitle": "Actuarial frequency × severity underwriting built from your own measured driving, with a premium simulation and ranked improvement levers.",
       "summary": {
@@ -36749,7 +36946,7 @@
       },
       "checksum": {
         "title": "Risk-summary checksum",
-        "subtitle": "A limited SHA-256 checksum of the vehicle ID, window bounds, risk score, frequency, severity and loss-cost indices, and ordered factor codes and observed rates at fixed precision. It does not verify identity or hash the complete evidence packet: raw exposure, other factor details, policy, premium, trend and evidence are not included. Matching checksums do not establish that the complete datasets are identical.",
+        "subtitle": "A limited SHA-256 checksum of the vehicle ID, window bounds, selected timezone, risk score, frequency, severity and loss-cost indices, and ordered factor codes and observed rates at fixed precision. It does not verify identity or hash the complete evidence packet: raw exposure, other factor details, policy, premium, trend and evidence are not included. Matching checksums do not establish that the complete datasets are identical.",
         "empty": "A risk-summary checksum is produced once a profile has been computed.",
         "hash": "Limited risk-summary checksum (SHA-256)"
       }
@@ -37719,7 +37916,9 @@
       "trailingWindow": "Trailing {{days}} days",
       "trailingWindow_one": "Trailing {{days}} day",
       "trailingWindow_other": "Trailing {{days}} days",
-      "windowReason": "The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source."
+      "windowReason": "The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source.",
+      "selectedWindow": "Selected workspace range",
+      "boundedSource": "Completed drives are filtered by the workspace start and exclusive end; live power remains a separate snapshot."
     },
     "metrics": {
       "estimated": "Estimated",
@@ -37805,7 +38004,8 @@
       "title": "Daily energy history",
       "noData": "No energy history records available.",
       "empty": "No energy records found."
-    }
+    },
+    "rangeLimit": "Choose a workspace range of at most 3650 days to view energy history."
   },
   "vehicleSystems": {
     "brief": {
@@ -37983,7 +38183,7 @@
   },
   "wait_oracle": {
     "title": "Supercharger wait oracle",
-    "subtitle": "Expected queue wait per site and arrival time, predicted from your fleet charging history. All hours UTC.",
+    "subtitle": "Expected queue wait per site and arrival time, predicted from your fleet charging history.",
     "site": "Site",
     "sessions": "{{count}} sessions",
     "pickSite": "Select a site",
@@ -37997,7 +38197,7 @@
     "expectedWait": "{{min}} min expected wait",
     "confidence": "{{level}} confidence",
     "waitProb": "{{pct}}% chance of any wait · ~{{stalls}} stalls",
-    "bestHour": "Arrive {{hour}}:00 UTC instead to save ~{{min}} min.",
+    "bestHour": "Arrive {{hour}}:00 instead to save ~{{min}} min.",
     "verdict": {
       "quiet": "Quiet",
       "steady": "Steady",
@@ -38010,10 +38210,10 @@
       "low": "Low"
     },
     "chart": {
-      "title": "Wait across the arrival day (UTC)",
+      "title": "Wait across the arrival day",
       "aria": "Expected wait minutes by hour of day",
       "col": {
-        "hour": "Hour (UTC)",
+        "hour": "Hour",
         "wait": "Expected wait (min)"
       }
     }
@@ -38858,7 +39058,8 @@
       "provenance": "Historical inputs and derived fits; source eligibility, assumptions and uncertainty apply. Counts are not a health grade.",
       "pressureImbalance": "Reported corner-pressure imbalance in the selected source window.",
       "underinflation": "Source underinflation fraction relative to the assumed placard pressure."
-    }
+    },
+    "rangeLimit": "Choose a workspace range of at most 30 days to view science evidence."
   },
   "serverConnect": {
     "connect": {
@@ -39766,6 +39967,14 @@
     }
   },
   "powerSql": {
+    "timestampColumns": {
+      "driveStart": "Drive start instant.",
+      "driveEnd": "Drive end instant.",
+      "sessionStart": "Session start instant.",
+      "sessionEnd": "Session end instant.",
+      "alertFired": "Alert firing instant.",
+      "sample": "Sample instant."
+    },
     "editor": {
       "copyFailed": "Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C.",
       "run": "Run",
@@ -40119,6 +40328,14 @@
   },
   "powerGrafana": {
     "title": "Grafana panel builder",
+    "timestampColumns": {
+      "driveStart": "Drive start instant.",
+      "driveEnd": "Drive end instant.",
+      "sessionStart": "Session start instant.",
+      "sessionEnd": "Session end instant.",
+      "alertFired": "Alert firing instant.",
+      "sample": "Sample instant."
+    },
     "summary": {
       "panelTypes": "Panel types",
       "datasources": "Datasources",

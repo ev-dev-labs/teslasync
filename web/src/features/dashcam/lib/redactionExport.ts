@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import type { ClipRecord, EventCandidate, RedactionRegion } from './types';
 import type { ReconstructionResult } from './timelineAlignment';
 
@@ -111,7 +112,7 @@ export function drawRedactedFrame(
   regions: RedactionRegion[],
 ): void {
   ctx.drawImage(videoSource, 0, 0, frameWidth, frameHeight);
-  ctx.fillStyle = '#000000';
+  ctx.fillStyle = palette.DATA_VISUAL_COLORS.canvasInk;
   for (const region of regions) {
     ctx.fillRect(
       region.x * frameWidth,

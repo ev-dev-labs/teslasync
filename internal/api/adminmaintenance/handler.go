@@ -14,6 +14,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
+	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // Authenticated operators can update the service-mode banner; the audit row is
@@ -176,7 +177,7 @@ func (h *AdminMaintenanceHandler) Set(w http.ResponseWriter, r *http.Request) {
 		log.Debug().Str("mode", mode).Msg("admin maintenance: setting non-ok mode without message")
 	}
 
-	actor := actorFromRequest(r, h.authHdr)
+	actor := httputil.ActorIdentity(r, h.authHdr)
 	state, err := h.store.Set(r.Context(), mode, message, untilTime, actor)
 	if err != nil {
 		if errors.Is(err, systemdb.ErrInvalidSystemMode) {
@@ -288,14 +289,6 @@ func BuildMaintenanceProvider(store SystemStateStore, cfg *config.Config) func(c
 		}
 		return view
 	}
-}
-
-// actorFromRequest resolves the user identity for the system_state updated_by field.
-func actorFromRequest(r *http.Request, headerName string) string {
-	if r == nil || headerName == "" {
-		return ""
-	}
-	return strings.TrimSpace(r.Header.Get(headerName))
 }
 
 // parseEnvUntil tolerates a malformed env value by returning nil so

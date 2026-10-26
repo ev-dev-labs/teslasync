@@ -265,14 +265,15 @@ describe('FSDInsightsPage', () => {
       expect(screen.getByTestId(id)).toHaveTextContent('ready:16093.44');
     }
     expect(useFsdInsightsMock).toHaveBeenCalledWith(
-      '42', expect.any(String), expect.any(String), Intl.DateTimeFormat().resolvedOptions().timeZone,
+      '42', expect.any(String), expect.any(String), 'UTC',
     );
     expect(pageTitleMock).toHaveBeenCalledWith('FSD Insights');
   });
 
   it('uses a shared custom date link instead of the retired days filter', () => {
     renderPage('/fsd?from=2026-05-01&to=2026-05-07');
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // Bare renders resolve the display zone to UTC (global timezone mock).
+    const timezone = 'UTC';
     const { startInstant, endInstantExclusive } = calendarRangeToInstants({
       startDate: '2026-05-01',
       endDate: '2026-05-07',
@@ -305,7 +306,8 @@ describe('FSDInsightsPage', () => {
 
   it('prefers an explicit shared range over an obsolete days parameter', async () => {
     renderPage('/fsd?days=90&from=2026-05-01&to=2026-05-07');
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // Bare renders resolve the display zone to UTC (global timezone mock).
+    const timezone = 'UTC';
     const { startInstant, endInstantExclusive } = calendarRangeToInstants({
       startDate: '2026-05-01', endDate: '2026-05-07', timezone,
     });

@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
@@ -10,10 +10,20 @@ import { DayLogOperationalSummary } from './DayLogOperationalSummary';
 
 vi.unmock('react-i18next');
 
+const displayZone = vi.hoisted(() => ({ value: 'UTC' }));
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
+  return { ...actual, useTimezone: () => displayZone.value };
+});
+
 let i18n: Awaited<ReturnType<typeof createEnglishI18n>>;
 
 beforeAll(async () => {
   i18n = await createEnglishI18n();
+});
+
+beforeEach(() => {
+  displayZone.value = 'UTC';
 });
 
 function response(overrides: Partial<DayLogResponse> = {}): DayLogResponse {
@@ -52,7 +62,6 @@ function renderSummary(overrides: Partial<ComponentProps<typeof DayLogOperationa
         <DayLogOperationalSummary
           data={response()}
           date="2026-10-10"
-          timezone="Europe/London"
           isLoading={false}
           error={null}
           status="ok"
@@ -200,16 +209,38 @@ describe('DayLogOperationalSummary', () => {
     assertOperationalMetricUnavailable(screen.getByTestId('day-log-summary'), 'Drive time');
   });
 
-  it('preserves server scope and exclusive day bounds in the details provenance', () => {
+  it('shows the vehicle day once, formatted, in the details provenance', () => {
     renderSummary({ data: response({ truncated: true }) });
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
 
     const details = screen.getByRole('dialog');
-    expect(details).toHaveTextContent('2026-10-11 · UTC');
-    expect(details).toHaveTextContent('[2026-10-11T00:00:00Z, 2026-10-12T00:00:00Z) · end exclusive');
+    expect(details).toHaveTextContent('Selected vehicle day · Oct 11, 2026');
+    expect(details).not.toHaveTextContent('2026-10-11 · UTC');
+    expect(details).not.toHaveTextContent('[2026-10-11T00:00:00Z, 2026-10-12T00:00:00Z)');
+    const period = within(details).getByText('Analysis period').closest('dt')?.nextElementSibling;
+    expect(period).toHaveTextContent('[Oct 11, 2026, 12:00 AM, Oct 12, 2026, 12:00 AM) · end exclusive');
     expect(details).toHaveTextContent('Recorded drives and charging sessions for the selected vehicle day. Signal transitions and per-source availability remain in Timeline and Sources.');
     expect(details).toHaveTextContent(capNotice);
     expect(within(details).getByText('Distance').parentElement?.parentElement).toHaveTextContent('25.00 km');
+  });
+
+  it('formats authoritative half-open bounds in the selected zone across DST without changing wire instants', () => {
+    displayZone.value = 'America/Los_Angeles';
+    const data = response({
+      date: '2026-03-08', timezone: 'America/Los_Angeles',
+      day_start: '2026-03-08T08:00:00Z', day_end: '2026-03-09T07:00:00Z',
+    });
+    renderSummary({ data });
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog');
+    const period = within(details).getByText('Analysis period').closest('dt')?.nextElementSibling;
+    expect(period).toHaveTextContent('[Mar 8, 2026, 12:00 AM, Mar 9, 2026, 12:00 AM) · end exclusive');
+    expect(details).toHaveTextContent('Selected vehicle day · Mar 8, 2026');
+    expect(details).not.toHaveTextContent('2026-03-08T08:00:00Z');
+    expect(details).not.toHaveTextContent('America/Los_Angeles');
+    expect(data.day_start).toBe('2026-03-08T08:00:00Z');
+    expect(data.day_end).toBe('2026-03-09T07:00:00Z');
+    expect(Date.parse(data.day_end) - Date.parse(data.day_start)).toBe(23 * 60 * 60 * 1000);
   });
 
   it('preserves loading suppression without fabricating complete or measured zero history', () => {
@@ -223,11 +254,12 @@ describe('DayLogOperationalSummary', () => {
     expect(screen.getByTestId('day-log-summary').querySelector('[data-operational-value]')).toBeNull();
   });
 
-  it('preserves unknown summary values and unknown bounds without claiming cap loss', () => {
+  it('preserves unknown summary values and the formatted day without claiming cap loss', () => {
     renderSummary({ data: null, status: 'unavailable' });
 
     assertOperationalBriefDisclosure(screen.getByTestId('day-log-summary'), 'Day summary unavailable');
-    assertOperationalBriefDisclosure(screen.getByTestId('day-log-summary'), 'Recorded day bounds unavailable');
+    assertOperationalBriefDisclosure(screen.getByTestId('day-log-summary'), 'Selected vehicle day · Oct 10, 2026');
+    assertOperationalBriefDisclosure(screen.getByTestId('day-log-summary'), 'Recorded day bounds unavailable', { region: 'drawer' });
     expect(screen.queryByText(capNotice)).not.toBeInTheDocument();
     for (const label of ['Drives', 'Charges', 'Drive time', 'Distance', 'Energy added', 'Energy used']) {
       assertOperationalMetricUnavailable(screen.getByTestId('day-log-summary'), label);

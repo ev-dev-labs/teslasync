@@ -8,6 +8,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/tou"
+
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
 
@@ -129,12 +131,7 @@ func ComputeQueue(vehicles []QueueVehicle, chargerKW float64, now time.Time) (Qu
 }
 
 func parseClock(s string) (int, int, error) {
-	var h, m int
-	n, err := fmt.Sscanf(s, "%d:%d", &h, &m)
-	if err != nil || n != 2 || h < 0 || h > 23 || m < 0 || m > 59 || len(s) != 5 {
-		return 0, 0, fmt.Errorf("ready_by must be HH:MM (24h)")
-	}
-	return h, m, nil
+	return tou.ParseClock(s)
 }
 
 func slotList(slots []QueueSlot) string {

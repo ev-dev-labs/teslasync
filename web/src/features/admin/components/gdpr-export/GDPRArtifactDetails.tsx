@@ -140,7 +140,7 @@ function CopyValue({ text }: { text: string | null | undefined }) {
 function TimeValue({ iso }: { iso: string | null | undefined }) {
   return (
     <>
-      <Text variant="bodySm" as="div" title={iso ?? undefined}>
+      <Text variant="bodySm" as="div">
         {formatDateTime(iso)}
       </Text>
       <Caption>{formatRelative(iso)}</Caption>

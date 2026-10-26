@@ -18,6 +18,7 @@
  *
  * Raw odometer observations remain separate from driven-distance metrics.
  */
+import { CHART_SEMANTIC } from '@/lib/colors';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import type { ChargingSession } from '@/api/types';
@@ -432,9 +433,9 @@ describe('useCostAnalysisData — chargerTypeData & hourlyData', () => {
     ]);
     expect(groups.map((g) => g.cost)).toEqual([5, 4, 0]);
     expect(groups.map((g) => g.energy)).toEqual([10, 20, 15]);
-    expect(groups[0].color).toBe('#ef4444'); // Supercharger
-    expect(groups[1].color).toBe('#10b981'); // Home
-    expect(groups[2].color).toBe('#a855f7'); // Public DC
+    expect(groups[0].color).toBe(CHART_SEMANTIC.charger.supercharger); // Supercharger
+    expect(groups[1].color).toBe(CHART_SEMANTIC.charger.home); // Home
+    expect(groups[2].color).toBe(CHART_SEMANTIC.charger.dc); // Public DC
   });
 
   it('spreads sessions across 24 hourly buckets, energy in kWh', () => {
@@ -909,4 +910,10 @@ describe('useCostAnalysisData — hardening', () => {
       expect(result.lifetimeMetrics?.avgDuration).toBe(0.25);
     });
   });
+});
+
+it.each(['__proto__','constructor','SpacePort'])('preserves unknown server category %s without object-key collisions',code=>{
+ const {current}=render({sessions:[makeSession({charger_type:code})]});
+ expect(current.chargerTypeData[0].name).toBe(code);
+ expect(current.chargerTypeData[0].sessions).toBe(1);
 });

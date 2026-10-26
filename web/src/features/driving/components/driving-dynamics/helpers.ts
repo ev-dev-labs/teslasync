@@ -1,3 +1,4 @@
+import * as palette from '@/lib/colors';
 import type { MotorSnapshot } from '@/api/types';
 
 /* ---- Shared types ---- */
@@ -33,10 +34,10 @@ export function gForceColor(g: number): string {
   // magnitude instead of collapsing every negative value into the calm green
   // band. Non-finite telemetry falls back to the neutral band.
   const mag = Number.isFinite(g) ? Math.abs(g) : 0;
-  if (mag < 0.2) return '#22c55e';
-  if (mag < 0.4) return '#3b82f6';
-  if (mag < 0.6) return '#eab308';
-  return '#ef4444';
+  if (mag < 0.2) return palette.COLOR.GOOD;
+  if (mag < 0.4) return palette.DATA_VISUAL_COLORS.blue;
+  if (mag < 0.6) return palette.COLOR.WARN;
+  return palette.COLOR.BAD;
 }
 
 /* ---- Constants ---- */

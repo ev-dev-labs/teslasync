@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowUpCircle, Link2 } from 'lucide-react';
-import { Badge, Subhead, Text } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { useVehicleUpgrades, useVehicles } from '@/api/hooks/useVehicles';
 import { useShareLinks } from '@/api/hooks/useSharing';
@@ -12,7 +11,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { combineDataStates } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetDetailCard } from './shared';
+import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 
 /** Safely extract a string from an unknown value */
@@ -74,7 +73,7 @@ export function daysUntil(dateStr: string | null): number | null {
 
 export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { formatDate: fmtDate } = useDateFormat();
+  const { formatRelative: fmtRelative } = useDateFormat();
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const vehiclesQuery = useVehicles();
   const numericId = vehicleId ?? safeArray(vehiclesQuery.data)[0]?.id ?? 0;
@@ -105,7 +104,6 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
 
   const upgradesData = envelope?.data ?? null;
   const isCompact = size.cols <= 1;
-  const isWide = size.cols >= 3;
 
   const unknownName = t('widget.subscriptions.unknown', 'Unknown');
   const upgrades = useMemo(() => parseUpgrades(upgradesData, unknownName), [upgradesData, unknownName]);
@@ -135,13 +133,6 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
     [shareLinks],
   );
 
-  const nearestExpiry = useMemo(() => {
-    const withExpiry = activeShareLinks
-      .filter((l) => l.expires_at)
-      .sort((a, b) => (daysUntil(a.expires_at) ?? Infinity) - (daysUntil(b.expires_at) ?? Infinity));
-    return withExpiry[0] ?? null;
-  }, [activeShareLinks]);
-
   const refresh = () => {
     if (!stringId) {
       void vehiclesQuery.refetch();
@@ -165,7 +156,7 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
     retry: refresh,
   };
   const shellProps = {
-    title: t('widget.upgrades.title', 'Upgrades & sharing'),
+    title: t('widget.upgrades.title', 'Upgrades & Sharing'),
     loading: upgradesLoading,
     dataState: state,
     updatedAt: stringId ? state.updatedAt ?? upgradesUpdatedAt ?? 0 : vehiclesState.updatedAt ?? 0,
@@ -184,7 +175,7 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
   if (!stringId) {
     return <WidgetShell {...shellProps}>
       <EmptyState icon={<ArrowUpCircle className="h-5 w-5" />}
-        message={t('widget.noVehicle', 'No vehicle')}
+        message={t('widget.noVehicle', 'No vehicle data')}
         actionTo={{ label: t('widget.chooseVehicle', 'Choose vehicle'), to: '/vehicles' }} />
     </WidgetShell>;
   }
@@ -205,56 +196,21 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
       icon={<ArrowUpCircle className="h-3.5 w-3.5 text-emerald-400" />}
       {...shellProps}
     >
-      <div className="overflow-y-auto h-full space-y-3">
+      <div className="h-full space-y-3 overflow-y-auto">
         {/* Upgrades section */}
         <div>
-          <Subhead className="mb-2">
+          <div className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
             {t('widget.upgrades.upgradesHeading', 'Available upgrades')}
-          </Subhead>
+          </div>
           {upgradesState.fatalError ? (
             <QueryError error={upgradesState.fatalError} onRetry={() => { void refetchUpgrades(); }} />
           ) : upgradesState.status === 'initial' ? <Skeleton className="h-20" /> : upgrades.length > 0 ? (
-            <div className="space-y-2">
-              {upgrades.map((upgrade, index) => (
-                <div
-                  key={`${upgrade.name}-${index}`}
-                  className="flex items-start justify-between gap-2 py-1.5 px-1 border-b border-[var(--border-default)] last:border-b-0"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <Text variant="bodySm" className="min-w-0 break-words [overflow-wrap:anywhere]">
-                        {upgrade.name}
-                      </Text>
-                      {upgrade.price && (
-                        <Badge variant="neutral" size="sm" className="max-w-full whitespace-normal break-words">
-                          {formatPrice(upgrade.price)}
-                        </Badge>
-                      )}
-                    </div>
-                    {upgrade.description && (
-                      <Text variant="bodySm" className="mt-0.5 block break-words [overflow-wrap:anywhere]">
-                        {upgrade.description}
-                      </Text>
-                    )}
-                    {isWide && (
-                      <Text variant="caption" className="mt-0.5 block">
-                        {upgrade.eligible
-                          ? t('widget.upgrades.eligible', 'Eligible')
-                          : t('widget.upgrades.notEligible', 'Not eligible')}
-                      </Text>
-                    )}
-                  </div>
-                  <Badge
-                    variant={upgrade.eligible ? 'success' : 'neutral'}
-                    size="sm"
-                  >
-                    {upgrade.eligible
-                      ? t('widget.upgrades.eligible', 'Eligible')
-                      : t('widget.upgrades.notEligible', 'Not eligible')}
-                  </Badge>
-                </div>
-              ))}
-            </div>
+            <WidgetDetailCard entries={upgrades.map((upgrade, index): DetailEntry => ({
+              id: `${upgrade.name}-${index}`,
+              label: upgrade.name,
+              sublabel: upgrade.description ?? undefined,
+              value: formatPrice(upgrade.price),
+            }))} />
           ) : (
             <EmptyState /* no-action: eligibility evidence cannot be created in this widget */
               message={emptyMessage} className="py-3" />
@@ -266,23 +222,40 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
 
         {/* Share Links section */}
         <div>
-          <Subhead className="mb-2 flex items-center gap-1.5">
+          <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)]">
             <Link2 className="h-3 w-3" />
             {t('widget.upgrades.shareLinksHeading', 'Share links')}
-          </Subhead>
+          </div>
           {sharingState.fatalError ? (
             <QueryError error={sharingState.fatalError} onRetry={() => {
               void drivesQuery.refetch();
               if (recentDriveId) void shareLinksQuery.refetch();
             }} />
           ) : sharingState.status === 'initial' ? <Skeleton className="h-16" /> : activeShareLinks.length > 0 ? (
-            <WidgetDetailCard entries={[
-              { label: t('widget.upgrades.activeLinks', 'Active links'), value: fmtInt(activeShareLinks.length) },
-              ...(nearestExpiry ? [{
-                label: t('widget.upgrades.nearestExpiry', 'Nearest expiry'),
-                value: fmtDate(nearestExpiry.expires_at) ?? '—',
-              }] : []),
-            ]} />
+            <WidgetDetailCard entries={activeShareLinks.map((link, index): DetailEntry => {
+              const details: string[] = [];
+              if (link.expires_at) {
+                const relativeExpiry = fmtRelative(link.expires_at);
+                if (relativeExpiry && relativeExpiry !== '—') {
+                  details.push(t('share.expiresOn', 'Expires {{date}}', { date: relativeExpiry }));
+                }
+              }
+              if (link.views > 0) {
+                details.push(`${fmtInt(link.views)} ${t('share.views', 'views')}`);
+              }
+              return {
+                id: link.id || `${link.token}-${index}`,
+                label: link.title?.trim() || link.description?.trim()
+                  || t('share.untitled', 'Untitled share'),
+                sublabel: details.length > 0 ? details.join(' · ') : undefined,
+                value: null,
+                badge: {
+                  text: t('live.connected', 'Live'),
+                  variant: 'success',
+                },
+                status: 'success',
+              };
+            })} />
           ) : (
             <EmptyState
               icon={<Link2 className="h-5 w-5" />}

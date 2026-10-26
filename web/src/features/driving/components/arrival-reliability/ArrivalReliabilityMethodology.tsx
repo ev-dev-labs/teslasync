@@ -24,7 +24,6 @@ interface ArrivalReliabilityMethodologyProps {
 
 export function ArrivalReliabilityMethodology({
   analysis,
-  timeZone,
 }: ArrivalReliabilityMethodologyProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
@@ -86,8 +85,7 @@ export function ArrivalReliabilityMethodology({
       ),
       body: t(
         'arrivalReliability.method.timezoneBody',
-        'Hour, weekday, date, week, and month use {{timeZone}}. Multiple drives on one local day count as separate observations.',
-        { timeZone },
+        'Hour, weekday, date, week, and month use your selected time zone. Multiple drives on one local day count as separate observations.',
       ),
     },
     {

@@ -3,14 +3,33 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors'
+import { CHART_COLORS_CB_SAFE, CHART_COLORS_DARK, CHART_COLORS_NEON, CHART_COLORS_NEON_DARK } from '@/lib/colors'
 import { themePresets } from '@/components/ui/themePresets'
 import { resolveChartPalette } from '@/hooks/useChartPalette'
-import { TeslaApiUsageHistory, toUtcUsageRange } from '../TeslaApiUsageHistory'
+import { TeslaApiUsageHistory } from '../TeslaApiUsageHistory'
+import { calendarRangeToInstants } from '@/lib/dateRange'
 const appearance = vi.hoisted(() => ({
   palette: 'cb_safe',
   modeId: 'dark',
+  timezone: 'UTC',
 }))
+const selectedRange = vi.hoisted(() => ({ start: '2024-01-01', end: '2024-01-07' }))
+vi.mock('@/hooks/useRangeState', () => ({
+  useRangeState: () => ({
+    ...selectedRange, timezone: appearance.timezone,
+    ...calendarRangeToInstants({
+      startDate: selectedRange.start, endDate: selectedRange.end, timezone: appearance.timezone,
+    }),
+  }),
+}))
+vi.mock('@/lib/timezone', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/lib/timezone')>()
+  return {
+    ...actual,
+    useTimezone: (mode: Parameters<typeof actual.useTimezone>[0] = 'vehicle') =>
+      actual.resolveTimezone(mode, 'Asia/Tokyo', appearance.timezone),
+  }
+})
 const theme = {
   id: 'neon-cyan' as const, name: 'Signal Blue',
   primary: '#91b4d2', primaryRGB: '145, 180, 210',
@@ -28,7 +47,10 @@ vi.mock('@/components/ui/ThemeProvider', async importOriginal => ({
 }))
 vi.mock('@/hooks/useSettings', async importOriginal => ({
   ...await importOriginal<typeof import('@/hooks/useSettings')>(),
-  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+  useSettings: () => ({ settings: {
+    locale: 'en-US', decimal_precision: 2, currency_symbol: '$',
+    tz_display_default: 'user', timezone_user: appearance.timezone,
+  }, settingsUnavailable: false }),
 }));
 
 const useHistory = vi.hoisted(() => vi.fn())
@@ -59,10 +81,6 @@ vi.mock('react-i18next', () => ({
 }))
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({ formatCurrency: (amount: number) => `$${amount.toFixed(4)}` }),
-}))
-vi.mock('@/components/forms', () => ({
-  RangePicker: ({ onChange }: { onChange: (range: { start: string; end: string }) => void }) =>
-    <button onClick={() => onChange({ start: '2024-01-01', end: '2024-01-07' })}>Older range</button>,
 }))
 vi.mock('@/components/ui', async importOriginal => ({
   ...await importOriginal<typeof import('@/components/ui')>(),
@@ -113,6 +131,9 @@ const point = {
 beforeEach(() => {
   appearance.palette = 'cb_safe'
   appearance.modeId = 'dark'
+  appearance.timezone = 'UTC'
+  selectedRange.start = '2024-01-01'
+  selectedRange.end = '2024-01-07'
   useHistory.mockReset()
   chartContainer.mockClear()
   chartBar.mockClear()
@@ -134,20 +155,25 @@ describe('Tesla usage selected history', () => {
       expect(trend.data).toEqual([{ bucket_start: point.bucket_start, signals: 1, commands: 1, data_requests: 1, wakes: 1 }])
       for (const chart of [distribution, trend]) expect(chart.exportData).toEqual(chart.data)
     }
-    verify(CHART_COLORS_CB_SAFE)
+    verify(CHART_COLORS_DARK)
     appearance.palette = 'neon'
     rerender(<TeslaApiUsageHistory />)
-    verify(CHART_COLORS_NEON)
+    verify(CHART_COLORS_NEON_DARK)
     appearance.modeId = 'github-light'
     rerender(<TeslaApiUsageHistory />)
     const lightPalette = resolveChartPalette('neon', {
       theme, mode: themePresets.find(mode => mode.id === 'github-light')!,
     })
-    expect(lightPalette).not.toEqual(CHART_COLORS_NEON)
+    expect(lightPalette).toEqual(CHART_COLORS_NEON)
+    expect(lightPalette).not.toEqual(CHART_COLORS_NEON_DARK)
     verify(lightPalette)
     appearance.modeId = 'dark'
     rerender(<TeslaApiUsageHistory />)
-    verify(CHART_COLORS_NEON)
+    verify(CHART_COLORS_NEON_DARK)
+    appearance.palette = 'cb_safe'
+    appearance.modeId = 'github-light'
+    rerender(<TeslaApiUsageHistory />)
+    verify(CHART_COLORS_CB_SAFE)
   })
   it.each([
     { points: [point], expected: '1 observed bucket' },
@@ -174,10 +200,10 @@ describe('Tesla usage selected history', () => {
     render(<TeslaApiUsageHistory />)
     const distribution = chartContainer.mock.calls[0][0]
     expect(distribution.data).toEqual([
-      { category: 'Streaming signals', usd: cost, color: CHART_COLORS_CB_SAFE[0] },
-      { category: 'Commands', usd: cost, color: CHART_COLORS_CB_SAFE[1] },
-      { category: 'Data requests', usd: cost, color: CHART_COLORS_CB_SAFE[2] },
-      { category: 'Wakes', usd: cost, color: CHART_COLORS_CB_SAFE[3] },
+      { category: 'Streaming signals', usd: cost, color: CHART_COLORS_DARK[0] },
+      { category: 'Commands', usd: cost, color: CHART_COLORS_DARK[1] },
+      { category: 'Data requests', usd: cost, color: CHART_COLORS_DARK[2] },
+      { category: 'Wakes', usd: cost, color: CHART_COLORS_DARK[3] },
     ])
     expect(distribution.exportData).toEqual(distribution.data)
   })
@@ -218,7 +244,7 @@ describe('Tesla usage selected history', () => {
       error: null, loading: false, empty: false, exportable: true,
       exportFilename: 'tesla-usage-distribution',
       ariaLabel: expect.any(String),
-      data: expect.arrayContaining([{ category: 'Commands', usd: 1, color: CHART_COLORS_CB_SAFE[1] }]),
+      data: expect.arrayContaining([{ category: 'Commands', usd: 1, color: CHART_COLORS_DARK[1] }]),
       dataColumns: [{ key: 'category', label: 'Billable category' }, { key: 'usd', label: 'Estimated USD', format: expect.any(Function) }],
     })
     expect(retainedCharts[1]).toMatchObject({
@@ -227,7 +253,7 @@ describe('Tesla usage selected history', () => {
       ariaLabel: expect.any(String),
       data: [{ bucket_start: point.bucket_start, signals: 1, commands: 1, data_requests: 1, wakes: 1 }],
       dataColumns: [
-        { key: 'bucket_start', label: 'UTC bucket start' },
+        { key: 'bucket_start', label: 'Bucket start', format: expect.any(Function) },
         ...['signals', 'commands', 'data_requests', 'wakes'].map(key => ({ key, label: expect.any(String), format: expect.any(Function) })),
       ],
     })
@@ -253,20 +279,53 @@ describe('Tesla usage selected history', () => {
     expect(within(screen.getByRole('dialog')).getAllByText(/Local observations only, not a Tesla invoice/).length).toBeGreaterThan(0)
   })
 
-  it('uses exact UTC inclusive-date to exclusive-end conversion and rejects oversized or reversed windows', () => {
-    expect(toUtcUsageRange({ start: '2024-01-01', end: '2024-01-07' })).toEqual({
-      start: '2024-01-01T00:00:00.000Z', end: '2024-01-08T00:00:00.000Z',
-    })
-    expect(toUtcUsageRange({ start: '2024-01-08', end: '2024-01-07' })).toBeNull()
-    expect(toUtcUsageRange({ start: '2023-01-01', end: '2024-01-03' })).toBeNull()
+  it.each([
+    ['2024-01-01', '2024-01-07', 'UTC', '2024-01-01T00:00:00.000Z', '2024-01-08T00:00:00.000Z', true],
+    ['2024-03-10', '2024-03-10', 'America/Los_Angeles', '2024-03-10T08:00:00.000Z', '2024-03-11T07:00:00.000Z', true],
+    ['2024-11-03', '2024-11-03', 'America/Los_Angeles', '2024-11-03T07:00:00.000Z', '2024-11-04T08:00:00.000Z', true],
+    ['2024-03-10', '2024-03-10', 'Asia/Tokyo', '2024-03-09T15:00:00.000Z', '2024-03-10T15:00:00.000Z', true],
+    ['2023-11-05', '2024-11-04', 'America/Los_Angeles', '2023-11-05T07:00:00.000Z', '2024-11-05T08:00:00.000Z', true],
+    ['2024-01-08', '2024-01-07', 'UTC', '2024-01-08T00:00:00.000Z', '2024-01-08T00:00:00.000Z', false],
+    ['2023-01-01', '2024-01-03', 'UTC', '2023-01-01T00:00:00.000Z', '2024-01-04T00:00:00.000Z', false],
+  ] as const)('forwards shared %s through %s in %s with its exact bounds and limit', (start, end, timezone, from, to, enabled) => {
+    Object.assign(selectedRange, { start, end })
+    appearance.timezone = timezone
+    useHistory.mockReturnValue({ data: undefined, isLoading: false, error: null, refetch: vi.fn() })
+    render(<TeslaApiUsageHistory />)
+    expect(useHistory).toHaveBeenLastCalledWith(from, to, 'day', enabled, timezone)
+    expect(chartContainer.mock.calls).toHaveLength(2)
+    if (!enabled) {
+      expect(screen.getByTestId('breakdown')).toHaveTextContent('Select 1 to 366 calendar days')
+    }
+  })
+
+  it('updates mounted history and visible bucket dates with the selected clock while keeping raw exports and costs', () => {
+    const data = { points: [point], total: { ...point } }
+    const original = structuredClone(data)
+    useHistory.mockReturnValue({ data, isLoading: false, error: null, refetch: vi.fn() })
+    appearance.timezone = 'America/Los_Angeles'
+    const { rerender } = render(<TeslaApiUsageHistory />)
+    expect(useHistory).toHaveBeenLastCalledWith(
+      '2024-01-01T08:00:00.000Z', '2024-01-08T08:00:00.000Z', 'day', true, 'America/Los_Angeles',
+    )
+    expect(chartContainer.mock.calls.at(-1)![0].dataColumns[0].format(point.bucket_start)).toBe('Dec 31, 2023')
+    appearance.timezone = 'Asia/Tokyo'
+    rerender(<TeslaApiUsageHistory />)
+    expect(useHistory).toHaveBeenLastCalledWith(
+      '2023-12-31T15:00:00.000Z', '2024-01-07T15:00:00.000Z', 'day', true, 'Asia/Tokyo',
+    )
+    const trend = chartContainer.mock.calls.at(-1)![0]
+    expect(trend.dataColumns[0].format(point.bucket_start)).toBe('Jan 1, 2024')
+    expect(trend.exportData).toEqual([{ bucket_start: point.bucket_start, signals: 1, commands: 1, data_requests: 1, wakes: 1 }])
+    expect(data).toEqual(original)
+    expect(screen.getByTestId('breakdown')).toHaveTextContent('Commands: 1,000 · $1.0000')
   })
 
   it('shows old observed history, four priced categories, and switches bucket selection', () => {
     useHistory.mockReturnValue({ data: { points: [point], total: { ...point } }, isLoading: false, error: null, refetch: vi.fn() })
     render(<TeslaApiUsageHistory />)
     assertOperationalBriefDisclosure(document.body, 'Local observations only, not a Tesla invoice', { contains: true })
-    fireEvent.click(screen.getByRole('button', { name: 'Older range' }))
-    expect(useHistory).toHaveBeenLastCalledWith('2024-01-01T00:00:00.000Z', '2024-01-08T00:00:00.000Z', 'day', true)
+    expect(useHistory).toHaveBeenLastCalledWith('2024-01-01T00:00:00.000Z', '2024-01-08T00:00:00.000Z', 'day', true, 'UTC')
     expect(screen.getByTestId('breakdown')).toHaveTextContent('Streaming signals: 150,000 · $1.0000')
     expect(screen.getByTestId('breakdown')).toHaveTextContent('Commands: 1,000 · $1.0000')
     expect(screen.getByTestId('breakdown')).toHaveTextContent('Data requests: 500 · $1.0000')
@@ -274,7 +333,7 @@ describe('Tesla usage selected history', () => {
     expect(screen.getByTestId('trend')).toHaveTextContent('2024-01-01T00:00:00Z')
     expect(screen.getByTestId('distribution')).toHaveTextContent('Streaming signals:1,Commands:1,Data requests:1,Wakes:1')
     fireEvent.change(screen.getByRole('combobox', { name: 'Group by' }), { target: { value: 'week' } })
-    expect(useHistory).toHaveBeenLastCalledWith('2024-01-01T00:00:00.000Z', '2024-01-08T00:00:00.000Z', 'week', true)
+    expect(useHistory).toHaveBeenLastCalledWith('2024-01-01T00:00:00.000Z', '2024-01-08T00:00:00.000Z', 'week', true, 'UTC')
   })
 
   it.each([

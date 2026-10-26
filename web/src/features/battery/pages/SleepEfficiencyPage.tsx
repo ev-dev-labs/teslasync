@@ -6,6 +6,7 @@ import { AlertBanner, QueryError, SectionErrorBoundary, StaleRefreshWarning } fr
 import { Button, Caption, HelpTooltip } from '@/components/ui';
 import { CardGrid, PageLayout } from '@/components/layout';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -44,20 +45,21 @@ export default function SleepEfficiencyPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
-  const { start, end } = useRangeState({
+  const { formatDateTime } = useDateFormat();
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'sleep-efficiency.range',
   });
   const requestedRange = useMemo(
-    () => analyzeSleepRange(start, end),
-    [end, start],
+    () => analyzeSleepRange(start, end, { startInstant, endInstantExclusive }),
+    [end, start, startInstant, endInstantExclusive],
   );
   const days =
     requestedRange.inclusiveDays ?? DEFAULT_SLEEP_RANGE_DAYS;
   const sleepQuery = useSleepEfficiency(
     vehicleIdStr,
     days,
-    start,
-    end,
+    startInstant,
+    endInstantExclusive,
   );
   const sleepState = useDataState(sleepQuery, { provenance: 'historical' });
   const [frozenNowMs] = useState(() => Date.now());
@@ -65,10 +67,9 @@ export default function SleepEfficiencyPage() {
     && sleepQuery.dataUpdatedAt > 0
     ? sleepQuery.dataUpdatedAt
     : frozenNowMs;
-  // Calendar bounds are inclusive UTC dates in the sleep endpoint.
   const analysisAsOfMs = requestedRange.status === 'valid'
-    && requestedRange.endMs != null
-    ? Math.min(responseAsOfMs, requestedRange.endMs + 86_400_000 - 1)
+    && requestedRange.endInstantExclusiveMs != null
+    ? Math.min(responseAsOfMs, requestedRange.endInstantExclusiveMs - 1)
     : responseAsOfMs;
   const analysis = useMemo(
     () =>
@@ -77,8 +78,9 @@ export default function SleepEfficiencyPage() {
         analysisAsOfMs,
         start,
         end,
+        { startInstant, endInstantExclusive },
       ),
-    [analysisAsOfMs, end, sleepQuery.data, start],
+    [analysisAsOfMs, end, sleepQuery.data, start, startInstant, endInstantExclusive],
   );
 
   const { formatTemperature, formatEnergy } = useUnits();
@@ -155,7 +157,7 @@ export default function SleepEfficiencyPage() {
           {hasCachedData && analysis.source.frozenNowIso && (
             <Caption data-testid="sleep-analysis-as-of">
               {t('operationalMode.asOf.label', 'As of {{when}}', {
-                when: analysis.source.frozenNowIso,
+                when: formatDateTime(analysis.source.frozenNowIso),
               })}
             </Caption>
           )}

@@ -55,7 +55,7 @@ describe('WeeklyPunchcard', () => {
     expect(screen.getByRole('table')).toHaveAccessibleName(
       'Drive starts by local weekday and hour; strongest slot Mon 05:00',
     );
-    expect(screen.getByText('24-hour departures grouped in UTC')).toBeInTheDocument();
+    expect(screen.getByText('24-hour departures grouped by local start hour.')).toBeInTheDocument();
     const cells = within(panel).getAllByRole('cell');
     expect(cells).toHaveLength(168);
     expect(cells[0]).toHaveAccessibleName('Mon 00:00 · 0 drives');

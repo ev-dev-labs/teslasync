@@ -131,7 +131,8 @@ describe.each(['light', 'dark'])('AutomationHistoryTable in %s mode', mode => {
     expect(within(detail).getByText('geofence')).toBeInTheDocument();
     expect(within(detail).getByText('1/2')).toBeInTheDocument();
     expect(within(detail).getByText('Action timed out')).toBeInTheDocument();
-    expect(detail.querySelector('[title="2026-09-05T12:00:00.000Z (UTC)"]')).toBeInTheDocument();
+    expect(detail.querySelector('[title="2026-09-05T12:00:00.000Z (UTC)"]')).not.toBeInTheDocument();
+    expect(detail).not.toHaveTextContent('2026-09-05T12:00:00.000Z');
     const action = within(detail).getByRole('button', { name: 'Home arrival' });
     expect(action).toHaveClass('min-h-11', 'min-w-11');
     await user.click(action);

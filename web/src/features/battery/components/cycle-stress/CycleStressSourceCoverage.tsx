@@ -258,8 +258,7 @@ export function CycleStressSourceCoverage({
               }
               subtitle={t(
                 'cycleStress.coverage.localCalendar',
-                '{{zone}} local calendar',
-                { zone: result.timeZone },
+                'Selected-zone local calendar',
               )}
               icon={<CalendarRange className="h-5 w-5" />}
               color="neutral"

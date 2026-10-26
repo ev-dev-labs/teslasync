@@ -287,7 +287,7 @@ describe('TopTalkersPanel — derivation', () => {
     const bars = readBars();
     expect(bars).toHaveLength(9);
     expect(SERIES).toHaveLength(8);
-    expect(SERIES[0]).toBe('light-dark(#385e7e, #91b4d2)');
+    expect(SERIES[0]).toBe('light-dark(#398ad6, #67aaed)');
     expect(bars[0].color).toBe(SERIES[0]);
     expect(bars[1].color).toBe(SERIES[1]);
     // series[8 % 8] === series[0] — the palette wraps.

@@ -17,6 +17,7 @@ import { join } from 'node:path';
 import { render, cleanup } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
+import { DATA_VISUAL_COLORS } from '@/lib/colors';
 
 type FakeLatLng = { lat: number; lng: number };
 type FakeIcon = {
@@ -107,8 +108,8 @@ describe('AnimatedMarker', () => {
 
     const icon = h.icons[0];
     expect(icon).toBeDefined();
-    // Default color from the component's default prop.
-    expect(icon.html).toContain('#00b4d8');
+    // Both the pulse and vehicle dot use the informational map-data role.
+    expect(icon.html?.match(new RegExp(`background:${DATA_VISUAL_COLORS.info}`, 'g'))).toHaveLength(2);
     expect(icon.html).toContain('animation:replay-pulse');
     expect(icon.html).not.toContain('<style');
     expect(readFileSync(join('src', 'index.css'), 'utf8')).toContain('@keyframes replay-pulse');
@@ -120,7 +121,7 @@ describe('AnimatedMarker', () => {
   it('honors a custom marker color', () => {
     render(<AnimatedMarker position={[1, 2]} color="#ff0000" />);
     expect(latestIconHtml()).toContain('#ff0000');
-    expect(latestIconHtml()).not.toContain('#00b4d8');
+    expect(latestIconHtml()).not.toContain(DATA_VISUAL_COLORS.info);
   });
 
   it('exposes an accessible role + default translated label on the icon', () => {

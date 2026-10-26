@@ -18,6 +18,7 @@
  *     clock-skewed uptime values.
  *   - A11Y: getStatusIcon rendered a bare decorative <svg> with no aria-hidden.
  */
+import { COLOR, CHART_NEUTRAL } from '@/lib/colors'
 import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react'
@@ -37,26 +38,26 @@ const DANGER = ['unhealthy', 'offline', 'error', 'down', 'failed']
 
 describe('getStatusColor', () => {
   it('maps every success status to green', () => {
-    for (const s of SUCCESS) expect(getStatusColor(s)).toBe('#22c55e')
+    for (const s of SUCCESS) expect(getStatusColor(s)).toBe(COLOR.GOOD)
   })
 
   it('maps warning and danger statuses to amber and red', () => {
-    for (const s of WARNING) expect(getStatusColor(s)).toBe('#f59e0b')
-    for (const s of DANGER) expect(getStatusColor(s)).toBe('#ef4444')
+    for (const s of WARNING) expect(getStatusColor(s)).toBe(COLOR.WARN)
+    for (const s of DANGER) expect(getStatusColor(s)).toBe(COLOR.BAD)
   })
 
   it('is case-insensitive', () => {
-    expect(getStatusColor('Healthy')).toBe('#22c55e')
-    expect(getStatusColor('Warning')).toBe('#f59e0b')
-    expect(getStatusColor('Error')).toBe('#ef4444')
+    expect(getStatusColor('Healthy')).toBe(COLOR.GOOD)
+    expect(getStatusColor('Warning')).toBe(COLOR.WARN)
+    expect(getStatusColor('Error')).toBe(COLOR.BAD)
   })
 
   it('falls back to grey for unknown, empty, and nullish input', () => {
-    expect(getStatusColor('bananas')).toBe('#6b7280')
-    expect(getStatusColor('')).toBe('#6b7280')
+    expect(getStatusColor('bananas')).toBe(CHART_NEUTRAL)
+    expect(getStatusColor('')).toBe(CHART_NEUTRAL)
     // Guards runtime null/undefined arriving from untyped API payloads.
-    expect(getStatusColor(null as unknown as string)).toBe('#6b7280')
-    expect(getStatusColor(undefined as unknown as string)).toBe('#6b7280')
+    expect(getStatusColor(null as unknown as string)).toBe(CHART_NEUTRAL)
+    expect(getStatusColor(undefined as unknown as string)).toBe(CHART_NEUTRAL)
   })
 })
 
@@ -203,7 +204,7 @@ describe('status helper consistency', () => {
 
   it('classifies every success status identically across all helpers', () => {
     for (const s of SUCCESS) {
-      expect(getStatusColor(s)).toBe('#22c55e')
+      expect(getStatusColor(s)).toBe(COLOR.GOOD)
       expect(statusTextClass(s)).toBe('text-green-400')
       expect(statusToBadgeVariant(s)).toBe('success')
       expect(iconBucket(s)).toBe('success')
@@ -212,7 +213,7 @@ describe('status helper consistency', () => {
 
   it('classifies every danger status identically across all helpers', () => {
     for (const s of DANGER) {
-      expect(getStatusColor(s)).toBe('#ef4444')
+      expect(getStatusColor(s)).toBe(COLOR.BAD)
       expect(statusTextClass(s)).toBe('text-red-400')
       expect(statusToBadgeVariant(s)).toBe('danger')
       expect(iconBucket(s)).toBe('danger')

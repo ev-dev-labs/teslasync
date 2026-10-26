@@ -1,12 +1,14 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CreditCard } from 'lucide-react';
+import { ArrowRight, CreditCard } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useVehicleSubscriptions, useVehicles } from '@/api/hooks/useVehicles';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useDataState } from '@/hooks/useDataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useFormatting } from '@/hooks/useFormatting';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
@@ -44,6 +46,17 @@ export interface ParsedSub {
   expiryDate: string | null;
   renewalType: string | null;
   daysLeft: number | null;
+  price: number | null;
+  billingPeriod: string | null;
+}
+
+function knownNumber(val: unknown): number | null {
+  if (typeof val === 'number') return Number.isFinite(val) ? val : null;
+  if (typeof val === 'string' && val.trim() !== '') {
+    const parsed = Number(val);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
 }
 
 export function parseSubscriptions(
@@ -75,6 +88,8 @@ export function parseSubscriptions(
       expiryDate,
       renewalType: renewalRaw,
       daysLeft: days,
+      price: knownNumber(data[`${sub.key}_price`] ?? data[`${sub.key}_monthly_price`] ?? data[`${sub.key}_amount`]),
+      billingPeriod: asString(data[`${sub.key}_billing_period`] ?? data[`${sub.key}_period`]),
     });
   }
 
@@ -101,6 +116,8 @@ export function parseSubscriptions(
         expiryDate,
         renewalType: asString(rec.renewal_type) ?? asString(rec.renewal),
         daysLeft: days,
+        price: knownNumber(rec.price) ?? knownNumber(rec.monthly_price) ?? knownNumber(rec.amount),
+        billingPeriod: asString(rec.billing_period) ?? asString(rec.period) ?? null,
       });
     }
   }
@@ -111,11 +128,12 @@ export function parseSubscriptions(
 export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { fmtInt } = useNumberFormatting();
+  const { formatCurrency } = useFormatting();
   const vehiclesQuery = useVehicles();
   const { data: vehicles } = vehiclesQuery;
   const numericId = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const stringId = Number.isSafeInteger(numericId) && numericId > 0 ? String(numericId) : undefined;
-  const { formatDate: fmtDate } = useDateFormat();
+  const { formatDateShort } = useDateFormat();
 
   const subscriptionsQuery = useVehicleSubscriptions(stringId);
   const {
@@ -150,19 +168,34 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
   }, [parsed]);
 
   const entries: DetailEntry[] = useMemo(() => {
-    return parsed.map((sub) => ({
-      label: sub.name,
-      value: sub.expiryDate
-        ? fmtDate(sub.expiryDate) ?? '—'
-        : sub.renewalType ?? '—',
-      badge: {
-        text: sub.active
-          ? t('widget.subscriptions.active', 'Active')
-          : t('widget.subscriptions.expired', 'Expired'),
-        variant: sub.active ? 'success' as const : 'error' as const,
-      },
-    }));
-  }, [parsed, t, fmtDate]);
+    return parsed.map((sub) => {
+      const renewalDate = sub.expiryDate ? formatDateShort(sub.expiryDate) : null;
+      const period = sub.billingPeriod?.toLowerCase() === 'month' || sub.billingPeriod?.toLowerCase() === 'monthly'
+        ? t('widget.subscriptions.perMonth', '/mo')
+        : sub.billingPeriod ? `/${sub.billingPeriod}` : null;
+
+      return {
+        label: sub.name,
+        sublabel: renewalDate ?? sub.renewalType ?? undefined,
+        value: sub.price != null ? formatCurrency(sub.price, 2) : sub.active ? '—' : '—',
+        hint: period ?? undefined,
+        status: sub.active ? 'success' as const : 'neutral' as const,
+        badge: {
+          text: sub.active ? t('widget.subscriptions.active', 'Active') : t('widget.subscriptions.expired', 'Expired'),
+          variant: sub.active ? 'success' as const : 'neutral' as const,
+        },
+      };
+    });
+  }, [parsed, t, formatDateShort, formatCurrency]);
+
+  const monthlyTotal = useMemo(() => {
+    const monthly = parsed.filter((sub) => sub.active && sub.price != null && (
+      /month|monthly/i.test(sub.billingPeriod ?? '')
+    ));
+    return monthly.length > 0
+      ? monthly.reduce((sum, sub) => sum + (sub.price ?? 0), 0)
+      : null;
+  }, [parsed]);
 
   const handleRefresh = useCallback(() => {
     if (!stringId) {
@@ -203,7 +236,7 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
                   size="sm"
                   className="min-h-[44px] min-w-[44px] max-w-full whitespace-normal break-words text-center"
                 >
-                  {fmtDate(nextExpiry.expiryDate) ?? '—'}
+                  {formatDateShort(nextExpiry.expiryDate) ?? '—'}
                 </Badge>
               )}
             </>
@@ -224,6 +257,22 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
     <WidgetShell
       icon={<CreditCard className="h-3.5 w-3.5 text-sky-400" />}
       {...shellProps}
+      footer={parsed.length > 0 ? (
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <span className="min-w-0 text-xs text-[var(--text-muted)] tabular-nums">
+            {monthlyTotal == null
+              ? t('widget.subscriptions.activeSummary', '{{count}} active', { count: activeCount })
+              : t('widget.subscriptions.monthlySummary', '{{total}} / month', { total: formatCurrency(monthlyTotal, 2) })}
+          </span>
+          <Link
+            to="/vehicle-management"
+            className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-[var(--accent-primary)] hover:underline"
+          >
+            {t('widget.subscriptions.manage', 'Manage')}
+            <ArrowRight className="h-3 w-3" aria-hidden="true" />
+          </Link>
+        </div>
+      ) : undefined}
     >
       <WidgetDetailCard
         entries={entries}

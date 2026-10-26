@@ -89,7 +89,7 @@ export default function IncidentTimelinePage() {
       freshness={incident ? fmtAbs(incident.updated_at) : undefined}
       metrics={[
         { metricId: 'duration', occurrenceId: 'duration', rawValue: incident
-          ? (Date.parse(incident.resolved_at ?? new Date().toISOString()) - Date.parse(incident.started_at)) / 1000 : null,
+          ? ((incident.resolved_at == null ? Date.now() : Date.parse(incident.resolved_at)) - Date.parse(incident.started_at)) / 1000 : null,
           label: t('incidentTimeline.kpi.duration', 'Duration'), display: { formatter: () => ({ value: durationLabel || '—', unit: '' }) } },
         { metricId: 'count', occurrenceId: 'updates', rawValue: incident?.updates != null ? updates.length : null, label: t('incidentTimeline.kpi.updates', 'Updates') },
         { metricId: 'count', occurrenceId: 'affected', rawValue: incident?.affected_components != null ? affected.length : null, label: t('incidentTimeline.kpi.affected', 'Affected') },

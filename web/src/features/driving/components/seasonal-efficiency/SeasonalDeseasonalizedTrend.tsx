@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next';
 
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
-import { formatDisplayIntensity, formatLocalDate, toDisplayIntensity } from './formatters';
+import { formatDisplayIntensity, toDisplayIntensity } from './formatters';
+import { formatMonthYear } from '@/lib/dateConvert';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalDeseasonalizedTrend({
@@ -19,7 +20,7 @@ export function SeasonalDeseasonalizedTrend({
   const { t } = useTranslation();
   const data = analysis.timeline.map((row) => ({
     dateKey: `${row.timestampMs}-${row.driveId}`,
-    date: formatLocalDate(row.timestampMs, locale, timeZone, { month: 'short', year: '2-digit' }),
+    date: formatMonthYear(new Date(row.timestampMs), { locale, tz: timeZone, yearStyle: '2-digit' }),
     deseasonalized: toDisplayIntensity(row.deseasonalizedEnergyIntensityWhPerM, units.unitPrefs),
   }));
   return (

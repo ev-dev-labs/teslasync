@@ -406,8 +406,9 @@ for (const theme of ['dark', 'light'] as const) {
         'Modeled recommendation score, not source confidence',
         'raw input in watts', 'raw input in watt-hours',
         'TeslaSync has no endpoint that reports these as measured fact.',
-        '15.00-minute modeled slots · UTC · source coverage not established',
+        '15.00-minute modeled slots · source coverage not established',
       ]);
+      expect(drawerText).not.toContain('modeled slots · UTC ·');
       const interval = drawerText.match(/Planning horizon: (.+?) — (.+?) \(end exclusive\)/);
       expect(interval, 'actual modeled interval must expose both exclusive bounds').not.toBeNull();
       if (!interval) throw new Error('Planning interval is missing');

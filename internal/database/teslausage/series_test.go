@@ -62,3 +62,74 @@ func TestTeslaUsageSeriesPreservesOldObservedBucketsAndFourPrices(t *testing.T) 
 		t.Errorf("absent history was fabricated: %+v", got.Points)
 	}
 }
+
+func TestTeslaUsageSelectedCalendarBucketsConserveBothSources(t *testing.T) {
+	first := time.Date(2025, 1, 5, 23, 30, 0, 0, time.UTC)
+	second := first.Add(time.Hour)
+	for _, tc := range []struct {
+		zone, bucket string
+		keys         []string
+	}{
+		{"UTC", "day", []string{"2025-01-05T00:00:00Z", "2025-01-06T00:00:00Z"}},
+		{"UTC", "week", []string{"2024-12-30T00:00:00Z", "2025-01-06T00:00:00Z"}},
+		{"America/Los_Angeles", "day", []string{"2025-01-05T08:00:00Z"}},
+		{"America/Los_Angeles", "week", []string{"2024-12-30T08:00:00Z"}},
+		{"Asia/Tokyo", "day", []string{"2025-01-05T15:00:00Z"}},
+		{"Asia/Tokyo", "week", []string{"2025-01-05T15:00:00Z"}},
+	} {
+		t.Run(tc.zone+"/"+tc.bucket, func(t *testing.T) {
+			loc, err := time.LoadLocation(tc.zone)
+			if err != nil {
+				t.Fatal(err)
+			}
+			acc := newTeslaUsageSeriesAccumulator(tc.bucket, loc)
+			acc.addSignals(first, 150000)
+			acc.addRequest(first, "tesla-api", "POST", "/api/1/vehicles/7/command/door_lock", 200)
+			acc.addRequest(second, "tesla-api", "GET", "/api/1/vehicles/7/vehicle_data", 200)
+			acc.addRequest(second, "tesla-api", "POST", "/api/1/vehicles/7/wake_up", 200)
+			result := acc.build(first, second.Add(time.Minute), 366, 0)
+			if len(result.Points) != len(tc.keys) {
+				t.Fatalf("buckets = %+v, want %v", result.Points, tc.keys)
+			}
+			for i, key := range tc.keys {
+				if got := result.Points[i].BucketStart.Format(time.RFC3339); got != key {
+					t.Errorf("bucket %d = %s, want %s", i, got, key)
+				}
+			}
+			total := result.Total
+			if total.Signals != 150000 || total.Commands != 1 || total.DataRequests != 1 || total.Wakes != 1 ||
+				math.Abs(total.EstimatedUSD-1.023) > 1e-12 || !total.Start.Equal(first) || !total.End.Equal(second.Add(time.Minute)) {
+				t.Errorf("calendar changed source counts, price, or interval: %+v", total)
+			}
+			paged := acc.build(first, second.Add(time.Minute), 1, 0)
+			if len(paged.Points) != 1 || paged.Total != total {
+				t.Errorf("pagination changed full-range totals: %+v", paged)
+			}
+		})
+	}
+}
+
+func TestTeslaUsageCalendarDSTAndMidnightTransitions(t *testing.T) {
+	for _, tc := range []struct {
+		zone, at, want string
+	}{
+		{"America/Los_Angeles", "2024-03-10T12:00:00Z", "2024-03-10T08:00:00Z"},
+		{"America/Los_Angeles", "2024-03-11T12:00:00Z", "2024-03-11T07:00:00Z"},
+		{"America/Los_Angeles", "2024-11-03T12:00:00Z", "2024-11-03T07:00:00Z"},
+		{"America/Los_Angeles", "2024-11-04T12:00:00Z", "2024-11-04T08:00:00Z"},
+		{"America/Sao_Paulo", "2018-11-04T12:00:00Z", "2018-11-04T03:00:00Z"},
+		{"America/Havana", "2024-11-03T12:00:00Z", "2024-11-03T04:00:00Z"},
+	} {
+		loc, err := time.LoadLocation(tc.zone)
+		if err != nil {
+			t.Fatal(err)
+		}
+		at, err := time.Parse(time.RFC3339, tc.at)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := TeslaUsageBucketStart(at, "day", loc).Format(time.RFC3339); got != tc.want {
+			t.Errorf("%s bucket(%s) = %s, want %s", tc.zone, tc.at, got, tc.want)
+		}
+	}
+}

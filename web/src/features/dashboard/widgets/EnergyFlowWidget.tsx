@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, BatteryCharging, Zap, Plug } from 'lucide-react';
+import { Activity, BatteryCharging, Car, Plug } from 'lucide-react';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { DataProvenanceBadge } from '@/components/data-display';
 import { knownNumber } from '@/api/dataState';
@@ -15,7 +15,7 @@ import type { WidgetProps } from './types';
 const REFRESH_INTERVAL = 5_000;
 
 export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
   const id = vehicleId ?? config?.vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -52,14 +52,24 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
   });
 
   const nodes = useMemo<FlowNode[]>(() => {
-    const result: FlowNode[] = [
+    const result: FlowNode[] = [];
+    result.push({
+      id: 'charger',
+      label: t('widget.wallConnector.title', 'Wall connector'),
+      value: chargerPower ?? 0,
+      formattedValue: '',
+      icon: <Plug className="h-2.5 w-2.5" />,
+      position: 'left',
+    });
+
+    result.push(
       {
         id: 'battery',
         label: t('widget.battery', 'Battery'),
         value: batteryLevel ?? 0,
-        formattedValue: batteryLevel == null ? '—' : `${fmtNumber(batteryLevel)}%`,
-        icon: <BatteryCharging className="h-2.5 w-2.5 text-emerald-400" />,
-        position: 'left',
+        formattedValue: batteryLevel == null ? '—' : `${fmtInt(batteryLevel)}%`,
+        icon: <BatteryCharging className="h-2.5 w-2.5" />,
+        position: 'center',
       },
       {
         id: 'motor',
@@ -67,27 +77,18 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
           ? t('widget.consuming', 'Consuming')
           : isRegen
             ? t('widget.regenerating', 'Regenerating')
-            : power == null ? t('hero.unknownStatus', 'Unknown') : t('widget.standby', 'Standby'),
+            : power == null
+              ? t('hero.unknownStatus', 'Unknown')
+                : `${t('widget.car', 'Car')} (${t('widget.energyFlowAnimated.idle', 'Idle')})`,
         value: absPower ?? 0,
-        formattedValue: formatPower(absPower),
-        icon: <Zap className="h-2.5 w-2.5 text-purple-400" />,
+        formattedValue: '',
+        icon: <Car className="h-2.5 w-2.5" />,
         position: 'right',
       },
-    ];
-
-    if (isCharging) {
-      result.push({
-        id: 'charger',
-        label: t('widget.charger', 'Charger'),
-        value: chargerPower ?? 0,
-        formattedValue: formatPower(chargerPower == null ? null : chargerPower * 1000),
-        icon: <Plug className="h-2.5 w-2.5 text-amber-400" />,
-        position: 'top',
-      });
-    }
+    );
 
     return result;
-  }, [batteryLevel, power, absPower, isConsuming, isRegen, isCharging, chargerPower, formatPower, t, fmtNumber]);
+  }, [batteryLevel, power, absPower, isConsuming, isRegen, isCharging, chargerPower, t, fmtInt]);
 
   const arrows = useMemo<FlowArrow[]>(() => {
     const result: FlowArrow[] = [
@@ -96,14 +97,14 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
         to: 'motor',
         value: isConsuming ? absPower ?? 0 : 0,
         active: isConsuming,
-        color: 'text-cyan-400',
+        label: isConsuming ? formatPower(absPower, { precision: 1 }) : undefined,
       },
       {
         from: 'motor',
         to: 'battery',
         value: isRegen ? absPower ?? 0 : 0,
         active: isRegen,
-        color: 'text-emerald-400',
+        label: isRegen ? formatPower(absPower, { precision: 1 }) : undefined,
       },
     ];
 
@@ -113,12 +114,13 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
         to: 'battery',
         value: chargerPower ?? 0,
         active: chargerPower != null && chargerPower > 0,
-        color: 'text-amber-400',
+        label: chargerPower != null && chargerPower > 0 ? formatPower(chargerPower * 1000, { precision: 1 }) : undefined,
+        color: 'text-emerald-400',
       });
     }
 
     return result;
-  }, [absPower, isConsuming, isRegen, isCharging, chargerPower]);
+  }, [absPower, isConsuming, isRegen, isCharging, chargerPower, formatPower]);
 
   return (
     <WidgetShell
@@ -140,7 +142,7 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
           <WidgetFlowDiagram
             nodes={nodes}
             arrows={arrows}
-            ariaLabel={`${t('widget.energyFlow', 'Energy flow')}: ${nodes.map((node) => `${node.label} ${node.formattedValue}`).join(', ')}; ${arrows.filter((arrow) => arrow.active).map((arrow) => `${nodes.find((node) => node.id === arrow.from)?.label} → ${nodes.find((node) => node.id === arrow.to)?.label}`).join(', ')}`}
+            ariaLabel={`${t('widget.energyFlow', 'Energy flow')}: ${nodes.map((node) => `${node.label} ${node.formattedValue}`).join(', ')}; ${arrows.filter((arrow) => arrow.active).map((arrow) => `${nodes.find((node) => node.id === arrow.from)?.label} → ${nodes.find((node) => node.id === arrow.to)?.label}${arrow.label ? ` ${arrow.label}` : ''}`).join(', ')}`}
             emptyMessage={t('widget.noEnergyData', 'No energy data available')}
           />
         </div>

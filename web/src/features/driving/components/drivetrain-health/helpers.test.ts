@@ -23,6 +23,7 @@
  * non-finite / bad-ceiling inputs resolve to the neutral (never "critical" or
  * a misleading "healthy") state.
  */
+import { CHART_NEUTRAL } from '@/lib/colors';
 import { describe, it, expect, vi } from 'vitest';
 
 import { HEALTH_COLOR } from './constants';
@@ -34,7 +35,7 @@ import {
   displayTemp,
 } from './helpers';
 
-const NEUTRAL = '#6b7280';
+const NEUTRAL = CHART_NEUTRAL;
 
 // Sensor ceilings actually configured on the Drivetrain-Health page.
 const MOTOR_MAX = 150;

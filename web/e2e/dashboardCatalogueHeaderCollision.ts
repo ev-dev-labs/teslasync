@@ -33,12 +33,13 @@ async function headerGeometry(expand: Locator) {
       return true;
     };
     const expandBox = rect(element);
-    const controls = [...header.querySelectorAll('button')].filter(visible).map(button => {
+    const controls = [...header.querySelectorAll('button')].filter(button => button !== element && visible(button)).map(button => {
       const box = rect(button);
       const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
       return { text: button.textContent?.trim(), label: button.getAttribute('aria-label'), box,
         verticalOverlap: Math.max(0, Math.min(box.bottom, expandBox.bottom) - Math.max(box.top, expandBox.top)),
-        gap: expandBox.left - box.right, hitOwnButton: hit?.closest('button') === button };
+        gap: Math.max(expandBox.left - box.right, box.left - expandBox.right),
+        hitOwnButton: hit?.closest('button') === button };
     });
     const walker = document.createTreeWalker(header, NodeFilter.SHOW_TEXT);
     const readings = [];
@@ -77,7 +78,7 @@ function assertGeometry(frame: Awaited<ReturnType<typeof headerGeometry>>, keybo
   expect(frame.title).toBe('Fleet posture');
   const refresh = frame.controls.filter(control => control.label?.startsWith('Refresh data'));
   expect(refresh, 'Visible Refresh must not be dropped to avoid the collision').toHaveLength(1);
-  expect(refresh[0].box.right).toBeLessThanOrEqual(frame.expand.left);
+  expect(refresh[0].box.left, 'Freshness remains the rightmost shared header control').toBeGreaterThanOrEqual(frame.expand.right);
   expect(refresh[0].gap, 'Actual Refresh/Expand gap must be at least8px').toBeGreaterThanOrEqual(8);
   for (const control of frame.controls) {
     expect(control.hitOwnButton, 'Each visible header control center must retain its own button').toBe(true);
@@ -97,38 +98,29 @@ function assertGeometry(frame: Awaited<ReturnType<typeof headerGeometry>>, keybo
   }
 }
 
-async function assertPosture(panel: Locator) {
+export async function assertCataloguePostureContent(panel: Locator) {
   await expect(panel.getByRole('heading', { name: 'Fleet posture', exact: true, level: 3 })).toBeVisible();
-  await expect(panel.getByRole('listitem').filter({ hasText: /^Verified\s*1\/1$/ })).toHaveCount(1);
-  await expect(panel.getByTestId('fleet-posture-announcement'))
-    .toContainText('All 1 vehicles verified from current telemetry.');
+  const verified = panel.getByText('Verified', { exact: true }).locator('..');
+  await expect(verified).toHaveText(/^Verified\s*1\s*\/\s*1$/);
+  const coverage = panel.getByRole('meter', { name: 'Coverage', exact: true });
+  await expect(coverage).toHaveAttribute('aria-valuenow', '100');
+  await expect(coverage).toHaveAttribute('aria-valuemin', '0');
+  await expect(coverage).toHaveAttribute('aria-valuemax', '100');
+  await expect(coverage).toHaveAttribute('aria-valuetext', '100%');
+  await expect(panel.getByText('Coverage 100%', { exact: true })).toBeVisible();
+  const vehicle = panel.locator('dt').filter({ hasText: /^Aurora/ }).locator('..');
+  await expect(vehicle).toHaveCount(1);
+  await expect(vehicle.getByText('driving · telemetry live', { exact: true })).toBeVisible();
+  await expect(vehicle.getByText('Active', { exact: true })).toBeVisible();
+  const announcement = panel.getByTestId('fleet-posture-announcement');
+  await expect(announcement).toHaveAttribute('aria-live', 'polite');
+  await expect(announcement).toHaveText('All 1 vehicles verified from current telemetry.');
   await expect(panel.getByRole('link', { name: 'Open vehicle', exact: true })).toHaveAttribute('href', '/vehicles/7');
-  await expect(panel).toContainText(/Last real observation\s+\S/);
-  await expect(panel).toContainText('Active vehicle scope');
+  await expect(panel).toContainText(/Newest evidence (?:just now|\d+[smhd] ago)/);
   await expect(panel.getByText('Aurora', { exact: true })).toHaveCount(1);
   await expect(panel.getByText('Aurora', { exact: true })).toBeVisible();
-  await expect(panel.getByText('driving', { exact: true })).toHaveCount(1);
-  await expect(panel.getByText('driving', { exact: true })).toBeVisible();
-  await expect(panel).toContainText('Vehicle data is reporting normally.');
-  await expect(panel).toContainText('current telemetry');
-  const brief = panel.getByRole('region', { name: 'Fleet operating posture', exact: true });
-  await brief.getByRole('button', { name: 'Review details', exact: true }).click();
-  const details = panel.page().getByRole('dialog', { name: 'Fleet operating posture details', exact: true });
-  await expect(details).toContainText('1 of 1 verified');
-  await expect(details).toContainText('observed, not fetched');
-  await panel.page().keyboard.press('Escape');
-  await expect(details).toHaveCount(0);
-  const oldest = brief.locator('[data-operational-metric]').filter({ hasText: 'Oldest reading' });
-  const oldestLabel = oldest.getByText('Oldest reading', { exact: true });
-  await expect(oldestLabel).toHaveCount(1);
-  await expect(oldestLabel).toBeVisible();
-  const oldestValue = oldest.locator('[data-operational-value]');
-  await expect(oldestValue).toHaveCount(1);
-  await expect(oldestValue).toBeVisible();
-  await expect(oldestValue).toContainText(/^\d+[smhd] ago/);
-  for (const text of ['Live · 1', 'Stale · 0', 'Guessed · 0', 'Missing · 0']) {
-    await expect(panel.getByText(text, { exact: true })).toBeVisible();
-  }
+  await expect(panel.getByTestId('fleet-posture-taxonomy')).toHaveCount(0);
+  await expect(panel.getByRole('region', { name: 'Fleet operating posture', exact: true })).toHaveCount(0);
 }
 
 async function assertRefresh(page: Page, panel: Locator) {
@@ -148,7 +140,7 @@ async function assertRefresh(page: Page, panel: Locator) {
   expect(after.responses.filter(response => new URL(response.url).pathname === '/api/v1/vehicles/states')
     .every(response => new URL(response.url).searchParams.get('vehicle_ids') === '7')).toBe(true);
   await expect(refresh).toBeEnabled();
-  await assertPosture(panel);
+  await assertCataloguePostureContent(panel);
   return { before, after };
 }
 
@@ -197,10 +189,12 @@ export async function assertCatalogueHeaderCollision(page: Page, panel: Locator,
   const expand = container.getByRole('button', { name: `Expand ${def.name}`, exact: true });
   await expect(expand).toHaveCount(1);
   await positionCataloguePanel(panel);
-  await assertPosture(panel);
+  await assertCataloguePostureContent(panel);
   const captures = [];
   for (const mode of ['hover', 'keyboard'] as const) {
     if (mode === 'hover') {
+      await panel.hover();
+      await writeFile(info.outputPath('fleet-header-before-hover.json'), JSON.stringify(await headerGeometry(expand), null, 2));
       await expand.hover();
     } else {
       await page.mouse.move(0, 0);
@@ -245,7 +239,7 @@ export async function assertCatalogueHeaderCollision(page: Page, panel: Locator,
   await page.keyboard.press('Tab');
   await expect(exit, 'Tab from last dialog control must wrap back to Exit').toBeFocused();
   await expect(overlay.getByRole('heading', { name: def.name, exact: true, level: 2 })).toBeVisible();
-  await assertPosture(overlay);
+  await assertCataloguePostureContent(overlay);
   const fullscreenRefresh = await assertRefresh(page, overlay);
   await exit.click();
   await expect(exit).toHaveCount(0);
@@ -262,7 +256,7 @@ export async function assertCatalogueHeaderCollision(page: Page, panel: Locator,
   await expect(exit).toHaveCount(0);
   await expect(expand, 'Native Escape must restore the original Expand focus').toBeFocused();
   await positionCataloguePanel(panel);
-  await assertPosture(panel);
+  await assertCataloguePostureContent(panel);
   await writeFile(info.outputPath('fleet-header-native-contract.json'), JSON.stringify({
     width, theme, captures, gridRefresh, fullscreenRefresh, fullscreenBefore, reverseTrap, escapeBefore,
     fullscreenOpenedAndClosed: true, reverseAndForwardTabTrapped: true, escapeClosedAndFocusRestored: true,

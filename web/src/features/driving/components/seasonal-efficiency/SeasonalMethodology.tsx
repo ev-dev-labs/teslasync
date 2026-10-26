@@ -9,7 +9,6 @@ import { fitStatusLabel } from './formatters';
 export function SeasonalMethodology({
   analysis,
   state,
-  timeZone,
 }: SeasonalSectionProps) {
   const { t } = useTranslation();
   return (
@@ -36,7 +35,7 @@ export function SeasonalMethodology({
             <div>
               <Text variant="subhead" as="h4">{t('seasonalEfficiency.methodology.scopeTitle', 'Scope')}</Text>
               <Text as="p" variant="bodySm" className="mt-2">
-                {t('seasonalEfficiency.methodology.scope', 'The result describes the returned latest history in {{timeZone}}. Weather, temperature, route mix, tyres, firmware, charging losses, and driving behavior are not modeled or attributed.', { timeZone })}
+                {t('seasonalEfficiency.methodology.scope', 'The result describes the returned latest history in your selected time zone. Weather, temperature, route mix, tyres, firmware, charging losses, and driving behavior are not modeled or attributed.')}
               </Text>
             </div>
           </div>

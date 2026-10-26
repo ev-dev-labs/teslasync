@@ -132,7 +132,7 @@ test.beforeAll(async ({ browser }, testInfo) => {
       value !== null && typeof value === 'object' && !Array.isArray(value);
     const session = wire.find(response => {
       const url = new URL(response.url);
-      return url.pathname === '/api/v1/charging' && url.searchParams.get('limit') === '10';
+      return url.pathname === '/api/v1/charging' && url.searchParams.get('limit') === '20';
     });
     if (!session || !Array.isArray(session.body) || session.body.length !== 1 || !object(session.body[0])) {
       throw new Error('Missing actual native single-session wire evidence');
@@ -142,7 +142,7 @@ test.beforeAll(async ({ browser }, testInfo) => {
       const widget = evidence.find(row =>
         row.widgetId === (kind === 'chart' ? 'charge-session-chart' : 'charging-session-detail'));
       if (!widget) throw new Error('Missing native source widget evidence');
-      const expected = kind === 'chart' ? ['charging', 7, 'session-chart-10'] : ['charging-session', 701];
+      const expected = kind === 'chart' ? ['charging', 7, 'session-chart-20'] : ['charging-session', 701];
       const matches = widget.component.candidates.flatMap(component => component.hooks
         .filter(hook => hook.publicObserver && JSON.stringify(hook.queryKey) === JSON.stringify(expected))
         .map(hook => ({ component, hook })));
@@ -194,7 +194,7 @@ for (const [mode, error] of [
     const binding = structuredClone(chart);
     if (mode === 'widget') binding.widgetId = 'state-charging-session-detail';
     if (mode === 'boundary') binding.boundaryReached = false;
-    if (mode === 'key') binding.queryKey = ['charging', 8, 'session-chart-10'];
+    if (mode === 'key') binding.queryKey = ['charging', 8, 'session-chart-20'];
     if (mode === 'vehicle') binding.vehicleProp = 8;
     if (['session', 'source', 'energy'].includes(mode)) {
       if (!Array.isArray(binding.data) || !binding.data[0]) throw new Error('Native source array missing');

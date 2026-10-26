@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
 import { STALE_TIMES } from '@/lib/constants';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 /**
  * Remaining Useful Life (RUL) — predictive component prognostics. These hooks
@@ -102,11 +103,21 @@ export interface ComponentDetailResponse extends ComponentRUL {
 /**
  * The whole component health board for a vehicle. Disabled until a vehicle is
  * known so an empty selection never fires a request.
+ *
+ * The user's zone travels as `?timezone=`: the backend attributes the daily
+ * SoH series in that frame. An omitted zone resolves to the single display
+ * value (`useDateFormat().tz`); the backend defaults to UTC.
  */
-export function useRUL(vehicleId: number | null) {
+export function useRUL(vehicleId: number | null, timezone?: string) {
+  const { tz } = useDateFormat();
+  const zone = timezone ?? tz;
   return useQuery({
-    queryKey: ['rul', vehicleId],
-    queryFn: ({ signal }) => request<RULResponse>(`/vehicles/${vehicleId}/rul`, { signal }),
+    queryKey: ['rul', vehicleId, zone],
+    queryFn: ({ signal }) =>
+      request<RULResponse>(
+        `/vehicles/${vehicleId}/rul?timezone=${encodeURIComponent(zone)}`,
+        { signal },
+      ),
     enabled: vehicleId !== null && vehicleId > 0,
     staleTime: STALE_TIMES.ANALYTICS,
   });
@@ -114,13 +125,23 @@ export function useRUL(vehicleId: number | null) {
 
 /**
  * One component's detailed prognosis plus its forecast series. Disabled until
- * both a vehicle and a component are selected.
+ * both a vehicle and a component are selected. The zone travels for the same
+ * reason as the board: the SoH series behind the prognosis is day-bucketed.
  */
-export function useComponentRUL(vehicleId: number | null, component: string | null) {
+export function useComponentRUL(
+  vehicleId: number | null,
+  component: string | null,
+  timezone?: string,
+) {
+  const { tz } = useDateFormat();
+  const zone = timezone ?? tz;
   return useQuery({
-    queryKey: ['rul-component', vehicleId, component],
+    queryKey: ['rul-component', vehicleId, component, zone],
     queryFn: ({ signal }) =>
-      request<ComponentDetailResponse>(`/vehicles/${vehicleId}/rul/${component}`, { signal }),
+      request<ComponentDetailResponse>(
+        `/vehicles/${vehicleId}/rul/${component}?timezone=${encodeURIComponent(zone)}`,
+        { signal },
+      ),
     enabled: vehicleId !== null && vehicleId > 0 && !!component,
     staleTime: STALE_TIMES.ANALYTICS,
   });

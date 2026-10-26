@@ -36,6 +36,7 @@
  * render for real. Interactions use `fireEvent` (repo convention — user-event is
  * not installed).
  */
+import { CHART_COLORS } from '@/lib/colors'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup, fireEvent, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
@@ -312,7 +313,7 @@ describe('VehicleCharts — live map', () => {
     )
     const line = screen.getByTestId('polyline')
     expect(line).toHaveAttribute('data-count', '2')
-    expect(line).toHaveAttribute('data-color', '#00f0ff')
+    expect(line).toHaveAttribute('data-color', CHART_COLORS[0])
   })
 
   it('drops the (0,0) no-fix placeholder from the trail', () => {

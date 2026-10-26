@@ -94,7 +94,9 @@ export interface CreateExportPayload {
   type: 'drives' | 'charging' | 'trips' | 'analytics' | 'backup' | 'account';
   format?: 'csv' | 'json' | 'zip';
   vehicle_id?: number;
+  /** Inclusive RFC3339 instant (legacy date-only UTC midnight also accepted). */
   start?: string;
+  /** Exclusive RFC3339 instant; legacy date-only clients retain inclusive UTC midnight. */
   end?: string;
   /** Caller-supplied column allowlist. When omitted, the backend writes every
    *  catalog column. When present, the backend validates each entry against
@@ -129,7 +131,9 @@ export function useCreateExport() {
  *  table plus a manifest.json. */
 export interface CreateAccountExportPayload {
   vehicle_id?: number;
+  /** Inclusive RFC3339 instant; omitted bounds remain unbounded. */
   start?: string;
+  /** Exclusive RFC3339 instant; legacy date-only clients retain inclusive UTC midnight. */
   end?: string;
 }
 

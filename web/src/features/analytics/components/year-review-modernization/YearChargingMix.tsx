@@ -6,6 +6,7 @@ import { Text, Caption } from '@/components/ui';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import type { YearReview } from '@/api/types';
+import { CHART_SEMANTIC } from '@/lib/colors';
 
 interface Props {
   data?: YearReview;
@@ -21,9 +22,9 @@ export function YearChargingMix({ data, loading, error, onRetry, emptyMessage }:
   const { reduce } = useMotionPreference();
   // Connector identity owns the colour, not the post-filter index.
   const slices = useMemo(() => [
-    { name: t('yearReview.supercharger', 'Supercharger'), value: data?.supercharger_pct ?? 0, color: '#f59e0b' },
-    { name: t('yearReview.dcFast', 'DC fast'), value: data?.dc_fast_pct ?? 0, color: '#6366f1' },
-    { name: t('yearReview.acOther', 'AC / other'), value: data?.ac_other_pct ?? 0, color: '#94a3b8' },
+    { name: t('yearReview.supercharger', 'Supercharger'), value: data?.supercharger_pct ?? 0, color: CHART_SEMANTIC.charger.supercharger },
+    { name: t('yearReview.dcFast', 'DC fast'), value: data?.dc_fast_pct ?? 0, color: CHART_SEMANTIC.charger.dc },
+    { name: t('yearReview.acOther', 'AC / other'), value: data?.ac_other_pct ?? 0, color: CHART_SEMANTIC.charger.other },
   ].filter(s => s.value > 0), [data?.supercharger_pct, data?.dc_fast_pct, data?.ac_other_pct, t]);
 
   return (

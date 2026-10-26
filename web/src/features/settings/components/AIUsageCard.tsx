@@ -26,6 +26,7 @@ import { useDataState } from '@/hooks/useDataState'
 import { useUnits } from '@/hooks/useUnits'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { fmtInt, fmtNumber } from '@/lib/numberFormat'
+import { toIsoString } from '@/lib/dateConvert'
 
 const PLACEHOLDER = '—'
 
@@ -89,9 +90,9 @@ export function AIUsageCard({ enabled = true, showSourceNotice = true }: {
         retained={enabled && state.status === 'stale'} testId="helix-usage-summary"
         freshness={data && state.updatedAt != null ? (
           <Caption>
-            <time dateTime={new Date(state.updatedAt).toISOString()}>
+            <time dateTime={toIsoString(state.updatedAt) ?? undefined}>
               {t('common:freshness.lastUpdated', 'Last updated: {{time}}', {
-                time: formatDateTime(new Date(state.updatedAt)),
+                time: formatDateTime(state.updatedAt),
               })}
             </time>
           </Caption>
