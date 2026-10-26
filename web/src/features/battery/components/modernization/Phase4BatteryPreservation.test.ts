@@ -73,14 +73,18 @@ describe('Phase 4 battery presentation preservation', () => {
     ]) expect(advisor).toContain(fact);
   });
 
-  it('keeps passport UTC date provenance and advisor complete scenario rows in canonical chart frames', () => {
+  it('keeps passport source-calendar provenance and advisor complete scenario rows in canonical chart frames', () => {
     const passport = read('../battery-passport/BatteryPassportTrendTimeline.tsx');
     expect(passport).toContain('<ChartCard toolbar size="standard"');
     expect(passport).toContain('exportable={false}');
     expect(passport).toContain('height={280}');
     expect(passport).toContain('height={240}');
     expect(passport).toContain('analysis.trend.points.map');
-    expect(passport).toContain('calendar dates in UTC');
+    expect(passport).toContain('fixed certificate calendar');
+    expect(passport).toContain('display settings do not move these dates');
+    expect(passport).toContain('date: point.date');
+    expect(passport).toContain('formatDayKey(value, { locale })');
+    expect(passport).toContain("formatDayKey(value, { locale, style: 'short' })");
     const advisor = read('../charge-advisor/ChargeAdvisorScenarioChart.tsx');
     expect(advisor).toContain('<EmbeddedChart toolbar exportable size="standard"');
     expect(advisor).toContain('chartKey="charge-advisor-scenarios"');

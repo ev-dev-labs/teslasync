@@ -6,6 +6,24 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
 ## Continuation after `98e23bed33` (2026-10-25)
 
+- Passport preservation-contract CI round (after pushed `39bf1313ff`):
+  frontend unit shard 3/8 reports **1 failure / 11,699 pass**. The only
+  failure requires the old literal caption `calendar dates in UTC`, rather
+  than the fixed source-calendar behavior already verified by the pure,
+  rendered and native download cases. Updated that expectation to the
+  truthful source-calendar caveat and strengthened the same test with
+  raw `point.date` preservation plus explicit table and axis day-key
+  formatting checks. All original chart-frame/export/cap/scenario checks
+  and all 36 preservation cases remain.
+  Targeted preservation plus battery behavior passes **123/123**; actual
+  TypeScript and full unchanged lint pass. Production, catalogs, endpoints
+  and browser output are unchanged from verified `39bf1313ff`.
+  Evidence: `r124-unit3`, `r125-passport-preservation`,
+  `r125-preservation-types-lint`.
+  Before-fix graph at 01:24Z: **86 pass / 1 fail / 107 pending / 3 skipped**.
+  **Exact next:** push this test-contract correction, then continue the
+  current-head CI loop. Wait five minutes only when no actionable failure
+  remains; diagnose new failures from their actual logs/artifacts.
 - Battery-passport fixed-calendar phase gate (after pushed `4b24bb653f`):
   unchanged five-width guards reproduce **5 failures**, each with 11 visible
   zone labels and no layout/instant/duplicate failures. Two new selected-clock
@@ -33,7 +51,7 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   provenance 353/358 and timeline 116/119. All 12 methodology items remain.
   Evidence: `r111-passport-red`, `r113-passport-unit-red`, `r114-*`,
   `r115-*`, `r116-*`, `r117-*`, `r119-*`.
-  **Exact next:** push this phase, then inspect the current PR head's
+  **Pushed:** `39bf1313ff`. Inspect the current PR head's
   actual failing jobs/artifacts. If only pending, recheck every five minutes;
   rerun only hosted-setup failures after their containing run completes.
   Last `4b24bb653f` graph at 01:09Z: **77 pass / 114 pending / 3 skipped**,
