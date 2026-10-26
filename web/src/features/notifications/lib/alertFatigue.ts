@@ -27,6 +27,7 @@
  */
 
 import type { NotificationLog } from '@/api/types';
+import { zonedDateParts } from '@/lib/dateFormat';
 
 export type FatigueVerdict = 'healthy' | 'chatty' | 'noisy' | 'fatiguing';
 
@@ -80,6 +81,8 @@ export interface AlertFatigueSummary {
 }
 
 export interface AlertFatigueOptions {
+  /** Calendar for weekday/hour attribution; omitted retains browser-local buckets. */
+  timezone?: string;
   /** Two firings of one rule within this many minutes count as a burst. */
   burstWindowMin?: number;
   /** Minimum firings before a group is scored at all. */
@@ -266,8 +269,9 @@ export function analyzeAlertFatigue(
     const hourCounts = Array.from({ length: 24 }, () => 0);
     for (const e of events) {
       const d = new Date(e.ms);
-      weekdayCounts[d.getDay()]! += 1;
-      hourCounts[d.getHours()]! += 1;
+      const parts = options.timezone ? zonedDateParts(d, options.timezone) : null;
+      weekdayCounts[parts?.weekday ?? d.getDay()]! += 1;
+      hourCounts[parts?.hour ?? d.getHours()]! += 1;
     }
 
     globalTrackable += trackable;

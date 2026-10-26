@@ -35,6 +35,14 @@ const PRIMARY_KEY_MARKER = 'primary key';
 function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
   const { t } = useTranslation();
   const columns = table.columns ?? [];
+  const timestampDescriptions: Record<string, string> = {
+    'drives.started_at': t('powerSql.timestampColumns.driveStart', 'Drive start instant.'),
+    'drives.ended_at': t('powerSql.timestampColumns.driveEnd', 'Drive end instant.'),
+    'charging_sessions.started_at': t('powerSql.timestampColumns.sessionStart', 'Session start instant.'),
+    'charging_sessions.ended_at': t('powerSql.timestampColumns.sessionEnd', 'Session end instant.'),
+    'alerts.fired_at': t('powerSql.timestampColumns.alertFired', 'Alert firing instant.'),
+    'signal_log_view.ts': t('powerSql.timestampColumns.sample', 'Sample instant.'),
+  };
 
   return (
     <GlassPanel className="flex h-full min-w-0 max-w-full flex-col p-4 sm:p-5">
@@ -96,7 +104,7 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
                   <td><Text size="xs" color="secondary">{col.type || EM_DASH}</Text></td>
                   <td>
                     {col.description
-                      ? <Text size="xs" color="secondary" as="p">{col.description}</Text>
+                      ? <Text size="xs" color="secondary" as="p">{timestampDescriptions[`${table.name}.${col.name}`] ?? col.description}</Text>
                       : EM_DASH}
                   </td>
                 </tr>

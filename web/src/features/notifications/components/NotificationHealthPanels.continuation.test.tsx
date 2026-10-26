@@ -507,7 +507,7 @@ describe('Notification health continuation source independence', () => {
       const { rerender } = render(<MemoryRouter><NotificationBurnRatePanel /></MemoryRouter>);
       const burn = screen.getByRole('region', { name: 'Notification burn rate' });
       const asOf = within(burn).getByTestId('notification-burn-rate-as-of');
-      expect(asOf).toHaveTextContent('As of Oct 14, 2026, 12:00 PM (UTC)');
+      expect(asOf).toHaveTextContent(/^As of Oct 14, 2026, 12:00 PM$/);
       expect(statTile(burn, '1h burn rate').querySelector('[data-operational-value]')).toHaveTextContent(/^100.00×$/);
       expect(statTile(burn, '24h burn rate').querySelector('[data-operational-value]')).toHaveTextContent(/^50.00×$/);
       expect(statTile(burn, 'Budget status')).toHaveTextContent('SLO breach');
@@ -516,7 +516,7 @@ describe('Notification health continuation source independence', () => {
       state.deliveryError = new Error('snapshot refresh failed');
       state.paused = true;
       rerender(<MemoryRouter><NotificationBurnRatePanel /></MemoryRouter>);
-      expect(asOf).toHaveTextContent('As of Oct 14, 2026, 12:00 PM (UTC)');
+      expect(asOf).toHaveTextContent(/^As of Oct 14, 2026, 12:00 PM$/);
       expect(statTile(burn, '1h burn rate').querySelector('[data-operational-value]')).toHaveTextContent(/^100.00×$/);
       expect(statTile(burn, '24h burn rate').querySelector('[data-operational-value]')).toHaveTextContent(/^50.00×$/);
       expect(within(burn).getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -525,7 +525,7 @@ describe('Notification health continuation source independence', () => {
       state.paused = false;
       state.deliveryUpdatedAt = Date.now();
       rerender(<MemoryRouter><NotificationBurnRatePanel /></MemoryRouter>);
-      expect(asOf).toHaveTextContent('As of Oct 14, 2026, 02:00 PM (UTC)');
+      expect(asOf).toHaveTextContent(/^As of Oct 14, 2026, 02:00 PM$/);
       assertOperationalMetricUnavailable(within(burn).getByTestId('notification-burn-rate-brief'), '1h burn rate');
       expect(statTile(burn, '24h burn rate').querySelector('[data-operational-value]')).toHaveTextContent(/^100.00×$/);
       expect(statTile(burn, 'Budget status')).toHaveTextContent('Burning fast');
@@ -544,11 +544,11 @@ describe('Notification health continuation source independence', () => {
     try {
       state.delivery = [log()];
       const { rerender } = render(<MemoryRouter><NotificationBurnRatePanel /></MemoryRouter>);
-      expect(screen.getByTestId('notification-burn-rate-as-of')).toHaveTextContent('As of Oct 14, 2026, 12:00 PM (UTC)');
+      expect(screen.getByTestId('notification-burn-rate-as-of')).toHaveTextContent(/^As of Oct 14, 2026, 12:00 PM$/);
       vi.setSystemTime(new Date('2026-10-15T14:00:00Z'));
       state.delivery = [...state.delivery];
       rerender(<MemoryRouter><NotificationBurnRatePanel /></MemoryRouter>);
-      expect(screen.getByTestId('notification-burn-rate-as-of')).toHaveTextContent('As of Oct 14, 2026, 12:00 PM (UTC)');
+      expect(screen.getByTestId('notification-burn-rate-as-of')).toHaveTextContent(/^As of Oct 14, 2026, 12:00 PM$/);
       expect(statTile(screen.getByRole('region', { name: 'Notification burn rate' }), '1h burn rate')
         .querySelector('[data-operational-value]')).toHaveTextContent(/^0.00×$/);
       expect(state.retryDelivery).not.toHaveBeenCalled();

@@ -1050,8 +1050,8 @@
       "period": "Recorded daily drive distance from the trailing 90-day source. Dates use the existing date formatter. Recording completeness is unknown."
     },
     "monthly": {
-      "period": "UTC calendar-month buckets from the server’s default 24-month window. This is not a full-history total; recording completeness is unknown.",
-      "method": "The same UTC monthly source as the chart. Distance / drive divides monthly recorded distance by monthly drive count; a zero drive count yields zero. No totals are inferred from these limited rows."
+      "period": "Calendar-month buckets in the selected time zone from the server’s default 24-month window. This is not a full-history total; recording completeness is unknown.",
+      "method": "The same selected-calendar monthly source as the chart. Distance / drive divides monthly recorded distance by monthly drive count; a zero drive count yields zero. No totals are inferred from these limited rows."
     },
     "analysis": {
       "title": "Recorded mileage",

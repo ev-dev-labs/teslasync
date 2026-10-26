@@ -84,16 +84,18 @@ describe('NotificationLatencyPanel shared delivery table', () => {
     }];
     const { rerender } = render(<MemoryRouter><NotificationLatencyPanel /></MemoryRouter>);
     const table = screen.getByRole('table', { name: 'Slowest delivery records' });
-    expect(table).toHaveTextContent('Dec 31, 2023, 04:30 PM (America/Los_Angeles)');
+    expect(table).toHaveTextContent('Dec 31, 2023, 04:30 PM');
+    expect(table).not.toHaveTextContent('America/Los_Angeles');
     datePreferences.locale = 'en-GB';
     datePreferences.tz = 'Asia/Tokyo';
     rerender(<MemoryRouter><NotificationLatencyPanel /></MemoryRouter>);
-    expect(table).toHaveTextContent('1 Jan 2024, 09:30 (Asia/Tokyo)');
+    expect(table).toHaveTextContent('1 Jan 2024, 09:30');
+    expect(table).not.toHaveTextContent('Asia/Tokyo');
     expect(table).toHaveTextContent('1,250.00 ms');
     expect(table).toHaveTextContent('Clock delivery');
   });
 
-  it('keeps fatigue hour buckets in the browser zone while updating 12/24-hour labels', () => {
+  it('reattributes fatigue hours in the selected zone while preserving readings and 12/24-hour labels', () => {
     const instant = '2024-01-01T00:30:00Z';
     state.logs = [{
       id: 1, channel_id: 1, alert_id: null, title: 'Hour delivery', message: '',
@@ -107,17 +109,22 @@ describe('NotificationLatencyPanel shared delivery table', () => {
     const before = hourRows();
     expect(before).toHaveLength(24);
     expect(before[0]?.hour).toBe('12:00 AM');
-    expect(before[new Date(instant).getHours()]?.count).toBe(1);
-    expect(screen.getByText(/Firings by hour of day across every rule/)).toHaveTextContent(
-      `(${Intl.DateTimeFormat().resolvedOptions().timeZone})`,
+    expect(before[16]?.count).toBe(1);
+    expect(before.reduce((sum, row) => sum + row.count, 0)).toBe(1);
+    expect(screen.getByText(/Firings by hour of day across every rule/)).not.toHaveTextContent(
+      /UTC|America\/Los_Angeles|Asia\/Tokyo/,
     );
     datePreferences.locale = 'en-GB';
     datePreferences.tz = 'Asia/Tokyo';
     rerender(<MemoryRouter><AlertFatiguePanel /></MemoryRouter>);
     const after = hourRows();
     expect(after[0]?.hour).toBe('00:00');
-    expect(after.map(row => row.count)).toEqual(before.map(row => row.count));
+    expect(after[9]?.count).toBe(1);
+    expect(after[16]?.count).toBe(0);
+    expect(after.reduce((sum, row) => sum + row.count, 0)).toBe(1);
     expect(screen.getByRole('table', { name: 'Hour delivery' })).toHaveTextContent('1 · 1.00/day');
+    expect(state.logs?.[0]?.created_at).toBe(instant);
+    expect(state.retry).not.toHaveBeenCalled();
   });
 
   it('formats burn-rate instants without changing window outcomes or the analysis instant', () => {
@@ -129,7 +136,7 @@ describe('NotificationLatencyPanel shared delivery table', () => {
     }];
     const { rerender } = render(<MemoryRouter><NotificationBurnRatePanel /></MemoryRouter>);
     expect(screen.getByTestId('notification-burn-rate-as-of')).toHaveTextContent(
-      'Dec 31, 2023, 04:30 PM (America/Los_Angeles)',
+      'Dec 31, 2023, 04:30 PM',
     );
     const rows = () => JSON.parse(
       screen.getByTestId('notification-chart-data').getAttribute('data-rows')!,
@@ -140,7 +147,7 @@ describe('NotificationLatencyPanel shared delivery table', () => {
     datePreferences.tz = 'Asia/Tokyo';
     rerender(<MemoryRouter><NotificationBurnRatePanel /></MemoryRouter>);
     expect(screen.getByTestId('notification-burn-rate-as-of')).toHaveTextContent(
-      '1 Jan 2024, 09:30 (Asia/Tokyo)',
+      '1 Jan 2024, 09:30',
     );
     expect(rows().map(({ sent, failed }) => ({ sent, failed })))
       .toEqual(before.map(({ sent, failed }) => ({ sent, failed })));

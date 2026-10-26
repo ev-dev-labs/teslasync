@@ -21,7 +21,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 export function NotificationLatencyPanel() {
-  const { formatDateTime, tz } = useDateFormat();
+  const { formatDateTime } = useDateFormat();
   const { fmtNumber, fmtPercent, fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const logsQuery = useNotificationDeliveryLogs();
@@ -44,7 +44,7 @@ export function NotificationLatencyPanel() {
             {t('notificationLatency.slowest.meta', '{{severity}} · {{status}} · {{date}}', {
               severity: record.severity,
               status: record.status,
-              date: `${formatDateTime(record.createdAt)} (${tz})`,
+              date: formatDateTime(record.createdAt),
             })}
           </Text>
         </div>
@@ -67,7 +67,7 @@ export function NotificationLatencyPanel() {
       align: 'right',
       render: record => <Text variant="body" mono className="font-medium">{latencyLabel(record.latencyMs)}</Text>,
     },
-  ], [latencyLabel, t, formatDateTime, tz]);
+  ], [latencyLabel, t, formatDateTime]);
   const histogramData = useMemo(
     () => summary.histogram.map((bin) => ({
       range: bin.upperMs == null

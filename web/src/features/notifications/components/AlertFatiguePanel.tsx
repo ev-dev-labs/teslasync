@@ -19,7 +19,6 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { isFiniteNumber } from '@/lib/numberFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { browserTimezone } from '@/lib/timezone';
 
 import { analyzeAlertFatigue, type FatigueVerdict } from '../lib/alertFatigue';
 
@@ -39,8 +38,7 @@ const VERDICT_DEFAULT: Record<FatigueVerdict, string> = {
 
 export function AlertFatiguePanel() {
   const { t } = useTranslation();
-  const { formatTime } = useDateFormat();
-  const groupingZone = browserTimezone();
+  const { formatTime, tz } = useDateFormat();
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const numberLabel = (value: unknown) => isFiniteNumber(value) ? fmtNumber(value) : '—';
   const countLabel = (value: unknown) => isFiniteNumber(value) && Number.isSafeInteger(value) && value >= 0
@@ -53,8 +51,8 @@ export function AlertFatiguePanel() {
   const source = useDataState(logsQuery, { provenance: 'historical' });
 
   const summary = useMemo(
-    () => analyzeAlertFatigue(logsQuery.data ?? []),
-    [logsQuery.data],
+    () => analyzeAlertFatigue(logsQuery.data ?? [], { timezone: tz }),
+    [logsQuery.data, tz],
   );
 
   const chartData = useMemo(
@@ -86,7 +84,7 @@ export function AlertFatiguePanel() {
     for (const g of summary.groups) {
       for (let h = 0; h < 24; h++) totals[h]! += g.hourCounts[h] ?? 0;
     }
-    // These are browser-local hour buckets, not instants to shift into the display zone.
+    // These are calendar-hour labels, not instants to shift a second time.
     return totals.map((count, h) => ({
       hour: formatTime(new Date(Date.UTC(2000, 0, 1, h)), { tz: 'UTC' }),
       count,
@@ -290,10 +288,10 @@ export function AlertFatiguePanel() {
         ) : (
         <ChartContainer
           title={t('alertFatigue.hours', 'When notifications arrive')}
-          subtitle={`${t(
+          subtitle={t(
             'alertFatigue.hoursHint',
             'Firings by hour of day across every rule — the small hours are what really cost goodwill',
-          )} (${groupingZone})`}
+          )}
           ariaLabel={t(
             'alertFatigue.hoursAria',
             'Bar chart of notification volume by hour of day',

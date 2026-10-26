@@ -53,6 +53,14 @@
     }
   },
   "powerSql": {
+    "timestampColumns": {
+      "driveStart": "Drive start instant.",
+      "driveEnd": "Drive end instant.",
+      "sessionStart": "Session start instant.",
+      "sessionEnd": "Session end instant.",
+      "alertFired": "Alert firing instant.",
+      "sample": "Sample instant."
+    },
     "editor": {
       "copyFailed": "Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C.",
       "run": "Run",

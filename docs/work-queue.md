@@ -6,6 +6,55 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
 
 ## Continuation after `98e23bed33` (2026-10-25)
 
+- Timezone route phase gate (2026-10-26, after `02d31f2f09`):
+  the completed graph is **193 pass / 7 fail / 3 skipped**. Five route shards
+  (52/53/54/56/58) expose mileage, notification health aliases, SQL metadata,
+  Tesla usage and battery-passport timezone roots; one hosted setup failed
+  before tests, and the aggregate reflects those failures.
+  Mileage hooks/backend already bucket in the selected clock; only its old
+  UTC copy is stale. That copy now accurately preserves the fixed 24-month
+  source and every completeness/ratio limitation. Notification fatigue's
+  real browser-only weekday/hour attribution now accepts the selected clock,
+  preserving scoring, spans, raw events and legacy pure callers. Two new
+  boundary regressions failed before repair; selected-midnight and DST
+  conservation cases pass afterward. Removed duplicate captions across the
+  three shared notification panels while retaining selected timestamp
+  formatting and frozen source/as-of semantics. SQL's six timestamp hints now
+  use localized instant descriptions, with all names, timestamptz types,
+  other columns and read-only behavior intact.
+  Initial affected units pass **282/282**; the final mileage suite including
+  its additional copy regression passes **27/27**. All seven affected
+  production sources pass actual TypeScript and six zero audit counts.
+  Full unchanged lint, both hook-domain route checks, generated catalog,
+  **7,728/7,728** frozen receipts and the hermetic build pass. The unchanged
+  five-width guards pass **25/25** across all five repaired routes; native
+  notification-health operand contracts pass **4/4**. Both wrappers report
+  zero escapes. Original/current lines: mileage 465/465, fatigue 433/431,
+  burn 289/289, latency 308/308, SQL card 122/130; panel/chart markers
+  remain 0/0, 8/8, 6/6, 7/7 and 1/1 respectively. No section removed.
+  Evidence: `r93-fatigue-red`, `r94-timezone-unit`, `r95-*`, `r96-*`,
+  `r98-timezone-route`, `r99-notification-native`.
+  **Exact next:** push this verified phase and finish the Tesla-usage /
+  battery-passport roots while fresh CI runs. Tesla usage really buckets
+  both sources in UTC and owns a conflicting local calendar; extend its
+  read-time grouping and consume the shared header. Battery-passport dates
+  originate in fixed certificate aggregates and canonical hashing; preserve
+  that source calendar instead of shifting date-only evidence as instants.
+  A new source push naturally retries hosted setup; rerun only setup jobs
+  once no source fixes remain. No workflow or baseline changes.
+- Hosted setup retry pending (2026-10-26 00:16Z, head `02d31f2f09`):
+  responsive-33 job `121331078018` never ran tests. Playwright dependency
+  setup failed because Microsoft's Ubuntu 24.04 APT repository returned
+  HTTP 403 for `InRelease`; exit 100. The unrelated Ubuntu mirrors worked.
+  Both CLI and API confirm this job cannot be retried while its containing
+  run `40246842498` is still active (API: "The workflow run containing this
+  job is already running"). No workflow, repository, dependency, test or
+  tolerance changes are justified. Latest graph **149 pass / 49 pending /
+  1 fail / 3 skipped**, incomplete.
+  **Exact next:** continue five-minute checks, diagnose any application
+  failures, and once that run completes rerun failed setup job(s) only with
+  `gh run rerun 40246842498 --failed`. Preserve successful shards.
+  Evidence: `r90-responsive33`, `r90-run`, `r91-responsive33-api`.
 - CI command-contract phase (after pushed `5be78d19c5`):
   responsive-10's four actual failures required removed Lock/Climate-off
   actions rather than the intentional redesign's stable six-action set.
@@ -22,8 +71,10 @@ kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
   At 23:52Z CI is **162 pass / 36 pending / 1 fail / 3 skipped**; the
   remaining observed failure is this now-locally-repaired root. Responsive
   21/38 are still pending, not yet CI-confirmed. No baseline changes.
-  **Exact next:** push this gate and continue current-head CI at five-minute
-  intervals, fixing only actual failed roots. Do not rerun full local quality.
+  Pushed as `02d31f2f09`. At 23:59Z its fresh graph is **19 pass /
+  171 pending / 2 skipped**, incomplete, with no observed failures.
+  **Exact next:** continue current-head CI at five-minute intervals, fixing
+  only actual failed roots. Do not rerun full local quality.
 - CI contract follow-up (23:26Z, after pushed insurance `e5174b3521`):
   actual CI has two observed failing roots: responsive-21's native sleep
   fixtures still pinned date-only bounds, and responsive-38's home-energy
