@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Thermometer } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Text } from '@/components/ui';
 import { deriveDataState } from '@/api/dataState';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useClimateLatest } from '@/api/hooks/useVehicles';
@@ -15,6 +15,8 @@ import { convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import { cn } from '@/lib/cn';
+import ClimateAirflow from './vehicle-instruments/ClimateAirflow';
+import { useObservationCurrent } from './vehicle-instruments/useObservationCurrent';
 
 export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetProps) {
   const { fmtInt } = useNumberFormatting();
@@ -29,6 +31,7 @@ export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetPro
   );
 
   const tempUnit = unitPrefs.temperature;
+  const observationCurrent = useObservationCurrent(climateData?.ts, !isError);
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
 
@@ -60,7 +63,7 @@ export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetPro
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.climatePanel.title', 'Climate control')}
-      icon={isCompact ? undefined : <Thermometer className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={isCompact ? undefined : <Thermometer className="h-3.5 w-3.5 text-[var(--semantic-info)]" />}
       loading={loading}
       dataState={dataState}
       updatedAt={dataUpdatedAt}
@@ -78,6 +81,7 @@ export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetPro
             toTemperatureDisplay={toTemperatureDisplay}
             tempUnit={tempUnit}
             t={t}
+            observationCurrent={observationCurrent}
           />
         )
       ) : (
@@ -104,9 +108,10 @@ interface FullViewProps {
   toTemperatureDisplay: (value: number) => number;
   tempUnit: string;
   t: (k: string, f: string) => string;
+  observationCurrent: boolean;
 }
 
-function FullView({ climateData, toTemperatureDisplay, tempUnit, t }: FullViewProps) {
+function FullView({ climateData, toTemperatureDisplay, tempUnit, t, observationCurrent }: FullViewProps) {
   const { fmtInt } = useNumberFormatting();
   const hvacState = resolveHvacActive(climateData.hvac_power, climateData.is_ac_on);
   const inside = climateData.inside_temp_c ?? climateData.inside_temp;
@@ -161,6 +166,8 @@ function FullView({ climateData, toTemperatureDisplay, tempUnit, t }: FullViewPr
         </div>
       </div>
 
+      <ClimateAirflow active={hvacState === true && observationCurrent} />
+
       <div className="flex flex-wrap items-center gap-2">
         {hvacState !== null && (
           <span className="inline-flex items-center gap-2 text-sm text-[var(--text-primary)]">
@@ -213,9 +220,9 @@ function FullView({ climateData, toTemperatureDisplay, tempUnit, t }: FullViewPr
 
 function StatusTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className={cn('min-w-0 border border-[var(--border-subtle)]', dashboardTokens.radius.inner, dashboardTokens.density.itemPadding)}>
-      <p className="text-xs text-[var(--text-muted)]">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold text-[var(--text-primary)] tabular-nums" title={value}>{value}</p>
+    <div className={cn('min-w-0 border border-[var(--border-subtle)] bg-[var(--surface-2)]', dashboardTokens.radius.inner, dashboardTokens.density.itemPadding)}>
+      <Text as="p" variant="caption">{label}</Text>
+      <Text as="p" variant="bodySm" weight="semibold" className="mt-1 break-words tabular-nums" title={value}>{value}</Text>
     </div>
   );
 }

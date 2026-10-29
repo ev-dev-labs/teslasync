@@ -117,7 +117,7 @@ describe('WidgetTipCards — rendering tips', () => {
     // Spec `.tip` card language: bordered 10px sub-surface card, not a divided row.
     expect(screen.getByRole('listitem')).toHaveClass(
       'border',
-      'bg-[var(--surface-2)]',
+      'bg-[var(--widget-well,var(--surface-2))]',
       'rounded-shape-lg',
       'px-3',
       'py-2.5',

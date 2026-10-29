@@ -103,6 +103,8 @@ export interface VehicleTwinProps extends VehicleTwinState {
   interactive?: boolean;
   /** Cosmetic, bounded entrance only; never supplies measured vehicle state. */
   driveIn?: boolean;
+  /** Disable continuous state cues without changing the accessible measured state. */
+  animateActivity?: boolean;
   className?: string;
   /**
    * Optional vehicle id — when provided, enables per-vehicle paint
@@ -1366,6 +1368,7 @@ export function VehicleTwin({
   size = 'md',
   interactive = false,
   driveIn = false,
+  animateActivity = true,
   className,
   vehicleId,
   exteriorColor,
@@ -1401,7 +1404,7 @@ export function VehicleTwin({
   const summary = inspection.map(({ name, state }) => `${name}: ${state}`).join('. ');
   // Share the derived OS/low-bandwidth preference with every feedback loop.
   const { reduce } = useMotionPreference();
-  const animateDriving = isDriving === true && !reduce;
+  const animateDriving = isDriving === true && !reduce && animateActivity;
   const animateEntry = driveIn && !reduce;
   const containerRef = useRef<HTMLDivElement>(null);
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
@@ -1577,8 +1580,8 @@ export function VehicleTwin({
               interactive={interactive}
               photo={photoOn}
             />
-            <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} photo={photoOn} reduce={reduce} />
-            <TaillightGlows hazards={hazards} turnSignal={turnSignal} photo={photoOn} reduce={reduce} />
+            <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} photo={photoOn} reduce={reduce || !animateActivity} />
+            <TaillightGlows hazards={hazards} turnSignal={turnSignal} photo={photoOn} reduce={reduce || !animateActivity} />
           </g>
           {!photoOn && (
             <g id="wheels">

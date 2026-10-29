@@ -20,7 +20,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 
@@ -354,11 +354,32 @@ describe('DataTableColumnMenu — reordering', () => {
 })
 
 describe('DataTableColumnMenu — reset + empty hardening', () => {
-  it('invokes onReset when the reset control is clicked', () => {
+  it('confirms before resetting column order and visibility', async () => {
+    const user = userEvent.setup()
     const { onReset } = setup()
     openMenu()
-    fireEvent.click(screen.getByTestId('datatable-column-menu-reset'))
+    const reset = screen.getByRole('button', { name: 'Reset', exact: true })
+    expect(reset).not.toHaveTextContent('Reset')
+    await user.click(reset)
+    expect(onReset).not.toHaveBeenCalled()
+    const confirmation = screen.getByRole('dialog', { name: 'Reset columns?' })
+    expect(confirmation).toHaveTextContent('Row data will not change.')
+    await user.click(within(confirmation).getByRole('button', { name: 'Reset', exact: true }))
     expect(onReset).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancels reset without changing the layout and restores focus', async () => {
+    const user = userEvent.setup()
+    const { onReset, onChange } = setup({ layout: { order: ['status', 'name', 'detail'], hidden: ['detail'] } })
+    openMenu()
+    const reset = screen.getByRole('button', { name: 'Reset', exact: true })
+    await user.click(reset)
+    const confirmation = screen.getByRole('dialog', { name: 'Reset columns?' })
+    await user.click(within(confirmation).getByRole('button', { name: 'Cancel', exact: true }))
+    expect(onReset).not.toHaveBeenCalled()
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getByTestId('datatable-column-menu')).toBeVisible()
+    expect(reset).toHaveFocus()
   })
 
   describe('DataTableColumnMenu — restrained presentation preservation', () => {

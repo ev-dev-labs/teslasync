@@ -139,7 +139,7 @@ for (const theme of ['light', 'dark'] as const) {
       await columnsButton.focus();
       await page.keyboard.press('Enter');
       await expect(columnsButton).toHaveAttribute('aria-expanded', 'true');
-      const menu = journalFrame.getByRole('menu', { name: 'Reorder or hide columns' });
+      const menu = page.getByRole('dialog', { name: 'Reorder or hide columns' });
       const firmwareToggle = menu.getByRole('checkbox', { name: 'Show or hide Firmware', exact: true });
       await firmwareToggle.focus();
       await page.keyboard.press('Space');
@@ -150,6 +150,8 @@ for (const theme of ['light', 'dark'] as const) {
       await menu.getByRole('button', { name: 'Move Firmware up', exact: true }).click();
       await expect(journal.getByRole('columnheader').nth(3)).toHaveText('Firmware');
       await menu.getByRole('button', { name: 'Reset', exact: true }).click();
+      const resetConfirmation = page.getByRole('dialog', { name: 'Reset columns?', exact: true });
+      await resetConfirmation.getByRole('button', { name: 'Reset', exact: true }).click();
       await page.keyboard.press('Escape');
       await expect(menu).toHaveCount(0);
       await expect(columnsButton).toHaveAttribute('aria-expanded', 'false');

@@ -2,8 +2,8 @@
  * WidgetFlowDiagram — behaviour, hardening & a11y contract.
  *
  * A purely presentational SVG following the After `flow` language in
- * `docs/widget-redesign/widgets-compare.html`: a wide viewBox, node discs
- * (icon only) with a stacked name + reading caption below, and curved S-links
+ * the approved cockpit preview: rounded instruments with a stacked name
+ * and measured reading, and curved S-links
  * between them. It has no data hooks and no interactive controls, so this
  * suite drives every branch of its render surface directly:
  *
@@ -11,7 +11,7 @@
  *     message, role="status", and crucially NO `<svg>` — never a blank panel);
  *   - accessibility: the diagram is exposed as `role="img"` with a localisable
  *     accessible name (default + the `ariaLabel` override);
- *   - node rendering: one circle per node, an optional icon, and the key
+ *   - node rendering: one instrument per node, an optional icon, and the key
  *     hardening — the caption renders the caller-formatted `formattedValue`
  *     string (units like `%` / `kW` and the `—` placeholder) as its own
  *     element next to the standalone label, INSTEAD of the raw numeric
@@ -22,7 +22,7 @@
  *   - compact mode: the name collapses to a 3-char uppercase code while the
  *     reading keeps its units, and only the three largest-magnitude arrows
  *     survive;
- *   - arrow semantics: a link animates (the `flow-active` class + a `6 5` dash)
+ *   - arrow semantics: a link animates (the `flow-active` class + a `9 23` dash)
  *     only when it is both `active` and non-zero; idle links are thin neutral
  *     lines with neither. Colour defaults are status-neutral (spec rule 4 —
  *     never sign-derived red/green) unless an explicit override is supplied.
@@ -56,7 +56,7 @@ function arrow(over: Partial<FlowArrow> = {}): FlowArrow {
 }
 
 function paths(container: HTMLElement): SVGPathElement[] {
-  return Array.from(container.querySelectorAll('path'));
+  return Array.from(container.querySelectorAll<SVGPathElement>('[data-flow-edge]'));
 }
 
 function classOf(el: Element | null): string {
@@ -105,7 +105,7 @@ describe('WidgetFlowDiagram accessibility', () => {
 // ── Nodes ────────────────────────────────────────────────────────────────────
 
 describe('WidgetFlowDiagram nodes', () => {
-  it('renders exactly one circle per node', () => {
+  it('renders exactly one instrument per node', () => {
     const nodes = [
       node({ id: 'battery', position: 'left' }),
       node({ id: 'motor', position: 'right' }),
@@ -113,7 +113,7 @@ describe('WidgetFlowDiagram nodes', () => {
     ];
     const { container } = render(<WidgetFlowDiagram nodes={nodes} arrows={[]} />);
 
-    expect(container.querySelectorAll('circle')).toHaveLength(3);
+    expect(container.querySelectorAll('[data-flow-node]')).toHaveLength(3);
   });
 
   it('renders the label and formattedValue as separate caption elements (units preserved, raw value hidden)', () => {
@@ -166,8 +166,7 @@ describe('WidgetFlowDiagram nodes', () => {
     ];
     const { container } = render(<WidgetFlowDiagram nodes={nodes} arrows={[]} />);
 
-    // The node still renders (circle + reading) and no "undefined" text leaks in.
-    expect(container.querySelectorAll('circle')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-flow-node]')).toHaveLength(1);
     expect(container).toHaveTextContent('5 kW');
     expect(container).not.toHaveTextContent('undefined');
   });
@@ -231,10 +230,10 @@ describe('WidgetFlowDiagram arrows', () => {
       <WidgetFlowDiagram nodes={ab} arrows={[arrow({ from: 'a', to: 'b', value: 5, active: true })]} />,
     );
 
-    const path = container.querySelector('path');
+    const path = container.querySelector('[data-flow-edge]');
     expect(classOf(path)).toContain('flow-active');
-    expect(path?.getAttribute('stroke-dasharray')).toBe('6 5');
-    expect(path?.getAttribute('stroke-width')).toBe('3');
+    expect(path?.getAttribute('stroke-dasharray')).toBe('9 23');
+    expect(path?.getAttribute('stroke-width')).toBe('2.5');
   });
 
   it('leaves idle arrows static (no animation class, no dash pattern, thin neutral line)', () => {
@@ -257,6 +256,12 @@ describe('WidgetFlowDiagram arrows', () => {
     expect(classOf(path)).not.toContain('flow-active');
     expect(path?.getAttribute('stroke-dasharray')).toBeNull();
     expect(path?.getAttribute('stroke-width')).toBe('1.5');
+  });
+
+  it.each([NaN, Infinity, -Infinity])('does not animate a non-finite reading (%s)', (value) => {
+    const { container } = render(<WidgetFlowDiagram nodes={ab} arrows={[arrow({ value, active: true })]} />);
+    expect(container.querySelector('.flow-active')).toBeNull();
+    expect(paths(container)[0]).not.toHaveAttribute('stroke-dasharray');
   });
 
   it('skips arrows whose endpoints are not present in the node set', () => {
@@ -308,7 +313,7 @@ describe('WidgetFlowDiagram arrows', () => {
       />,
     );
 
-    const path = container.querySelector('path');
+    const path = container.querySelector('[data-flow-edge]');
     expect(classOf(path)).toContain('text-amber-400');
     expect(classOf(path)).not.toContain('text-[var(--semantic-info)]');
   });
@@ -329,7 +334,8 @@ describe('WidgetFlowDiagram arrows', () => {
       <WidgetFlowDiagram nodes={ab} arrows={[arrow({ from: 'a', to: 'b', value: 4.2, active: true })]} />,
     );
 
-    // Only the two stacked node captions exist — the link adds no extra text.
-    expect(container.querySelectorAll('text')).toHaveLength(4);
+    expect(screen.getAllByText('Battery')).toHaveLength(2);
+    expect(screen.getAllByText('0%')).toHaveLength(2);
+    expect(container.querySelectorAll('text')).toHaveLength(0);
   });
 });

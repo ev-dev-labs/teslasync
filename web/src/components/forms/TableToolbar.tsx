@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MoreHorizontal } from 'lucide-react';
-import { Button } from '../ui/Button';
+import { IconButton } from '../ui/IconButton';
 import { Modal } from '../ui/Modal';
 import { Text } from '@/components/ui/Typography';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -54,10 +54,8 @@ export function TableToolbar({ search, density, exports, heading, actions, colum
         </div>
       )}
       {(density || exports || actions || columns) && (compact ? <>
-        <Button size="sm" variant="secondary" className="ml-auto min-h-11" icon={<MoreHorizontal className="h-4 w-4" aria-hidden="true" />}
-          aria-haspopup="dialog" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}>
-          {t('common.more', 'More')}
-        </Button>
+        <IconButton className="ml-auto min-h-11 min-w-11" icon={<MoreHorizontal className="h-4 w-4" aria-hidden="true" />}
+          label={t('common.more', 'More')} aria-haspopup="dialog" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)} />
         <Modal open={moreOpen} onClose={() => setMoreOpen(false)} title={t('common.more', 'More')} size="sm">
           <div className="flex min-w-0 flex-wrap items-center gap-3 [&_button]:min-h-11 [&_button]:min-w-11">{secondaryControls}</div>
         </Modal>

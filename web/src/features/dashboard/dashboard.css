@@ -1,0 +1,153 @@
+  :is(.dashboard-widget-panel, .dashboard-widget) {
+    --semantic-info: light-dark(#2463b1, #7cbbff);
+    --semantic-success: light-dark(#14664b, #62d5b2);
+    --semantic-warning: light-dark(#87551b, #f2bf70);
+    --semantic-danger: light-dark(#b33c55, #f294a6);
+    --semantic-purple: light-dark(#704bbb, #bda2f5);
+    --semantic-info-bg: color-mix(in srgb, var(--semantic-info) 9%, var(--surface-1));
+    --semantic-success-bg: color-mix(in srgb, var(--semantic-success) 9%, var(--surface-1));
+    --semantic-warning-bg: color-mix(in srgb, var(--semantic-warning) 9%, var(--surface-1));
+    --semantic-danger-bg: color-mix(in srgb, var(--semantic-danger) 9%, var(--surface-1));
+    --semantic-purple-bg: color-mix(in srgb, var(--semantic-purple) 9%, var(--surface-1));
+    --semantic-info-border: color-mix(in srgb, var(--semantic-info) 32%, var(--surface-1));
+    --semantic-success-border: color-mix(in srgb, var(--semantic-success) 32%, var(--surface-1));
+    --semantic-warning-border: color-mix(in srgb, var(--semantic-warning) 32%, var(--surface-1));
+    --semantic-danger-border: color-mix(in srgb, var(--semantic-danger) 32%, var(--surface-1));
+    --semantic-purple-border: color-mix(in srgb, var(--semantic-purple) 32%, var(--surface-1));
+    --widget-well: color-mix(in srgb, var(--surface-2) 94%, var(--semantic-info) 6%);
+    --widget-charge-surface: color-mix(in srgb, var(--surface-1) 90%, var(--semantic-success) 10%);
+  }
+
+  .dashboard-widget-panel {
+    --panel-bg: color-mix(in srgb, var(--surface-1) 95%, var(--semantic-info) 5%);
+    --panel-border: color-mix(in srgb, var(--border-default) 75%, var(--semantic-info-border) 25%);
+    --panel-radius: var(--radius-xl);
+  }
+
+  .dashboard-widget [data-role="widget-shell-header"] {
+    box-shadow: inset 0 -1px 0 var(--border-subtle);
+  }
+
+  .widget-stat-rail {
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--widget-well, var(--surface-2));
+    padding: var(--density-pad-y) var(--density-pad-x);
+  }
+
+  .widget-status-tile {
+    background: var(--widget-well, var(--surface-2));
+  }
+
+  .widget-status-tile[data-status="ok"] {
+    border-color: var(--semantic-success-border);
+  }
+
+  .widget-status-tile[data-status="warning"] {
+    border-color: var(--semantic-warning-border);
+  }
+
+  .widget-status-tile[data-status="error"] {
+    border-color: var(--semantic-danger-border);
+  }
+
+  .widget-chart-well,
+  .widget-flow-frame {
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--widget-well, var(--surface-2));
+  }
+
+  .widget-chart-well {
+    padding: var(--density-pad-y);
+  }
+
+  .widget-event-feed > [role="listitem"] + [role="listitem"],
+  .widget-detail-list > * + * {
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .widget-rank-number {
+    color: var(--semantic-info);
+    background: var(--semantic-info-bg);
+    border-radius: var(--radius-sm);
+  }
+
+  .widget-tip-card {
+    border-inline-start: 2px solid var(--semantic-info-border);
+  }
+
+  .widget-gauge-hero > [role="meter"] {
+    padding: var(--density-pad-y) var(--density-pad-x);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--widget-well, var(--surface-2));
+  }
+
+  .widget-activity-active {
+    border-color: var(--semantic-success-border);
+    background: var(--widget-charge-surface, var(--semantic-success-bg));
+  }
+
+  .widget-energy-stream {
+    animation: widget-energy-sweep 3.2s linear infinite;
+  }
+
+  .widget-cell-stream {
+    animation: widget-cell-rise 2.4s linear infinite;
+  }
+
+  .dashboard-widget .flow-active {
+    animation: widget-power-travel 2.4s linear infinite;
+  }
+
+  .widget-road-motion {
+    animation: widget-road-travel 4.8s linear infinite;
+  }
+
+  .widget-airflow-motion {
+    animation: widget-airflow-travel 3.2s linear infinite;
+  }
+
+  .dashboard-canvas[data-motion-paused="true"] :is(.widget-state-motion, .flow-active),
+  .dashboard-widget [data-motion-suppressed="true"] :is(.widget-state-motion, .flow-active),
+  .dashboard-widget[data-motion-suppressed="true"] :is(.widget-state-motion, .flow-active) {
+    animation: none !important;
+  }
+@keyframes widget-energy-sweep {
+  to { transform: translateX(160px); }
+}
+
+@keyframes widget-cell-rise {
+  to { transform: translateY(-48px); }
+}
+
+@keyframes widget-power-travel {
+  to { stroke-dashoffset: -32; }
+}
+
+@keyframes widget-road-travel {
+  to { stroke-dashoffset: 152; }
+}
+
+@keyframes widget-airflow-travel {
+  to { stroke-dashoffset: -48; }
+}
+
+@media (prefers-reduced-motion: reduce), print {
+  :is(.dashboard-widget, .dashboard-canvas) :is(.widget-state-motion, .flow-active) {
+    animation: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :is(.dashboard-widget-panel, .dashboard-widget) {
+    --semantic-info: CanvasText;
+    --semantic-success: CanvasText;
+    --semantic-warning: CanvasText;
+    --semantic-danger: CanvasText;
+    --semantic-purple: CanvasText;
+    --widget-well: Canvas;
+    --widget-charge-surface: Canvas;
+  }
+}

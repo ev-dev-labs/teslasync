@@ -322,10 +322,13 @@ describe('full reconciliation table controls and canonical exports', () => {
     fireEvent.keyDown(resizer, { key: 'ArrowRight' });
     expect(resizer).toHaveAttribute('aria-valuenow', String(initialWidth + 8));
     fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }));
-    const menu = screen.getByRole('menu', { name: 'Reorder or hide columns' });
+    const menu = screen.getByRole('dialog', { name: 'Reorder or hide columns' });
     fireEvent.click(within(menu).getByRole('button', { name: 'Move Started up' }));
     expect(within(table).getAllByRole('columnheader')[1]).toHaveAttribute('aria-label', 'Started');
     fireEvent.click(within(menu).getByRole('button', { name: 'Reset' }));
+    const confirmation = screen.getByRole('dialog', { name: 'Reset columns?' });
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Reset', exact: true }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Reset columns?' })).not.toBeInTheDocument());
     expect(within(table).getAllByRole('columnheader')[1]).toHaveAttribute('aria-label', 'Session');
     fireEvent.click(within(menu).getByRole('checkbox', { name: 'Show or hide Meter energy' }));
     fireEvent.keyDown(document, { key: 'Escape' });

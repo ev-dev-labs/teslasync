@@ -127,6 +127,56 @@ const mockSettings = useSettings as unknown as ReturnType<typeof vi.fn>;
 
 const STANDARD = { cols: 2, rows: 2 };
 
+describe('VehicleHeroWidget — state-coherent real vehicle studio', () => {
+  it.each([6, 7, 14])('keeps bounded natural height at %i rows while preserving the charge meter and all cabin chips', rows => {
+    setup();
+    const { container } = renderWidget(<VehicleHeroWidget size={{ cols: 2, rows }} />);
+    expect(container.querySelector('[data-studio-layout="bounded"]')).toHaveClass('h-32');
+    expect(screen.getByRole('meter', { name: 'Battery' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Range' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Inside' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Outside' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Details/ })).toBeInTheDocument();
+  });
+
+  it('moves only the road for current verified driving and stops at the observation expiry', () => {
+    vi.useFakeTimers();
+    try {
+      setup({ state: makeQuery({ data: makeStateData({ fsmState: 'driving' }) }) });
+      renderWidget(<VehicleHeroWidget size={STANDARD} />);
+      expect(screen.getByTestId('vehicle-road-motion')).toHaveClass('widget-state-motion', 'widget-road-motion');
+      expect(screen.getByTestId('vehicle-road-motion')).toHaveAttribute('d', 'M536 188H24');
+      act(() => vi.advanceTimersByTime(120_001));
+      expect(screen.queryByTestId('vehicle-road-motion')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    { freshness: 'stale' as const },
+    { freshness: 'unknown' as const },
+    { verifiedFields: [] },
+    { observedAt: null },
+    { observedAt: Date.now() + 180_000 },
+  ])('keeps the vehicle studio static without current verified driving: %o', evidence => {
+    setup({ state: makeQuery({ data: makeStateData({ fsmState: 'driving', ...evidence }) }) });
+    const { container } = renderWidget(<VehicleHeroWidget size={STANDARD} />);
+    expect(container.querySelector('[data-vehicle-studio]')).toHaveAttribute('data-activity', 'static');
+    expect(screen.queryByTestId('vehicle-road-motion')).not.toBeInTheDocument();
+  });
+
+  it('stops activity after a failed refresh while retaining the actual vehicle and readings', () => {
+    setup({ state: makeQuery({
+      data: makeStateData({ fsmState: 'driving' }), isError: true, error: new Error('unavailable'),
+    }) });
+    const { container } = renderWidget(<VehicleHeroWidget size={STANDARD} />);
+    expect(container.querySelector('[data-vehicle-studio]')).toHaveAttribute('data-activity', 'static');
+    expect(screen.getByText('My Tesla · Model 3 Performance')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+  });
+});
+
 function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined as unknown,

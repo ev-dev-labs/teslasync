@@ -23,6 +23,8 @@ import type {
 import type { VehicleStatus, VehicleStateReadings } from '@/api/types';
 import type { Vehicle } from '../types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import VehicleStudio from '../widgets/vehicle-instruments/VehicleStudio';
+import { useVerifiedDriving } from '../widgets/vehicle-instruments/useVerifiedDriving';
 
 interface VehicleHeroProps {
   vehicle: Vehicle;
@@ -97,6 +99,7 @@ export const VehicleHero = memo(function VehicleHero({
     verifiedFields,
   });
   const unknownStatus = status == null;
+  const driving = useVerifiedDriving({ state: observedState, freshness, observedAt, verifiedFields });
   /* Both ends converted together so the arc means the same thing in °C and
    * °F, with a sub-zero floor so cold outside readings still render. */
   const tempRange = ambientTemperatureGaugeRange(toTemperatureDisplay);
@@ -153,6 +156,9 @@ export const VehicleHero = memo(function VehicleHero({
             </Text>
           </GlassPanel>
         )}
+        <div className="mt-5">
+          <VehicleStudio vehicle={vehicle} driving={driving} size="lg" />
+        </div>
           <div className="mt-6">
             {/* Context-aware gauges. Bars need horizontal room, so they sit in
                 a responsive grid rather than the single wrapping row the old

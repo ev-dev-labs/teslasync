@@ -132,7 +132,7 @@ export function WidgetRankedList({
             )}
           >
             {/* Rank number */}
-            <span className="w-5 shrink-0 text-right text-xs font-medium tabular-nums text-[var(--text-muted)]">
+            <span className="widget-rank-number flex size-6 shrink-0 items-center justify-center text-xs font-medium tabular-nums">
               {index + 1}
             </span>
 

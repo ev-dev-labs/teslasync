@@ -28,6 +28,8 @@ import { VEHICLE_STATE_LABELS, type VehicleState } from '@/types/fsm';
 import { WidgetBigNumber } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import VehicleStudio from './vehicle-instruments/VehicleStudio';
+import { useVerifiedDriving } from './vehicle-instruments/useVerifiedDriving';
 
 /** Stable identity so an unresolved read never re-renders the hero body. */
 const EMPTY_VERIFIED_FIELDS: readonly VerifiedVehicleStateField[] = [];
@@ -169,6 +171,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
     verifiedFields,
   });
   const unknownStatus = status == null;
+  const driving = useVerifiedDriving(stateData, isError);
 
   const batteryLevel =
     state?.battery_level != null && Number.isFinite(state.battery_level)
@@ -299,8 +302,10 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
             )}
           </div>
 
+          <VehicleStudio vehicle={vehicle} driving={driving} size="lg" bounded />
+
           {/* Headline battery + estimated range. Each value appears once. */}
-          <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
             <WidgetBigNumber
               value={batteryLevel}
               unit="%"
@@ -374,7 +379,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
           </div>
 
           {/* Access + cabin chips. */}
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 gap-2 @lg:grid-cols-4">
             <Chip
               icon={
                 state?.is_locked ? (

@@ -267,6 +267,15 @@ CSS reduced-motion remains the safety net. Remove nonessential loops in normal
 mode too. Owners: `web\src\hooks\useMotionPreference.ts:44–48`,
 `web\src\lib\tokens.ts:108–163`, `web\src\index.css` reduced-motion rules.
 
+Dashboard cockpit instruments may use continuous, directional charging ribbons,
+road movement and HVAC airflow as verified active-state feedback. Measurements,
+charge targets and the car body remain still. Missing, stale, historical and
+inactive evidence never starts activity. The existing per-dashboard settings own
+the persisted pause; reduced motion, low bandwidth and hidden tabs override it,
+including fullscreen and kiosk. Pausing motion must not pause data refresh.
+Owners: `features/dashboard/dashboard.css`, `WidgetShell`, `DashboardGrid` and
+the domain instruments; this is not permission for decorative page-wide loops.
+
 ## Existing interaction and layout owners
 
 | Stable ID | Decision / preserved API | Exact existing owner |

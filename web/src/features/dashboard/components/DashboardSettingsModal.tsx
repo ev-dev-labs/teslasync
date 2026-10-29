@@ -6,6 +6,7 @@ import {
   Select as UiSelect,
   Toggle,
   Button as UiButton,
+  Text,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { SavedDashboard, DashboardSettings } from '../widgets/types';
@@ -212,6 +213,14 @@ export function DashboardSettingsModal({
             {t('dashSettings.display', 'Display')}
           </h3>
           <div className="space-y-3">
+            <Toggle
+              label={t('dashSettings.animateActiveStates', 'Animate active states')}
+              checked={settings.animateActiveStates !== false}
+              onChange={(v) => setSettings((s) => ({ ...s, animateActiveStates: v }))}
+            />
+            <Text variant="caption" color="muted">
+              {t('dashSettings.animateActiveStatesHelp', 'Show continuous charging, driving and climate activity. Reduced motion and low-bandwidth preferences always take priority.')}
+            </Text>
             <Toggle
               label={t('dashSettings.showBorders', 'Show widget borders')}
               checked={settings.showWidgetBorders}

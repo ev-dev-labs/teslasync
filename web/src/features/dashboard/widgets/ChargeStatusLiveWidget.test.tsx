@@ -178,6 +178,45 @@ describe('formatTimeRemaining', () => {
 
 // ── Widget render states ─────────────────────────────────────────────────────
 describe('ChargeStatusLiveWidget', () => {
+  it('activates verified current charging without pulsing the pack or moving its fixed percent', () => {
+    vehicleStateMock.mockReturnValue({
+      ...makeStateQuery(makeState({ battery_level: 72 })),
+      data: {
+        state: makeState({ battery_level: 72 }), live: true,
+        freshness: 'fresh', observedAt: Date.now(), verifiedFields: ['is_charging'],
+      },
+    });
+    const { container } = renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
+    expect(container.querySelector('.widget-cell-stream')).toHaveClass('widget-state-motion');
+    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '72');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.getByText('72')).toBeInTheDocument();
+  });
+
+  it('does not infer charging activity from power when the authoritative state is unknown', () => {
+    vehicleStateMock.mockReturnValue({
+      ...makeStateQuery(makeState()),
+      data: {
+        state: { ...makeState(), is_charging: null }, live: true,
+        freshness: 'fresh', observedAt: Date.now(), verifiedFields: ['is_charging'],
+      },
+    });
+    const { container } = renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(container.querySelector('.widget-state-motion')).toBeNull();
+  });
+
+  it('uses timestamped charging telemetry only when vehicle state is absent', () => {
+    vehicleStateMock.mockReturnValue(makeStateQuery(undefined));
+    chargingTelemetryMock.mockReturnValue({
+      data: { charging_state: 'Charging', ts: new Date().toISOString(), battery_level: 72, charger_power_w: 11_000 },
+      isLoading: false, isError: false, dataUpdatedAt: Date.now(), refetch: vi.fn(),
+    });
+    const { container } = renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
+    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '72');
+    expect(container.querySelector('.widget-cell-stream')).toHaveClass('widget-state-motion');
+  });
+
   it.each([SIZE_COMPACT, SIZE_MEDIUM])('keeps missing charging status unknown at %j size', size => {
     vehicleStateMock.mockReturnValue(makeStateQuery({
       ...makeState(), is_charging: undefined, battery_level: 0,

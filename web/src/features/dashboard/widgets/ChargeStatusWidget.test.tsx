@@ -154,6 +154,21 @@ const CHARGING: Partial<VehicleState> = {
   time_to_full_charge: 2.5,
 };
 
+it('animates only verified current charging and keeps the true current-to-limit readout', () => {
+  mockVehicleState.mockReturnValue(qr({
+    data: {
+      ...stateWithLimit(80, { ...CHARGING, battery_level: 64 }),
+      freshness: 'fresh', observedAt: Date.now(), verifiedFields: ['is_charging'],
+    },
+  }));
+  const { container } = renderWidget({ vehicleId: 42 });
+  expect(container.querySelector('.widget-energy-stream')).toHaveClass('widget-state-motion');
+  expect(container.querySelector('.widget-cell-stream')).toHaveClass('widget-state-motion');
+  expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '64');
+  expect(screen.getByTestId('charge-limit-marker')).toHaveStyle({ left: '80%' });
+  expect(screen.getByText('64 → 80')).toBeInTheDocument();
+});
+
 function renderWidget(props: Partial<WidgetProps> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(

@@ -52,14 +52,9 @@ export function WidgetGaugeHero({ gauge, stats, compact, children }: WidgetGauge
   const items = stats ?? [];
 
   return (
-    // Spec hero chrome: the LinearGauge bar is the single headline; this
-    // wrapper only centers it full-width (a bar takes its width from the
-    // parent — see the gauge-width audit) and spaces the quiet secondary
-    // stats with the shared section rhythm. No gradients, no glass, no
-    // motion of its own (reduced-motion safe by construction).
     <div
       className={cn(
-        'flex h-full w-full min-w-0 flex-col items-center justify-center',
+        'widget-gauge-hero flex h-full w-full min-w-0 flex-col items-center justify-center',
         dashboardTokens.density.sectionGap,
       )}
     >
@@ -86,6 +81,7 @@ export function WidgetGaugeHero({ gauge, stats, compact, children }: WidgetGauge
         <div
           className={cn(
             'flex w-full min-w-0 flex-wrap items-center justify-center',
+            dashboardTokens.statRail,
             dashboardTokens.density.statGap,
           )}
         >

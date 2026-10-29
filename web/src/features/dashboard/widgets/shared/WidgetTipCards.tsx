@@ -70,7 +70,7 @@ export function WidgetTipCards({
             // title block and a muted body — not a divided row. The leading
             // icon and impact pill stay opt-in per tip so the four callers
             // keep their status cues; color never carries meaning alone.
-            'min-w-0 border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2.5',
+            'widget-tip-card min-w-0 border border-[var(--border-subtle)] bg-[var(--widget-well,var(--surface-2))] px-3 py-2.5',
             dashboardTokens.radius.inner,
           )}
         >

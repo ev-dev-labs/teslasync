@@ -473,7 +473,7 @@ describe('DataTable — columnReorder + columnVisibility (Phase-46 / Prompt 45)'
     expect(stored.hidden).toContain('name')
   })
 
-  it('Reset clears the persisted layout and restores defaults', () => {
+  it('Reset clears the persisted layout and restores defaults after confirmation', async () => {
     window.localStorage.setItem(
       'teslasync.table.reorder-4.columns',
       JSON.stringify({ order: ['status', 'id', 'name'], hidden: ['name'] }),
@@ -491,6 +491,9 @@ describe('DataTable — columnReorder + columnVisibility (Phase-46 / Prompt 45)'
     expect(getHeaderOrder(container)).toEqual(['status', 'id'])
     fireEvent.click(screen.getByRole('button', { name: /reorder or hide columns/i }))
     fireEvent.click(screen.getByTestId('datatable-column-menu-reset'))
+    expect(getHeaderOrder(container)).toEqual(['status', 'id'])
+    const confirmation = screen.getByRole('dialog', { name: 'Reset columns?' })
+    await act(async () => fireEvent.click(within(confirmation).getByRole('button', { name: 'Reset', exact: true })))
     // Back to source order with all columns visible.
     expect(getHeaderOrder(container)).toEqual(['id', 'name', 'status'])
     expect(window.localStorage.getItem('teslasync.table.reorder-4.columns')).toBeNull()

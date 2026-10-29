@@ -9,6 +9,7 @@ import { convertPowerFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid } from './shared';
+import { ChargeBatteryPack, ChargeReadings, useTelemetryChargeActivity } from './instruments/ChargeInstruments';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -26,8 +27,11 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
   } = query;
 
   const isCompact = size.cols <= 1;
+  const isShort = size.rows <= 2;
 
   const isCharging = data?.charging_state === 'Charging';
+  const active = useTelemetryChargeActivity(query);
+  const batteryLevel = knownNumber(data?.battery_level);
 
   const voltage = knownNumber(data?.charger_voltage);
   const current = knownNumber(data?.charger_actual_current);
@@ -96,7 +100,12 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
         onRefresh={handleRefresh}
       >
         {isCharging ? (
-          <WidgetStatGrid compact cols={2} stats={stats.slice(0, 4)} />
+          <div className={isShort ? 'flex min-w-0 items-center gap-2' : 'flex min-w-0 flex-col gap-2'}>
+            <ChargeBatteryPack level={batteryLevel} active={active} className={isShort ? 'w-16' : 'mx-auto w-24'} />
+            <ChargeReadings short={isShort}>
+            <WidgetStatGrid compact cols={2} stats={stats.slice(0, 4)} />
+            </ChargeReadings>
+          </div>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Plug className="h-5 w-5" />}
@@ -122,12 +131,17 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
       onRefresh={handleRefresh}
     >
       {isCharging ? (
-        <div className="flex flex-col gap-3 h-full">
+        <div className={isShort ? 'flex min-w-0 items-start gap-3' : 'flex h-full flex-col gap-3'}>
+          <ChargeBatteryPack level={batteryLevel} active={active} className={isShort ? 'w-20' : 'mx-auto w-32'} />
+          <div className="min-w-0 flex-1">
+          <ChargeReadings short={isShort}>
           <WidgetStatGrid
             cols={3}
             maxPerRow={3}
             stats={stats}
           />
+          </ChargeReadings>
+          </div>
         </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

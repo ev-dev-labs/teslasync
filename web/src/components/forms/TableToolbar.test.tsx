@@ -23,7 +23,9 @@ describe('TableToolbar', () => {
     expect(screen.getByRole('searchbox')).toBeVisible();
     expect(screen.queryByRole('radiogroup')).toBeNull();
     const more = screen.getByRole('button', { name: 'More', exact: true });
-    await user.click(more);
+    expect(more).not.toHaveTextContent('More');
+    more.focus();
+    await user.keyboard('{Enter}');
     const dialog = screen.getByRole('dialog', { name: 'More', exact: true });
     await user.click(within(dialog).getByRole('radio', { name: 'Comfortable', exact: true }));
     expect(densityChange).toHaveBeenCalledWith('comfortable');

@@ -167,17 +167,20 @@ export function DataTableColumnMenu({
                 ? t('table.columns.headingReorder', 'Columns')
                 : t('table.columns.heading', 'Visible columns')}
             </Label>
-            <button
-              type="button"
-              onClick={() => {
-                onReset()
+            <IconButton
+              icon={<Icon icon={RotateCcw} size="xs" />}
+              label={t('table.columns.reset', 'Reset')}
+              onClick={onReset}
+              confirm={{
+                title: t('table.columns.resetTitle', 'Reset columns?'),
+                message: t('table.columns.resetMessage', 'Restore the default column order and visibility for this table? Row data will not change.'),
+                confirmLabel: t('table.columns.reset', 'Reset'),
+                cancelLabel: t('common.cancel', 'Cancel'),
+                variant: 'warning',
               }}
               data-testid="datatable-column-menu-reset"
-              className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-shape-sm px-2 text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] md:min-h-6"
-            >
-              <Icon icon={RotateCcw} size="xs" />
-              <Text variant="bodySm">{t('table.columns.reset', 'Reset')}</Text>
-            </button>
+              className="min-h-11 min-w-11"
+            />
           </div>
           {toggleable && safeColumns.length > 0 && (
             <div className="mb-1 border-b border-[var(--border-subtle)] px-2 pb-2">

@@ -3,15 +3,16 @@ import { useTranslation } from 'react-i18next';
 import { Monitor, ArrowUpRight, Lock, Unlock, Shield } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { EmptyState, Skeleton } from '@/components/feedback';
-import { VehicleTwin } from '@/components/vehicles';
 import { useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { buildTwinState } from '@/lib/vehicleState';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
 import { WidgetStatusGrid } from './shared';
 import { WidgetShell } from './WidgetShell';
-import { IconButton } from '@/components/ui/IconButton';
+import { IconButton } from '@/components/ui';
 import type { WidgetProps } from './types';
+import VehicleStudio from './vehicle-instruments/VehicleStudio';
+import { useVerifiedDriving } from './vehicle-instruments/useVerifiedDriving';
 
 const REFRESH_INTERVAL = 5_000;
 
@@ -35,6 +36,7 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
   // initial fetch instead of flashing the "No vehicle data" empty state.
   const isLoading = vehiclesLoading || secLoading || stateLoading;
   const vehicleState = vehicleStateData?.state ?? null;
+  const driving = useVerifiedDriving(vehicleStateData, stateError);
   const stateTrust = useDataState({ ...stateQuery, data: vehicleStateData ?? (stateLoading || stateError ? undefined : null) }, { provenance: vehicleStateData?.live ? 'live' : 'cached' });
   const securityTrust = useDataState({ ...securityQuery, data: securityData ?? (secLoading || securityQuery.isError ? undefined : null) }, { provenance: 'cached' });
   const chargingTrust = useDataState({ ...chargingQuery, data: chargingData ?? (chargingQuery.isLoading || chargingQuery.isError ? undefined : null) }, { provenance: 'cached' });
@@ -86,19 +88,19 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
     >
       {vehicle ? (
         <div className="h-full flex flex-col items-center justify-center gap-2 px-2 pb-2">
-          <div className="flex-1 min-h-0 flex items-center justify-center w-full">
-            <VehicleTwin
-              {...twinState}
+          <div className="shrink-0 flex items-center justify-center w-full">
+            <VehicleStudio
+              twinState={twinState}
+              vehicle={vehicle}
+              driving={driving}
               size="sm"
-              vehicleId={vehicle?.id}
-              exteriorColor={vehicle?.exterior_color}
-              model={vehicle?.model}
+              compact
             />
           </div>
 
           {/* Status badges — shown unless very cramped */}
           {!isCompact || size.rows >= 2 ? (
-            <div className="flex-shrink-0 flex flex-wrap gap-1.5 justify-center">
+            <div className="flex w-full flex-shrink-0 flex-wrap justify-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2">
               <Badge
                 variant={
                   // Unknown lock state stays neutral — a green "success" chip
