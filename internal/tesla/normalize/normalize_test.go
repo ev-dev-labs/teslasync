@@ -22,6 +22,49 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 )
 
+func TestPipeline_NewStreamingFields(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)
+	cases := []struct {
+		field string
+		body  string
+		want  any
+	}{
+		{"AccessoryRail", "false", false},
+		{"PowerTransferStatus", `"PowerTransferStatusChargeEnabled"`, "ChargeEnabled"},
+		{"AutomaticEmergencyBrakingState", `"AutomaticEmergencyBrakingStateStandby"`, "Standby"},
+		{"RollingResistanceCoefficient", "0.006123456789", float64(0.006123456789)},
+		{"LifetimeDcChargeEnergyKwh", "12.5", float64(12500)},
+		{"SemiVehicleMassKg", "36500.5", float64(36500.5)},
+	}
+	for _, tc := range cases {
+		t.Run(tc.field, func(t *testing.T) {
+			repo := &fakeRepo{}
+			routes := &fakeRouter{}
+			pipeline := New(repo, routes, zerolog.Nop())
+			atoms, err := codec.DecodeJSONField(tc.field,
+				[]byte(`{"value":`+tc.body+`,"ts":"2026-10-28T12:00:00Z"}`),
+				"TEST-STREAMING", now.Add(time.Hour))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := pipeline.ProcessAtomics(context.Background(), atoms, 42); err != nil {
+				t.Fatal(err)
+			}
+			got := routes.routesCopy()
+			if len(got) != 1 || got[0].Field != tc.field || got[0].Value != tc.want {
+				t.Fatalf("routed = %#v, want %s=%v", got, tc.field, tc.want)
+			}
+			if !got[0].EmittedAt.Equal(now) {
+				t.Fatalf("source timestamp = %v, want %v", got[0].EmittedAt, now)
+			}
+			if ops := repo.opsCopy(); len(ops) != 0 {
+				t.Fatalf("fixed-unit fields must not require vehicle unit history: %+v", ops)
+			}
+		})
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Test fakes
 // ---------------------------------------------------------------------------

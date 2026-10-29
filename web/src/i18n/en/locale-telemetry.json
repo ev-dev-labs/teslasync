@@ -743,6 +743,13 @@
     "emptyDesc": "Pick signals from the catalog, choose a time range, then click run for historical data — or toggle live to stream in real time."
   },
   "telemetry": {
+    "accessoryRail": "Accessory rail",
+    "powerTransferStatus": "Power transfer status",
+    "aebOperatingState": "AEB operating state",
+    "lifetimeDcChargeEnergy": "Lifetime DC charge energy",
+    "rollingResistanceCoefficient": "Rolling resistance coefficient",
+    "semiVehicleMass": "Semi vehicle mass",
+    "streamingAvailability": "Availability depends on vehicle and firmware. Lifetime energy is the vehicle counter, not tracked session totals.",
     "brief": {
       "analysisBounds": "Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.",
       "auditGenerated": "Audit generated: {{timestamp}}",

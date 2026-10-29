@@ -109,6 +109,26 @@ func TestConfigCoversAllFields(t *testing.T) {
 	}
 }
 
+func TestSubscriptionIncludesNewStreamingFields(t *testing.T) {
+	t.Parallel()
+	body, err := NewBuilder().BuildSubscription()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var subscription parsedSubscription
+	if err := json.Unmarshal(body, &subscription); err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{
+		"AccessoryRail", "PowerTransferStatus", "AutomaticEmergencyBrakingState",
+		"RollingResistanceCoefficient", "LifetimeDcChargeEnergyKwh", "SemiVehicleMassKg",
+	} {
+		if entry, ok := subscription.Config.Fields[field]; !ok || entry.IntervalSeconds <= 0 {
+			t.Errorf("subscription missing active field %s", field)
+		}
+	}
+}
+
 // TestSubscriptionDeterministic asserts BuildSubscription produces
 // byte-identical output across calls for the same inputs. Without
 // this property the subscription JSON would churn its hash on every

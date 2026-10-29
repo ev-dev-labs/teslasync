@@ -409,6 +409,17 @@ describe('SafetySettingsPage helpers', () => {
     expect(byKey.slw.enabled).toBe(false); // SpeedAssistLevelNone → Off
     expect(byKey.cfd.valueText).toBe('3'); // FollowDistance3 → "3"
   });
+
+  it('keeps AEB operating state separate from its configuration and coverage', () => {
+    const snapshot = { ...SAFETY, automatic_emergency_braking_state: 'Unavailable' };
+    const t = (_key: string, fallback: string) => fallback;
+    const aeb = buildFeatureCards(snapshot, t).find(card => card.key === 'aeb');
+    expect(aeb?.enabled).toBe(true);
+    expect(aeb?.detail).toBe('AEB operating state: Unavailable');
+    expect(enabledCount(snapshot)).toBe(enabledCount(SAFETY));
+    expect(boolFeatures({ automatic_emergency_braking_state: 'Enabled' })[0]).toBeNull();
+    expect(toChartData([snapshot])[0].aeb).toBe(1);
+  });
 });
 
 /* ── Specs: page render / orchestration ───────────────────────────── */
