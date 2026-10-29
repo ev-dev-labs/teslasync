@@ -1,8 +1,13 @@
 package drives
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -75,5 +80,100 @@ func TestDriveTelemetryNumericFanAndIndependentMeasurements(t *testing.T) {
 		if output[1][key] != nil {
 			t.Errorf("missing %s copied from preceding row: %v", key, output[1][key])
 		}
+	}
+
+}
+
+func TestDriveTelemetryBoundaryState(t *testing.T) {
+	start := time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC)
+	readErr := errors.New("boundary unavailable")
+	tests := []struct {
+		name      string
+		state     signal.State
+		rows      []signal.TimelineRow
+		stateErr  error
+		wantRows  int
+		wantReads int
+		wantErr   error
+	}{
+		{name: "unknown is not an observation", state: signal.State{"PackCurrent": nil}, wantReads: 1},
+		{name: "unrelated state is not telemetry", state: signal.State{"DoorState": "closed"}, wantReads: 1},
+		{name: "measured zero and false survive", state: signal.State{"PackCurrent": 0.0, "PackVoltage": 400.0, "HvacPower": false}, wantRows: 1, wantReads: 1},
+		{name: "exact boundary is not duplicated", rows: []signal.TimelineRow{{Timestamp: start, Fields: map[string]signal.SignalValue{"pack_current": 2.0}}}, wantRows: 1},
+		{name: "boundary failure is surfaced", stateErr: readErr, wantReads: 1, wantErr: readErr},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reads := 0
+			reader := &fakeStateReader{
+				stateFn: func(context.Context, int64, time.Time) (signal.State, error) {
+					reads++
+					return tt.state, tt.stateErr
+				},
+				timelineFn: func(context.Context, int64, []signal.FieldMapping, time.Time, time.Time, signal.TimelineOptions) ([]signal.TimelineRow, error) {
+					return tt.rows, nil
+				},
+			}
+			rows, err := (&driveDetailHandler{state: reader}).telemetryTimeline(context.Background(), 42, start, start.Add(time.Minute))
+			if !errors.Is(err, tt.wantErr) || len(rows) != tt.wantRows || reads != tt.wantReads {
+				t.Fatalf("rows=%+v reads=%d err=%v; want rows=%d reads=%d err=%v", rows, reads, err, tt.wantRows, tt.wantReads, tt.wantErr)
+			}
+			if tt.state["PackCurrent"] == 0.0 {
+				output := timelineRowsToDriveTelemetry(rows)[0]
+				if output.Power == nil || *output.Power != 0 || output.IsClimateOn == nil || *output.IsClimateOn {
+					t.Fatalf("known zero/false replaced by unknown: %+v", output)
+				}
+			}
+		})
+	}
+}
+
+func TestDriveTelemetryRetainsLeadingBoundaryPowerInterval(t *testing.T) {
+	start := time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC)
+	fake := &fakeStateReader{
+		stateFn: func(context.Context, int64, time.Time) (signal.State, error) {
+			return signal.State{"PackVoltage": 400.0, "PackCurrent": 40.0}, nil
+		},
+		timelineFn: func(_ context.Context, _ int64, fields []signal.FieldMapping, _, _ time.Time, _ signal.TimelineOptions) ([]signal.TimelineRow, error) {
+			if len(fields) == len(drivePositionFieldMappings) {
+				return nil, nil
+			}
+			return []signal.TimelineRow{{Timestamp: start.Add(52 * time.Second),
+				Fields: map[string]signal.SignalValue{"pack_voltage": 400.0, "pack_current": -10.0}}}, nil
+		},
+	}
+	for _, endpoint := range []string{"detail", "telemetry"} {
+		t.Run(endpoint, func(t *testing.T) {
+			h := &driveDetailHandler{DriveHandler: &DriveHandler{live: newTestLiveStateReader(fake)},
+				state: fake, drives: &fakeDriveByIDFetcher{drive: completedDrive(7, 42, start, start.Add(time.Minute))}}
+			rec := httptest.NewRecorder()
+			req := newDriveDetailRequest(t, "7", "")
+			if endpoint == "detail" {
+				h.Get(rec, req)
+			} else {
+				h.TelemetryReadings(rec, req)
+			}
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d: %s", rec.Code, rec.Body.String())
+			}
+			var rows []driveTelemetryRow
+			if endpoint == "detail" {
+				var payload struct {
+					Telemetry []driveTelemetryRow `json:"telemetry"`
+				}
+				if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+					t.Fatal(err)
+				}
+				rows = payload.Telemetry
+			} else if err := json.Unmarshal(rec.Body.Bytes(), &rows); err != nil {
+				t.Fatal(err)
+			}
+			if len(rows) != 2 || !rows[0].CreatedAt.Equal(start) || rows[0].Power == nil || *rows[0].Power != 16000 {
+				t.Fatalf("leading 52-second draw interval lost: %+v", rows)
+			}
+			if rows[1].Power == nil || *rows[1].Power != -4000 {
+				t.Fatalf("regen sign lost: %+v", rows[1])
+			}
+		})
 	}
 }

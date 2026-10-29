@@ -16,6 +16,12 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   Ingest preserves current sign; no normalizer sign inversion was found.
   Fixes must retain positive draw/negative regen and integrate elapsed time,
   not clamp recovery or force every drive's net power positive.
+- Additional Part A root found during integration: `StateReader.Timeline`
+  correctly seeds prevailing values but emits only change-event timestamps.
+  The drive API omits the leading boundary state; a long initial draw interval
+  can therefore disappear from the frontend mean even after duration weighting.
+  Both telemetry endpoints need a derived start-boundary row from the canonical
+  state reader, without inventing unknown values or duplicating a real start row.
 - Climate roots confirmed: the drive telemetry projection never includes
   canonical boolean `HvacPower` or `is_climate_on`, although the frontend expects
   the latter. The codec also stores fan status as text, while the frontend
@@ -35,11 +41,18 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   enclosed cards short; chart-card title and embedded chart toolbar have
   separate owners, placing download actions below the title. Shared layout
   and card anatomy fixes plus precise route-guard regressions are in progress.
+- Part C design refinement requested by the user: use one reusable, responsive
+  card-layout mechanism with explicit header/summary/body/footer slots and
+  declarative call sites. Do not scatter long DOM-depth-dependent Tailwind
+  selector chains through `CardGrid`, chart cards, or page components.
 - Part A implementation: paired state-reader timelines feed signed elapsed-time
   power integration. Both normal completion and restart recovery preserve the
   mean's sign and real zero, never substitute peak power, and write SI watts
   exactly once. Frontend fallback estimates use actual bounded instants, stop
   at unknown samples, and do not extrapolate uncovered intervals.
+  Both drive telemetry endpoints now share a start-boundary projection from
+  canonical state, preserving the leading held interval without duplicating
+  an exact-start event, fabricating unknown observations, or losing zero/false.
 - Repair boundary: extended the existing dry-run-first operator command only;
   never execute against production. Reconstruct only from retained original
   signals; absent/corrupted original telemetry cannot be recovered by guessing.
@@ -59,12 +72,21 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   drives, telemetry and repair race suites and `go build ./...` pass.
   Four frontend interval regressions pass; actual `npx tsc --noEmit`,
   scoped ESLint, all six audit counts (zero), and driving hook-route checks pass.
+  Follow-up red receipt: both HTTP endpoints omitted a 52-second initial draw
+  interval and returned only the final regen row. The endpoint regression,
+  five boundary/null/zero/error cases, affected race suites and full Go build
+  now pass. CI explicitly runs the sparse-power PostgreSQL regression against
+  its isolated test service; workflow actionlint passes.
 - Final verification pending: full lint/audits, consolidated hermetic browsers,
   route matrix and reviewed committed before/after screenshots, per-part
   commits/push and current-head draft PR checks. No success is claimed yet.
-- Next step: persist Part A, complete the 2,216-route-variant card guard and
-  targeted drive/browser checks, review after screenshots, commit B/C and push,
-  then fix actual current-head CI failures until green.
+- Initial card guard runs exposed real layout findings and were stopped before
+  acceptance when the user requested the shared-slot architecture refinement.
+  Partial old-build logs are diagnostic only, never passing matrix evidence.
+- Next step: finish the reusable shared card-slot mechanism, rebuild once,
+  complete the 2,216-route-variant guard and targeted drive/browser checks,
+  review after screenshots, commit B/C and push, then fix actual current-head
+  CI failures until green.
 
 ## Bug 1: Drive detail shows same address for Start and Destination (non-round-trip)
 
