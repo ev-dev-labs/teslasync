@@ -3,6 +3,69 @@
 Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`.
 
+## Bug 3: Drive evidence, presentation and app-wide card layout
+
+- Status: in progress; branch `fix/post-202-polish`, draft PR #223.
+- Part A roots confirmed before changes: `SignalLogReader.RegenEnergy` treats
+  the fraction of negative-current change events as a fraction of elapsed time.
+  Fleet Telemetry is a sparse change feed, so this overweights frequently
+  changing regen samples. `DriveAggregates` separately averages voltage and
+  current instead of pairing their time-aligned observations; the power chart
+  also averages emitted rows without duration weights. Completion applies
+  `Abs` to mean power, masking rather than resolving sign inconsistencies.
+  Ingest preserves current sign; no normalizer sign inversion was found.
+  Fixes must retain positive draw/negative regen and integrate elapsed time,
+  not clamp recovery or force every drive's net power positive.
+- Climate roots confirmed: the drive telemetry projection never includes
+  canonical boolean `HvacPower` or `is_climate_on`, although the frontend expects
+  the latter. The codec also stores fan status as text, while the frontend
+  requires numeric fan readings; the projection now explicitly parses finite
+  nonnegative speeds, preserving null and measured zero.
+  A fan observation above zero can establish activity when the explicit
+  HVAC state is unavailable; a temperature request alone cannot.
+- Independent-field audit so far: codec/normalizer preserve field identity;
+  range mappings use `IdealBatteryRange` and `RatedRange` separately; tire
+  mappings use all four distinct `TpmsPressure*` signals; the shared timeline
+  fold copies per-signal values, not one pointer into every output. Equal
+  production readings alone do not prove copying. Add distinct-value and
+  missing-field regressions rather than fabricate different readings.
+  BUG 1 is a separate boundary-coordinate/geocoding repair problem.
+- Part B: in progress, shared precision/range/chart/table presentation fixes.
+- Part C roots confirmed: grid stretch stops at animation wrappers, leaving
+  enclosed cards short; chart-card title and embedded chart toolbar have
+  separate owners, placing download actions below the title. Shared layout
+  and card anatomy fixes plus precise route-guard regressions are in progress.
+- Part A implementation: paired state-reader timelines feed signed elapsed-time
+  power integration. Both normal completion and restart recovery preserve the
+  mean's sign and real zero, never substitute peak power, and write SI watts
+  exactly once. Frontend fallback estimates use actual bounded instants, stop
+  at unknown samples, and do not extrapolate uncovered intervals.
+- Repair boundary: extended the existing dry-run-first operator command only;
+  never execute against production. Reconstruct only from retained original
+  signals; absent/corrupted original telemetry cannot be recovered by guessing.
+  Energy repair deliberately targets one completed drive at a time:
+  `go run ./cmd/drive-address-repair -energy -drive-id 555 -dry-run`.
+  Review against an isolated copy before `-dry-run=false`. Missing/incomplete
+  paired history is logged as unrepairable; original energy counters and raw
+  range/tire observations remain unchanged. Unit tests execute dry run first,
+  apply once, then prove a second apply writes nothing. No repair was run
+  against production. The available local read-only `/drives/555` returns 404;
+  original production range/tire observations were not available to establish
+  whether their equal values were already equal at the vehicle.
+- Part A actual red receipt: sparse 60-second SQL fixture returned -2.788 kW
+  and 0.0738 kWh recovered before the fix, versus time-aligned +13.404 kW
+  and 0.0126 kWh. All missing-climate cases failed before projection changes.
+  Corrected isolated PostgreSQL race regression passes; affected signal,
+  drives, telemetry and repair race suites and `go build ./...` pass.
+  Four frontend interval regressions pass; actual `npx tsc --noEmit`,
+  scoped ESLint, all six audit counts (zero), and driving hook-route checks pass.
+- Final verification pending: full lint/audits, consolidated hermetic browsers,
+  route matrix and reviewed committed before/after screenshots, per-part
+  commits/push and current-head draft PR checks. No success is claimed yet.
+- Next step: persist Part A, complete the 2,216-route-variant card guard and
+  targeted drive/browser checks, review after screenshots, commit B/C and push,
+  then fix actual current-head CI failures until green.
+
 ## Bug 1: Drive detail shows same address for Start and Destination (non-round-trip)
 
 - Status: done

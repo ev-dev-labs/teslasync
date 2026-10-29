@@ -31,6 +31,7 @@ import (
 	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	"github.com/ev-dev-labs/teslasync/internal/driveaddressrepair"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 )
@@ -41,8 +42,18 @@ var Version = "dev"
 func main() { os.Exit(run()) }
 
 func run() int {
-	dryRun := flag.Bool("dry-run", true, "list affected drives and proposed end addresses without writing")
+	dryRun := flag.Bool("dry-run", true, "list proposed repairs without writing")
+	energy := flag.Bool("energy", false, "repair signed mean power and recovered energy from retained signals instead of addresses")
+	driveID := flag.Int64("drive-id", 0, "completed drive to inspect (required with -energy)")
 	flag.Parse()
+	if *driveID != 0 && !*energy {
+		log.Error().Msg("drive-address-repair: -drive-id is currently scoped to -energy repairs")
+		return 1
+	}
+	if *energy && *driveID <= 0 {
+		log.Error().Msg("drive-address-repair: -energy requires a positive -drive-id")
+		return 1
+	}
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -59,6 +70,22 @@ func run() int {
 		return 1
 	}
 	defer db.Close()
+
+	if *energy {
+		report, err := driveaddressrepair.RepairEnergy(ctx, drivedb.NewDriveRepo(db),
+			signaldb.NewSignalLogReader(db), *driveID, *dryRun)
+		if err != nil {
+			log.Error().Err(err).Int64("drive_id", *driveID).Bool("dry_run", *dryRun).
+				Msg("drive-address-repair: energy repair failed")
+			return 1
+		}
+		log.Info().Int64("drive_id", *driveID).Bool("dry_run", *dryRun).
+			Bool("changed", report.Changed).Interface("old_avg_power_w", report.OldAvgPowerW).
+			Interface("avg_power_w", report.AvgPowerW).Interface("old_regen_energy_wh", report.OldRegenWh).
+			Interface("regen_energy_wh", report.RegenWh).Str("unrepairable", report.Unrepairable).
+			Msg("drive-address-repair: energy evidence; raw signals and cumulative consumption are unchanged")
+		return 0
+	}
 
 	repairer := driveaddressrepair.NewRepairer(drivedb.NewDriveRepo(db),
 		driveaddressrepair.NewResolver(geofencedb.NewGeofenceRepo(db), dbadmin.NewPlacesCacheRepo(db),

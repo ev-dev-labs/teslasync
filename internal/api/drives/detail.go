@@ -85,6 +85,7 @@ var driveTelemetryFieldMappings = []signal.FieldMapping{
 	{Signal: "HvacLeftTemperatureRequest", Field: "driver_temp"},
 	{Signal: "HvacRightTemperatureRequest", Field: "passenger_temp"},
 	{Signal: "HvacFanStatus", Field: "fan_status"},
+	{Signal: "HvacPower", Field: "hvac_power"},
 	{Signal: "TpmsPressureFl", Field: "tire_pressure_fl"},
 	{Signal: "TpmsPressureFr", Field: "tire_pressure_fr"},
 	{Signal: "TpmsPressureRl", Field: "tire_pressure_rl"},
@@ -110,9 +111,10 @@ type driveTelemetryRow struct {
 	CreatedAt     time.Time `json:"created_at"`
 	DriverTemp    any       `json:"driver_temp"`
 	EstRange      any       `json:"est_range"`
-	FanStatus     any       `json:"fan_status"`
+	FanStatus     *float64  `json:"fan_status"`
 	IdealRange    any       `json:"ideal_range"`
 	InsideTemp    any       `json:"inside_temp"`
+	IsClimateOn   *bool     `json:"is_climate_on"`
 	Latitude      any       `json:"latitude"`
 	Longitude     any       `json:"longitude"`
 	Odometer      any       `json:"odometer"`
@@ -146,9 +148,9 @@ func timelineRowsToDriveTelemetry(rows []signal.TimelineRow) []driveTelemetryRow
 			CreatedAt:     tr.Timestamp,
 			DriverTemp:    f["driver_temp"],
 			EstRange:      f["est_range"],
-			FanStatus:     f["fan_status"],
 			IdealRange:    f["ideal_range"],
 			InsideTemp:    f["inside_temp"],
+			IsClimateOn:   driveClimateOn(f["hvac_power"], f["fan_status"]),
 			Latitude:      f["latitude"],
 			Longitude:     f["longitude"],
 			Odometer:      f["odometer"],
@@ -164,6 +166,9 @@ func timelineRowsToDriveTelemetry(rows []signal.TimelineRow) []driveTelemetryRow
 			TireRL:        f["tire_pressure_rl"],
 			TireRR:        f["tire_pressure_rr"],
 		}
+		if fan, ok := drivePackReading(f["fan_status"]); ok && fan >= 0 {
+			row.FanStatus = &fan
+		}
 		if v, vOk := drivePackReading(f["pack_voltage"]); vOk {
 			if c, cOk := drivePackReading(f["pack_current"]); cOk {
 				power := v * c
@@ -175,6 +180,18 @@ func timelineRowsToDriveTelemetry(rows []signal.TimelineRow) []driveTelemetryRow
 		out[i] = row
 	}
 	return out
+}
+
+func driveClimateOn(power, fan any) *bool {
+	// The codec converts every known HvacPower enum to a boolean.
+	if on, ok := power.(bool); ok {
+		return &on
+	}
+	if speed, ok := drivePackReading(fan); ok && speed > 0 {
+		on := true
+		return &on
+	}
+	return nil
 }
 
 func drivePackReading(value any) (float64, bool) {

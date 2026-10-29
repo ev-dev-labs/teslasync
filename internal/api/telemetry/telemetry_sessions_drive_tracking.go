@@ -877,10 +877,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		endLon = active.LastLongitude
 	}
 
-	var powerMax *float64
-	if active.SpeedCount > 0 {
-		powerMax = &active.PowerMax
-	}
+	var meanPowerW *float64
 
 	// Build enhanced fields map (only columns in drivePartialAllowed)
 	enhancedFields := map[string]interface{}{}
@@ -1094,7 +1091,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		}
 
 		// Aggregates from signal_log during the drive window
-		slAvgSpeed, slMaxSpeed, slAvgPower := t.signalLogReader.DriveAggregates(ctx, vehicleID, active.StartTime, endTs)
+		slAvgSpeed, slMaxSpeed, _ := t.signalLogReader.DriveAggregates(ctx, vehicleID, active.StartTime, endTs)
 		// signal_log stores SI (m/s). Writing to *_mph would trigger
 		// translatePartialFieldsToSI
 		// to multiply by mpsPerMph (0.44704) producing a 0.44× understatement
@@ -1111,17 +1108,13 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			// yields zero. PartialUpdateWithTx then writes the correct
 			// SI-direct value. Avoids the historical mph↔mps double convert.
 		}
-		if slAvgPower != 0 {
-			// DriveAggregates returns avg power in kW; convert to SI W.
-			avgPowerW := math.Abs(slAvgPower) * 1000.0
+		power, powerErr := t.signalLogReader.DriveEnergy(ctx, vehicleID, active.StartTime, endTs)
+		if powerErr != nil {
+			log.Warn().Err(powerErr).Int64("drive_id", active.DriveID).Msg("drive completion power reconstruction failed")
+		} else if avgPowerW, ok := power.MeanPowerW(); ok {
 			enhancedFields["avg_power_w"] = avgPowerW
-			powerMax = &avgPowerW
-		}
-
-		// Regen energy. RegenEnergy returns kWh; convert to SI Wh.
-		regenKwh := t.signalLogReader.RegenEnergy(ctx, vehicleID, active.StartTime, endTs)
-		if regenKwh > 0 {
-			enhancedFields["regen_energy_wh"] = regenKwh * 1000.0
+			meanPowerW = &avgPowerW
+			enhancedFields["regen_energy_wh"] = power.RegenWh
 		}
 	} else if t.signalHistoryWriter != nil {
 		// Legacy fallback path: signalHistoryWriter is wired but signalLogReader
@@ -1222,14 +1215,8 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	// Compute durationS in SI seconds for downstream completion call.
 	durationS := int64(duration*60.0 + 0.5)
 	// active.MaxSpeed is captured in m/s because VehicleSpeed is SI.
-	// active.PowerMax is captured in kW (signalPowerKW returns
-	// V*A/1000); convert to SI W for the avg_power_w write below.
+	// Only a reconstructed mean may populate avg_power_w, never peak power.
 	maxSpeedMps := active.MaxSpeed
-	var powerMaxW *float64
-	if powerMax != nil {
-		w := *powerMax * 1000.0
-		powerMaxW = &w
-	}
 
 	if err := t.withTransaction(ctx, func(tx pgx.Tx) error {
 		var endBatteryPct *int16
@@ -1237,7 +1224,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			endBatteryPct = &endBattery
 		}
 		if err := t.driveRepo.CompleteWithTx(ctx, tx, active.DriveID, endTs,
-			distanceMeters, durationS, endBatteryPct, &maxSpeedMps, powerMaxW, outsideAvg); err != nil {
+			distanceMeters, durationS, endBatteryPct, &maxSpeedMps, meanPowerW, outsideAvg); err != nil {
 			return err
 		}
 		// Attach unattributed drive_telemetry rows to this drive in the same

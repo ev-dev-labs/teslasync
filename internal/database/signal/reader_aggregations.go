@@ -4,12 +4,18 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/rs/zerolog/log"
+
+	livestate "github.com/ev-dev-labs/teslasync/internal/signal"
 )
+
+const maxDrivePowerEvents = 200000
 
 // DriveAggregates computes average speed, max speed, and average power during
 // a time window from signal_log entries. Speed is filtered to >0 samples only
-// for the average (excluding stationary readings). Power is computed from
-// AVG(PackVoltage) × AVG(PackCurrent) / 1000.
+// for the average (excluding stationary readings). Power is the signed
+// time-weighted mean of paired pack readings, returned in kW.
 //
 // signal_log stores numeric samples in float_value or int_value; the
 // legacy created_at/signal/value_num columns no longer exist. COALESCE
@@ -21,18 +27,17 @@ func (r *SignalLogReader) DriveAggregates(ctx context.Context, vehicleID int64, 
 	const numCol = "COALESCE(float_value, int_value::float8)"
 	query := `SELECT
 		AVG(` + numCol + `) FILTER (WHERE field = 'VehicleSpeed' AND ` + numCol + ` > 0),
-		MAX(` + numCol + `) FILTER (WHERE field = 'VehicleSpeed'),
-		AVG(` + numCol + `) FILTER (WHERE field = 'PackCurrent'),
-		AVG(` + numCol + `) FILTER (WHERE field = 'PackVoltage')
+		MAX(` + numCol + `) FILTER (WHERE field = 'VehicleSpeed')
 	FROM signal_log
 	WHERE vehicle_id = $1 AND ts >= $2 AND ts <= $3
-	  AND field IN ('VehicleSpeed', 'PackCurrent', 'PackVoltage')`
+	  AND field = 'VehicleSpeed'`
 
-	var pAvgSpeed, pMaxSpeed, pAvgCurrent, pAvgVoltage *float64
+	var pAvgSpeed, pMaxSpeed *float64
 	err := r.db.Pool.QueryRow(ctx, query, vehicleID, from, to).Scan(
-		&pAvgSpeed, &pMaxSpeed, &pAvgCurrent, &pAvgVoltage,
+		&pAvgSpeed, &pMaxSpeed,
 	)
 	if err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("drive speed aggregation failed")
 		return 0, 0, 0
 	}
 	if pAvgSpeed != nil {
@@ -41,54 +46,64 @@ func (r *SignalLogReader) DriveAggregates(ctx context.Context, vehicleID int64, 
 	if pMaxSpeed != nil {
 		maxSpeed = *pMaxSpeed
 	}
-	if pAvgCurrent != nil && pAvgVoltage != nil {
-		avgPower = (*pAvgVoltage) * (*pAvgCurrent) / 1000.0 // kW
+	energy, err := r.DriveEnergy(ctx, vehicleID, from, to)
+	if err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("drive power aggregation failed")
+	} else if meanW, ok := energy.MeanPowerW(); ok {
+		avgPower = meanW / 1000
 	}
 	return avgSpeed, maxSpeed, avgPower
 }
 
-// RegenEnergy estimates regenerative braking energy recovered during a time
-// window. Uses negative PackCurrent samples (regen = charging the battery)
-// paired with PackVoltage readings to compute approximate kWh.
-//
-// Falls back to 0 when no negative-current samples exist.
+// RegenEnergy integrates negative signed pack power over elapsed intervals,
+// returning recovered kWh. A change-event count is never a duration estimate.
 func (r *SignalLogReader) RegenEnergy(ctx context.Context, vehicleID int64, from, to time.Time) float64 {
-	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
-	defer cancel()
-
-	// This approximation uses AVG(|negative current|) × AVG(voltage) × duration.
-	// Per-sample integration would be more precise, but this is sufficient for
-	// drive summaries.
-	const numCol = "COALESCE(float_value, int_value::float8)"
-	query := `SELECT
-		AVG(ABS(` + numCol + `)) FILTER (WHERE field = 'PackCurrent' AND ` + numCol + ` < 0),
-		COUNT(*) FILTER (WHERE field = 'PackCurrent' AND ` + numCol + ` < 0),
-		COUNT(*) FILTER (WHERE field = 'PackCurrent'),
-		AVG(` + numCol + `) FILTER (WHERE field = 'PackVoltage')
-	FROM signal_log
-	WHERE vehicle_id = $1 AND ts >= $2 AND ts <= $3
-	  AND field IN ('PackCurrent', 'PackVoltage')`
-
-	var pAvgRegenCurrent *float64
-	var regenCount, totalCount int64
-	var pAvgVoltage *float64
-	err := r.db.Pool.QueryRow(ctx, query, vehicleID, from, to).Scan(
-		&pAvgRegenCurrent, &regenCount, &totalCount, &pAvgVoltage,
-	)
-	if err != nil || pAvgRegenCurrent == nil || pAvgVoltage == nil || totalCount == 0 {
+	energy, err := r.DriveEnergy(ctx, vehicleID, from, to)
+	if err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("drive recovered-energy aggregation failed")
 		return 0
 	}
+	return energy.RegenWh / 1000
+}
 
-	// Fraction of drive time spent in regen
-	regenFraction := float64(regenCount) / float64(totalCount)
-	durationHours := to.Sub(from).Hours()
-
-	// Energy = avg_regen_current × avg_voltage × regen_time_fraction × duration / 1000
-	kwh := (*pAvgRegenCurrent) * (*pAvgVoltage) * regenFraction * durationHours / 1000.0
-	if kwh < 0 {
-		kwh = 0
+// DriveEnergy uses the canonical state reader to pair asynchronous voltage
+// and current changes before integrating. Missing/invalid power is not zero.
+func (r *SignalLogReader) DriveEnergy(ctx context.Context, vehicleID int64, from, to time.Time) (livestate.PowerIntegral, error) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+	state := livestate.NewLogStateReader(r.db.Pool, log.Logger)
+	seed, err := state.State(ctx, vehicleID, from)
+	if err != nil {
+		return livestate.PowerIntegral{}, fmt.Errorf("seed drive power: %w", err)
 	}
-	return kwh
+	rows, err := state.Timeline(ctx, vehicleID, []livestate.FieldMapping{
+		{Signal: "PackVoltage", Field: "voltage"},
+		{Signal: "PackCurrent", Field: "current"},
+	}, from, to, livestate.TimelineOptions{MaxEvents: maxDrivePowerEvents})
+	if err != nil {
+		return livestate.PowerIntegral{}, fmt.Errorf("read drive power intervals: %w", err)
+	}
+	pair := func(voltage, current any) *float64 {
+		if _, ok := voltage.(bool); ok {
+			return nil
+		}
+		if _, ok := current.(bool); ok {
+			return nil
+		}
+		v, vok := livestate.Float64(voltage)
+		c, cok := livestate.Float64(current)
+		if !vok || !cok {
+			return nil
+		}
+		w := v * c
+		return &w
+	}
+	samples := make([]livestate.PowerSample, 0, len(rows)+1)
+	samples = append(samples, livestate.PowerSample{Time: from, PowerW: pair(seed["PackVoltage"], seed["PackCurrent"])})
+	for _, row := range rows {
+		samples = append(samples, livestate.PowerSample{Time: row.Timestamp, PowerW: pair(row.Fields["voltage"], row.Fields["current"])})
+	}
+	return livestate.IntegratePower(samples, from, to), nil
 }
 
 // ChargeAggregates computes max and average charger power during a charge

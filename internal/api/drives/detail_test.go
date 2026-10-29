@@ -536,11 +536,12 @@ func TestDriveDetail_RowShapesPreserveLegacyWireContract(t *testing.T) {
 	teleRow := teleRows[0]
 	wantTeleKeys := []string{
 		"battery_level", "created_at", "driver_temp", "est_range", "fan_status",
-		"ideal_range", "inside_temp", "latitude", "longitude", "odometer",
+		"ideal_range", "inside_temp", "is_climate_on", "latitude", "longitude", "odometer",
 		"outside_temp", "pack_current", "pack_voltage", "passenger_temp",
 		"power", "rated_range", "soc", "speed",
 		"tire_pressure_fl", "tire_pressure_fr", "tire_pressure_rl", "tire_pressure_rr",
 	}
+
 	if len(teleRow) != len(wantTeleKeys) {
 		t.Fatalf("telemetry keys = %d, want %d", len(teleRow), len(wantTeleKeys))
 	}
