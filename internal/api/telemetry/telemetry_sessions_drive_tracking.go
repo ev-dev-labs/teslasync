@@ -1399,6 +1399,83 @@ const (
 // Nominatim's usage policy caps callers at 1 request/second.
 const geocodeRateLimit = 1100 * time.Millisecond
 
+// placeLookup is a resolved place name for one coordinate pair. GeofenceID
+// is set only when the name came from a matched geofence, so the caller can
+// attach that geofence to the drive endpoint it writes.
+type placeLookup struct {
+	Name       string
+	GeofenceID *int64
+}
+
+// lookupPlaceName resolves a place name from the given coordinates only:
+// geofences first, then (when mode allows) the places cache, then the
+// reverse geocoder. The cache is keyed by the coordinates themselves, so
+// a start and an end far apart never share an entry. It writes nothing
+// except, when writeCache is true, the places-cache entry for a fresh
+// geocode. It reports false when no name could be resolved — callers must
+// leave any stored label untouched (and never substitute another
+// endpoint's label).
+func (t *TelemetrySessionTracker) lookupPlaceName(ctx context.Context, lat, lon float64, mode addressResolveMode, writeCache bool) (placeLookup, bool) {
+	// 1. Check geofences first (user-defined names like "Home", "Office").
+	// Match-only — a drive endpoint NEVER auto-creates a geofence (that is
+	// exclusive to a confirmed charging session; see
+	// telemetry_sessions_charge_geofence_pricing.go).
+	if geofences, err := t.geofenceRepo.FindByCoordinates(ctx, lat, lon); err == nil && len(geofences) > 0 {
+		metrics.GeocodingTotal.WithLabelValues("geofence").Inc()
+		return placeLookup{Name: geofences[0].Name, GeofenceID: &geofences[0].ID}, true
+	}
+
+	// 2. Check places cache (previously resolved locations within 50m)
+	if mode == resolveUseCache {
+		if cached, err := t.placesCache.FindNearby(ctx, lat, lon, 50); err == nil && cached != nil {
+			if writeCache {
+				_ = t.placesCache.IncrementHitCount(ctx, cached.ID)
+			}
+			metrics.GeocodingTotal.WithLabelValues("cached").Inc()
+			return placeLookup{Name: cached.DisplayName}, true
+		}
+	}
+
+	// 3. Reverse geocode via Nominatim (or Google when configured)
+	geocodeStart := time.Now()
+	result, err := t.geocoder.ReverseGeocode(ctx, lat, lon)
+	metrics.ObserveDurationWithExemplar(ctx, metrics.GeocodingDuration, time.Since(geocodeStart).Seconds())
+	if err != nil {
+		metrics.GeocodingTotal.WithLabelValues("failure").Inc()
+		log.Warn().Err(err).Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode failed")
+		return placeLookup{}, false
+	}
+	if result == nil {
+		metrics.GeocodingTotal.WithLabelValues("failure").Inc()
+		log.Warn().Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode returned no result")
+		return placeLookup{}, false
+	}
+	metrics.GeocodingTotal.WithLabelValues("success").Inc()
+
+	name := result.ShortName()
+	if name == "" {
+		log.Warn().Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode produced an empty place name")
+		return placeLookup{}, false
+	}
+
+	// Save to cache for future lookups. Upsert overwrites any entry within 50m,
+	// so a repair also refreshes the stale label other drives would have read.
+	if writeCache {
+		_ = t.placesCache.Upsert(ctx, &dbadmin.PlaceCacheEntry{
+			Latitude:     lat,
+			Longitude:    lon,
+			DisplayName:  name,
+			Source:       "geocoding",
+			BusinessName: ptrStrOrNil(result.Name),
+			City:         ptrStrOrNil(result.City),
+			State:        ptrStrOrNil(result.State),
+			Country:      ptrStrOrNil(result.Country),
+			Postcode:     ptrStrOrNil(result.PostCode),
+		})
+	}
+	return placeLookup{Name: name}, true
+}
+
 // resolveAndUpdateAddress resolves a place name for one drive endpoint and
 // writes it to start_place or end_place. It reports whether a name was stored.
 func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lon float64, isStart bool, mode addressResolveMode) bool {
@@ -1418,71 +1495,20 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 		geofenceField = "start_geofence_id"
 	}
 
-	// 1. Check geofences first (user-defined names like "Home", "Office").
-	// Match-only — a drive endpoint NEVER auto-creates a geofence (that is
-	// exclusive to a confirmed charging session; see
-	// telemetry_sessions_charge_geofence_pricing.go). Attaching
-	// start_geofence_id/end_geofence_id lets a later place rename
+	// Attaching start_geofence_id/end_geofence_id lets a later place rename
 	// retroactively improve this drive's displayed name — see
 	// DriveRepo.resolveCurrentGeofenceNames and the StartGeofenceID doc on
 	// drivemodel.Drive — while start_place/end_place keep storing today's
 	// name as the permanent fallback.
-	if geofences, err := t.geofenceRepo.FindByCoordinates(ctx, lat, lon); err == nil && len(geofences) > 0 {
-		_ = t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{
-			field:         geofences[0].Name,
-			geofenceField: geofences[0].ID,
-		})
-		metrics.GeocodingTotal.WithLabelValues("geofence").Inc()
-		return true
-	}
-
-	// 2. Check places cache (previously resolved locations within 50m)
-	if mode == resolveUseCache {
-		if cached, err := t.placesCache.FindNearby(ctx, lat, lon, 50); err == nil && cached != nil {
-			_ = t.placesCache.IncrementHitCount(ctx, cached.ID)
-			_ = t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: cached.DisplayName})
-			metrics.GeocodingTotal.WithLabelValues("cached").Inc()
-			return true
-		}
-	}
-
-	// 3. Reverse geocode via Nominatim (or Google when configured)
-	geocodeStart := time.Now()
-	result, err := t.geocoder.ReverseGeocode(ctx, lat, lon)
-	metrics.ObserveDurationWithExemplar(ctx, metrics.GeocodingDuration, time.Since(geocodeStart).Seconds())
-	if err != nil {
-		metrics.GeocodingTotal.WithLabelValues("failure").Inc()
-		log.Warn().Err(err).Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode failed")
+	lookup, ok := t.lookupPlaceName(ctx, lat, lon, mode, true)
+	if !ok {
 		return false
 	}
-	if result == nil {
-		metrics.GeocodingTotal.WithLabelValues("failure").Inc()
-		log.Warn().Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode returned no result")
-		return false
+	fields := map[string]interface{}{field: lookup.Name}
+	if lookup.GeofenceID != nil {
+		fields[geofenceField] = *lookup.GeofenceID
 	}
-	metrics.GeocodingTotal.WithLabelValues("success").Inc()
-
-	name := result.ShortName()
-	if name == "" {
-		log.Warn().Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode produced an empty place name")
-		return false
-	}
-
-	// Save to cache for future lookups. Upsert overwrites any entry within 50m,
-	// so a repair also refreshes the stale label other drives would have read.
-	_ = t.placesCache.Upsert(ctx, &dbadmin.PlaceCacheEntry{
-		Latitude:     lat,
-		Longitude:    lon,
-		DisplayName:  name,
-		Source:       "geocoding",
-		BusinessName: ptrStrOrNil(result.Name),
-		City:         ptrStrOrNil(result.City),
-		State:        ptrStrOrNil(result.State),
-		Country:      ptrStrOrNil(result.Country),
-		Postcode:     ptrStrOrNil(result.PostCode),
-	})
-
-	if err := t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: name}); err != nil {
+	if err := t.driveRepo.PartialUpdate(ctx, driveID, fields); err != nil {
 		log.Error().Err(err).Int64("drive_id", driveID).Str("field", field).Msg("telemetry: failed to update address")
 		return false
 	}
@@ -1495,6 +1521,9 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 	t.backfillMissingAddresses(ctx)
 	t.RepairStalePlaceLabels(ctx)
+	if _, err := t.RepairDuplicateEndAddresses(ctx, false); err != nil {
+		log.Error().Err(err).Msg("backfill: duplicate end-address repair failed")
+	}
 }
 
 // backfillMissingAddresses fills in place names for drives that have never been
@@ -1521,10 +1550,14 @@ func (t *TelemetrySessionTracker) backfillMissingAddresses(ctx context.Context) 
 		// A drive missing labels may also carry endpoints that were never
 		// recorded or that collapsed onto one fix. Correct them from the track
 		// before geocoding so the two ends resolve to different places.
-		t.repairDriveEndpointCoords(ctx, d)
+		startRepaired, endRepaired := t.repairDriveEndpointCoords(ctx, d)
 
-		needStart := (d.StartAddress == nil || *d.StartAddress == "") && d.StartLat != nil && d.StartLon != nil
-		needEnd := (d.EndAddress == nil || *d.EndAddress == "") && d.EndLat != nil && d.EndLon != nil
+		// An endpoint whose coordinates were just repaired keeps its old
+		// label only by accident — it describes the previous fix — so it
+		// must be re-resolved from the corrected coordinates even when a
+		// (stale) label is already stored.
+		needStart := ((d.StartAddress == nil || *d.StartAddress == "") || startRepaired) && d.StartLat != nil && d.StartLon != nil
+		needEnd := ((d.EndAddress == nil || *d.EndAddress == "") || endRepaired) && d.EndLat != nil && d.EndLon != nil
 
 		if needStart {
 			t.resolveAndUpdateAddress(d.ID, *d.StartLat, *d.StartLon, true, resolveUseCache)
@@ -1708,15 +1741,20 @@ func (t *TelemetrySessionTracker) RepairStalePlaceLabels(ctx context.Context) {
 				break
 			}
 
-			resolved := false
 			// Correct the stored coordinates first. Geocoding reads
 			// d.StartLat / d.EndLat, so repairing labels before endpoints
 			// would just rewrite the same wrong label into both fields.
 			t.repairDriveEndpointCoords(ctx, d)
 
+			// Every endpoint that has coordinates must resolve before the
+			// drive is marked current. Marking on partial success (start
+			// resolved, end failed) would strand the failed end label —
+			// possibly still the start address — at the current version
+			// with no finder ever selecting the drive again.
+			allResolved := true
 			if d.StartLat != nil && d.StartLon != nil {
-				if t.resolveAndUpdateAddress(d.ID, *d.StartLat, *d.StartLon, true, resolveBypassCache) {
-					resolved = true
+				if !t.resolveAndUpdateAddress(d.ID, *d.StartLat, *d.StartLon, true, resolveBypassCache) {
+					allResolved = false
 				}
 				time.Sleep(geocodeRateLimit)
 			}
@@ -1724,15 +1762,16 @@ func (t *TelemetrySessionTracker) RepairStalePlaceLabels(ctx context.Context) {
 				break
 			}
 			if d.EndLat != nil && d.EndLon != nil {
-				if t.resolveAndUpdateAddress(d.ID, *d.EndLat, *d.EndLon, false, resolveBypassCache) {
-					resolved = true
+				if !t.resolveAndUpdateAddress(d.ID, *d.EndLat, *d.EndLon, false, resolveBypassCache) {
+					allResolved = false
 				}
 				time.Sleep(geocodeRateLimit)
 			}
 
-			// Leave the version untouched when nothing resolved so a provider
-			// outage cannot permanently strand a drive on the old label.
-			if !resolved {
+			// Leave the version untouched when any endpoint failed so a
+			// provider outage cannot permanently strand a drive on the
+			// old (or the start) label.
+			if !allResolved {
 				batchFailed++
 				continue
 			}

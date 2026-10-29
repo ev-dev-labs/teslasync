@@ -336,6 +336,11 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// Repair degenerate stored endpoints (end == start, or missing) from the
 	// real GPS track so the Journey Details panel matches the rendered route.
 	repairDriveEndpoints(drive, telemetry, positions)
+	// The stored end label may still be the start label resolved from the
+	// wrong fix; with (possibly just-repaired) far-apart endpoints it must
+	// not be returned as the destination. Clearing it makes the client
+	// show the end coordinates / unavailable state instead.
+	drive.ClearSuspectEndAddress()
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"id":                 drive.ID,

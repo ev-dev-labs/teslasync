@@ -5,16 +5,18 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 
 ## Bug 1: Drive detail shows same address for Start and Destination (non-round-trip)
 
-- Status: in progress
+- Status: done
 - Example: production `/drives/555` — map route Canyon Park, Bothell → Redmond, but both Start and Destination show "19720 Bothell Everett Highway, Bothell". Positions correct; destination address wrong.
-- Root cause: TBD — investigate drive end/address pipeline (record here once found).
+- Root cause (found): stored `end_place` resolved from the wrong fix at completion time, then stranded. Completion's boundary-snapshot fallback can persist the same fix into both endpoint pairs (documented in `internal/database/signal/reader_aggregations.go` `DriveEndpointCoordinates`), so the end label was geocoded from the start coordinates and written to `end_place`. Later corrections fix the stored/response coordinates (GPS track / `repairDriveEndpoints` in `internal/api/drives/detail.go`) but never re-resolve `end_place`. No live finder selects the stranded rows: `FindMissingAddresses` only selects empty labels, `FindStalePlaceLabels` only selects `place_label_version < 3` (affected rows carry the current version), and `RepairStalePlaceLabels` marks a drive current when only one endpoint resolves, stranding a failed end lookup. Checked and cleared: places cache is keyed by coordinates within 50 m (`internal/database/admin/places_cache_repo.go` `FindNearby`), providers geocode the coordinates they are handed (`internal/geocoding/`), and the frontend reads `startAddress`/`endAddress` independently (`JourneyDetailsPanel.tsx`, `web/src/types/driving.ts`) — the API returns the duplicated stored label. The drive detail response also had no guard against returning an end label identical to the start label while the endpoints are far apart.
 - Next step: investigate Go drive end/address pipeline, reverse-geocoding/address cache, drive API response, and frontend drive detail fields.
-- Fix: start/end addresses from own coordinates; failed/pending end lookup shows unavailable/pending (and coordinates if existing pattern), never start address.
+- Fix: start/end addresses from own coordinates; suspect duplicate end label (equal labels, endpoints >0.5 km apart) is suppressed at read/API time so failed/pending end lookup shows unavailable/pending (and coordinates if existing pattern), never start address; partial repair no longer marks drives current.
 - Tests: Go (different coords → different addresses; failed/pending end ≠ start; round trip same; cache key) + frontend (independent start/end rendering incl. unavailable).
-- Data repair: idempotent command/job, dry-run, >0.5 km threshold, rate-limited, never round trips, logged. Do not run against production. Document dry-run-first runbook here once written.
-- API contract change: none expected / TBD (record if any).
+- Data repair: done. `TelemetrySessionTracker.RepairDuplicateEndAddresses` (`internal/api/telemetry/drive_end_address_repair.go`) finds drives via `DriveRepo.FindDuplicateEndAddresses` (end label == start label, endpoints >0.5 km apart), re-resolves only the end address from the end coordinates (places cache bypassed, `geocodeRateLimit` pacing, every change logged), is idempotent, and never touches genuine round trips. It also runs at startup from `BackfillAddresses`. Operator command: `go run ./cmd/drive-address-repair -dry-run` (default; lists affected drives and proposed end addresses, writes nothing), then `go run ./cmd/drive-address-repair -dry-run=false` to apply. Not run against production.
+- Repair runbook: build/run the command with the service's config/database environment, run `-dry-run` first and review the logged `old_end`/`proposed_end` rows, then apply with `-dry-run=false`, then re-run `-dry-run` to confirm no affected drives remain.
+- API contract change: none. No field renamed/removed/retyped; a suspect duplicate `end_address` is now returned as null (unavailable) instead of the start address, and the frontend already renders coordinates/unavailable for a null end address.
 
 ## Verification
 
-- Status: not started
-- Next step: go build/test, tsc, lint, affected frontend tests; commit, push, check `gh pr checks` on this branch's draft PR.
+- Status: in progress
+- Done locally: `go build ./...`; `go test` for models/drive, database/drive, database/admin, api/drives, api/telemetry, geocoding; `go vet` + `gofmt` on touched packages; web `tsc --noEmit`; full web `npm run lint`; frontend tests (JourneyDetailsPanel 27/27, drive-detail + DriveDetailPage + driving types 555/555). DB-gated Go repair tests skip without a test DSN and run where one is configured.
+- Next step: commit, push, check `gh pr checks` on this branch's draft PR.
