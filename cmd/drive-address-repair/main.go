@@ -26,9 +26,12 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	telemetry "github.com/ev-dev-labs/teslasync/internal/api/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
+	"github.com/ev-dev-labs/teslasync/internal/driveaddressrepair"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 )
 
@@ -57,9 +60,10 @@ func run() int {
 	}
 	defer db.Close()
 
-	tracker := telemetry.NewTelemetrySessionTracker(db, nil,
-		geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey), nil)
-	report, err := tracker.RepairDuplicateEndAddresses(ctx, *dryRun)
+	repairer := driveaddressrepair.NewRepairer(drivedb.NewDriveRepo(db),
+		driveaddressrepair.NewResolver(geofencedb.NewGeofenceRepo(db), dbadmin.NewPlacesCacheRepo(db),
+			geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey)))
+	report, err := repairer.Repair(ctx, *dryRun)
 	if err != nil {
 		log.Error().Err(err).Msg("drive-address-repair: repair failed")
 		return 1

@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
-	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
+	"github.com/ev-dev-labs/teslasync/internal/driveaddressrepair"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/fsm"
@@ -1407,73 +1407,18 @@ type placeLookup struct {
 	GeofenceID *int64
 }
 
-// lookupPlaceName resolves a place name from the given coordinates only:
-// geofences first, then (when mode allows) the places cache, then the
-// reverse geocoder. The cache is keyed by the coordinates themselves, so
-// a start and an end far apart never share an entry. It writes nothing
-// except, when writeCache is true, the places-cache entry for a fresh
-// geocode. It reports false when no name could be resolved — callers must
-// leave any stored label untouched (and never substitute another
-// endpoint's label).
+// lookupPlaceName resolves a place name from the given coordinates only
+// via driveaddressrepair.Resolver (geofences, then the coordinate-keyed
+// places cache when mode allows, then the reverse geocoder). It reports
+// false when no name could be resolved — callers must leave any stored
+// label untouched (and never substitute another endpoint's label).
 func (t *TelemetrySessionTracker) lookupPlaceName(ctx context.Context, lat, lon float64, mode addressResolveMode, writeCache bool) (placeLookup, bool) {
-	// 1. Check geofences first (user-defined names like "Home", "Office").
-	// Match-only — a drive endpoint NEVER auto-creates a geofence (that is
-	// exclusive to a confirmed charging session; see
-	// telemetry_sessions_charge_geofence_pricing.go).
-	if geofences, err := t.geofenceRepo.FindByCoordinates(ctx, lat, lon); err == nil && len(geofences) > 0 {
-		metrics.GeocodingTotal.WithLabelValues("geofence").Inc()
-		return placeLookup{Name: geofences[0].Name, GeofenceID: &geofences[0].ID}, true
-	}
-
-	// 2. Check places cache (previously resolved locations within 50m)
-	if mode == resolveUseCache {
-		if cached, err := t.placesCache.FindNearby(ctx, lat, lon, 50); err == nil && cached != nil {
-			if writeCache {
-				_ = t.placesCache.IncrementHitCount(ctx, cached.ID)
-			}
-			metrics.GeocodingTotal.WithLabelValues("cached").Inc()
-			return placeLookup{Name: cached.DisplayName}, true
-		}
-	}
-
-	// 3. Reverse geocode via Nominatim (or Google when configured)
-	geocodeStart := time.Now()
-	result, err := t.geocoder.ReverseGeocode(ctx, lat, lon)
-	metrics.ObserveDurationWithExemplar(ctx, metrics.GeocodingDuration, time.Since(geocodeStart).Seconds())
-	if err != nil {
-		metrics.GeocodingTotal.WithLabelValues("failure").Inc()
-		log.Warn().Err(err).Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode failed")
+	resolver := driveaddressrepair.NewResolver(t.geofenceRepo, t.placesCache, t.geocoder)
+	lookup, ok := resolver.Lookup(ctx, lat, lon, mode == resolveUseCache, writeCache)
+	if !ok {
 		return placeLookup{}, false
 	}
-	if result == nil {
-		metrics.GeocodingTotal.WithLabelValues("failure").Inc()
-		log.Warn().Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode returned no result")
-		return placeLookup{}, false
-	}
-	metrics.GeocodingTotal.WithLabelValues("success").Inc()
-
-	name := result.ShortName()
-	if name == "" {
-		log.Warn().Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode produced an empty place name")
-		return placeLookup{}, false
-	}
-
-	// Save to cache for future lookups. Upsert overwrites any entry within 50m,
-	// so a repair also refreshes the stale label other drives would have read.
-	if writeCache {
-		_ = t.placesCache.Upsert(ctx, &dbadmin.PlaceCacheEntry{
-			Latitude:     lat,
-			Longitude:    lon,
-			DisplayName:  name,
-			Source:       "geocoding",
-			BusinessName: ptrStrOrNil(result.Name),
-			City:         ptrStrOrNil(result.City),
-			State:        ptrStrOrNil(result.State),
-			Country:      ptrStrOrNil(result.Country),
-			Postcode:     ptrStrOrNil(result.PostCode),
-		})
-	}
-	return placeLookup{Name: name}, true
+	return placeLookup{Name: lookup.Name, GeofenceID: lookup.GeofenceID}, true
 }
 
 // resolveAndUpdateAddress resolves a place name for one drive endpoint and
