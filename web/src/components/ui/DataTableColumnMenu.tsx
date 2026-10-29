@@ -1,10 +1,12 @@
-import { IconButton } from '@/components/ui/IconButton';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { IconButton } from './IconButton'
+import { useMemo, useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, Columns3, RotateCcw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { Checkbox } from './Checkbox'
 import { Icon } from './Icon'
+import { Button } from './Button'
+import { Modal } from './Modal'
 import { Label, Text } from './Typography'
 import {
   applyColumnLayout,
@@ -18,7 +20,7 @@ import {
  * Combined column visibility and reorder menu.
  * This supersedes `DataTableColumnsMenu` for tables that opt into either
  * `columnVisibility` or `columnReorder`. Renders an icon-button trigger
- * + popover with one row per column:
+ * + settings dialog with one row per column:
  *   [✓] Header                         ↑   ↓
  * - Checkbox toggles visibility (with the same "at least one must stay
  *   visible" guardrail as the legacy menu).
@@ -69,23 +71,6 @@ export function DataTableColumnMenu({
 }: DataTableColumnMenuProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const onClickOutside = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) setOpen(false)
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onClickOutside)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onClickOutside)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
 
   // Defensive: props are typed to require an array, but a transient
   // `undefined` from a still-loading parent must never crash the menu on
@@ -164,22 +149,17 @@ export function DataTableColumnMenu({
     : t('table.columns.menu', 'Show or hide columns')
 
   return (
-    <div ref={containerRef} className={cn('relative inline-block', className)}>
+    <div className={cn('relative inline-block', className)}>
       {trigger ? (
         trigger(() => setOpen((v) => !v))
       ) : (
-        <IconButton icon={<Icon icon={Columns3} size="sm" />} label={t('table.columns.button', 'Columns')} onClick={() => setOpen((v) => !v)} aria-label={triggerLabel} aria-expanded={open} aria-haspopup="menu" />
+        <IconButton icon={<Icon icon={Columns3} size="sm" />} label={t('table.columns.button', 'Columns')} onClick={() => setOpen(true)} aria-label={triggerLabel} aria-expanded={open} aria-haspopup="dialog" />
       )}
 
-      {open && (
+      <Modal open={open} onClose={() => setOpen(false)} title={triggerLabel} size="sm"
+        footer={<Button variant="secondary" className="min-h-11" onClick={() => setOpen(false)}>{t('common.done', 'Done')}</Button>}>
         <div
-          role="menu"
-          aria-label={triggerLabel}
           data-testid="datatable-column-menu"
-          className={cn(
-            'absolute end-0 z-30 mt-1 w-72 rounded-shape-lg p-2',
-            'border border-[var(--border-default)] bg-[var(--surface-elevated)] shadow-e2',
-          )}
         >
           <div className="mb-2 flex items-center justify-between gap-2 px-1">
             <Label className="min-w-0 break-words">
@@ -213,7 +193,7 @@ export function DataTableColumnMenu({
               />
             </div>
           )}
-          <ul className="space-y-0.5 max-h-72 overflow-y-auto" role="presentation">
+          <ul className="space-y-0.5" role="presentation">
             {orderedKeys.map((key, idx) => {
               const col = colByKey.get(key)
               if (!col) return null
@@ -293,7 +273,7 @@ export function DataTableColumnMenu({
             )}
           </ul>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

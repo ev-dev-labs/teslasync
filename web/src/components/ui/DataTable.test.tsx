@@ -48,6 +48,24 @@ beforeEach(() => {
 })
 
 describe('DataTable — standard toolbar controls', () => {
+  it('protects the required mobile identity from individual and bulk column hiding, including saved layouts', () => {
+    localStorage.setItem('teslasync.table.test:required.columns', JSON.stringify({
+      order: ['status', 'name', 'id'], hidden: ['name'],
+    }))
+    const columns = REORDER_COLS.map(column => ({ ...column, required: column.key === 'name' }))
+    const view = render(<DataTable tableId="test:required" columns={columns} data={ROWS}
+      keyExtractor={row => row.id} mobileColumns={['name']} />)
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }))
+    const identity = screen.getByRole('checkbox', { name: 'Show or hide Name' })
+    expect(identity).toBeChecked()
+    expect(identity).toBeDisabled()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all' }))
+    expect(getHeaderOrder(view.container)).toEqual(['name'])
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+  })
+
   it('removes redundant embedded framing while preserving table controls and rows', () => {
     const view = render(<DataTable variant="embedded" tableId="test:embedded" columns={REORDER_COLS}
       data={ROWS} keyExtractor={row => row.id} />);
@@ -647,7 +665,7 @@ describe('DataTable — cohesive paging footer', () => {
     expect(screen.getByRole('table')).not.toHaveAttribute('aria-describedby')
   })
 
-  it('lets the complete Columns popup escape a short two-row frame without escaping the scrolling viewport', () => {
+  it('keeps column settings outside a short table frame and its scrolling viewport', () => {
     const { container } = render(<DataTable tableId="test:short-popup" columns={REORDER_COLS} data={ROWS.slice(0, 2)}
       keyExtractor={row => row.id} paginationControls={{ ...controls(), page: 1, total: 2 }} />)
     const frame = container.querySelector('[data-grid-frame]')!
@@ -655,7 +673,8 @@ describe('DataTable — cohesive paging footer', () => {
     fireEvent.click(screen.getByRole('button', { name: /reorder or hide columns/i }))
     const lastColumn = screen.getByRole('checkbox', { name: 'Show or hide Status' })
     expect(lastColumn).toBeVisible()
-    expect(frame).toContainElement(lastColumn)
+    expect(frame).not.toContainElement(lastColumn)
+    expect(screen.getByRole('dialog', { name: 'Reorder or hide columns' })).toContainElement(lastColumn)
     expect(viewport).not.toContainElement(lastColumn)
     expect(frame).toHaveClass('overflow-visible')
     expect(frame).not.toHaveClass('overflow-hidden')

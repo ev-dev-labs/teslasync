@@ -1,9 +1,41 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@/i18n';
+import { patchMatchMedia } from '@/test/setup';
 import { TableToolbar } from './TableToolbar';
 
 describe('TableToolbar', () => {
+  let media: ReturnType<typeof patchMatchMedia> | undefined;
+  afterEach(() => {
+    media?.restore();
+    media = undefined;
+  });
+
+  it('keeps search visible and moves secondary controls into an accessible More dialog on phones and tablets', async () => {
+    media = patchMatchMedia(query => query === '(max-width: 1279px)');
+    const user = userEvent.setup();
+    const densityChange = vi.fn();
+    render(<TableToolbar collapseBelow="xl" search={{ value: '', onChange: vi.fn() }}
+      density={{ value: 'compact', onChange: densityChange }}
+      exports={{ onExportCsv: vi.fn(), onExportJson: vi.fn() }}
+      columns={<span>Column settings</span>} />);
+    expect(screen.getByRole('searchbox')).toBeVisible();
+    expect(screen.queryByRole('radiogroup')).toBeNull();
+    const more = screen.getByRole('button', { name: 'More', exact: true });
+    await user.click(more);
+    const dialog = screen.getByRole('dialog', { name: 'More', exact: true });
+    await user.click(within(dialog).getByRole('radio', { name: 'Comfortable', exact: true }));
+    expect(densityChange).toHaveBeenCalledWith('comfortable');
+    expect(within(dialog).getByRole('button', { name: 'Export list' })).toBeVisible();
+    expect(within(dialog).getByText('Column settings')).toBeVisible();
+    await user.keyboard('{Escape}');
+    expect(more).toHaveFocus();
+    act(() => media?.fire('(max-width: 1279px)', false));
+    expect(screen.queryByRole('button', { name: 'More', exact: true })).toBeNull();
+    expect(screen.getByRole('radiogroup')).toBeVisible();
+  });
+
   it('uses the canonical search label when callers omit a label and placeholder', () => {
     render(<TableToolbar search={{ value: '', onChange: vi.fn() }} />);
     expect(screen.getByRole('searchbox', { name: 'Search query' })).toBeInTheDocument();

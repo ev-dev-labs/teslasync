@@ -1,6 +1,10 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { MoreHorizontal } from 'lucide-react';
+import { Button } from '../ui/Button';
+import { Modal } from '../ui/Modal';
 import { Text } from '@/components/ui/Typography';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/cn';
 import { SearchInput, type SearchInputProps } from './SearchInput';
 import { DensityToggle, type DensityToggleProps } from './DensityToggle';
@@ -20,10 +24,23 @@ export interface TableToolbarProps extends TableControls {
   actions?: ReactNode;
   columns?: ReactNode;
   className?: string;
+  collapseBelow?: 'md' | 'xl';
 }
 
-export function TableToolbar({ search, density, exports, heading, actions, columns, className }: TableToolbarProps) {
+export function TableToolbar({ search, density, exports, heading, actions, columns, className, collapseBelow = 'md' }: TableToolbarProps) {
   const { t } = useTranslation();
+  const compact = useMediaQuery(collapseBelow === 'xl' ? '(max-width: 1279px)' : '(max-width: 767px)');
+  const [moreOpen, setMoreOpen] = useState(false);
+  useEffect(() => {
+    if (!compact) setMoreOpen(false);
+  }, [compact]);
+  const secondaryControls = <>
+    {density && <DensityToggle {...density} options={density.options ?? ['compact', 'comfortable']} />}
+    {exports && <ListExportMenu {...exports} />}
+    {actions}
+    {columns}
+    {exports?.description && <Text as="p" size="xs" color="muted" className="basis-full">{exports.description}</Text>}
+  </>;
   return (
     <div className={cn('flex flex-wrap items-center gap-3', className)}>
       {heading && <div className="min-w-0 flex-1 basis-48">{heading}</div>}
@@ -36,13 +53,15 @@ export function TableToolbar({ search, density, exports, heading, actions, colum
           )}
         </div>
       )}
-      <div className="ml-auto flex max-w-full flex-wrap items-center gap-2">
-        {density && <DensityToggle {...density} options={density.options ?? ['compact', 'comfortable']} />}
-        {exports && <ListExportMenu {...exports} />}
-        {actions}
-        {columns}
-      </div>
-      {exports?.description && <Text as="p" size="xs" color="muted" className="basis-full">{exports.description}</Text>}
+      {(density || exports || actions || columns) && (compact ? <>
+        <Button size="sm" variant="secondary" className="ml-auto min-h-11" icon={<MoreHorizontal className="h-4 w-4" aria-hidden="true" />}
+          aria-haspopup="dialog" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}>
+          {t('common.more', 'More')}
+        </Button>
+        <Modal open={moreOpen} onClose={() => setMoreOpen(false)} title={t('common.more', 'More')} size="sm">
+          <div className="flex min-w-0 flex-wrap items-center gap-3 [&_button]:min-h-11 [&_button]:min-w-11">{secondaryControls}</div>
+        </Modal>
+      </> : <div className="ml-auto flex max-w-full flex-wrap items-center gap-2">{secondaryControls}</div>)}
     </div>
   );
 }

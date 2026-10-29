@@ -162,6 +162,8 @@ export interface Column<T> {
   /** Default visible column? Defaults to true. Hidden columns appear in the
    *  column-visibility menu so users can re-show them. */
   defaultVisible?: boolean
+  /** Identifying columns remain visible even when an older saved layout hides them. */
+  required?: boolean
   /** When set, this column is shown at <md viewports. Used to derive the
    *  effective `mobileColumns` allow-list when the prop isn't supplied. */
   visibleOnMobile?: boolean
@@ -247,6 +249,8 @@ interface DataTableProps<T> {
    * @example mobileColumns={['name', 'status']}
    */
   mobileColumns?: string[]
+  /** Keep summary columns through tablet widths when the full table needs more room. */
+  mobileBreakpoint?: 'md' | 'xl'
 
   // ── Persistent table controls ─────────────────────────────────────────
   /** Stable identifier used to persist column visibility & widths in
@@ -466,6 +470,7 @@ export function DataTable<T>({
   pagination,
   paginationControls,
   mobileColumns,
+  mobileBreakpoint = 'md',
   name,
   tableId,
   selectable = 'none',
@@ -740,7 +745,9 @@ export function DataTable<T>({
     [effectiveMobileColumns],
   )
   const colHiddenClass = (key: string) =>
-    mobileSet && !mobileSet.has(key) ? 'hidden md:table-cell' : ''
+    mobileSet && !mobileSet.has(key)
+      ? mobileBreakpoint === 'xl' ? 'hidden xl:table-cell' : 'hidden md:table-cell'
+      : ''
 
   // ── Column widths (persisted by tableId) ───────────────────────────────
   const widthsStorageKey = tableId ? `${STORAGE_PREFIX}.${tableId}.widths` : null
@@ -1365,6 +1372,7 @@ export function DataTable<T>({
       {/* Toolbar row (selection bulk-bar + columns picker + export) */}
       {showToolbar && (
         <TableToolbar
+          collapseBelow={mobileBreakpoint}
           className={cn(tableTokens.toolbar, 'rounded-t-xl border-b border-[var(--border-default)] p-3',
             mobileActive && '[&_button]:min-h-11 [&_button]:min-w-11 [&_input]:min-h-11')}
           search={searchControls}
@@ -1385,6 +1393,7 @@ export function DataTable<T>({
                   key: c.key,
                   header: c.header,
                   defaultVisible: c.defaultVisible,
+                  required: c.required,
                 }))}
                 layout={layout}
                 onChange={persistLayout}

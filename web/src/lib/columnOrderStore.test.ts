@@ -70,6 +70,22 @@ describe('columnOrderStore — storage round-trip', () => {
 })
 
 describe('columnOrderStore — applyColumnLayout', () => {
+  it('restores required identity columns from stale layouts without restoring unrelated hidden columns', () => {
+    const columns = [
+      { key: 'name', required: true },
+      { key: 'status' },
+      { key: 'detail' },
+    ]
+    expect(applyColumnLayout(columns, { order: ['status', 'name', 'detail'], hidden: ['name', 'detail'] })
+      .map(column => column.key)).toEqual(['status', 'name'])
+  })
+
+  it('keeps required columns visible even when their default visibility conflicts', () => {
+    const columns = [{ key: 'identity', required: true, defaultVisible: false }, { key: 'detail' }]
+    expect(applyColumnLayout(columns, null).map(column => column.key)).toEqual(['identity', 'detail'])
+    expect(defaultColumnLayout(columns).hidden).toEqual([])
+  })
+
   it('returns default-visible columns in source order when layout is null', () => {
     const out = applyColumnLayout(COLS, null).map((c) => c.key)
     expect(out).toEqual(['id', 'name', 'status'])
