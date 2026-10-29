@@ -1,8 +1,3 @@
-// Package driveaddressrepair re-resolves drive end addresses from end
-// coordinates for drives whose stored end address duplicates the start
-// address despite far-apart endpoints. It lives outside internal/api so
-// both the telemetry tracker (startup backfill) and the
-// cmd/drive-address-repair operator command can use it.
 package driveaddressrepair
 
 import (
