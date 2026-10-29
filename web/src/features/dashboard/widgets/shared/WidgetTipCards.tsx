@@ -65,13 +65,7 @@ export function WidgetTipCards({
           key={tip.id}
           role="listitem"
           className={cn(
-            // Spec `.tip` language (widgets-compare.html): a bordered 10px
-            // card on the sub surface with 10px/12px padding, a semibold
-            // title block and a muted body — not a divided row. The leading
-            // icon and impact pill stay opt-in per tip so the four callers
-            // keep their status cues; color never carries meaning alone.
-            'widget-tip-card min-w-0 border border-[var(--border-subtle)] bg-[var(--widget-well,var(--surface-2))] px-3 py-2.5',
-            dashboardTokens.radius.inner,
+            'widget-tip-card min-w-0 py-2.5',
           )}
         >
           <div className="flex min-w-0 items-start gap-3">

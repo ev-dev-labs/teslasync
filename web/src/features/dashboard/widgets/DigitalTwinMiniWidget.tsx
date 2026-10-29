@@ -100,7 +100,7 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
 
           {/* Status badges — shown unless very cramped */}
           {!isCompact || size.rows >= 2 ? (
-            <div className="flex w-full flex-shrink-0 flex-wrap justify-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2">
+            <div className="flex w-full flex-shrink-0 flex-wrap justify-center gap-2 border-t border-[var(--border-subtle)] pt-2">
               <Badge
                 variant={
                   // Unknown lock state stays neutral — a green "success" chip

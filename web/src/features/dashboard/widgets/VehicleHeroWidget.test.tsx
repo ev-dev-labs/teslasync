@@ -260,7 +260,7 @@ function makeStateData(over: {
     // widget passes this through instead of `dataUpdatedAt`.
     observedAt: over.observedAt === undefined ? Date.now() : over.observedAt,
     freshness: over.freshness ?? 'fresh',
-    verifiedFields: over.verifiedFields ?? ['state', 'software_version'],
+    verifiedFields: over.verifiedFields ?? Object.keys(state),
   };
 }
 
@@ -370,6 +370,31 @@ describe('VehicleHeroWidget — vehicle resolution', () => {
 });
 
 describe('VehicleHeroWidget — After layout', () => {
+  it('does not present unverified default zeros or false security flags as observations', () => {
+    setup({ state: makeQuery({ data: makeStateData({
+      batteryLevel: 0, ratedRangeM: 0, insideTemp: 0, outsideTemp: 0,
+      isLocked: false, sentryMode: false, verifiedFields: [],
+    }) }) });
+    renderWidget(<VehicleHeroWidget size={STANDARD} />);
+    expect(screen.queryByRole('meter', { name: 'Battery', exact: true })).not.toBeInTheDocument();
+    for (const label of ['Range', 'Inside', 'Outside']) {
+      expect(screen.getByRole('group', { name: label, exact: true })).toHaveAccessibleDescription('Unknown');
+    }
+    expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
+    expect(screen.queryByText('Off')).not.toBeInTheDocument();
+    expect(screen.getByText('0 verified fields')).toBeInTheDocument();
+  });
+
+  it('retains a verified zero battery during stale refreshes without exposing unverified temperatures', () => {
+    setup({ state: makeQuery({ data: makeStateData({
+      batteryLevel: 0, insideTemp: 0, freshness: 'stale',
+      verifiedFields: ['battery_level'],
+    }) }) });
+    renderWidget(<VehicleHeroWidget size={STANDARD} />);
+    expect(screen.getByRole('meter', { name: 'Battery', exact: true })).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByRole('group', { name: 'Inside', exact: true })).toHaveAccessibleDescription('Unknown');
+  });
+
   it.each([null, Number.NaN])('announces unavailable range and temperatures (%s) without numeric meters', (value) => {
     setup({ state: makeQuery({ data: makeStateData({
       ratedRangeM: value, insideTemp: value, outsideTemp: value,
@@ -441,7 +466,6 @@ describe('VehicleHeroWidget — After layout', () => {
         data: makeStateData({
           isCharging: true,
           etaHours: 2.5,
-          verifiedFields: ['state', 'is_charging'],
         }),
       }),
     });
@@ -474,7 +498,7 @@ describe('VehicleHeroWidget — After layout', () => {
   });
 
   it('renders the verified-field count and Details link in the footer', () => {
-    setup();
+    setup({ state: makeQuery({ data: makeStateData({ verifiedFields: ['state', 'software_version'] }) }) });
     renderWidget(<VehicleHeroWidget size={STANDARD} />);
     expect(screen.getByText('2 verified fields')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Details/ })).toHaveAttribute('href', '/vehicles/1');

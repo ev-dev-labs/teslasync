@@ -17,6 +17,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import VehicleStudio from './vehicle-instruments/VehicleStudio';
 import { useVerifiedDriving } from './vehicle-instruments/useVerifiedDriving';
 import { cn } from '@/lib/cn';
+import { observedVehicleReadings } from '../lib/observedVehicleReadings';
 
 export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -36,7 +37,7 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
     dataUpdatedAt,
     refetch,
   } = useVehicleState(id);
-  const state = stateData?.state;
+  const state = observedVehicleReadings(stateData?.state, stateData?.verifiedFields);
   const driving = useVerifiedDriving(stateData, isError);
   /* SI-floor: state.ideal_range in METERS, state.{inside,outside}_temp in °C. */
   const { unitPrefs } = useUnits();

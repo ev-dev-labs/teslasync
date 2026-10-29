@@ -88,7 +88,7 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
           <div className="grid grid-cols-2 gap-2">
             {[tires[0], tires[2], tires[1], tires[3]].map(tire => (
               <div key={tire.label} role="group" aria-label={tire.label} data-pressure-status={tire.variant}
-                className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+                className="widget-status-tile flex min-w-0 items-center justify-between gap-2 py-2">
                 <Text as="span" variant="caption">{tire.label}</Text>
                 <Text as="span" variant="body" className={VARIANT_STYLE[tire.variant].text}>{formatPressure(tire.value)}</Text>
               </div>

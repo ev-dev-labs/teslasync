@@ -91,13 +91,10 @@ export function WidgetStatusGrid({
             role="listitem"
             data-status={cell.status}
             className={cn(
-              // After `.sgi`: bordered 10px box, 8px dot/body gap, no ambient motion.
               // `relative` is a positioning hook only (no absolute descendants):
               // consumer status tests climb `.closest('.relative')` to the cell.
-              'widget-status-tile relative flex min-w-0 items-center gap-2 border border-[var(--border-subtle)]',
-              dashboardTokens.radius.inner,
-              dashboardTokens.density.itemPadding,
-              compact && 'py-1.5',
+              'widget-status-tile relative flex min-w-0 items-center gap-2',
+              compact ? 'py-1.5' : 'py-2',
             )}
           >
             {/* Status meaning remains visible as text independently of this dot. */}

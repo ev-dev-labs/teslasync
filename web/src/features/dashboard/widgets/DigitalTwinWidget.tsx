@@ -121,7 +121,7 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
             />
           </div>
 
-          <div className="flex w-full flex-shrink-0 flex-wrap gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+          <div className="flex w-full flex-shrink-0 flex-wrap gap-2 border-t border-[var(--border-subtle)] pt-2">
             <Badge variant={lockBadgeVariant}>
               {twinState.locked === false ? (
                 <Unlock className="h-2.5 w-2.5 mr-0.5" />

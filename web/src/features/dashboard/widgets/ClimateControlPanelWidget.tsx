@@ -220,7 +220,7 @@ function FullView({ climateData, toTemperatureDisplay, tempUnit, t, observationC
 
 function StatusTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className={cn('min-w-0 border border-[var(--border-subtle)] bg-[var(--surface-2)]', dashboardTokens.radius.inner, dashboardTokens.density.itemPadding)}>
+    <div className="widget-status-tile min-w-0 py-2">
       <Text as="p" variant="caption">{label}</Text>
       <Text as="p" variant="bodySm" weight="semibold" className="mt-1 break-words tabular-nums" title={value}>{value}</Text>
     </div>

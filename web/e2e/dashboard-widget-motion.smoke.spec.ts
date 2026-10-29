@@ -2,6 +2,8 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { DashboardLayoutsPayload } from '../src/api/hooks/useSettings';
 import { prepareCatalogueState } from './dashboardCatalogueStateHarness';
 import { fulfillApiFixture, waitForHarnessReady } from './mockApi';
+import { positionCataloguePanel } from './dashboardCatalogueCapture';
+import { expectFlatWidgetSurfaces } from './dashboardWidgetSurfaces';
 
 test.skip(process.env.E2E_MOCKS === '0', 'Requires synthetic widget activity sources');
 
@@ -58,6 +60,59 @@ async function expectFlowGeometry(page: Page) {
 
 for (const theme of ['dark', 'light'] as const) {
   for (const width of [375, 1440]) {
+    test(`unified widget surfaces and unknown readings at ${width}px in ${theme}`, async ({ page }) => {
+      test.setTimeout(120_000);
+      const failures: string[] = [];
+      page.on('pageerror', error => failures.push(error.message));
+      const ids = [
+        'vehicle-hero', 'vehicle-hero-card', 'digital-twin-mini', 'climate-control-panel',
+        'tire-pressure-visual', 'battery-gauge', 'charge-status-live', 'vehicle-specs',
+        'drive-efficiency-chart', 'weekly-summary-card', 'command-history', 'security-status',
+        'driving-coach', 'energy-flow', 'range-bar', 'maintenance-tracker',
+        'signal-catalog', 'geofence-status', 'quick-nav',
+      ];
+      const mocks = await prepareCatalogueState(page, ids, width, theme);
+      await page.addInitScript(() => localStorage.setItem('teslasync-row-height-version', '2'));
+      await page.goto('/');
+      await waitForHarnessReady(page, mocks);
+      for (const id of ids) {
+        const panel = page.locator(`[data-widget-id="state-${id}"] > .widget-panel`);
+        await expect(panel).toBeVisible();
+        await positionCataloguePanel(panel);
+        await expect(panel.locator('[aria-busy="true"]')).toHaveCount(0);
+        await expectFlatWidgetSurfaces(panel);
+        if (['vehicle-hero', 'battery-gauge', 'security-status', 'drive-efficiency-chart'].includes(id)) {
+          await panel.screenshot({ path: test.info().outputPath(`flat-${id}-${width}-${theme}.png`), animations: 'disabled' });
+        }
+      }
+
+      const state = {
+        vehicle_id: 7, state: 'online', battery_level: 0, rated_range: 0, ideal_range: 0,
+        inside_temp: 0, outside_temp: 0, is_locked: false, sentry_mode: false, is_charging: false,
+      };
+      const evidence = { state, live: false, observed_at: null, freshness: 'unknown', verified_fields: [] };
+      await page.route('**/api/v1/vehicles/7/state', route => fulfillApiFixture(route, mocks, { json: evidence }));
+      await page.route('**/api/v1/vehicles/states*', route => fulfillApiFixture(route, mocks, { json: {
+        now: new Date().toISOString(), total: 1, limit: 100, offset: 0,
+        counts: { resolved: 1, missing: 0, failed: 0 },
+        vehicles: [{ vehicle_id: 7, outcome: 'resolved', ...evidence }],
+      } }));
+      await page.reload();
+      await waitForHarnessReady(page, mocks);
+      const hero = page.locator('[data-widget-id="state-vehicle-hero"] > .widget-panel');
+      await positionCataloguePanel(hero);
+      await expect(hero).toContainText('0 verified fields');
+      await expect(hero.getByRole('meter', { name: 'Battery', exact: true })).toHaveCount(0);
+      for (const label of ['Range', 'Inside', 'Outside']) {
+        await expect(hero.getByRole('group', { name: label, exact: true })).toHaveAccessibleDescription('Unknown');
+      }
+      await expect(hero.getByText('Unlocked', { exact: true })).toHaveCount(0);
+      await expect(hero.locator('.widget-road-motion')).toHaveCount(0);
+      await hero.screenshot({ path: test.info().outputPath(`flat-unknown-hero-${width}-${theme}.png`), animations: 'disabled' });
+      expect(failures).toEqual([]);
+      expect([...mocks.unmatched]).toEqual([]);
+    });
+
     test(`verified activity, pause and inactive states at ${width}px in ${theme}`, async ({ page }) => {
       test.setTimeout(120_000);
       let mode: 'charging' | 'complete' | 'driving' | 'conditioning' | 'stale' = 'charging';

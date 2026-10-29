@@ -23,7 +23,7 @@ export default function VehicleStudio({
       data-studio-layout={compact ? 'compact' : bounded ? 'bounded' : 'full'}
       data-activity={driving ? 'driving' : 'static'}
       className={cn(
-        'relative isolate flex w-full min-w-0 shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--widget-well,var(--surface-1))]',
+        'relative isolate flex w-full min-w-0 shrink-0 flex-col items-center justify-center overflow-hidden',
         compact ? 'h-20 px-1' : bounded ? 'h-32 px-2' : 'min-h-36 px-3 py-5',
       )}
     >

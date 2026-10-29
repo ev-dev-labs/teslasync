@@ -7,7 +7,7 @@ export default function ClimateAirflow({ active, compact = false }: { active: bo
       aria-hidden="true"
       data-climate-airflow={active ? 'active' : 'static'}
       className={cn(
-        'relative flex w-full shrink-0 items-center overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--widget-well,var(--surface-1))] px-4',
+        'relative flex w-full shrink-0 items-center overflow-hidden',
         compact ? 'h-4' : 'h-10',
         active && 'widget-activity-active',
       )}

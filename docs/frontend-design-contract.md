@@ -267,6 +267,10 @@ CSS reduced-motion remains the safety net. Remove nonessential loops in normal
 mode too. Owners: `web\src\hooks\useMotionPreference.ts:44–48`,
 `web\src\lib\tokens.ts:108–163`, `web\src\index.css` reduced-motion rules.
 
+Dashboard widgets use one outer panel surface. Integrate charts, vehicle artwork,
+metrics and status readings into it; use spacing and light separators instead of
+nested shaded cards. Retain meaningful control, badge, alert and diagram styling.
+
 Dashboard cockpit instruments may use continuous, directional charging ribbons,
 road movement and HVAC airflow as verified active-state feedback. Measurements,
 charge targets and the car body remain still. Missing, stale, historical and
