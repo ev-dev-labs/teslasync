@@ -17,6 +17,7 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 
 ## Verification
 
-- Status: in progress
+- Status: done
 - Done locally: `go build ./...`; `go test` for models/drive, database/drive, database/admin, api/drives, api/telemetry, geocoding; `go vet` + `gofmt` on touched packages; web `tsc --noEmit`; full web `npm run lint`; frontend tests (JourneyDetailsPanel 27/27, drive-detail + DriveDetailPage + driving types 555/555). DB-gated Go repair tests skip without a test DSN and run where one is configured.
-- Next step: commit, push, check `gh pr checks` on this branch's draft PR.
+- PR checks (head `cdf3cfb709`): Backend lint, Backend architecture, Backend race tests, Backend database, Go builds and Frontend lint pass. `Security Scan` fails on a pre-existing `github.com/go-jose/go-jose/v4` CVE-2026-116587 (HIGH, fixed in 4.1.6) in dependencies untouched by this branch — not addressed here. Remaining browser/visual shards were still pending at last check.
+- Next step: none for Bug 1. Review remaining PR #223 browser shards when they finish; do not run the repair against production (dry run first, see above).
