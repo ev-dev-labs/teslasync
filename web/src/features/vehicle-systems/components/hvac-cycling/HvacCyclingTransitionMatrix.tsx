@@ -32,13 +32,14 @@ export function HvacCyclingTransitionMatrix({
 
   return (
     <section data-testid="hvac-cycling-transition-matrix">
-      <LayoutCard title={t('hvacCycling.transitions.title', 'Observed transition matrix')}>
+      <LayoutCard title={t('hvacCycling.transitions.title', 'Observed transition matrix')} summary={
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'hvacCycling.transitions.subtitle',
             'Direction changes require a gap-qualified adjacent pair with interpretable states on both ends.',
           )}
         </Text>
+      }>
         <HvacCyclingSectionBody summary={summary} state={state} requirement="intervals">
           <Grid cols={{ default: 2, md: 3 }} gap={3}>
             <MatrixCell

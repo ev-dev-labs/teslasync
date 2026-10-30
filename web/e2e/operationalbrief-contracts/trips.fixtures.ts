@@ -105,7 +105,7 @@ export const zeroJourneyReport = {
   checklist: { ready: 0, total: 0 }, evidence: [],
 } satisfies JourneyReport;
 
-const checklist = {
+export const checklist = {
   id: 901, session_id: JOURNEY_ID, run_at: '2026-08-24T07:55:00Z',
   items: [{ key: 'charge', status: 'ok', detail: 'Recorded readiness check.' }],
 } satisfies ChecklistRun;

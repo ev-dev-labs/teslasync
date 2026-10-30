@@ -17,10 +17,11 @@ export interface MetricGridProps {
 export function MetricGrid({ children, label, className }: MetricGridProps) {
   return (
     <div
+      data-metric-grid
       role={label ? 'group' : undefined}
       aria-label={label}
       className={cn(
-        'grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,12.5rem),1fr))]',
+        'grid min-w-0 items-stretch gap-3 [&>*]:min-w-0 [grid-template-columns:repeat(auto-fit,minmax(min(100%,12.5rem),1fr))]',
         className,
       )}
     >

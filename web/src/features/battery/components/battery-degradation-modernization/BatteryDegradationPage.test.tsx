@@ -109,6 +109,19 @@ afterEach(() => {
 });
 
 describe('battery degradation trust and preservation', () => {
+  it('keeps range provenance in the shared summary track before sibling analysis bodies', () => {
+    const mounted = render(<BatteryDegradationPage />, { wrapper: Harness });
+    const card = Array.from(mounted.container.querySelectorAll<HTMLElement>('[data-card]'))
+      .find(element => element.querySelector('[data-card-title]')?.textContent === 'Range loss over time')!;
+    const disclosure = within(card).getByText(/The comparison baseline is the range estimate/);
+    expect(disclosure.closest('[data-card-slot="summary"]')).not.toBeNull();
+    expect(disclosure.closest('[data-card-content]')).toBeNull();
+    expect(within(card).getByRole('group', {
+      name: 'First retained comparison baseline and estimated driving range over time', exact: true,
+    })).toBeVisible();
+    expect(screen.getByText('No fast charges in this sample.')).toBeVisible();
+  });
+
   it('refreshes the analytics source from an unusable health measurement without inventing SOH', () => {
     source.data = { ...analytics(), current_soh: Number.NaN };
     const mounted = render(<BatteryDegradationPage />, { wrapper: Harness });

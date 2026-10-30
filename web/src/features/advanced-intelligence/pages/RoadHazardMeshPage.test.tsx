@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataStateSource } from '@/api/dataState';
 import type { HazardPage } from '@/types/advancedIntelligence';
 import { ToastProvider } from '@/components/feedback';
+import { formatDateTime } from '@/lib/dateFormat';
 import { hazards } from './advancedIntelligenceClosure.fixtures';
 import RoadHazardMeshPage from './RoadHazardMeshPage';
 
@@ -58,7 +59,7 @@ describe('RoadHazardMeshPage restrained source preservation', () => {
     expect(within(table).getByText('coarse-cell-only')).toBeInTheDocument();
     expect(within(table).getByText('0.00%')).toBeInTheDocument();
     expect(within(table).getByText('0')).toBeInTheDocument();
-    expect(within(table).getAllByRole('cell')[3]).not.toHaveTextContent('—');
+    expect(within(table).getAllByRole('cell')[3]).toHaveTextContent(formatDateTime(hazards.items[0].last_seen, { tz: 'UTC' }));
     expect(screen.getByText(/Cells are identifiers, not map pins/)).toBeInTheDocument();
     expect(screen.queryByRole('img', { name: /map/i })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Evidence, quality, and limitations' })).toBeInTheDocument();

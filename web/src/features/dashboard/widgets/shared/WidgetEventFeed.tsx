@@ -110,7 +110,7 @@ export function WidgetEventFeed({
     <div
       role="list"
       aria-label={t('widget.eventFeed.label', 'Event feed')}
-      className="space-y-0 overflow-x-clip overflow-y-auto h-full"
+      className="widget-event-feed space-y-0 overflow-x-clip overflow-y-auto h-full"
     >
       {sorted.map((item, i) => (
         <div role="listitem" key={item.id}>

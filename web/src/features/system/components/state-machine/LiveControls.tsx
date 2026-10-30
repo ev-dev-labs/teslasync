@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Select, Tooltip } from '@/components/ui';
 import { Caption } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 /**
  * Live/Freeze/Step toolbar for the FSM debugger.
@@ -80,6 +81,7 @@ export function LiveControls({
   className,
 }: LiveControlsProps) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
 
   const windowOptions = useMemo(() => {
     const minutes =
@@ -115,8 +117,8 @@ export function LiveControls({
     ? t('debugger.controls.scopedTooltip',
         'Matching total: {{range}}. Loaded server page: {{page}}. Buffer cleared at: {{since}}; when cleared, only loaded rows at or after that instant are included. Timeline window: [{{windowStart}}, {{windowEnd}}], intersected with the filtered buffer. No full-range aggregate is inferred from loaded rows.',
         { range: rangeScope ?? '—', page: page ?? '—',
-          since: bufferSince ?? t('debugger.controls.notCleared', 'Not cleared'),
-          windowStart: windowStart ?? '—', windowEnd: windowEnd ?? '—' })
+          since: bufferSince ? formatDateTime(bufferSince) : t('debugger.controls.notCleared', 'Not cleared'),
+          windowStart: formatDateTime(windowStart), windowEnd: formatDateTime(windowEnd) })
     : t('debugger.controls.bufferTooltip',
         'The {{minutes}}-minute timeline window is a slice of the loaded buffer, not a full-range total.',
         { minutes: windowMinutes });

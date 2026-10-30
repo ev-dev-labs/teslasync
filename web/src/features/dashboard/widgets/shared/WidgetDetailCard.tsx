@@ -85,7 +85,7 @@ export function WidgetDetailCard({
     <KVList
       layout="responsive"
       wrap
-      className="h-full overflow-y-auto"
+      className="widget-detail-list h-full overflow-y-auto"
       items={visible.map((entry) => ({
         id: entry.id,
         label: entry.status || entry.sublabel ? (

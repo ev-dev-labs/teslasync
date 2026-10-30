@@ -161,13 +161,13 @@ const baseTwinState = {
   lastUpdated: null,
 } satisfies VehicleTwinProps;
 
-describe('VehicleTwin source-derived inspection', () => {
-  async function localizedTwin(props: Partial<VehicleTwinProps>) {
-    const i18n = createInstance();
-    await i18n.init({ lng: 'en', resources: { en: { translation: english } } });
-    return render(<I18nextProvider i18n={i18n}><VehicleTwin {...baseTwinState} {...props} /></I18nextProvider>);
-  }
+async function localizedTwin(props: Partial<VehicleTwinProps>) {
+  const i18n = createInstance();
+  await i18n.init({ lng: 'en', resources: { en: { translation: english } } });
+  return render(<I18nextProvider i18n={i18n}><VehicleTwin {...baseTwinState} {...props} /></I18nextProvider>);
+}
 
+describe('VehicleTwin source-derived inspection', () => {
   it.each(['photo', 'svg'] as const)('keeps all null states unknown and image semantics in %s mode', async variant => {
     const { container } = await localizedTwin({
       doors: { driverFront: null, driverRear: null, passengerFront: null, passengerRear: null, trunkFront: null, trunkRear: null },
@@ -233,6 +233,25 @@ describe('VehicleTwin source-derived inspection', () => {
 });
 
 describe('VehicleTwin', () => {
+  it.each(['photo', 'svg'] as const)('can pause %s activity without falsifying driving, charging or hazard states', async variant => {
+    const { container } = await localizedTwin({ isDriving: true, isCharging: true, hazards: true, animateActivity: false });
+    const photo = container.querySelector<HTMLImageElement>('img[aria-hidden="true"]')!;
+    if (variant === 'photo') fireEvent.load(photo);
+    else fireEvent.error(photo);
+    const root = container.querySelector('[aria-describedby]')!;
+    const summary = document.getElementById(root.getAttribute('aria-describedby')!)!;
+    expect(summary).toHaveTextContent('Driving: On');
+    expect(summary).toHaveTextContent('Charging: Charging');
+    expect(summary).toHaveTextContent('Hazards: On');
+    await act(async () => {
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    });
+    for (const rotor of container.querySelectorAll<HTMLElement>('[data-wheel-rotor], [data-svg-wheel-rotor]')) {
+      expect(['', 'none', 'rotate(0deg)']).toContain(rotor.style.transform);
+    }
+    expect(container.querySelector('ellipse[cx="90"][cy="180"]')).toHaveAttribute('opacity', '1');
+  });
+
   it.each([false, true])('keeps actual charge and sentry feedback finite and static with reduced motion=%s', async reduce => {
     motionPreference.reduce = reduce;
     const { container, rerender } = render(

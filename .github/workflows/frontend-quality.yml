@@ -1,6 +1,12 @@
 name: Frontend Quality Gates
 
 on:
+  workflow_dispatch:
+    inputs:
+      production_base_url:
+        description: 'Optional deployed URL for authenticated smoke (no mocks)'
+        required: false
+        type: string
   pull_request:
     branches: [main, revamped-ui]
     paths:
@@ -17,12 +23,6 @@ on:
       - 'cmd/routetemplategen/**'
       - 'internal/api/webvitals/routetemplates_gen.go'
       - '.github/workflows/frontend-quality.yml'
-  workflow_dispatch:
-    inputs:
-      production_base_url:
-        description: 'Optional deployed URL for authenticated smoke (no mocks)'
-        required: false
-        type: string
 
 concurrency:
   group: frontend-quality-${{ github.workflow }}-${{ github.ref }}

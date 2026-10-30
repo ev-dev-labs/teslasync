@@ -18,7 +18,7 @@ export const analysisWindow = '?from=2026-08-01&to=2026-08-31';
 export const measuredSession = {
   id: 201, vehicle_id: 7,
   started_at: '2026-08-25T08:00:00.000Z', ended_at: '2026-08-25T09:00:00.000Z',
-  startedAt: '2026-08-25T08:00:00.000Z', duration_min: 60,
+  startedAt: '2026-08-25T08:00:00.000Z', duration_s: 3600,
   start_soc_pct: 0, end_soc_pct: 80, delta_soc_pct: 80,
   start_odometer_m: 100000, end_odometer_m: 100000,
   start_lat: null, start_lng: null, start_place: 'Synthetic home charger',
@@ -32,7 +32,7 @@ export const measuredWindow: ChargingSession[] = [
   {
     ...measuredSession, id: 202, start_place: 'Synthetic public charger',
     started_at: '2026-08-24T08:00:00.000Z', ended_at: '2026-08-24T09:30:00.000Z',
-    startedAt: '2026-08-24T08:00:00.000Z', duration_min: 90,
+    startedAt: '2026-08-24T08:00:00.000Z', duration_s: 5400,
     start_soc_pct: 10, delta_soc_pct: 70,
     total_energy_added_wh: 36000, peak_power_w: 44000, avg_power_w: 18000,
     cost_decimal: 10.8, charger_type: 'DC',
@@ -44,7 +44,7 @@ export const zeroSession: ChargingSession = {
 };
 export const incompleteSession: ChargingSession = {
   ...measuredSession, ended_at: null, end_soc_pct: null, delta_soc_pct: null,
-  duration_min: 0, peak_power_w: null, avg_power_w: null, cost_decimal: null,
+  duration_s: 0, peak_power_w: null, avg_power_w: null, cost_decimal: null,
   live: true,
 };
 
@@ -59,7 +59,7 @@ export const mixedCostWindow: ChargingSession[] = [
 
 export const thermalSession: ChargingSession = {
   ...measuredWindow[1],
-  ended_at: '2026-08-24T08:02:00.000Z', duration_min: 2,
+  ended_at: '2026-08-24T08:02:00.000Z', duration_s: 120,
   total_energy_added_wh: 1000, peak_power_w: 5000, avg_power_w: 5000,
 };
 

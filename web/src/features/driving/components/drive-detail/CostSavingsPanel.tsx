@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { Card, CardContent, CardHeader, Table, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { useSettings } from '@/hooks/useSettings';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -33,11 +33,14 @@ export function CostSavingsPanel({ drive, stats }: { drive: DriveDetail; stats: 
   ];
   return (
     <FadeIn className="h-full">
-      <GlassPanel className="h-full space-y-3 p-4 sm:p-5" data-testid="drive-cost-estimate">
-        <PanelTitle>{t('driveDetail.costSavings', 'Cost and savings')}</PanelTitle>
+      <Card layout padding="none" className="h-full p-4 sm:p-5" data-testid="drive-cost-estimate">
+        <CardHeader title={t('driveDetail.costSavings', 'Cost and savings')} />
+        <CardContent layoutSlot="summary" className="card-layout-summary">
         <Text as="p" variant="caption">
           {t('driveDetail.report.costMethod', 'Estimate using configured rates, not a charging invoice. Energy source is listed in energy evidence.')}
         </Text>
+        </CardContent>
+        <CardContent>
         <Table variant="embedded" aria-label={t('driveDetail.costSavings', 'Cost and savings')}>
           <thead><tr><th scope="col">{t('driveDetail.report.metric', 'Metric')}</th><th scope="col">{t('driveDetail.whyEnded.signal.cols.value', 'Value')}</th></tr></thead>
           <tbody>{rows.map((row) => (
@@ -48,7 +51,8 @@ export function CostSavingsPanel({ drive, stats }: { drive: DriveDetail; stats: 
           {t('driveDetail.atRate', 'at {{currencySymbol}}{{costPerKwh}}/kWh', { currencySymbol, costPerKwh: costPerKwh ?? '—' })}
           {' · '}{t('driveDetail.atMpg', 'at {{mpg}} MPG', { mpg: settingsUnavailable ? '—' : settings.gas_efficiency_mpg ?? '—' })}
         </Text>
-      </GlassPanel>
+        </CardContent>
+      </Card>
     </FadeIn>
   );
 }

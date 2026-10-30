@@ -48,8 +48,8 @@ vi.mock('@/components/charts', async () => ({
   ...(await import('@/test/chartTestDoubles')).inertCartesianParts,
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
   LineChart: ({ children }: { children: ReactNode }) => <>{children}</>,
-  Line: ({ dataKey, stroke }: { dataKey: string; stroke: string }) =>
-    <span data-testid={`temperature-${dataKey}`} data-stroke={stroke} />,
+  Line: ({ dataKey, stroke, strokeDasharray }: { dataKey: string; stroke: string; strokeDasharray?: string }) =>
+    <span data-testid={`temperature-${dataKey}`} data-stroke={stroke} data-dash={strokeDasharray ?? 'solid'} />,
 }));
 
 // jsdom lacks matchMedia; FadeIn → useMotionPreference → framer-motion's
@@ -238,6 +238,18 @@ beforeEach(() => {
 });
 
 describe('TemperatureSection — chart chrome + a11y', () => {
+  it('BUG3 identifies averages, retains one decimal, and distinguishes overlapping setpoints', () => {
+    renderSection({ stats: {
+      avgOutsideTemp: 20.25, avgInsideTemp: 21.75,
+      driverTemps: [22, 22], passengerTemps: [22, 22],
+      avgFanSpeed: 0.4, maxFanSpeed: 4,
+    } });
+    expect(cellValue('Outside temperature (average)')).toBe('20.3');
+    expect(cellValue('Inside temperature (average)')).toBe('21.8');
+    expect(cellValue('Fan status')).toBe('Avg 0.4 · Max 4');
+    expect(screen.getByTestId('temperature-driverTemp').dataset.dash)
+      .not.toBe(screen.getByTestId('temperature-passengerTemp').dataset.dash);
+  });
   it('keeps all temperature identities distinct with shared paint and signed readings', () => {
     renderSection({
       chartData: [
@@ -252,7 +264,7 @@ describe('TemperatureSection — chart chrome + a11y', () => {
     for (const [key, index] of Object.entries({ outsideTemp: 0, insideTemp: 2, driverTemp: 6, passengerTemp: 4 })) {
       expect(screen.getByTestId(`temperature-${key}`)).toHaveAttribute('data-stroke', chartTokens.series[index]);
     }
-    expect(cellValue('Outside temperature')).toBe('-5.00');
+    expect(cellValue('Outside temperature')).toBe('-5.0');
   });
   it('renders as a figure named by its title heading, with a role="img" chart body', () => {
     renderSection();
@@ -285,10 +297,10 @@ describe('TemperatureSection — outside + inside tiles', () => {
   it('shows the outside and inside averages with the °C label under metric preferences', () => {
     renderSection({ stats: { avgOutsideTemp: 15, avgInsideTemp: 21 } });
 
-    expect(cellValue('Outside temperature')).toBe('15.00');
-    expect(cellValue('Inside temperature')).toBe('21.00');
-    expect(tSpy).toHaveBeenCalledWith('driveDetail.outsideTemp', 'Outside temperature');
-    expect(tSpy).toHaveBeenCalledWith('driveDetail.insideTemp', 'Inside temperature');
+    expect(cellValue('Outside temperature')).toBe('15.0');
+    expect(cellValue('Inside temperature')).toBe('21.0');
+    expect(tSpy).toHaveBeenCalledWith('driveDetail.report.averageOutsideTemp', 'Outside temperature (average)');
+    expect(tSpy).toHaveBeenCalledWith('driveDetail.report.averageInsideTemp', 'Inside temperature (average)');
   });
 
   it('labels the temperatures with °F under Fahrenheit preferences (unit applied at render)', () => {
@@ -296,10 +308,10 @@ describe('TemperatureSection — outside + inside tiles', () => {
     renderSection({ stats: { avgOutsideTemp: 59, avgInsideTemp: 70 } });
 
     // Values are pre-converted upstream; the section only swaps the label.
-    expect(cellValue('Outside temperature')).toBe('59.00');
-    expect(cellValue('Inside temperature')).toBe('70.00');
-    expect(screen.getByText('Outside temperature (°F)')).toBeInTheDocument();
-    expect(screen.queryByText('Outside temperature (°C)')).toBeNull();
+    expect(cellValue('Outside temperature')).toBe('59.0');
+    expect(cellValue('Inside temperature')).toBe('70.0');
+    expect(screen.getByText('Outside temperature (average) (°F)')).toBeInTheDocument();
+    expect(screen.queryByText('Outside temperature (average) (°C)')).toBeNull();
   });
 
   it('omits the outside/inside tiles when their average is null but the band still renders', () => {
@@ -323,15 +335,15 @@ describe('TemperatureSection — driver + passenger averages', () => {
       },
     });
 
-    expect(cellValue('Driver temperature')).toBe('22.00');
-    expect(cellValue('Passenger temperature')).toBe('20.00');
-    expect(tSpy).toHaveBeenCalledWith('driveDetail.driverTemp', 'Driver temperature');
-    expect(tSpy).toHaveBeenCalledWith('driveDetail.passengerTemp', 'Passenger temperature');
+    expect(cellValue('Driver temperature')).toBe('22.0');
+    expect(cellValue('Passenger temperature')).toBe('20.0');
+    expect(tSpy).toHaveBeenCalledWith('driveDetail.report.averageDriverTemp', 'Driver temperature (average)');
+    expect(tSpy).toHaveBeenCalledWith('driveDetail.report.averagePassengerTemp', 'Passenger temperature (average)');
   });
 
   it('averages an uneven series without rounding drift', () => {
     renderSection({ stats: { driverTemps: [10, 11] } }); // mean 10.5
-    expect(cellValue('Driver temperature')).toBe('10.50');
+    expect(cellValue('Driver temperature')).toBe('10.5');
   });
 
   it('omits the driver/passenger tiles entirely when their series are empty', () => {
@@ -369,11 +381,10 @@ describe('TemperatureSection — climate tile', () => {
 });
 
 describe('TemperatureSection — fan tile', () => {
-  it('renders the fan tile as "Avg <avg> · Max <max>" with an integer average', () => {
+  it('renders the fan tile as "Avg <avg> · Max <max>" with one average decimal', () => {
     renderSection({ stats: { avgFanSpeed: 2.6, maxFanSpeed: 5 } });
 
-    // fmtInt rounds 2.6 → 3; the tile pairs it with the raw max.
-    expect(cellValue('Fan status')).toBe('Avg 3 · Max 5');
+    expect(cellValue('Fan status')).toBe('Avg 2.6 · Max 5');
     expect(tSpy).toHaveBeenCalledWith('driveDetail.avg', 'Avg');
     expect(tSpy).toHaveBeenCalledWith('driveDetail.fanStatus', 'Fan status');
   });
@@ -462,7 +473,7 @@ describe('TemperatureSection — null safety', () => {
       },
     });
 
-    expect(cellValue('Driver temperature')).toBe('10.00');
+    expect(cellValue('Driver temperature')).toBe('10.0');
     expect(cellValue('Passenger temperature')).toBe('—');
     expect(screen.queryByText(/NaN/)).toBeNull();
   });

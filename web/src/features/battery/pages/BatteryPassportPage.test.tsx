@@ -519,6 +519,17 @@ afterEach(() => {
 });
 
 describe('BatteryPassportPage', () => {
+  it('allocates all six capacity and usage tiles through readable container-responsive metric grids', () => {
+    h.passportQuery = passportQuery({ data: certificate() });
+    renderPage();
+    for (const section of ['battery-passport-capacity-context', 'battery-passport-usage-profile']) {
+      const group = screen.getByTestId(section).querySelector('[data-metric-grid]');
+      expect(group).not.toBeNull();
+      expect(group!.children).toHaveLength(3);
+    }
+    expectEverySection();
+  });
+
   it.each([
     ['de-DE', 'vehicle', 'America/Los_Angeles'],
     ['ja-JP', 'user', 'Asia/Tokyo'],

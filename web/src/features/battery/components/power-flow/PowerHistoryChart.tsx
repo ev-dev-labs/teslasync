@@ -101,7 +101,7 @@ export function PowerHistoryChart({ data, loading, error, onRetry, className }: 
       ]}
     >
       {({ hiddenSeries }) => (
-        <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+        <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={rows} margin={chartMarginLabeled}>
           <defs>
             <ChartGradient id="pfGradSolar" color={FLOW_COLORS.solar} />

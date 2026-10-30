@@ -4,16 +4,17 @@ import { Monitor, Lock, Unlock, ArrowUpRight } from 'lucide-react';
 import { Badge, Text } from '@/components/ui';
 import { SourceContent } from '@/components/layout';
 import { EmptyState, Skeleton } from '@/components/feedback';
-import { VehicleTwin } from '@/components/vehicles';
 import { useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { buildTwinState } from '@/lib/vehicleState';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
 import { WidgetStatusGrid } from './shared';
 import { WidgetShell } from './WidgetShell';
-import { IconButton } from '@/components/ui/IconButton';
+import { IconButton } from '@/components/ui';
 import type { WidgetProps } from './types';
 import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
+import VehicleStudio from './vehicle-instruments/VehicleStudio';
+import { useVerifiedDriving } from './vehicle-instruments/useVerifiedDriving';
 
 const REFRESH_INTERVAL = 5_000;
 
@@ -32,6 +33,7 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
   const { data: security, isLoading: securityLoading } = securityQuery;
   const { data: charging } = chargingQuery;
   const state = stateData?.state;
+  const driving = useVerifiedDriving(stateData, isError);
   const stateTrust = useDataState({ ...stateQuery, data: stateData ?? (stateLoading || isError ? undefined : null) }, { provenance: stateData?.live ? 'live' : 'cached' });
   const securityTrust = useDataState({ ...securityQuery, data: security ?? (securityLoading || securityQuery.isError ? undefined : null) }, { provenance: 'cached' });
   const chargingTrust = useDataState({ ...chargingQuery, data: charging ?? (chargingQuery.isLoading || chargingQuery.isError ? undefined : null) }, { provenance: 'cached' });
@@ -109,19 +111,17 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
           {/* Keep the scene's intrinsic height measurable by grid auto-fit.
               Flexing it into a smaller box centered overflow above the body
               and underestimated the required rows when sm changes to md. */}
-          <div className="relative shrink-0 min-h-[170px] w-full flex items-center justify-center">
-            <VehicleTwin
-              {...twinState}
+          <div className="relative shrink-0 w-full flex items-center justify-center">
+            <VehicleStudio
+              twinState={twinState}
+              vehicle={vehicle}
+              driving={driving}
               size={twinSize}
-              vehicleId={vehicle?.id}
-              exteriorColor={vehicle?.exterior_color}
-              model={vehicle?.model}
-              driveIn
-              className="relative z-10 drop-shadow-2xl"
+              bounded={size.rows <= 4}
             />
           </div>
 
-          <div className="flex flex-shrink-0 flex-wrap gap-1.5 justify-center">
+          <div className="flex w-full flex-shrink-0 flex-wrap gap-2 border-t border-[var(--border-subtle)] pt-2">
             <Badge variant={lockBadgeVariant}>
               {twinState.locked === false ? (
                 <Unlock className="h-2.5 w-2.5 mr-0.5" />

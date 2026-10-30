@@ -34,6 +34,7 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
           className={cn(
             tableTokens.wrapper,
             tableTokens.semantic,
+            '[&_th]:[text-align:inherit] [&_td]:[text-align:inherit]',
             'text-start',
             variant === 'embedded' && '[&_thead]:bg-transparent [&_tbody_tr:nth-child(even)]:bg-transparent [&_tbody_tr:last-child]:border-b-0',
             className,

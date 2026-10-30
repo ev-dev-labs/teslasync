@@ -67,6 +67,7 @@ interface FeatureCardDef {
   description: string;
   enabled: boolean | null;
   valueText: string;
+  detail?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -170,17 +171,20 @@ function SafetyCard({
   description,
   enabled,
   valueText,
+  detail,
 }: {
   label: string;
   description: string;
   enabled: boolean | null;
   valueText: string;
+  detail?: string;
 }) {
   return (
     <LayoutCard title={label} description={description}>
       <Badge variant={enabled === true ? 'success' : 'neutral'}>
         {valueText}
       </Badge>
+      {detail && <Caption className="mt-2">{detail}</Caption>}
     </LayoutCard>
   );
 }
@@ -241,6 +245,7 @@ export function buildFeatureCards(
       description: t('safety.aebDesc', 'Automatic collision mitigation'),
       enabled: aebOn,
       valueText: boolText(aebOn),
+      detail: `${t('telemetry.aebOperatingState', 'AEB operating state')}: ${snap.automatic_emergency_braking_state ?? t('safety.settings.unknown', 'Unknown')}`,
     },
     {
       key: 'bsc',
@@ -335,6 +340,12 @@ function buildHistoryColumns(t: (k: string, fallback: string) => string): Column
       filterValue: (row) => row.automatic_emergency_braking_off == null ? null : isAebEnabled(row.automatic_emergency_braking_off),
       filterValueLabel: (_value, row) => boolLabel(row.automatic_emergency_braking_off == null ? null : isAebEnabled(row.automatic_emergency_braking_off)),
       render: (row) => boolCell(row.automatic_emergency_braking_off == null ? null : isAebEnabled(row.automatic_emergency_braking_off)),
+    },
+    {
+      key: 'aeb_operating_state',
+      header: t('telemetry.aebOperatingState', 'AEB operating state'),
+      filterValue: (row) => row.automatic_emergency_braking_state ?? null,
+      render: (row) => <Text as="span" variant="bodySm">{row.automatic_emergency_braking_state ?? '—'}</Text>,
     },
     {
       key: 'bsc',
@@ -742,6 +753,7 @@ export default function SafetySettingsPage() {
                     description={card.description}
                     enabled={card.enabled}
                     valueText={card.valueText}
+                    detail={card.detail}
                   />
                 ))}
               </div>

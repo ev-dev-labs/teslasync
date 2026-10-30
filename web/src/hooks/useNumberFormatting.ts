@@ -1,6 +1,7 @@
 import { useMemo, useSyncExternalStore } from 'react'
 import {
   fmtNumber as formatNumber,
+  fmtRange as formatRange,
   fmtCompact as formatCompact,
   fmtScientificNumber as formatScientificNumber,
   formatBytes,
@@ -34,6 +35,8 @@ export function useNumberFormatting() {
       formatDurationMsCompact: (value: number | null | undefined) => formatDurationMsCompact(value),
       formatDurationMsLong: (value: number | null | undefined) => formatDurationMsLong(value),
       fmtNumber,
+      fmtRange: (min: number | null | undefined, max: number | null | undefined, decimals?: number) =>
+        formatRange(min, max, decimals ?? preferences.precision, preferences.locale),
       fmtPercent: (value: unknown, decimals?: number) => `${fmtNumber(value, decimals)}%`,
       fmtWithUnit: (value: unknown, unit: string, decimals?: number) => `${fmtNumber(value, decimals)} ${unit}`,
       fmtInt: (value: unknown, locale?: string) => fmtNumber(value, 0, locale),

@@ -84,13 +84,12 @@ export function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCap
               period={{ kind: 'snapshot', label: t('energy.products.modernization.siteSnapshot', 'Site snapshot'),
                 observedAt: response?.fetched_at ?? null,
                 provenance: t('energy.products.modernization.configurationSource', 'Cached Tesla site configuration') }} />
-            {(info.version || info.installation_time_zone) && (
+            {info.version && (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                {info.version && <Text variant="caption" className="inline-flex items-center gap-1 break-words">
+                <Text variant="caption" className="inline-flex items-center gap-1 break-words">
                   <Cpu className="h-3 w-3" aria-hidden="true" />
                   {t('energy.siteInfo.firmware', 'Firmware')}: {info.version}
-                </Text>}
-                {info.installation_time_zone && <Text variant="caption" className="break-words">· {info.installation_time_zone}</Text>}
+                </Text>
               </div>
             )}
             {info.components && <div className="flex flex-wrap gap-1.5">

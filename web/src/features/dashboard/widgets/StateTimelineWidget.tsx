@@ -285,7 +285,7 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
                   {segments.slice(0, 5).map((seg) => (
                     <div
                       key={seg.state}
-                      className="flex min-w-0 items-center gap-2 border border-[var(--border-subtle)] px-2.5 py-1.5 rounded-shape-lg"
+                      className="flex min-w-0 items-center gap-2 border-b border-[var(--border-subtle)] py-1.5"
                     >
                       <span
                         aria-hidden="true"

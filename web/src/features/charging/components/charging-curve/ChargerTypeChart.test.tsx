@@ -254,6 +254,14 @@ describe('ChargerTypeChart — motion-aware series', () => {
 });
 
 describe('ChargerTypeChart — chrome + a11y', () => {
+  it('keeps charger counts outside the bounded plot instead of clipping the supporting rows', () => {
+    renderChart([session(1, 30, { charger_type: 'supercharger', peak_power_w: 120000 })]);
+    const row = screen.getByText(/min avg/);
+    expect(row.closest('[data-card-slot="caption"]')).not.toBeNull();
+    expect(row.closest('[data-chart-viewport]')).toBeNull();
+    expect(fallbackTable()).toBeInTheDocument();
+  });
+
   it('renders the panel title, subtitle and the accessible chart frame', () => {
     renderChart([session(1, 30, { charger_type: 'Tesla', peak_power_w: 100_000 })]);
 

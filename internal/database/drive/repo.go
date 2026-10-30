@@ -204,6 +204,14 @@ func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, of
 		// end_place text, just not refreshed with a since-renamed place.
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("drives: failed to resolve current geofence names")
 	}
+	for _, d := range drives {
+		// Never surface the start address as the destination: a stored
+		// end label identical to the start label while the endpoints are
+		// far apart was resolved from the wrong coordinates. Clearing it
+		// (in memory only) makes readers show the unavailable state and
+		// the end coordinates until the repair re-resolves it.
+		d.ClearSuspectEndAddress()
+	}
 	return drives, nil
 }
 
@@ -222,6 +230,7 @@ func (r *DriveRepo) GetByID(ctx context.Context, id int64) (*drivemodel.Drive, e
 	if err := r.resolveCurrentGeofenceNames(ctx, []*drivemodel.Drive{d}); err != nil {
 		log.Warn().Err(err).Int64("drive_id", id).Msg("drives: failed to resolve current geofence names")
 	}
+	d.ClearSuspectEndAddress()
 	return d, nil
 }
 
@@ -635,6 +644,52 @@ func (r *DriveRepo) FindStalePlaceLabels(ctx context.Context, limit int) ([]*dri
 		drives = append(drives, d)
 	}
 	return drives, rows.Err()
+}
+
+// FindDuplicateEndAddresses returns drives whose stored end label is
+// identical to the start label even though the stored endpoints are far
+// apart (see drivemodel.Drive.HasDuplicateEndAddress) — the end address
+// was resolved from the wrong coordinates and must be re-resolved from
+// the end coordinates. Genuine round trips (endpoints within
+// DuplicateEndAddressDistanceM) are excluded by the distance predicate,
+// in SQL and again in Go via HasDuplicateEndAddress. Newest first,
+// bounded by limit.
+func (r *DriveRepo) FindDuplicateEndAddresses(ctx context.Context, limit int) ([]*drivemodel.Drive, error) {
+	if limit <= 0 {
+		return nil, nil
+	}
+	query := `SELECT ` + driveColumns + ` FROM drives
+		WHERE start_place IS NOT NULL AND start_place <> ''
+		  AND end_place IS NOT NULL AND end_place = start_place
+		  AND start_lat IS NOT NULL AND start_lng IS NOT NULL
+		  AND end_lat IS NOT NULL AND end_lng IS NOT NULL
+		  AND (6371000 * acos(
+			LEAST(1.0, cos(radians(start_lat)) * cos(radians(end_lat)) *
+			cos(radians(end_lng) - radians(start_lng)) +
+			sin(radians(start_lat)) * sin(radians(end_lat)))
+		  )) > $1
+		ORDER BY id DESC
+		LIMIT $2`
+	rows, err := r.db.Pool.Query(ctx, query, drivemodel.DuplicateEndAddressDistanceM, limit)
+	if err != nil {
+		return nil, fmt.Errorf("drives find_duplicate_end_addresses: %w", err)
+	}
+	defer rows.Close()
+
+	var drives []*drivemodel.Drive
+	for rows.Next() {
+		d, err := scanDrive(rows)
+		if err != nil {
+			return nil, fmt.Errorf("drives find_duplicate_end_addresses scan: %w", err)
+		}
+		if d.HasDuplicateEndAddress() {
+			drives = append(drives, d)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("drives find_duplicate_end_addresses iter: %w", err)
+	}
+	return drives, nil
 }
 
 // MarkPlaceLabelVersion records that a drive's place names were produced by the

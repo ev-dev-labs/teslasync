@@ -282,6 +282,12 @@ const (
 	Field_SemiCruiseSpeedLimitMph                   Field = 269
 	Field_Cabin12vPortKeepOn                        Field = 270
 	Field_Cabin48vPortKeepOn                        Field = 271
+	Field_AccessoryRail                             Field = 272
+	Field_PowerTransferStatus                       Field = 273
+	Field_AutomaticEmergencyBrakingState            Field = 274
+	Field_RollingResistanceCoefficient              Field = 275
+	Field_LifetimeDcChargeEnergyKwh                 Field = 276
+	Field_SemiVehicleMassKg                         Field = 277
 )
 
 // Name returns the protobuf field name for this Field. Returns the empty
@@ -832,6 +838,18 @@ func (f Field) Name() string {
 		return "Cabin12vPortKeepOn"
 	case Field_Cabin48vPortKeepOn:
 		return "Cabin48vPortKeepOn"
+	case Field_AccessoryRail:
+		return "AccessoryRail"
+	case Field_PowerTransferStatus:
+		return "PowerTransferStatus"
+	case Field_AutomaticEmergencyBrakingState:
+		return "AutomaticEmergencyBrakingState"
+	case Field_RollingResistanceCoefficient:
+		return "RollingResistanceCoefficient"
+	case Field_LifetimeDcChargeEnergyKwh:
+		return "LifetimeDcChargeEnergyKwh"
+	case Field_SemiVehicleMassKg:
+		return "SemiVehicleMassKg"
 	}
 	return ""
 }
@@ -1394,6 +1412,18 @@ func ParseField(s string) (Field, error) {
 		return Field_Cabin12vPortKeepOn, nil
 	case "Cabin48vPortKeepOn":
 		return Field_Cabin48vPortKeepOn, nil
+	case "AccessoryRail":
+		return Field_AccessoryRail, nil
+	case "PowerTransferStatus":
+		return Field_PowerTransferStatus, nil
+	case "AutomaticEmergencyBrakingState":
+		return Field_AutomaticEmergencyBrakingState, nil
+	case "RollingResistanceCoefficient":
+		return Field_RollingResistanceCoefficient, nil
+	case "LifetimeDcChargeEnergyKwh":
+		return Field_LifetimeDcChargeEnergyKwh, nil
+	case "SemiVehicleMassKg":
+		return Field_SemiVehicleMassKg, nil
 	}
 	return Field(0), fmt.Errorf("protomodel: unknown Field name %q", s)
 }
@@ -1677,6 +1707,12 @@ var Signals = []SignalMeta{
 	{Field: "SemiCruiseSpeedLimitMph", ProtoEnumNum: 269, Category: "driving", ValueKind: ValueKindFloat, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
 	{Field: "Cabin12vPortKeepOn", ProtoEnumNum: 270, Category: "vehicle_state", ValueKind: ValueKindEnum, EnumTypeName: "CabinPortKeepOnState", EnumStringPrefix: "CabinPortKeepOnState", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
 	{Field: "Cabin48vPortKeepOn", ProtoEnumNum: 271, Category: "vehicle_state", ValueKind: ValueKindEnum, EnumTypeName: "CabinPortKeepOnState", EnumStringPrefix: "CabinPortKeepOnState", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "AccessoryRail", ProtoEnumNum: 272, Category: "vehicle_state", ValueKind: ValueKindBool, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "PowerTransferStatus", ProtoEnumNum: 273, Category: "charging", ValueKind: ValueKindEnum, EnumTypeName: "PowerTransferStatusValue", EnumStringPrefix: "PowerTransferStatus", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "AutomaticEmergencyBrakingState", ProtoEnumNum: 274, Category: "safety_security", ValueKind: ValueKindEnum, EnumTypeName: "AutomaticEmergencyBrakingStateValue", EnumStringPrefix: "AutomaticEmergencyBrakingState", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "RollingResistanceCoefficient", ProtoEnumNum: 275, Category: "driving", ValueKind: ValueKindDouble, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "LifetimeDcChargeEnergyKwh", ProtoEnumNum: 276, Category: "charging", ValueKind: ValueKindDouble, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "SemiVehicleMassKg", ProtoEnumNum: 277, Category: "driving", ValueKind: ValueKindDouble, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
 }
 
 // SignalsByName indexes Signals by canonical proto field name. The pointer

@@ -89,6 +89,19 @@ beforeEach(() => { fixtures.distance = 'km'; fixtures.hideDistance = false });
 afterEach(() => vi.unstubAllGlobals());
 
 describe('production vehicle charts through shared layout', () => {
+  it('declares battery header, gauge/readout summary and plot as the same shared row anatomy as its sibling', () => {
+    render(<VehicleDetailCharts state={syntheticState} drives={syntheticDrives}
+      stateQuery={{ data: { state: syntheticState } }} drivesQuery={{ data: syntheticDrives }} />);
+    const heading = screen.getByRole('heading', { name: 'Battery overview' });
+    const card = heading.closest('[data-card-layout-opt-in]');
+    expect(card).not.toBeNull();
+    expect(heading.closest('[data-card-slot="header"]')).not.toBeNull();
+    expect(screen.getByTestId('battery-gauge').closest('[data-card-slot="summary"]')).not.toBeNull();
+    expect(screen.getByTestId('vehicle-battery-readouts').closest('[data-card-slot="summary"]')).not.toBeNull();
+    expect(screen.getByTestId('battery-bars').closest('[data-card-slot="body"]')).not.toBeNull();
+    expect(heading.querySelector('svg')).not.toBeNull();
+  });
+
   it.each([null, undefined, NaN, Infinity, -Infinity, -1, 101, '42', ''])(
     'keeps both battery rows and the unavailable gauge shell for %s', battery_level => {
       render(<VehicleBatteryChart state={Object.assign({}, syntheticState, { battery_level })} />);
@@ -214,5 +227,9 @@ describe('production vehicle charts through shared layout', () => {
       });
       expect(screen.getAllByTestId('embedded-fixture').map(node => node.getAttribute('data-height'))).toEqual([String(height), String(height)]);
     }
+    const battery = screen.getByRole('heading', { name: 'Battery overview' }).closest('[data-card-layout-opt-in]');
+    expect(battery).toHaveAttribute('data-card-layout-aligned', 'true');
+    expect(battery?.parentElement?.closest('[data-card-layout="grid"]'))
+      .toHaveAttribute('data-card-layout-aligned', 'true');
   });
 });

@@ -840,13 +840,23 @@ paths:
                 items:
                   type: object
                   properties:
-                    timestamp:
+                    created_at:
                       type: string
                       format: date-time
                     speed:
                       type: number
                     power:
                       type: number
+                      nullable: true
+                      description: Signed pack power in watts; positive draw, negative regeneration.
+                    fan_status:
+                      type: number
+                      nullable: true
+                      description: Observed fan speed; null when unknown.
+                    is_climate_on:
+                      type: boolean
+                      nullable: true
+                      description: Canonical HVAC power state, or positive fan evidence when the state is unavailable.
                     battery_level:
                       type: integer
                     outside_temp:

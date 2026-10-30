@@ -91,15 +91,38 @@ export async function captureGeometry(panel: Locator, timeout?: number) {
         }
       }
       let lineIndex = 0;
-      for (const box of range.getClientRects()) {
+      const boxes = range.getClientRects();
+      let svgBounds: { top: number; bottom: number; left: number; right: number } | null = null;
+      if (owner instanceof SVGTextContentElement && owner.childNodes.length === 1 && boxes.length === 1) {
+        const matrix = owner.getScreenCTM();
+        if (matrix) {
+          // SVG client rects quantize translated viewport coordinates to float32.
+          // Transform native glyph bounds in panel space instead: scrolling must
+          // not change identity, and even subpixel source movement must still fail.
+          matrix.e -= panelBox.left;
+          matrix.f -= panelBox.top;
+          const bounds = owner.getBBox();
+          const points = [
+            new DOMPoint(bounds.x, bounds.y), new DOMPoint(bounds.x + bounds.width, bounds.y),
+            new DOMPoint(bounds.x, bounds.y + bounds.height), new DOMPoint(bounds.x + bounds.width, bounds.y + bounds.height),
+          ].map(point => point.matrixTransform(matrix));
+          svgBounds = {
+            top: Math.min(...points.map(point => point.y)), bottom: Math.max(...points.map(point => point.y)),
+            left: Math.min(...points.map(point => point.x)), right: Math.max(...points.map(point => point.x)),
+          };
+        }
+      }
+      for (const box of boxes) {
         if (box.width <= 0 || box.height <= 0) continue;
         const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
         readings.push({
           id: `${nodeIndex}:${lineIndex++}`,
           observationAgeRole, observationAgeLayout,
           text, top: box.top, bottom: box.bottom, left: box.left, right: box.right,
-          relativeTop: box.top - panelBox.top, relativeBottom: box.bottom - panelBox.top,
-          relativeLeft: box.left - panelBox.left, relativeRight: box.right - panelBox.left,
+          relativeTop: svgBounds?.top ?? box.top - panelBox.top,
+          relativeBottom: svgBounds?.bottom ?? box.bottom - panelBox.top,
+          relativeLeft: svgBounds?.left ?? box.left - panelBox.left,
+          relativeRight: svgBounds?.right ?? box.right - panelBox.left,
           hitInsidePanel: hit !== null && element.contains(hit),
           hit: hit ? { tag: hit.tagName, className: hit.getAttribute('class'),
             role: hit.closest('[data-role]')?.getAttribute('data-role') } : null,

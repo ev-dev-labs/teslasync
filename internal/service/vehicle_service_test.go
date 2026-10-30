@@ -3,7 +3,9 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -65,6 +67,115 @@ func newStore(t *testing.T, vehicleID int64, signals map[string]interface{}) *si
 		st.Update(vehicleID, signals)
 	}
 	return st
+}
+
+func TestBuildStateFromSignalStore_NewStreamingFields(t *testing.T) {
+	values := signal.State{
+		"AccessoryRail":                  false,
+		"PowerTransferStatus":            "ChargeEnabled",
+		"AutomaticEmergencyBrakingState": "Unavailable",
+		"RollingResistanceCoefficient":   float64(0.006123456789),
+		"LifetimeDcChargeEnergyKwh":      float64(12500),
+		"SemiVehicleMassKg":              float64(36500.5),
+	}
+	want := map[string]any{
+		"accessory_rail":                    false,
+		"power_transfer_status":             "ChargeEnabled",
+		"automatic_emergency_braking_state": "Unavailable",
+		"rolling_resistance_coefficient":    float64(0.006123456789),
+		"lifetime_dc_charge_energy_wh":      float64(12500),
+		"semi_vehicle_mass_kg":              float64(36500.5),
+	}
+	for _, source := range []string{"live", "durable", "missing"} {
+		t.Run(source, func(t *testing.T) {
+			store := signal.New()
+			reader := &fakeStateReader{}
+			if source == "live" {
+				live := make(map[string]any, len(values))
+				for name, value := range values {
+					live[name] = value
+				}
+				store.Update(7, live)
+			} else if source == "durable" {
+				reader.snapshot = values
+			}
+			state, verified := newSvc(reader).BuildStateFromSignalStoreWithProvenance(
+				store, &vehiclemodel.Vehicle{ID: 7})
+			body, err := json.Marshal(state)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got map[string]any
+			if err := json.Unmarshal(body, &got); err != nil {
+				t.Fatal(err)
+			}
+			for field, expected := range want {
+				if source == "missing" {
+					if _, exists := got[field]; exists {
+						t.Errorf("missing signal invented %s=%v", field, got[field])
+					}
+				} else if got[field] != expected {
+					t.Errorf("%s = %v, want %v", field, got[field], expected)
+				}
+				if verified[field] != (source == "live") {
+					t.Errorf("%s verified=%v, source=%s", field, verified[field], source)
+				}
+			}
+		})
+	}
+}
+
+func TestBuildStateFromSignalStore_StreamingInvalidMeasurements(t *testing.T) {
+	for _, source := range []string{"live", "durable"} {
+		t.Run(source, func(t *testing.T) {
+			store := signal.New()
+			reader := &fakeStateReader{}
+			values := map[string]any{
+				"RollingResistanceCoefficient": math.NaN(),
+				"LifetimeDcChargeEnergyKwh":    math.Inf(1),
+				"SemiVehicleMassKg":            math.Inf(-1),
+			}
+			if source == "live" {
+				store.Update(7, values)
+			} else {
+				reader.snapshot = signal.State{}
+				for name, value := range values {
+					reader.snapshot[name] = value
+				}
+			}
+			state := newSvc(reader).BuildStateFromSignalStore(store, &vehiclemodel.Vehicle{ID: 7})
+			if state.RollingResistanceCoefficient != nil || state.LifetimeDcChargeEnergyWh != nil || state.SemiVehicleMassKg != nil {
+				t.Fatalf("invalid measurements leaked into API state: %+v", state)
+			}
+			if _, err := json.Marshal(state); err != nil {
+				t.Fatalf("invalid telemetry made current state unencodable: %v", err)
+			}
+		})
+	}
+}
+
+func TestBuildStateFromSignalStore_StreamingZeroAndFalseBeatFallback(t *testing.T) {
+	store := newStore(t, 7, map[string]any{
+		"AccessoryRail":                  false,
+		"LifetimeDcChargeEnergyKwh":      float64(0),
+		"AutomaticEmergencyBrakingState": "Unknown",
+	})
+	reader := &fakeStateReader{snapshot: signal.State{
+		"AccessoryRail":                  true,
+		"LifetimeDcChargeEnergyKwh":      float64(9000),
+		"AutomaticEmergencyBrakingState": "Enabled",
+		"SemiVehicleMassKg":              float64(36500),
+	}}
+	state, verified := newSvc(reader).BuildStateFromSignalStoreWithProvenance(
+		store, &vehiclemodel.Vehicle{ID: 7})
+	if state.AccessoryRail == nil || *state.AccessoryRail ||
+		state.LifetimeDcChargeEnergyWh == nil || *state.LifetimeDcChargeEnergyWh != 0 ||
+		state.AutomaticEmergencyBrakingState == nil || *state.AutomaticEmergencyBrakingState != "Unknown" {
+		t.Fatalf("durable fallback replaced real false, zero or unknown: %+v", state)
+	}
+	if state.SemiVehicleMassKg == nil || *state.SemiVehicleMassKg != 36500 || verified["semi_vehicle_mass_kg"] {
+		t.Fatalf("missing live mass did not use unverified durable fallback: %+v, verified=%v", state, verified)
+	}
 }
 
 // TestBuildStateFromSignalStore_LiveValuesAlwaysWin proves the fallback never

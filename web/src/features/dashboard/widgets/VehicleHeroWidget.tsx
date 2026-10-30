@@ -28,6 +28,9 @@ import { VEHICLE_STATE_LABELS, type VehicleState } from '@/types/fsm';
 import { WidgetBigNumber } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import VehicleStudio from './vehicle-instruments/VehicleStudio';
+import { useVerifiedDriving } from './vehicle-instruments/useVerifiedDriving';
+import { observedVehicleReadings } from '../lib/observedVehicleReadings';
 
 /** Stable identity so an unresolved read never re-renders the hero body. */
 const EMPTY_VERIFIED_FIELDS: readonly VerifiedVehicleStateField[] = [];
@@ -48,7 +51,7 @@ const ChargeDoneAt = memo(function ChargeDoneAt({ etaHours }: { etaHours: number
   );
 });
 
-function Chip({ icon, label, description, children }: {
+function StatusReading({ icon, label, description, children }: {
   icon?: ReactNode; label?: string; description?: string; children: ReactNode;
 }) {
   return (
@@ -56,7 +59,7 @@ function Chip({ icon, label, description, children }: {
       role={label ? 'group' : undefined}
       aria-label={label}
       aria-description={description}
-      className="inline-flex min-w-0 items-center gap-1.5 rounded-pill border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2.5 py-1 text-xs text-[var(--text-secondary)]"
+      className="inline-flex min-w-0 items-center gap-1.5 py-1 text-xs text-[var(--text-secondary)]"
     >
       {icon}
       <span className="min-w-0 break-words">{label && <>{label}{' '}</>}{children}</span>
@@ -158,8 +161,8 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
     refetch,
   });
 
-  const state = stateData?.state ?? null;
   const verifiedFields = stateData?.verifiedFields ?? EMPTY_VERIFIED_FIELDS;
+  const state = observedVehicleReadings(stateData?.state, verifiedFields);
   /* The shared precedence: verified charging → verified motion → verified FSM
    * state. `null` means Unknown and is rendered as such — it must never fall
    * through to "offline". */
@@ -169,6 +172,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
     verifiedFields,
   });
   const unknownStatus = status == null;
+  const driving = useVerifiedDriving(stateData, isError);
 
   const batteryLevel =
     state?.battery_level != null && Number.isFinite(state.battery_level)
@@ -299,8 +303,10 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
             )}
           </div>
 
+          <VehicleStudio vehicle={vehicle} driving={driving} size="lg" bounded />
+
           {/* Headline battery + estimated range. Each value appears once. */}
-          <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex flex-wrap items-end justify-between gap-3 py-1">
             <WidgetBigNumber
               value={batteryLevel}
               unit="%"
@@ -373,9 +379,8 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
             </div>
           </div>
 
-          {/* Access + cabin chips. */}
-          <div className="flex flex-wrap gap-2">
-            <Chip
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 border-t border-[var(--border-subtle)] pt-2 @lg:grid-cols-4">
+            <StatusReading
               icon={
                 state?.is_locked ? (
                   <Lock className="h-3.5 w-3.5" aria-hidden="true" />
@@ -389,8 +394,8 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
                 : state.is_locked
                   ? t('common.locked', 'Locked')
                   : t('common.unlocked', 'Unlocked')}
-            </Chip>
-            <Chip>
+            </StatusReading>
+            <StatusReading>
               {t('common.sentry', 'Sentry')}{' '}
               <span className="font-semibold text-[var(--text-primary)]">
                 {state?.sentry_mode == null
@@ -399,23 +404,23 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
                     ? t('common.on', 'On')
                     : t('common.off', 'Off')}
               </span>
-            </Chip>
-            <Chip
+            </StatusReading>
+            <StatusReading
               label={t('hero.inside', 'Inside')}
               description={state?.inside_temp == null || !Number.isFinite(state.inside_temp) ? unknownReading : undefined}
             >
               <span className="font-semibold text-[var(--text-primary)]">
                 {tempChipText(state?.inside_temp, toTemperatureDisplay, tempUnit, (v, d) => fmtNumber(v, d))}
               </span>
-            </Chip>
-            <Chip
+            </StatusReading>
+            <StatusReading
               label={t('hero.outside', 'Outside')}
               description={state?.outside_temp == null || !Number.isFinite(state.outside_temp) ? unknownReading : undefined}
             >
               <span className="font-semibold text-[var(--text-primary)]">
                 {tempChipText(state?.outside_temp, toTemperatureDisplay, tempUnit, (v, d) => fmtNumber(v, d))}
               </span>
-            </Chip>
+            </StatusReading>
           </div>
         </div>
       ) : (

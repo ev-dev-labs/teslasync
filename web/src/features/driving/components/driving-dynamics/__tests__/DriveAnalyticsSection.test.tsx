@@ -34,12 +34,17 @@ import type { ComponentProps, ReactNode } from 'react'
 const captured = vi.hoisted(() => ({
   exportRows: vi.fn(),
   plottedRows: vi.fn(),
+  responsiveHeight: vi.fn(),
 }))
 
 vi.mock('@/components/charts', async (original) => {
   const actual = await original<typeof import('@/components/charts')>()
   return {
     ...actual,
+    ResponsiveContainer: (props: ComponentProps<typeof actual.ResponsiveContainer>) => {
+      captured.responsiveHeight(props.height)
+      return <actual.ResponsiveContainer {...props} />
+    },
     ChartContainer: (props: ComponentProps<typeof actual.ChartContainer>) => {
       if (props.chartKey === 'driving-dynamics-power-profile') captured.exportRows(props.data)
       return <actual.ChartContainer {...props} />
@@ -167,6 +172,13 @@ function bucketCount(figureName: RegExp, rangeLabel: string): string {
 }
 
 describe('DriveAnalyticsSection — speed distribution bucketing', () => {
+  it('lets all three analytical plots use their responsive frame allocation', () => {
+    captured.responsiveHeight.mockClear()
+    renderSection({ filteredDrives: [drive({ avgSpeedMps: 10, avgPowerW: 1200 })] })
+    expect(captured.responsiveHeight.mock.calls).toHaveLength(3)
+    expect(captured.responsiveHeight.mock.calls.every(([height]) => height === '100%')).toBe(true)
+  })
+
   it('buckets each drive by its DISPLAY speed, not raw m/s (mph)', () => {
     // 44.704 m/s = 100 mph → "90–120 mph"; 20.1168 m/s = 45 mph → "30–60 mph".
     // Pre-fix both compared in m/s: 100 mph landed in "30–60", 45 mph in "0–30".

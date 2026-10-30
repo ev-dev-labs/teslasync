@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BatteryCharging, ChevronRight } from 'lucide-react'
 
-import { GlassPanel, DataTable, PanelTitle, type Column } from '@/components/ui'
+import { DataTable, type Column } from '@/components/ui'
+import { LayoutCard } from '@/components/layout'
 import { EmptyState } from '@/components/feedback'
 import { formatDateTime } from '@/lib/dateFormat'
 
@@ -89,22 +90,20 @@ export function RecentChargesSection({ sessions }: RecentChargesSectionProps) {
   const chargeColumns = useChargeColumns()
 
   return (
-    <GlassPanel className="p-6">
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <PanelTitle className="flex items-center gap-2">
-          <BatteryCharging className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-          {t('common.recentCharges', 'Recent charges')}
-        </PanelTitle>
-        <Link
+    <LayoutCard
+      title={t('common.recentCharges', 'Recent charges')}
+      icon={<BatteryCharging className="h-4 w-4 text-emerald-300" aria-hidden="true" />}
+      actions={<Link
           to="/charging"
           className="flex items-center gap-1 text-xs text-[var(--text-muted)] transition-colors hover:text-emerald-300"
         >
           {t('common.viewAll', 'View all')} <ChevronRight className="h-3 w-3" aria-hidden="true" />
-        </Link>
-      </div>
+        </Link>}
+    >
       {sessions && sessions.length > 0 ? (
         <DataTable
           tableId="vehicles:detail-recent-charges"
+          cardLayout
           columns={chargeColumns}
           mobileColumns={['date', 'energy', 'battery']}
           data={sessions}
@@ -119,6 +118,6 @@ export function RecentChargesSection({ sessions }: RecentChargesSectionProps) {
           message={t('common.noCharges', 'No charging sessions recorded yet')}
         />
       )}
-    </GlassPanel>
+    </LayoutCard>
   )
 }

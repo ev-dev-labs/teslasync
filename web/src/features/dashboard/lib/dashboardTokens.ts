@@ -3,7 +3,7 @@ import { typography } from '@/lib/tokens';
 
 /** Dashboard content is hosted by the canvas panel; these tokens add no card chrome. */
 export const dashboardTokens = {
-  shell: 'relative flex h-full min-w-0 flex-col',
+  shell: 'dashboard-widget relative flex h-full min-w-0 flex-col',
   header: 'flex w-full shrink-0 flex-col pl-4 pr-4 pb-2 pt-3',
   title: `${typography.size.sm} ${typography.weight.semibold} ${typography.color.primary} leading-snug`,
   description: `${typography.role.bodySm} mt-1 break-words leading-snug`,
@@ -12,11 +12,12 @@ export const dashboardTokens = {
   // descendant text at spaces via the inherited break-words.
   body: '@container min-w-0 flex-1 min-h-0 overflow-x-clip overflow-y-auto break-words [&>*]:min-w-0',
   footer: 'shrink-0 border-t border-[var(--border-subtle)] px-4 py-2',
-  metric: `${typography.size['2xl']} ${typography.weight.semibold} ${typography.color.primary} tabular-nums leading-tight`,
+  metric: `${typography.size['2xl']} @sm:text-3xl ${typography.weight.medium} ${typography.color.primary} tabular-nums leading-tight tracking-tight`,
   secondaryMetric: `${typography.size.lg} ${typography.weight.semibold} ${typography.color.primary} tabular-nums leading-tight`,
   metricLabel: `${typography.role.bodySm} break-words leading-snug`,
   unit: `${typography.role.caption} shrink-0`,
   stat: '!min-h-0 !rounded-none !border-0 !bg-transparent !p-0 !shadow-none [&_.text-2xl]:text-xl [&_.text-2xl]:font-semibold',
+  statRail: 'widget-stat-rail',
   columns: {
     1: 'grid-cols-1',
     2: 'grid-cols-1 @xs:grid-cols-2',
@@ -123,10 +124,8 @@ export const dashboardTokens = {
     meterHeightThick: 12,
   },
   /**
-   * Motion budget (contract MDC-016/MDC-042): feedback only, never ambient
-   * loops. No animate tokens are provided on purpose — decorative loops such
-   * as flow dashes must be wrapped in `motion-safe:` by the consumer and fall
-   * back to a static value under `useMotionPreference()` / reduced motion.
+   * Confirmed active-state motion is owned by dashboard.css. Shell trust,
+   * dashboard pause and useMotionPreference suppress it without hiding data.
    */
   motion: {
     transition: 'transition-colors duration-fast motion-reduce:transition-none',

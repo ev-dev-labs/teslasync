@@ -158,6 +158,27 @@ beforeEach(() => {
 });
 
 describe('BatteryLinearGaugeWidget — level → gauge colour', () => {
+  it('streams only verified current charging while preserving the charge limit and fixed scale', () => {
+    mockUseVehicleState.mockReturnValue(stateQuery(undefined, {
+      data: {
+        state: stateWithLimit(90, { battery_level: 72, is_charging: true }),
+        live: true, freshness: 'fresh', observedAt: Date.now(), verifiedFields: ['is_charging'],
+      },
+    }));
+    const { container } = renderWidget();
+    expect(container.querySelector('.widget-cell-stream')).toHaveClass('widget-state-motion');
+    expect(container.querySelector('.widget-energy-stream')).toHaveClass('widget-state-motion');
+    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '72');
+    expect(limitMarker(container)).toHaveStyle({ left: '90%' });
+  });
+
+  it('does not animate a real but unverified charging flag', () => {
+    mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 72, is_charging: true })));
+    const { container } = renderWidget();
+    expect(screen.getByText('Charging')).toBeInTheDocument();
+    expect(container.querySelector('.widget-state-motion')).toBeNull();
+  });
+
   it('renders a green arc when the level is above 50%', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 80 })));
     const { container } = renderWidget();

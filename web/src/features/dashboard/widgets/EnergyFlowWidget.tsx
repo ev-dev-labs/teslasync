@@ -48,6 +48,7 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
     refetch,
   }, {
     provenance: stateData?.live ? 'live' : 'cached',
+    maxAgeMs: 120_000,
     partial: !!state && (power == null || batteryLevel == null || (isCharging && chargerPower == null)),
   });
 
@@ -138,7 +139,7 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
       onRefresh={handleRefresh}
     >
       {state ? (
-        <div className="mx-auto h-full min-h-0 w-full max-w-72 px-5 py-7 [&>svg]:overflow-visible [&_text]:fill-[var(--text-secondary)] [&_circle]:fill-[var(--surface-2)] [&_circle]:stroke-[var(--border-default)] motion-reduce:[&_.flow-active]:animate-none">
+        <div className="widget-flow-frame flex h-full min-h-0 w-full items-center" data-motion-suppressed={!stateData?.live || undefined}>
           <WidgetFlowDiagram
             nodes={nodes}
             arrows={arrows}

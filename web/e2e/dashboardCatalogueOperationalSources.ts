@@ -19,7 +19,7 @@ export function catalogueOperationalSources(now: string): CatalogueSources {
     start_lat: 37.4, start_lng: -122.1, start_place: 'Catalogue home',
     total_energy_added_wh: 42_000, peak_power_w: 11000, avg_power_w: 10500,
     cost_decimal: 6.72, cost: 6.72, cost_currency: 'USD', charger_type: 'AC',
-    cable_type: 'IEC', duration_min: 240, live: false,
+    cable_type: 'IEC', duration_s: 14400, live: false,
   };
   const telemetry: ChargeTelemetryReading[] = [0, 1, 2].map(index => {
     const ts = new Date(Date.parse(earlier) + index * 7_200_000).toISOString();

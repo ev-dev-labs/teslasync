@@ -136,7 +136,7 @@ function renderHero(state: VehicleState | null) {
         tempUnit="°C"
         observedAt={Date.now()}
         freshness="fresh"
-        verifiedFields={['speed']}
+        verifiedFields={['speed', 'rated_range']}
       />
     </MemoryRouter>,
   );

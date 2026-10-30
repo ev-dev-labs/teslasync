@@ -256,7 +256,7 @@ describe('ListExportMenu', () => {
     expect(screen.getByTestId('le-trigger')).toHaveFocus();
   });
 
-  it('uses menu scope semantics and navigates actions with arrows and Home/End', () => {
+  it('uses menu scope semantics and navigates actions with arrows and Home/End', async () => {
     render(
       <ListExportMenu onExportCsv={onExportCsv} onExportJson={onExportJson}
         selectedCount={2} visibleCount={0} testId="le" />,
@@ -265,7 +265,7 @@ describe('ListExportMenu', () => {
     fireEvent.keyDown(trigger, { key: 'ArrowDown' });
     expect(screen.getByRole('menu', { name: 'Export list' })).toBeInTheDocument();
     const visible = screen.getByRole('menuitemradio', { name: 'Visible (0)' });
-    expect(visible).toHaveFocus();
+    await waitFor(() => expect(visible).toHaveFocus());
     fireEvent.keyDown(visible, { key: 'ArrowDown' });
     expect(screen.getByTestId('le-scope-selected')).toHaveFocus();
     fireEvent.keyDown(screen.getByTestId('le-scope-selected'), { key: 'End' });
@@ -279,7 +279,7 @@ describe('ListExportMenu', () => {
     fireEvent.keyDown(visible, { key: 'Escape' });
     expect(trigger).toHaveFocus();
     fireEvent.keyDown(trigger, { key: 'ArrowUp' });
-    expect(screen.getByTestId('le-json')).toHaveFocus();
+    await waitFor(() => expect(screen.getByTestId('le-json')).toHaveFocus());
   });
 
   it('closes on outside pointer interaction without exporting or taking outside focus', () => {

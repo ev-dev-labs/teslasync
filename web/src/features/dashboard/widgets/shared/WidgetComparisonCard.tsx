@@ -110,7 +110,7 @@ export function WidgetComparisonCard({
   }
 
   return (
-    <div className={cn('flex flex-col', compact && 'text-sm')}>
+    <div className={cn('widget-stat-rail flex flex-col', compact && 'text-sm')}>
       {visible.map((m, i) => (
         <MetricRow key={`${m.label}-${i}`} metric={m} previousLabel={resolvedPreviousLabel} />
       ))}

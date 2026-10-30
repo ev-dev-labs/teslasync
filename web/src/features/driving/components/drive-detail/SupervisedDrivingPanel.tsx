@@ -10,6 +10,13 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 
 import type { DriveFsdInsight, FsdAttributionConfidence } from '@/types/fsd';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { typography } from '@/lib/tokens';
+import { cn } from '@/lib/cn';
+
+const evidenceLinkClass = cn(
+  typography.role.bodySm,
+  'inline-flex items-center gap-1 underline underline-offset-4',
+);
 
 interface SupervisedDrivingPanelProps {
   insight: DriveFsdInsight | undefined;
@@ -107,7 +114,7 @@ export function SupervisedDrivingPanel({
           <div className="flex flex-col items-end gap-1">
             <Link
               to="/fsd"
-              className="inline-flex items-center gap-1 text-xs font-medium text-[var(--theme-primary)] underline-offset-4 hover:underline"
+              className={evidenceLinkClass}
             >
               {t('driveDetail.fsd.openInsights', 'Open FSD insights')}
               <ExternalLink className="h-3 w-3" aria-hidden="true" />
@@ -115,7 +122,7 @@ export function SupervisedDrivingPanel({
             {insight?.firmware_version ? (
               <Link
                 to="/fsd#fsd-firmware-spotlight"
-                className="inline-flex items-center gap-1 text-xs font-medium text-[var(--theme-primary)] underline-offset-4 hover:underline"
+                className={evidenceLinkClass}
               >
                 {t('driveDetail.fsd.afterFirmware', 'After firmware {{version}}', {
                   version: insight.firmware_version,
@@ -128,8 +135,10 @@ export function SupervisedDrivingPanel({
         <Table variant="embedded" aria-label={t('driveDetail.fsd.title', 'Supervised driving')}>
           <tbody><tr>
             <th scope="row">
-              <Route className="h-3.5 w-3.5" aria-hidden="true" />
-              {t('driveDetail.fsd.distance', 'Reported distance')}
+              <Text as="span" variant="bodySm" className="inline-flex items-center gap-2">
+                <Route className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {t('driveDetail.fsd.distance', 'Reported distance')}
+              </Text>
             </th>
             <td className="tabular-nums">
               {insight?.fsd_distance_m == null
@@ -140,8 +149,10 @@ export function SupervisedDrivingPanel({
             </td>
           </tr><tr>
             <th scope="row">
-              <Gauge className="h-3.5 w-3.5" aria-hidden="true" />
-              {t('driveDetail.fsd.share', 'Share of drive')}
+              <Text as="span" variant="bodySm" className="inline-flex items-center gap-2">
+                <Gauge className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {t('driveDetail.fsd.share', 'Share of drive')}
+              </Text>
             </th>
             <td className="tabular-nums">
               {insight?.fsd_share_pct == null
@@ -150,8 +161,10 @@ export function SupervisedDrivingPanel({
             </td>
           </tr><tr>
             <th scope="row">
-              <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
-              {t('driveDetail.fsd.evidenceWindow', 'Evidence window')}
+              <Text as="span" variant="bodySm" className="inline-flex items-center gap-2">
+                <Clock3 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {t('driveDetail.fsd.evidenceWindow', 'Evidence window')}
+              </Text>
             </th>
             <td>
               {firstEvidence && lastEvidence

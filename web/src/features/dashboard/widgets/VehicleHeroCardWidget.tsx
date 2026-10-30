@@ -14,6 +14,10 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import VehicleStudio from './vehicle-instruments/VehicleStudio';
+import { useVerifiedDriving } from './vehicle-instruments/useVerifiedDriving';
+import { cn } from '@/lib/cn';
+import { observedVehicleReadings } from '../lib/observedVehicleReadings';
 
 export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -33,7 +37,8 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
     dataUpdatedAt,
     refetch,
   } = useVehicleState(id);
-  const state = stateData?.state;
+  const state = observedVehicleReadings(stateData?.state, stateData?.verifiedFields);
+  const driving = useVerifiedDriving(stateData, isError);
   /* SI-floor: state.ideal_range in METERS, state.{inside,outside}_temp in °C. */
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -94,7 +99,7 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.vehicleHeroCard', 'Vehicle')}
-      icon={isCompact ? undefined : <Car className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={isCompact ? undefined : <Car className="h-3.5 w-3.5 text-[var(--semantic-info)]" />}
       loading={loading}
       dataState={dataState}
       updatedAt={dataUpdatedAt}
@@ -104,7 +109,9 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
       onRefresh={() => refetch()}
     >
       {vehicle ? (
-        <FadeIn>
+        <FadeIn className="grid grid-cols-[minmax(72px,0.28fr)_minmax(0,1fr)] items-center gap-3">
+          <VehicleStudio vehicle={vehicle} driving={driving} compact size="sm" />
+          <div className="min-w-0" data-vehicle-card-layout="short">
           {isCompact ? (
             <CompactView
               name={vehicle.display_name || vehicle.vin}
@@ -129,9 +136,11 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
               chargerPower={state?.charger_power ?? null}
               isWide={isWide}
               isTall={isTall}
+              dense
               t={t}
             />
           )}
+          </div>
         </FadeIn>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -183,6 +192,7 @@ interface FullViewProps {
   chargerPower: number | null;
   isWide: boolean;
   isTall: boolean;
+  dense: boolean;
   t: (k: string, f: string) => string;
 }
 
@@ -192,33 +202,40 @@ function FullView({
   range, distanceUnit,
   insideTemp, outsideTemp, tempUnit,
   isCharging, chargerPower,
-  isWide, isTall, t,
+  isWide, isTall, dense, t,
 }: FullViewProps) {
   const { fmtNumber } = useNumberFormatting();
+  const stats = [
+    { icon: <Battery className="size-4" />, label: t('widget.battery', 'Battery'), value: batteryLevel != null ? `${fmtNumber(batteryLevel)}%` : '—', valueColor: batteryColor },
+    { icon: <Gauge className="size-4" />, label: t('widget.range', 'Range'), value: range != null ? `${fmtNumber(range)} ${distanceUnit}` : '—' },
+    { icon: <Thermometer className="size-4" />, label: t('widget.cabin', 'Cabin'), value: insideTemp != null ? `${fmtNumber(insideTemp)}${tempUnit}` : '—' },
+    ...(isWide || isTall ? [{
+      icon: <Thermometer className="size-4" />,
+      label: t('widget.outside', 'Outside'),
+      value: outsideTemp != null ? `${fmtNumber(outsideTemp)}${tempUnit}` : '—',
+    }] : []),
+  ];
   return (
-    <div className="flex min-w-0 flex-col gap-3">
+    <div className={cn('flex min-w-0 flex-col', dense ? 'gap-1' : 'gap-3')}>
       {/* Header: name + status badge */}
       <div className="flex flex-wrap items-center gap-2 min-w-0">
         <Text weight="semibold" className="min-w-0 break-words">{name}</Text>
         <StatusBadge status={status} size="sm" className="shrink-0" />
+        {dense && <Text variant="caption" className="break-words">{model}{trimBadging ? ` ${trimBadging}` : ''}</Text>}
       </div>
 
       {/* Subtitle: model + trim */}
-      <Text variant="bodySm" className="break-words">
+      {!dense && <Text variant="bodySm" className="break-words">
         {model}{trimBadging ? ` ${trimBadging}` : ''}
-      </Text>
+      </Text>}
 
       {/* Metrics row — collapses to 2 cols on very narrow widget widths */}
-      <WidgetStatGrid cols={isWide ? 4 : 3} stats={[
-        { icon: <Battery className="size-4" />, label: t('widget.battery', 'Battery'), value: batteryLevel != null ? `${fmtNumber(batteryLevel)}%` : '—', valueColor: batteryColor },
-        { icon: <Gauge className="size-4" />, label: t('widget.range', 'Range'), value: range != null ? `${fmtNumber(range)} ${distanceUnit}` : '—' },
-        { icon: <Thermometer className="size-4" />, label: t('widget.cabin', 'Cabin'), value: insideTemp != null ? `${fmtNumber(insideTemp)}${tempUnit}` : '—' },
-        ...(isWide || isTall ? [{
-          icon: <Thermometer className="size-4" />,
-          label: t('widget.outside', 'Outside'),
-          value: outsideTemp != null ? `${fmtNumber(outsideTemp)}${tempUnit}` : '—',
-        }] : []),
-      ]} />
+      {dense ? <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+        {stats.map(stat => <div key={stat.label} className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-1">
+          <Text variant="caption">{stat.label}</Text>
+          <Text variant="bodySm" weight="semibold" className={cn('tabular-nums', 'valueColor' in stat && stat.valueColor)}>{stat.value}</Text>
+        </div>)}
+      </div> : <WidgetStatGrid cols={isWide ? 4 : 3} stats={stats} />}
 
       {/* Charging banner — shown when actively charging */}
       {isCharging && (

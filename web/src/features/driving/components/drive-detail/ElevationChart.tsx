@@ -16,6 +16,7 @@ import { useUnits } from '@/hooks/useUnits';
 import type { ChartDataPoint, DriveStats } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { asFiniteNumber } from '@/lib/typeGuards';
+import { convertElevationFromSI, elevationUnit } from '@/lib/unitConversion';
 import type { DriveElevationEvidence } from './useDriveDetailData';
 
 interface ElevationChartProps {
@@ -28,6 +29,7 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const speedUnit = unitPrefs.speed;
+  const heightUnit = elevationUnit(unitPrefs.distance);
   const syncProps = useSyncedCursor();
   const syncedX = useSyncedReferenceLineX();
 
@@ -36,8 +38,9 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
   // `.length` check and the recharts `data` prop never touch a nullish value,
   // and keep a stable reference so <ComposedChart> isn't fed a fresh array.
   const points = useMemo(() => (chartData ?? []).map((point) => ({
-    ...point, elevation: asFiniteNumber(point.elevation),
-  })), [chartData]);
+    ...point, elevation: point.elevation != null && asFiniteNumber(point.elevation) != null
+      ? asFiniteNumber(convertElevationFromSI(point.elevation, unitPrefs.distance)) : null,
+  })), [chartData, unitPrefs.distance]);
   const hasPair = points.some((point, i) => {
     const previous = points[i - 1]?.elevation;
     return point.elevation != null && previous != null
@@ -61,9 +64,9 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
           <ChartSummary
             label={t('driveDetail.elevSummary', 'Elevation summary')}
             items={[
-              { id: 'gain', label: t('driveDetail.elevationGain', 'Elevation gain'), unit: 'm', value: elevGain != null ? fmtNumber(elevGain) : '—' },
-              { id: 'loss', label: t('driveDetail.elevationLoss', 'Elevation loss'), unit: 'm', value: elevLoss != null ? fmtNumber(elevLoss) : '—' },
-              { id: 'net', label: t('driveDetail.elevationNet', 'Net elevation'), unit: 'm', value: elevNet != null ? fmtNumber(elevNet) : '—' },
+              { id: 'gain', label: t('driveDetail.elevationGain', 'Elevation gain'), unit: heightUnit, value: elevGain != null ? fmtNumber(convertElevationFromSI(elevGain, unitPrefs.distance)) : '—' },
+              { id: 'loss', label: t('driveDetail.elevationLoss', 'Elevation loss'), unit: heightUnit, value: elevLoss != null ? fmtNumber(convertElevationFromSI(elevLoss, unitPrefs.distance)) : '—' },
+              { id: 'net', label: t('driveDetail.elevationNet', 'Net elevation'), unit: heightUnit, value: elevNet != null ? fmtNumber(convertElevationFromSI(elevNet, unitPrefs.distance)) : '—' },
             ]}
           />
         )}
@@ -93,7 +96,7 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
                 <YAxis yAxisId="speed" orientation="right" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
                 <Tooltip content={<ChartTooltip />} />
                 <ChartLegend />
-                <Area yAxisId="elev" type="monotone" dataKey="elevation" stroke={chartTokens.series[1]} fill={chartTokens.series[1]} fillOpacity={0.08} strokeWidth={2} name={`${t('driveDetail.elevation', 'Elevation')} (m)`} hide={hiddenSeries?.isHidden('elevation')} />
+                <Area yAxisId="elev" type="monotone" dataKey="elevation" stroke={chartTokens.series[1]} fill={chartTokens.series[1]} fillOpacity={0.08} strokeWidth={2} name={`${t('driveDetail.elevation', 'Elevation')} (${heightUnit})`} hide={hiddenSeries?.isHidden('elevation')} />
                 <Line yAxisId="speed" type="monotone" dataKey="speed" stroke={chartTokens.series[0]} strokeWidth={1.5} dot={false} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} strokeOpacity={0.6} hide={hiddenSeries?.isHidden('speed')} />
                 {syncedX != null && (
                   <ReferenceLine

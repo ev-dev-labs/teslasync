@@ -17,6 +17,7 @@ import { useUnits } from '@/hooks/useUnits';
 import type { DriveDetail } from '@/types/driving';
 import type { ChartDataPoint } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { DETAIL_SERIES_DASHES } from './helpers';
 
 interface DriveOverviewChartProps {
   drive: DriveDetail;
@@ -84,17 +85,17 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
               <ReferenceLine yAxisId="power" y={0} stroke={chartTokens.axisStroke} />
               <Area {...AREA_DEFAULTS} yAxisId="speed" dataKey="speed" stroke={chartTokens.series[0]} fill="url(#driveOverviewSpeed)" strokeWidth={1.5} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} hide={hiddenSeries?.isHidden('speed')} />
               {series.hasIdealRange && (
-                <Line {...AREA_DEFAULTS} yAxisId="range" dataKey="idealRange" stroke={chartTokens.series[4]} strokeWidth={1} name={`${t('driveDetail.rangeIdeal', 'Range ideal')} (${distanceUnit})`} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('idealRange')} />
+                <Line {...AREA_DEFAULTS} yAxisId="range" dataKey="idealRange" stroke={chartTokens.series[4]} strokeWidth={1} name={`${t('driveDetail.rangeIdeal', 'Range ideal')} (${distanceUnit})`} strokeDasharray={DETAIL_SERIES_DASHES[1]} hide={hiddenSeries?.isHidden('idealRange')} />
               )}
               {series.hasEstimatedRange && (
-                <Line {...AREA_DEFAULTS} yAxisId="range" dataKey="estRange" stroke={chartTokens.series[6]} strokeWidth={1} name={`${t('driveDetail.rangeEst', 'Range est.')} (${distanceUnit})`} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('estRange')} />
+                <Line {...AREA_DEFAULTS} yAxisId="range" dataKey="estRange" stroke={chartTokens.series[6]} strokeWidth={1} name={`${t('driveDetail.rangeEst', 'Range est.')} (${distanceUnit})`} strokeDasharray={DETAIL_SERIES_DASHES[2]} hide={hiddenSeries?.isHidden('estRange')} />
               )}
               {series.hasRatedRange && (
-                <Line {...AREA_DEFAULTS} yAxisId="range" dataKey="ratedRange" stroke={chartTokens.series[7]} strokeWidth={1} name={`${t('driveDetail.report.ratedRange', 'Range (rated)')} (${distanceUnit})`} strokeDasharray="2 3" hide={hiddenSeries?.isHidden('ratedRange')} />
+                <Line {...AREA_DEFAULTS} yAxisId="range" dataKey="ratedRange" stroke={chartTokens.series[7]} strokeWidth={1} name={`${t('driveDetail.report.ratedRange', 'Range (rated)')} (${distanceUnit})`} strokeDasharray={DETAIL_SERIES_DASHES[3]} hide={hiddenSeries?.isHidden('ratedRange')} />
               )}
               <Line {...AREA_DEFAULTS} yAxisId="soc" dataKey="battery" stroke={chartTokens.series[1]} strokeWidth={1.5} name={`${t('driveDetail.soc', 'SOC')} %`} hide={hiddenSeries?.isHidden('battery')} />
               {series.hasUsableSoc && (
-                <Line {...AREA_DEFAULTS} yAxisId="soc" dataKey="usableSoc" stroke={chartTokens.series[5]} strokeWidth={1} name={`${t('driveDetail.usableSoc', 'Usable SOC')} %`} hide={hiddenSeries?.isHidden('usableSoc')} />
+                <Line {...AREA_DEFAULTS} yAxisId="soc" dataKey="usableSoc" stroke={chartTokens.series[5]} strokeWidth={1} strokeDasharray={DETAIL_SERIES_DASHES[1]} name={`${t('driveDetail.usableSoc', 'Usable SOC')} %`} hide={hiddenSeries?.isHidden('usableSoc')} />
               )}
               <Line {...AREA_DEFAULTS} yAxisId="power" dataKey="power" stroke={chartTokens.series[2]} name={`${t('driveDetail.power', 'Power')} kW`} hide={hiddenSeries?.isHidden('power')} />
               {syncedX != null && (

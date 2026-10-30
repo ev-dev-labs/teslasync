@@ -30,6 +30,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
+const responsiveHeights = vi.hoisted(() => ({ values: [] as (string | number | undefined)[] }));
+vi.mock('@/components/charts', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  return {
+    ...actual,
+    ResponsiveContainer: (props: React.ComponentProps<typeof actual.ResponsiveContainer>) => {
+      responsiveHeights.values.push(props.height);
+      return <actual.ResponsiveContainer {...props} />;
+    },
+  };
+});
+
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
   return {
@@ -157,6 +169,13 @@ function renderCharts(motorHistory: MotorSnapshot[] | undefined) {
 }
 
 describe('MotorHistoryCharts', () => {
+  it('lets every motor plot use its responsive frame allocation', () => {
+    responsiveHeights.values.length = 0;
+    renderCharts([snap({ di_torque: 10, torque_nm_front: 3, motor_rpm_front: 600 })]);
+    expect(responsiveHeights.values.length).toBeGreaterThan(0);
+    expect(responsiveHeights.values.every(height => height === '100%')).toBe(true);
+  });
+
   it('renders all three motor-telemetry charts as titled, labelled figures', () => {
     renderCharts([fullSnap('2026-05-10T12:00:00Z'), fullSnap('2026-05-10T12:01:00Z')]);
 

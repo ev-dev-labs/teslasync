@@ -6,7 +6,7 @@ import {
   Activity,
 } from 'lucide-react';
 
-import { PageLayout, CardGrid, LayoutCard } from '@/components/layout';
+import { PageLayout, CardGrid, LayoutCard, FlowGrid } from '@/components/layout';
 import {
   GlassPanel, Badge, DataTable, useSortToggle, type Column,
   Text, Caption, Label, Icon,
@@ -190,8 +190,8 @@ function FlowConnector({
             : cn(neonColorMap.neutral.bg, neonColorMap.neutral.border, typography.color.secondary),
         )}
       >
-        <Icon icon={ArrowDown} size="sm" className="@[640px]:hidden" />
-        <Icon icon={ArrowRight} size="sm" className="hidden @[640px]:block" />
+        <Icon icon={ArrowDown} size="sm" className="flow-grid-arrow-column" />
+        <Icon icon={ArrowRight} size="sm" className="flow-grid-arrow-row" />
         <Text size="xs" weight="medium" className={active ? neonColorMap.cyan.text : typography.color.secondary}>{value}</Text>
       </div>
     </div>
@@ -523,7 +523,7 @@ export default function EnergyFlowPage() {
               onRetry={() => { void refetchFlow(); }}
               skeletonHeight={200}
             >
-              <div className="grid grid-cols-1 items-center gap-3 @[640px]:grid-cols-5">
+              <FlowGrid>
                 <FlowNode
                   icon={<Icon icon={Plug} size="xl" className={typography.color.secondary} />}
                   label={t('energyFlow.node.grid', 'Grid')}
@@ -565,7 +565,7 @@ export default function EnergyFlowPage() {
                   label={t('energyFlow.node.motor', 'Motor')}
                   sublabel={t('energyFlow.node.noLiveData', 'No live data')}
                 />
-              </div>
+              </FlowGrid>
             </SectionState>
           </LayoutCard>
           ) },

@@ -53,31 +53,34 @@ func TestSafetyHandler_History_CarriesForwardEnableFlags(t *testing.T) {
 	t0 := time.Date(2026, 4, 30, 9, 0, 0, 0, time.UTC)
 	folded := []signal.TimelineRow{
 		{Timestamp: t0, Fields: map[string]signal.SignalValue{
-			"automatic_emergency_braking_off": false,
-			"lane_departure_avoidance":        "WARN",
-			"forward_collision_warning":       "MEDIUM",
-			"pin_to_drive_enabled":            true,
-			"cruise_follow_distance":          3.0,
-			"miles_since_reset":               1234.5,
-			"self_driving_miles_since_reset":  500.0,
+			"automatic_emergency_braking_off":   false,
+			"automatic_emergency_braking_state": "Standby",
+			"lane_departure_avoidance":          "WARN",
+			"forward_collision_warning":         "MEDIUM",
+			"pin_to_drive_enabled":              true,
+			"cruise_follow_distance":            3.0,
+			"miles_since_reset":                 1234.5,
+			"self_driving_miles_since_reset":    500.0,
 		}},
 		{Timestamp: t0.Add(30 * time.Second), Fields: map[string]signal.SignalValue{
-			"automatic_emergency_braking_off": false,
-			"lane_departure_avoidance":        "WARN",
-			"forward_collision_warning":       "MEDIUM",
-			"pin_to_drive_enabled":            true,
-			"cruise_follow_distance":          3.0,
-			"miles_since_reset":               1240.0,
-			"self_driving_miles_since_reset":  505.0,
+			"automatic_emergency_braking_off":   false,
+			"automatic_emergency_braking_state": "Enabled",
+			"lane_departure_avoidance":          "WARN",
+			"forward_collision_warning":         "MEDIUM",
+			"pin_to_drive_enabled":              true,
+			"cruise_follow_distance":            3.0,
+			"miles_since_reset":                 1240.0,
+			"self_driving_miles_since_reset":    505.0,
 		}},
 		{Timestamp: t0.Add(60 * time.Second), Fields: map[string]signal.SignalValue{
-			"automatic_emergency_braking_off": false,
-			"lane_departure_avoidance":        "WARN",
-			"forward_collision_warning":       "MEDIUM",
-			"pin_to_drive_enabled":            true,
-			"cruise_follow_distance":          3.0,
-			"miles_since_reset":               1245.5,
-			"self_driving_miles_since_reset":  510.0,
+			"automatic_emergency_braking_off":   false,
+			"automatic_emergency_braking_state": "Unavailable",
+			"lane_departure_avoidance":          "WARN",
+			"forward_collision_warning":         "MEDIUM",
+			"pin_to_drive_enabled":              true,
+			"cruise_follow_distance":            3.0,
+			"miles_since_reset":                 1245.5,
+			"self_driving_miles_since_reset":    510.0,
 		}},
 	}
 	fake := &fakeStateReader{
@@ -115,6 +118,9 @@ func TestSafetyHandler_History_CarriesForwardEnableFlags(t *testing.T) {
 		t.Fatalf("response row count = %d, want %d (forward-folded rows must NOT be dropped)", len(got), len(folded))
 	}
 	for i, row := range got {
+		if row["automatic_emergency_braking_state"] != folded[i].Fields["automatic_emergency_braking_state"] {
+			t.Fatalf("row[%d] lost AEB operating state: %v", i, row)
+		}
 		// Every row must carry the forward-folded ADAS enable flags;
 		// in the old pivot impl, only the row with a fresh emission
 		// would have these populated, leaving the rest as NULL.
@@ -165,13 +171,14 @@ func TestSafetyHandler_Latest_UsesNow(t *testing.T) {
 			gotAt = at
 			gotVehicleID = vid
 			return signal.State{
-				"AutomaticEmergencyBrakingOff": false,
-				"LaneDepartureAvoidance":       "WARN",
-				"ForwardCollisionWarning":      "MEDIUM",
-				"PinToDriveEnabled":            true,
-				"CruiseFollowDistance":         3.0,
-				"SpeedLimitWarning":            "DISPLAY",
-				"MilesSinceReset":              1234.5,
+				"AutomaticEmergencyBrakingOff":   false,
+				"AutomaticEmergencyBrakingState": "Unavailable",
+				"LaneDepartureAvoidance":         "WARN",
+				"ForwardCollisionWarning":        "MEDIUM",
+				"PinToDriveEnabled":              true,
+				"CruiseFollowDistance":           3.0,
+				"SpeedLimitWarning":              "DISPLAY",
+				"MilesSinceReset":                1234.5,
 				// SelfDrivingMilesSinceReset / AutomaticBlindSpotCamera /
 				// BlindSpotCollisionWarningChime /
 				// EmergencyLaneDepartureAvoidance intentionally absent
@@ -206,6 +213,9 @@ func TestSafetyHandler_Latest_UsesNow(t *testing.T) {
 	}
 	// Mapped signals present in State must appear under their JSON field
 	// name; the snake_case Field side of safetyMappings.
+	if got["automatic_emergency_braking_state"] != "Unavailable" {
+		t.Fatalf("AEB operating state = %#v, want Unavailable", got["automatic_emergency_braking_state"])
+	}
 	if v, ok := got["lane_departure_avoidance"].(string); !ok || v != "WARN" {
 		t.Fatalf("lane_departure_avoidance = %#v, want \"WARN\"", got["lane_departure_avoidance"])
 	}

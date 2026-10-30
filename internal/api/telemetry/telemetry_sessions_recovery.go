@@ -2,7 +2,6 @@ package telemetry
 
 import (
 	"context"
-	"math"
 	"time"
 
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
@@ -767,7 +766,7 @@ func (t *TelemetrySessionTracker) completeRecoveredDrive(ctx context.Context, dr
 	// power in kW (V*A/1000); convert avg power to Watts.
 	var maxSpeedMps float64
 	var powerMaxW *float64
-	slAvgSpeed, slMaxSpeed, slAvgPower := t.signalLogReader.DriveAggregates(ctx, drive.VehicleID, drive.StartTs, endTs)
+	slAvgSpeed, slMaxSpeed, _ := t.signalLogReader.DriveAggregates(ctx, drive.VehicleID, drive.StartTs, endTs)
 	if slAvgSpeed > 0 {
 		enhancedFields["avg_speed_mps"] = slAvgSpeed
 	}
@@ -775,16 +774,13 @@ func (t *TelemetrySessionTracker) completeRecoveredDrive(ctx context.Context, dr
 		enhancedFields["max_speed_mps"] = slMaxSpeed
 		maxSpeedMps = slMaxSpeed
 	}
-	if slAvgPower != 0 {
-		w := math.Abs(slAvgPower) * 1000.0
+	power, powerErr := t.signalLogReader.DriveEnergy(ctx, drive.VehicleID, drive.StartTs, endTs)
+	if powerErr != nil {
+		log.Warn().Err(powerErr).Int64("drive_id", drive.ID).Msg("drive recovery power reconstruction failed")
+	} else if w, ok := power.MeanPowerW(); ok {
 		enhancedFields["avg_power_w"] = w
 		powerMaxW = &w
-	}
-
-	// Regen energy (kWh from signal_log) → Wh.
-	regenKwh := t.signalLogReader.RegenEnergy(ctx, drive.VehicleID, drive.StartTs, endTs)
-	if regenKwh > 0 {
-		enhancedFields["regen_energy_wh"] = regenKwh * 1000.0
+		enhancedFields["regen_energy_wh"] = power.RegenWh
 	}
 
 	// Commit to DB

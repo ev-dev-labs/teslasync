@@ -9,7 +9,7 @@ import { memo } from 'react';
 import { Database, KeyRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { Card, CardContent, PanelTitle, Table, Text } from '@/components/ui';
 
 import type { CuratedTable } from './sqlCatalog';
 
@@ -27,7 +27,7 @@ const EM_DASH = '—';
 const PRIMARY_KEY_MARKER = 'primary key';
 
 /**
- * SchemaCatalogCard renders one curated table as a self-contained GlassPanel:
+ * SchemaCatalogCard renders one curated table with shared header/body tracks:
  * a mono table name (h3), a one-line description, a column-count chip, and the
  * column table with SI-aware descriptions. Primary-key columns get a key icon
  * so the status is conveyed by shape + text, not colour alone.
@@ -45,8 +45,8 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
   };
 
   return (
-    <GlassPanel className="flex h-full min-w-0 max-w-full flex-col p-4 sm:p-5">
-      <div className="mb-3 flex min-w-0 flex-wrap items-start gap-2.5">
+    <Card layout padding="none" className="flex h-full min-w-0 max-w-full flex-col p-4 sm:p-5">
+      <div data-card-header data-card-slot="header" className="mb-3 flex min-w-0 flex-wrap items-start gap-2.5">
         <span
           className="mt-0.5 inline-flex shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-1.5"
           aria-hidden="true"
@@ -74,6 +74,7 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
         </Text>
       </div>
 
+      <CardContent data-card-content>
       {columns.length > 0 ? (
         <Table aria-label={table.name || EM_DASH}>
           <thead>
@@ -122,7 +123,8 @@ function SchemaCatalogCardBase({ table }: SchemaCatalogCardProps) {
           {t('powerSql.catalog.noColumns', 'No columns documented for this table.')}
         </Text>
       )}
-    </GlassPanel>
+      </CardContent>
+    </Card>
   );
 }
 
