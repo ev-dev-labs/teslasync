@@ -1,5 +1,6 @@
 import { expect, test, type Download, type Locator, type Page } from '@playwright/test';
 import { ROUTE_REGISTRY } from '../../src/lib/routeRegistry';
+import { closeTableToolbarControls, openTableToolbarControls } from '../tableToolbarControls';
 import {
   assertMockApiComplete,
   expectThemeApplied,
@@ -146,7 +147,8 @@ for (const theme of ['light', 'dark'] as const) {
         const grid = page.locator('[data-grid-frame]');
         await expect(page.getByRole('heading', { name: 'Export jobs', exact: true })).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Status breakdown', exact: true })).toBeVisible();
-        await grid.getByRole('button', { name: 'Export list', exact: true }).click();
+        const controls = await openTableToolbarControls(grid);
+        await controls.getByRole('button', { name: 'Export list', exact: true }).click();
         const exportMenu = page.getByRole('menu', { name: 'Export list', exact: true });
         await expect(exportMenu.getByRole('menuitemradio', { name: 'Selected (1)', exact: true })).toBeChecked();
         const jsonDownload = page.waitForEvent('download');
@@ -155,13 +157,13 @@ for (const theme of ['light', 'dark'] as const) {
         expect(selectedRows).toEqual([expect.objectContaining({
           type: 'drives', format: 'csv', status: 'ready', file_size: 1024,
         })]);
-        await grid.getByRole('button', { name: 'Export list', exact: true }).click();
+        await controls.getByRole('button', { name: 'Export list', exact: true }).click();
         const csvDownload = page.waitForEvent('download');
         await exportMenu.getByRole('menuitem', { name: 'Download as CSV', exact: true }).click();
         const csv = await readDownload(await csvDownload);
         expect(csv).toContain('drives');
         expect(csv).not.toContain('charging');
-        await grid.getByRole('button', { name: 'Export list', exact: true }).click();
+        await controls.getByRole('button', { name: 'Export list', exact: true }).click();
         await exportMenu.getByRole('menuitemradio', { name: 'Visible (6)', exact: true }).click();
         await expect(exportMenu.getByRole('menuitemradio', { name: 'Visible (6)', exact: true })).toBeChecked();
         const allDownload = page.waitForEvent('download');
@@ -170,6 +172,7 @@ for (const theme of ['light', 'dark'] as const) {
         expect(allRows).toEqual(exportJobs.map(job => expect.objectContaining({
           type: job.type, format: job.format, status: job.status,
         })));
+        await closeTableToolbarControls(controls);
         if (width === 1440) {
           await grid.getByRole('button', { name: 'Type filter', exact: true }).click();
           const filter = page.getByRole('dialog', { name: 'Type filter', exact: true });

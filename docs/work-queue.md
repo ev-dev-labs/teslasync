@@ -58,6 +58,18 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   Partial diagnostics also flag empty centering, gaps and offsets; they are not
   final coverage. Fix shared intrinsic chart/slot allocation and add an actual
   browser chart-fit regression before another consolidated acceptance run.
+  The retained worker's v4 production source is now frozen. Root corrections
+  remove containment at borrowed subgrid boundaries, distinguish transparent
+  relays from true row owners, propagate natural stretch through Card and
+  GlassPanel, allocate fluid plots alongside their headings and unify chart
+  actions under one header. Shared EvidencePanel columns and local empty-state
+  allocation participate without dropping sections or changing hook URLs.
+  Actual bounded receipts show 284 unit tests, six chart-fit/fullscreen cases
+  and 22 sampled routes passing; all eleven screenshot pairs were inspected.
+  The old chart-overflow images remain rejected evidence, not current captures.
+  The broader sample still had 14 unmatched synthetic requests; the worker is
+  correcting exact typed fixtures and running a 277-route 1280/dark preflight
+  before the final eight-variant matrix. No complete-matrix pass is claimed.
 - Part A implementation: paired state-reader timelines feed signed elapsed-time
   power integration. Both normal completion and restart recovery preserve the
   mean's sign and real zero, never substitute peak power, and write SI watts
@@ -132,7 +144,11 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   and actions by 13–46 px. Move that description to its own shared toolbar row;
   retain compact More dialogs and update responsive consumers to actually open
   them, preserving every export, selection, column and geometry assertion.
-  Browser validation of the final combined source remains pending.
+  Final combined-source browser validation now passes 101 affected cases:
+  32 drive/API-log, 59 FSD/shared-table and ten operational cases, all with
+  zero proxy escapes. Compact consumers open the actual More dialog and
+  dismiss search history before clicking underlying column filters; export
+  selection/delete actions remain in their separate bulk bar.
   The current graph has 173 successes, 26 failures, one queued and one
   conditional skip; this is not green. Reviewed Windows dashboard pixels show
   the intended flattened Quick navigation links versus the old nested borders.
@@ -152,6 +168,15 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   inspected: flattened dashboard links, retained notification kind metadata
   and export-scope toolbar reflow are visible. These are diagnostic, not final
   C-source captures or permission to replace baselines from CI artifacts.
+  At pushed `f52df66e9f`, all eight frontend unit shards, generated artifacts,
+  frontend build, all backend race/database/build checks and Security Scan pass.
+  The completed graph is 180 successes, 20 failures and one conditional skip:
+  the remaining roots are nine responsive browser shards and nine Windows
+  snapshot shards, plus their aggregate gates. Actual final v4 TypeScript,
+  full npm lint and scoped browser-consumer ESLint pass. Seven frozen i18n
+  contracts pass 7,728 tests. The full route-layout matrix is still pending
+  exact mock-fixture closure and preflight; none of these bounded checks
+  substitutes for that acceptance gate or current-head CI.
 - Initial card guard runs exposed real layout findings and were stopped before
   acceptance when the user requested the shared-slot architecture refinement.
   Partial old-build logs are diagnostic only, never passing matrix evidence.

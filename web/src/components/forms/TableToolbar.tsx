@@ -39,8 +39,8 @@ export function TableToolbar({ search, density, exports, heading, actions, colum
     {exports && <ListExportMenu {...exports} />}
     {actions}
     {columns}
-    {exports?.description && <Text as="p" size="xs" color="muted" className="basis-full">{exports.description}</Text>}
   </>;
+  const exportDescription = exports?.description && <Text as="p" size="xs" color="muted" className="basis-full">{exports.description}</Text>;
   return (
     <div className={cn('flex flex-wrap items-center gap-3', className)}>
       {heading && <div className="min-w-0 flex-1 basis-48">{heading}</div>}
@@ -57,9 +57,10 @@ export function TableToolbar({ search, density, exports, heading, actions, colum
         <IconButton className="ml-auto min-h-11 min-w-11" icon={<MoreHorizontal className="h-4 w-4" aria-hidden="true" />}
           label={t('More', 'More')} aria-haspopup="dialog" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)} />
         <Modal open={moreOpen} onClose={() => setMoreOpen(false)} title={t('More', 'More')} size="sm">
-          <div className="flex min-w-0 flex-wrap items-center gap-3 [&_button]:min-h-11 [&_button]:min-w-11">{secondaryControls}</div>
+          <div className="flex min-w-0 flex-wrap items-center gap-3 [&_button]:min-h-11 [&_button]:min-w-11">{secondaryControls}{exportDescription}</div>
         </Modal>
       </> : <div className="ml-auto flex max-w-full flex-wrap items-center gap-2">{secondaryControls}</div>)}
+      {!compact && exportDescription}
     </div>
   );
 }

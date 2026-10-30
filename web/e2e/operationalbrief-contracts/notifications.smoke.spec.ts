@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { assertMockApiComplete, waitForHarnessReady } from '../mockApi';
+import { closeTableToolbarControls, openTableToolbarControls } from '../tableToolbarControls';
 import {
   expectDialogsInsideViewport, expectIntegratedGridFooter, expectNoHorizontalOverflow, monitorPage,
 } from '../qualityAssertions';
@@ -118,11 +119,15 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.getByTestId('inbox-result-count')).toHaveText('1 notifications');
         await metric(backlog, 'inbox-total', '50');
         await metric(report, 'report-triggered', '120');
-        await expect(frame.getByRole('button', { name: 'Export list', exact: true })).toBeVisible();
-        await expect(frame.getByRole('button', { name: 'Reorder or hide columns' })).toBeVisible();
+        const controls = await openTableToolbarControls(frame);
+        await expect(controls.getByRole('button', { name: 'Export list', exact: true })).toBeVisible();
+        await expect(controls.getByRole('button', { name: 'Reorder or hide columns' })).toBeVisible();
+        await closeTableToolbarControls(controls);
         await expect(page.locator('main').getByRole('link', { name: 'View archived', exact: true }))
           .toHaveAttribute('href', '/notifications/archived');
         await search.fill('');
+        await search.press('Escape');
+        await expect(search).toHaveAttribute('aria-expanded', 'false');
         await expect(table.getByRole('button', { name: /^Open notification:/ })).toHaveCount(25);
         const column = width < 768 ? 'Notification' : 'Severity';
         await table.getByRole('button', { name: `${column} filter`, exact: true }).click();

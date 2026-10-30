@@ -7,6 +7,7 @@ import {
   expectNoHorizontalOverflow, expectNoRuntimeFailures, monitorPage,
 } from './qualityAssertions';
 import { fsdObservatoryGridFixture } from './fsdObservatoryGridFixtures';
+import { closeTableToolbarControls, openTableToolbarControls } from './tableToolbarControls';
 
 test.skip(process.env.E2E_MOCKS === '0', 'Requires isolated observatory evidence fixtures');
 const path = '/fsd?from=2026-07-28&to=2026-08-26';
@@ -135,7 +136,8 @@ for (const theme of ['light', 'dark'] as const) {
       await captureGrid(page, journal, `journal-${width}-${theme}`);
       await captureGrid(page, commute, `commute-${width}-${theme}`);
       const journalFrame = frameOf(journal);
-      const columnsButton = journalFrame.getByRole('button', { name: 'Reorder or hide columns' });
+      const controls = await openTableToolbarControls(journalFrame);
+      const columnsButton = controls.getByRole('button', { name: 'Reorder or hide columns' });
       await columnsButton.focus();
       await page.keyboard.press('Enter');
       await expect(columnsButton).toHaveAttribute('aria-expanded', 'true');
@@ -155,6 +157,8 @@ for (const theme of ['light', 'dark'] as const) {
       await page.keyboard.press('Escape');
       await expect(menu).toHaveCount(0);
       await expect(columnsButton).toHaveAttribute('aria-expanded', 'false');
+      await expect(columnsButton).toBeFocused();
+      await closeTableToolbarControls(controls);
       await expect(journal.getByRole('columnheader').nth(4)).toHaveText('Firmware');
       const driveLink = journal.getByRole('link', { name: 'Aug 26, 2026, 03:15 PM' });
       await expect(driveLink).toBeVisible();
