@@ -5,7 +5,9 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 
 ## Bug 3: Drive evidence, presentation and app-wide card layout
 
-- Status: in progress; branch `fix/post-202-polish`, draft PR #223.
+- Status: blocked (Windows baseline regeneration requires a clean native
+  mirror); branch `fix/post-202-polish`, draft PR #223. Parts A/B/C are
+  implemented and locally verified; strict visual acceptance is outstanding.
 - Part A roots confirmed before changes: `SignalLogReader.RegenEnergy` treats
   the fraction of negative-current change events as a fraction of elapsed time.
   Fleet Telemetry is a sparse change feed, so this overweights frequently
@@ -255,9 +257,39 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   the playbook's mirror-only baseline provenance. No CI-generated PNGs were
   accepted. The recovery also removes the clearly agent-created root junk
   file `none}` left by a malformed pre-reboot patch.
-  Next: push the restored strict workflow and final matrix documentation,
-  inspect every current-head check, fix actionable failures, and preserve
-  unrelated native-mirror work. No Windows baseline or CI-green claim.
+  Restored strict comparisons and the regression contract are committed/pushed
+  as `00638d611d`. Fresh actionlint across all workflows, 24 harness contracts,
+  actual TypeScript, full frontend lint and the scoped six-pattern audit pass.
+  Rechecking all 159 frozen hashes finds no changes; matrix receipts again
+  accept all 2,216 expected unique variants. Strict frontend run 41086199287
+  completes with seven intended Windows snapshot-difference shards (1, 5,
+  10, 13, 14, 17, 56) plus their failing aggregate. An additional large-fleet
+  readiness failure on shard 39 is not dismissed as baseline drift: its trace
+  shows successful requests and no runtime error; an isolated Linux readiness
+  replay passes (5.2s, proxy0), and its unchanged native rerun job 124185786813
+  passes. That temporary diagnostic spec is preserved only in session files.
+  Final code-head PR checks: 192 successful, eight failed, one intentionally
+  skipped; frontend attempt 2 has 146 successful, eight failed, one skipped.
+  All failures are the seven snapshot comparisons and their aggregate.
+  CI, Security, Performance, SI, Ops and protomodel workflows pass.
+  Current dashboard mobile and forced-colors comparisons were reviewed:
+  the differences remove the requested nested shortcut-card outlines while
+  retaining link labels/icons and the outer surface. Notification comparisons
+  retain all rows; the stronger wheel/five-point footer tests pass.
+  No comparison image was copied into expected snapshots.
+  Windows Git reconfirms the native mirror at `bfecead853` on
+  `fix/post-merge-followups`, with four unrelated untracked files:
+  `Claude outputs/battery-immersive.html`, `battery-minimal.html`,
+  `battery-pack-3d.html`, `battery-widgets-live.html`. They remain untouched.
+  Playbook section 4 forbids syncing a dirty mirror, so native baseline
+  regeneration is genuinely blocked; neither test tolerances nor checks may
+  be weakened to bypass it.
+  Next: once the designated mirror is clean, sync the pushed branch there,
+  regenerate only reviewed failing shards using native Windows tools, compare
+  old/new PNGs, copy only changed baselines to WSL, commit/push and require all
+  strict PR checks green. Do not delete, move or stash unrelated mirror files.
+  The final handoff changes documentation only; do not mistake pending checks
+  on that documentation commit for the completed code-head results above.
 - Part A implementation: paired state-reader timelines feed signed elapsed-time
   power integration. Both normal completion and restart recovery preserve the
   mean's sign and real zero, never substitute peak power, and write SI watts

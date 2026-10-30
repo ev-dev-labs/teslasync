@@ -27,6 +27,14 @@ The manual snapshot-update run 41018927032 is not comparison evidence:
 it regenerated expected images and uploaded no updated-snapshot artifacts.
 The temporary CI update mode has been removed; every Windows visual shard
 again compares committed baselines unconditionally.
+Strict run 41086199287 on `00638d611d` confirms the remaining blocker:
+seven Windows snapshot-difference shards (1/5/10/13/14/17/56) and their
+aggregate fail. All other code-head PR checks pass (192 successful, eight
+failed, one skipped). The separate native large-fleet readiness job passed
+its isolated unchanged rerun after trace review and a passing nonvisual
+Linux readiness replay. No snapshot comparison was waived or updated from
+CI artifacts. The designated mirror's four unrelated untracked HTML files
+must remain untouched; the playbook prohibits syncing it while dirty.
 
 ## Prior V11 acceptance
 
