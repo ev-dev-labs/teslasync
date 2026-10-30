@@ -36,8 +36,9 @@ vi.mock('@/components/charts', async () => ({
   ...(await import('@/test/chartTestDoubles')).inertCartesianParts,
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
   LineChart: ({ children }: { children: ReactNode }) => <>{children}</>,
-  Line: ({ dataKey, stroke }: { dataKey: string; stroke: string }) =>
-    <span data-testid={`pressure-${dataKey}`} data-stroke={stroke} />,
+  YAxis: ({ domain }: { domain?: readonly string[] }) => <span data-testid="pressure-axis" data-domain={JSON.stringify(domain)} />,
+  Line: ({ dataKey, stroke, strokeDasharray }: { dataKey: string; stroke: string; strokeDasharray?: string }) =>
+    <span data-testid={`pressure-${dataKey}`} data-stroke={stroke} data-dash={strokeDasharray ?? 'solid'} />,
 }));
 
 // U+2013 EN DASH separates min–max; U+2014 EM DASH is the "no reading" marker.
@@ -165,6 +166,17 @@ function renderSection(
 }
 
 describe('TirePressureSection', () => {
+  it('BUG3 collapses equal ranges and fits the axis to the observed pressures', () => {
+    renderSection([
+      point({ tireFl: 42, tireFr: 42, tireRl: 42, tireRr: 42 }),
+      point({ tireFl: 42, tireFr: 42, tireRl: 42, tireRr: 42 }),
+    ], driveStats({ hasTirePressure: true }));
+    expect(screen.queryAllByText('42.00–42.00')).toHaveLength(0);
+    expect(screen.getAllByText('42.00')).toHaveLength(4);
+    expect(screen.getByTestId('pressure-axis')).toHaveAttribute('data-domain', '["dataMin","dataMax"]');
+    expect(new Set(['tireFl', 'tireFr', 'tireRl', 'tireRr']
+      .map(key => screen.getByTestId(`pressure-${key}`).dataset.dash)).size).toBe(4);
+  });
   it('uses distinct shared wheel identities rather than a danger color for a normal rear-right reading', () => {
     renderSection(fullPressure, driveStats({ hasTirePressure: true }));
     for (const [key, index] of Object.entries({ tireFl: 0, tireFr: 1, tireRl: 2, tireRr: 4 })) {
@@ -189,7 +201,7 @@ describe('TirePressureSection', () => {
       screen.getByRole('heading', { name: 'Tire pressure during drive' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('img', {
+      screen.getByRole('group', {
         name: /front and rear tire pressure lines over the drive timeline/i,
       }),
     ).toBeInTheDocument();
@@ -262,7 +274,7 @@ describe('TirePressureSection', () => {
     expect(() =>
       renderSection(big, driveStats({ hasTirePressure: true })),
     ).not.toThrow();
-    expect(screen.getByText(`2.70${EN_DASH}2.70`)).toBeInTheDocument();
+    expect(screen.getByText('2.70')).toBeInTheDocument();
   });
 
   it('degrades a missing chartData array to empty tiles without throwing', () => {

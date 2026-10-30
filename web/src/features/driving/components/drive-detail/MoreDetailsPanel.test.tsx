@@ -64,7 +64,7 @@ describe('Energy and range evidence', () => {
   it('labels average-power estimates rather than calling them metered energy', () => {
     render(<MoreDetailsPanel drive={driveFixture({ energyUsedWh: null, regenEnergyWh: null })} stats={statsFixture()} />);
     expect(value('Energy consumed')).toBe('8 kWh');
-    expect(screen.getByText(/absolute average power × duration/)).toBeInTheDocument();
+    expect(screen.getByText(/signed average power × duration/)).toBeInTheDocument();
     expect(value('Energy recovered')).toBe('—');
   });
 
@@ -83,19 +83,25 @@ describe('Energy and range evidence', () => {
 
   it('shows eligible power coverage and a fractional estimate without counting missing or invalid samples as zero', () => {
     // Row power is watts (pack voltage × current).
-    const telemetry = [-500, 250, 0, null, NaN, Infinity].map((power) => ({ power } as DriveTelemetryPoint));
+    const telemetry = [-500, 250, 0, null, NaN, Infinity].map((power, index) => ({
+      power, createdAt: `2026-09-01T10:${String(index * 5).padStart(2, '0')}:00Z`,
+    } as DriveTelemetryPoint));
     render(<MoreDetailsPanel drive={driveFixture({
       durationS: 3600, energyUsedWh: null, regenEnergyWh: null, avgPowerW: null, telemetry,
     })} stats={statsFixture()} />);
-    expect(value('Energy recovered')).toBe(`${1 / 6} kWh`);
+    expect(value('Energy recovered')).toBe(`${500 * (5 / 60) / 1000} kWh`);
     expect(screen.getByText(/Recorded telemetry samples: 3 \/ 6/)).toBeInTheDocument();
-    expect(screen.getByText(/assumes uniform sampling/)).toBeInTheDocument();
+    expect(screen.getByText(/negative power integrated over observed elapsed intervals/)).toBeInTheDocument();
+    expect(screen.queryByText(/assumes uniform sampling/)).toBeNull();
   });
 
   it.each([0, 0.25])('shows measured nonnegative power %s as estimated zero recovery, not unknown', (power) => {
     render(<MoreDetailsPanel drive={driveFixture({
       energyUsedWh: null, regenEnergyWh: null, avgPowerW: null,
-      telemetry: [{ power } as DriveTelemetryPoint, { power: null } as DriveTelemetryPoint],
+      telemetry: [
+        { power, createdAt: '2026-09-01T10:00:00Z' } as DriveTelemetryPoint,
+        { power: null, createdAt: '2026-09-01T10:10:00Z' } as DriveTelemetryPoint,
+      ],
     })} stats={statsFixture()} />);
     expect(value('Energy recovered')).toBe('0 kWh');
     expect(screen.getByText(/Recorded telemetry samples: 1 \/ 2/)).toBeInTheDocument();
@@ -143,9 +149,9 @@ describe('Energy and range evidence', () => {
       pointFixture({ idealRange: 300, ratedRange: 250, estRange: 200 }),
       pointFixture({ idealRange: 280, ratedRange: 230, estRange: 180 }),
     ]} />);
-    expect(value('Range (ideal)')).toBe('300.00 → 280.00 km');
-    expect(value('Range (rated)')).toBe('250.00 → 230.00 km');
-    expect(value('Range (est.)')).toBe('200.00 → 180.00 km');
+    expect(value('Range (ideal, start → end)')).toBe('300.00 → 280.00 km');
+    expect(value('Range (rated, start → end)')).toBe('250.00 → 230.00 km');
+    expect(value('Range (estimated, start → end)')).toBe('200.00 → 180.00 km');
     expect(value('Range used')).toBe('20.00 km');
     expect(screen.queryByRole('rowheader', { name: 'Range (start → end)' })).toBeNull();
   });
@@ -155,8 +161,8 @@ describe('Energy and range evidence', () => {
       pointFixture({ idealRange: 300, ratedRange: null }),
       pointFixture({ idealRange: null, ratedRange: 200 }),
     ]} />);
-    expect(value('Range (ideal)')).toBe('300.00 → — km');
-    expect(value('Range (rated)')).toBe('200.00 → — km');
+    expect(value('Range (ideal, start → end)')).toBe('300.00 → — km');
+    expect(value('Range (rated, start → end)')).toBe('200.00 → — km');
     expect(value('Range used')).toBe('—');
   });
 });

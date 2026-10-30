@@ -43,6 +43,7 @@ import type { ChartDataPoint, DriveStats } from './types';
 // ── Hoisted mutable state driving the mocked hooks/units per test. ──
 const state = vi.hoisted(() => ({
   speed: 'km/h' as string,
+  distance: 'km' as 'km' | 'mi',
   syncProps: {} as {
     syncId?: string;
     syncMethod?: 'index' | 'value';
@@ -71,7 +72,7 @@ vi.mock('@/components/motion', () => ({
 
 // ── Unit prefs: control the speed unit the <Line> series binds. ──
 vi.mock('@/hooks/useUnits', () => ({
-  useUnits: () => ({ unitPrefs: { speed: state.speed } }),
+  useUnits: () => ({ unitPrefs: { speed: state.speed, distance: state.distance } }),
 }));
 
 // ── charts barrel double: ResponsiveContainer + ComposedChart render their
@@ -278,8 +279,25 @@ function readChartRows(): ChartDataPoint[] {
 
 beforeEach(() => {
   state.speed = 'km/h';
+  state.distance = 'km';
   state.syncProps = {};
   state.syncedX = null;
+});
+
+it('BUG3 converts elevation traces and summaries to feet without mutating SI evidence', () => {
+  state.distance = 'mi';
+  state.speed = 'mph';
+  const elevationEvidence = { gainM: 30.48, lossM: 15.24, eligiblePairCount: 1, pairCount: 1, coverage: 1 };
+  const stats = { ...makeStats({ elevGain: 30.48, elevLoss: 15.24 }), elevationEvidence };
+  renderChart([
+    makePoint({ elevation: 30.48 }), makePoint({ elevation: 60.96 }),
+  ], stats);
+  expect(readChartRows().map(point => point.elevation)).toEqual([100, 200]);
+  expect(screen.getByTestId('area')).toHaveAttribute('data-name', 'Elevation (ft)');
+  expect(summaryValues()).toEqual(['100.00', '50.00', '50.00']);
+  expect(stats.elevGain).toBe(30.48);
+  expect(stats.elevLoss).toBe(15.24);
+  expect(elevationEvidence).toEqual({ gainM: 30.48, lossM: 15.24, eligiblePairCount: 1, pairCount: 1, coverage: 1 });
 });
 
 // ── 1. Panel chrome ──────────────────────────────────────────────────────────

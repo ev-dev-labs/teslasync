@@ -53,6 +53,16 @@ const insight: DriveFsdInsight = {
 };
 
 describe('SupervisedDrivingPanel', () => {
+  it('BUG3 keeps firmware and insight links neutral and row icons on their label baseline', () => {
+    render(<MemoryRouter><SupervisedDrivingPanel insight={insight} isLoading={false} /></MemoryRouter>);
+    for (const link of screen.getAllByRole('link')) {
+      expect(link).not.toHaveClass('text-[var(--theme-primary)]');
+    }
+    for (const name of ['Reported distance', 'Share of drive', 'Evidence window']) {
+      const header = screen.getByRole('rowheader', { name });
+      expect(header.querySelector('svg')?.parentElement).toHaveClass('inline-flex', 'items-center');
+    }
+  });
   it('retries failed evidence independently and recovers through active loading', () => {
     const onRetry = vi.fn();
     const panel = (isLoading: boolean, error?: Error, data?: DriveFsdInsight) => (

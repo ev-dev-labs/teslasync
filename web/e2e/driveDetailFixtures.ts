@@ -3,7 +3,8 @@ import type { PhysicsLedger, PhysicsTerm } from '../src/api/types';
 import type { DriveDiagnosticResponse } from '../src/types/admin-diagnostics';
 import type { RoadAnomalyResponse } from '../src/types/roadAnomalies';
 import type { GearTheater, SilentReport } from '../src/types/teslaPhysics';
-import { fulfillApiFixture, mockAppSettings, mockDrive, mockVehicle, type MockApiController } from './mockApi';
+import type { DriveFsdInsight, FsdInsights } from '../src/types/fsd';
+import { fulfillApiFixture, mockAppSettings, mockDrive, mockVehicle, resolveApiFixture, type MockApiController } from './mockApi';
 
 export const DRIVE_DETAIL_ID = 412;
 
@@ -59,6 +60,26 @@ const positions = telemetry.map((point) => ({
   is_climate_on: point.is_climate_on,
 }));
 
+// Unequal emission intervals: +10 kW for 30 minutes, then -10 kW for two minutes.
+// The emitted-row mean is -8 kW; the elapsed-time mean is +8.75 kW.
+// The first row is the bounded start-state row returned by both drive endpoints,
+// not a fabricated zero or a second exact-start emission.
+const presentationTelemetry = [0, 1800, 1801, 1802, 1803, 1804, 1805, 1806, 1807, 1920].map((second, index) => {
+  const timestamp = new Date(Date.parse(mockDrive.start_ts) + second * 1000).toISOString();
+  return {
+    ...telemetry[Math.min(index, telemetry.length - 1)],
+    timestamp, created_at: timestamp,
+    power: index === 0 ? 10000 : -10000,
+    outside_temp: 20.3, inside_temp: 21.7, driver_temp: 22.2, passenger_temp: 22.2,
+    fan_status: index === 0 ? 4 : 0,
+    elevation: index === 0 ? 30.48 : index === 1 ? 60.96 : 45.72,
+    ideal_range: 300000, rated_range: 300000, est_range: 300000,
+    // Telemetry endpoints expose pascals; the display bridge accepts kilopascals.
+    tire_pressure_fl: 289579.794, tire_pressure_fr: 289579.794,
+    tire_pressure_rl: 289579.794, tire_pressure_rr: 289579.794,
+  };
+});
+
 const nullableLedger = {
   vehicle_id: mockDrive.vehicle_id,
   kind: 'drive',
@@ -110,13 +131,15 @@ export async function installDriveDetailMocks(
   page: Page,
   theme: 'light' | 'dark',
   controller: MockApiController | null,
-  options: { partial?: boolean; imperial?: boolean; populatedLedger?: boolean } = {},
+  options: { partial?: boolean; imperial?: boolean; populatedLedger?: boolean; presentation?: boolean } = {},
 ): Promise<void> {
+  const detailTelemetry = options.presentation ? presentationTelemetry : telemetry;
+  const detailPositions = options.presentation ? presentationTelemetry : positions;
   const detail = {
     ...mockDrive,
     id: DRIVE_DETAIL_ID,
-    positions: options.partial ? null : positions,
-    telemetry: options.partial ? null : telemetry,
+    positions: options.partial ? null : detailPositions,
+    telemetry: options.partial ? null : detailTelemetry,
     ...(options.partial ? {
       end_battery_pct: null,
       energy_used_wh: null,
@@ -130,10 +153,10 @@ export async function installDriveDetailMocks(
   };
   await page.route(`**/api/v1/drives/${DRIVE_DETAIL_ID}`, (route) => fulfillApiFixture(route, controller, { json: detail }));
   await page.route(`**/api/v1/drives/${DRIVE_DETAIL_ID}/positions`, (route) => fulfillApiFixture(route, controller, {
-    json: options.partial ? null : positions,
+    json: options.partial ? null : detailPositions,
   }));
   await page.route(`**/api/v1/drives/${DRIVE_DETAIL_ID}/telemetry`, (route) => fulfillApiFixture(route, controller, {
-    json: options.partial ? null : telemetry,
+    json: options.partial ? null : detailTelemetry,
   }));
   await page.route(`**/api/v1/drives/${DRIVE_DETAIL_ID}/shares`, (route) => fulfillApiFixture(route, controller, { json: [] }));
   await page.route(`**/api/v1/vehicles/${mockDrive.vehicle_id}`, (route) => fulfillApiFixture(route, controller, {
@@ -189,9 +212,30 @@ export async function installDriveDetailMocks(
       ended_status: 'parked', window: '60s', fsm_transitions: [], signal_window: [],
     } satisfies DriveDiagnosticResponse,
   }));
-  if (options.imperial) {
+  if (options.presentation) {
+    const baseline = resolveApiFixture('/analytics/fsd', 'GET', 'populated', theme);
+    if (!baseline.matched || !baseline.body) throw new Error('Missing shared FSD fixture');
+    const insights = structuredClone(baseline.body as FsdInsights);
+    insights.drive_analytics.contributing_drives = [{
+      drive_id: DRIVE_DETAIL_ID, started_at: mockDrive.start_ts, ended_at: mockDrive.end_ts,
+      start_place: 'Home', end_place: 'Office', distance_m: mockDrive.distance_m,
+      energy_used_wh: mockDrive.energy_used_wh, fsd_distance_m: mockDrive.distance_m / 2,
+      fsd_share_pct: 50, confidence: 'high', reset_affected: false,
+      firmware_version: '2026.30.2', evidence_truncated: false,
+      evidence: [{
+        start_at: mockDrive.start_ts, end_at: mockDrive.end_ts,
+        fsd_distance_m: mockDrive.distance_m / 2, confidence: 'high', approximate: true,
+      }],
+    } satisfies DriveFsdInsight];
+    await page.route('**/api/v1/analytics/fsd?*', route => fulfillApiFixture(route, controller, { json: insights }));
+  }
+  if (options.imperial || options.presentation) {
     await page.route('**/api/v1/settings', (route) => fulfillApiFixture(route, controller, {
-      json: { ...mockAppSettings, mode: theme, unit_of_length: 'mi', unit_of_temp: 'F' },
+      json: {
+        ...mockAppSettings, mode: theme,
+        ...(options.imperial ? { unit_of_length: 'mi', unit_of_temp: 'F' } : {}),
+        ...(options.presentation ? { theme: 'tesla-red', unit_of_pressure: options.imperial ? 'psi' : 'bar' } : {}),
+      },
     }));
   }
 }

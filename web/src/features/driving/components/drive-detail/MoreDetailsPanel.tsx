@@ -8,6 +8,7 @@ import type { ChartDataPoint, DriveStats } from './types';
 import { driveEnergyEvidence } from './energyEvidence';
 import { driveOdometerEvidence } from './odometerEvidence';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { asFiniteNumber } from '@/lib/typeGuards';
 
 /**
  * Evidence, not another dashboard: source and estimation remain attached to
@@ -32,9 +33,9 @@ export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDeta
   // merged fallback stats remain supported for leaf callers, while the report
   // supplies samples and keeps each estimator's endpoints independent.
   const ranges = [
-    { key: 'idealRange', label: t('driveDetail.rangeIdeal', 'Range (ideal)') },
-    { key: 'ratedRange', label: t('driveDetail.report.ratedRange', 'Range (rated)') },
-    { key: 'estRange', label: t('driveDetail.rangeEst', 'Range (est.)') },
+    { key: 'idealRange', label: t('driveDetail.report.idealRangeEndpoints', 'Range (ideal, start → end)') },
+    { key: 'ratedRange', label: t('driveDetail.report.ratedRangeEndpoints', 'Range (rated, start → end)') },
+    { key: 'estRange', label: t('driveDetail.report.estimatedRangeEndpoints', 'Range (estimated, start → end)') },
   ] as const;
   const rangeRows = ranges.map((series) => {
     const readings = (chartData ?? []).map((point) => point[series.key])
@@ -54,13 +55,16 @@ export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDeta
       id: 'used', label: t('driveDetail.energyConsumed', 'Energy consumed'),
       value: used != null ? formatEnergy(used) : '—',
       source: evidence.energySource === 'observed' ? reported
-        : used != null ? t('driveDetail.report.energyEstimate', 'Estimate: absolute average power × duration; not metered energy') : missing,
+        : used != null ? asFiniteNumber(drive.avgPowerW) != null
+          ? t('driveDetail.report.energyEstimate', 'Estimate: signed average power × duration; not metered energy')
+          : t('driveDetail.report.observedEnergyEstimate', 'Estimate: signed power integrated over observed elapsed intervals; uncovered intervals remain unknown')
+          : missing,
     },
     {
       id: 'regen', label: t('driveDetail.energyRecovered', 'Energy recovered'),
       value: recovered != null ? formatEnergy(recovered) : '—',
       source: evidence.regenSource === 'observed' ? reported
-        : recovered != null ? t('driveDetail.report.regenEstimate', 'Estimate: negative-power sample mean × duration; assumes uniform sampling') : missing,
+        : recovered != null ? t('driveDetail.report.regenEstimate', 'Estimate: negative power integrated over observed elapsed intervals; uncovered intervals remain unknown') : missing,
     },
     {
       id: 'odometer', label: drive.endTs == null

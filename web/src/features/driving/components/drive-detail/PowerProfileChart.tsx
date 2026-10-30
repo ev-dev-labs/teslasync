@@ -15,6 +15,7 @@ import { useUnits } from '@/hooks/useUnits';
 import type { ChartDataPoint, DriveStats } from './types';
 import type { DriveDetail } from '@/types/driving';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { observedDrivePower } from './energyEvidence';
 
 interface PowerProfileChartProps {
   chartData: ChartDataPoint[];
@@ -37,7 +38,7 @@ export function PowerProfileChart({ chartData, drive }: PowerProfileChartProps) 
   const hasChart = powers.length > 1;
   const max = powers.length ? powers.reduce((result, value) => Math.max(result, value), -Infinity) : null;
   const min = powers.length ? powers.reduce((result, value) => Math.min(result, value), Infinity) : null;
-  const mean = powers.length ? powers.reduce((sum, value) => sum + value, 0) / powers.length : null;
+  const meanPowerW = drive ? observedDrivePower(drive).meanPowerW : null;
   const minMoving = speeds.length ? speeds.reduce((result, value) => Math.min(result, value), Infinity) : null;
 
   return (
@@ -47,12 +48,12 @@ export function PowerProfileChart({ chartData, drive }: PowerProfileChartProps) 
         summary={(
           <ChartSummary
             label={t('driveDetail.powerSummary', 'Power summary')}
-            caption={t('driveDetail.report.powerMethod', 'Power samples preserve sign: positive draw, negative regeneration. Peak values require observations.')}
+            caption={t('driveDetail.report.observedPowerMethod', 'Observed mean weights signed power by covered elapsed time; missing intervals remain unknown. Peaks use recorded observations.')}
             items={[
               { id: 'max-power', label: t('driveDetail.maxPower', 'Maximum power'), unit: 'kW', value: max != null ? fmtInt(max) : '—' },
               { id: 'max-regen', label: t('driveDetail.maxRegen', 'Maximum regen'), unit: 'kW', value: min != null && min < 0 ? fmtInt(min) : min != null ? '0' : '—' },
               { id: 'avg-power', label: t('driveDetail.avgPower', 'Average power'), unit: 'kW', value: drive?.avgPowerW != null && Number.isFinite(drive.avgPowerW) ? fmtNumber(drive.avgPowerW / 1000) : '—' },
-              { id: 'sample-mean-power', label: t('driveDetail.report.sampleMeanPower', 'Mean sampled power'), unit: 'kW', value: mean != null ? fmtNumber(mean) : '—' },
+              { id: 'sample-mean-power', label: t('driveDetail.report.observedMeanPower', 'Observed power (time-weighted)'), unit: 'kW', value: meanPowerW != null ? fmtNumber(meanPowerW / 1000) : '—' },
               { id: 'min-moving-speed', label: t('driveDetail.minMovingSpeed', 'Min moving speed'), unit: unitPrefs.speed, value: minMoving != null ? fmtNumber(minMoving) : '—' },
             ]}
           />

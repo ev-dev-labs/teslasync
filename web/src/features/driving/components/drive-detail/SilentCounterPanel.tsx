@@ -9,6 +9,8 @@ import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 
 export function SilentCounterPanel({ driveId }: { driveId: string | undefined }) {
   const { fmtNumber } = useNumberFormatting();
@@ -56,7 +58,7 @@ export function SilentCounterPanel({ driveId }: { driveId: string | undefined })
               pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
             />
           )}
-          <Link to="/fsd" className="text-sm text-[var(--theme-primary)] underline-offset-2 hover:underline">
+          <Link to="/fsd" className={cn(typography.role.bodySm, 'underline underline-offset-4')}>
             {t('driveDetail.silent.fsd', 'Open FSD insights')}
           </Link>
         </>

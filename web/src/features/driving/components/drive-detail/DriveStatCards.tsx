@@ -12,7 +12,7 @@ import { IconStatCard } from './IconStatCard';
 import { formatDuration } from './helpers';
 import type { DriveDetail } from '@/types/driving';
 import type { DriveStats } from './types';
-import { convertDistanceFromSI, convertDurationFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertDurationFromSI, convertEnergyFromSI, convertElevationFromSI, elevationUnit } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { COLOR, DATA_VISUAL_COLORS } from '@/lib/colors';
 
@@ -39,6 +39,7 @@ export function DriveStatCards({ drive, stats }: DriveStatCardsProps) {
 
   const distanceUnit = unitPrefs.distance;
   const speedUnit = unitPrefs.speed;
+  const heightUnit = elevationUnit(distanceUnit);
 
   const distanceM = drive.distanceM;
   const distanceDisplay = convertDistanceFromSI(distanceM, distanceUnit);
@@ -65,8 +66,8 @@ export function DriveStatCards({ drive, stats }: DriveStatCardsProps) {
         <StaggerItem><IconStatCard icon={TrendingUp} color={COLOR.GOOD} value={<AnimatedNumber value={stats.avgSpd} decimals={displayPrecision} suffix={` ${speedUnit}`} />} label={t('driveDetail.avgSpeed', 'Avg Speed')} /></StaggerItem>
         <StaggerItem><IconStatCard icon={Battery} color={COLOR.GOOD} value={socLabel} label={t('driveDetail.soc', 'SOC')} /></StaggerItem>
         <StaggerItem><IconStatCard icon={Zap} color={COLOR.WARN} value={fmtWithUnit(stats.powerMax, 'kW')} label={t('driveDetail.maxPower', 'Max Power')} /></StaggerItem>
-        <StaggerItem><IconStatCard icon={Navigation} color={COLOR.GOOD} value={<AnimatedNumber value={stats.elevGain} decimals={displayPrecision} suffix=" m ↑" />} label={t('driveDetail.elevGain', 'Elev. Gain')} /></StaggerItem>
-        <StaggerItem><IconStatCard icon={Navigation} color={COLOR.BAD} value={<AnimatedNumber value={stats.elevLoss} decimals={displayPrecision} suffix=" m ↓" />} label={t('driveDetail.elevLoss', 'Elev. Loss')} /></StaggerItem>
+        <StaggerItem><IconStatCard icon={Navigation} color={COLOR.GOOD} value={<AnimatedNumber value={convertElevationFromSI(stats.elevGain, distanceUnit)} decimals={displayPrecision} suffix={` ${heightUnit} ↑`} />} label={t('driveDetail.elevGain', 'Elev. Gain')} /></StaggerItem>
+        <StaggerItem><IconStatCard icon={Navigation} color={COLOR.BAD} value={<AnimatedNumber value={convertElevationFromSI(stats.elevLoss, distanceUnit)} decimals={displayPrecision} suffix={` ${heightUnit} ↓`} />} label={t('driveDetail.elevLoss', 'Elev. Loss')} /></StaggerItem>
         {hasEnergy && (
           <StaggerItem><IconStatCard icon={DollarSign} color={COLOR.GOOD} value={formatEnergyCost(tripEnergyDisplay)} label={t('driveDetail.tripCost', 'Trip Cost')} /></StaggerItem>
         )}
