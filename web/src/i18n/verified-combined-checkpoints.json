@@ -402,12 +402,12 @@
     {
       "file": "web/src/features/dashboard/widgets/QuickNavWidget.tsx",
       "calls": 6,
-      "sha256": "798b6e322a672ebfde97376d6db6c940a8066729b9b157c22d152b63537c0d21"
+      "sha256": "ee1b968d9a196633d081008e7601229facdba2479fa338c94767cbe46a765b22"
     },
     {
       "file": "web/src/features/dashboard/widgets/shared/WidgetEventFeed.tsx",
       "calls": 3,
-      "sha256": "824274a420cffe4589b3acd86ba67501d3ad91638467dd0f86c8344f31ad4ff7"
+      "sha256": "a82a90031293b523999f748b788ad12b95d64f1571e92c7916eb8d5d40830757"
     },
     {
       "file": "web/src/features/dashboard/widgets/UptimeMonitorWidget.tsx",
@@ -442,7 +442,7 @@
     {
       "file": "web/src/features/driving/components/drive-detail/SupervisedDrivingPanel.tsx",
       "calls": 28,
-      "sha256": "f98d498193723077b6031424d81eb1661c568399f072d8a1c2c7bcc2ef37ec48"
+      "sha256": "37b6f20a90f65812848be789abb50ae54313fbc40006bad5c908854cfd6d708c"
     },
     {
       "file": "web/src/features/driving/components/drive-detail/RouteMapSection.tsx",

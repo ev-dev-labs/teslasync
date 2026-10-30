@@ -19022,9 +19022,9 @@ describe('authorized exact canonical catalog recovery attempt3', () => {
       ...finalFourAdditions, ...acceptedInterveningAdditions,
     ].map(([key]) => JSON.stringify(key.split('.'))))
     const predecessor = entries.filter(([path]) => !exactAdded.has(JSON.stringify(path)))
-    expect(predecessor).toHaveLength(31146)
-    expect(createHash('sha256').update(JSON.stringify(predecessor)).digest('hex')).toBe("d2cb5a3ea0fa77b77a920145dce8dcb64ef4f3b7be1350a31abeb24737f5cf29")
-    expect(entries).toHaveLength(33178)
+    expect(predecessor).toHaveLength(31167)
+    expect(createHash('sha256').update(JSON.stringify(predecessor)).digest('hex')).toBe("96e6a78d8f5d6daec8f684e5a551cc7727eb5a478decd72962d066c7fe671bb4")
+    expect(entries).toHaveLength(33199)
     expect(preservedResolutions).toHaveLength(28)
     for (const [key, value] of preservedResolutions) expect(nested(catalog, key), key).toBe(value)
     expect(catalog.settings.title).toBe('Settings')

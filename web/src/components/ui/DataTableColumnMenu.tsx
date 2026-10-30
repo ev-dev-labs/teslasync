@@ -157,7 +157,7 @@ export function DataTableColumnMenu({
       )}
 
       <Modal open={open} onClose={() => setOpen(false)} title={triggerLabel} size="sm"
-        footer={<Button variant="secondary" className="min-h-11" onClick={() => setOpen(false)}>{t('common.done', 'Done')}</Button>}>
+        footer={<Button variant="secondary" className="min-h-11" onClick={() => setOpen(false)}>{t('Done', 'Done')}</Button>}>
         <div
           data-testid="datatable-column-menu"
         >

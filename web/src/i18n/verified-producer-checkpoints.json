@@ -665,7 +665,7 @@
   {
     "file": "web/src/features/dashboard/components/VehicleHero.tsx",
     "calls": 40,
-    "sha256": "860dd3f1a55dca8411ecb27d302b53099f49c1b8c9382a6d9bf4291ffa979891"
+    "sha256": "2372c85504d7c0a6d08211bf3a5f61c3117b3051b18eff035bee32319e8c6887"
   },
   {
     "file": "web/src/features/dashboard/components/WidgetEditChrome.tsx",
@@ -800,7 +800,7 @@
   {
     "file": "web/src/features/dashboard/widgets/QuickNavWidget.tsx",
     "calls": 6,
-    "sha256": "798b6e322a672ebfde97376d6db6c940a8066729b9b157c22d152b63537c0d21"
+    "sha256": "ee1b968d9a196633d081008e7601229facdba2479fa338c94767cbe46a765b22"
   },
   {
     "file": "web/src/features/dashboard/widgets/RangeBarWidget.tsx",
@@ -830,12 +830,12 @@
   {
     "file": "web/src/features/dashboard/widgets/shared/WidgetEventFeed.tsx",
     "calls": 3,
-    "sha256": "824274a420cffe4589b3acd86ba67501d3ad91638467dd0f86c8344f31ad4ff7"
+    "sha256": "a82a90031293b523999f748b788ad12b95d64f1571e92c7916eb8d5d40830757"
   },
   {
     "file": "web/src/features/dashboard/widgets/shared/WidgetMapView.tsx",
     "calls": 2,
-    "sha256": "cdc3bf8429cc3aa52cd0baca99df20f7f98b2e17843fc40b7c92f4f65c753b9c"
+    "sha256": "c0f6274140fc8f4456b9ef3421f9ff06f62bc0630c9320cacb291f1040936ca6"
   },
   {
     "file": "web/src/features/dashboard/widgets/SignalHealthWidget.tsx",
@@ -885,7 +885,7 @@
   {
     "file": "web/src/features/driving/components/drive-detail/SupervisedDrivingPanel.tsx",
     "calls": 28,
-    "sha256": "f98d498193723077b6031424d81eb1661c568399f072d8a1c2c7bcc2ef37ec48"
+    "sha256": "37b6f20a90f65812848be789abb50ae54313fbc40006bad5c908854cfd6d708c"
   },
   {
     "file": "web/src/features/driving/components/DriveCard.tsx",
@@ -994,8 +994,8 @@
   },
   {
     "file": "web/src/features/notifications/components/NotificationInboxTable.tsx",
-    "calls": 55,
-    "sha256": "f3f60c0c9a597865e5187f33d05c51cfdda8a806d93e1a1fdd51ce45d8c0171e"
+    "calls": 52,
+    "sha256": "b77607658f4760ddb77c594f3388ed7f0d954c11e64c60d26a4a58a0acadef43"
   },
   {
     "file": "web/src/features/notifications/pages/AuditLogPage.tsx",

@@ -51,6 +51,13 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   card-layout mechanism with explicit header/summary/body/footer slots and
   declarative call sites. Do not scatter long DOM-depth-dependent Tailwind
   selector chains through `CardGrid`, chart cards, or page components.
+  The first named-slot implementation passes 177 focused tests, actual
+  TypeScript, full frontend lint and the hermetic build, but is NOT accepted:
+  scrolled browser captures expose 198px/125px power/elevation cards whose
+  canvases overlap following content. All four v1 matrix processes were stopped.
+  Partial diagnostics also flag empty centering, gaps and offsets; they are not
+  final coverage. Fix shared intrinsic chart/slot allocation and add an actual
+  browser chart-fit regression before another consolidated acceptance run.
 - Part A implementation: paired state-reader timelines feed signed elapsed-time
   power integration. Both normal completion and restart recovery preserve the
   mean's sign and real zero, never substitute peak power, and write SI watts
@@ -86,6 +93,11 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 - Final verification pending: full lint/audits, consolidated hermetic browsers,
   route matrix and reviewed committed before/after screenshots, per-part
   commits/push and current-head draft PR checks. No success is claimed yet.
+- Full `web/src` violations skill scan: static styles 0, raw controls 33,
+  direct imports 2, old API imports 0, double prefix 0, camelCase parameters 0,
+  TypeScript pass. All 35 findings' files are unchanged since the pre-BUG3
+  `adc001fea8` baseline, verified separately; do not claim a whole-tree zero or
+  expand this repair into unrelated controls. Full existing npm lint passes.
 - Early current-head CI findings: Trivy flags transitive `go-jose/v4` 4.1.4
   (CVE-2026-116587; patched in 4.1.6). Its cloud-storage/backup consumer and
   full Go build pass with the targeted patch. The SI gate incorrectly rejects
@@ -96,14 +108,43 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   JSON/storage-tag, unknown-name and same-line checks. Four focused regressions
   reproduce both failure classes before the fix and pass afterward; the actual
   branch diff has zero legacy application identifiers/deprecated callers.
-  Both changed workflows pass actionlint. These CI repairs await current-head
-  CI validation; no security check has been bypassed.
+  Both changed workflows pass actionlint. At `fbec5e010b`, Security Scan and
+  both SI checks pass; no security check has been bypassed.
+  Frontend unit shards reveal stale
+  frozen i18n receipts (21 additional leaves and changed producer bytes)
+  and consumer tests still querying the old column-menu role after the shared
+  column control became a focus-managed dialog. Preserve the old catalog
+  predecessor assertions and all interaction coverage while refreshing verified
+  receipts with sanctioned generators and updating consumers to the dialog API.
+  The physical catalog comparison against accepted `b4099b42e4` is reviewed:
+  21 additions, no removals, and two intentional energy-method copy corrections.
+  Typed verification passes for all six changed frozen producers and both
+  shared controls. The sanctioned generators retain exact static assertions;
+  all seven affected frozen test files plus drive/toolbar consumers pass
+  7,791 tests. Global catalog verification reports 41,924 calls and 237 unresolved
+  runtime expressions, not universal dynamic-key verification.
+  Two actual missing keys in the shared More/Done controls now use the existing
+  translated global keys instead of relying on English defaults. The separate
+  SafetySettingsPage casing mismatch predates these fixes and is not checkpointed.
+  Column-dialog, focus-restoration and keyboard compact-export coverage passes
+  97 tests. Real CI also exposes a shared toolbar layout root: putting the
+  full export-scope description inside the action flex row displaces headings
+  and actions by 13–46 px. Move that description to its own shared toolbar row;
+  retain compact More dialogs and update responsive consumers to actually open
+  them, preserving every export, selection, column and geometry assertion.
+  Browser validation of the final combined source remains pending.
+  The current graph has 173 successes, 26 failures, one queued and one
+  conditional skip; this is not green. Reviewed Windows dashboard pixels show
+  the intended flattened Quick navigation links versus the old nested borders.
+  Baseline regeneration remains blocked because the designated Windows mirror
+  has unrelated uncommitted work; never clean it or generate Windows baselines
+  on Linux.
 - Initial card guard runs exposed real layout findings and were stopped before
   acceptance when the user requested the shared-slot architecture refinement.
   Partial old-build logs are diagnostic only, never passing matrix evidence.
 - Next step: finish the reusable shared card-slot mechanism, rebuild once,
   complete the 2,216-route-variant guard and targeted drive/browser checks,
-  review after screenshots, commit B/C and push, then fix actual current-head
+  review after screenshots, commit C/verified CI repairs and push, then fix actual current-head
   CI failures until green.
 
 ## Bug 1: Drive detail shows same address for Start and Destination (non-round-trip)
