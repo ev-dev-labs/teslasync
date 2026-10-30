@@ -55,8 +55,8 @@ export function TableToolbar({ search, density, exports, heading, actions, colum
       )}
       {(density || exports || actions || columns) && (compact ? <>
         <IconButton className="ml-auto min-h-11 min-w-11" icon={<MoreHorizontal className="h-4 w-4" aria-hidden="true" />}
-          label={t('common.more', 'More')} aria-haspopup="dialog" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)} />
-        <Modal open={moreOpen} onClose={() => setMoreOpen(false)} title={t('common.more', 'More')} size="sm">
+          label={t('More', 'More')} aria-haspopup="dialog" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)} />
+        <Modal open={moreOpen} onClose={() => setMoreOpen(false)} title={t('More', 'More')} size="sm">
           <div className="flex min-w-0 flex-wrap items-center gap-3 [&_button]:min-h-11 [&_button]:min-w-11">{secondaryControls}</div>
         </Modal>
       </> : <div className="ml-auto flex max-w-full flex-wrap items-center gap-2">{secondaryControls}</div>)}

@@ -139,6 +139,19 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   Baseline regeneration remains blocked because the designated Windows mirror
   has unrelated uncommitted work; never clean it or generate Windows baselines
   on Linux.
+  Verified translation/column-dialog repairs are pushed as `fc30372cad`.
+  That head exposed a coupled generated-artifact omission: replacing the
+  missing Done reference also requires regenerating the locale usage manifest.
+  The generator now removes both nonexistent common.done/common.more references
+  after the shared controls switch to real existing keys. Exact split-catalog
+  verification passes (57 bundles, 182 fallbacks, 1,264 shell keys, no new
+  known-missing keys). Actual combined-source TypeScript and full npm lint pass.
+  Realistic min/max viewport query mocks retain mobile More-dialog export and
+  density coverage rather than pretending every media query matches.
+  All ten old-head Windows before/actual pairs from nine failing shards were
+  inspected: flattened dashboard links, retained notification kind metadata
+  and export-scope toolbar reflow are visible. These are diagnostic, not final
+  C-source captures or permission to replace baselines from CI artifacts.
 - Initial card guard runs exposed real layout findings and were stopped before
   acceptance when the user requested the shared-slot architecture refinement.
   Partial old-build logs are diagnostic only, never passing matrix evidence.

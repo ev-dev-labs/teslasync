@@ -16,9 +16,10 @@ describe('TableToolbar', () => {
     media = patchMatchMedia(query => query === '(max-width: 1279px)');
     const user = userEvent.setup();
     const densityChange = vi.fn();
+    const exportCsv = vi.fn();
     render(<TableToolbar collapseBelow="xl" search={{ value: '', onChange: vi.fn() }}
       density={{ value: 'compact', onChange: densityChange }}
-      exports={{ onExportCsv: vi.fn(), onExportJson: vi.fn() }}
+      exports={{ onExportCsv: exportCsv, onExportJson: vi.fn() }}
       columns={<span>Column settings</span>} />);
     expect(screen.getByRole('searchbox')).toBeVisible();
     expect(screen.queryByRole('radiogroup')).toBeNull();
@@ -31,6 +32,9 @@ describe('TableToolbar', () => {
     expect(densityChange).toHaveBeenCalledWith('comfortable');
     expect(within(dialog).getByRole('button', { name: 'Export list' })).toBeVisible();
     expect(within(dialog).getByText('Column settings')).toBeVisible();
+    await user.click(within(dialog).getByRole('button', { name: 'Export list' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Download as CSV' }));
+    expect(exportCsv).toHaveBeenCalledWith('visible');
     await user.keyboard('{Escape}');
     expect(more).toHaveFocus();
     act(() => media?.fire('(max-width: 1279px)', false));
