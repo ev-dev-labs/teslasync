@@ -300,6 +300,8 @@ interface DataTableProps<T> {
   toolbarActions?: ReactNode
   /** Page-owned heading placed on the left of the same toolbar. */
   toolbarHeading?: ReactNode
+  /** Delegate toolbar actions/context to a LayoutCard's shared header/summary slots. */
+  cardLayout?: boolean
   /** Typed, caller-owned search, density and CSV/JSON actions. No implicit loaded-row search or export. */
   controls?: TableControls
   /** Defaults to true unless legacy toolbarActions owns the controls. */
@@ -500,6 +502,7 @@ export function DataTable<T>({
   rowContextMenu,
   toolbarActions,
   toolbarHeading,
+  cardLayout = false,
   controls,
   showDensityControl = !toolbarActions,
   searchable = !toolbarActions,
@@ -1372,6 +1375,7 @@ export function DataTable<T>({
       {/* Toolbar row (selection bulk-bar + columns picker + export) */}
       {showToolbar && (
         <TableToolbar
+          placement={cardLayout ? 'card' : 'inline'}
           collapseBelow={mobileBreakpoint}
           className={cn(tableTokens.toolbar, 'rounded-t-xl border-b border-[var(--border-default)] p-3',
             mobileActive && '[&_button]:min-h-11 [&_button]:min-w-11 [&_input]:min-h-11')}

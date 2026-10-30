@@ -97,7 +97,7 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
       exportFilename="charging-speed-trend"
       chartKey="charging-speed-trend"
     >
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={monthlyTrend}
           margin={{ top: 10, right: 20, left: 0, bottom: 0 }}

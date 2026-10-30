@@ -43,7 +43,7 @@ export function ChargeAdvisorDailyTrend({ analysis, state }: ChargeAdvisorCompon
           {t('chargeAdvisor.trend.empty', 'No qualified local-day SoC-drop observations yet.')}
         </Text>
       ) : (
-        <EmbeddedChart toolbar exportable size="standard"
+        <EmbeddedChart toolbar exportable size="standard" headerPlacement="card"
           title={t('chargeAdvisor.trend.chartTitle', 'Observed daily use')}
           ariaLabel={t(
             'chargeAdvisor.trend.aria',

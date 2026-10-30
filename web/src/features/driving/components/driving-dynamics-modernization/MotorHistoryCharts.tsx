@@ -81,7 +81,7 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery, showSource
                   exportFilename="motor-power"
                 >
                   {powerHasData ? (
-                    <ResponsiveContainer width="100%" height={280}>
+                    <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={powerChartData}>
                         <defs>
                           <ChartGradient id="powerAreaGrad" color={palette[0]} opacity={0.08} />
@@ -123,7 +123,7 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery, showSource
                   chartKey="motor-torque-history"
                 >
                   {torqueHasData ? (
-                    <ResponsiveContainer width="100%" height={280}>
+                    <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={torqueChartData}>
                         {chartGrid}
                         <XAxis dataKey="time" tick={axisTick} />
@@ -161,7 +161,7 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery, showSource
                   chartKey="motor-rpm-history"
                 >
                   {rpmHasData ? (
-                    <ResponsiveContainer width="100%" height={280}>
+                    <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={rpmChartData}>
                         {chartGrid}
                         <XAxis dataKey="time" tick={axisTick} />

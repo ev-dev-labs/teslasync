@@ -595,7 +595,7 @@
   {
     "file": "web/src/features/battery/pages/BatteryDegradationPage.tsx",
     "calls": 121,
-    "sha256": "9afdd6ec81e82cb8f0c554ac4313949723b7cb50431d8eb50735d02794ccecd9"
+    "sha256": "23a676b90eea8eb4750f0f40f8e2427d6bb13c1e6832a2ec9a7512d35860fc9b"
   },
   {
     "file": "web/src/features/battery/pages/BatteryPassportPage.tsx",
@@ -1188,7 +1188,7 @@
   {
     "file": "web/src/features/system/components/state-machine/LiveControls.tsx",
     "calls": 15,
-    "sha256": "d95ea85d9cb38b885c9183744f648af54a4867deabb7d7a7cf123554ba928fbe"
+    "sha256": "eb8052a16dc0dbffb7650498c41b433de8df2e4f0f445f46014957f73531ae9a"
   },
   {
     "file": "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.tsx",
@@ -1243,7 +1243,7 @@
   {
     "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
     "calls": 81,
-    "sha256": "a2b3ae8dfdac5091e91988e7b37535097b44a5655d3f2b73e40380b75998a486"
+    "sha256": "3a8852515a4822e0f44076ce5797f578405439cf02695d100731e4afdf696fe8"
   },
   {
     "file": "web/src/features/system/pages/TeslaApiUsagePage.tsx",

@@ -136,6 +136,16 @@ beforeEach(() => {
   client.clear();
 });
 
+it('keeps all three active motor plots inside the authoritative responsive viewport', () => {
+  const view = mount(<MotorHistoryCharts vehicleId={7} historyQuery={window} />);
+  const plots = view.container.querySelectorAll<HTMLElement>('.recharts-responsive-container');
+  expect(plots).toHaveLength(3);
+  for (const plot of plots) expect(plot.style.height).toBe('100%');
+  for (const title of ['Motor Power Over Time', 'Motor Torque History', 'Motor RPM History']) {
+    expect(screen.getByRole('heading', { name: title, exact: true })).toBeVisible();
+  }
+});
+
 describe('resolved-empty telemetry recovery', () => {
   it.each([
     ['guidance', (enabled: boolean) => <DrivingTips vehicleId={7} historyQuery={{ ...window, enabled }} />],

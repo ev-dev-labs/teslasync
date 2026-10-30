@@ -17,6 +17,13 @@ const value = (label: string) => within(screen.getByRole('rowheader', { name: la
 beforeEach(() => { prefs.distance = 'km'; prefs.translations = {}; });
 
 describe('Energy and range evidence', () => {
+  it('owns its title and evidence matrix through shared header and body tracks', () => {
+    render(<MoreDetailsPanel drive={driveFixture()} stats={statsFixture()} />);
+    expect(screen.getByRole('heading', { name: 'Energy and range evidence' })
+      .closest('[data-card-slot="header"]')).not.toBeNull();
+    expect(screen.getByRole('table').closest('[data-card-slot="body"]')).not.toBeNull();
+  });
+
   it.each([
     ['aggregate', { start_odometer_m: 120000000, end_odometer_m: 120040000 }, 'persisted', 'Persisted drive aggregate', '120,000.00 → 120,040.00 km'],
     ['sampled', {}, 'sampled', 'Recorded telemetry samples', '10,000.00 → 10,040.00 km'],

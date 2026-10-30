@@ -17,6 +17,9 @@ vi.mock('../../charts/EmbeddedChart', () => ({
     renderEmbedded(props);
     return (
       <div data-testid="embedded-chart-boundary">
+        {props.visibleTitle && <h3>{props.title}</h3>}
+        {props.headerDescription}
+        {props.summary}
         {typeof props.children === 'function' ? null : props.children}
       </div>
     );
@@ -214,7 +217,7 @@ describe('ChartCard production composition contract', () => {
     }
   });
 
-  it('retains the card title, complete subtitle and actionable footer outside the embedded chart', () => {
+  it('retains the card name, complete subtitle help and actionable footer outside the embedded chart', () => {
     const subtitle = 'Complete specialist explanation, not a shortened substitute.';
     const footerAction = vi.fn();
     const { container } = render(
@@ -223,8 +226,8 @@ describe('ChartCard production composition contract', () => {
         <span>Original chart content</span>
       </ChartCard>,
     );
-    const heading = screen.getByRole('heading', { name: title });
-    expect(container.querySelector('[data-card]')).toHaveAttribute('aria-labelledby', heading.id);
+    expect(screen.getByRole('heading', { name: title })).toBeVisible();
+    expect(container.querySelector('[data-card]')).toHaveAccessibleName(title);
     expect(container.querySelector('[data-card-desc]')?.textContent).toBe(subtitle);
     expect(screen.getByRole('button', { name: `Read full description for ${title}` }))
       .toHaveAccessibleDescription(subtitle);

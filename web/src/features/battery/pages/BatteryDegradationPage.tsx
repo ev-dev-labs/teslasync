@@ -669,7 +669,16 @@ export default function BatteryDegradationPage() {
           sizes={['half', 'half']}
         >
           {/* Range loss over time */}
-          <LayoutCard title={t('battery.degradation.rangeLoss', 'Range loss over time')} size="half">
+          <LayoutCard
+            title={t('battery.degradation.rangeLoss', 'Range loss over time')}
+            size="half"
+            summary={!initialLoading && !fatalError && !unavailableMessage && rangeData.length > 0 ? (
+              <Caption className="block">
+                {t('battery.degradation.retainedRangeEvidence',
+                  'The comparison baseline is the range estimate attached to the first retained history row, not new-pack range. Missing baseline values remain unknown. Sample timestamps identify carried-forward telemetry; the history date is the capacity aggregation day.')}
+              </Caption>
+            ) : undefined}
+          >
             {initialLoading ? (
               <Skeleton height={240} />
             ) : fatalError ? (
@@ -679,11 +688,6 @@ export default function BatteryDegradationPage() {
                 actionTo={activeId == null ? { label: t('yearReview.goToVehicles', 'Go to vehicles'), to: '/vehicles' } : undefined}
                 action={activeId != null ? { label: t('common.retry', 'Retry'), onClick: () => { void healthState.retry?.(); } } : undefined} />
             ) : rangeData.length > 0 ? (
-              <>
-              <Caption className="mb-3 block">
-                {t('battery.degradation.retainedRangeEvidence',
-                  'The comparison baseline is the range estimate attached to the first retained history row, not new-pack range. Missing baseline values remain unknown. Sample timestamps identify carried-forward telemetry; the history date is the capacity aggregation day.')}
-              </Caption>
               <EmbeddedChart
                 title={t('battery.degradation.rangeLoss', 'Range loss over time')}
                 ariaLabel={t(
@@ -749,7 +753,6 @@ export default function BatteryDegradationPage() {
                   </ResponsiveContainer>
                 )}
               </EmbeddedChart>
-              </>
             ) : (
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing */
                 icon={<Battery className="h-8 w-8" />}

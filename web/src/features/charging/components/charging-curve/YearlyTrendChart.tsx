@@ -62,7 +62,7 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
       exportFilename="yearly-charging-trend"
     >
       {({ hiddenSeries }) => (
-        <ResponsiveContainer width="100%" height={280}>
+        <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
           <CartesianGrid {...chartGrid} />
           <XAxis dataKey="year" tick={axisTickSm} />

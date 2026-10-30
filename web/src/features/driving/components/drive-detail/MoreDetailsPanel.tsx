@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { Card, CardContent, CardHeader, Table, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
 
@@ -99,8 +99,9 @@ export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDeta
   ];
   return (
     <FadeIn className="h-full">
-      <GlassPanel className="h-full space-y-3 p-4 sm:p-5" data-testid="drive-energy-evidence">
-        <PanelTitle>{t('driveDetail.report.energyEvidence', 'Energy and range evidence')}</PanelTitle>
+      <Card layout padding="none" className="h-full p-4 sm:p-5" data-testid="drive-energy-evidence">
+        <CardHeader title={t('driveDetail.report.energyEvidence', 'Energy and range evidence')} />
+        <CardContent>
         <Table variant="embedded" aria-label={t('driveDetail.report.energyEvidence', 'Energy and range evidence')}>
           <thead><tr>
             <th scope="col">{t('driveDetail.report.metric', 'Metric')}</th>
@@ -122,7 +123,8 @@ export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDeta
         <Text as="p" variant="caption">
           {t('driveDetail.report.noNet', 'Consumed and recovered energy retain their original source semantics. No additional net-energy total is inferred.')}
         </Text>
-      </GlassPanel>
+        </CardContent>
+      </Card>
     </FadeIn>
   );
 }

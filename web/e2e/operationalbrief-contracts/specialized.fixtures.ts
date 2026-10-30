@@ -89,11 +89,12 @@ export const efficiencyShift: EfficiencyShift = {
 };
 
 export const tireForecast: ComponentDetailResponse = {
-  component: 'tires', label: 'Tires', health_pct: 75, wear_rate_per_day: 0.1,
-  remaining_days: 100, remaining_km: null, projected_eol_date: '2026-08-01',
-  confidence: 0.75, status: 'watch', basis: 'Measured tread trend',
-  eol_threshold: 20, nominal_life_km: null, nominal_life_days: null,
-  notes: 'Observed trend only',
+  component: 'tires', label: 'Tires', health_pct: 75, wear_rate_per_day: 0.55,
+  remaining_days: 100, remaining_km: 33000, projected_eol_date: '2026-08-01',
+  confidence: 0.75, status: 'watch', basis: 'Whole-life odometer estimate',
+  observation_available: true, projection_available: true, basis_kind: 'whole_life_odometer',
+  eol_threshold: 20, nominal_life_km: 60000, nominal_life_days: null,
+  notes: 'Synthetic nominal-distance model, not measured tread.',
   projection: [{ date: '2026-08-01', projected_health: 20, confidence_low: 15, confidence_high: 25 }],
 };
 

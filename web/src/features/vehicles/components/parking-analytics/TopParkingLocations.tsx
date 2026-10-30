@@ -6,12 +6,11 @@ import { EmptyState } from '@/components/feedback';
 import {
   Badge,
   DataTable,
-  GlassPanel,
   HelpTooltip,
-  PanelTitle,
   Text,
   type Column,
 } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
@@ -118,11 +117,10 @@ export function TopParkingLocations({
       aria-label={t('parking.sections.locations', 'Top parking locations')}
       data-testid="parking-locations"
     >
-      <GlassPanel className="h-full p-4 sm:p-5">
-        <PanelTitle className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-          {t('parking.topLocations', 'Where it sits')}
-          <HelpTooltip
+      <LayoutCard
+        title={t('parking.topLocations', 'Where it sits')}
+        icon={<MapPin className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
+        actions={<HelpTooltip
             size="sm"
             i18nKey="help.parkingAnalytics.body"
             defaultValue="Parking stints are reconstructed from the gaps between consecutive drives, located at the previous drive's destination. The overnight share counts parked time falling between 22:00 and 06:00 local."
@@ -130,8 +128,8 @@ export function TopParkingLocations({
               'help.parkingAnalytics.iconLabel',
               'More info about parking analytics',
             )}
-          />
-        </PanelTitle>
+          />}
+        summary={<>
         <Text as="p" variant="caption" className="mt-1">
           {t(
             'parking.locations.subtitle',
@@ -156,6 +154,8 @@ export function TopParkingLocations({
             'Parking is reconstructed between usable drives, not observed continuously. Missing locations and incomplete history remain explicit.',
           )}
         </Text>
+        </>}
+      >
         <ParkingSectionBody state={state} className="mt-3 min-h-72">
           {summary.locations.length === 0 ? (
             <EmptyState
@@ -173,6 +173,7 @@ export function TopParkingLocations({
           ) : (
             <DataTable
               tableId="vehicles:parking-locations"
+              cardLayout
               enableValueFilters={!summary.coverage.possiblyCapped}
               columns={columns}
               data={summary.locations}
@@ -186,7 +187,7 @@ export function TopParkingLocations({
             />
           )}
         </ParkingSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

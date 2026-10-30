@@ -16,6 +16,7 @@ import { Button } from './Button'
 import { downloadRowsAsCSV } from '@/lib/csvExport'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
+import { LayoutCard } from '../layout/layout-reference/LayoutCard'
 
 interface Row {
   id: number
@@ -48,6 +49,43 @@ beforeEach(() => {
 })
 
 describe('DataTable — standard toolbar controls', () => {
+  it('delegates card controls and source context to named header/summary slots instead of displacing table rows', () => {
+    const densityChange = vi.fn()
+    const csv = vi.fn()
+    render(<LayoutCard title="Transition counts">
+      <DataTable cardLayout variant="embedded" tableId="test:card-slots" columns={REORDER_COLS} data={ROWS}
+        keyExtractor={row => row.id} controls={{
+          search: { value: '', onChange: vi.fn(), ariaLabel: 'Search returned transitions' },
+          density: { value: 'compact', onChange: densityChange },
+          exports: { onExportCsv: csv, onExportJson: vi.fn(), description: 'Only returned transition rows' },
+        }} />
+    </LayoutCard>)
+    const card = screen.getByRole('heading', { name: 'Transition counts' }).closest('[data-card]')!
+    const header = card.querySelector<HTMLElement>('[data-card-slot="header"]')!
+    const summary = card.querySelector<HTMLElement>('[data-card-slot="summary"]')!
+    const body = card.querySelector<HTMLElement>('[data-card-content]')!
+    expect(within(header).getByRole('radiogroup', { name: 'List density' })).toBeVisible()
+    expect(within(header).getByRole('button', { name: 'Export list' })).toBeVisible()
+    expect(within(summary).getByRole('searchbox', { name: 'Search returned transitions' })).toBeVisible()
+    expect(within(summary).getByText('Only returned transition rows')).toBeVisible()
+    expect(within(body).queryByRole('radiogroup')).toBeNull()
+    expect(within(body).queryByRole('searchbox')).toBeNull()
+    expect(within(body).getByText('Alpha')).toBeVisible()
+    fireEvent.click(within(header).getByRole('radio', { name: 'Comfortable' }))
+    expect(densityChange).toHaveBeenCalledWith('comfortable')
+    fireEvent.click(within(header).getByRole('button', { name: 'Export list' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }))
+    expect(csv).toHaveBeenCalledWith('visible')
+  })
+
+  it('retains inline controls when card placement is requested outside a card owner', () => {
+    render(<DataTable cardLayout tableId="test:unhosted-slots" columns={REORDER_COLS} data={ROWS}
+      keyExtractor={row => row.id} />)
+    expect(screen.getByRole('radiogroup', { name: 'List density' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Export list' })).toBeVisible()
+    expect(screen.getByText('Alpha')).toBeVisible()
+  })
+
   it('protects the required mobile identity from individual and bulk column hiding, including saved layouts', () => {
     localStorage.setItem('teslasync.table.test:required.columns', JSON.stringify({
       order: ['status', 'name', 'id'], hidden: ['name'],

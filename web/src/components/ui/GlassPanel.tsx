@@ -1,5 +1,6 @@
-import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, useCallback, useRef, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { useCardStretchRegistration } from '../layout/layout-reference/CardLayoutContext';
 
 export interface GlassPanelProps extends HTMLAttributes<HTMLDivElement> {
   variant?: 'standalone' | 'embedded';
@@ -44,9 +45,17 @@ const paddingClasses: Record<NonNullable<GlassPanelProps['padding']>, string> = 
 };
 
 export const GlassPanel = forwardRef<HTMLDivElement, GlassPanelProps>(
-  ({ glow = 'none', hover = false, padding, className, children, variant = 'standalone', ...props }, ref) => (
+  ({ glow = 'none', hover = false, padding, className, children, variant = 'standalone', ...props }, ref) => {
+    const surfaceRef = useRef<HTMLDivElement | null>(null);
+    useCardStretchRegistration(surfaceRef, variant === 'standalone');
+    const setRef = useCallback((element: HTMLDivElement | null) => {
+      surfaceRef.current = element;
+      if (typeof ref === 'function') ref(element);
+      else if (ref) ref.current = element;
+    }, [ref]);
+    return (
     <div
-      ref={ref}
+      ref={setRef}
       data-surface-variant={variant}
       data-print-card={variant === 'standalone' ? true : undefined}
       className={cn(
@@ -75,6 +84,7 @@ export const GlassPanel = forwardRef<HTMLDivElement, GlassPanelProps>(
     >
       {children}
     </div>
-  ),
+    );
+  },
 );
 GlassPanel.displayName = 'GlassPanel';

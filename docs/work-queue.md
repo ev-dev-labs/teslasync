@@ -70,6 +70,122 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   The broader sample still had 14 unmatched synthetic requests; the worker is
   correcting exact typed fixtures and running a 277-route 1280/dark preflight
   before the final eight-variant matrix. No complete-matrix pass is claimed.
+- Part C continuation: v7's shared table placement assigns
+  actions to the card header and search/provenance to its summary track, with
+  ordinary inline fallback outside participating cards. The debugger adopts
+  this shared API without page-specific sizing; rebuilt browsers confirm its
+  real 132px offset is zero at all eight required variants. All 303 affected
+  worker-run tests pass with unchanged geometry thresholds and no route
+  exemptions. Its page retains 12 surfaces and 1118 -> 1120 lines; including
+  direct components, 23 surfaces and 2645 -> 2647 lines. The parent expanded
+  exact typed fixtures, including downstream reads exposed by populated
+  responses. Unknown endpoints still fail.
+  The earlier fixture-only diagnostic recorded 277 route names but had 25
+  unmatched signatures and 16 readiness/navigation errors; closed-page records
+  are not successful rendering coverage. Those 25 signatures now have explicit
+  responses; the real guard's bounded chunks must verify them on the new build.
+  Per-route guard receipts now also reject console/ErrorBoundary, uncaught
+  runtime, resource and failed-data errors.
+  The v7 consolidated mock build passes (50.55 seconds), as do actual
+  app/guard TypeScript, full frontend lint and scoped fixture/guard lint;
+  that build is now stale because actual browser findings require more fixes.
+  The coherent RUL nominal-distance fixture passes all four affected browser
+  cases with zero proxy escapes.
+  The real bounded preflight produced 275 unique records: 256 passed and 19
+  had actual findings. A widget-only 366-day assertion threw on the legitimate
+  90-day mileage request, losing `/mileage` and `/signal-deadband`; it was not
+  an established memory failure. Six chart-fit/fullscreen cases pass, but all
+  eight debugger variants fail existing timestamp checks, not geometry.
+  The remaining geometry/sizing roots were fixed in the v8 continuation below.
+  Parent fixture corrections use actual certificate envelopes, maintenance
+  schedules, independent unavailable charge-ledger/telemetry contracts and an
+  exact guard-owned mileage resolver; the original widget assertion remains.
+  Public share `date` is a calendar value per `share/handler.go`, not the ISO
+  instant mistakenly supplied by the new fixture; no production share change
+  is warranted. Five real display regressions fail before fixes and pass after:
+  frozen clock formatting, redundant comfort/site timezone suffixes, hazard
+  timestamp precision and second-precision physics boundaries. Existing source
+  instants, selected-zone reactivity, zero and missing-value behavior remain.
+  All six affected parent suites pass 330 tests (214 fixture contracts);
+  strict fixture TypeScript and scoped ESLint pass.
+  V8 source is frozen and rebuilt (58.37 seconds). Shared FormSection surface
+  ownership, preserved bounded API-browser scrolling, SchemaCatalogCard slots,
+  HVAC header/summary delegation, container-responsive MetricGrid adoption and
+  FlowGrid orientation resolve the inventoried allocation/narrow roots.
+  All 277 unique real preflight records now pass, with no missing/duplicate
+  routes, layout/runtime/unmatched/escape findings or wrapper failures.
+  The actual debugger passes all 12 existing width/theme variants, and six
+  real chart-fit/fullscreen/restore cases pass: 18 tests, zero proxy escapes.
+  Worker suites pass 649 consumer tests and 92 adapter tests (overlapping
+  groups); parent suites pass 361 tests. Three changed frozen producers have
+  all 231 translation calls verified before sanctioned receipt generation;
+  all 7,728 frozen contracts then pass. No translation keys or tests were
+  weakened. Full frontend lint, actual app TypeScript and strict guard/fixture
+  TypeScript pass. Whole-source audit still reports 35 pre-existing findings
+  in 21 files unchanged since before BUG 3; no new finding belongs to this work.
+  The earlier eleven-file count came from truncated audit stdout; complete
+  untruncated grep and byte comparisons establish 21, without changing the
+  35-finding total.
+  Eleven AFTER images were refreshed from the frozen build; all eleven
+  capture cases pass with zero escapes. All eleven pairs were visually
+  inspected with no new shared-layout regression observed. All eleven BEFORE
+  hashes and 34 frozen source hashes remain unchanged; ten measured feature
+  scopes preserve their sections/surfaces and exceed the 70% line minimum.
+  The first required-matrix batch exposes additional width-specific roots:
+  three shards pass 32 cases each; the fourth passes 26 and fails six.
+  Ingest X-ray has a 40px mobile plot spill and raw mobile timestamps;
+  vehicle detail has 25px/17px sibling body offsets at 1920px. These are
+  real findings, not tolerated exceptions. The fifth shard was stopped;
+  no complete-matrix pass is claimed. The retained shared-layout worker
+  owns the bounded v9 fixes. The four dark-theme diagnostic shards now
+  contain all 831 expected unique 390/768/1920px records: 814 passing,
+  17 violating across 14 routes, no missing/duplicate/unexpected records,
+  runtime errors, unmatched mocks or proxy escapes. The remaining roots
+  are shared chart containment/header/body anatomy and six 195px passport
+  metric cells; thresholds are unchanged. The exact 17 failed browser
+  cases have a separate discovered red/green selector.
+  Additional populated-dashboard BEFORE evidence passes with eight
+  canonical owner widgets, existing catalogue sources and the real
+  auto-arrange control at 1280x1600. Console/page/API diagnostics and an
+  explicit unmocked-outbound fallback are clean; its AFTER image awaits
+  v9. The original eleven BEFORE files and frozen route fixtures remain
+  unchanged. Owned preview processes and temporary capture specs stopped.
+  V9 bounded checkpoint passes 404 tests in 17 suites, app TypeScript
+  and scoped ESLint. Seven measured feature scopes preserve their
+  sections/tables and at least 70% of original lines. Its frozen build
+  completes in 49.88 seconds. The exact browser replay now passes nine
+  cases and fails eight (71 unique route records, 63 passing), proxy
+  escapes zero. Vehicles, ingest, score, drive detail, advisor and all
+  three parking variants are genuinely clean. Two motor chart surfaces
+  still spill 20px; the other formerly failing dynamics plots are clean.
+  The retained worker owns a bounded v10 continuation for these motor
+  surfaces and the seven remaining route variants, not a threshold change.
+  V10 resolves all seventeen original failing browser cases: all 71 unique
+  target/neighbor records pass, with zero escapes. The deduplicated affected
+  run passes 43 suites / 1,317 tests; verified producer generation restores
+  all 7,728 frozen contracts. Visual review nevertheless rejects a detached
+  shared legend: actual glyphs sit 155px from their markers despite clean
+  containment. A new real-browser regression fails on V10; the shared fix
+  retains its responsive grid but centers intrinsic marker/label groups.
+  V11 gives 12px gaps for both elevation series at 390/1280 in both themes;
+  all six chart-fit/fullscreen cases and 59 focused chart tests pass.
+  Full lint, actual app TypeScript and targeted guard/fixture/chart TypeScript
+  pass. The broad existing E2E project still has legacy library/declaration
+  configuration and unmodified caller errors; it is not claimed clean.
+  The corrected mock build completes in 48.11 seconds. Its 123 changed
+  source/fixture files, built index and twelve BEFORE images are hashed;
+  all 2,216 required variants now run under a fresh V11 receipt prefix.
+  All twelve AFTER captures pass; all 24 PNGs were reviewed with no new
+  shared-layout regression, within their documented synthetic/crop limits.
+  Final V11 inventory verification passes all 2,216 unique expected records:
+  every one of 277 routes at four required widths in both themes. Missing,
+  unexpected, duplicate and finding arrays are empty; all sixteen bounded
+  wrappers pass 512 browser cases with zero proxy escapes. Source and
+  protected-image hashes remain unchanged; owned preview processes and
+  temporary capture specs are stopped/removed.
+  Next: commit exact verified paths, push and validate the new head's PR
+  checks, including the native mirror baseline gate. Current-source CI
+  success is not claimed.
 - Part A implementation: paired state-reader timelines feed signed elapsed-time
   power integration. Both normal completion and restart recovery preserve the
   mean's sign and real zero, never substitute peak power, and write SI watts
@@ -102,9 +218,11 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   five boundary/null/zero/error cases, affected race suites and full Go build
   now pass. CI explicitly runs the sparse-power PostgreSQL regression against
   its isolated test service; workflow actionlint passes.
-- Final verification pending: full lint/audits, consolidated hermetic browsers,
-  route matrix and reviewed committed before/after screenshots, per-part
-  commits/push and current-head draft PR checks. No success is claimed yet.
+- Local final verification passes: full lint, app/affected harness TypeScript,
+  affected units, frozen contracts, all 2,216 route variants and all twelve
+  reviewed before/after pairs. The full audit retains 35 verified legacy
+  findings, not a whole-tree zero. C commit/push and current-head draft PR
+  checks remain; no CI success is claimed yet.
 - Full `web/src` violations skill scan: static styles 0, raw controls 33,
   direct imports 2, old API imports 0, double prefix 0, camelCase parameters 0,
   TypeScript pass. All 35 findings' files are unchanged since the pre-BUG3
@@ -149,7 +267,7 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   zero proxy escapes. Compact consumers open the actual More dialog and
   dismiss search history before clicking underlying column filters; export
   selection/delete actions remain in their separate bulk bar.
-  The current graph has 173 successes, 26 failures, one queued and one
+  An earlier graph had 173 successes, 26 failures, one queued and one
   conditional skip; this is not green. Reviewed Windows dashboard pixels show
   the intended flattened Quick navigation links versus the old nested borders.
   Baseline regeneration remains blocked because the designated Windows mirror
@@ -177,6 +295,12 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   contracts pass 7,728 tests. The full route-layout matrix is still pending
   exact mock-fixture closure and preflight; none of these bounded checks
   substitutes for that acceptance gate or current-head CI.
+  Pushed `13d4e6dbc0` now has 192 successes, eight failures and one conditional
+  skip: every responsive shard passes; seven Windows snapshot shards and their
+  aggregate fail. This does not validate uncommitted v6 source. The mirror's
+  full native status includes unrelated untracked `Claude outputs/`; tracked-only
+  cleanliness is insufficient, so it remains untouched and baseline regeneration
+  remains blocked under playbook section 4.
 - Initial card guard runs exposed real layout findings and were stopped before
   acceptance when the user requested the shared-slot architecture refinement.
   Partial old-build logs are diagnostic only, never passing matrix evidence.

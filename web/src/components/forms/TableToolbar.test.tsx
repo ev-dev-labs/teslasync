@@ -4,12 +4,34 @@ import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import { patchMatchMedia } from '@/test/setup';
 import { TableToolbar } from './TableToolbar';
+import { LayoutCard } from '../layout/layout-reference/LayoutCard';
 
 describe('TableToolbar', () => {
   let media: ReturnType<typeof patchMatchMedia> | undefined;
   afterEach(() => {
     media?.restore();
     media = undefined;
+  });
+
+  it('keeps the card-owned mobile More button, search and keyboard recovery in their named slots', async () => {
+    media = patchMatchMedia(query => query === '(max-width: 767px)');
+    const user = userEvent.setup();
+    const csv = vi.fn();
+    render(<LayoutCard title="Observed transitions">
+      <TableToolbar placement="card" search={{ value: '', onChange: vi.fn(), ariaLabel: 'Search observed transitions' }}
+        exports={{ onExportCsv: csv, onExportJson: vi.fn(), description: 'Returned rows only' }} />
+    </LayoutCard>);
+    const card = screen.getByRole('heading', { name: 'Observed transitions' }).closest('[data-card]')!;
+    const header = card.querySelector<HTMLElement>('[data-card-slot="header"]')!;
+    const summary = card.querySelector<HTMLElement>('[data-card-slot="summary"]')!;
+    const more = within(header).getByRole('button', { name: 'More', exact: true });
+    expect(within(summary).getByRole('searchbox', { name: 'Search observed transitions' })).toBeVisible();
+    more.focus();
+    await user.keyboard('{Enter}');
+    const dialog = screen.getByRole('dialog', { name: 'More', exact: true });
+    expect(within(dialog).getByText('Returned rows only')).toBeVisible();
+    await user.keyboard('{Escape}');
+    expect(more).toHaveFocus();
   });
 
   it('keeps search visible and moves secondary controls into an accessible More dialog on phones and tablets', async () => {

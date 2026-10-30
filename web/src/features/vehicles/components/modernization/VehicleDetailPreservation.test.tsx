@@ -60,6 +60,29 @@ beforeEach(() => {
 });
 
 describe('actual detail stats and history source preservation', () => {
+  it('shares history title/actions and table-body tracks without moving toolbar controls into the table offset', () => {
+    render(view(
+      { data: { state }, isSuccess: true },
+      { data: drives, isSuccess: true },
+      { data: emptyCharges, isSuccess: true },
+    ));
+    const history = screen.getByRole('region', { name: 'Recent activity' });
+    const headings = within(history).getAllByRole('heading', { name: /Recent drives|Recent charges/ });
+    expect(headings).toHaveLength(2);
+    for (const heading of headings) {
+      const header = heading.closest('[data-card-slot="header"]');
+      expect(header).not.toBeNull();
+      expect(within(header as HTMLElement).getByRole('link', { name: 'View all' })).toBeInTheDocument();
+      expect(heading.querySelector('svg')).not.toBeNull();
+    }
+    const table = within(history).getByRole('table');
+    const card = table.closest('[data-card-layout-opt-in]');
+    expect(card).not.toBeNull();
+    expect(table.closest('[data-card-slot="body"]')).not.toBeNull();
+    const exportButton = within(card as HTMLElement).getByRole('button', { name: /Export/ });
+    expect(exportButton.closest('[data-card-actions]')).not.toBeNull();
+  });
+
   it('retains the same stats, sorted table, focus and completed-empty neighbor through independent refresh failures', () => {
     const original = JSON.stringify({ state, drives, emptyCharges });
     const { rerender } = render(view(
