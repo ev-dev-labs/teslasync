@@ -36,7 +36,13 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   production readings alone do not prove copying. Add distinct-value and
   missing-field regressions rather than fabricate different readings.
   BUG 1 is a separate boundary-coordinate/geocoding repair problem.
-- Part B: in progress, shared precision/range/chart/table presentation fixes.
+- Part B: implemented and committed as `5ccba95dbb`. Shared precision,
+  explicit average/start-end labels, fractional fan, unit-aware elevation,
+  collapsed ranges, distinguishable coincident series, fitted pressure axes,
+  neutral links and aligned tables/icons pass 405 affected unit tests.
+  Two actual light/390 metric and dark/1280 imperial browser regressions pass
+  with zero proxy escapes. All 74 shell/header references remain present;
+  final combined-source browser/layout acceptance remains Part C's gate.
 - Part C roots confirmed: grid stretch stops at animation wrappers, leaving
   enclosed cards short; chart-card title and embedded chart toolbar have
   separate owners, placing download actions below the title. Shared layout
@@ -80,6 +86,18 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 - Final verification pending: full lint/audits, consolidated hermetic browsers,
   route matrix and reviewed committed before/after screenshots, per-part
   commits/push and current-head draft PR checks. No success is claimed yet.
+- Early current-head CI findings: Trivy flags transitive `go-jose/v4` 4.1.4
+  (CVE-2026-116587; patched in 4.1.6). Its cloud-storage/backup consumer and
+  full Go build pass with the targeted patch. The SI gate incorrectly rejects
+  the newly vendored immutable `LifetimeDcChargeEnergyKwh` Tesla field; its
+  hand-maintained whole-line exception list was stale and could also hide
+  unrelated bad identifiers on the same line. The replacement recognizes exact
+  authoritative proto field tokens while retaining strict application-field,
+  JSON/storage-tag, unknown-name and same-line checks. Four focused regressions
+  reproduce both failure classes before the fix and pass afterward; the actual
+  branch diff has zero legacy application identifiers/deprecated callers.
+  Both changed workflows pass actionlint. These CI repairs await current-head
+  CI validation; no security check has been bypassed.
 - Initial card guard runs exposed real layout findings and were stopped before
   acceptance when the user requested the shared-slot architecture refinement.
   Partial old-build logs are diagnostic only, never passing matrix evidence.
