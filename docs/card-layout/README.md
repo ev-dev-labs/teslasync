@@ -1,6 +1,6 @@
 # Shared card layout evidence
 
-**Current V15 captures and focused regressions pass; the full route rerun is in progress.**
+**Current V15 route matrix, captures and focused regressions pass.**
 The twelve current AFTER images were refreshed from the frozen V15 mock build
 and individually inspected. All twelve capture cases and twenty focused browser
 cases pass with zero proxy escapes. Those checks include four formerly failing
@@ -16,9 +16,17 @@ relay cells, retaining padding and margins. Fourteen affected suites pass 177
 tests; actual app, Node and affected browser TypeScript, full frontend lint and
 the unchanged strict startup limit pass (399.8KB of 400KB).
 V15 protects 145 source/config/fixture hashes, all twelve BEFORE images and
-the original dist. Its complete 2,216-record matrix is not yet accepted.
+the original dist. The combined verifier accepts all 2,216 unique expected
+records: 277 routes at 390/768/1280/1920px in both themes. Missing, unexpected,
+duplicate and finding arrays are empty; all sixteen bounded wrappers pass
+with zero proxy escapes. The interrupted original shard 12 is excluded;
+its complete fresh rerun supplies that shard's acceptance records.
 Windows baseline regeneration remains blocked by unrelated untracked work in
 the designated native mirror; no snapshots or visual tolerances were changed.
+The manual snapshot-update run 41018927032 is not comparison evidence:
+it regenerated expected images and uploaded no updated-snapshot artifacts.
+The temporary CI update mode has been removed; every Windows visual shard
+again compares committed baselines unconditionally.
 
 ## Prior V11 acceptance
 

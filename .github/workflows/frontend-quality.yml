@@ -3,11 +3,6 @@ name: Frontend Quality Gates
 on:
   workflow_dispatch:
     inputs:
-      update_visual_snapshots:
-        description: 'Regenerate committed Windows visual snapshots instead of comparing them'
-        required: false
-        default: false
-        type: boolean
       production_base_url:
         description: 'Optional deployed URL for authenticated smoke (no mocks)'
         required: false
@@ -316,36 +311,10 @@ jobs:
           name: e2e-app
           path: web/e2e/.app-dist
       - name: Compare committed Windows snapshots
-        if: ${{ inputs.update_visual_snapshots != true }}
         env:
           E2E_MOCKS: '1'
           E2E_REUSE_BUILD: '1'
         run: npm run e2e:visual -- --shard=${{ matrix.shard }}/64 --workers=2
-      - name: Update Windows visual snapshots
-        if: ${{ inputs.update_visual_snapshots == true }}
-        env:
-          E2E_MOCKS: '1'
-          E2E_REUSE_BUILD: '1'
-        run: npm run e2e:update-visual -- --shard=${{ matrix.shard }}/64 --workers=2
-      - name: Stage changed Windows visual snapshots
-        if: ${{ always() && inputs.update_visual_snapshots == true }}
-        shell: bash
-        run: |
-          mkdir -p visual-snapshots-update
-          git diff --name-only -- 'web/e2e/.snapshots/**/*.png' | while IFS= read -r file; do
-            if [ -f "$file" ]; then
-              mkdir -p "visual-snapshots-update/$(dirname "$file")"
-              cp "$file" "visual-snapshots-update/$file"
-            fi
-          done
-      - name: Upload updated Windows snapshots
-        if: ${{ always() && inputs.update_visual_snapshots == true }}
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: visual-snapshots-update-${{ matrix.shard }}
-          if-no-files-found: ignore
-          retention-days: 14
-          path: visual-snapshots-update/
       - name: Upload visual diffs
         if: always()
         uses: actions/upload-artifact@v7.0.1

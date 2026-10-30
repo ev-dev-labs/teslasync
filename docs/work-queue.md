@@ -238,12 +238,26 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   configuration; the annotation fixture now reads the actual shared stylesheet
   from disk instead of silently injecting an empty string. All existing
   assertions remain. Final runtime private-map build passes the unchanged
-  strict limits at 399.8KB startup. Fresh full-matrix/browser validation is
-  running against V15.
+  strict limits at 399.8KB startup.   Final combined V15 verification accepts 2,216 unique expected passing records
+  (277 routes, four widths, both themes); missing, unexpected, duplicate and
+  finding arrays are empty. All sixteen bounded wrappers pass with zero proxy
+  escapes, using the completed fresh shard 12 rather than its interrupted
+  predecessor. All twelve AFTER captures pass and were reviewed.
   No Windows baselines are approved.
-  Next: complete the frozen V15 2,216-variant route matrix and final captures,
-  commit and push exact paths, then inspect current-head checks. Preserve
-  the dirty native mirror; no Windows baseline or CI-green claim.
+  Committed/pushed the verified source and captures as `c4a21553e5`.
+  Recovery audit: `344e43e920` has successful CI, Security, Performance and
+  SI workflows, but its strict frontend run 41018731970 was cancelled.
+  Manual run 41018927032 succeeded in snapshot-update mode, not comparison
+  mode, and produced no updated-snapshot artifacts. Its staging paths were
+  inconsistent with the workflow's web working directory; its green status
+  does not establish visual acceptance. That unapproved regeneration mode
+  is removed, restoring unconditional Windows comparisons and preserving
+  the playbook's mirror-only baseline provenance. No CI-generated PNGs were
+  accepted. The recovery also removes the clearly agent-created root junk
+  file `none}` left by a malformed pre-reboot patch.
+  Next: push the restored strict workflow and final matrix documentation,
+  inspect every current-head check, fix actionable failures, and preserve
+  unrelated native-mirror work. No Windows baseline or CI-green claim.
 - Part A implementation: paired state-reader timelines feed signed elapsed-time
   power integration. Both normal completion and restart recovery preserve the
   mean's sign and real zero, never substitute peak power, and write SI watts
