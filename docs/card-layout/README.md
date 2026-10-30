@@ -1,6 +1,7 @@
 # Shared card layout evidence
 
-**Current V15 route matrix, captures and focused regressions pass.**
+**Current V15 route matrix, captures, focused regressions and reviewed native
+Windows comparisons pass; final PR workflows are pending.**
 The twelve current AFTER images were refreshed from the frozen V15 mock build
 and individually inspected. All twelve capture cases and twenty focused browser
 cases pass with zero proxy escapes. Those checks include four formerly failing
@@ -21,20 +22,46 @@ records: 277 routes at 390/768/1280/1920px in both themes. Missing, unexpected,
 duplicate and finding arrays are empty; all sixteen bounded wrappers pass
 with zero proxy escapes. The interrupted original shard 12 is excluded;
 its complete fresh rerun supplies that shard's acceptance records.
-Windows baseline regeneration remains blocked by unrelated untracked work in
-the designated native mirror; no snapshots or visual tolerances were changed.
+Seven Windows baselines are regenerated natively for the reviewed intended
+dashboard and notification layout changes. Visual tolerances are unchanged.
 The manual snapshot-update run 41018927032 is not comparison evidence:
 it regenerated expected images and uploaded no updated-snapshot artifacts.
 The temporary CI update mode has been removed; every Windows visual shard
 again compares committed baselines unconditionally.
-Strict run 41086199287 on `00638d611d` confirms the remaining blocker:
+Prior strict run 41086199287 on `00638d611d` confirmed the baseline mismatch:
 seven Windows snapshot-difference shards (1/5/10/13/14/17/56) and their
 aggregate fail. All other code-head PR checks pass (192 successful, eight
 failed, one skipped). The separate native large-fleet readiness job passed
 its isolated unchanged rerun after trace review and a passing nonvisual
 Linux readiness replay. No snapshot comparison was waived or updated from
-CI artifacts. The designated mirror's four unrelated untracked HTML files
-must remain untouched; the playbook prohibits syncing it while dirty.
+CI artifacts. The original mirror's four unrelated untracked HTML files
+remain untouched; it was not synced while dirty.
+
+## Native Windows baseline provenance
+
+After the user's renewed continuation, a separate clean mirror at
+`D:/repos/teslasync-pr223-visual-20261030` isolates the native visual work
+from the original mirror's unrelated files. It clones pushed `fa4da80703`,
+uses Windows Node 26.8.1, npm 11.19.0 and locked Playwright 1.63.0, restores
+missing dependencies once, and builds the mock application once in 43.86s.
+Every visual command runs on Windows, with `E2E_MOCKS=1`,
+`E2E_REUSE_BUILD=1`, `CI=true`, `TZ=UTC` and a separate 20-minute bound.
+
+Native comparison first reproduces the mobile dashboard's intended 951-pixel
+difference. Only reviewed shards 1/5/10/13/14/17/56 are regenerated, one at
+a time, producing exactly seven changed PNGs. All seven old/new images were
+inspected: dashboard variants remove nested shortcut borders, while notification
+variants retain all evidence rows and the intended Inbox navigation.
+The native-generated light-mobile, light-notification and forced-colors images
+are also byte-identical to the reviewed CI actuals; no CI actual was copied
+into an expected baseline.
+
+Strict native comparison then passes all thirteen cases in those seven shards,
+with zero proxy escapes. Two additional native notification pagination tests
+verify wheel scrolling, interaction and five-point unobscured hit testing in
+both themes. Both exposed-footer images were inspected. TypeScript also passes.
+Only the seven generated PNGs are copied into WSL for commit; the isolated
+mirror is returned to a clean tracked tree afterward.
 
 ## Prior V11 acceptance
 

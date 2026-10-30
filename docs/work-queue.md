@@ -5,9 +5,9 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
 
 ## Bug 3: Drive evidence, presentation and app-wide card layout
 
-- Status: blocked (Windows baseline regeneration requires a clean native
-  mirror); branch `fix/post-202-polish`, draft PR #223. Parts A/B/C are
-  implemented and locally verified; strict visual acceptance is outstanding.
+- Status: in progress (final strict CI); branch `fix/post-202-polish`,
+  draft PR #223. Parts A/B/C and native Windows baseline regeneration are
+  locally verified; current-head workflow acceptance is outstanding.
 - Part A roots confirmed before changes: `SignalLogReader.RegenEnergy` treats
   the fraction of negative-current change events as a fraction of elapsed time.
   Fleet Telemetry is a sparse change feed, so this overweights frequently
@@ -284,12 +284,32 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   Playbook section 4 forbids syncing a dirty mirror, so native baseline
   regeneration is genuinely blocked; neither test tolerances nor checks may
   be weakened to bypass it.
-  Next: once the designated mirror is clean, sync the pushed branch there,
-  regenerate only reviewed failing shards using native Windows tools, compare
-  old/new PNGs, copy only changed baselines to WSL, commit/push and require all
-  strict PR checks green. Do not delete, move or stash unrelated mirror files.
-  The final handoff changes documentation only; do not mistake pending checks
-  on that documentation commit for the completed code-head results above.
+  The user's renewed continuation after the separate-clean-mirror option
+  resolves the environment boundary without touching the original mirror.
+  An isolated shallow clone at `D:/repos/teslasync-pr223-visual-20261030`
+  starts clean at pushed `fa4da80703`. Native Node 26.8.1/npm 11.19.0 and
+  locked Playwright 1.63.0 are used. The initial build reports missing Vite;
+  one native `npm ci --legacy-peer-deps` restores the locked dependencies.
+  The Windows hermetic mock build completes in 43.86s and is reused for every
+  bounded shard. Native comparison reproduces the intended 951-pixel mobile
+  dashboard difference before regeneration.
+  Only reviewed shards 1/5/10/13/14/17/56 are regenerated, sequentially using
+  the existing update command. Exactly seven PNGs change: five dashboard
+  variants and two notification variants. All old/new images were reviewed;
+  they preserve the flattened links, content, status labels and actual data.
+  Three regenerated PNGs are also byte-identical to their reviewed CI actual
+  artifacts, but every accepted PNG came from native regeneration, not an
+  artifact copy. Subsequent strict native comparisons pass all thirteen
+  cases across the seven shards with zero proxy escapes.
+  Native notification wheel/interaction/five-point hit tests pass in both
+  themes (two more cases, zero escapes); their exposed-footer images were
+  inspected. Actual frontend TypeScript passes. Only those seven generated
+  PNGs are copied to WSL; the isolated mirror's generated changes are then
+  restored to its clean source state. The original mirror's four unrelated
+  HTML files remain untouched.
+  Next: commit/push the seven reviewed native baselines and this provenance,
+  require every strict PR workflow to pass, and fix any new failures without
+  relaxing tests, changing visual tolerances or reintroducing update-mode CI.
 - Part A implementation: paired state-reader timelines feed signed elapsed-time
   power integration. Both normal completion and restart recovery preserve the
   mean's sign and real zero, never substitute peak power, and write SI watts
