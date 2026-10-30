@@ -343,7 +343,7 @@ jobs:
         uses: actions/upload-artifact@v7.0.1
         with:
           name: visual-snapshots-update-${{ matrix.shard }}
-          if-no-files-found: error
+          if-no-files-found: ignore
           retention-days: 14
           path: visual-snapshots-update/
       - name: Upload visual diffs
