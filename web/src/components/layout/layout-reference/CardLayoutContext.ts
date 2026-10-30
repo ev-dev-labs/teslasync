@@ -8,10 +8,25 @@ const nativeOwners = new WeakMap<HTMLElement, { role: string | null; styles: [st
 const columns = new WeakMap<HTMLElement, Set<HTMLElement>>();
 const stretchOwners = new WeakMap<HTMLElement, { previous: string | null; owners: Map<symbol, string> }>();
 const physicalSurface = '[data-surface-variant="standalone"],figure[data-chart-variant="panel"]';
+const layoutAttributes = ['data-card-layout', 'data-card-layout-aligned', 'data-card-layout-cell'] as const;
+
+function restoreAttribute(element: HTMLElement, name: string, value: string | null) {
+  if (value == null) element.removeAttribute(name);
+  else element.setAttribute(name, value);
+}
+
+function hasText(element: HTMLElement) {
+  return Array.from(element.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
+}
 
 function registerStretchRoles(entries: [HTMLElement, string][]) {
   const token = Symbol();
   for (const [element, role] of entries) {
+    if (role === 'surface') {
+      let parent = element.parentElement;
+      while (parent && getComputedStyle(parent).display === 'contents') parent = parent.parentElement;
+      if (!parent || !/grid|flex/.test(getComputedStyle(parent).display)) continue;
+    }
     const active = stretchOwners.get(element) ?? { previous: element.getAttribute('data-card-stretch'), owners: new Map<symbol, string>() };
     active.owners.set(token, role);
     stretchOwners.set(element, active);
@@ -20,20 +35,16 @@ function registerStretchRoles(entries: [HTMLElement, string][]) {
   return () => {
     for (const [element] of entries) {
       const active = stretchOwners.get(element);
-      if (!active) continue;
-      active.owners.delete(token);
+      if (!active?.owners.delete(token)) continue;
       const role = [...active.owners.values()].pop() ?? active.previous;
-      if (role == null) element.removeAttribute('data-card-stretch');
-      else element.setAttribute('data-card-stretch', role);
+      restoreAttribute(element, 'data-card-stretch', role);
       if (active.owners.size === 0) stretchOwners.delete(element);
     }
   };
 }
 
 function transparent(element: HTMLElement) {
-  return element.children.length === 1 && !Array.from(element.childNodes).some(
-    node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
-  );
+  return element.children.length === 1 && !hasText(element);
 }
 
 /** An empty source owns remaining space inside its native grid column. */
@@ -50,9 +61,9 @@ export function useCardColumnRegistration(ref: RefObject<HTMLElement | null>, en
       if (parent.matches('[data-surface-variant]') || !transparent(parent)) break;
       relays.push([parent, 'empty']);
     }
-    const column = source?.parentElement;
+    const column = source.parentElement;
     const owner = column?.parentElement;
-    if (!enabled || !source || !column || !owner || column.hasAttribute('data-card-layout-opt-in')) return;
+    if (!column || !owner || column.hasAttribute('data-card-layout-opt-in')) return;
     if (column.hasAttribute('data-card-slot') && !columns.has(column)) return;
     const css = getComputedStyle(column);
     if (!getComputedStyle(owner).display.includes('grid') || css.display.includes('grid')
@@ -106,9 +117,7 @@ export function useCardLayoutRegistration(ref: RefObject<HTMLElement | null>, en
       owner.setAttribute('data-card-layout', 'grid');
     }
     const previous = [surface, ...relays].map(element => ({
-      element, role: element.getAttribute('data-card-layout'),
-      aligned: element.getAttribute('data-card-layout-aligned'),
-      cell: element.getAttribute('data-card-layout-cell'),
+      element, attributes: layoutAttributes.map(name => [name, element.getAttribute(name)] as const),
     }));
     const active = registrations.get(owner) ?? new Set<HTMLElement>();
     active.add(surface);
@@ -127,8 +136,7 @@ export function useCardLayoutRegistration(ref: RefObject<HTMLElement | null>, en
         owner.removeAttribute('data-card-layout-aligned');
         const native = nativeOwners.get(owner);
         if (native) {
-          if (native.role == null) owner.removeAttribute('data-card-layout');
-          else owner.setAttribute('data-card-layout', native.role);
+          restoreAttribute(owner, 'data-card-layout', native.role);
           for (const [property, value] of native.styles) {
             if (value) owner.style.setProperty(property, value);
             else owner.style.removeProperty(property);
@@ -136,13 +144,8 @@ export function useCardLayoutRegistration(ref: RefObject<HTMLElement | null>, en
           nativeOwners.delete(owner);
         }
       }
-      for (const { element, role, aligned, cell } of previous) {
-        if (role == null) element.removeAttribute('data-card-layout');
-        else element.setAttribute('data-card-layout', role);
-        if (aligned == null) element.removeAttribute('data-card-layout-aligned');
-        else element.setAttribute('data-card-layout-aligned', aligned);
-        if (cell == null) element.removeAttribute('data-card-layout-cell');
-        else element.setAttribute('data-card-layout-cell', cell);
+      for (const { element, attributes } of previous) {
+        for (const [name, value] of attributes) restoreAttribute(element, name, value);
       }
     };
   }, [enabled, sharedOwner, ref]);
@@ -160,10 +163,11 @@ export function useCardStretchRegistration(ref: RefObject<HTMLElement | null>, e
       const css = getComputedStyle(parent);
       if (parent === grid || css.display.includes('grid')
         || css.display.includes('flex') && css.flexDirection === 'row') {
-        return registerStretchRoles([[surface, 'surface'], ...relays]);
+        // Apply relays before deciding whether native percentage fill can be replaced.
+        return registerStretchRoles([...relays, [surface, 'surface']]);
       }
       if (!transparent(parent)) {
-        if (Array.from(parent.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim())) return;
+        if (hasText(parent)) return;
         const surfaces = Array.from(parent.querySelectorAll(physicalSurface))
           .filter(candidate => {
             const enclosing = candidate.parentElement?.closest(physicalSurface);

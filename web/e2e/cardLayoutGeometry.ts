@@ -17,6 +17,8 @@ export interface CardGeometry {
   /** Full row allocation when retained notes and one card form a shared column. */
   allocation?: Box | null;
   allocationContent?: Box[];
+  /** Content-box allocation of a transparent native row cell. */
+  fill?: Box | null;
   /** Physical surfaces in the complete stack, including nested grid groups. */
   flowMembers?: { label: string; box: Box }[];
   header: Box | null;
@@ -29,7 +31,7 @@ export interface CardGeometry {
   charts?: ChartGeometry[];
 }
 export interface CardLayoutViolation {
-  kind: 'blank-gap' | 'row-alignment' | 'header-actions' | 'stats-grid' | 'content-offset' | 'empty-centering' | 'chart-fit';
+  kind: 'blank-gap' | 'cell-fill' | 'row-alignment' | 'header-actions' | 'stats-grid' | 'content-offset' | 'empty-centering' | 'chart-fit';
   cards: string[];
   difference: number;
 }
@@ -40,6 +42,10 @@ export function auditCardGeometry(cards: CardGeometry[]): CardLayoutViolation[] 
   const bottom = (box: Box) => box.y + box.height;
   const right = (box: Box) => box.x + box.width;
   for (const card of cards) {
+    if (card.fill) {
+      const difference = Math.max(Math.abs(card.box.y - card.fill.y), Math.abs(bottom(card.box) - bottom(card.fill)));
+      if (difference > 4) violations.push({ kind: 'cell-fill', cards: [card.label], difference: Math.round(difference) });
+    }
     if (card.allocation) {
       const difference = Math.max(card.allocation.x - card.box.x, card.allocation.y - card.box.y,
         right(card.box) - right(card.allocation), bottom(card.box) - bottom(card.allocation));
@@ -210,6 +216,18 @@ export function collectCardGeometry(): CardGeometry[] {
       }
       const grouping = group ?? el;
       if (!groups.includes(grouping)) groups.push(grouping);
+      let fill: Box | null = null;
+      const cell = el.parentElement;
+      if (flow === 'row' && cell?.matches('[data-card-stretch="relay"]') && cell.children.length === 1) {
+        const allocation = box(cell);
+        if (allocation) {
+          const css = getComputedStyle(cell), childCss = getComputedStyle(el);
+          const value = (input: string) => Number.parseFloat(input) || 0;
+          const top = value(css.paddingTop) + value(css.borderTopWidth) + value(childCss.marginTop);
+          const end = value(css.paddingBottom) + value(css.borderBottomWidth) + value(childCss.marginBottom);
+          fill = { ...allocation, y: allocation.y + top, height: Math.max(0, allocation.height - top - end) };
+        }
+      }
       const header = el.querySelector('[data-card-header],header');
       const title = header?.querySelector('h2,h3,h4,[data-card-title]') ?? null;
       const stats = el.querySelector('[data-card-stats],[data-chart-summary]');
@@ -278,7 +296,7 @@ export function collectCardGeometry(): CardGeometry[] {
       }
       return [{
         label: (title?.textContent ?? el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 100),
-        group: groups.indexOf(grouping), flow, box: rect, allocation: rowAllocation, allocationContent,
+        group: groups.indexOf(grouping), flow, box: rect, allocation: rowAllocation, allocationContent, fill,
         flowMembers: flow === 'masonry' && group ? (surfaceCells(group) ?? []).flatMap(member => {
           const measured = box(member);
           return measured ? [{

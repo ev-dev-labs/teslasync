@@ -700,14 +700,14 @@ describe('ConsumablesLifecyclePage — confirm-gated delete', () => {
     const view = renderPage();
     const projection = card('Part-by-part projection');
     expect(projection).toHaveTextContent('120');
-    const fill = projection.querySelector('[style]');
+    const fill = projection.querySelector('[aria-hidden="true"] > [style]');
     expect(fill).toHaveStyle({ width: '100%' });
     expect(fill?.parentElement).toHaveAttribute('aria-hidden', 'true');
     expect(within(projection).getByText('Remaining').parentElement).toHaveTextContent('—');
     expect(within(projection).getByText('Duty-adjusted life').parentElement).toHaveTextContent('—');
     mockReport.mockReturnValue(makeQuery(makeReport(makeLifecycle({ health_pct: Number.NaN }))));
     view.rerenderPage();
-    expect(projection.querySelector('[style]')).not.toBeInTheDocument();
+    expect(projection.querySelector('[aria-hidden="true"] > [style]')).not.toBeInTheDocument();
     expect(within(projection).getByText('Remaining life').parentElement).toHaveTextContent('—');
   });
 });

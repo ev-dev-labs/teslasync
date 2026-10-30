@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Card, CardContent, CardFooter, CardHeader } from '../../ui/Card';
@@ -7,14 +10,20 @@ import { Grid } from '../Grid';
 import { LayoutCard } from './LayoutCard';
 import { SourceContent } from './SourceContent';
 import { FormSection } from '../../forms/FormSection';
-import cardLayoutCss from './card-layout.css?raw';
 import { auditCardGeometry, collectCardGeometry } from '../../../../e2e/cardLayoutGeometry';
+
+const cardLayoutCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'card-layout.css'), 'utf8');
+
+function installCardStyles(utilities = '') {
+  const style = document.createElement('style');
+  style.textContent = `${cardLayoutCss}\n${utilities}`;
+  document.head.append(style);
+  return () => style.remove();
+}
 
 describe('shared intrinsic card-row anatomy', () => {
   it('preserves bounded scroll viewport heights while stretching their transparent row wrappers', () => {
-    const style = document.createElement('style');
-    style.textContent = `.bounded-test-viewport { height: 416px; }\n${cardLayoutCss}`;
-    document.head.append(style);
+    const removeStyles = installCardStyles('.bounded-test-viewport { height: 416px; }');
     try {
       render(<div style={{ display: 'grid' }}>
         <aside data-testid="viewport-owner"><Card className="bounded-test-viewport" data-testid="viewport">Endpoint browser</Card></aside>
@@ -23,7 +32,7 @@ describe('shared intrinsic card-row anatomy', () => {
       expect(screen.getByTestId('viewport-owner')).toHaveAttribute('data-card-stretch', 'relay');
       expect(getComputedStyle(screen.getByTestId('viewport')).height).toBe('416px');
     } finally {
-      style.remove();
+      removeStyles();
     }
   });
 
@@ -74,15 +83,37 @@ describe('shared intrinsic card-row anatomy', () => {
       </section>
       <GlassPanel>Sibling evidence</GlassPanel>
     </div>;
-    const { rerender } = render(view('standalone'));
-    expect(screen.getByTestId('annotated-column')).toHaveAttribute('data-card-stretch', 'column');
-    expect(screen.getByTestId('annotated-relay')).toHaveAttribute('data-card-stretch', 'relay');
-    expect(screen.getByTestId('annotated-surface')).toHaveAttribute('data-card-stretch', 'surface');
-    expect(screen.getByText('Original setup scope')).toBeVisible();
-    expect(screen.getByText('Original source limitation')).toBeVisible();
-    rerender(view('embedded'));
-    expect(screen.getByTestId('annotated-column')).not.toHaveAttribute('data-card-stretch');
-    expect(screen.getByTestId('annotated-surface')).not.toHaveAttribute('data-card-stretch');
+    const removeStyles = installCardStyles();
+    try {
+      const { rerender } = render(view('standalone'));
+      expect(screen.getByTestId('annotated-column')).toHaveAttribute('data-card-stretch', 'column');
+      expect(screen.getByTestId('annotated-relay')).toHaveAttribute('data-card-stretch', 'relay');
+      expect(screen.getByTestId('annotated-surface')).toHaveAttribute('data-card-stretch', 'surface');
+      expect(screen.getByText('Original setup scope')).toBeVisible();
+      expect(screen.getByText('Original source limitation')).toBeVisible();
+      rerender(view('embedded'));
+      expect(screen.getByTestId('annotated-column')).not.toHaveAttribute('data-card-stretch');
+      expect(screen.getByTestId('annotated-surface')).not.toHaveAttribute('data-card-stretch');
+    } finally {
+      removeStyles();
+    }
+  });
+
+  it('preserves percentage fill through a relay kept block-level by authored utilities', () => {
+    const removeStyles = installCardStyles('.block { display: block; } .h-full { height: 100%; }');
+    try {
+      render(<div style={{ display: 'grid' }}>
+        <a href="/export" className="block h-full" data-testid="linked-cell">
+          <GlassPanel className="h-full" data-testid="linked-surface">Complete linked evidence</GlassPanel>
+        </a>
+        <GlassPanel>Original sibling</GlassPanel>
+      </div>);
+      expect(screen.getByTestId('linked-cell')).toHaveAttribute('data-card-stretch', 'relay');
+      expect(getComputedStyle(screen.getByTestId('linked-cell')).display).toBe('block');
+      expect(getComputedStyle(screen.getByTestId('linked-surface')).height).toBe('100%');
+    } finally {
+      removeStyles();
+    }
   });
 
   it('does not turn a packed multi-card side rail into one stretching card column', () => {

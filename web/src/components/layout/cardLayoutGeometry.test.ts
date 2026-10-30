@@ -21,6 +21,27 @@ const neighbor = (overrides: Partial<CardGeometry> = {}) => card({
 });
 
 describe('shared card layout geometry guard', () => {
+  it('rejects an unfilled transparent row cell even below the large-hole threshold, preserving real padding', () => {
+    document.body.innerHTML = `<div style="display:grid" data-box="0,0,824,220">
+      <a data-card-stretch="relay" data-box="0,0,400,220">
+        <div id="linked" data-surface-variant="standalone" data-box="0,0,400,175">Linked evidence</div>
+      </a>
+      <span>Independent adjacent control</span>
+    </div>`;
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const [x = 0, y = 0, width = 0, height = 0] = (this.dataset.box ?? '').split(',').map(Number);
+      return { x, y, width, height, top: y, left: x, right: x + width, bottom: y + height, toJSON: () => ({}) };
+    });
+    expect(auditCardGeometry(collectCardGeometry()))
+      .toContainEqual({ kind: 'cell-fill', cards: ['Linked evidence'], difference: 45 });
+    document.getElementById('linked')!.dataset.box = '0,0,400,220';
+    expect(auditCardGeometry(collectCardGeometry())).toEqual([]);
+    const relay = document.querySelector<HTMLElement>('[data-card-stretch="relay"]')!;
+    relay.style.padding = '8px 0';
+    relay.dataset.box = '0,0,400,236';
+    document.getElementById('linked')!.dataset.box = '0,8,400,220';
+    expect(auditCardGeometry(collectCardGeometry())).toEqual([]);
+  });
   it('does not report populated nested grid sections as blank space in their surrounding stacked card sequence', () => {
     document.body.innerHTML = `<section data-box="0,0,400,1000">
       <div data-surface-variant="standalone" data-box="0,0,400,200">Summary</div>

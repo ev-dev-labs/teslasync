@@ -153,7 +153,12 @@ describe('BatteryPanelGrid original CardGrid provider integration', () => {
       expect(Array.from(host.querySelectorAll('[data-battery-panel]'))).toEqual(panels);
       expect(panels.map(panel => panel.getAttribute('data-battery-panel')))
         .toEqual(['trend', 'thermal', 'details']);
-      expect(host.querySelectorAll('[style]')).toHaveLength(0);
+      const styledGrids = Array.from(host.querySelectorAll<HTMLElement>('[style]'));
+      expect(styledGrids).toHaveLength(1);
+      for (const grid of styledGrids) {
+        expect(grid).toHaveAttribute('data-card-layout', 'grid');
+        expect(Array.from(grid.style)).toEqual(['--card-layout-gutter']);
+      }
     }
     expect(callbacks).toHaveLength(1);
     unmount();

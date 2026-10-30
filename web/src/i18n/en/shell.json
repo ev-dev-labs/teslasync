@@ -444,9 +444,6 @@
       }
     }
   },
-  "contextMenu": {
-    "menuLabel": "Context menu"
-  },
   "dataSources": {
     "partialMessage": "Available sections remain visible. Source status is tracked independently below.",
     "staleMessage": "Previously loaded data remains visible while affected sources recover.",
@@ -2313,6 +2310,9 @@
     "statusOnline": "Online",
     "statusIdle": "Idle",
     "statusOffline": "Offline"
+  },
+  "contextMenu": {
+    "menuLabel": "Context menu"
   },
   "metricCard": {
     "moreInfoAbout": "More info about {{label}}"

@@ -15,12 +15,13 @@ export interface LayoutCardProps {
   summary?: ReactNode;
   /** Override the host header when a child owns its title and controls. */
   header?: ReactNode;
+  titleId?: string;
   children: ReactNode;
   footer?: ReactNode;
   size?: CardSize;
 }
 
-export function LayoutCard({ title, icon, description, actions, summary, header, children, footer, size = 'full' }: LayoutCardProps) {
+export function LayoutCard({ title, icon, description, actions, summary, header, titleId, children, footer, size = 'full' }: LayoutCardProps) {
   const placement = useCardPlacement();
   const id = useId();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -35,8 +36,8 @@ export function LayoutCard({ title, icon, description, actions, summary, header,
       data-card-header-owner={header === undefined ? 'host' : 'content'}
       data-card-size={placement?.size ?? size}
       data-card-resolved-span={placement?.span ?? 1}
-      aria-labelledby={header === undefined ? `${id}-title` : undefined}
-      aria-label={header === undefined ? undefined : title}
+      aria-labelledby={titleId ?? (header === undefined ? `${id}-title` : undefined)}
+      aria-label={header === undefined || titleId ? undefined : title}
       className={cn(
         'flex h-full min-w-0 flex-col gap-3 p-3 @container',
         placement && placement.width >= 640 && 'p-4',
@@ -48,7 +49,7 @@ export function LayoutCard({ title, icon, description, actions, summary, header,
             crushing the title when the actions row is wide. Floor the title
             so it wraps to its own line instead of collapsing. */}
         <div className="min-w-[min(100%,12rem)] flex-1 space-y-1">
-          <Heading id={`${id}-title`} level="panel" data-card-title className={cn('break-words', icon && 'flex items-center gap-2')}>
+          <Heading id={titleId ?? `${id}-title`} level="panel" data-card-title className={cn('break-words', icon && 'flex items-center gap-2')}>
             {icon ? <><span className="shrink-0">{icon}</span><span className="min-w-0 break-words">{title}</span></> : title}
           </Heading>
           {description && <CardDescription title={title} description={description} boundaryRef={cardRef} />}

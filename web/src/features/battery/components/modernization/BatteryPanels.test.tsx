@@ -69,7 +69,11 @@ describe('live battery canonical packing adapter', () => {
       expect(panels.map(panel => panel.getAttribute('data-card-resolved-span'))).toEqual(expected);
       expect(Array.from(host.querySelectorAll('[data-battery-panel]'))).toEqual(panels);
       expect(panels.map(panel => panel.getAttribute('data-battery-panel'))).toEqual(['model', 'live', 'details']);
-      expect(host.querySelectorAll('[style]')).toHaveLength(0);
+      const styled = Array.from(host.querySelectorAll<HTMLElement>('[style]'));
+      expect(styled).toHaveLength(1);
+      expect(styled[0]).toHaveAttribute('data-card-layout', 'grid');
+      expect(Array.from(styled[0].style)).toEqual(['--card-layout-gutter']);
+      expect(panels.every(panel => !panel.hasAttribute('style'))).toBe(true);
     }
     expect(callbacks).toHaveLength(1);
     expect(screen.getByText('Full details')).toBeVisible();

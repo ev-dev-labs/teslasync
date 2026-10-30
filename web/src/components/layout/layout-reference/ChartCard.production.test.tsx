@@ -17,7 +17,7 @@ vi.mock('../../charts/EmbeddedChart', () => ({
     renderEmbedded(props);
     return (
       <div data-testid="embedded-chart-boundary">
-        {props.visibleTitle && <h3>{props.title}</h3>}
+        {props.visibleTitle && <h3 id={props.titleId}>{props.title}</h3>}
         {props.headerDescription}
         {props.summary}
         {typeof props.children === 'function' ? null : props.children}

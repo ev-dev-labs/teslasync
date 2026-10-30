@@ -183,9 +183,67 @@ Master status file per `docs/agent-playbook.md` section 1. Status values:
   wrappers pass 512 browser cases with zero proxy escapes. Source and
   protected-image hashes remain unchanged; owned preview processes and
   temporary capture specs are stopped/removed.
-  Next: commit exact verified paths, push and validate the new head's PR
-  checks, including the native mirror baseline gate. Current-source CI
-  success is not claimed.
+  Committed and pushed this acceptance as `80bd1caac5`. Its completed CI
+  reports 177 successful, 23 failed and one skipped check.
+  Failures include downstream aggregate gates, seven unit shards, eight
+  Windows visual shards, two responsive shards and the startup budget.
+  CI root causes: the shared visible chart title lost its canonical marker
+  and host title-ID relationship; several consumers still expected controls
+  inside the figure or prohibited the shared dynamic gutter variable.
+  Responsive catalogue captures additionally expose float32 SVG viewport
+  rounding under scrolling (0.00003px), not a layout movement. Native
+  SVG-local measurement now passes exact scroll identity while still rejecting
+  a real 0.0001px displacement, without rounding or tolerance changes.
+  Actual repaired-consumer, ownership and menu tests pass 577 assertions in
+  28 suites. The build-preload helper and existing Vite contracts pass seven
+  more assertions in two suites. V13 passes ten chart/native/pagination browser
+  cases and all six exact responsive CI replays, with zero proxy escapes.
+  Visual inspection caught a limitation of that first pagination check:
+  IntersectionObserver/main bounds do not detect fixed status-bar occlusion.
+  V14 additionally requires actual wheel scrolling and corner/center hit tests
+  for every visible pagination control; both themes pass and the resulting
+  exposed, operable footer images were inspected.
+  Startup was 401.4KB against the unchanged 400KB budget. Annotation-editor
+  and image-export deferrals were tested and rejected/reverted: export code
+  was never in the startup closure. Source-map attribution identifies the
+  closed context-menu renderer as genuine conditional work. Its tested split
+  plus canonical JavaScript preload ordering passes all strict limits at
+  399.8KB: every dependency is retained, CSS order/positions are unchanged.
+  An additional composite-project check caught TS6305 from putting a build-only
+  helper in the app source project. It now belongs under scripts/ and the Node
+  project, not the app. Actual app, Node and affected browser compilers and
+  full lint pass; V13/V14 are not final frozen-source acceptance.
+  Seven reviewed Windows shards retain their content; five dashboard changes
+  are intended flattening. Linux pagination reachability is proven, but native
+  confirmation/baseline updates remain blocked by four unrelated HTML files
+  in the Windows mirror. They are untouched. Settings shard 18 needs its
+  separate intended-difference review. That review found a real regression:
+  the linked Settings shortcut surface shrinks below its full-height cell.
+  Four actual browser regressions reproduce 175px surfaces in 239px/260px
+  cells at 1440/1920 in both themes. The relay is correctly registered but
+  its authored block display wins the CSS cascade; resetting the child's
+  percentage height therefore cannot borrow grid/flex allocation.
+  The shared correction registers relays before deciding whether native
+  percentage fill can be replaced, skips display:contents boxes, and preserves
+  percentage fill when the actual generated parent is not grid/flex. It never
+  overrides authored display or unhides responsive wrappers. All four formerly
+  failing browser cases now fill their cells exactly. The guard additionally
+  rejects unfilled single-card relay cells, including a 45px gap below the
+  existing large-hole threshold, while retaining real padding.
+  V14 matrix wrappers were stopped; partial receipts/captures remain diagnostic,
+  not acceptance. V15 freezes 145 source/config/fixture files, all twelve
+  BEFORE images, the original dist and the current mock index. Fourteen affected
+  suites pass 177 tests, including the stronger geometry oracle and authored
+  block-relay regression. Vitest erases even ?raw CSS imports in this
+  configuration; the annotation fixture now reads the actual shared stylesheet
+  from disk instead of silently injecting an empty string. All existing
+  assertions remain. Final runtime private-map build passes the unchanged
+  strict limits at 399.8KB startup. Fresh full-matrix/browser validation is
+  running against V15.
+  No Windows baselines are approved.
+  Next: complete the frozen V15 2,216-variant route matrix and final captures,
+  commit and push exact paths, then inspect current-head checks. Preserve
+  the dirty native mirror; no Windows baseline or CI-green claim.
 - Part A implementation: paired state-reader timelines feed signed elapsed-time
   power integration. Both normal completion and restart recovery preserve the
   mean's sign and real zero, never substitute peak power, and write SI watts

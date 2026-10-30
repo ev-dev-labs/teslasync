@@ -140,6 +140,7 @@ export interface ChartContainerProps {
   action?: React.ReactNode;
   /** Embedded hosts can share the canonical title/action row without a second surface. */
   visibleTitle?: boolean;
+  titleId?: string;
   /** Existing host description/help control, kept inside the shared header. */
   headerDescription?: React.ReactNode;
   /** Chart-owned statistics between the shared header and plotting viewport. */
@@ -336,6 +337,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       emptyActionTo,
       action,
       visibleTitle = false,
+      titleId: providedTitleId,
       headerDescription,
       summary,
       caption,
@@ -382,7 +384,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
 
     // Stable ids for figure ↔ figcaption wiring.
     const reactId = useId();
-    const titleId = `chart-title-${reactId}`;
+    const titleId = providedTitleId ?? `chart-title-${reactId}`;
     const fallbackId = `chart-fallback-${reactId}`;
 
     // ── Annotation state (only active when annotationsConfig is supplied) ──
@@ -659,7 +661,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               </span>
             )}
             <div className="min-w-0">
-              <Heading level="panel" id={titleId}>
+              <Heading level="panel" id={titleId} data-card-title>
                 {title}
               </Heading>
               {headerDescription ?? (subtitle && (

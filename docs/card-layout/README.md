@@ -1,13 +1,35 @@
 # Shared card layout evidence
 
-**V11 complete route matrix and visual review pass.**
+**Current V15 captures and focused regressions pass; the full route rerun is in progress.**
+The twelve current AFTER images were refreshed from the frozen V15 mock build
+and individually inspected. All twelve capture cases and twenty focused browser
+cases pass with zero proxy escapes. Those checks include four formerly failing
+linked Settings cells, six chart/fullscreen cases, two exact SVG geometry cases,
+two notification pagination cases and six exact responsive CI replays.
+Pagination requires native wheel scrolling and five-point hit tests, not merely
+viewport intersection.
+
+The shared fill fix respects authored block/hidden display instead of forcing
+every relay to grid: only actual grid/flex parents replace native percentage
+fill. The route guard now also checks the content allocation of single-card
+relay cells, retaining padding and margins. Fourteen affected suites pass 177
+tests; actual app, Node and affected browser TypeScript, full frontend lint and
+the unchanged strict startup limit pass (399.8KB of 400KB).
+V15 protects 145 source/config/fixture hashes, all twelve BEFORE images and
+the original dist. Its complete 2,216-record matrix is not yet accepted.
+Windows baseline regeneration remains blocked by unrelated untracked work in
+the designated native mirror; no snapshots or visual tolerances were changed.
+
+## Prior V11 acceptance
+
+**V11 complete route matrix and visual review passed.**
 All 277 routes pass at 390/768/1280/1920px in both themes: 2,216 unique
 passing records, no missing/unexpected/duplicate records or findings.
 All sixteen bounded wrappers pass, 512 browser cases with zero proxy escapes.
 All seventeen previously failing browser cases now pass, with all 71 unique
-target/neighbor records clean and zero proxy escapes. All twelve AFTER
-captures use the frozen v11 build and pass their source-isolation assertions.
-All 24 images were visually inspected with no new shared-layout regression.
+target/neighbor records clean and zero proxy escapes. At that acceptance, all
+twelve AFTER captures used the frozen v11 build and passed their source-isolation
+assertions. All 24 images were visually inspected with no new shared-layout regression.
 The V10 review caught detached legend markers despite passing containment:
 a new browser regression reproduced 155px marker-to-text gaps. Shared
 intrinsic grouping now gives 12px gaps at 390/1280px in both themes.

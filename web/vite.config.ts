@@ -5,8 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import path from 'path'
-// @ts-expect-error — plain .mjs helper shared with scripts/ and the contract
-// test; it has no type declarations and does not need any.
+import { canonicalPreloadDependencies } from './scripts/preloadDependencies'
 import { resolveBuildIdentity } from './scripts/buildIdentity.mjs'
 
 const enablePwaInDev = process.env.VITE_PWA_DEV === 'true'
@@ -380,6 +379,9 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap,
+    modulePreload: {
+      resolveDependencies: (_filename, dependencies) => canonicalPreloadDependencies(dependencies),
+    },
     // Preserve wrappers for conditional requires and cycles, not every CJS
     // module. Vite's bundled CommonJS plugin owns that dependency analysis.
     commonjsOptions: {
