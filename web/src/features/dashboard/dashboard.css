@@ -52,8 +52,63 @@
     animation: widget-power-travel 2.4s linear infinite;
   }
 
+  .widget-road-strip {
+    --widget-road-asphalt: light-dark(
+      color-mix(in srgb, var(--text-secondary) 60%, var(--surface-1)),
+      color-mix(in srgb, var(--text-secondary) 30%, var(--surface-1))
+    );
+    --widget-road-lane: light-dark(#fff, #d2dbe6);
+    mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+  }
+
   .widget-road-motion {
-    animation: widget-road-travel 4.8s linear infinite;
+    color: var(--widget-road-lane);
+    animation: widget-road-travel 6s linear infinite;
+  }
+
+  .widget-road-asphalt-stop {
+    stop-color: var(--widget-road-asphalt);
+  }
+
+  .widget-road-grain {
+    color: var(--widget-road-lane);
+    opacity: .13;
+  }
+
+  .widget-road-grain-motion {
+    animation: widget-road-grain-travel 1.5s linear infinite;
+  }
+
+  .widget-road-far-motion {
+    animation-duration: 9s;
+    opacity: .36;
+  }
+
+  .widget-road-near-motion {
+    opacity: .88;
+  }
+
+  .widget-road-edge {
+    stroke: var(--widget-road-lane);
+    stroke-width: .8;
+    opacity: .25;
+  }
+
+  .widget-road-headlight-stop {
+    stop-color: light-dark(rgb(244 246 239 / .55), #f4f6ef);
+  }
+
+  .widget-road-taillight-stop {
+    stop-color: light-dark(rgb(224 100 88 / .65), #e06458);
+  }
+
+  [data-vehicle-studio] [data-twin-ground-shadow] {
+    display: none;
+  }
+
+  .widget-wheel-motion {
+    animation: widget-wheel-turn 1.8s linear infinite;
   }
 
   .widget-airflow-motion {
@@ -78,7 +133,15 @@
 }
 
 @keyframes widget-road-travel {
-  to { stroke-dashoffset: 152; }
+  to { stroke-dashoffset: 224; }
+}
+
+@keyframes widget-road-grain-travel {
+  to { transform: translateX(48px); }
+}
+
+@keyframes widget-wheel-turn {
+  to { transform: rotate(-360deg); }
 }
 
 @keyframes widget-airflow-travel {
