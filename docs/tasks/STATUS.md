@@ -4,7 +4,7 @@ Values: todo | done | blocked. Agents take the first `todo` row.
 
 | # | Task | Status | Commit | Notes |
 |---|---|---|---|---|
-| 00 | Update the playbook for Windows | todo | | |
+| 00 | Update the playbook for Windows | done | 36cd1116f7 | Updated playbook to Windows paths
 | 01 | Experiments placeholder pages and routes | todo | | |
 | 02 | Experiments nav section complete | todo | | |
 | 03 | Animated nav icon for Experiments | todo | | |
