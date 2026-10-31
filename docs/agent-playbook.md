@@ -1,7 +1,7 @@
 # TeslaSync agent playbook (autonomous, agent-agnostic, resumable)
 
 This file is the operating instructions for ANY AI agent (Claude, Codex,
-Muse, or another) working on branch `fix/post-202-polish` (this branch's draft PR). Agents rotate when usage limits are hit or a session crashes. Every
+Muse, or another) working on branch `next-upgrades` (this branch's draft PR). Agents rotate when usage limits are hit or a session crashes. Every
 agent must be able to stop at any moment, and the next agent must be able
 to resume without redoing work.
 
@@ -222,7 +222,7 @@ a reason to stop. Never wait more than 15 minutes without new output.
   2. Sync the mirror (only if its working tree is clean; if not, record a
      blocker instead of touching it):
      `git.exe -C D:/repos/teslasync fetch` then
-     `git.exe -C D:/repos/teslasync checkout -B fix/post-202-polish origin/fix/post-202-polish`
+     `git.exe -C D:/repos/teslasync checkout -B next-upgrades origin/next-upgrades`
   3. Run via Windows PowerShell, e.g.:
      `powershell.exe -NoProfile -Command "cd D:\repos\teslasync\web; $env:E2E_MOCKS='1'; npm run e2e:build; $env:E2E_REUSE_BUILD='1'; $env:CI='true'; $env:TZ='UTC'; npm run e2e:visual -- --shard=N/10 --workers=2"`
      (add `--update-snapshots` only for intended, reviewed differences).

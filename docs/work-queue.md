@@ -1,11 +1,11 @@
-# Work queue — branch `fix/post-202-polish` (this branch's draft PR)
+# Work queue — branch `next-upgrades` (this branch's draft PR)
 
 Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`.
 
 ## Bug 3: Drive evidence, presentation and app-wide card layout
 
-- Status: in progress (final strict CI); branch `fix/post-202-polish`,
+- Status: in progress (final strict CI); branch `next-upgrades`,
   draft PR #223. Parts A/B/C and native Windows baseline regeneration are
   locally verified; current-head workflow acceptance is outstanding.
 - Part A roots confirmed before changes: `SignalLogReader.RegenEnergy` treats
