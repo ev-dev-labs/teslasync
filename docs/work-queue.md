@@ -3,6 +3,22 @@
 Master status file per `docs/agent-playbook.md` section 1. Status values:
 `not started | in progress | done | blocked (reason)`.
 
+## Experiments development
+
+| Experiment | Status | Notes |
+|---|---|---|
+| 1. 3D vehicle lab | not started | Design UI, choose three.js, load glTF model |
+| 2. Route flyover | not started | Use deck.gl for terrain, integrate drive data |
+| 3. Energy breakdown | not started | Visualize energy sources, use existing API |
+| 4. Year in motion | not started | Animated map timeline, reuse map components |
+| 5. Battery what-if lab | not started | Interactive controls, estimate projections |
+| 6. Drive art | not started | Generate artwork, privacy blur option |
+
+Update this file as each experiment progresses.
+
+Master status file per `docs/agent-playbook.md` section 1. Status values:
+`not started | in progress | done | blocked (reason)`.
+
 ## Bug 3: Drive evidence, presentation and app-wide card layout
 
 - Status: in progress (final strict CI); branch `next-upgrades`,
