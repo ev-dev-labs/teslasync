@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { EmptyState } from '@/components/feedback';
 import { SourceContent, type SourceState } from '@/components/layout';
-import { Badge, Icon, Text, type BadgeProps } from '@/components/ui';
+import { Badge, CardContent, Icon, Text, type BadgeProps } from '@/components/ui';
 import { KVList } from '@/components/data-display';
 import type { DataStateSource } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
@@ -78,7 +78,7 @@ export function EvidencePanel({
         aria-busy={query ? sourceState === 'loading' || dataState.isRefreshing : undefined}
         data-source-status={query ? dataState.status : undefined}
         data-source-provenance={query ? dataState.provenance : undefined}>
-        <section aria-label={t('advancedIntelligence.quality.title', 'Data quality')} className="min-w-0 space-y-3">
+        <CardContent as="section" layoutSlot="column" aria-label={t('advancedIntelligence.quality.title', 'Data quality')}>
           <div className="flex items-center gap-2">
             <Icon icon={ShieldCheck} className={typography.color.secondary} aria-hidden={true} />
             <Text as="h3" variant="label">
@@ -105,9 +105,9 @@ export function EvidencePanel({
             </Text>
           )}
           </SourceContent>
-        </section>
+        </CardContent>
 
-        <section aria-label={t('advancedIntelligence.evidence.sources', 'Evidence sources')} className="min-w-0 space-y-3">
+        <CardContent as="section" layoutSlot="column" aria-label={t('advancedIntelligence.evidence.sources', 'Evidence sources')}>
           <div className="flex items-center gap-2">
             <Icon icon={Database} className={typography.color.secondary} aria-hidden={true} />
             <Text as="h3" variant="label">
@@ -137,9 +137,9 @@ export function EvidencePanel({
             />
           )}
           </SourceContent>
-        </section>
+        </CardContent>
 
-        <section aria-label={t('advancedIntelligence.limitations.title', 'Limitations')} className="min-w-0 space-y-3">
+        <CardContent as="section" layoutSlot="column" aria-label={t('advancedIntelligence.limitations.title', 'Limitations')}>
           <div className="flex items-center gap-2">
             <Icon icon={AlertTriangle} className={neonColorMap.amber.text} aria-hidden={true} />
             <Text as="h3" variant="label">
@@ -165,7 +165,7 @@ export function EvidencePanel({
               ))}
             </div>
           ) : null}
-        </section>
+        </CardContent>
       </div>
     </InsightPanel>
   );

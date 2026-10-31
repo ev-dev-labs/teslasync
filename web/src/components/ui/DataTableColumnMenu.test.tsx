@@ -20,7 +20,8 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 
 vi.mock('react-i18next', () => ({
@@ -75,20 +76,35 @@ describe('DataTableColumnMenu — trigger + popover lifecycle', () => {
   it('renders a labelled trigger and keeps the popover closed until clicked', () => {
     setup()
     const trigger = screen.getByRole('button', { name: 'Reorder or hide columns' })
-    expect(trigger).toHaveAttribute('aria-haspopup', 'menu')
+    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog')
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByTestId('datatable-column-menu')).toBeNull()
   })
 
-  it('toggles the popover open and closed from the trigger', () => {
+  it('opens a settings dialog and closes it from Done', () => {
     setup()
     const trigger = screen.getByRole('button', { name: 'Reorder or hide columns' })
     fireEvent.click(trigger)
     expect(screen.getByTestId('datatable-column-menu')).toBeInTheDocument()
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
-    fireEvent.click(trigger)
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
     expect(screen.queryByTestId('datatable-column-menu')).toBeNull()
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('moves focus into settings, traps Tab, and restores the trigger on Escape', async () => {
+    const user = userEvent.setup()
+    setup()
+    const trigger = screen.getByRole('button', { name: 'Reorder or hide columns' })
+    await user.click(trigger)
+    const dialog = screen.getByRole('dialog', { name: 'Reorder or hide columns' })
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus()
+    await user.tab({ shift: true })
+    expect(screen.getByRole('button', { name: 'Done' })).toHaveFocus()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(trigger).toHaveFocus()
   })
 
   it('uses the visibility-only trigger label when reorder is disabled', () => {
@@ -104,14 +120,14 @@ describe('DataTableColumnMenu — trigger + popover lifecycle', () => {
   it('closes the popover on Escape', () => {
     setup()
     openMenu()
-    fireEvent.keyDown(document, { key: 'Escape' })
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
     expect(screen.queryByTestId('datatable-column-menu')).toBeNull()
   })
 
   it('closes the popover on an outside pointer press', () => {
     setup()
     openMenu()
-    fireEvent.mouseDown(document.body)
+    fireEvent.click(document.querySelector('.fixed[aria-hidden="true"]')!)
     expect(screen.queryByTestId('datatable-column-menu')).toBeNull()
   })
 
@@ -338,11 +354,32 @@ describe('DataTableColumnMenu — reordering', () => {
 })
 
 describe('DataTableColumnMenu — reset + empty hardening', () => {
-  it('invokes onReset when the reset control is clicked', () => {
+  it('confirms before resetting column order and visibility', async () => {
+    const user = userEvent.setup()
     const { onReset } = setup()
     openMenu()
-    fireEvent.click(screen.getByTestId('datatable-column-menu-reset'))
+    const reset = screen.getByRole('button', { name: 'Reset', exact: true })
+    expect(reset).not.toHaveTextContent('Reset')
+    await user.click(reset)
+    expect(onReset).not.toHaveBeenCalled()
+    const confirmation = screen.getByRole('dialog', { name: 'Reset columns?' })
+    expect(confirmation).toHaveTextContent('Row data will not change.')
+    await user.click(within(confirmation).getByRole('button', { name: 'Reset', exact: true }))
     expect(onReset).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancels reset without changing the layout and restores focus', async () => {
+    const user = userEvent.setup()
+    const { onReset, onChange } = setup({ layout: { order: ['status', 'name', 'detail'], hidden: ['detail'] } })
+    openMenu()
+    const reset = screen.getByRole('button', { name: 'Reset', exact: true })
+    await user.click(reset)
+    const confirmation = screen.getByRole('dialog', { name: 'Reset columns?' })
+    await user.click(within(confirmation).getByRole('button', { name: 'Cancel', exact: true }))
+    expect(onReset).not.toHaveBeenCalled()
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getByTestId('datatable-column-menu')).toBeVisible()
+    expect(reset).toHaveFocus()
   })
 
   describe('DataTableColumnMenu — restrained presentation preservation', () => {
@@ -355,7 +392,7 @@ describe('DataTableColumnMenu — reset + empty hardening', () => {
       document.documentElement.dir = 'rtl'
       try {
         const menu = openMenu()
-        expect(menu).toHaveClass('end-0', 'shadow-e2')
+        expect(menu.closest('[role="dialog"]')).toHaveAttribute('aria-modal', 'true')
         const label = screen.getByText(header.trim(), { exact: false })
         expect(label).toHaveClass('min-w-0', 'break-words')
         expect(label).not.toHaveClass('truncate')
@@ -383,12 +420,12 @@ describe('DataTableColumnMenu — reset + empty hardening', () => {
       expect(trigger).toHaveAttribute('type', 'button')
       expect(trigger).toHaveClass('motion-reduce:transition-none', 'duration-fast')
       openMenu()
-      const buttons = screen.getAllByRole('button')
+      const buttons = screen.getAllByRole('button', { name: /Move .* (up|down)|Reset/ })
       buttons.forEach(button => {
         expect(button).toHaveClass('focus-visible:outline-[var(--focus-ring)]')
         expect(button).not.toHaveClass('focus-visible:ring-cyan-500')
       })
-      fireEvent.keyDown(document, { key: 'Escape' })
+      fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
       expect(screen.queryByTestId('datatable-column-menu')).toBeNull()
     })
   })

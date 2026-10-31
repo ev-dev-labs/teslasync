@@ -82,8 +82,11 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(selectAll).toHaveAttribute('aria-checked', 'mixed');
         await expect(table.locator('thead th[data-column-key]')).toHaveCount(1);
         await columnsMenu.getByRole('button', { name: 'Reset', exact: true }).click();
+        const resetConfirmation = page.getByRole('dialog', { name: 'Reset columns?', exact: true });
+        await resetConfirmation.getByRole('button', { name: 'Reset', exact: true }).click();
         await expect(table.getByRole('button', { name: / filter$/ })).toHaveCount(9);
-        await history.getByRole('button', { name: 'Reorder or hide columns' }).click();
+        await page.getByRole('dialog', { name: 'Reorder or hide columns', exact: true })
+          .getByRole('button', { name: 'Done', exact: true }).click();
       } else {
         await expect(table).toHaveCount(0);
         await expect(history.locator('a[href="/charging/201"]').first()).toBeVisible();

@@ -51,6 +51,7 @@ const catalog: SignalMeta[] = [
   { name: 'FastChargerType', category: 'Charging', type: 'string', description: 'Type of fast charger', enumValues: ['Supercharger', 'CCS', 'CHAdeMO', 'Other', 'None'] },
   { name: 'IdealBatteryRange', category: 'Battery', type: 'number', unit: 'mi', description: 'Ideal battery range' },
   { name: 'LifetimeEnergyChargedKwh', category: 'Battery', type: 'number', unit: 'Wh', description: 'Lifetime energy charged (stored as watt-hours)' },
+  { name: 'LifetimeDcChargeEnergyKwh', category: 'Battery', type: 'number', unit: 'Wh', description: 'Vehicle lifetime DC charge energy (stored as watt-hours, not tracked session totals)' },
   { name: 'LifetimeEnergyUsed', category: 'Battery', type: 'number', unit: 'kWh', description: 'Total lifetime energy used' },
   { name: 'ModuleTempMax', category: 'Battery', type: 'number', unit: '°C', description: 'Maximum battery module temperature' },
   { name: 'ModuleTempMin', category: 'Battery', type: 'number', unit: '°C', description: 'Minimum battery module temperature' },
@@ -63,6 +64,7 @@ const catalog: SignalMeta[] = [
   { name: 'PackCurrent', category: 'Battery', type: 'number', unit: 'A', description: 'Battery pack current' },
   { name: 'PackVoltage', category: 'Battery', type: 'number', unit: 'V', description: 'Battery pack voltage' },
   { name: 'PreconditioningEnabled', category: 'Charging', type: 'boolean', description: 'Battery preconditioning enabled' },
+  { name: 'PowerTransferStatus', category: 'Charging', type: 'string', description: 'Power transfer operating state', enumValues: ['Unknown', 'Standby', 'Faulted', 'EmergencyShutdown', 'ExtEvseTestAllowed', 'ExtPrechargeAllowed', 'ChargeEnabling', 'ChargeEnabled', 'GracefulShutdown', 'Blocked'] },
   { name: 'RatedRange', category: 'Battery', type: 'number', unit: 'mi', description: 'EPA rated range' },
   { name: 'ScheduledChargingMode', category: 'Charging', type: 'string', description: 'Scheduled charging mode', enumValues: ['Off', 'StartAt', 'DepartBy'] },
   { name: 'ScheduledChargingPending', category: 'Charging', type: 'boolean', description: 'Scheduled charging pending' },
@@ -196,6 +198,7 @@ const catalog: SignalMeta[] = [
   // ── Safety ────────────────────────────────────────────────────────────
   { name: 'AutomaticBlindSpotCamera', category: 'Safety', type: 'boolean', description: 'Automatic blind spot camera enabled' },
   { name: 'AutomaticEmergencyBrakingOff', category: 'Safety', type: 'boolean', description: 'Automatic emergency braking disabled' },
+  { name: 'AutomaticEmergencyBrakingState', category: 'Safety', type: 'string', description: 'Automatic emergency braking operating state, separate from the user enable setting', enumValues: ['Unknown', 'Unavailable', 'Standby', 'Enabled', 'Standstill'] },
   { name: 'BlindSpotCollisionWarningChime', category: 'Safety', type: 'boolean', description: 'Blind spot collision warning chime enabled' },
   { name: 'CruiseFollowDistance', category: 'Safety', type: 'string', description: 'Cruise follow distance setting (1-7)', enumValues: ['1', '2', '3', '4', '5', '6', '7'] },
   { name: 'DriverSeatBelt', category: 'Safety', type: 'boolean', description: 'Driver seat belt unbuckled warning' },
@@ -223,6 +226,7 @@ const catalog: SignalMeta[] = [
   { name: 'TpmsSoftWarnings', category: 'Tire Pressure', type: 'string', description: 'TPMS soft warnings (per-tire JSON)' },
 
   // ── Vehicle State ─────────────────────────────────────────────────────
+  { name: 'AccessoryRail', category: 'Vehicle Config', type: 'boolean', description: 'Accessory rail active' },
   { name: 'CenterDisplay', category: 'Vehicle Config', type: 'string', description: 'Center display state', enumValues: ['Off', 'Dim', 'Accessory', 'On', 'Driving', 'Charging', 'Lock', 'Sentry', 'Dog', 'Entertainment'] },
   { name: 'CurrentLimitMph', category: 'Driving', type: 'number', unit: 'mph', description: 'Current speed limit' },
   { name: 'DoorState', category: 'Security', type: 'string', description: 'Door open/closed states' },
@@ -258,7 +262,9 @@ const catalog: SignalMeta[] = [
   { name: 'ValetModeEnabled', category: 'Security', type: 'boolean', description: 'Valet mode enabled' },
 
   // ── Vehicle Configuration ─────────────────────────────────────────────
-  { name: 'CarType', category: 'Vehicle Config', type: 'string', description: 'Vehicle model type' },
+  { name: 'CarType', category: 'Vehicle Config', type: 'string', description: 'Vehicle model type', enumValues: ['Unknown', 'ModelS', 'ModelX', 'Model3', 'ModelY', 'SemiTruck', 'Cybertruck', 'SemiTruckV2', 'Cybercab'] },
+  { name: 'RollingResistanceCoefficient', category: 'Driving', type: 'number', description: 'Reported rolling resistance coefficient (dimensionless)' },
+  { name: 'SemiVehicleMassKg', category: 'Driving', type: 'number', unit: 'kg', description: 'Reported Semi vehicle mass in kilograms (Semi only)' },
   { name: 'EfficiencyPackage', category: 'Vehicle Config', type: 'string', description: 'Efficiency package installed' },
   { name: 'EuropeVehicle', category: 'Vehicle Config', type: 'boolean', description: 'European market vehicle' },
   { name: 'ExteriorColor', category: 'Vehicle Config', type: 'string', description: 'Exterior paint color' },

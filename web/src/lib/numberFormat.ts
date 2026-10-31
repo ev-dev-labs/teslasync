@@ -121,6 +121,19 @@ export function fmtNumber(v: unknown, decimals?: number, locale?: string): strin
   }
 }
 
+/** Collapse ranges that are equal at the displayed precision, not just in raw data. */
+export function fmtRange(
+  min: number | null | undefined,
+  max: number | null | undefined,
+  decimals?: number,
+  locale?: string,
+): string {
+  if (min == null || max == null || !Number.isFinite(min) || !Number.isFinite(max)) return '—'
+  const start = fmtNumber(min, decimals, locale)
+  const end = fmtNumber(max, decimals, locale)
+  return start === end ? start : `${start}–${end}`
+}
+
 /** Format with unit suffix: fmtWithUnit(42.567, 'kWh') → "42.57 kWh" (at precision 2) */
 export function fmtWithUnit(v: unknown, unit: string, decimals?: number): string {
   return `${fmtNumber(v, decimals)} ${unit}`

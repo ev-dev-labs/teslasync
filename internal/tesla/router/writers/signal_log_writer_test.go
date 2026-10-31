@@ -83,7 +83,7 @@ func assertSignalLogCallShape(t *testing.T, call recordedCall) {
 // in the LOCKED set (string/bool/int32/int64/float32/float64/time.Time/
 // proto enum), the bump-only edit is trivial.
 func TestSignalLogWriter_RoutingYAMLCoverage(t *testing.T) {
-	const wantSignalLogRoutes = 156
+	const wantSignalLogRoutes = 162
 
 	entries, err := router.LoadMap()
 	if err != nil {

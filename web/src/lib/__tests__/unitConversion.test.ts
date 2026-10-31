@@ -11,6 +11,8 @@ import {
   type PowerUnitPref,
   type DurationUnitPref,
   convertDistanceFromSI,
+  convertElevationFromSI,
+  elevationUnit,
   convertDistanceToSI,
   convertSpeedFromSI,
   convertTempFromSI,
@@ -50,6 +52,17 @@ function withPref(overrides: Partial<UnitPref>): UnitPref {
 // Round-trip tolerance: 1e-9 for exact ratios, 1e-3 for °F.
 const EPS_EXACT = 1e-9
 const EPS_LOOSE = 1e-3
+
+describe('elevation display units', () => {
+  it('uses feet for imperial elevation while metric stays meters, preserving signed and zero readings', () => {
+    expect(elevationUnit('mi')).toBe('ft')
+    expect(elevationUnit('km')).toBe('m')
+    expect(convertElevationFromSI(30.48, 'mi')).toBe(100)
+    expect(convertElevationFromSI(-30.48, 'mi')).toBe(-100)
+    expect(convertElevationFromSI(30.48, 'km')).toBe(30.48)
+    expect(convertElevationFromSI(0, 'mi')).toBe(0)
+  })
+})
 
 // ---------------------------------------------------------------------------
 // SI baseline

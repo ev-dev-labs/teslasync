@@ -251,20 +251,30 @@ export async function assertTwinWheelAndPhotoGeometry(
     expect(Math.abs(wheel.centerY - wheel.expectedY), `${wheel.key} crop vertical calibration`).toBeLessThanOrEqual(1);
   }
   }
-  const wheels = await twin.evaluate(async element => {
+  const { wheels, roads } = await panel.evaluate(async element => {
     const nodes = [...element.querySelectorAll('[data-svg-wheel-rotor], [data-wheel-rotor]')];
+    const roadNodes = [...element.querySelectorAll('.widget-road-motion')];
     const frames: string[][] = [];
+    const roadFrames: string[][] = [];
     for (let frame = 0; frame < 60; frame++) {
       await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
       frames.push(nodes.map(node => getComputedStyle(node).transform));
+      roadFrames.push(roadNodes.map(node => getComputedStyle(node).strokeDashoffset));
     }
-    return frames;
+    return { wheels: frames, roads: roadFrames };
   });
   expect(wheels[0]).toHaveLength(2);
   for (let index = 0; index < 2; index++) {
     const distinct = new Set(wheels.map(frame => frame[index])).size;
-    if (motion === 'reduce') expect(distinct, `Reduced wheel ${index} still rotates`).toBe(1);
-    else if (driving) expect(distinct, `Normal driving wheel ${index} stopped`).toBeGreaterThan(1);
+    expect(distinct, `Professional twin wheel ${index} must remain still`).toBe(1);
   }
-  await writeFile(info.outputPath(`${widgetId}-photo-wheel-geometry.json`), JSON.stringify({ svgFallback, photo, wheels }, null, 2));
+  if (driving && motion === 'no-preference') {
+    expect(roads[0].length, 'Driving uses directional road feedback, not spinning photo overlays').toBeGreaterThan(0);
+  }
+  for (let index = 0; index < roads[0].length; index++) {
+    const distinct = new Set(roads.map(frame => frame[index])).size;
+    if (driving && motion === 'no-preference') expect(distinct, `Driving road ${index} stopped`).toBeGreaterThan(1);
+    else expect(distinct, `Inactive or reduced road ${index} still moves`).toBe(1);
+  }
+  await writeFile(info.outputPath(`${widgetId}-photo-wheel-geometry.json`), JSON.stringify({ svgFallback, photo, wheels, roads }, null, 2));
 }

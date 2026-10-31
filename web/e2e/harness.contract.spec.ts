@@ -153,6 +153,7 @@ test('authenticated smoke records only sanitized aggregate status', () => {
 test('CI shares one hermetic build and gives each browser shard one managed preview', () => {
   interface WorkflowStep {
     run?: string;
+    if?: string;
     uses?: string;
     with?: Record<string, unknown>;
     env?: Record<string, string>;
@@ -168,6 +169,11 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
   const build = workflow.jobs['browser-build'];
   const visualShards = workflow.jobs['visual-tests'].strategy?.matrix?.shard ?? [];
   expect(visualShards).toEqual(Array.from({ length: 64 }, (_, index) => index + 1));
+  const visualSteps = workflow.jobs['visual-tests'].steps;
+  const comparison = visualSteps.find(step => step.run?.startsWith('npm run e2e:visual '));
+  expect(comparison).toBeDefined();
+  expect(comparison?.if).toBeUndefined();
+  expect(visualSteps.some(step => step.run?.includes('e2e:update-visual'))).toBe(false);
   const chromiumRows = workflow.jobs['chromium-tests'].strategy?.matrix?.include ?? [];
   for (const [suite, count] of [['quality', 64], ['a11y', 13], ['performance', 1]] as const) {
     expect(chromiumRows.filter(row => row.suite === suite).map(row => row.shard))

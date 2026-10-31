@@ -30,6 +30,18 @@
 # writer, never here.
 
 routes:
+  - field: AccessoryRail
+    dest: signal_log
+  - field: AutomaticEmergencyBrakingState
+    dest: signal_log
+  - field: PowerTransferStatus
+    dest: signal_log
+  - field: RollingResistanceCoefficient
+    dest: signal_log
+  - field: LifetimeDcChargeEnergyKwh
+    dest: signal_log
+  - field: SemiVehicleMassKg
+    dest: signal_log
   - field: ACChargingEnergyIn
     dest: charging_telemetry
     column: ac_charging_energy_in_wh

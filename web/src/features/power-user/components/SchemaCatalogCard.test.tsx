@@ -71,6 +71,15 @@ import { CURATED_CATALOG, type CuratedColumn, type CuratedTable } from './sqlCat
 // The em dash the source uses for null-safe placeholders (U+2014).
 const EM_DASH = '—';
 
+it('declares shared header/body tracks so wrapped catalog descriptions cannot displace sibling tables', () => {
+  render(<SchemaCatalogCard table={CURATED_CATALOG[0]} />);
+  const table = screen.getByRole('table');
+  const card = table.closest('[data-surface-variant="standalone"]')!;
+  expect(card).toHaveAttribute('data-card-layout-opt-in', 'true');
+  expect(card.querySelector('[data-card-slot="header"]')).toContainElement(screen.getByRole('heading'));
+  expect(card.querySelector('[data-card-slot="body"]')).toContainElement(table);
+});
+
 function makeColumn(overrides: Partial<CuratedColumn> = {}): CuratedColumn {
   return { name: 'id', type: 'bigint', description: 'primary key', ...overrides };
 }

@@ -23,6 +23,7 @@ export function FormSection({ title, description, children, className, 'aria-inv
 
   return (
     <fieldset
+      data-surface-variant="standalone"
       aria-labelledby={headingId}
       aria-describedby={[hasDescription ? descriptionId : undefined, describedBy].filter(Boolean).join(' ') || undefined}
       aria-invalid={invalid}

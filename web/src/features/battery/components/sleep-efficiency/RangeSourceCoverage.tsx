@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
+import { MetricGrid } from '@/components/layout';
 import {
   DataTable,
   GlassPanel,
@@ -30,7 +31,7 @@ export function RangeSourceCoverage({
   state,
 }: SleepEfficiencySectionProps) {
   const { fmtInt } = useNumberFormatting();
-  const { formatDayKey } = useDateFormat();
+  const { formatDayKey, formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   const stateAccounting = analysis.stateAccounting;
   const eventAccounting = analysis.events.accounting;
@@ -185,7 +186,7 @@ export function RangeSourceCoverage({
           state={{ ...state, isResolved: state.isResolved && analysis.source.hasResponse }}
           skeletonHeight={300}
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricGrid>
             <MetricCard
               icon={<CalendarRange className="h-4 w-4" aria-hidden="true" />}
               label={t('sleep.coverage.requested', 'Requested dates')}
@@ -270,7 +271,7 @@ export function RangeSourceCoverage({
             <MetricCard
               icon={<Database className="h-4 w-4" aria-hidden="true" />}
               label={t('sleep.coverage.clock', 'Frozen analysis clock')}
-              value={analysis.source.frozenNowIso ?? '—'}
+              value={analysis.source.frozenNowIso ? formatDateTime(analysis.source.frozenNowIso) : '—'}
               color="neutral"
               subtitle={t(
                 'sleep.coverage.clockPurpose',
@@ -287,7 +288,7 @@ export function RangeSourceCoverage({
                 'Directory caps do not affect summaries',
               )}
             />
-          </div>
+          </MetricGrid>
           <div className="mt-4">
             <DataTable<AccountingRow>
               tableId="battery:sleep-source-accounting"

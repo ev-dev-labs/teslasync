@@ -9,23 +9,23 @@ import { usePressureFormat } from '@/hooks/usePressureFormat';
 import { tirePressureVariant } from '@/features/vehicles/components/vehicle-detail/helpers';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import { COLOR, CHART_NEUTRAL } from '@/lib/colors';
+import VehicleStudio from './vehicle-instruments/VehicleStudio';
 
 type TireVariant = ReturnType<typeof tirePressureVariant>;
 
 /**
- * Fill + value-text colour per tire-pressure severity variant. The variant is
+ * Value-text colour per tire-pressure severity variant. The variant is
  * derived from the backend SI value (Pascals) by the shared
  * `tirePressureVariant` helper, keeping this widget consistent with the
  * vehicle-detail tire panels instead of re-deriving thresholds locally. The
  * `neutral` band renders a muted grey for an unknown/missing reading rather
  * than an alarming critical-red.
  */
-const VARIANT_STYLE: Record<TireVariant, { fill: string; text: string }> = {
-  success: { fill: COLOR.GOOD, text: 'text-emerald-300' },
-  warning: { fill: COLOR.WARN, text: 'text-amber-300' },
-  danger: { fill: COLOR.BAD, text: 'text-rose-300' },
-  neutral: { fill: CHART_NEUTRAL, text: 'text-[var(--text-muted)]' },
+const VARIANT_STYLE: Record<TireVariant, { text: string }> = {
+  success: { text: 'text-emerald-300' },
+  warning: { text: 'text-amber-300' },
+  danger: { text: 'text-rose-300' },
+  neutral: { text: 'text-[var(--text-muted)]' },
 };
 
 interface TireInfo {
@@ -34,48 +34,19 @@ interface TireInfo {
   variant: TireVariant;
 }
 
-/**
- * Top-down car silhouette with four tire indicators.
- * Each tire is a rounded rect colored by pressure status.
- */
-function CarDiagram({ tires }: { tires: [TireInfo, TireInfo, TireInfo, TireInfo] }) {
-  const tirePositions = [
-    { tire: tires[0], x: 78, y: 28 },
-    { tire: tires[1], x: 172, y: 28 },
-    { tire: tires[2], x: 78, y: 116 },
-    { tire: tires[3], x: 172, y: 116 },
-  ];
-
-  return (
-    <svg viewBox="-30 0 320 170" className="mx-auto block w-full max-w-[320px]" aria-hidden="true">
-      {tirePositions.map(({ tire, x, y }) => (
-        <rect
-          key={tire.label}
-          x={x} y={y} width="10" height="26" rx="3"
-          fill={VARIANT_STYLE[tire.variant].fill}
-        />
-      ))}
-      <rect x="86" y="10" width="88" height="150" rx="34"
-        fill="none" className="stroke-[var(--border-default)]" strokeWidth="1.5" />
-      <path d="M96 52 Q130 40 164 52 L160 70 Q130 62 100 70Z" className="fill-[var(--border-subtle)]" />
-      <path d="M100 118 Q130 124 160 118 L163 132 Q130 142 97 132Z" className="fill-[var(--border-subtle)]" />
-      <line x1="88" y1="92" x2="172" y2="92" className="stroke-[var(--border-subtle)]" />
-    </svg>
-  );
-}
-
-export default function TirePressureVisualWidget({ vehicleId }: WidgetProps) {
+export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
+  const vehicle = vehicles?.find(item => item.id === id);
   const { data: tireData, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useLatestTirePressure(id, 10_000);
   const { pressureUnit, formatPressureValue } = usePressureFormat();
 
   const tires: [TireInfo, TireInfo, TireInfo, TireInfo] = [
-    { label: 'FL', value: tireData?.front_left ?? null, variant: tirePressureVariant(tireData?.front_left) },
-    { label: 'FR', value: tireData?.front_right ?? null, variant: tirePressureVariant(tireData?.front_right) },
-    { label: 'RL', value: tireData?.rear_left ?? null, variant: tirePressureVariant(tireData?.rear_left) },
-    { label: 'RR', value: tireData?.rear_right ?? null, variant: tirePressureVariant(tireData?.rear_right) },
+    { label: t('widget.tireFL', 'FL'), value: tireData?.front_left ?? null, variant: tirePressureVariant(tireData?.front_left) },
+    { label: t('widget.tireFR', 'FR'), value: tireData?.front_right ?? null, variant: tirePressureVariant(tireData?.front_right) },
+    { label: t('widget.tireRL', 'RL'), value: tireData?.rear_left ?? null, variant: tirePressureVariant(tireData?.rear_left) },
+    { label: t('widget.tireRR', 'RR'), value: tireData?.rear_right ?? null, variant: tirePressureVariant(tireData?.rear_right) },
   ];
 
   const allNormal = tires.every((tire) => tire.variant === 'success');
@@ -102,7 +73,7 @@ export default function TirePressureVisualWidget({ vehicleId }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.tirePressure', 'Tire pressure')}
-      icon={<CircleDot className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={<CircleDot className="h-3.5 w-3.5 text-[var(--semantic-info)]" />}
       loading={loading}
       dataState={dataState}
       updatedAt={dataUpdatedAt}
@@ -113,18 +84,15 @@ export default function TirePressureVisualWidget({ vehicleId }: WidgetProps) {
     >
       {tireData ? (
         <div className="flex h-full min-w-0 flex-col justify-center gap-2">
-          <div className="grid grid-cols-[minmax(0,1fr)_minmax(112px,min(320px,calc(100%_-_6rem)))_minmax(0,1fr)] items-center gap-1">
-            <div className="flex min-w-0 flex-col gap-10 text-end">
-              <Text as="span" variant="body" className={VARIANT_STYLE[tires[0].variant].text}>{formatPressure(tires[0].value)}</Text>
-              <Text as="span" variant="body" className={VARIANT_STYLE[tires[2].variant].text}>{formatPressure(tires[2].value)}</Text>
-            </div>
-            <div className="flex items-center justify-center">
-              <CarDiagram tires={tires} />
-            </div>
-            <div className="flex min-w-0 flex-col gap-10 text-start">
-              <Text as="span" variant="body" className={VARIANT_STYLE[tires[1].variant].text}>{formatPressure(tires[1].value)}</Text>
-              <Text as="span" variant="body" className={VARIANT_STYLE[tires[3].variant].text}>{formatPressure(tires[3].value)}</Text>
-            </div>
+          {vehicle && <VehicleStudio vehicle={vehicle} size="lg" bounded={size.rows <= 4} />}
+          <div className="grid grid-cols-2 gap-2">
+            {[tires[0], tires[2], tires[1], tires[3]].map(tire => (
+              <div key={tire.label} role="group" aria-label={tire.label} data-pressure-status={tire.variant}
+                className="widget-status-tile flex min-w-0 items-center justify-between gap-2 py-2">
+                <Text as="span" variant="caption">{tire.label}</Text>
+                <Text as="span" variant="body" className={VARIANT_STYLE[tire.variant].text}>{formatPressure(tire.value)}</Text>
+              </div>
+            ))}
           </div>
           <div className="flex items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-2">
             <Badge variant={allNormal ? 'success' : hasDanger ? 'danger' : hasWarning ? 'warning' : 'neutral'}>

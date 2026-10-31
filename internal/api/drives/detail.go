@@ -85,6 +85,7 @@ var driveTelemetryFieldMappings = []signal.FieldMapping{
 	{Signal: "HvacLeftTemperatureRequest", Field: "driver_temp"},
 	{Signal: "HvacRightTemperatureRequest", Field: "passenger_temp"},
 	{Signal: "HvacFanStatus", Field: "fan_status"},
+	{Signal: "HvacPower", Field: "hvac_power"},
 	{Signal: "TpmsPressureFl", Field: "tire_pressure_fl"},
 	{Signal: "TpmsPressureFr", Field: "tire_pressure_fr"},
 	{Signal: "TpmsPressureRl", Field: "tire_pressure_rl"},
@@ -110,9 +111,10 @@ type driveTelemetryRow struct {
 	CreatedAt     time.Time `json:"created_at"`
 	DriverTemp    any       `json:"driver_temp"`
 	EstRange      any       `json:"est_range"`
-	FanStatus     any       `json:"fan_status"`
+	FanStatus     *float64  `json:"fan_status"`
 	IdealRange    any       `json:"ideal_range"`
 	InsideTemp    any       `json:"inside_temp"`
+	IsClimateOn   *bool     `json:"is_climate_on"`
 	Latitude      any       `json:"latitude"`
 	Longitude     any       `json:"longitude"`
 	Odometer      any       `json:"odometer"`
@@ -146,9 +148,9 @@ func timelineRowsToDriveTelemetry(rows []signal.TimelineRow) []driveTelemetryRow
 			CreatedAt:     tr.Timestamp,
 			DriverTemp:    f["driver_temp"],
 			EstRange:      f["est_range"],
-			FanStatus:     f["fan_status"],
 			IdealRange:    f["ideal_range"],
 			InsideTemp:    f["inside_temp"],
+			IsClimateOn:   driveClimateOn(f["hvac_power"], f["fan_status"]),
 			Latitude:      f["latitude"],
 			Longitude:     f["longitude"],
 			Odometer:      f["odometer"],
@@ -164,6 +166,9 @@ func timelineRowsToDriveTelemetry(rows []signal.TimelineRow) []driveTelemetryRow
 			TireRL:        f["tire_pressure_rl"],
 			TireRR:        f["tire_pressure_rr"],
 		}
+		if fan, ok := drivePackReading(f["fan_status"]); ok && fan >= 0 {
+			row.FanStatus = &fan
+		}
 		if v, vOk := drivePackReading(f["pack_voltage"]); vOk {
 			if c, cOk := drivePackReading(f["pack_current"]); cOk {
 				power := v * c
@@ -175,6 +180,47 @@ func timelineRowsToDriveTelemetry(rows []signal.TimelineRow) []driveTelemetryRow
 		out[i] = row
 	}
 	return out
+}
+
+func (h *driveDetailHandler) telemetryTimeline(ctx context.Context, vehicleID int64, from, to time.Time) ([]signal.TimelineRow, error) {
+	rows, err := h.state.Timeline(ctx, vehicleID, driveTelemetryFieldMappings, from, to, signal.TimelineOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("read drive telemetry timeline: %w", err)
+	}
+	if len(rows) > 0 && !rows[0].Timestamp.After(from) {
+		return rows, nil
+	}
+
+	// Timeline emits changes, not the leading held interval needed by charts
+	// and time-weighted power evidence. Preserve the canonical boundary state.
+	state, err := h.state.State(ctx, vehicleID, from)
+	if err != nil {
+		return nil, fmt.Errorf("read drive telemetry boundary: %w", err)
+	}
+	fields := make(map[string]signal.SignalValue)
+	for _, mapping := range driveTelemetryFieldMappings {
+		if value, ok := state[mapping.Signal]; ok && value != nil {
+			fields[mapping.Field] = value
+		}
+	}
+	if len(fields) == 0 {
+		return rows, nil
+	}
+	bounded := make([]signal.TimelineRow, 0, len(rows)+1)
+	bounded = append(bounded, signal.TimelineRow{Timestamp: from, Fields: fields})
+	return append(bounded, rows...), nil
+}
+
+func driveClimateOn(power, fan any) *bool {
+	// The codec converts every known HvacPower enum to a boolean.
+	if on, ok := power.(bool); ok {
+		return &on
+	}
+	if speed, ok := drivePackReading(fan); ok && speed > 0 {
+		on := true
+		return &on
+	}
+	return nil
 }
 
 func drivePackReading(value any) (float64, bool) {
@@ -311,8 +357,7 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// Telemetry: chart mode (empty CollapseBy) so every change-feed emission
 	// becomes a row, preserving the legacy flat-pivot semantics consumed by
 	// frontend chart components.
-	telemetryRows, err := h.state.Timeline(ctx,
-		drive.VehicleID, driveTelemetryFieldMappings, drive.StartTs, endTs, signal.TimelineOptions{})
+	telemetryRows, err := h.telemetryTimeline(ctx, drive.VehicleID, drive.StartTs, endTs)
 	if err != nil {
 		span.RecordError(err)
 		log.Error().Err(err).Int64("driveID", id).
@@ -336,6 +381,11 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// Repair degenerate stored endpoints (end == start, or missing) from the
 	// real GPS track so the Journey Details panel matches the rendered route.
 	repairDriveEndpoints(drive, telemetry, positions)
+	// The stored end label may still be the start label resolved from the
+	// wrong fix; with (possibly just-repaired) far-apart endpoints it must
+	// not be returned as the destination. Clearing it makes the client
+	// show the end coordinates / unavailable state instead.
+	drive.ClearSuspectEndAddress()
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"id":                 drive.ID,
@@ -567,15 +617,21 @@ func (h *driveDetailHandler) Positions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *driveDetailHandler) TelemetryReadings(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.drives.telemetry")
+	defer span.End()
+
 	driveID, err := urlParamInt64(r, "driveID")
 	if err != nil {
+		span.RecordError(err)
 		writeError(w, http.StatusBadRequest, "invalid drive ID")
 		return
 	}
 
-	drive, err := h.drives.GetByID(r.Context(), driveID)
+	drive, err := h.drives.GetByID(ctx, driveID)
 	if err != nil {
-		log.Error().Err(err).Int64("id", driveID).Msg("failed to get drive for telemetry")
+		span.RecordError(err)
+		log.Error().Err(err).Int64("id", driveID).
+			Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to get drive for telemetry")
 		writeError(w, http.StatusInternalServerError, "failed to get drive")
 		return
 	}
@@ -589,10 +645,11 @@ func (h *driveDetailHandler) TelemetryReadings(w http.ResponseWriter, r *http.Re
 		endTs = *drive.EndTs
 	}
 
-	rowsTL, err := h.state.Timeline(r.Context(),
-		drive.VehicleID, driveTelemetryFieldMappings, drive.StartTs, endTs, signal.TimelineOptions{})
+	rowsTL, err := h.telemetryTimeline(ctx, drive.VehicleID, drive.StartTs, endTs)
 	if err != nil {
-		log.Error().Err(err).Int64("driveID", driveID).Msg("failed to get telemetry from signal_log")
+		span.RecordError(err)
+		log.Error().Err(err).Int64("driveID", driveID).
+			Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to get telemetry from signal_log")
 		writeError(w, http.StatusInternalServerError, "failed to get telemetry")
 		return
 	}

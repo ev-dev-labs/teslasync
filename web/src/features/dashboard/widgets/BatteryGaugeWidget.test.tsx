@@ -114,7 +114,13 @@ function makeStateWithLimit(limit: unknown, over: Partial<VehicleState> = {}): V
 const MI_M = 1609.344;
 
 interface VehicleStateResult {
-  data: { state?: VehicleState; live: boolean } | undefined;
+  data: {
+    state?: VehicleState;
+    live: boolean;
+    freshness?: 'fresh' | 'stale' | 'unknown';
+    observedAt?: number | null;
+    verifiedFields?: string[];
+  } | undefined;
   isLoading: boolean;
   isFetching: boolean;
   isStale: boolean;
@@ -399,5 +405,41 @@ describe('BatteryGaugeWidget — compact', () => {
     renderWidget({ cols: 1, rows: 1 });
     expect(screen.getByText('88')).toBeInTheDocument();
     expect(screen.getByText('Charging')).toBeInTheDocument();
+  });
+});
+
+describe('BatteryGaugeWidget — verified activity', () => {
+  it('streams within the measured level without moving the reading or limit marker', () => {
+    useVehicleStateMock.mockReturnValue(makeResult({
+      data: {
+        state: makeStateWithLimit(80, { battery_level: 72, is_charging: true }),
+        live: true,
+        freshness: 'fresh',
+        observedAt: Date.now(),
+        verifiedFields: ['is_charging'],
+      },
+    }));
+    const { container } = renderWidget();
+    expect(container.querySelector('.widget-cell-stream')).toHaveClass('widget-state-motion');
+    expect(container.querySelector('.widget-energy-stream')).toHaveClass('widget-state-motion');
+    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '72');
+    expect(screen.getByTestId('gauge-marker')).toHaveStyle({ left: '80%' });
+    expect(screen.getByText('72')).toBeInTheDocument();
+  });
+
+  it('retains a stale charging reading without claiming activity on a new successful poll', () => {
+    useVehicleStateMock.mockReturnValue(makeResult({
+      data: {
+        state: makeState({ battery_level: 72, is_charging: true }),
+        live: true,
+        freshness: 'fresh',
+        observedAt: Date.now() - 180_000,
+        verifiedFields: ['is_charging'],
+      },
+    }));
+    const { container } = renderWidget();
+    expect(screen.getByText('Charging')).toBeInTheDocument();
+    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '72');
+    expect(container.querySelector('.widget-state-motion')).toBeNull();
   });
 });

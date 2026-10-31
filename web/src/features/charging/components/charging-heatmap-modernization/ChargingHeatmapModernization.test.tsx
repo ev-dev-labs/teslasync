@@ -269,16 +269,18 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     expect(metric(container, 'charge.recordedCost')).toHaveTextContent('€6,000');
     expect(screen.getByRole('img', { name: 'Charging sessions by weekday and hour of day' })).toBe(grid);
     expect(JSON.stringify(data)).toBe(bytes);
-    // Controls belong to the two opted-in breakdown figures, not the calendar.
+    // Controls belong to the two opted-in breakdown cards, not the calendar.
     expect(within(grid).queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
     expect(within(grid).queryByRole('button', { name: /export/i })).not.toBeInTheDocument();
     const breakdownCharts = ['Top Charging Locations', 'Sessions by Day of Week']
       .map(name => screen.getByRole('figure', { name }));
     expect(breakdownCharts).toHaveLength(2);
     for (const chart of breakdownCharts) {
-      expect(within(chart).getByRole('button', { name: /full.?screen/i })).toBeInTheDocument();
-      expect(within(chart).getByRole('button', { name: 'Export chart', exact: true })).toBeInTheDocument();
-      fireEvent.click(within(chart).getByRole('button', { name: 'Export chart', exact: true }));
+      const owner = chart.closest('[data-card]');
+      expect(owner).toBeInstanceOf(HTMLElement);
+      expect(within(owner as HTMLElement).getByRole('button', { name: /full.?screen/i })).toBeInTheDocument();
+      expect(within(owner as HTMLElement).getByRole('button', { name: 'Export chart', exact: true })).toBeInTheDocument();
+      fireEvent.click(within(owner as HTMLElement).getByRole('button', { name: 'Export chart', exact: true }));
       const menu = screen.getByRole('menu', { name: 'Export chart', exact: true });
       expect(within(menu).getByRole('menuitem', { name: 'Download data as CSV' })).toBeInTheDocument();
       fireEvent.keyDown(menu, { key: 'Escape' });

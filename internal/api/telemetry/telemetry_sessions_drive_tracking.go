@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
-	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
+	"github.com/ev-dev-labs/teslasync/internal/driveaddressrepair"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/fsm"
@@ -877,10 +877,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		endLon = active.LastLongitude
 	}
 
-	var powerMax *float64
-	if active.SpeedCount > 0 {
-		powerMax = &active.PowerMax
-	}
+	var meanPowerW *float64
 
 	// Build enhanced fields map (only columns in drivePartialAllowed)
 	enhancedFields := map[string]interface{}{}
@@ -1094,7 +1091,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		}
 
 		// Aggregates from signal_log during the drive window
-		slAvgSpeed, slMaxSpeed, slAvgPower := t.signalLogReader.DriveAggregates(ctx, vehicleID, active.StartTime, endTs)
+		slAvgSpeed, slMaxSpeed, _ := t.signalLogReader.DriveAggregates(ctx, vehicleID, active.StartTime, endTs)
 		// signal_log stores SI (m/s). Writing to *_mph would trigger
 		// translatePartialFieldsToSI
 		// to multiply by mpsPerMph (0.44704) producing a 0.44× understatement
@@ -1111,17 +1108,13 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			// yields zero. PartialUpdateWithTx then writes the correct
 			// SI-direct value. Avoids the historical mph↔mps double convert.
 		}
-		if slAvgPower != 0 {
-			// DriveAggregates returns avg power in kW; convert to SI W.
-			avgPowerW := math.Abs(slAvgPower) * 1000.0
+		power, powerErr := t.signalLogReader.DriveEnergy(ctx, vehicleID, active.StartTime, endTs)
+		if powerErr != nil {
+			log.Warn().Err(powerErr).Int64("drive_id", active.DriveID).Msg("drive completion power reconstruction failed")
+		} else if avgPowerW, ok := power.MeanPowerW(); ok {
 			enhancedFields["avg_power_w"] = avgPowerW
-			powerMax = &avgPowerW
-		}
-
-		// Regen energy. RegenEnergy returns kWh; convert to SI Wh.
-		regenKwh := t.signalLogReader.RegenEnergy(ctx, vehicleID, active.StartTime, endTs)
-		if regenKwh > 0 {
-			enhancedFields["regen_energy_wh"] = regenKwh * 1000.0
+			meanPowerW = &avgPowerW
+			enhancedFields["regen_energy_wh"] = power.RegenWh
 		}
 	} else if t.signalHistoryWriter != nil {
 		// Legacy fallback path: signalHistoryWriter is wired but signalLogReader
@@ -1222,14 +1215,8 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	// Compute durationS in SI seconds for downstream completion call.
 	durationS := int64(duration*60.0 + 0.5)
 	// active.MaxSpeed is captured in m/s because VehicleSpeed is SI.
-	// active.PowerMax is captured in kW (signalPowerKW returns
-	// V*A/1000); convert to SI W for the avg_power_w write below.
+	// Only a reconstructed mean may populate avg_power_w, never peak power.
 	maxSpeedMps := active.MaxSpeed
-	var powerMaxW *float64
-	if powerMax != nil {
-		w := *powerMax * 1000.0
-		powerMaxW = &w
-	}
 
 	if err := t.withTransaction(ctx, func(tx pgx.Tx) error {
 		var endBatteryPct *int16
@@ -1237,7 +1224,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			endBatteryPct = &endBattery
 		}
 		if err := t.driveRepo.CompleteWithTx(ctx, tx, active.DriveID, endTs,
-			distanceMeters, durationS, endBatteryPct, &maxSpeedMps, powerMaxW, outsideAvg); err != nil {
+			distanceMeters, durationS, endBatteryPct, &maxSpeedMps, meanPowerW, outsideAvg); err != nil {
 			return err
 		}
 		// Attach unattributed drive_telemetry rows to this drive in the same
@@ -1399,6 +1386,28 @@ const (
 // Nominatim's usage policy caps callers at 1 request/second.
 const geocodeRateLimit = 1100 * time.Millisecond
 
+// placeLookup is a resolved place name for one coordinate pair. GeofenceID
+// is set only when the name came from a matched geofence, so the caller can
+// attach that geofence to the drive endpoint it writes.
+type placeLookup struct {
+	Name       string
+	GeofenceID *int64
+}
+
+// lookupPlaceName resolves a place name from the given coordinates only
+// via driveaddressrepair.Resolver (geofences, then the coordinate-keyed
+// places cache when mode allows, then the reverse geocoder). It reports
+// false when no name could be resolved — callers must leave any stored
+// label untouched (and never substitute another endpoint's label).
+func (t *TelemetrySessionTracker) lookupPlaceName(ctx context.Context, lat, lon float64, mode addressResolveMode, writeCache bool) (placeLookup, bool) {
+	resolver := driveaddressrepair.NewResolver(t.geofenceRepo, t.placesCache, t.geocoder)
+	lookup, ok := resolver.Lookup(ctx, lat, lon, mode == resolveUseCache, writeCache)
+	if !ok {
+		return placeLookup{}, false
+	}
+	return placeLookup{Name: lookup.Name, GeofenceID: lookup.GeofenceID}, true
+}
+
 // resolveAndUpdateAddress resolves a place name for one drive endpoint and
 // writes it to start_place or end_place. It reports whether a name was stored.
 func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lon float64, isStart bool, mode addressResolveMode) bool {
@@ -1418,71 +1427,20 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 		geofenceField = "start_geofence_id"
 	}
 
-	// 1. Check geofences first (user-defined names like "Home", "Office").
-	// Match-only — a drive endpoint NEVER auto-creates a geofence (that is
-	// exclusive to a confirmed charging session; see
-	// telemetry_sessions_charge_geofence_pricing.go). Attaching
-	// start_geofence_id/end_geofence_id lets a later place rename
+	// Attaching start_geofence_id/end_geofence_id lets a later place rename
 	// retroactively improve this drive's displayed name — see
 	// DriveRepo.resolveCurrentGeofenceNames and the StartGeofenceID doc on
 	// drivemodel.Drive — while start_place/end_place keep storing today's
 	// name as the permanent fallback.
-	if geofences, err := t.geofenceRepo.FindByCoordinates(ctx, lat, lon); err == nil && len(geofences) > 0 {
-		_ = t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{
-			field:         geofences[0].Name,
-			geofenceField: geofences[0].ID,
-		})
-		metrics.GeocodingTotal.WithLabelValues("geofence").Inc()
-		return true
-	}
-
-	// 2. Check places cache (previously resolved locations within 50m)
-	if mode == resolveUseCache {
-		if cached, err := t.placesCache.FindNearby(ctx, lat, lon, 50); err == nil && cached != nil {
-			_ = t.placesCache.IncrementHitCount(ctx, cached.ID)
-			_ = t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: cached.DisplayName})
-			metrics.GeocodingTotal.WithLabelValues("cached").Inc()
-			return true
-		}
-	}
-
-	// 3. Reverse geocode via Nominatim (or Google when configured)
-	geocodeStart := time.Now()
-	result, err := t.geocoder.ReverseGeocode(ctx, lat, lon)
-	metrics.ObserveDurationWithExemplar(ctx, metrics.GeocodingDuration, time.Since(geocodeStart).Seconds())
-	if err != nil {
-		metrics.GeocodingTotal.WithLabelValues("failure").Inc()
-		log.Warn().Err(err).Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode failed")
+	lookup, ok := t.lookupPlaceName(ctx, lat, lon, mode, true)
+	if !ok {
 		return false
 	}
-	if result == nil {
-		metrics.GeocodingTotal.WithLabelValues("failure").Inc()
-		log.Warn().Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode returned no result")
-		return false
+	fields := map[string]interface{}{field: lookup.Name}
+	if lookup.GeofenceID != nil {
+		fields[geofenceField] = *lookup.GeofenceID
 	}
-	metrics.GeocodingTotal.WithLabelValues("success").Inc()
-
-	name := result.ShortName()
-	if name == "" {
-		log.Warn().Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode produced an empty place name")
-		return false
-	}
-
-	// Save to cache for future lookups. Upsert overwrites any entry within 50m,
-	// so a repair also refreshes the stale label other drives would have read.
-	_ = t.placesCache.Upsert(ctx, &dbadmin.PlaceCacheEntry{
-		Latitude:     lat,
-		Longitude:    lon,
-		DisplayName:  name,
-		Source:       "geocoding",
-		BusinessName: ptrStrOrNil(result.Name),
-		City:         ptrStrOrNil(result.City),
-		State:        ptrStrOrNil(result.State),
-		Country:      ptrStrOrNil(result.Country),
-		Postcode:     ptrStrOrNil(result.PostCode),
-	})
-
-	if err := t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: name}); err != nil {
+	if err := t.driveRepo.PartialUpdate(ctx, driveID, fields); err != nil {
 		log.Error().Err(err).Int64("drive_id", driveID).Str("field", field).Msg("telemetry: failed to update address")
 		return false
 	}
@@ -1495,6 +1453,9 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 	t.backfillMissingAddresses(ctx)
 	t.RepairStalePlaceLabels(ctx)
+	if _, err := t.RepairDuplicateEndAddresses(ctx, false); err != nil {
+		log.Error().Err(err).Msg("backfill: duplicate end-address repair failed")
+	}
 }
 
 // backfillMissingAddresses fills in place names for drives that have never been
@@ -1521,10 +1482,14 @@ func (t *TelemetrySessionTracker) backfillMissingAddresses(ctx context.Context) 
 		// A drive missing labels may also carry endpoints that were never
 		// recorded or that collapsed onto one fix. Correct them from the track
 		// before geocoding so the two ends resolve to different places.
-		t.repairDriveEndpointCoords(ctx, d)
+		startRepaired, endRepaired := t.repairDriveEndpointCoords(ctx, d)
 
-		needStart := (d.StartAddress == nil || *d.StartAddress == "") && d.StartLat != nil && d.StartLon != nil
-		needEnd := (d.EndAddress == nil || *d.EndAddress == "") && d.EndLat != nil && d.EndLon != nil
+		// An endpoint whose coordinates were just repaired keeps its old
+		// label only by accident — it describes the previous fix — so it
+		// must be re-resolved from the corrected coordinates even when a
+		// (stale) label is already stored.
+		needStart := ((d.StartAddress == nil || *d.StartAddress == "") || startRepaired) && d.StartLat != nil && d.StartLon != nil
+		needEnd := ((d.EndAddress == nil || *d.EndAddress == "") || endRepaired) && d.EndLat != nil && d.EndLon != nil
 
 		if needStart {
 			t.resolveAndUpdateAddress(d.ID, *d.StartLat, *d.StartLon, true, resolveUseCache)
@@ -1708,15 +1673,20 @@ func (t *TelemetrySessionTracker) RepairStalePlaceLabels(ctx context.Context) {
 				break
 			}
 
-			resolved := false
 			// Correct the stored coordinates first. Geocoding reads
 			// d.StartLat / d.EndLat, so repairing labels before endpoints
 			// would just rewrite the same wrong label into both fields.
 			t.repairDriveEndpointCoords(ctx, d)
 
+			// Every endpoint that has coordinates must resolve before the
+			// drive is marked current. Marking on partial success (start
+			// resolved, end failed) would strand the failed end label —
+			// possibly still the start address — at the current version
+			// with no finder ever selecting the drive again.
+			allResolved := true
 			if d.StartLat != nil && d.StartLon != nil {
-				if t.resolveAndUpdateAddress(d.ID, *d.StartLat, *d.StartLon, true, resolveBypassCache) {
-					resolved = true
+				if !t.resolveAndUpdateAddress(d.ID, *d.StartLat, *d.StartLon, true, resolveBypassCache) {
+					allResolved = false
 				}
 				time.Sleep(geocodeRateLimit)
 			}
@@ -1724,15 +1694,16 @@ func (t *TelemetrySessionTracker) RepairStalePlaceLabels(ctx context.Context) {
 				break
 			}
 			if d.EndLat != nil && d.EndLon != nil {
-				if t.resolveAndUpdateAddress(d.ID, *d.EndLat, *d.EndLon, false, resolveBypassCache) {
-					resolved = true
+				if !t.resolveAndUpdateAddress(d.ID, *d.EndLat, *d.EndLon, false, resolveBypassCache) {
+					allResolved = false
 				}
 				time.Sleep(geocodeRateLimit)
 			}
 
-			// Leave the version untouched when nothing resolved so a provider
-			// outage cannot permanently strand a drive on the old label.
-			if !resolved {
+			// Leave the version untouched when any endpoint failed so a
+			// provider outage cannot permanently strand a drive on the
+			// old (or the start) label.
+			if !allResolved {
 				batchFailed++
 				continue
 			}

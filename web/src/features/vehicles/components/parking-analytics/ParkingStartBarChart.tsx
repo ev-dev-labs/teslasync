@@ -65,13 +65,14 @@ export function ParkingStartBarChart({
   );
 
   return (
-    <div className="h-36 sm:h-64">
+    <div className="h-full min-h-0">
       <EmbeddedChart
         title={seriesName}
         ariaLabel={effectiveAriaLabel}
         data={chartRows}
         dataColumns={dataColumns}
         fluid
+        viewportClassName="min-h-0 sm:min-h-0"
       >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart

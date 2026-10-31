@@ -8,6 +8,7 @@ import {
   safeNumber,
   isFiniteNumber,
   fmtNumber,
+  fmtRange,
   fmtScientificNumber,
   fmtWithUnit,
   fmtPercent,
@@ -26,6 +27,23 @@ beforeEach(() => {
   setGlobalPrecision(2)
   setGlobalLocale('en-US')
 })
+
+describe('displayed numeric ranges', () => {
+  it('shows one value when endpoints agree at display precision and retains real ranges', () => {
+    expect(fmtRange(42, 42)).toBe('42.00');
+    expect(fmtRange(42.001, 42.004)).toBe('42.00');
+    expect(fmtRange(41.8, 42.2)).toBe('41.80–42.20');
+    expect(fmtRange(-5, -2, 1, 'de-DE')).toBe('-5,0–-2,0');
+    expect(fmtRange(0, 0)).toBe('0.00');
+  });
+
+  it('keeps absent or non-finite endpoints unknown rather than inventing zeroes', () => {
+    expect(fmtRange(null, 42)).toBe('—');
+    expect(fmtRange(42, undefined)).toBe('—');
+    expect(fmtRange(NaN, 42)).toBe('—');
+    expect(fmtRange(42, Infinity)).toBe('—');
+  });
+});
 
 describe('numberFormat — global precision', () => {
   it('round-trips a valid precision through the setter/getter', () => {

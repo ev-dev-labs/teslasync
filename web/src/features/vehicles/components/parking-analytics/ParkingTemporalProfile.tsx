@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ChartContainer } from '@/components/charts';
+import { Grid } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import { Subhead } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -123,30 +124,31 @@ export function ParkingTemporalProfile({
               )}
             />
           ) : (
-            <div className="grid h-full grid-cols-1 gap-5 lg:grid-cols-2">
-              <div className="min-w-0">
-                <Subhead className="mb-2">
+            <Grid cols={{ default: 1, lg: 2 }} gap={5}
+              className="h-full min-h-0 grid-rows-2 lg:grid-rows-1">
+              <div className="flex min-h-0 min-w-0 flex-col">
+                <Subhead className="mb-2 shrink-0">
                   {t('parking.temporal.byHour', 'By local hour')}
                 </Subhead>
-                <ParkingStartBarChart
+                <div className="min-h-0 flex-1"><ParkingStartBarChart
                   rows={hourRows}
                   seriesName={seriesName}
                   colorIndex={0}
                   interval={3}
-                />
+                /></div>
               </div>
-              <div className="min-w-0">
-                <Subhead className="mb-2">
+              <div className="flex min-h-0 min-w-0 flex-col">
+                <Subhead className="mb-2 shrink-0">
                   {t('parking.temporal.byWeekday', 'By local weekday')}
                 </Subhead>
-                <ParkingStartBarChart
+                <div className="min-h-0 flex-1"><ParkingStartBarChart
                   rows={weekdayRows}
                   seriesName={seriesName}
                   colorIndex={2}
                   interval={0}
-                />
+                /></div>
               </div>
-            </div>
+            </Grid>
           )}
         </ParkingSectionBody>
       </ChartContainer>

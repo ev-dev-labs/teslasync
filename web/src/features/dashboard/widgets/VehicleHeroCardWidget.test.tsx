@@ -76,7 +76,7 @@ import type { Vehicle } from '@/types/vehicle';
 
 /** Only the fields the widget reads off the `useVehicleState` result. */
 interface StateQuery {
-  data: { state?: VehicleState } | undefined;
+  data: { state?: VehicleState; verifiedFields?: readonly (keyof VehicleState)[] } | undefined;
   isLoading: boolean;
   error: unknown;
   isFetching: boolean;
@@ -132,8 +132,8 @@ function makeState(overrides: Partial<VehicleState> = {}): VehicleState {
 }
 
 function makeStateQuery(overrides: Partial<StateQuery> = {}): StateQuery {
+  const data = 'data' in overrides ? overrides.data : { state: makeState() };
   return {
-    data: { state: makeState() },
     isLoading: false,
     error: null,
     isFetching: false,
@@ -142,6 +142,7 @@ function makeStateQuery(overrides: Partial<StateQuery> = {}): StateQuery {
     dataUpdatedAt: NOW,
     refetch: vi.fn(),
     ...overrides,
+    data: data ? { ...data, verifiedFields: data.verifiedFields ?? Object.keys(data.state ?? {}) as (keyof VehicleState)[] } : undefined,
   };
 }
 
@@ -221,6 +222,26 @@ afterEach(() => {
 // ── Full view: content + unit conversion ────────────────────────────────────
 
 describe('VehicleHeroCardWidget — full view', () => {
+  it.each([1, 2, 3])('bounds artwork beside all instrumentation for a short two-row card at %i columns', cols => {
+    const { container } = renderWidget({ cols, rows: 2 });
+    expect(container.querySelector('[data-studio-layout="compact"]')).toHaveClass('h-20');
+    expect(container.querySelector('[data-vehicle-card-layout="short"]')).toBeInTheDocument();
+    expect(screen.getByText('Battery')).toBeInTheDocument();
+    expect(screen.getByText('Range')).toBeInTheDocument();
+    expect(screen.getByText('Cabin')).toBeInTheDocument();
+    expect(screen.getByText('Outside')).toBeInTheDocument();
+    expect(container.querySelector('[data-vehicle-card-layout="short"]')?.previousElementSibling?.parentElement).toHaveClass('grid');
+  });
+
+  it.each([2, 5, 6, 12])('keeps natural content height independent of an auto-fit allocation of %i rows', rows => {
+    const { container } = renderWidget({ cols: 2, rows });
+    expect(container.querySelector('[data-studio-layout="compact"]')).toHaveClass('h-20');
+    expect(container.querySelector('[data-vehicle-card-layout="short"]')).toBeInTheDocument();
+    expect(screen.getByText('Outside')).toBeInTheDocument();
+    expect(screen.getByText('Battery')).toBeInTheDocument();
+    expect(screen.getByText('Range')).toBeInTheDocument();
+  });
+
   it('renders the titled header, subtitle, status and metric grid with converted values', () => {
     renderWidget(FULL, {
       vehicles: makeVehiclesQuery({
@@ -246,6 +267,16 @@ describe('VehicleHeroCardWidget — full view', () => {
     expect(screen.getByText('80.00%')).toBeInTheDocument();
     expect(screen.getByText('300.00 km')).toBeInTheDocument();
     expect(screen.getByText('22.00°C')).toBeInTheDocument();
+  });
+
+  it('shows unknown readings instead of unverified default zeros', () => {
+    renderWidget(FULL, { state: makeStateQuery({ data: { state: makeState(), verifiedFields: [] } }) });
+    for (const label of ['Battery', 'Range', 'Cabin']) {
+      expect(screen.getByText(label).parentElement).toHaveTextContent('—');
+    }
+    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00°C')).not.toBeInTheDocument();
+    expect(screen.queryByText('online')).not.toBeInTheDocument();
   });
 
   it('drops the trim from the subtitle when it is absent', () => {
@@ -321,7 +352,7 @@ describe('VehicleHeroCardWidget — battery colour classifier', () => {
       state: makeStateQuery({ data: { state: makeState({ battery_level: level }) } }),
     });
 
-    expect(screen.getByText(`${level}.00%`).closest('[data-print-card]')?.className).toContain(cls);
+    expect(screen.getByText(`${level}.00%`)).toHaveClass(cls);
   });
 });
 

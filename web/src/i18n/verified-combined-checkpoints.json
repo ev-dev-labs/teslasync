@@ -122,7 +122,7 @@
     {
       "file": "web/src/features/admin/components/devtools/FleetApiSection.tsx",
       "calls": 135,
-      "sha256": "0bb5f205e11d7bf1286a88d494fb23f06f8b1564d04c8b172c14959f5eb7354a"
+      "sha256": "a76a692b06e5dcf3fc6b5609b98c4cebbad6367b5d80d0f16fa4488a21dc7fc6"
     },
     {
       "file": "web/src/features/admin/components/devtools/FleetTelemetryHealth.tsx",
@@ -247,17 +247,17 @@
     {
       "file": "web/src/features/battery/pages/BatteryDegradationPage.tsx",
       "calls": 121,
-      "sha256": "9afdd6ec81e82cb8f0c554ac4313949723b7cb50431d8eb50735d02794ccecd9"
+      "sha256": "23a676b90eea8eb4750f0f40f8e2427d6bb13c1e6832a2ec9a7512d35860fc9b"
     },
     {
       "file": "web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx",
       "calls": 8,
-      "sha256": "363da11354426ee4d74ab32e7c9fd3e25c61e76fd6f025a34da5cb600ac8d327"
+      "sha256": "b88e7e169bc386c2dbac199fc4f893fba5d14870e7a5caec76a9df575f25d58b"
     },
     {
       "file": "web/src/features/charging/components/charging-curve/SessionCurveChart.tsx",
       "calls": 10,
-      "sha256": "05ab44d6296e68d149101bfb3a4409dbb1dcdf814adc7b945deccef82d7dbb14"
+      "sha256": "ae0d290bea982f04676035b15c131dd7226cfc60c18f43fef7699e7d25388c4b"
     },
     {
       "file": "web/src/features/charging/components/charging-list/ChargingInsights.tsx",
@@ -402,12 +402,12 @@
     {
       "file": "web/src/features/dashboard/widgets/QuickNavWidget.tsx",
       "calls": 6,
-      "sha256": "798b6e322a672ebfde97376d6db6c940a8066729b9b157c22d152b63537c0d21"
+      "sha256": "ee1b968d9a196633d081008e7601229facdba2479fa338c94767cbe46a765b22"
     },
     {
       "file": "web/src/features/dashboard/widgets/shared/WidgetEventFeed.tsx",
       "calls": 3,
-      "sha256": "824274a420cffe4589b3acd86ba67501d3ad91638467dd0f86c8344f31ad4ff7"
+      "sha256": "a82a90031293b523999f748b788ad12b95d64f1571e92c7916eb8d5d40830757"
     },
     {
       "file": "web/src/features/dashboard/widgets/UptimeMonitorWidget.tsx",
@@ -442,7 +442,7 @@
     {
       "file": "web/src/features/driving/components/drive-detail/SupervisedDrivingPanel.tsx",
       "calls": 28,
-      "sha256": "f98d498193723077b6031424d81eb1661c568399f072d8a1c2c7bcc2ef37ec48"
+      "sha256": "37b6f20a90f65812848be789abb50ae54313fbc40006bad5c908854cfd6d708c"
     },
     {
       "file": "web/src/features/driving/components/drive-detail/RouteMapSection.tsx",

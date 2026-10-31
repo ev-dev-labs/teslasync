@@ -296,6 +296,14 @@ beforeEach(() => {
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('WallConnectorWidget', () => {
+  it('does not imply current charging activity from historical energy', () => {
+    const { container } = renderWidget();
+    expect(screen.getByText('Today')).toBeInTheDocument();
+    expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
+    expect(container.querySelector('.widget-state-motion')).toBeNull();
+    expect(container.querySelector('.widget-activity-active')).toBeNull();
+  });
+
   it('standard layout renders the titled shell, 3 stats and the energy bar chart', () => {
     renderWidget();
 

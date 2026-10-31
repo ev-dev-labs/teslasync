@@ -4,6 +4,57 @@ package protomodel
 
 import "fmt"
 
+// AutomaticEmergencyBrakingStateValue is a proto3 enum from telemetry.vehicle_data.
+type AutomaticEmergencyBrakingStateValue int32
+
+const (
+	AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateUnknown     AutomaticEmergencyBrakingStateValue = 0
+	AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateUnavailable AutomaticEmergencyBrakingStateValue = 1
+	AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateStandby     AutomaticEmergencyBrakingStateValue = 2
+	AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateEnabled     AutomaticEmergencyBrakingStateValue = 3
+	AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateStandstill  AutomaticEmergencyBrakingStateValue = 4
+)
+
+// String returns the symbolic name of the enum value, falling back to the
+// numeric form when the value is unknown.
+func (e AutomaticEmergencyBrakingStateValue) String() string {
+	switch e {
+	case AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateUnknown:
+		return "AutomaticEmergencyBrakingStateUnknown"
+	case AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateUnavailable:
+		return "AutomaticEmergencyBrakingStateUnavailable"
+	case AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateStandby:
+		return "AutomaticEmergencyBrakingStateStandby"
+	case AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateEnabled:
+		return "AutomaticEmergencyBrakingStateEnabled"
+	case AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateStandstill:
+		return "AutomaticEmergencyBrakingStateStandstill"
+	}
+	return fmt.Sprintf("AutomaticEmergencyBrakingStateValue(%d)", int32(e))
+}
+
+// ParseAutomaticEmergencyBrakingStateValue parses a symbolic enum value name and returns the
+// corresponding AutomaticEmergencyBrakingStateValue constant. Both the full proto-cased token
+// (e.g. "AutomaticEmergencyBrakingStateValue<Suffix>") and the bare suffix (e.g. "<Suffix>") are
+// accepted so callers can pass either the wire-format name or a
+// human-friendly short form. Returns an error if the name is not a
+// known AutomaticEmergencyBrakingStateValue value.
+func ParseAutomaticEmergencyBrakingStateValue(s string) (AutomaticEmergencyBrakingStateValue, error) {
+	switch s {
+	case "AutomaticEmergencyBrakingStateUnknown", "Unknown":
+		return AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateUnknown, nil
+	case "AutomaticEmergencyBrakingStateUnavailable", "Unavailable":
+		return AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateUnavailable, nil
+	case "AutomaticEmergencyBrakingStateStandby", "Standby":
+		return AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateStandby, nil
+	case "AutomaticEmergencyBrakingStateEnabled", "Enabled":
+		return AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateEnabled, nil
+	case "AutomaticEmergencyBrakingStateStandstill", "Standstill":
+		return AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateStandstill, nil
+	}
+	return AutomaticEmergencyBrakingStateValue(0), fmt.Errorf("unknown AutomaticEmergencyBrakingStateValue %q", s)
+}
+
 // BMSStateValue is a proto3 enum from telemetry.vehicle_data.
 type BMSStateValue int32
 
@@ -278,13 +329,15 @@ func ParseCableType(s string) (CableType, error) {
 type CarTypeValue int32
 
 const (
-	CarTypeValue_CarTypeUnknown    CarTypeValue = 0
-	CarTypeValue_CarTypeModelS     CarTypeValue = 1
-	CarTypeValue_CarTypeModelX     CarTypeValue = 2
-	CarTypeValue_CarTypeModel3     CarTypeValue = 3
-	CarTypeValue_CarTypeModelY     CarTypeValue = 4
-	CarTypeValue_CarTypeSemiTruck  CarTypeValue = 5
-	CarTypeValue_CarTypeCybertruck CarTypeValue = 6
+	CarTypeValue_CarTypeUnknown     CarTypeValue = 0
+	CarTypeValue_CarTypeModelS      CarTypeValue = 1
+	CarTypeValue_CarTypeModelX      CarTypeValue = 2
+	CarTypeValue_CarTypeModel3      CarTypeValue = 3
+	CarTypeValue_CarTypeModelY      CarTypeValue = 4
+	CarTypeValue_CarTypeSemiTruck   CarTypeValue = 5
+	CarTypeValue_CarTypeCybertruck  CarTypeValue = 6
+	CarTypeValue_CarTypeSemiTruckV2 CarTypeValue = 7
+	CarTypeValue_CarTypeCybercab    CarTypeValue = 8
 )
 
 // String returns the symbolic name of the enum value, falling back to the
@@ -305,6 +358,10 @@ func (e CarTypeValue) String() string {
 		return "CarTypeSemiTruck"
 	case CarTypeValue_CarTypeCybertruck:
 		return "CarTypeCybertruck"
+	case CarTypeValue_CarTypeSemiTruckV2:
+		return "CarTypeSemiTruckV2"
+	case CarTypeValue_CarTypeCybercab:
+		return "CarTypeCybercab"
 	}
 	return fmt.Sprintf("CarTypeValue(%d)", int32(e))
 }
@@ -331,6 +388,10 @@ func ParseCarTypeValue(s string) (CarTypeValue, error) {
 		return CarTypeValue_CarTypeSemiTruck, nil
 	case "CarTypeCybertruck", "Cybertruck":
 		return CarTypeValue_CarTypeCybertruck, nil
+	case "CarTypeSemiTruckV2", "SemiTruckV2":
+		return CarTypeValue_CarTypeSemiTruckV2, nil
+	case "CarTypeCybercab", "Cybercab":
+		return CarTypeValue_CarTypeCybercab, nil
 	}
 	return CarTypeValue(0), fmt.Errorf("unknown CarTypeValue %q", s)
 }
@@ -1458,6 +1519,82 @@ func ParseMediaStatus(s string) (MediaStatus, error) {
 		return MediaStatus_MediaStatusPaused, nil
 	}
 	return MediaStatus(0), fmt.Errorf("unknown MediaStatus %q", s)
+}
+
+// PowerTransferStatusValue is a proto3 enum from telemetry.vehicle_data.
+type PowerTransferStatusValue int32
+
+const (
+	PowerTransferStatusValue_PowerTransferStatusUnknown             PowerTransferStatusValue = 0
+	PowerTransferStatusValue_PowerTransferStatusStandby             PowerTransferStatusValue = 1
+	PowerTransferStatusValue_PowerTransferStatusFaulted             PowerTransferStatusValue = 2
+	PowerTransferStatusValue_PowerTransferStatusEmergencyShutdown   PowerTransferStatusValue = 3
+	PowerTransferStatusValue_PowerTransferStatusExtEvseTestAllowed  PowerTransferStatusValue = 4
+	PowerTransferStatusValue_PowerTransferStatusExtPrechargeAllowed PowerTransferStatusValue = 5
+	PowerTransferStatusValue_PowerTransferStatusChargeEnabling      PowerTransferStatusValue = 6
+	PowerTransferStatusValue_PowerTransferStatusChargeEnabled       PowerTransferStatusValue = 7
+	PowerTransferStatusValue_PowerTransferStatusGracefulShutdown    PowerTransferStatusValue = 8
+	PowerTransferStatusValue_PowerTransferStatusBlocked             PowerTransferStatusValue = 9
+)
+
+// String returns the symbolic name of the enum value, falling back to the
+// numeric form when the value is unknown.
+func (e PowerTransferStatusValue) String() string {
+	switch e {
+	case PowerTransferStatusValue_PowerTransferStatusUnknown:
+		return "PowerTransferStatusUnknown"
+	case PowerTransferStatusValue_PowerTransferStatusStandby:
+		return "PowerTransferStatusStandby"
+	case PowerTransferStatusValue_PowerTransferStatusFaulted:
+		return "PowerTransferStatusFaulted"
+	case PowerTransferStatusValue_PowerTransferStatusEmergencyShutdown:
+		return "PowerTransferStatusEmergencyShutdown"
+	case PowerTransferStatusValue_PowerTransferStatusExtEvseTestAllowed:
+		return "PowerTransferStatusExtEvseTestAllowed"
+	case PowerTransferStatusValue_PowerTransferStatusExtPrechargeAllowed:
+		return "PowerTransferStatusExtPrechargeAllowed"
+	case PowerTransferStatusValue_PowerTransferStatusChargeEnabling:
+		return "PowerTransferStatusChargeEnabling"
+	case PowerTransferStatusValue_PowerTransferStatusChargeEnabled:
+		return "PowerTransferStatusChargeEnabled"
+	case PowerTransferStatusValue_PowerTransferStatusGracefulShutdown:
+		return "PowerTransferStatusGracefulShutdown"
+	case PowerTransferStatusValue_PowerTransferStatusBlocked:
+		return "PowerTransferStatusBlocked"
+	}
+	return fmt.Sprintf("PowerTransferStatusValue(%d)", int32(e))
+}
+
+// ParsePowerTransferStatusValue parses a symbolic enum value name and returns the
+// corresponding PowerTransferStatusValue constant. Both the full proto-cased token
+// (e.g. "PowerTransferStatusValue<Suffix>") and the bare suffix (e.g. "<Suffix>") are
+// accepted so callers can pass either the wire-format name or a
+// human-friendly short form. Returns an error if the name is not a
+// known PowerTransferStatusValue value.
+func ParsePowerTransferStatusValue(s string) (PowerTransferStatusValue, error) {
+	switch s {
+	case "PowerTransferStatusUnknown", "Unknown":
+		return PowerTransferStatusValue_PowerTransferStatusUnknown, nil
+	case "PowerTransferStatusStandby", "Standby":
+		return PowerTransferStatusValue_PowerTransferStatusStandby, nil
+	case "PowerTransferStatusFaulted", "Faulted":
+		return PowerTransferStatusValue_PowerTransferStatusFaulted, nil
+	case "PowerTransferStatusEmergencyShutdown", "EmergencyShutdown":
+		return PowerTransferStatusValue_PowerTransferStatusEmergencyShutdown, nil
+	case "PowerTransferStatusExtEvseTestAllowed", "ExtEvseTestAllowed":
+		return PowerTransferStatusValue_PowerTransferStatusExtEvseTestAllowed, nil
+	case "PowerTransferStatusExtPrechargeAllowed", "ExtPrechargeAllowed":
+		return PowerTransferStatusValue_PowerTransferStatusExtPrechargeAllowed, nil
+	case "PowerTransferStatusChargeEnabling", "ChargeEnabling":
+		return PowerTransferStatusValue_PowerTransferStatusChargeEnabling, nil
+	case "PowerTransferStatusChargeEnabled", "ChargeEnabled":
+		return PowerTransferStatusValue_PowerTransferStatusChargeEnabled, nil
+	case "PowerTransferStatusGracefulShutdown", "GracefulShutdown":
+		return PowerTransferStatusValue_PowerTransferStatusGracefulShutdown, nil
+	case "PowerTransferStatusBlocked", "Blocked":
+		return PowerTransferStatusValue_PowerTransferStatusBlocked, nil
+	}
+	return PowerTransferStatusValue(0), fmt.Errorf("unknown PowerTransferStatusValue %q", s)
 }
 
 // PowershareState is a proto3 enum from telemetry.vehicle_data.

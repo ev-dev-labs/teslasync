@@ -324,7 +324,7 @@ describe('Tesla Physics consolidated workbench', () => {
   it('formats mounted evidence boundaries and clock rows in the selected locale and timezone without dropping seconds', async () => {
     Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
     await renderAt('/tesla-physics/clocks');
-    const opts = { locale: datePreferences.locale, tz: datePreferences.tz };
+    const opts = { locale: datePreferences.locale, tz: datePreferences.tz, clock: { second: '2-digit' as const } };
     const evidence = report.evidence;
     if (!evidence) throw new Error('Evidence fixture must be present');
     expect(screen.getAllByText(`Requested: ${formatDateTime(evidence.requested_from, opts)} → ${formatDateTime(evidence.requested_to, opts)}`).length).toBeGreaterThan(0);

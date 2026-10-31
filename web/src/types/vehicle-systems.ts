@@ -137,6 +137,7 @@ export interface SafetySnapshot {
   vehicle_id?: number;
   automatic_blind_spot_camera?: boolean | null;
   automatic_emergency_braking_off?: boolean | null;
+  automatic_emergency_braking_state?: string | null;
   blind_spot_collision_warning?: boolean | null;
   // Backend serializes raw signal.SignalValue (interface{}) so these enum
   // fields may arrive as `string`, native `boolean`, or `number`.

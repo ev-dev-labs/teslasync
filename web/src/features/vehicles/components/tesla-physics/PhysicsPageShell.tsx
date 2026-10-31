@@ -62,8 +62,9 @@ export function PhysicsPageShell({ physics, children, navigation }: {
 }) {
   const { slug, t, title, vehicleId, query, state, report } = physics;
   const { formatDateTime: formatSettingsDateTime } = useDateFormat();
+  const clock = slug === 'clocks' ? { second: '2-digit' as const } : undefined;
   const time = (value: string | null | undefined, translate: Translate) =>
-    value ? formatSettingsDateTime(value) : unknown(translate);
+    value ? formatSettingsDateTime(value, { clock }) : unknown(translate);
   const pageTitle = t('teslaOnly.title', 'Tesla physics');
   usePageTitle(pageTitle);
   if (vehicleId == null) return <NoVehicleSelected pageTitle={pageTitle} />;

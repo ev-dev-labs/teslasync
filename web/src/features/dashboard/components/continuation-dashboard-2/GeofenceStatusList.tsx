@@ -22,9 +22,7 @@ export function GeofenceStatusList({ fences, hasCoords, formatRadius }: Geofence
   return (
     <ul className="space-y-1.5">
       {fences.map((fence) => (
-        <li key={fence.id} className={fence.inside && fence.enabled
-          ? 'min-h-[44px] min-w-0 rounded-lg bg-green-500/10 px-2.5 ring-1 ring-green-500/30'
-          : 'min-h-[44px] min-w-0 rounded-lg bg-[var(--surface-2)] px-2.5'}>
+        <li key={fence.id} className="min-h-11 min-w-0 border-b border-[var(--border-subtle)] last:border-b-0">
           <KVList
             layout="responsive"
             wrap

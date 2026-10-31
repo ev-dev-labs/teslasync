@@ -157,12 +157,12 @@ export function readLegacyVisibleLayout(
  *    layout that's now stale), fall back to the default-visible set so
  *    the table never renders zero columns.
  */
-export function applyColumnLayout<C extends { key: string; defaultVisible?: boolean }>(
+export function applyColumnLayout<C extends { key: string; defaultVisible?: boolean; required?: boolean }>(
   columns: readonly C[],
   layout: ColumnLayout | null,
 ): C[] {
   if (!layout) {
-    return columns.filter((c) => c.defaultVisible !== false)
+    return columns.filter((c) => c.required || c.defaultVisible !== false)
   }
   const knownKeys = new Set(columns.map((c) => c.key))
   const hiddenSet = new Set(layout.hidden.filter((k) => knownKeys.has(k)))
@@ -170,6 +170,7 @@ export function applyColumnLayout<C extends { key: string; defaultVisible?: bool
     if (column.defaultVisible === false && !layout.order.includes(column.key)) {
       hiddenSet.add(column.key)
     }
+    if (column.required) hiddenSet.delete(column.key)
   }
   const orderedKeys: string[] = []
   const seen = new Set<string>()
@@ -187,7 +188,7 @@ export function applyColumnLayout<C extends { key: string; defaultVisible?: bool
   }
   const visibleKeys = orderedKeys.filter((k) => !hiddenSet.has(k))
   if (visibleKeys.length === 0) {
-    return columns.filter((c) => c.defaultVisible !== false)
+    return columns.filter((c) => c.required || c.defaultVisible !== false)
   }
   const byKey = new Map(columns.map((c) => [c.key, c] as const))
   return visibleKeys.map((k) => byKey.get(k)).filter((c): c is C => Boolean(c))
@@ -250,11 +251,11 @@ export function toggleHiddenColumn(layout: ColumnLayout, key: string): ColumnLay
  *  the column menu (so toggling a single checkbox writes a complete
  *  picture, not a partial). We seed `hidden` from each column's
  *  `defaultVisible: false` so unchanged defaults survive a round-trip. */
-export function defaultColumnLayout<C extends { key: string; defaultVisible?: boolean }>(
+export function defaultColumnLayout<C extends { key: string; defaultVisible?: boolean; required?: boolean }>(
   columns: readonly C[],
 ): ColumnLayout {
   return {
     order: columns.map((c) => c.key),
-    hidden: columns.filter((c) => c.defaultVisible === false).map((c) => c.key),
+    hidden: columns.filter((c) => c.defaultVisible === false && !c.required).map((c) => c.key),
   }
 }

@@ -81,7 +81,7 @@ export function EnergyFlowChart({ slots, slotMinutes }: EnergyFlowChartProps) {
       ]}
     >
       {({ hiddenSeries }) => (
-        <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+        <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={rows} margin={chartMarginLabeled}>
           {chartGrid}
           <XAxis dataKey="time" tickFormatter={(v: string) => formatTime(v)} {...axisTick} />

@@ -94,6 +94,7 @@ export function WidgetChartSummary({
         <div
           className={cn(
             'shrink-0',
+            dashboardTokens.statRail,
             // Reflow against the widget width, including a narrow desktop column.
             compact
               ? 'grid grid-cols-1 gap-2 @xs:grid-cols-2'
@@ -123,7 +124,7 @@ export function WidgetChartSummary({
               {yAxisLabel}
             </p>
           )}
-          <div className="min-h-0 flex-1">{chart}</div>
+          <div className="widget-chart-well min-h-0 flex-1">{chart}</div>
           {safeLegend.length > 0 && (
             <ul className="mt-1.5 flex min-w-0 shrink-0 flex-wrap gap-x-3 gap-y-1">
               {safeLegend.map((item, index) => (

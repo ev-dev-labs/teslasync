@@ -184,12 +184,13 @@ func IsFixedMileDistanceField(field string) bool {
 // AC/DCChargingEnergyIn in kWh and AC/DCChargingPower in kW:
 // https://developer.tesla.com/docs/fleet-api/fleet-telemetry/available-data
 var fixedKiloToBaseFields = map[string]bool{
-	"ACChargingEnergyIn":         true,
-	"DCChargingEnergyIn":         true,
-	"ACChargingPower":            true,
-	"DCChargingPower":            true,
-	"LifetimeEnergyChargedKwh":   true,
-	"NominalFullPackEnergyKwh":   true,
+	"ACChargingEnergyIn":        true,
+	"DCChargingEnergyIn":        true,
+	"ACChargingPower":           true,
+	"DCChargingPower":           true,
+	"LifetimeEnergyChargedKwh":  true,
+	"LifetimeDcChargeEnergyKwh": true,
+	"NominalFullPackEnergyKwh":  true,
 }
 
 // IsFixedKiloToBaseField reports whether a Tesla field has a fixed kWh/kW

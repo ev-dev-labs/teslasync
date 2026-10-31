@@ -172,6 +172,12 @@ const VEHICLE_STATE_FIELDS = new Set<VerifiedVehicleStateField>([
   'is_locked',
   'sentry_mode',
   'software_version',
+  'accessory_rail',
+  'power_transfer_status',
+  'automatic_emergency_braking_state',
+  'rolling_resistance_coefficient',
+  'lifetime_dc_charge_energy_wh',
+  'semi_vehicle_mass_kg',
 ])
 
 function parseObservedAt(raw: string | null | undefined): number | null {

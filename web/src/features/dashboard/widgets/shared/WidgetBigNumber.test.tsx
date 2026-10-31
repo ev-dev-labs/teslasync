@@ -72,7 +72,7 @@ describe('WidgetBigNumber — value rendering', () => {
     expect(animated).toHaveTextContent('42');
     // Default styling: display size + weight + the default theme text colour.
     expect(animated).toHaveClass('text-2xl');
-    expect(animated).toHaveClass('font-semibold');
+    expect(animated).toHaveClass('font-medium');
     expect(animated).toHaveClass('text-[var(--text-primary)]');
   });
 

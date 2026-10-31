@@ -515,10 +515,11 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     renderPage();
     const statements = card('Provider statements');
     fireEvent.click(within(statements).getByRole('button', { name: 'Reorder or hide columns' }));
-    const columns = screen.getByRole('menu', { name: 'Reorder or hide columns' });
+    const columns = screen.getByRole('dialog', { name: 'Reorder or hide columns' });
     fireEvent.click(within(columns).getByRole('checkbox', { name: 'Show or hide Billed' }));
     expect(within(statements).queryByRole('columnheader', { name: 'Billed' })).not.toBeInTheDocument();
-    fireEvent.click(within(statements).getByRole('button', { name: 'Reorder or hide columns' }));
+    fireEvent.click(within(columns).getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Reorder or hide columns' })).not.toBeInTheDocument());
 
     fireEvent.click(within(statements).getByRole('button', { name: 'Export list' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
@@ -531,7 +532,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     expect(within(statements).getByRole('button', { name: 'Audit' })).toBeEnabled();
     expect(within(statements).getByRole('button', { name: 'Remove' })).toBeEnabled();
     fireEvent.click(within(statements).getByRole('button', { name: 'Reorder or hide columns' }));
-    fireEvent.click(within(screen.getByRole('menu', { name: 'Reorder or hide columns' }))
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Reorder or hide columns' }))
       .getByRole('checkbox', { name: 'Show or hide Billed' }));
   });
 

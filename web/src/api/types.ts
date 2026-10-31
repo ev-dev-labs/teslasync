@@ -640,6 +640,12 @@ export interface VehicleState {
   is_locked: boolean
   sentry_mode: boolean
   software_version: string
+  accessory_rail?: boolean | null
+  power_transfer_status?: string | null
+  automatic_emergency_braking_state?: string | null
+  rolling_resistance_coefficient?: number | null
+  lifetime_dc_charge_energy_wh?: number | null
+  semi_vehicle_mass_kg?: number | null
 }
 
 /** Client readings preserve absent fields without inventing measurements or flags. */
@@ -2336,6 +2342,7 @@ export interface SafetySnapshot {
   vehicle_id: number
   automatic_blind_spot_camera?: boolean
   automatic_emergency_braking_off?: boolean
+  automatic_emergency_braking_state?: string | null
   blind_spot_collision_warning?: boolean
   cruise_follow_distance?: string
   emergency_lane_departure_avoidance?: boolean

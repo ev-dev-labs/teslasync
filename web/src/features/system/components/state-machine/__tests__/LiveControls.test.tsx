@@ -2,6 +2,17 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LiveControls, type LiveControlsProps } from '../LiveControls';
 
+vi.mock('@/hooks/useDateFormat', async () => {
+  const { formatDateTime } = await import('@/lib/dateFormat');
+  return {
+    useDateFormat: () => ({
+      formatDateTime: (value: string | null | undefined) => formatDateTime(value, {
+        locale: 'en-US', tz: 'America/Los_Angeles',
+      }),
+    }),
+  };
+});
+
 // Mirror the sibling state-machine tests: echo the English default copy and
 // interpolate `{{token}}` placeholders so assertions read against real,
 // user-visible strings. `@testing-library/user-event` is not installed in this
@@ -200,19 +211,20 @@ describe('LiveControls — buffered counter', () => {
 
   it('distinguishes a filtered buffer from the loaded page and matching range total', () => {
     setup({ windowCount: 2, filteredBufferCount: 4, loadedCount: 50, totalCount: 233,
-      page: 2, rangeScope: '[2026-03-08T08:00:00Z, 2026-03-09T07:00:00Z)',
+      page: 2, rangeScope: 'Mar 8, 2026',
       bufferSince: '2026-03-08T10:00:00Z', windowEnd: '2026-03-08T12:00:00Z' });
     expect(screen.getByTestId('live-controls-counter')).toHaveTextContent(
       '2 in window · 4 in filtered buffer · 50 loaded · 233 matching',
     );
     expect(screen.getByRole('tooltip')).toHaveTextContent('Loaded server page: 2');
     expect(screen.getByRole('tooltip')).toHaveTextContent(
-      '[2026-03-08T08:00:00Z, 2026-03-09T07:00:00Z)',
+      'Matching total: Mar 8, 2026',
     );
-    expect(screen.getByRole('tooltip')).toHaveTextContent('2026-03-08T10:00:00Z');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Mar 8, 2026, 03:00 AM');
     expect(screen.getByRole('tooltip')).toHaveTextContent(
-      '[2026-03-08T11:50:00.000Z, 2026-03-08T12:00:00Z]',
+      '[Mar 8, 2026, 04:50 AM, Mar 8, 2026, 05:00 AM]',
     );
+    expect(screen.getByRole('tooltip')).not.toHaveTextContent(/\d{4}-\d\d-\d\dT\d\d:\d\d/);
   });
 
   it('does not substitute loaded rows for a missing matching total', () => {

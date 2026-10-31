@@ -87,7 +87,7 @@ export async function assertCatalogueHeroMigration(
   }
   await expect(panel.getByText('Locked', { exact: true })).toBeVisible();
   await expect(panel).toContainText(/Sentry\s*On/);
-  await expect(panel).toContainText('5 verified fields');
+  await expect(panel).toContainText('20 verified fields');
   const geometry = () => panel.evaluate((element, identityName) => {
     const bounds = (node: Element) => {
       const rect = node.getBoundingClientRect();

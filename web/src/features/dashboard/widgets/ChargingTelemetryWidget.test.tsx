@@ -90,6 +90,38 @@ function renderWidget(props: Partial<WidgetProps> = {}) {
   );
 }
 
+it('activates only fresh charging samples and keeps all electrical measurements', () => {
+  mockLive.mockReturnValue(makeQuery({
+    data: makeTelemetry({ ts: new Date().toISOString(), battery_level: 72 }),
+  }));
+  const { container } = renderWidget();
+  expect(container.querySelector('.widget-cell-stream')).toHaveClass('widget-state-motion');
+  expect(screen.getByText('Voltage')).toBeInTheDocument();
+  expect(screen.getByText('Current')).toBeInTheDocument();
+  expect(screen.getByText('Power')).toBeInTheDocument();
+  expect(screen.getByText('Phases')).toBeInTheDocument();
+  expect(screen.getByText('Charger')).toBeInTheDocument();
+  expect(screen.getByText('Pilot')).toBeInTheDocument();
+});
+
+it('keeps stale samples readable without turning a recent poll into charging activity', () => {
+  mockLive.mockReturnValue(makeQuery({
+    data: makeTelemetry({ ts: new Date(Date.now() - 180_000).toISOString() }),
+  }));
+  const { container } = renderWidget();
+  expect(screen.getByText('Power')).toBeInTheDocument();
+  expect(container.querySelector('.widget-state-motion')).toBeNull();
+});
+
+it('does not animate completed charging telemetry', () => {
+  mockLive.mockReturnValue(makeQuery({
+    data: makeTelemetry({ ts: new Date().toISOString(), charging_state: 'Complete' }),
+  }));
+  const { container } = renderWidget();
+  expect(screen.getByText('Not currently charging')).toBeInTheDocument();
+  expect(container.querySelector('.widget-state-motion')).toBeNull();
+});
+
 beforeEach(() => {
   applyPreferences();
   mockUseVehicles.mockReset();

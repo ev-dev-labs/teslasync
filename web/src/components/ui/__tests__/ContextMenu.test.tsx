@@ -57,10 +57,11 @@ function Trigger({ items }: { items: ContextMenuItem[] }) {
   );
 }
 
-function openMenuByRightClick(testId: string, x = 100, y = 100): void {
+async function openMenuByRightClick(testId: string, x = 100, y = 100): Promise<void> {
   act(() => {
     fireEvent.contextMenu(screen.getByTestId(testId), { clientX: x, clientY: y });
   });
+  await screen.findByTestId('context-menu');
 }
 
 function renderWithRoot(ui: React.ReactNode) {
@@ -90,12 +91,12 @@ afterEach(() => {
 /* ------------------------------------------------------------------ */
 
 describe('ContextMenu — open / close lifecycle', () => {
-  it('opens via right-click on a trigger bound through useContextMenu', () => {
+  it('opens via right-click on a trigger bound through useContextMenu', async () => {
     const items = makeItems();
     renderWithRoot(<Trigger items={items} />);
     expect(screen.queryByTestId('context-menu')).toBeNull();
 
-    openMenuByRightClick('trigger');
+    await openMenuByRightClick('trigger');
 
     const menu = screen.getByTestId('context-menu');
     expect(menu).toBeInTheDocument();
@@ -104,12 +105,12 @@ describe('ContextMenu — open / close lifecycle', () => {
     expect(screen.getByTestId('context-menu-item-c')).toHaveAttribute('data-destructive', 'true');
   });
 
-  it('opens via the imperative openContextMenu API', () => {
+  it('opens via the imperative openContextMenu API', async () => {
     renderWithRoot(<div data-testid="canvas" />);
     act(() => {
       openContextMenu(makeItems(), 50, 50, null);
     });
-    expect(screen.getByTestId('context-menu')).toBeInTheDocument();
+    expect(await screen.findByTestId('context-menu')).toBeInTheDocument();
   });
 
   it('does nothing when called with an empty item list', () => {
@@ -120,7 +121,7 @@ describe('ContextMenu — open / close lifecycle', () => {
     expect(screen.queryByTestId('context-menu')).toBeNull();
   });
 
-  it('closes on Escape and restores focus to the trigger', () => {
+  it('closes on Escape and restores focus to the trigger', async () => {
     const items = makeItems();
     renderWithRoot(<Trigger items={items} />);
     const trigger = screen.getByTestId('trigger') as HTMLButtonElement;
@@ -128,7 +129,7 @@ describe('ContextMenu — open / close lifecycle', () => {
     expect(document.activeElement).toBe(trigger);
 
     act(() => { fireEvent.contextMenu(trigger, { clientX: 100, clientY: 100 }); });
-    expect(screen.getByTestId('context-menu')).toBeInTheDocument();
+    expect(await screen.findByTestId('context-menu')).toBeInTheDocument();
 
     act(() => {
       fireEvent.keyDown(document, { key: 'Escape' });
@@ -141,9 +142,9 @@ describe('ContextMenu — open / close lifecycle', () => {
     });
   });
 
-  it('closes on outside pointer-down', () => {
+  it('closes on outside pointer-down', async () => {
     renderWithRoot(<Trigger items={makeItems()} />);
-    openMenuByRightClick('trigger');
+    await openMenuByRightClick('trigger');
     expect(screen.getByTestId('context-menu')).toBeInTheDocument();
 
     act(() => {
@@ -152,27 +153,27 @@ describe('ContextMenu — open / close lifecycle', () => {
     expect(screen.queryByTestId('context-menu')).toBeNull();
   });
 
-  it('keeps the menu open when pointer-down lands inside it', () => {
+  it('keeps the menu open when pointer-down lands inside it', async () => {
     renderWithRoot(<Trigger items={makeItems()} />);
-    openMenuByRightClick('trigger');
+    await openMenuByRightClick('trigger');
     fireEvent.pointerDown(screen.getByTestId('context-menu-item-a'));
     expect(screen.getByTestId('context-menu')).toBeInTheDocument();
   });
 });
 
 describe('ContextMenu — keyboard navigation', () => {
-  it('ArrowDown on the menu container focuses the first enabled item', () => {
+  it('ArrowDown on the menu container focuses the first enabled item', async () => {
     renderWithRoot(<Trigger items={makeItems()} />);
-    openMenuByRightClick('trigger');
+    await openMenuByRightClick('trigger');
     const menu = screen.getByTestId('context-menu');
 
     fireEvent.keyDown(menu, { key: 'ArrowDown' });
     expect(document.activeElement).toBe(screen.getByTestId('context-menu-item-a'));
   });
 
-  it('ArrowDown wraps around at the last item', () => {
+  it('ArrowDown wraps around at the last item', async () => {
     renderWithRoot(<Trigger items={makeItems()} />);
-    openMenuByRightClick('trigger');
+    await openMenuByRightClick('trigger');
     const a = screen.getByTestId('context-menu-item-a');
     const b = screen.getByTestId('context-menu-item-b');
     const c = screen.getByTestId('context-menu-item-c');
@@ -185,18 +186,18 @@ describe('ContextMenu — keyboard navigation', () => {
     expect(document.activeElement).toBe(a);
   });
 
-  it('ArrowUp on the menu container focuses the last enabled item', () => {
+  it('ArrowUp on the menu container focuses the last enabled item', async () => {
     renderWithRoot(<Trigger items={makeItems()} />);
-    openMenuByRightClick('trigger');
+    await openMenuByRightClick('trigger');
     const menu = screen.getByTestId('context-menu');
 
     fireEvent.keyDown(menu, { key: 'ArrowUp' });
     expect(document.activeElement).toBe(screen.getByTestId('context-menu-item-c'));
   });
 
-  it('Home / End jump to first / last enabled item', () => {
+  it('Home / End jump to first / last enabled item', async () => {
     renderWithRoot(<Trigger items={makeItems()} />);
-    openMenuByRightClick('trigger');
+    await openMenuByRightClick('trigger');
     const menu = screen.getByTestId('context-menu');
     fireEvent.keyDown(menu, { key: 'End' });
     expect(document.activeElement).toBe(screen.getByTestId('context-menu-item-c'));
@@ -204,19 +205,19 @@ describe('ContextMenu — keyboard navigation', () => {
     expect(document.activeElement).toBe(screen.getByTestId('context-menu-item-a'));
   });
 
-  it('skips disabled items during arrow navigation', () => {
+  it('skips disabled items during arrow navigation', async () => {
     const items = makeItems({ b: { disabled: true } });
     renderWithRoot(<Trigger items={items} />);
-    openMenuByRightClick('trigger');
+    await openMenuByRightClick('trigger');
     const a = screen.getByTestId('context-menu-item-a');
     a.focus();
     fireEvent.keyDown(a, { key: 'ArrowDown' });
     expect(document.activeElement).toBe(screen.getByTestId('context-menu-item-c'));
   });
 
-  it('Tab closes the menu (focus leaves)', () => {
+  it('Tab closes the menu (focus leaves)', async () => {
     renderWithRoot(<Trigger items={makeItems()} />);
-    openMenuByRightClick('trigger');
+    await openMenuByRightClick('trigger');
     const menu = screen.getByTestId('context-menu');
     fireEvent.keyDown(menu, { key: 'Tab' });
     expect(screen.queryByTestId('context-menu')).toBeNull();
@@ -228,7 +229,7 @@ describe('ContextMenu — item activation', () => {
     const onClick = vi.fn();
     const items: ContextMenuItem[] = [{ id: 'a', label: 'Mark as read', onClick }];
     renderWithRoot(<Trigger items={items} />);
-    openMenuByRightClick('trigger');
+    await openMenuByRightClick('trigger');
     const item = screen.getByTestId('context-menu-item-a');
     item.focus();
     fireEvent.keyDown(item, { key: 'Enter' });
@@ -242,7 +243,7 @@ describe('ContextMenu — item activation', () => {
     const onClick = vi.fn();
     const items: ContextMenuItem[] = [{ id: 'a', label: 'Mark as read', onClick }];
     renderWithRoot(<Trigger items={items} />);
-    openMenuByRightClick('trigger');
+    await openMenuByRightClick('trigger');
     fireEvent.click(screen.getByTestId('context-menu-item-a'));
     expect(screen.queryByTestId('context-menu')).toBeNull();
     await Promise.resolve();
@@ -255,7 +256,7 @@ describe('ContextMenu — item activation', () => {
       { id: 'a', label: 'Disabled', onClick, disabled: true },
     ];
     renderWithRoot(<Trigger items={items} />);
-    openMenuByRightClick('trigger');
+    await openMenuByRightClick('trigger');
     const item = screen.getByTestId('context-menu-item-a');
     fireEvent.click(item);
     await Promise.resolve();
@@ -266,7 +267,7 @@ describe('ContextMenu — item activation', () => {
 });
 
 describe('ContextMenu — viewport overflow flip', () => {
-  it('flips the menu to the left when right-edge would overflow', () => {
+  it('flips the menu to the left when right-edge would overflow', async () => {
     // Force the menu to a known width via getBoundingClientRect mock.
     const origRect = HTMLDivElement.prototype.getBoundingClientRect;
     HTMLDivElement.prototype.getBoundingClientRect = function () {
@@ -291,7 +292,7 @@ describe('ContextMenu — viewport overflow flip', () => {
       act(() => {
         openContextMenu(makeItems(), 974, 100, null);
       });
-      const menu = screen.getByTestId('context-menu') as HTMLElement;
+      const menu = await screen.findByTestId('context-menu');
       // Expected flip: left = 974 - 200 = 774
       expect(menu.style.left).toBe('774px');
       // Vertical did not need to flip.
@@ -301,7 +302,7 @@ describe('ContextMenu — viewport overflow flip', () => {
     }
   });
 
-  it('flips the menu upward when bottom-edge would overflow', () => {
+  it('flips the menu upward when bottom-edge would overflow', async () => {
     const origRect = HTMLDivElement.prototype.getBoundingClientRect;
     HTMLDivElement.prototype.getBoundingClientRect = function () {
       if (this.getAttribute('role') === 'menu') {
@@ -325,7 +326,7 @@ describe('ContextMenu — viewport overflow flip', () => {
       act(() => {
         openContextMenu(makeItems(), 100, 718, null);
       });
-      const menu = screen.getByTestId('context-menu') as HTMLElement;
+      const menu = await screen.findByTestId('context-menu');
       // Expected flip: top = 718 - 200 = 518
       expect(menu.style.top).toBe('518px');
       expect(menu.style.left).toBe('100px');
@@ -336,7 +337,7 @@ describe('ContextMenu — viewport overflow flip', () => {
 });
 
 describe('ContextMenu — useContextMenu hook surface', () => {
-  it('returns a stable openMenu and a no-op contextMenuProps when items not provided', () => {
+  it('returns a stable openMenu and a no-op contextMenuProps when items not provided', async () => {
     function Probe() {
       const { contextMenuProps, openMenu } = useContextMenu();
       return (
@@ -356,10 +357,10 @@ describe('ContextMenu — useContextMenu hook surface', () => {
     expect(screen.queryByTestId('context-menu')).toBeNull();
     // Imperative openMenu still works.
     act(() => { fireEvent.click(screen.getByTestId('probe')); });
-    expect(screen.getByTestId('context-menu')).toBeInTheDocument();
+    expect(await screen.findByTestId('context-menu')).toBeInTheDocument();
   });
 
-  it('accepts a function form so items can be computed lazily at click time', () => {
+  it('accepts a function form so items can be computed lazily at click time', async () => {
     let counter = 0;
     function Probe() {
       const { contextMenuProps } = useContextMenu(() => {
@@ -372,6 +373,6 @@ describe('ContextMenu — useContextMenu hook surface', () => {
     expect(counter).toBe(0);
     act(() => { fireEvent.contextMenu(screen.getByTestId('probe')); });
     expect(counter).toBe(1);
-    expect(screen.getByTestId('context-menu')).toBeInTheDocument();
+    expect(await screen.findByTestId('context-menu')).toBeInTheDocument();
   });
 });

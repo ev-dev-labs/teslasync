@@ -13,7 +13,8 @@ export function PhysicsEvidenceBrief({ physics, id, metrics, description, availa
 }) {
   const { report, state, t } = physics;
   const { formatDateTime } = useDateFormat();
-  const time = (value: string | null | undefined) => value ? formatDateTime(value) : t('teslaOnly.unknown', 'unknown');
+  const clock = physics.slug === 'clocks' ? { second: '2-digit' as const } : undefined;
+  const time = (value: string | null | undefined) => value ? formatDateTime(value, { clock }) : t('teslaOnly.unknown', 'unknown');
   const evidence = report?.evidence;
   const limited = evidence && (!evidence.history_available || !evidence.black_box_available ||
     evidence.history_truncated || evidence.black_box_truncated ||

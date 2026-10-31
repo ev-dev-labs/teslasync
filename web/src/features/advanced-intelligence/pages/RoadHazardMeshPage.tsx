@@ -9,7 +9,7 @@ import { FadeIn } from '@/components/motion';
 import { Table, Badge, Card, Icon, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { formatRelative } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { typography } from '@/lib/tokens';
 
 import { EvidencePanel, InsightPanel } from '../components';
@@ -26,6 +26,7 @@ function severityVariant(severity: string) {
 
 export default function RoadHazardMeshPage() {
   const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const headingId = useId();
@@ -119,7 +120,7 @@ export default function RoadHazardMeshPage() {
                       <Icon icon={Clock3} size="sm" className="me-1 inline-block" />
                       {t('advancedIntelligence.hazards.recency', 'Last seen')}
                     </th>
-                    <td>{formatRelative(cluster.last_seen)}</td>
+                    <td>{formatDateTime(cluster.last_seen)}</td>
                   </tr>
                 </tbody></Table>
                 </Card>

@@ -3,7 +3,8 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
-import { Badge, DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
+import { Badge, DataTable, Text, type Column } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
 import type { ParkingStint, ParkingSummary } from '../../lib/parkingDwell';
@@ -128,12 +129,10 @@ export function LongestParkingStints({
       aria-label={t('parking.sections.longest', 'Longest parking stints')}
       data-testid="parking-longest"
     >
-      <GlassPanel className="h-full p-4 sm:p-5">
-        <PanelTitle className="flex items-center gap-2">
-          <ListOrdered className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-          {t('parking.longest.title', 'Longest observed stints')}
-        </PanelTitle>
-        <Text as="p" variant="caption" className="mt-1">
+      <LayoutCard
+        title={t('parking.longest.title', 'Longest observed stints')}
+        icon={<ListOrdered className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
+        summary={<Text as="p" variant="caption" className="mt-1">
           {t(
             'parking.longest.subtitle',
             'Showing {{shown}} of {{count}} reconstructed stints; range-edge durations are observed minimums.',
@@ -142,7 +141,8 @@ export function LongestParkingStints({
               count: summary.stints.length,
             },
           )}
-        </Text>
+        </Text>}
+      >
         <ParkingSectionBody state={state} className="mt-3 min-h-72">
           {rows.length === 0 ? (
             <EmptyState
@@ -160,6 +160,7 @@ export function LongestParkingStints({
           ) : (
             <DataTable
               tableId="vehicles:parking-longest"
+              cardLayout
               columns={columns}
               data={rows}
               keyExtractor={(row) =>
@@ -192,7 +193,7 @@ export function LongestParkingStints({
             />
           )}
         </ParkingSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

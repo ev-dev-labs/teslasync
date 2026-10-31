@@ -136,7 +136,7 @@ export interface ResaleFixtureState {
   reads: Record<string, number>;
 }
 
-function expectedVerifyBody(issue: BatteryCertificateIssueResponse | undefined) {
+export function expectedVerifyBody(issue: BatteryCertificateIssueResponse | undefined) {
   if (!issue) throw new Error('Verification cannot precede certificate issuance');
   const c = issue.certificate;
   // Explicit transport mirror of client.ts/resilience.ts; do not load browser-only modules in Playwright's Node process.

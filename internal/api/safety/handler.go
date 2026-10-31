@@ -26,6 +26,7 @@ type SafetyHandler struct {
 // camelCase keys on the wire).
 var safetyMappings = []signal.FieldMapping{
 	{Signal: "AutomaticEmergencyBrakingOff", Field: "automatic_emergency_braking_off"},
+	{Signal: "AutomaticEmergencyBrakingState", Field: "automatic_emergency_braking_state"},
 	{Signal: "AutomaticBlindSpotCamera", Field: "automatic_blind_spot_camera"},
 	{Signal: "BlindSpotCollisionWarningChime", Field: "blind_spot_collision_warning"},
 	{Signal: "CruiseFollowDistance", Field: "cruise_follow_distance"},

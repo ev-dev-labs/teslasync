@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from 'react';
+import { useRef, type ComponentProps, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorDisplay, type ErrorDisplayProps } from '@/components/feedback/ErrorDisplay';
@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/feedback/Skeleton';
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Typography';
 import { typography } from '@/lib/tokens';
+import { useCardColumnRegistration } from './CardLayoutContext';
 
 export type SourceState = 'ready' | 'loading' | 'error' | 'empty' | 'retained';
 
@@ -39,6 +40,8 @@ export function SourceContent({
   errorRecovery, emptyRecovery, retainedMessage, loadingContent, emptyContent,
 }: SourceContentProps) {
   const { t } = useTranslation();
+  const emptyRef = useRef<HTMLDivElement>(null);
+  useCardColumnRegistration(emptyRef, state === 'empty');
   if (state === 'loading') {
     return (
       <div role="status" aria-label={t('developerReference.layout.source.loading', 'Loading {{label}}', { label })} className="min-w-0 space-y-3 break-words">
@@ -52,7 +55,7 @@ export function SourceContent({
     );
   }
   if (state === 'error') return <ErrorDisplay {...errorRecovery} error={error ?? new Error(errorMessage)} compact message={errorMessage} />;
-  if (state === 'empty') return <div data-empty-state>{emptyContent ?? <EmptyState {...emptyRecovery} message={emptyMessage} className="py-6" />}</div>;
+  if (state === 'empty') return <div ref={emptyRef} data-empty-state className="flex min-w-0 flex-1 flex-col justify-center">{emptyContent ?? <EmptyState {...emptyRecovery} message={emptyMessage} className="py-6" />}</div>;
   return (
     <>
       {state === 'retained' && (
