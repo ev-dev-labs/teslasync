@@ -116,6 +116,7 @@ must have a verified CC0 or CC-BY license and a source/author record here.
 | Name | Source URL | Author | License | Used by |
 |---|---|---|---|---|
 | Four-part flask geometry | [Source](https://github.com/ev-dev-labs/teslasync/blob/next-upgrades/web/src/components/layout/sidebar/navIconParts.ts) | TeslaSync Contributors | Original work, MIT | Experiments navigation |
+| Studio SUV primitive model | [Source](https://github.com/ev-dev-labs/teslasync/blob/next-upgrades/web/src/features/experiments/vehicle-lab/model/createVehicleModel.ts) | TeslaSync Contributors | Original work, MIT; no downloaded assets | Vehicle lab |
 
 ## Design decisions
 
@@ -125,5 +126,5 @@ must have a verified CC0 or CC-BY license and a source/author record here.
 | A flask with settling liquid and staggered bubbles | A recognizable, self-made glyph plays once within 380ms; shared reduced-motion handling keeps it static. | Navigation |
 | Distinct destination names and glyphs | Preserve the existing navigation's uniqueness and keep Energy flow analytics separate. | Navigation and discovery |
 | A default-on local, cross-tab preference | Instant, offline-capable hiding; direct routes and stored pins remain intact. | Appearance and navigation |
-| Original stylized vehicle, not a vendor replica | License-safe expressive geometry with separately named parts for future model replacement. | Planned vehicle lab |
+| Original stylized vehicle, not a vendor replica | Primitive geometry in meters, +Y up/+Z forward/+X left; separately named hinge groups and door-attached windows support replacement and animation. | Vehicle lab model |
 | Text information is a first-class experience | Keyboard, screen-reader, and WebGL-fallback users must receive the same signals and details. | Vehicle lab and replay |
