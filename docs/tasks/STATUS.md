@@ -9,7 +9,7 @@ Values: todo | done | blocked. Agents take the first `todo` row.
 | 02 | Experiments nav section complete | done | 3ea704d537 | Six badged destinations on rail/panel/phone sheets; distinct labels/glyphs; tsc/lint/catalog and1384layout tests pass; strict startup399.7KB <=399.8KB baseline. |
 | 03 | Animated nav icon for Experiments | done | f927698097 | Four-part flask/liquid/bubbles settle380ms; reduced-motion/coverage54tests pass; tsc/lint/catalog/build/strict budget pass, startup399.7KB. |
 | 04 | Show experiments toggle in settings | done | c1b942eb04 | Default-on local/cross-tab setting hides all nav/palette/Explore entries, preserves direct routes and pins; tsc/lint/catalog/build and2674tests pass; startup399.9KB < unchanged400KB budget. |
-| 05 | Tests for Experiments nav, routes and toggle | todo | | |
+| 05 | Tests for Experiments nav, routes and toggle | done | 51e72fdc2a | Twelve actual lazy-route title/description/badge cases including hidden nav;152targeted tests pass; tsc/lint/catalog/build/strict startup399.9KB pass. |
 | 06 | Experiments documentation | todo | | |
 | 07 | Vehicle lab: 3D libraries | todo | | |
 | 08 | Vehicle lab: placeholder 3D vehicle model | todo | | |
