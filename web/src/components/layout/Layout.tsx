@@ -52,6 +52,7 @@ import {
   BreadcrumbOverridesProvider,
 } from './BreadcrumbOverridesContext'
 import { CommandPaletteHost } from './CommandPaletteHost'
+import { isProductNavigationVisible } from '@/lib/productPreferences'
 import { NotificationBellPopover } from './NotificationBellPopover'
 import { request } from '@/api/client'
 import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
@@ -528,7 +529,8 @@ export const navSections = [
 type NavSection = (typeof navSections)[number]
 type NavItem = NavSection['items'][number]
 
-function isVisibleNavItem(item: NavItem, vehicleCount: number, isForwardAuth: boolean) {
+function isVisibleNavItem(item: NavItem, vehicleCount: number, isForwardAuth: boolean, showExperiments = true) {
+  if (!isProductNavigationVisible(item.to, showExperiments)) return false
   if ('minVehicles' in item && vehicleCount < (item as { minVehicles?: number }).minVehicles!) return false
   // Items marked `requiresAuth` are useless without a configured ForwardAuth
   // identity provider (per-user state, audit feeds, etc.) — hide them in
@@ -1059,7 +1061,7 @@ export default function Layout() {
           .map(section => ({
             ...section,
             items: section.items.filter(item =>
-              isVisibleNavItem(item, vehicleCount, isForwardAuth),
+              isVisibleNavItem(item, vehicleCount, isForwardAuth, productPreferences.showExperiments),
             ),
           }))
           .filter(section => section.items.length > 0),
@@ -1069,6 +1071,7 @@ export default function Layout() {
       vehicleCount,
       isForwardAuth,
       productPreferences.persona,
+      productPreferences.showExperiments,
     ],
   )
   const visibleCollections = useMemo(() => collectionGroups(visibleNavSections), [visibleNavSections])
@@ -1083,21 +1086,21 @@ export default function Layout() {
       .map(path => findNavItemByExactPath(path))
       .filter((entry): entry is { section: NavSection; item: NavItem } => Boolean(entry))
       .map(entry => entry.item)
-      .filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth)),
-    [pinnedNavPaths, vehicleCount, isForwardAuth],
+      .filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth, productPreferences.showExperiments)),
+    [pinnedNavPaths, vehicleCount, isForwardAuth, productPreferences.showExperiments],
   )
   const recentNavItems = useMemo(() =>
     [...new Set([...recentPagePaths, ...recentNavPaths])]
       .map(path => findNavItemByExactPath(path))
       .filter((entry): entry is { section: NavSection; item: NavItem } => Boolean(entry))
       .map(entry => entry.item)
-      .filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth))
+      .filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth, productPreferences.showExperiments))
       // Don't echo the current page in "Recently Used" — it's already
       // highlighted in its canonical section below, so duplicating it
       // here just adds visual noise and a confusing two-column "active"
       // indicator. Quick-jump rows for *other* recent pages remain.
       .filter(item => !isExclusiveActivePath(location.pathname, item.to, NAV_CATALOG_PATHS)),
-    [recentPagePaths, recentNavPaths, vehicleCount, isForwardAuth, location.pathname],
+    [recentPagePaths, recentNavPaths, vehicleCount, isForwardAuth, location.pathname, productPreferences.showExperiments],
   )
 
   const pinnedNavSet = useMemo(() => new Set(pinnedNavPaths), [pinnedNavPaths])

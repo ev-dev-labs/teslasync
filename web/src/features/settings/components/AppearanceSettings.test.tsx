@@ -39,6 +39,7 @@ import {
   fireEvent,
   waitFor,
   within,
+  act,
 } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
@@ -109,6 +110,7 @@ import { resetAllTours } from '@/lib/tourRegistry'
 import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors'
 import type { AppSettings } from '@/api/types'
 import { AppearanceSettings } from './AppearanceSettings'
+import { PRODUCT_PREFERENCES_STORAGE_KEY, resetProductPreferences } from '@/lib/productPreferences'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 const mockedStartTour = startTour as unknown as ReturnType<typeof vi.fn>
@@ -162,6 +164,7 @@ function findPutCall() {
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
+  resetProductPreferences()
   // Reset the module-scoped localStorage snapshots to their documented
   // defaults so each case is hermetic (these stores cache a snapshot at
   // import time and mutate it in place).
@@ -173,6 +176,35 @@ beforeEach(() => {
     pushOnUnlock: true,
   })
   mockedRequest.mockResolvedValue(settingsFixture)
+})
+
+describe('AppearanceSettings — experiments preference', () => {
+  it('shows experiments by default and persists changes locally without a server save', () => {
+    const view = renderPanel()
+    const toggle = screen.getByRole('switch', { name: 'Show experiments' })
+    expect(toggle).toHaveAttribute('aria-checked', 'true')
+    expect(toggle).toHaveAccessibleDescription('Show playful, experimental experiences in navigation. Direct links still work when hidden.')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-checked', 'false')
+    expect(JSON.parse(localStorage.getItem(PRODUCT_PREFERENCES_STORAGE_KEY) ?? '{}')).toMatchObject({
+      version: 1,
+      showExperiments: false,
+    })
+    expect(findPutCall()).toBeUndefined()
+    view.unmount()
+    renderPanel()
+    expect(screen.getByRole('switch', { name: 'Show experiments' })).toHaveAttribute('aria-checked', 'false')
+  })
+
+  it('reacts to a preference changed in another tab', () => {
+    renderPanel()
+    act(() => {
+      const value = JSON.stringify({ version: 1, showExperiments: false })
+      localStorage.setItem(PRODUCT_PREFERENCES_STORAGE_KEY, value)
+      window.dispatchEvent(new StorageEvent('storage', { key: PRODUCT_PREFERENCES_STORAGE_KEY, newValue: value }))
+    })
+    expect(screen.getByRole('switch', { name: 'Show experiments' })).toHaveAttribute('aria-checked', 'false')
+  })
 })
 
 describe('AppearanceSettings — structure & delegation', () => {

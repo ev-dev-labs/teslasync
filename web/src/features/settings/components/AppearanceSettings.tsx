@@ -13,6 +13,7 @@ import { Palette, Rows3, PanelBottom, Trophy, Clock, Eye, PlayCircle, RotateCcw,
 import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors'
 import { startTour } from '@/lib/tourLauncher'
 import { resetAllTours } from '@/lib/tourRegistry'
+import { ExperimentsSettings } from './ExperimentsSettings'
 
 type DensityId = 'compact' | 'comfortable' | 'spacious'
 type TimeFormatId = 'relative' | 'absolute'
@@ -121,6 +122,8 @@ export function AppearanceSettings() {
             the top-bar quick-switcher renders a compact variant. */}
         <ThemePicker showMode showCustom />
       </GlassPanel>
+
+      <ExperimentsSettings />
 
       <GlassPanel className="p-6 space-y-6">
         {/* Density (information density) */}

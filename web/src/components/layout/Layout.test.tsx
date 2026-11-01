@@ -439,6 +439,7 @@ import {
   __resetNavPinsSessionOverridesForTests,
   setPinnedNavPaths,
 } from '@/lib/navPins'
+import { resetProductPreferences, updateProductPreferences } from '@/lib/productPreferences'
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -494,6 +495,7 @@ const origCAF = window.cancelAnimationFrame
 beforeEach(() => {
   cleanup()
   localStorage.clear()
+  resetProductPreferences()
   __resetNavPinsSessionOverridesForTests()
   H.sidebarProps.unified = null
   H.forwardAuth.value = false
@@ -1113,6 +1115,27 @@ describe('Layout — nav item visibility', () => {
       flattenSidebarItems(section.items, props.collections).map((entry) => entry.to),
     )
   }
+
+  it('hides every experiment surface, pin and recent entry reactively without changing the direct route or stored pins', async () => {
+    setPinnedNavPaths(['/experiments/drive-art', '/drives'])
+    localStorage.setItem(RECENT_NAV_STORAGE_KEY, JSON.stringify(['/experiments/route-flyover', '/charging']))
+    renderLayout('/experiments/vehicle-lab', { defaultPins: true })
+    await waitFor(() => expect(deckPaths()).toContain('/experiments/vehicle-lab'))
+    const entries = (key: string) => (H.sidebarProps.unified?.[key] as Array<{ to: string }>).map(item => item.to)
+    expect(entries('pinnedItems')).toContain('/experiments/drive-art')
+    expect(entries('recentItems')).toContain('/experiments/route-flyover')
+    act(() => { updateProductPreferences({ showExperiments: false }) })
+    await waitFor(() => expect(deckPaths().some(path => path.startsWith('/experiments/'))).toBe(false))
+    for (const key of ['pinnedItems', 'recentItems', 'suggestions']) {
+      expect(entries(key).some(path => path.startsWith('/experiments/'))).toBe(false)
+    }
+    expect(entries('pinnedItems')).toContain('/drives')
+    expect(screen.getByTestId('loc')).toHaveTextContent('/experiments/vehicle-lab')
+    expect(JSON.parse(localStorage.getItem(PINNED_NAV_STORAGE_KEY) ?? '[]')).toContain('/experiments/drive-art')
+    act(() => { updateProductPreferences({ showExperiments: true }) })
+    await waitFor(() => expect(deckPaths()).toContain('/experiments/vehicle-lab'))
+    expect(entries('pinnedItems')).toContain('/experiments/drive-art')
+  })
 
   it('hides requiresAuth items in open mode and reveals them under ForwardAuth', () => {
     H.forwardAuth.value = false

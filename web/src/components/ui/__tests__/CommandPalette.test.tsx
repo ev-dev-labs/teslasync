@@ -22,6 +22,8 @@ import { alertKeys } from '@/api/hooks/useAlerts'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { recordCommandUse, _resetFrecency } from '@/lib/commandFrecency'
 import { setPinnedNavPaths, __resetNavPinsSessionOverridesForTests } from '@/lib/navPins'
+import { resetProductPreferences, updateProductPreferences } from '@/lib/productPreferences'
+import { recordPageView } from '@/lib/recentPages'
 import { getShellFocusableElements } from '@/components/layout/shellFocusTrap'
 import type { Vehicle } from '@/types/vehicle'
 import type { Alert, AlertDetail, SavedView, SearchResponse } from '@/api/types'
@@ -167,11 +169,28 @@ beforeEach(() => {
   motionPreference.reduce = false
   locale.translations = {}
   localStorage.clear()
+  resetProductPreferences()
   sessionStorage.clear()
   __resetNavPinsSessionOverridesForTests()
   _resetFrecency()
   requestMock.mockReset()
   requestMock.mockResolvedValue({})
+})
+
+describe('CommandPalette experiments visibility', () => {
+  it('hides experiment search, pinned, recent and most-used rows while preserving the underlying records', async () => {
+    setPinnedNavPaths(['/experiments/drive-art'])
+    recordPageView({ path: '/experiments/drive-art', title: 'Drive art' })
+    recordCommandUse('/experiments/drive-art')
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+    await waitFor(() => expect(screen.getAllByText('Drive art').length).toBeGreaterThan(0))
+    act(() => { updateProductPreferences({ showExperiments: false }) })
+    expect(screen.queryByText('Drive art')).not.toBeInTheDocument()
+    expect(screen.queryByText('Vehicle lab')).not.toBeInTheDocument()
+    expect(screen.queryByText('Experiments')).not.toBeInTheDocument()
+    act(() => { updateProductPreferences({ showExperiments: true }) })
+    await waitFor(() => expect(screen.getAllByText('Drive art').length).toBeGreaterThan(0))
+  })
 })
 
 describe('CommandPalette independent source trust', () => {

@@ -44037,6 +44037,8 @@
       "theme.density.spacious",
       "theme.density.spaciousHelp",
       "theme.displayMode",
+      "theme.experiments.help",
+      "theme.experiments.show",
       "theme.mode",
       "theme.moreOptions",
       "theme.noModes",

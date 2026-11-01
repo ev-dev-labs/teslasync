@@ -37,6 +37,7 @@ import ExplorePage from './ExplorePage';
 import { buildFeatureCatalog, filterFeatureCatalog } from '../featureCatalog';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { resetProductPreferences, updateProductPreferences } from '@/lib/productPreferences';
 
 // ── Hoisted, per-test controllable gating state ──────────────────────
 const state = vi.hoisted(() => ({
@@ -195,6 +196,7 @@ function expectHiddenFieldCount(drawer: HTMLElement, count: number) {
 }
 
 beforeEach(() => {
+  resetProductPreferences();
   state.vehicles = [{ id: 1 }, { id: 2 }];
   state.forwardAuth = true;
   state.authResolved = true;
@@ -756,6 +758,24 @@ describe('ExplorePage — navigation', () => {
 });
 
 describe('ExplorePage — visibility gates', () => {
+  it('hides experiment cards and categories immediately while preserving normal discovery', () => {
+    renderPage();
+    expect(screen.getByTestId('explore-card-/experiments/vehicle-lab')).toBeInTheDocument();
+    act(() => { updateProductPreferences({ showExperiments: false }); });
+    expect(screen.queryByTestId('explore-card-/experiments/vehicle-lab')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Experiments', exact: true })).not.toBeInTheDocument();
+    expect(screen.getByTestId('explore-card-/drives')).toBeInTheDocument();
+    act(() => { updateProductPreferences({ showExperiments: true }); });
+    expect(screen.getByTestId('explore-card-/experiments/vehicle-lab')).toBeInTheDocument();
+  });
+
+  it('translates the new experiment descriptions and searches their translated text', () => {
+    state.translations['experiments.vehicleLab.description'] = 'Beschreibung Fahrzeuglabor';
+    renderPage('/explore?q=Beschreibung');
+    expect(screen.getByTestId('explore-card-/experiments/vehicle-lab')).toHaveTextContent('Beschreibung Fahrzeuglabor');
+    expect(screen.queryByTestId('explore-card-/drives')).not.toBeInTheDocument();
+  });
+
   it('hides minVehicles-gated cards below the threshold and reflects the fleet size', () => {
     state.vehicles = [{ id: 1 }];
     renderPage();

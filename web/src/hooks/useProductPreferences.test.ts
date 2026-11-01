@@ -27,6 +27,28 @@ describe('useProductPreferences', () => {
     expect(result.current.preferences).toEqual(DEFAULT_PRODUCT_PREFERENCES)
   })
 
+  it.each([undefined, 'false', null])('shows experiments when an older or invalid stored preference contains %s', showExperiments => {
+    localStorage.setItem(
+      PRODUCT_PREFERENCES_STORAGE_KEY,
+      JSON.stringify({ version: 1, persona: 'analyst', showExperiments }),
+    )
+    const { result } = renderHook(() => useProductPreferences())
+    expect(result.current.preferences.showExperiments).toBe(true)
+    expect(result.current.preferences.persona).toBe('analyst')
+  })
+
+  it('persists an explicit hidden preference across consumers and remounts', () => {
+    const first = renderHook(() => useProductPreferences())
+    const second = renderHook(() => useProductPreferences())
+    act(() => {
+      first.result.current.updatePreferences({ showExperiments: false })
+    })
+    expect(second.result.current.preferences.showExperiments).toBe(false)
+    first.unmount()
+    second.unmount()
+    expect(renderHook(() => useProductPreferences()).result.current.preferences.showExperiments).toBe(false)
+  })
+
   it('persists same-tab updates and notifies every consumer', () => {
     const first = renderHook(() => useProductPreferences())
     const second = renderHook(() => useProductPreferences())

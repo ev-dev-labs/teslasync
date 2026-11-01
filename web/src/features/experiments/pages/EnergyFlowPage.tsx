@@ -6,7 +6,7 @@ import ExperimentIntro from '../components/ExperimentIntro';
 export default function EnergyFlowPage() {
   const { t } = useTranslation();
   const title = t('experiments.energyFlow.title', 'Where did my energy go?');
-  const description = t('experiments.energyFlow.description', 'Trace the full energy story of a charge or drive, from grid to battery to wheel, as one flow.');
+  const description = t('experiments.energyFlow.description', 'Trace charge and drive energy from grid to battery to wheels, as one flow.');
 
   return (
     <ExperimentIntro

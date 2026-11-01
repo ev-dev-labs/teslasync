@@ -5968,7 +5968,7 @@
     },
     "energyFlow": {
       "title": "Where did my energy go?",
-      "description": "Trace the full energy story of a charge or drive, from grid to battery to wheel, as one flow."
+      "description": "Trace charge and drive energy from grid to battery to wheels, as one flow."
     },
     "yearInMotion": {
       "title": "Year in motion",
@@ -23593,6 +23593,10 @@
       "iconOnlyHelp": "Hide labels at all widths. Lower-priority tools move into more on constrained screens.",
       "shownToast": "Status bar shown",
       "hiddenToast": "Status bar hidden"
+    },
+    "experiments": {
+      "show": "Show experiments",
+      "help": "Show playful, experimental experiences in navigation. Direct links still work when hidden."
     },
     "timeFormat": {
       "label": "Default time format",
