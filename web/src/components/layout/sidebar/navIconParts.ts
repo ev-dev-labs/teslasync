@@ -19,6 +19,18 @@ export const NAV_ICON_PARTS = {
         "nodes": [
           ["path", { "d": "M7 15h10" }]
         ]
+      },
+      {
+        "origin": [9.5, 18],
+        "nodes": [
+          ["circle", { "cx": "9.5", "cy": "18", "r": ".5" }]
+        ]
+      },
+      {
+        "origin": [14.5, 17.5],
+        "nodes": [
+          ["circle", { "cx": "14.5", "cy": "17.5", "r": ".5" }]
+        ]
       }
     ]
   },

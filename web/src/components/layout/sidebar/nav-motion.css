@@ -8,7 +8,12 @@
 .sidenav-rail-item.is-selected .sidenav-short-label { color: var(--text-primary); }
 @media (prefers-reduced-motion: no-preference) {
   .nav-motion-target.is-animating .nav-glyph-experiments .part-1 { animation-name: nav-casing; }
-  .nav-motion-target.is-animating .nav-glyph-experiments .part-2 { animation-name: nav-dip; }
+  .nav-motion-target.is-animating:has(.nav-glyph-experiments) { animation-duration: 380ms; }
+  .nav-motion-target.is-animating .nav-glyph-experiments .part-2 { animation-name: nav-liquid; animation-duration: 380ms; }
+  .nav-motion-target.is-animating .nav-glyph-experiments .part-3, .nav-motion-target.is-animating .nav-glyph-experiments .part-4 { animation-name: nav-bubble; animation-duration: 260ms; }
+  .nav-motion-target.is-animating .nav-glyph-experiments .part-4 { animation-delay: 70ms; }
+  @keyframes nav-liquid { 30% { transform: translateY(-.8px) rotate(4deg); } 65% { transform: translateY(.3px) rotate(-2deg); } 100% { transform: none; } }
+  @keyframes nav-bubble { 15% { opacity: .5; transform: scale(.7); } 65% { opacity: .8; transform: translateY(-2px) scale(1.2); } 85% { opacity: 0; transform: translateY(-3px); } 100% { opacity: 1; transform: none; } }
   [data-nav-action] .nav-motion-target { transition: transform 100ms cubic-bezier(.2,.9,.2,1.2); }
   .sidenav-phone-tabs:not([data-nav-reduced]) > [data-nav-action]:active .nav-motion-target,
   .sidenav-rail:not([data-nav-reduced]) [data-nav-action]:active .nav-motion-target { transform: scale(.9); }
