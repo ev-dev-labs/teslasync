@@ -89,6 +89,24 @@ and helpers are reused rather than duplicated.
 
 | Name | Version | License | Used by |
 |---|---|---|---|
+| three | 0.180.0 | MIT | Vehicle lab only |
+| @react-three/fiber | 8.18.0 | MIT | Vehicle lab only; React 18 renderer |
+| @react-three/drei | 9.122.0 | MIT | Vehicle lab only; React 18-compatible scene helpers |
+| @types/three | 0.180.0 | MIT | Vehicle lab development types |
+| three-mesh-bvh | 0.8.3 | MIT | Drei dependency; scoped compatibility override |
+
+Versions were checked against npm publication metadata on 2026-11-01:
+Three and its types were published 2025-09-03; Fiber and Drei were published
+2025-02-19. All exceed the two-week minimum. Fiber 8 supports React 18
+(`>=18 <19`); Drei 9 accepts React 18 and Fiber 8. Their Three peer minimums
+are 0.133 and 0.137 respectively, satisfied by the pinned Three version.
+Do not import these libraries outside `web/src/features/experiments/vehicle-lab/`.
+
+Drei 9 declares the deprecated Three-incompatible BVH 0.7.8 range. Its
+dependency is pinned to BVH 0.8.3 (published 2024-11-11, Three peer `>=0.159.0`)
+with a scoped override, rather than ignoring the incompatibility warning or
+upgrading the application's React version. Debug-only helpers are not required
+by the scene; do not import them merely because Drei provides them.
 
 ## Assets
 
