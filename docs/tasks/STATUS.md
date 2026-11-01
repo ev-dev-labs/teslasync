@@ -13,7 +13,7 @@ Values: todo | done | blocked. Agents take the first `todo` row.
 | 06 | Experiments documentation | done | 4a68479b8d | Six planned overviews, guardrails, library/asset/design tables and original MIT flask recorded; existing Markdown renderer verifies all headings/tables. |
 | 07 | Vehicle lab: 3D libraries | done | 4f99b235fa | Exact age/React18/license-verified packages plus scoped BVH compatibility override; isolated exact-candidate tsc/build/strict399.7KB pass. Host14unowned concurrent TS errors disclosed in progress log. |
 | 08 | Vehicle lab: placeholder 3D vehicle model | done | bcac44cd89 | Original17named-part SUV, door-attached windows and GPU disposal;3tests/scoped lint/audit0; isolated exact-candidate tsc/build/strict399.8KB pass; no vendor assets. |
-| 09 | Vehicle lab: 3D scene | todo | | |
+| 09 | Vehicle lab: 3D scene | done | 696f37ec3c | Lazy themed studio/five camera presets/WebGL summary;154unit and5native tests pass; exact-candidate tsc/full lint/catalog/build/strict400.0KB/unchanged duplication baseline pass. Native video helper unavailable, assertions retained. |
 | 10 | Vehicle lab: part mapping file | todo | | |
 | 11 | Vehicle lab: live vehicle state | todo | | |
 | 12 | Vehicle lab: labels and animations | todo | | |
