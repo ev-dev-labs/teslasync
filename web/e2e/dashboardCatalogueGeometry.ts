@@ -264,16 +264,16 @@ export async function assertTwinWheelAndPhotoGeometry(
     return { wheels: frames, roads: roadFrames };
   });
   expect(wheels[0]).toHaveLength(2);
+  const active = driving && motion === 'no-preference';
   for (let index = 0; index < 2; index++) {
     const distinct = new Set(wheels.map(frame => frame[index])).size;
-    expect(distinct, `Professional twin wheel ${index} must remain still`).toBe(1);
+    if (active) expect(distinct, `Driving twin wheel ${index} stopped`).toBeGreaterThan(1);
+    else expect(distinct, `Inactive or reduced twin wheel ${index} still moves`).toBe(1);
   }
-  if (driving && motion === 'no-preference') {
-    expect(roads[0].length, 'Driving uses directional road feedback, not spinning photo overlays').toBeGreaterThan(0);
-  }
+  expect(roads[0], 'Verified driving retains both near and far lanes').toHaveLength(driving ? 2 : 0);
   for (let index = 0; index < roads[0].length; index++) {
     const distinct = new Set(roads.map(frame => frame[index])).size;
-    if (driving && motion === 'no-preference') expect(distinct, `Driving road ${index} stopped`).toBeGreaterThan(1);
+    if (active) expect(distinct, `Driving road ${index} stopped`).toBeGreaterThan(1);
     else expect(distinct, `Inactive or reduced road ${index} still moves`).toBe(1);
   }
   await writeFile(info.outputPath(`${widgetId}-photo-wheel-geometry.json`), JSON.stringify({ svgFallback, photo, wheels, roads }, null, 2));
