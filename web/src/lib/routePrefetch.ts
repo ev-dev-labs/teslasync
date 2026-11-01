@@ -29,6 +29,12 @@
 import * as routeLoaders from './routeLoaders'
 
 const PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
+  '/experiments/vehicle-lab': routeLoaders.VehicleLab,
+  '/experiments/route-flyover': routeLoaders.RouteFlyover,
+  '/experiments/energy-flow': routeLoaders.EnergyFlowExperiment,
+  '/experiments/year-in-motion': routeLoaders.YearInMotion,
+  '/experiments/battery-what-if': routeLoaders.BatteryWhatIf,
+  '/experiments/drive-art': routeLoaders.DriveArt,
   ...(import.meta.env.DEV ? {
     '/dev/grid-states': routeLoaders.MobileGridReference,
     '/dev/layout': routeLoaders.LayoutReference,

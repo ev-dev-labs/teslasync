@@ -317,4 +317,10 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'PhysicsLedger', load: () => import('../features/vehicles/pages/PhysicsLedgerPage') },
   { name: 'ScienceLab', load: () => import('../features/science/pages/ScienceLabPage') },
   { name: 'OutageAutobiography', load: () => import('../features/system/pages/OutageAutobiographyPage') },
+  { name: 'VehicleLab', load: () => import('../features/experiments/pages/VehicleLabPage') },
+  { name: 'RouteFlyover', load: () => import('../features/experiments/pages/RouteFlyoverPage') },
+  { name: 'EnergyFlowExperiment', load: () => import('../features/experiments/pages/EnergyFlowPage') },
+  { name: 'YearInMotion', load: () => import('../features/experiments/pages/YearInMotionPage') },
+  { name: 'BatteryWhatIf', load: () => import('../features/experiments/pages/BatteryWhatIfPage') },
+  { name: 'DriveArt', load: () => import('../features/experiments/pages/DriveArtPage') },
 ]

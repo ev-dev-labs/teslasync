@@ -101,7 +101,7 @@ describe('generate-route-registry — freshness gate', () => {
     const generated = readFileSync(outPath, 'utf8')
     // `hidden: true` is how the generator flags a parameterised route.
     expect(generated).toContain(
-      '{ path: "/acceptance-probe/:token", name: "AcceptanceProbe", label: "Acceptance probe", i18nKey: "routes.acceptanceProbe", hidden: true },',
+      '{ path: "/acceptance-probe/:token", name: "AcceptanceProbe", label: "Acceptance probe", hidden: true },',
     )
     expect(generated).not.toBe(readFileSync(REGISTRY_PATH, 'utf8'))
   })
@@ -143,7 +143,7 @@ describe('generate-route-registry — freshness gate', () => {
     const generated = readFileSync(out, 'utf8')
     for (const [name, label] of names) {
       expect(generated).toContain(
-        `{ path: "/case/${name}/:token", name: "${name}CasingProbe", label: "${label} casing probe", i18nKey: "routes.${name.charAt(0).toLowerCase() + name.slice(1)}CasingProbe", hidden: true },`,
+        `{ path: "/case/${name}/:token", name: "${name}CasingProbe", label: "${label} casing probe", hidden: true },`,
       )
     }
   })
@@ -171,5 +171,13 @@ describe('generate-route-registry — every :param route reaches the templater',
         .join('/')
       expect(normalizeRouteTemplate(probe)).not.toContain('customer-private-slug')
     }
+  })
+
+  it('derives every translation key without changing acronym or brand identifiers', async () => {
+    const { ROUTE_REGISTRY } = await import('../routeRegistry')
+    for (const entry of ROUTE_REGISTRY) {
+      expect(entry.i18nKey).toBe(`routes.${entry.name.charAt(0).toLowerCase()}${entry.name.slice(1)}`)
+    }
+    expect(ROUTE_REGISTRY.find(entry => entry.name === 'FSDInsights')?.i18nKey).toBe('routes.fSDInsights')
   })
 })
