@@ -6,7 +6,7 @@ Values: todo | done | blocked. Agents take the first `todo` row.
 |---|---|---|---|---|
 | 00 | Update the playbook for Windows | done | 36cd1116f7 | Updated playbook to Windows paths
 | 01 | Experiments placeholder pages and routes | done | da0bbacd19 | Six lazy routes/pages, shared prefetch, translations and Go templates; tsc/lint/190 route tests/32 generator tests pass. Strict startup399.3KB <=399.8KB baseline. |
-| 02 | Experiments nav section complete | todo | | |
+| 02 | Experiments nav section complete | done | 3ea704d537 | Six badged destinations on rail/panel/phone sheets; distinct labels/glyphs; tsc/lint/catalog and1384layout tests pass; strict startup399.7KB <=399.8KB baseline. |
 | 03 | Animated nav icon for Experiments | todo | | |
 | 04 | Show experiments toggle in settings | todo | | |
 | 05 | Tests for Experiments nav, routes and toggle | todo | | |
