@@ -11,8 +11,9 @@ Implementation progress and verification belong in `docs/tasks/STATUS.md` and
 
 ### Vehicle lab
 
-`/experiments/vehicle-lab` will bring live signals into an original, stylized 3D
-vehicle: opening doors, lowering windows, lighting the charge port, and anchoring
+`/experiments/vehicle-lab` now has a theme-aware studio, five camera views,
+mouse/touch orbit and zoom, and a readable unknown-state summary without WebGL.
+Live binding is still pending: opening doors, lowering windows, lighting the charge port, and anchoring
 tire-pressure readings beside each wheel. An equally complete text summary and
 keyboard-accessible part details must remain usable without WebGL. The vehicle
 is illustrative, not a Tesla render or an exact representation of its hardware.
@@ -94,6 +95,10 @@ and helpers are reused rather than duplicated.
 | @react-three/drei | 9.122.0 | MIT | Vehicle lab only; React 18-compatible scene helpers |
 | @types/three | 0.180.0 | MIT | Vehicle lab development types |
 | three-mesh-bvh | 0.8.3 | MIT | Drei dependency; scoped compatibility override |
+| zustand | 4.5.7 | MIT | Shared Fiber/Drei store API; no application store migration |
+| @types/react-reconciler | 0.28.9 | MIT | Shared Fiber/its-fine development types |
+| scheduler | 0.23.2 | MIT | Existing React DOM scheduler shared with Fiber |
+| fflate | 0.8.3 | MIT | Existing Three types dependency shared with three-stdlib |
 
 Versions were checked against npm publication metadata on 2026-11-01:
 Three and its types were published 2025-09-03; Fiber and Drei were published
@@ -107,6 +112,24 @@ dependency is pinned to BVH 0.8.3 (published 2024-11-11, Three peer `>=0.159.0`)
 with a scoped override, rather than ignoring the incompatibility warning or
 upgrading the application's React version. Debug-only helpers are not required
 by the scene; do not import them merely because Drei provides them.
+
+The first CI duplication check exposed five new duplicate dependency families.
+Scoped overrides share Zustand 4's default and named create APIs across
+Fiber/Drei/tunnel-rat, the existing reconciler types and fflate versions, and
+Three itself in the unused stats helper. React's scheduler is shared at its
+existing 0.23.2 version. No duplication baseline or budget was relaxed.
+Publication dates: Zustand 4.5.7 2025-05-15, reconciler types 0.28.9
+2024-12-11, scheduler 0.23.2 2024-04-26, fflate 0.8.3 2026-05-16; all MIT.
+
+The scene imports only Drei's OrbitControls module, with no downloaded studio
+environment. Three's published source entry is aliased consistently and its
+core/renderer modules are separate lazy vendor chunks; the original 224.6KB
+scene chunk exceeded the unchanged 100KB route budget. The resulting engine
+chunks measure 99.8KB and 84.7KB under the unchanged 140KB vendor limit.
+Camera changes are immediate, without autorotation or damping; demand rendering
+pauses in hidden tabs and DPR is capped at two. Context loss leaves the same
+seventeen unknown-state rows visible. Live values, part details and Demo controls
+remain subsequent tasks, not claimed complete.
 
 ## Assets
 

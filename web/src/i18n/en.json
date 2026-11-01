@@ -5960,7 +5960,28 @@
     "badge": "Experimental",
     "vehicleLab": {
       "title": "Vehicle lab",
-      "description": "Explore live vehicle signals through an interactive, self-made 3D vehicle."
+      "description": "Explore live vehicle signals through an interactive, self-made 3D vehicle.",
+      "loading": "Opening the vehicle studio...",
+      "webglUnavailable": "3D is unavailable on this device. Every vehicle signal remains readable below.",
+      "studio": "Vehicle studio",
+      "illustrative": "Original illustrative model, not a manufacturer asset. Unknown signals never imply closed doors or normal readings.",
+      "summary": "Vehicle state",
+      "unavailable": "Unavailable",
+      "canvas": "Illustrative vehicle. Drag to orbit, pinch or scroll to zoom, use arrow keys to pan, or choose a camera view.",
+      "cameraViews": "Camera views",
+      "camera": {
+        "front": "Front", "rear": "Rear", "side": "Side", "top": "Top", "tires": "Tires"
+      },
+      "parts": {
+        "doorFrontLeft": "Front-left door", "doorFrontRight": "Front-right door",
+        "doorRearLeft": "Rear-left door", "doorRearRight": "Rear-right door",
+        "windowFrontLeft": "Front-left window", "windowFrontRight": "Front-right window",
+        "windowRearLeft": "Rear-left window", "windowRearRight": "Rear-right window",
+        "wheelFrontLeft": "Front-left tire", "wheelFrontRight": "Front-right tire",
+        "wheelRearLeft": "Rear-left tire", "wheelRearRight": "Rear-right tire",
+        "frunk": "Front trunk", "trunk": "Rear trunk", "chargePort": "Charge port",
+        "headlights": "Headlights", "taillights": "Taillights"
+      }
     },
     "routeFlyover": {
       "title": "Route flyover",

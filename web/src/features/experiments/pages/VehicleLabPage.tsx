@@ -1,7 +1,11 @@
 import { useTranslation } from 'react-i18next';
+import { lazy, Suspense } from 'react';
 
 import { Icons } from '@/lib/icons';
+import { Text } from '@/components/ui';
 import ExperimentIntro from '../components/ExperimentIntro';
+
+const VehicleScene = lazy(() => import('../vehicle-lab/VehicleScene'));
 
 export default function VehicleLabPage() {
   const { t } = useTranslation();
@@ -13,6 +17,10 @@ export default function VehicleLabPage() {
       title={title}
       description={description}
       icon={Icons.vehicle}
-    />
+    >
+      <Suspense fallback={<Text as="p" role="status" className="mt-6">{t('experiments.vehicleLab.loading', 'Opening the vehicle studio...')}</Text>}>
+        <VehicleScene />
+      </Suspense>
+    </ExperimentIntro>
   );
 }

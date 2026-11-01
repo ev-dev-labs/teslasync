@@ -191,8 +191,20 @@
   },
   "overrides": {
     "@react-three/drei": {
-      "three-mesh-bvh": "0.8.3"
+      "three-mesh-bvh": "0.8.3",
+      "zustand": "4.5.7",
+      "stats-gl": {
+        "three": "0.180.0"
+      },
+      "three-stdlib": {
+        "fflate": "0.8.3"
+      }
     },
+    "@react-three/fiber": {
+      "@types/react-reconciler": "0.28.9",
+      "zustand": "4.5.7"
+    },
+    "scheduler": "0.23.2",
     "handlebars": "4.7.10",
     "import-in-the-middle": "3.4.0",
     "react-grid-layout": {
