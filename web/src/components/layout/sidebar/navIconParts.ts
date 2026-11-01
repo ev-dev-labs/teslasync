@@ -5,6 +5,23 @@
 export type NavNode = readonly [string, Readonly<Record<string, string>>]
 export interface NavGlyph { lucideName: string; parts: readonly { origin: readonly [number, number]; nodes: readonly NavNode[] }[]; static?: readonly NavNode[] }
 export const NAV_ICON_PARTS = {
+  "experiments": {
+    "lucideName": "flask-conical",
+    "parts": [
+      {
+        "origin": [12, 13],
+        "nodes": [
+          ["path", { "d": "M9 3h6M10 3v7L4.5 19a1.5 1.5 0 0 0 1.3 2h12.4a1.5 1.5 0 0 0 1.3-2L14 10V3" }]
+        ]
+      },
+      {
+        "origin": [12, 16],
+        "nodes": [
+          ["path", { "d": "M7 15h10" }]
+        ]
+      }
+    ]
+  },
   "home": {
     "lucideName": "layout-template",
     "parts": [

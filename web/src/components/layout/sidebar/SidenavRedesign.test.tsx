@@ -51,7 +51,7 @@ describe('responsive sidenav and reload contract', () => {
 describe('frozen old-nav reachability', () => {
   it('keeps every original primary and route in the canonical production source', () => {
     const text=readFileSync('src/components/layout/Layout.tsx','utf8'); const tree=ts.createSourceFile('Layout.tsx',text,ts.ScriptTarget.Latest,true); const paths=new Set<string>();
-    const titles: string[]=[]; function visit(node:ts.Node) { if(ts.isPropertyAssignment(node)&&ts.isStringLiteral(node.initializer)){ if(node.name.getText(tree)==='to')paths.add(node.initializer.text); if(node.name.getText(tree)==='title'&&ts.isObjectLiteralExpression(node.parent)&&node.parent.properties.some(property=>ts.isPropertyAssignment(property)&&property.name.getText(tree)==='items'))titles.push(node.initializer.text) } ts.forEachChild(node,visit) } visit(tree); expect(titles).toEqual(inventory.map(section=>section.title));
+    const titles: string[]=[]; function visit(node:ts.Node) { if(ts.isPropertyAssignment(node)&&ts.isStringLiteral(node.initializer)){ if(node.name.getText(tree)==='to')paths.add(node.initializer.text); if(node.name.getText(tree)==='title'&&ts.isObjectLiteralExpression(node.parent)&&node.parent.properties.some(property=>ts.isPropertyAssignment(property)&&property.name.getText(tree)==='items'))titles.push(node.initializer.text) } ts.forEachChild(node,visit) } visit(tree); expect(titles).toEqual([...inventory.map(section=>section.title), 'Experiments']);
     for(const section of inventory)for(const item of section.items)expect(paths.has(item.to),item.to).toBe(true)
   })
   it.each(sections.map(section=>[section.title,section] as const))('every page in %s is reachable at its unchanged route', (title,section) => {

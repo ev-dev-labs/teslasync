@@ -106,6 +106,7 @@
     "entityContext",
     "error",
     "errorBoundary",
+    "experiments",
     "explorer",
     "export",
     "exports",
@@ -598,9 +599,6 @@
       "vehicleManagement",
       "vehicles"
     ],
-    "experiments": [
-      "experiments"
-    ],
     "automations": [
       "automationList",
       "comfort",
@@ -840,12 +838,6 @@
     "/energy-ledger": "battery",
     "/energy-orchestrator": "home-energy",
     "/energy-products": "battery",
-    "/experiments/battery-what-if": "experiments",
-    "/experiments/drive-art": "experiments",
-    "/experiments/energy-flow": "experiments",
-    "/experiments/route-flyover": "experiments",
-    "/experiments/vehicle-lab": "experiments",
-    "/experiments/year-in-motion": "experiments",
     "/explore": "explore",
     "/explorer": "driving-explorer",
     "/firmware-impact": "analytics",
@@ -1795,12 +1787,6 @@
       "watchFaceNL",
       "widget",
       "yearReview"
-    ],
-    "experiments": [
-      "errorBoundary",
-      "gas",
-      "rbac",
-      "toast"
     ],
     "automations": [
       "achievements",

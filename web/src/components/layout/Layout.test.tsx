@@ -850,6 +850,7 @@ describe('Layout — grouped sidebar sections', () => {
       'Settings',
       'Integrations',
       'About',
+      'Experiments',
     ])
   })
 

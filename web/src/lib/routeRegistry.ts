@@ -127,7 +127,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: "/energy-products", name: "EnergyProducts", label: "Energy products" },
   { path: "/experiments/battery-what-if", name: "BatteryWhatIf", label: "Battery what-if" },
   { path: "/experiments/drive-art", name: "DriveArt", label: "Drive art" },
-  { path: "/experiments/energy-flow", name: "EnergyFlowExperiment", label: "Energy flow" },
+  { path: "/experiments/energy-flow", name: "EnergyFlowExperiment", label: "Where did my energy go?" },
   { path: "/experiments/route-flyover", name: "RouteFlyover", label: "Route flyover" },
   { path: "/experiments/vehicle-lab", name: "VehicleLab", label: "Vehicle lab" },
   { path: "/experiments/year-in-motion", name: "YearInMotion", label: "Year in motion" },

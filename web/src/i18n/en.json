@@ -5658,6 +5658,12 @@
     "speedHistoryAria": "Speed and distance-to-arrival area chart over time",
     "speedHistoryTitle": "Speed & distance history",
     "items": {
+      "experiments_vehicle-lab": "Vehicle lab",
+      "experiments_route-flyover": "Route flyover",
+      "experiments_energy-flow": "Where did my energy go?",
+      "experiments_year-in-motion": "Year in motion",
+      "experiments_battery-what-if": "Battery what-if",
+      "experiments_drive-art": "Drive art",
       "account_2fa": "Two-factor auth",
       "account_privacy": "Privacy",
       "account_sessions": "Active sessions",
@@ -5891,6 +5897,7 @@
       "driving": "Driving",
       "energy": "Energy",
       "home": "Home",
+      "experiments": "Experiments",
       "integrations": "Integrations",
       "notifications": "Notifications",
       "ownership_intelligence": "Ownership intelligence",
@@ -5960,7 +5967,7 @@
       "description": "Replay a recorded drive as a cinematic journey along its actual route."
     },
     "energyFlow": {
-      "title": "Energy flow",
+      "title": "Where did my energy go?",
       "description": "Trace the full energy story of a charge or drive, from grid to battery to wheel, as one flow."
     },
     "yearInMotion": {
@@ -5979,7 +5986,7 @@
   "routes": {
     "vehicleLab": "Vehicle lab",
     "routeFlyover": "Route flyover",
-    "energyFlowExperiment": "Energy flow",
+    "energyFlowExperiment": "Where did my energy go?",
     "yearInMotion": "Year in motion",
     "batteryWhatIf": "Battery what-if",
     "driveArt": "Drive art",

@@ -1,0 +1,29 @@
+{
+  "experiments": {
+    "badge": "Experimental",
+    "vehicleLab": {
+      "title": "Vehicle lab",
+      "description": "Explore live vehicle signals through an interactive, self-made 3D vehicle."
+    },
+    "routeFlyover": {
+      "title": "Route flyover",
+      "description": "Replay a recorded drive as a cinematic journey along its actual route."
+    },
+    "energyFlow": {
+      "title": "Where did my energy go?",
+      "description": "Trace the full energy story of a charge or drive, from grid to battery to wheel, as one flow."
+    },
+    "yearInMotion": {
+      "title": "Year in motion",
+      "description": "Watch a year of recorded journeys unfold as an animated map and timeline."
+    },
+    "batteryWhatIf": {
+      "title": "Battery what-if",
+      "description": "Model battery degradation and range projections from real charge and discharge history."
+    },
+    "driveArt": {
+      "title": "Drive art",
+      "description": "Turn a drive into a generated piece of art from its route, speed and power."
+    }
+  }
+}

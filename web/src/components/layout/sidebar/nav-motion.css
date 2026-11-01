@@ -7,6 +7,8 @@
 .sidenav-rail-item .sidenav-short-label { color: var(--text-muted); }
 .sidenav-rail-item.is-selected .sidenav-short-label { color: var(--text-primary); }
 @media (prefers-reduced-motion: no-preference) {
+  .nav-motion-target.is-animating .nav-glyph-experiments .part-1 { animation-name: nav-casing; }
+  .nav-motion-target.is-animating .nav-glyph-experiments .part-2 { animation-name: nav-dip; }
   [data-nav-action] .nav-motion-target { transition: transform 100ms cubic-bezier(.2,.9,.2,1.2); }
   .sidenav-phone-tabs:not([data-nav-reduced]) > [data-nav-action]:active .nav-motion-target,
   .sidenav-rail:not([data-nav-reduced]) [data-nav-action]:active .nav-motion-target { transform: scale(.9); }

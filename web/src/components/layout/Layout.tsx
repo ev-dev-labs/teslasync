@@ -505,6 +505,18 @@ export const navSections = [
       { to: '/roadmap', icon: Icons.signpost, label: 'Roadmap', labelKey: 'nav.items.roadmap', color: 'text-violet-400' },
     ],
   },
+  {
+    title: 'Experiments',
+    titleKey: 'nav.groups.experiments',
+    items: [
+      { to: '/experiments/vehicle-lab', icon: Icons.vehicle, label: 'Vehicle lab', labelKey: 'nav.items.experiments_vehicle-lab', color: 'text-violet-400' },
+      { to: '/experiments/route-flyover', icon: Icons.departure, label: 'Route flyover', labelKey: 'nav.items.experiments_route-flyover', color: 'text-sky-400' },
+      { to: '/experiments/energy-flow', icon: Icons.powerWave, label: 'Where did my energy go?', labelKey: 'nav.items.experiments_energy-flow', color: 'text-amber-400' },
+      { to: '/experiments/year-in-motion', icon: Icons.calendarPlus, label: 'Year in motion', labelKey: 'nav.items.experiments_year-in-motion', color: 'text-emerald-400' },
+      { to: '/experiments/battery-what-if', icon: Icons.batteryCharging, label: 'Battery what-if', labelKey: 'nav.items.experiments_battery-what-if', color: 'text-lime-400' },
+      { to: '/experiments/drive-art', icon: Icons.eraser, label: 'Drive art', labelKey: 'nav.items.experiments_drive-art', color: 'text-rose-400' },
+    ],
+  },
 ].map(section => ({
   ...section,
   items: section.items.map(item => ({
