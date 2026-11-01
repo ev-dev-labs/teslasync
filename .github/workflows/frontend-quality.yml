@@ -83,7 +83,7 @@ jobs:
       - run: npm run e2e:build
         env:
           E2E_MOCKS: '1'
-      - uses: actions/upload-artifact@v7.0.1
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: e2e-app
           path: web/e2e/.app-dist/
@@ -201,7 +201,7 @@ jobs:
         run: npm run e2e:${{ matrix.suite }} -- --shard=${{ matrix.shard }} ${{ matrix.suite == 'a11y' && '--fully-parallel' || '' }}
       - name: Upload Chromium failure evidence
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: chromium-${{ matrix.name }}-report
           if-no-files-found: ignore
@@ -255,7 +255,7 @@ jobs:
         run: npm run e2e -- --project=${{ matrix.browser }}-smoke --shard=${{ matrix.shard }}/3
       - name: Upload engine failure evidence
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: ${{ matrix.browser }}-smoke-report-${{ matrix.shard }}
           if-no-files-found: ignore
@@ -317,7 +317,7 @@ jobs:
         run: npm run e2e:visual -- --shard=${{ matrix.shard }}/64 --workers=2
       - name: Upload visual diffs
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: visual-regression-report-${{ matrix.shard }}
           if-no-files-found: ignore
@@ -386,7 +386,7 @@ jobs:
           rm -rf test-results playwright-report blob-report
       - name: Upload sanitized deployed smoke status
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: authenticated-production-smoke-status
           if-no-files-found: error
