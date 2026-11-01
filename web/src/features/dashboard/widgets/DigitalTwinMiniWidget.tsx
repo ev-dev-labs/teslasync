@@ -13,6 +13,7 @@ import { IconButton } from '@/components/ui';
 import type { WidgetProps } from './types';
 import VehicleStudio from './vehicle-instruments/VehicleStudio';
 import { useVerifiedDriving } from './vehicle-instruments/useVerifiedDriving';
+import { useVerifiedStudioLights } from './vehicle-instruments/useVerifiedStudioLights';
 
 const REFRESH_INTERVAL = 5_000;
 
@@ -37,6 +38,7 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
   const isLoading = vehiclesLoading || secLoading || stateLoading;
   const vehicleState = vehicleStateData?.state ?? null;
   const driving = useVerifiedDriving(vehicleStateData, stateError);
+  const lightsOn = useVerifiedStudioLights(id, securityQuery);
   const stateTrust = useDataState({ ...stateQuery, data: vehicleStateData ?? (stateLoading || stateError ? undefined : null) }, { provenance: vehicleStateData?.live ? 'live' : 'cached' });
   const securityTrust = useDataState({ ...securityQuery, data: securityData ?? (secLoading || securityQuery.isError ? undefined : null) }, { provenance: 'cached' });
   const chargingTrust = useDataState({ ...chargingQuery, data: chargingData ?? (chargingQuery.isLoading || chargingQuery.isError ? undefined : null) }, { provenance: 'cached' });
@@ -93,6 +95,7 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
               twinState={twinState}
               vehicle={vehicle}
               driving={driving}
+              lightsOn={lightsOn}
               size="sm"
               compact
             />

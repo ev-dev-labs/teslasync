@@ -4,6 +4,7 @@ import { prepareCatalogueState } from './dashboardCatalogueStateHarness';
 import { fulfillApiFixture, waitForHarnessReady } from './mockApi';
 import { positionCataloguePanel } from './dashboardCatalogueCapture';
 import { expectFlatWidgetSurfaces } from './dashboardWidgetSurfaces';
+import { installCataloguePhotoSource } from './dashboardCatalogueGeometry';
 
 test.skip(process.env.E2E_MOCKS === '0', 'Requires synthetic widget activity sources');
 
@@ -115,12 +116,12 @@ for (const theme of ['dark', 'light'] as const) {
 
     test(`verified activity, pause and inactive states at ${width}px in ${theme}`, async ({ page }) => {
       test.setTimeout(120_000);
-      let mode: 'charging' | 'complete' | 'driving' | 'conditioning' | 'stale' = 'charging';
+      let mode: 'charging' | 'complete' | 'driving' | 'lights-off' | 'conditioning' | 'stale' = 'charging';
       let savedLayouts: DashboardLayoutsPayload | undefined;
       const failures: string[] = [];
       page.on('pageerror', error => failures.push(error.message));
       const mocks = await prepareCatalogueState(page, [
-        'battery-gauge', 'vehicle-hero', 'climate-status',
+        'battery-gauge', 'vehicle-hero', 'vehicle-hero-card', 'climate-status',
         'energy-flow', 'energy-flow-animated', 'live-power-flow',
       ], width, theme);
       await page.addInitScript(() => localStorage.setItem('teslasync-row-height-version', '2'));
@@ -131,14 +132,15 @@ for (const theme of ['dark', 'light'] as const) {
       });
       await page.route('**/api/v1/vehicles/7/state', route => {
         const now = new Date(Date.now() - (mode === 'stale' ? 180_000 : 0)).toISOString();
+        const driving = mode === 'driving' || mode === 'lights-off';
         const state = {
-          vehicle_id: 7, state: mode === 'driving' ? 'driving' : mode === 'charging' ? 'charging' : 'online',
+          vehicle_id: 7, state: driving ? 'driving' : mode === 'charging' ? 'charging' : 'online',
           battery_level: 72, rated_range: 410_000, ideal_range: 430_000, odometer: 32_100_000,
-          power: mode === 'charging' ? -7680 : mode === 'driving' ? 14_000 : 0,
+          power: mode === 'charging' ? -7680 : driving ? 14_000 : 0,
           is_charging: mode === 'charging', charger_power: mode === 'charging' ? 7.68 : 0,
           charge_rate: mode === 'charging' ? 30_000 : 0,
           time_to_full_charge: mode === 'charging' ? 3600 : 0,
-          speed: mode === 'driving' ? 18 : 0, is_climate_on: mode === 'conditioning',
+          speed: driving ? 18 : 0, is_climate_on: mode === 'conditioning',
           inside_temp: 21, outside_temp: 18, is_locked: true, sentry_mode: false,
           timestamp: now, updated_at: now,
         };
@@ -147,6 +149,10 @@ for (const theme of ['dark', 'light'] as const) {
           freshness: mode === 'stale' ? 'stale' : 'fresh', verified_fields: Object.keys(state),
         } });
       });
+      await page.route('**/api/v1/security/latest*', route => fulfillApiFixture(route, mocks, { json: {
+        vehicle_id: 7, ts: new Date(Date.now() - (mode === 'stale' ? 180_000 : 0)).toISOString(),
+        lights_high_beams: mode === 'driving', source: 'telemetry',
+      } }));
       await page.route('**/api/v1/climate/latest*', route => fulfillApiFixture(route, mocks, { json: {
         vehicle_id: 7, ts: new Date().toISOString(), source: 'telemetry',
         inside_temp_c: 21, outside_temp_c: 18, driver_setpoint_c: 22, passenger_setpoint_c: 22,
@@ -231,15 +237,123 @@ for (const theme of ['dark', 'light'] as const) {
         });
         expect(centering, 'a two-instrument flow must remain centered when the charger disappears').toBeLessThan(1);
       }
-      const road = page.locator('[data-widget-id="state-vehicle-hero"] .widget-road-motion').first();
+      const road = page.locator('[data-widget-id="state-vehicle-hero"] .widget-road-near-motion');
       await expect(road).toHaveCSS('animation-name', 'widget-road-travel');
       expect(new Set(await samples(road, 'strokeDashoffset')).size).toBeGreaterThan(1);
+      const studios = page.locator('[data-vehicle-studio]');
+      await expect(studios).toHaveCount(2);
+      for (const studio of await studios.all()) {
+        const strip = studio.locator('.widget-road-strip');
+        await expect(strip).toHaveCSS('mask-image', /linear-gradient.*0, 0, 0, 0.*12%.*88%.*0, 0, 0, 0/);
+        await expect(studio.locator('.widget-road-near-motion')).toHaveCSS('animation-duration', '6s');
+        await expect(studio.locator('.widget-road-far-motion')).toHaveCSS('animation-duration', '9s');
+        await expect(studio.locator('.widget-road-grain-motion')).toHaveCSS('animation-name', 'widget-road-grain-travel');
+        await expect(studio.locator('[data-vehicle-road-lighting]')).toHaveCount(1);
+        const lights = await studio.evaluate(element => {
+          const front = element.querySelector('.widget-road-headlight-pool')!;
+          const rear = element.querySelector('.widget-road-taillight-pool')!;
+          const frontBox = front.getBoundingClientRect();
+          const rearBox = rear.getBoundingClientRect();
+          const car = element.querySelector('[data-vehicle-twin]')!.getBoundingClientRect();
+          const strip = element.querySelector('.widget-road-strip')!.getBoundingClientRect();
+          const near = element.querySelector('.widget-road-near-motion')!.getBoundingClientRect();
+          const groundOffset = element.querySelector<SVGGElement>('.widget-road-strip > g')!
+            .transform.baseVal.consolidate()!.matrix.f;
+          const expectedGround = (car.top - strip.top + 211 * car.width / 560) * 200 / strip.height;
+          const color = (pool: Element) => getComputedStyle(
+            document.getElementById(pool.getAttribute('fill')!.slice(5, -1))!.firstElementChild!).stopColor;
+          return {
+            frontWidth: frontBox.width, rearWidth: rearBox.width,
+            frontAhead: frontBox.x + frontBox.width / 2 < car.x + car.width * .15,
+            rearBehind: rearBox.x + rearBox.width / 2 > car.x + car.width * .85,
+            differentColors: color(front) !== color(rear),
+            nearVisible: near.y >= strip.y && near.y <= strip.bottom,
+            groundError: Math.abs(177 + groundOffset - expectedGround),
+            filters: element.querySelectorAll('.widget-road-strip [filter]').length,
+          };
+        });
+        expect(lights.frontWidth).toBeGreaterThan(lights.rearWidth * 2);
+        expect(lights.groundError, 'the road follows the real car bounds, including compact studio resize').toBeLessThan(1);
+        expect(lights).toMatchObject({ frontAhead: true, rearBehind: true, differentColors: true, nearVisible: true, filters: 0 });
+        await expect(studio.locator('[data-wheel-rotor].widget-wheel-motion')).toHaveCount(2);
+      }
+      const checkWheels = async (moving: boolean, variant: 'photo' | 'svg') => {
+        for (const studio of await studios.all()) {
+          const wheels = studio.locator(variant === 'photo' ? '[data-wheel-rotor]' : '[data-svg-wheel-rotor]');
+          await expect(wheels).toHaveCount(2);
+          for (const wheel of await wheels.all()) {
+            await expect(wheel).toHaveCSS('animation-name', moving ? 'widget-wheel-turn' : 'none');
+          }
+          const frames = await studio.evaluate(async element => {
+            const rotors = [...element.querySelectorAll('[data-wheel-rotor], [data-svg-wheel-rotor]')];
+            const frames: string[][] = [];
+            for (let frame = 0; frame < 6; frame++) {
+              frames.push(rotors.map(rotor => getComputedStyle(rotor).transform));
+              await new Promise(resolve => setTimeout(resolve, 150));
+            }
+            return frames;
+          });
+          for (const index of [0, 1]) {
+            const distinct = new Set(frames.map(frame => frame[index])).size;
+            if (moving) expect(distinct, `${variant} wheel ${index} rotates`).toBeGreaterThan(1);
+            else expect(distinct, `${variant} wheel ${index} stays still`).toBe(1);
+          }
+          await expect(studio.locator(':scope > [role="img"]')).toHaveCSS('transform', 'none');
+        }
+      };
+      await checkWheels(true, 'photo');
+      for (const [index, studio] of (await studios.all()).entries()) {
+        await positionCataloguePanel(studio.locator('xpath=ancestor::*[@data-widget-id][1]'));
+        await studio.screenshot({ path: test.info().outputPath(`driving-photo-${index}-${width}-${theme}.png`) });
+      }
+      await motionSetting(page, false);
+      await expect(road).toHaveCSS('animation-name', 'none');
+      await expect(studios.first().locator('.widget-road-grain-motion')).toHaveCSS('animation-name', 'none');
+      await checkWheels(false, 'photo');
+      await motionSetting(page, true);
+      await checkWheels(true, 'photo');
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await checkWheels(false, 'photo');
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      for (const preference of ['on', 'auto']) {
+        await page.evaluate(value => {
+          const key = 'teslasync:low-bandwidth:v1';
+          localStorage.setItem(key, value);
+          window.dispatchEvent(new StorageEvent('storage', { key, newValue: value }));
+        }, preference);
+        await checkWheels(preference === 'auto', 'photo');
+      }
+      for (const hidden of [true, false]) {
+        await page.evaluate(value => {
+          Object.defineProperty(document, 'hidden', { configurable: true, get: () => value });
+          document.dispatchEvent(new Event('visibilitychange'));
+        }, hidden);
+        await checkWheels(!hidden, 'photo');
+      }
+      await installCataloguePhotoSource(page, true);
+      await load();
+      await checkWheels(true, 'svg');
+      for (const studio of await studios.all()) {
+        await expect(studio.locator('[data-twin-ground-shadow]')).toHaveCSS('display', 'none');
+      }
+      await motionSetting(page, false);
+      await checkWheels(false, 'svg');
+      await motionSetting(page, true);
+      for (const [index, studio] of (await studios.all()).entries()) {
+        await positionCataloguePanel(studio.locator('xpath=ancestor::*[@data-widget-id][1]'));
+        await studio.screenshot({ path: test.info().outputPath(`driving-svg-${index}-${width}-${theme}.png`) });
+      }
+      mode = 'lights-off';
+      await load();
+      await expect(studios.locator('[data-vehicle-road-lighting]')).toHaveCount(0);
+      await expect(road).toHaveCSS('animation-name', 'widget-road-travel');
       mode = 'conditioning';
       await load();
       const airflow = page.locator('[data-widget-id="state-climate-status"] .widget-airflow-motion').first();
       await expect(airflow).toHaveCSS('animation-name', 'widget-airflow-travel');
       expect(new Set(await samples(airflow, 'strokeDashoffset')).size).toBeGreaterThan(1);
       await expect(page.locator('[data-widget-id="state-vehicle-hero"] .widget-road-motion')).toHaveCount(0);
+      await expect(studios.locator('.widget-wheel-motion')).toHaveCount(0);
       expect(failures).toEqual([]);
       expect([...mocks.unmatched]).toEqual([]);
     });

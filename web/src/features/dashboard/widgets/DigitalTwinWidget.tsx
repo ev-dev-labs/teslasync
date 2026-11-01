@@ -15,6 +15,7 @@ import type { WidgetProps } from './types';
 import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
 import VehicleStudio from './vehicle-instruments/VehicleStudio';
 import { useVerifiedDriving } from './vehicle-instruments/useVerifiedDriving';
+import { useVerifiedStudioLights } from './vehicle-instruments/useVerifiedStudioLights';
 
 const REFRESH_INTERVAL = 5_000;
 
@@ -34,6 +35,7 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
   const { data: charging } = chargingQuery;
   const state = stateData?.state;
   const driving = useVerifiedDriving(stateData, isError);
+  const lightsOn = useVerifiedStudioLights(id, securityQuery);
   const stateTrust = useDataState({ ...stateQuery, data: stateData ?? (stateLoading || isError ? undefined : null) }, { provenance: stateData?.live ? 'live' : 'cached' });
   const securityTrust = useDataState({ ...securityQuery, data: security ?? (securityLoading || securityQuery.isError ? undefined : null) }, { provenance: 'cached' });
   const chargingTrust = useDataState({ ...chargingQuery, data: charging ?? (chargingQuery.isLoading || chargingQuery.isError ? undefined : null) }, { provenance: 'cached' });
@@ -116,6 +118,7 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
               twinState={twinState}
               vehicle={vehicle}
               driving={driving}
+              lightsOn={lightsOn}
               size={twinSize}
               bounded={size.rows <= 4}
             />
