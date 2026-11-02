@@ -10,6 +10,7 @@
       "illustrative": "Original illustrative model, not a manufacturer asset. Unknown signals never imply closed doors or normal readings.",
       "summary": "Vehicle state",
       "unavailable": "Unavailable",
+      "available": "Available",
       "canvas": "Illustrative vehicle. Drag to orbit, pinch or scroll to zoom, use arrow keys to pan, or choose a camera view.",
       "cameraViews": "Camera views",
       "camera": {

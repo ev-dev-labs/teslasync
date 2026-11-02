@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import VehicleStudioCanvas from './VehicleStudioCanvas'
+import { deriveVehicleLabState } from './vehicleLabState'
 
 const canvas = vi.hoisted(() => ({ props: null as { dpr: number[]; frameloop: string } | null }))
 vi.mock('@react-three/fiber', () => ({
@@ -16,7 +17,7 @@ vi.mock('@/components/ui/ThemeProvider', async importOriginal => ({
 afterEach(() => vi.restoreAllMocks())
 
 it('selects exactly one camera view with keyboard-accessible buttons', async () => {
-  render(<VehicleStudioCanvas onUnavailable={vi.fn()} />)
+  render(<VehicleStudioCanvas state={deriveVehicleLabState(null)} onUnavailable={vi.fn()} />)
   for (const name of ['Rear', 'Side', 'Top', 'Tires', 'Front']) {
     await userEvent.click(screen.getByRole('button', { name }))
     expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true')
@@ -26,7 +27,7 @@ it('selects exactly one camera view with keyboard-accessible buttons', async () 
 
 it('caps DPR at two and stops the demand renderer when the document is hidden', () => {
   const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
-  render(<VehicleStudioCanvas onUnavailable={vi.fn()} />)
+  render(<VehicleStudioCanvas state={deriveVehicleLabState(null)} onUnavailable={vi.fn()} />)
   expect(canvas.props).toMatchObject({ dpr: [1, 2], frameloop: 'demand' })
   visibility.mockReturnValue('hidden')
   fireEvent(document, new Event('visibilitychange'))

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Heading, Text } from '@/components/ui'
+import { mapVehiclePartStates, type VehicleLabState } from './vehicleLabState'
 
 const PARTS = [
   ['doorFrontLeft', 'Front-left door'], ['doorFrontRight', 'Front-right door'],
@@ -12,8 +13,14 @@ const PARTS = [
   ['headlights', 'Headlights'], ['taillights', 'Taillights'],
 ] as const
 
-export default function VehicleSummary() {
+export default function VehicleSummary({ state }: { state: VehicleLabState }) {
   const { t } = useTranslation()
+  const parts = mapVehiclePartStates(state)
+  const labels = {
+    open: t('common.open', 'Open'), closed: t('common.closed', 'Closed'),
+    partial: t('digitalTwin.partial', 'Partial'), available: t('experiments.vehicleLab.available', 'Available'),
+    unknown: t('experiments.vehicleLab.unavailable', 'Unavailable'),
+  }
   return (
     <section aria-labelledby="vehicle-state-heading" className="rounded-shape-md border border-[var(--border-default)] p-4">
       <Heading level="panel" id="vehicle-state-heading">{t('experiments.vehicleLab.summary', 'Vehicle state')}</Heading>
@@ -21,7 +28,7 @@ export default function VehicleSummary() {
         {PARTS.map(([part, fallback]) => (
           <div key={part} className="min-w-0 border-l-2 border-[var(--border-default)] pl-3">
             <Text as="dt" variant="bodySm">{t(`experiments.vehicleLab.parts.${part}`, fallback)}</Text>
-            <Text as="dd" variant="caption" className="mt-1">{t('experiments.vehicleLab.unavailable', 'Unavailable')}</Text>
+            <Text as="dd" variant="caption" className="mt-1">{labels[parts[part]]}</Text>
           </div>
         ))}
       </dl>

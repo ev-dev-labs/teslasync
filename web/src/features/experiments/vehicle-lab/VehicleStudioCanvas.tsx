@@ -7,6 +7,7 @@ import { DATA_VISUAL_COLORS } from '@/lib/colors'
 import { CAMERA_PRESETS, type CameraPreset } from './cameraPresets'
 import VehicleCameraController from './VehicleCameraController'
 import VehicleModelView from './VehicleModelView'
+import type { VehicleLabState } from './vehicleLabState'
 
 function subscribeVisibility(listener: () => void) {
   document.addEventListener('visibilitychange', listener)
@@ -17,7 +18,7 @@ const CAMERA_LABELS: Record<CameraPreset, string> = {
   front: 'Front', rear: 'Rear', side: 'Side', top: 'Top', tires: 'Tires',
 }
 
-export default function VehicleStudioCanvas({ onUnavailable }: { onUnavailable: () => void }) {
+export default function VehicleStudioCanvas({ state, onUnavailable }: { state: VehicleLabState; onUnavailable: () => void }) {
   const { t } = useTranslation()
   const { mode, theme } = useTheme()
   const [preset, setPreset] = useState<CameraPreset>('front')
@@ -67,7 +68,7 @@ export default function VehicleStudioCanvas({ onUnavailable }: { onUnavailable: 
           <hemisphereLight args={[DATA_VISUAL_COLORS.canvasWhite, DATA_VISUAL_COLORS.blue, 1.1]} />
           <directionalLight position={[3, 8, 5]} intensity={3} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-6} shadow-camera-right={6} shadow-camera-top={6} shadow-camera-bottom={-6} shadow-normalBias={.025} />
           <directionalLight position={[-4, 3, -5]} intensity={1.5} color={DATA_VISUAL_COLORS.blue} />
-          <VehicleModelView palette={palette} />
+          <VehicleModelView palette={palette} state={state} />
           <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
             <circleGeometry args={[8, 64]} />
             <meshStandardMaterial color={mode.surface1} roughness={1} />
