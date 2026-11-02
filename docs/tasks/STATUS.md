@@ -15,7 +15,7 @@ Values: todo | done | blocked. Agents take the first `todo` row.
 | 08 | Vehicle lab: placeholder 3D vehicle model | done | bcac44cd89 | Original17named-part SUV, door-attached windows and GPU disposal;3tests/scoped lint/audit0; isolated exact-candidate tsc/build/strict399.8KB pass; no vendor assets. |
 | 09 | Vehicle lab: 3D scene | done | 696f37ec3c | Lazy themed studio/five camera presets/WebGL summary;154unit and5native tests pass; exact-candidate tsc/full lint/catalog/build/strict400.0KB/unchanged duplication baseline pass. Native video helper unavailable, assertions retained. |
 | 10 | Vehicle lab: part mapping file | done | b6cacc10c1 | Typed17part binding used by scene; missing/replacement-node tests pass;24experiment tests/tsc/full lint/catalog/audit/build/strict399.9KB pass on exact candidate. |
-| 11 | Vehicle lab: live vehicle state | todo | | |
+| 11 | Vehicle lab: live vehicle state | done | 690ecd99c5 | Canonical typed live atomics/unknown-safe17part states, per-field2minute expiry, source/freshness handling;62tests/tsc/full lint/catalog/audit/build/strict399.9KB/contracts pass on exact candidate. |
 | 12 | Vehicle lab: labels and animations | todo | | |
 | 13 | Vehicle lab: summary and detail panels | todo | | |
 | 14 | Vehicle lab: demo mode | todo | | |
