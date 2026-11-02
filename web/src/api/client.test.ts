@@ -565,6 +565,19 @@ describe('request() — wire error normalization', () => {
 })
 
 describe('request() — resilient fall-through', () => {
+  it.each([
+    { status: 404, code: 'NOT_FOUND', message: 'web push is not configured' },
+    { status: 501, code: 'AUTH_MODE_OPEN', message: 'requires forward-auth mode' },
+  ])('returns a terminal $status response without a duplicate request', async ({ status, code, message }) => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ error: message, code }, status))
+
+    await expect(request('/optional-feature')).rejects.toMatchObject({
+      name: 'ApiError', status, code, message,
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+  })
+
   it('routes a non-sudo 5xx JSON failure to resilientFetch with the normalised path', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ error: 'upstream broke' }, 502))
     resilientFetchMock.mockResolvedValueOnce({ recovered: true })

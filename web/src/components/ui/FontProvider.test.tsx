@@ -29,7 +29,7 @@ import {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FontProvider is a mirror of ThemeProvider: it hydrates from the backend
-// `/settings` blob via a RAW `fetch` (mounts before auth context exists),
+// `/settings` blob via the resilient request client,
 // persists edits back through the resilient `request()` client, writes six
 // `--font-*` CSS vars onto <html>, and keeps peer tabs in sync via the
 // `font.changed` broadcast. These tests exercise every export: the pure
@@ -77,8 +77,6 @@ function cssVar(name: string): string {
 
 const wrapper = ({ children }: { children: ReactNode }) => <FontProvider>{children}</FontProvider>
 
-let fetchMock: ReturnType<typeof vi.fn>
-
 beforeEach(() => {
   localStorage.clear()
   document.getElementById('teslasync-active-fonts')?.remove()
@@ -87,14 +85,9 @@ beforeEach(() => {
   // Default: GET /settings resolves an (empty) blob so the PUT branch runs.
   requestMock.mockResolvedValue({})
   broadcastSpy.mockReset()
-  // Default hydration: a non-ok response → provider keeps stored/default prefs
-  // but still flips `initialized`.
-  fetchMock = vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) })
-  vi.stubGlobal('fetch', fetchMock)
 })
 
 afterEach(() => {
-  vi.unstubAllGlobals()
   vi.clearAllMocks()
 })
 
@@ -317,19 +310,15 @@ describe('FontProvider — mount + hydration', () => {
     expect(stylesheet.href).toContain('family=Inter')
     expect(stylesheet.href).toContain('family=JetBrains+Mono')
     await waitFor(() => expect(result.current.initialized).toBe(true))
-    // Raw fetch, not the resilient client, drives hydration.
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/settings', { headers: new Headers() })
+    expect(requestMock).toHaveBeenCalledWith('/settings')
   })
 
   it('merges font_* fields from the backend blob and persists + applies them', async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        font_family: 'plex',
-        font_scale: 1.25,
-        font_heading_weight: 500,
-        font_tracking: '-0.01em',
-      }),
+    requestMock.mockResolvedValueOnce({
+      font_family: 'plex',
+      font_scale: 1.25,
+      font_heading_weight: 500,
+      font_tracking: '-0.01em',
     })
     const { result } = renderHook(() => useFont(), { wrapper })
     await waitFor(() => expect(result.current.prefs.sans).toBe('plex'))
@@ -341,9 +330,9 @@ describe('FontProvider — mount + hydration', () => {
   })
 
   it('ignores an invalid backend font_family and clamps an out-of-range scale', async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ font_family: 'nonsense', font_scale: 999 }),
+    requestMock.mockResolvedValueOnce({
+      font_family: 'nonsense',
+      font_scale: 999,
     })
     const { result } = renderHook(() => useFont(), { wrapper })
     await waitFor(() => expect(result.current.initialized).toBe(true))
@@ -352,7 +341,7 @@ describe('FontProvider — mount + hydration', () => {
   })
 
   it('still flips initialized when the hydration fetch rejects', async () => {
-    fetchMock.mockRejectedValueOnce(new Error('network down'))
+    requestMock.mockRejectedValueOnce(new Error('network down'))
     const { result } = renderHook(() => useFont(), { wrapper })
     await waitFor(() => expect(result.current.initialized).toBe(true))
     expect(result.current.prefs).toEqual(DEFAULT_FONT_PREFS)
