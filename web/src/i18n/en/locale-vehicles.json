@@ -1892,8 +1892,8 @@
       },
       "rows": "{{count}} rows",
       "status": {
-        "empty": "No rows",
         "ok": "Have data",
+        "empty": "No rows",
         "unavailable": "Unavailable"
       },
       "title": "Sources"

@@ -11,10 +11,10 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
 import {
   Badge,
+  DataTable,
   GlassPanel,
   HelpTooltip,
   PanelTitle,
-  Table,
   Text,
 } from '@/components/ui';
 
@@ -237,22 +237,26 @@ export function UtilizationMethodology({
                         'Timestamp eligibility',
                       )}
                     </Text>
-                    <Table className="mt-2" aria-label={t('utilization.method.timestampExclusions', 'Timestamp eligibility')}>
-                      <tbody>
-                        {exclusions.map((item) => (
-                          <tr key={item.label}>
-                            <th scope="row" className="font-normal">
-                              <Text variant="bodySm">{item.label}</Text>
-                            </th>
-                            <td className="text-right tabular-nums">
-                              <Text variant="bodySm" mono>
-                                {fmtInt(item.value)}
-                              </Text>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
+                    <DataTable
+                      tableId="utilization:timestamp-exclusions"
+                      caption={t('utilization.method.timestampExclusions', 'Timestamp eligibility')}
+                      data={exclusions.map((item) => ({
+                        key: item.label,
+                        label: item.label,
+                        value: fmtInt(item.value),
+                      }))}
+                      columns={[
+                        { key: 'label', header: t('utilization.method.timestampExclusions', 'Timestamp eligibility'), defaultWidth: 220, minWidth: 180, render: (row) => <Text variant="bodySm">{row.label}</Text> },
+                        { key: 'value', header: t('common.value', 'Value'), defaultWidth: 120, minWidth: 100, align: 'right', render: (row) => <Text variant="bodySm" mono>{row.value}</Text> },
+                      ]}
+                      keyExtractor={(row) => row.key}
+                      variant="embedded"
+                      stickyHeader={false}
+                      showColumnsMenu={false}
+                      columnVisibility={false}
+                      searchable={false}
+                      exportable={false}
+                    />
                   </div>
                   <div className="rounded-xl border border-[var(--border-subtle)] p-3">
                     <Text as="p" variant="label">
@@ -261,29 +265,26 @@ export function UtilizationMethodology({
                         'Metric field coverage',
                       )}
                     </Text>
-                    <Table className="mt-2" aria-label={t('utilization.method.fieldCoverageTitle', 'Metric field coverage')}>
-                      <tbody>
-                        {fieldCoverage.map((item) => (
-                          <tr key={item.label}>
-                            <th scope="row" className="font-normal">
-                              <Text variant="bodySm">{item.label}</Text>
-                            </th>
-                            <td className="text-right tabular-nums">
-                              <Text variant="caption">
-                                {t(
-                                  'utilization.method.fieldCoverageValue',
-                                  '{{usable}} usable · {{excluded}} excluded',
-                                  {
-                                    usable: fmtInt(item.usable),
-                                    excluded: fmtInt(item.excluded),
-                                  },
-                                )}
-                              </Text>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
+                    <DataTable
+                      tableId="utilization:field-coverage"
+                      caption={t('utilization.method.fieldCoverageTitle', 'Metric field coverage')}
+                      data={fieldCoverage.map((item) => ({
+                        key: item.label,
+                        label: item.label,
+                        value: t('utilization.method.fieldCoverageValue', '{{usable}} usable · {{excluded}} excluded', { usable: fmtInt(item.usable), excluded: fmtInt(item.excluded) }),
+                      }))}
+                      columns={[
+                        { key: 'label', header: t('utilization.method.fieldCoverageTitle', 'Metric field coverage'), defaultWidth: 220, minWidth: 180, render: (row) => <Text variant="bodySm">{row.label}</Text> },
+                        { key: 'value', header: t('common.value', 'Value'), defaultWidth: 160, minWidth: 120, align: 'right', render: (row) => <Text variant="caption">{row.value}</Text> },
+                      ]}
+                      keyExtractor={(row) => row.key}
+                      variant="embedded"
+                      stickyHeader={false}
+                      showColumnsMenu={false}
+                      columnVisibility={false}
+                      searchable={false}
+                      exportable={false}
+                    />
                   </div>
                 </div>
               </>

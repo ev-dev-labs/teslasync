@@ -16,6 +16,8 @@ import { useMotionPreference } from '@/hooks/useMotionPreference'
 import type { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
+import { useTranslation } from 'react-i18next'
+import { Badge } from '@/components/ui/Badge'
 
 export interface SidebarRowProps {
   to: string
@@ -57,6 +59,8 @@ export function SidebarRow({
   // in sequence on mount; without one the variants stay inert and the
   // row renders statically. Vertical rise keeps it direction-neutral.
   const { reduce } = useMotionPreference()
+  const { t } = useTranslation()
+  const experimental = to.startsWith('/experiments/')
   return (
     <motion.div
       variants={
@@ -117,6 +121,7 @@ export function SidebarRow({
           )}
         </span>}
         {compact && trailing && <span className="absolute end-0 top-0 scale-75">{trailing}</span>}
+        {!compact && experimental && <Badge variant="info" size="sm">{t('experiments.badge', 'Experimental')}</Badge>}
         {!compact && trailing}
       </PrefetchNavLink>
       {hoverAction && !compact && (

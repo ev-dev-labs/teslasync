@@ -5658,6 +5658,12 @@
     "speedHistoryAria": "Speed and distance-to-arrival area chart over time",
     "speedHistoryTitle": "Speed & distance history",
     "items": {
+      "experiments_vehicle-lab": "Vehicle lab",
+      "experiments_route-flyover": "Route flyover",
+      "experiments_energy-flow": "Where did my energy go?",
+      "experiments_year-in-motion": "Year in motion",
+      "experiments_battery-what-if": "Battery what-if",
+      "experiments_drive-art": "Drive art",
       "account_2fa": "Two-factor auth",
       "account_privacy": "Privacy",
       "account_sessions": "Active sessions",
@@ -5891,6 +5897,7 @@
       "driving": "Driving",
       "energy": "Energy",
       "home": "Home",
+      "experiments": "Experiments",
       "integrations": "Integrations",
       "notifications": "Notifications",
       "ownership_intelligence": "Ownership intelligence",
@@ -5949,7 +5956,82 @@
       "shortInbox": "Inbox"
     }
   },
+  "experiments": {
+    "badge": "Experimental",
+    "vehicleLab": {
+      "title": "Vehicle lab",
+      "description": "Explore live vehicle signals through an interactive, self-made 3D vehicle.",
+      "loading": "Opening the vehicle studio...",
+      "webglUnavailable": "3D is unavailable on this device. Every vehicle signal remains readable below.",
+      "studio": "Vehicle studio",
+      "illustrative": "Original illustrative model, not a manufacturer asset. Unknown signals never imply closed doors or normal readings.",
+      "summary": "Vehicle state",
+      "insideTemp": "Cabin",
+      "outsideTemp": "Outside",
+      "battery": "Battery",
+      "range": "Rated range",
+      "percent": "{{value}}%",
+      "pressureWarning": "Outside normal band",
+      "inspectHint": "Select a reading or a vehicle part to inspect it.",
+      "inspect": "Inspect {{part}}",
+      "detailHonesty": "Read-only telemetry. Missing or expired signals are unavailable; the vehicle geometry is illustrative, not a control.",
+      "charging": "Charging",
+      "locked": "Lock",
+      "lockedState": "Locked",
+      "unlockedState": "Unlocked",
+      "sentry": "Sentry",
+      "climate": "Climate",
+      "gear": "Gear",
+      "gears": { "P": "Park", "R": "Reverse", "N": "Neutral", "D": "Drive" },
+      "speed": "Speed",
+      "on": "On",
+      "off": "Off",
+      "unavailable": "Unavailable",
+      "available": "Available",
+      "canvas": "Illustrative vehicle. Drag to orbit, pinch or scroll to zoom, use arrow keys to pan, or choose a camera view.",
+      "cameraViews": "Camera views",
+      "camera": {
+        "front": "Front", "rear": "Rear", "side": "Side", "top": "Top", "tires": "Tires"
+      },
+      "parts": {
+        "doorFrontLeft": "Front-left door", "doorFrontRight": "Front-right door",
+        "doorRearLeft": "Rear-left door", "doorRearRight": "Rear-right door",
+        "windowFrontLeft": "Front-left window", "windowFrontRight": "Front-right window",
+        "windowRearLeft": "Rear-left window", "windowRearRight": "Rear-right window",
+        "wheelFrontLeft": "Front-left tire", "wheelFrontRight": "Front-right tire",
+        "wheelRearLeft": "Rear-left tire", "wheelRearRight": "Rear-right tire",
+        "frunk": "Front trunk", "trunk": "Rear trunk", "chargePort": "Charge port",
+        "headlights": "Headlights", "taillights": "Taillights"
+      }
+    },
+    "routeFlyover": {
+      "title": "Route flyover",
+      "description": "Replay a recorded drive as a cinematic journey along its actual route."
+    },
+    "energyFlow": {
+      "title": "Where did my energy go?",
+      "description": "Trace charge and drive energy from grid to battery to wheels, as one flow."
+    },
+    "yearInMotion": {
+      "title": "Year in motion",
+      "description": "Watch a year of recorded journeys unfold as an animated map and timeline."
+    },
+    "batteryWhatIf": {
+      "title": "Battery what-if",
+      "description": "Model battery degradation and range projections from real charge and discharge history."
+    },
+    "driveArt": {
+      "title": "Drive art",
+      "description": "Turn a drive into a generated piece of art from its route, speed and power."
+    }
+  },
   "routes": {
+    "vehicleLab": "Vehicle lab",
+    "routeFlyover": "Route flyover",
+    "energyFlowExperiment": "Where did my energy go?",
+    "yearInMotion": "Year in motion",
+    "batteryWhatIf": "Battery what-if",
+    "driveArt": "Drive art",
     "mobileGridReference": "Mobile grid reference",
     "layoutReference": "Layout reference",
     "statReference": "Stat reference",
@@ -23553,6 +23635,10 @@
       "iconOnlyHelp": "Hide labels at all widths. Lower-priority tools move into more on constrained screens.",
       "shownToast": "Status bar shown",
       "hiddenToast": "Status bar hidden"
+    },
+    "experiments": {
+      "show": "Show experiments",
+      "help": "Show playful, experimental experiences in navigation. Direct links still work when hidden."
     },
     "timeFormat": {
       "label": "Default time format",

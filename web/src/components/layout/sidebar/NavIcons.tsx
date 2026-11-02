@@ -39,6 +39,7 @@ export const NAV_SECTION_ICONS: Record<string, LucideIcon> = {
   'Settings': /* @__PURE__ */ glyph('settings'),
   'Integrations': /* @__PURE__ */ glyph('connect'),
   'About': /* @__PURE__ */ glyph('about'),
+  'Experiments': /* @__PURE__ */ glyph('experiments'),
 }
 export const NAV_UTILITY_ICONS = {
   alerts: /* @__PURE__ */ glyph('alerts'),

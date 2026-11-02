@@ -97,6 +97,7 @@ import {
   Fingerprint,
   Flag,
   Flame,
+  FlaskConical,
   FolderOpen,
   Factory,
   Fuel,
@@ -255,6 +256,7 @@ export type { LucideIcon };
  *    this registry so the audit can stay accurate.
  */
 export const Icons = {
+  experiments: FlaskConical,
   // ── Severity & status (also see severityTokens in tokens.ts) ────────────
   severityCritical: AlertOctagon,
   severityWarn: AlertTriangle,

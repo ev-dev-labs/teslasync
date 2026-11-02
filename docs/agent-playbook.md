@@ -1,7 +1,7 @@
 # TeslaSync agent playbook (autonomous, agent-agnostic, resumable)
 
 This file is the operating instructions for ANY AI agent (Claude, Codex,
-Muse, or another) working on branch `fix/post-202-polish` (this branch's draft PR). Agents rotate when usage limits are hit or a session crashes. Every
+Muse, or another) working on branch `next-upgrades` (this branch's draft PR). Agents rotate when usage limits are hit or a session crashes. Every
 agent must be able to stop at any moment, and the next agent must be able
 to resume without redoing work.
 
@@ -19,10 +19,7 @@ to resume without redoing work.
 
 ## 0. Start-of-session protocol (every agent, every session)
 
-1. Environment (see section 4): the working repo is `~/repos/teslasync` in
-   WSL (Linux). Make sure no other agent is running there (no other agent
-   CLI, no orphan test runners, preview or dev servers you didn't start;
-   stop orphans).
+1. Environment (see section 4): the working repo is `D:\\repos\\teslasync` (Windows, PowerShell). Make sure no other agent is running there (no other agent CLI, no orphan test runners, preview or dev servers you didn't start; stop orphans).
 2. `git fetch`, `git switch fix/post-202-polish`, `git pull --ff-only`.
 3. Read, in order:
    - this playbook (`docs/agent-playbook.md`)
@@ -171,14 +168,14 @@ branches) into main or this branch.
 ## 3. Verification: targeted locally, full suite in CI
 
 Workflow: `.github/workflows/frontend-quality.yml`. All browser tests run
-against a hermetic mock build with NO backend (none runs in this WSL
+against a hermetic mock build with NO backend (none runs in this Windows
 environment, which matches CI).
 
 Local checks are targeted only: TypeScript, lint, and the unit/browser
 specifications related to the current change. NEVER run the full quality
 suite or a full local CI replica. CI owns full-suite validation.
 
-From `~/repos/teslasync/web` (bash), build once after source changes and
+From `D:\\repos\\teslasync\\web` (PowerShell), build once after source changes and
 reuse that hermetic build for individual specs or small related groups:
 
 ```
@@ -206,41 +203,13 @@ a reason to stop. Never wait more than 15 minutes without new output.
 
 ---
 
-## 4. Environment (WSL) and Windows visual tests
+## 4. Environment (Windows) and Windows visual tests
 
-- Working repo: `~/repos/teslasync` (WSL native filesystem, Linux
-  node_modules, Linux git, Go 1.27.3, Node 26). Use bash and Linux tools
-  here. The old Windows copy `D:\repos\teslasync` (`/mnt/d/repos/teslasync`)
-  is NOT a working repo: never edit or commit there, except as the visual
-  test mirror below.
+- Working repo: `D:\\repos\\teslasync` (Windows, PowerShell). Use PowerShell and Windows tools. No other copies should be edited or committed.
 - Visual snapshot tests (`e2e:visual`) compare Windows baselines and run on
   `windows-latest` in CI. They can't be reproduced on Linux. Never run them
-  in WSL and never regenerate baselines from Linux.
-- Windows visual mirror (only when visual baselines must be checked or
-  regenerated, e.g. after intended redesign changes):
-  1. Push your branch first.
-  2. Sync the mirror (only if its working tree is clean; if not, record a
-     blocker instead of touching it):
-     `git.exe -C D:/repos/teslasync fetch` then
-     `git.exe -C D:/repos/teslasync checkout -B fix/post-202-polish origin/fix/post-202-polish`
-  3. Run via Windows PowerShell, e.g.:
-     `powershell.exe -NoProfile -Command "cd D:\repos\teslasync\web; $env:E2E_MOCKS='1'; npm run e2e:build; $env:E2E_REUSE_BUILD='1'; $env:CI='true'; $env:TZ='UTC'; npm run e2e:visual -- --shard=N/10 --workers=2"`
-     (add `--update-snapshots` only for intended, reviewed differences).
-     Use the failing Windows visual shards from CI and download their diff
-     artifacts first. Confirm each diff is an intended redesign/palette
-     change, not a bug. Regenerate only those shards, one at a time, with
-     `timeout 20m`; use the actual CI shard denominator, not the illustrative
-     `N/10` above. Fix code instead when a diff reveals a bug.
-     If the mirror's node_modules is out of date, run
-     `powershell.exe -NoProfile -Command "cd D:\repos\teslasync\web; npm ci --legacy-peer-deps"` once.
-  4. Copy only the changed snapshot files from
-     `/mnt/d/repos/teslasync/web/e2e/.snapshots/` into the same paths in
-     `~/repos/teslasync/web/e2e/.snapshots/`, review old vs new images, and
-     commit them from WSL with the reason recorded. Never commit from the
-     mirror; then restore the mirror's tree to clean
-     (`git.exe -C D:/repos/teslasync checkout -- web/e2e/.snapshots`).
-  If the mirror can't be used, rely on the PR's Windows visual CI jobs,
-  record diffs from their artifacts, and fix causes.
+  on Windows and never regenerate baselines from Linux.
+Visual baseline testing is performed directly on this machine via CI; no mirror is used.
 
 ---
 
@@ -320,7 +289,7 @@ blocked ("inputs missing") and continue with Part 3.
 Sub-state file: `docs/widget-redesign/state.md` (untracked): phase and gate
 status; task table `widget-id | phase | status | owner | started | attempts
 | commit | evidence | notes`; file locks; decisions log; blockers; data
-gaps; cycle log. Mirror a short summary (phase, counts, next step) into
+gaps; cycle log. Log a short summary (phase, counts, next step) into
 `docs/work-queue.md` after every task. If state.md is missing, rebuild it
 from commits named `feat(dashboard): redesign <id> widget`.
 
@@ -375,7 +344,7 @@ Phases:
   kept twins). Gate: every widget done or blocked with a reason.
 - Phase 4 (acceptance): full replica (section 3) incl. dashboard e2e specs
   (`e2e/dashboard-*.smoke.spec.ts`, `e2e/dashboard-catalogue-states.smoke.spec.ts`);
-  update Windows visual baselines via the mirror (section 4) only for
+  update Windows visual baselines directly (section 4) only for
   intentional redesign diffs; capture After for all widgets into
   `docs/widget-redesign/after/` (untracked); write
   `docs/widget-redesign/REPORT.md` (untracked) and copy its summary into
@@ -551,7 +520,7 @@ New branch `chore/tailwind-v4` from this branch (or from `main` if this branch
 is merged by then; record which), separate draft PR. Official upgrade path;
 preserve every design token, the exact accent behavior, light/dark themes
 and widget container queries. Verify with the full replica, the Windows
-visual mirror (regenerate only reviewed, intended differences), and the
+visual baseline (regenerate only reviewed, intended differences), and the
 route layout guard at 375/768/1280/1920; no tolerance changes. If it can't
 be made visually identical within reason, stop, record the differences,
 leave that PR as draft.

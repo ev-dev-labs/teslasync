@@ -36,6 +36,7 @@ export interface ProductPreferences {
   defaultAnalysisRange: WorkspaceRangePreset
   contextualHelp: boolean
   releaseHighlights: boolean
+  showExperiments: boolean
 }
 
 interface StoredProductPreferences extends ProductPreferences {
@@ -50,6 +51,7 @@ export const DEFAULT_PRODUCT_PREFERENCES: Readonly<ProductPreferences> =
     defaultAnalysisRange: '7d',
     contextualHelp: true,
     releaseHighlights: true,
+    showExperiments: true,
   })
 
 function isProductPersona(value: unknown): value is ProductPersona {
@@ -103,7 +105,18 @@ export function sanitizeProductPreferences(
       typeof candidate.releaseHighlights === 'boolean'
         ? candidate.releaseHighlights
         : DEFAULT_PRODUCT_PREFERENCES.releaseHighlights,
+    showExperiments:
+      typeof candidate.showExperiments === 'boolean'
+        ? candidate.showExperiments
+        : DEFAULT_PRODUCT_PREFERENCES.showExperiments,
   }
+}
+
+export function isProductNavigationVisible(
+  path: string,
+  showExperiments = true,
+): boolean {
+  return showExperiments || !path.startsWith('/experiments/')
 }
 
 function readStoredPreferences(): ProductPreferences {

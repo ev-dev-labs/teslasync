@@ -2932,8 +2932,7 @@
       "reconcile": "reconcile",
       "rolling": "Rolling",
       "session": "Session",
-      "title": "Drive energy ledger",
-      "unexplained": "Unexplained residual"
+      "title": "Drive energy ledger"
     },
     "dynamics": {
       "chartLabel": "Pack power and speed over the window",
