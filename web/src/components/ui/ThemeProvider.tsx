@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react'
-import { getApiBase } from '@/lib/resilience'
-import { authHeaders } from '@/lib/serverConnection'
 import { request } from '@/api/client'
+import { getBootstrapSettings } from '@/api/settingsBootstrap'
 import { broadcast, subscribe } from '@/lib/broadcast'
 import { themePresets, themeCategories } from './themePresets'
 
@@ -404,11 +403,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [initialized, setInitialized] = useState(false)
 
   // Load theme from backend settings on first mount.
-  // Uses raw fetch intentionally — ThemeProvider mounts before auth context
-  // is available, so request() (which handles 401 token refresh) may not work.
   useEffect(() => {
-    fetch(`${getApiBase()}/api/v1/settings`, { headers: authHeaders() })
-      .then(r => r.ok ? r.json() : null)
+    getBootstrapSettings()
       .then(settings => {
         if (!settings) return
         if (settings.theme && settings.theme in themes) {

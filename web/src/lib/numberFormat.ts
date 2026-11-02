@@ -100,6 +100,22 @@ function toFractionDigits(value: number): number {
   return Math.min(20, Math.max(0, value))
 }
 
+// toLocaleString with options rebuilds an ICU formatter for every table cell.
+const fixedNumberFormatters = new Map<string, Intl.NumberFormat>()
+
+function fixedNumberFormatter(locale: string, digits: number): Intl.NumberFormat {
+  const key = `${locale}|${digits}`
+  let formatter = fixedNumberFormatters.get(key)
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    })
+    fixedNumberFormatters.set(key, formatter)
+  }
+  return formatter
+}
+
 /**
  * Format a number with locale-aware separators. Uses the global precision
  * and global locale set by `useSettings` unless overridden per-call.
@@ -108,16 +124,10 @@ export function fmtNumber(v: unknown, decimals?: number, locale?: string): strin
   const d = toFractionDigits(decimals ?? _globalPrecision)
   const lc = locale ?? _globalLocale
   try {
-    return safeNumber(v).toLocaleString(lc, {
-      minimumFractionDigits: d,
-      maximumFractionDigits: d,
-    })
+    return fixedNumberFormatter(lc, d).format(safeNumber(v))
   } catch {
     // Bad locale tag — fall back to en-US so we still produce a string.
-    return safeNumber(v).toLocaleString('en-US', {
-      minimumFractionDigits: d,
-      maximumFractionDigits: d,
-    })
+    return fixedNumberFormatter('en-US', d).format(safeNumber(v))
   }
 }
 
