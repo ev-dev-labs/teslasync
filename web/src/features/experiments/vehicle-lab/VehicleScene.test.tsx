@@ -28,7 +28,7 @@ beforeEach(() => {
 it('shows all seventeen unknown signals without loading a canvas when WebGL is unavailable', () => {
   render(<VehicleScene />)
   expect(screen.getByText(en.experiments.vehicleLab.webglUnavailable)).toBeInTheDocument()
-  expect(within(screen.getByRole('region', { name: 'Vehicle state' })).getAllByText('Unavailable')).toHaveLength(17)
+  expect(within(screen.getByRole('region', { name: 'Vehicle state' })).getAllByText('Unavailable')).toHaveLength(27)
   expect(screen.getByText('Front-left door')).toBeInTheDocument()
   expect(screen.getByText('Rear-right tire')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Simulate context loss' })).not.toBeInTheDocument()
@@ -39,6 +39,6 @@ it('recovers from a lost graphics context without hiding the signal summary', as
   render(<VehicleScene />)
   await userEvent.click(await screen.findByRole('button', { name: 'Simulate context loss' }))
   expect(screen.getByText(en.experiments.vehicleLab.webglUnavailable)).toBeInTheDocument()
-  expect(within(screen.getByRole('region', { name: 'Vehicle state' })).getAllByText('Unavailable')).toHaveLength(17)
+  expect(within(screen.getByRole('region', { name: 'Vehicle state' })).getAllByText('Unavailable')).toHaveLength(27)
   expect(screen.queryByRole('button', { name: 'Simulate context loss' })).not.toBeInTheDocument()
 })

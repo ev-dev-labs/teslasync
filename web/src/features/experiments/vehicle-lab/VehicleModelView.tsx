@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Group, Object3D } from 'three'
 import { createVehicleModel, disposeVehicleModel, type VehicleModelPalette } from './model/createVehicleModel'
-import { bindVehicleParts, type VehiclePart } from './partMapping'
+import { bindVehicleParts, findVehiclePart, type VehiclePart } from './partMapping'
 import { mapVehiclePartStates, type VehicleLabState } from './vehicleLabState'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
@@ -14,7 +14,7 @@ interface PartMotion {
   to: PartPose
 }
 
-export default function VehicleModelView({ palette, state }: { palette: VehicleModelPalette; state: VehicleLabState }) {
+export default function VehicleModelView({ palette, state, onSelect }: { palette: VehicleModelPalette; state: VehicleLabState; onSelect?: (part: VehiclePart) => void }) {
   const [model, setModel] = useState<Group | null>(null)
   const invalidate = useThree(context => context.invalidate)
   const { reduce } = useMotionPreference(400)
@@ -50,5 +50,8 @@ export default function VehicleModelView({ palette, state }: { palette: VehicleM
     if (progress >= 1) animation.current = null
     else invalidate()
   })
-  return model ? <primitive object={model} dispose={null} /> : null
+  return model ? <primitive object={model} dispose={null} onClick={(event: import('@react-three/fiber').ThreeEvent<MouseEvent>) => {
+    const part = findVehiclePart(event.object)
+    if (part) { event.stopPropagation(); onSelect?.(part) }
+  }} /> : null
 }

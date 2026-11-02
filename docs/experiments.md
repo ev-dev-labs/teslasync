@@ -17,8 +17,10 @@ Live SI signals now open doors and lids, lower windows and open the charge-port
 flap with interruptible 400ms transitions (immediate under reduced motion).
 Wheel-anchored tire labels use the shared Pa formatter and existing pressure
 thresholds; cabin/outside temperatures, battery and rated range remain readable
-above the scene. Missing and expired readings say unavailable. An equally complete text summary and
-keyboard-accessible part details must remain usable without WebGL. The vehicle
+above the scene. Missing and expired readings say unavailable. The 27-reading text
+summary covers openings, security, charging, climate and all measured values.
+Mesh clicks, wheel labels and keyboard-accessible summary buttons open the same
+live-updating detail drawer, also without WebGL. The vehicle
 is illustrative, not a Tesla render or an exact representation of its hardware.
 
 ### Route flyover
@@ -156,3 +158,4 @@ must have a verified CC0 or CC-BY license and a source/author record here.
 | Text information is a first-class experience | Keyboard, screen-reader, and WebGL-fallback users must receive the same signals and details. | Vehicle lab and replay |
 | Interruptible, demand-rendered 400ms part transitions | Start from the currently displayed pose; stop frames when settled, and jump immediately with reduced motion. Unknown remains unknown even when geometry returns to its neutral pose. | Vehicle lab |
 | Shared pressure warning band | Wheel labels warn only below 250,000 Pa or above 350,000 Pa, matching the existing pressure page; unavailable values never imply a warning. | Vehicle lab |
+| One readable inspection path for every signal | A desktop scene/summary split stacks on mobile; shared details support Escape and focus restoration. Mesh hit-testing resolves the nearest mapped ancestor, so windows keep their own identity inside door hinges. | Vehicle lab |

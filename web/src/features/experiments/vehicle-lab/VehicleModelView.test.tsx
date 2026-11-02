@@ -80,3 +80,13 @@ it('jumps to the end pose with reduced motion and retains unknown instead of rep
   act(() => h.frame!(null, .4))
   expect(h.invalidate).toHaveBeenCalledTimes(calls)
 })
+
+it('selects a logical part when its child mesh receives a scene click', () => {
+  const onSelect = vi.fn()
+  const { result } = renderHook(() => VehicleModelView({ palette, state: deriveVehicleLabState(null), onSelect }))
+  const object = h.model!.getObjectByName('frunk')!.children[0]
+  const stopPropagation = vi.fn()
+  act(() => result.current!.props.onClick({ object, stopPropagation }))
+  expect(onSelect).toHaveBeenCalledWith('frunk')
+  expect(stopPropagation).toHaveBeenCalledOnce()
+})

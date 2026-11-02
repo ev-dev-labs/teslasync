@@ -23,6 +23,14 @@ export const VEHICLE_PART_MAPPING = {
 export type VehiclePart = keyof typeof VEHICLE_PART_MAPPING
 export type VehiclePartMapping = Readonly<Record<VehiclePart, string>>
 
+export function findVehiclePart(object: Object3D | null): VehiclePart | null {
+  for (let node = object; node; node = node.parent) {
+    const part: unknown = node.userData.logicalPart
+    if (typeof part === 'string' && Object.prototype.hasOwnProperty.call(VEHICLE_PART_MAPPING, part)) return part as VehiclePart
+  }
+  return null
+}
+
 export function bindVehicleParts(
   model: Object3D,
   mapping: VehiclePartMapping = VEHICLE_PART_MAPPING,

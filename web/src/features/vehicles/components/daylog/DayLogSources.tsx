@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Badge, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { Badge, DataTable, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
 import type { DayLogSource } from '@/api/types';
@@ -12,11 +12,6 @@ export interface DayLogSourcesProps {
   onRetry: () => void;
 }
 
-const STATUS_VARIANT = {
-  ok: 'success',
-  empty: 'neutral',
-  unavailable: 'warning',
-} as const;
 
 /**
  * Section 4 — source honesty. Every stream the day was rebuilt from,
@@ -55,33 +50,49 @@ export function DayLogSources({ sources, isLoading, error, onRetry }: DayLogSour
                 'Signal feeds record transitions only — states between samples were never captured and cannot be reconstructed.',
               )}
             </Text>
-            <Table variant="embedded" tabIndex={0} aria-label={t('dayLog.sources.title', 'Sources')}>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.source}>
-                    <th scope="row" className="min-w-0 font-normal">
-                      <Text size="sm" weight="medium" color="primary">{t(`dayLog.sources.names.${row.source}`, row.source)}</Text>
-                    </th>
-                    <td>
-                      {row.status === 'unavailable' ? (
-                        <Text variant="caption">
-                          {t(`dayLog.sources.reasons.${row.source}`, row.reason ?? t('dayLog.sources.noReason', 'Not available'))}
-                        </Text>
-                      ) : (
-                        <Text variant="caption">
-                          {t('dayLog.sources.rows', '{{count}} rows', { count: row.count })}
-                        </Text>
-                      )}
-                    </td>
-                    <td className="text-right">
-                      <Badge variant={STATUS_VARIANT[row.status] ?? 'neutral'}>
-                        {t(`dayLog.sources.status.${row.status}`, DAY_LOG_SOURCE_STATUS[row.status] ?? row.status)}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+            <DataTable
+              tableId="daylog:sources"
+              caption={t('dayLog.sources.title', 'Sources')}
+              data={rows.map((row) => ({
+                key: row.source,
+                source: t(`dayLog.sources.names.${row.source}`, row.source),
+                detail: row.status === 'unavailable'
+                  ? t(`dayLog.sources.reasons.${row.source}`, row.reason ?? t('dayLog.sources.noReason', 'Not available'))
+                  : t('dayLog.sources.rows', '{{count}} rows', { count: row.count }),
+                status: t(`dayLog.sources.status.${row.status}`, DAY_LOG_SOURCE_STATUS[row.status] ?? row.status),
+              }))}
+              columns={[
+                {
+                  key: 'source',
+                  header: t('dayLog.sources.title', 'Sources'),
+                  defaultWidth: 180,
+                  minWidth: 140,
+                  render: (row) => <Text size="sm" weight="medium" color="primary">{row.source}</Text>,
+                },
+                {
+                  key: 'detail',
+                  header: t('dayLog.sources.feedNote', 'Feed note'),
+                  defaultWidth: 260,
+                  minWidth: 200,
+                  render: (row) => <Text variant="caption">{row.detail}</Text>,
+                },
+                {
+                  key: 'status',
+                  header: t('dayLog.sources.status', 'Status'),
+                  defaultWidth: 120,
+                  minWidth: 100,
+                  align: 'right',
+                  render: (row) => <Badge variant={row.status === 'ok' ? 'success' : row.status === 'empty' ? 'neutral' : row.status === 'unavailable' ? 'warning' : 'neutral'}>{row.status}</Badge>,
+                },
+              ]}
+              keyExtractor={(row) => row.key}
+              variant="embedded"
+              stickyHeader={false}
+              showColumnsMenu={false}
+              columnVisibility={false}
+              searchable={false}
+              exportable={false}
+            />
           </>
         )}
       </div>

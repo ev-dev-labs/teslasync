@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { createVehicleModel, disposeVehicleModel } from './model/createVehicleModel'
-import { bindVehicleParts, VEHICLE_PART_MAPPING } from './partMapping'
+import { bindVehicleParts, findVehiclePart, VEHICLE_PART_MAPPING } from './partMapping'
 
 it('binds every original moving group to its logical identity for scene interaction', () => {
   const model = createVehicleModel()
@@ -30,5 +30,15 @@ it('resolves a replacement node name through mapping without changing its logica
   expect(parts.get('doorFrontLeft')?.name).toBe('replacement-driver-hinge')
   expect(parts.get('doorFrontLeft')?.userData.logicalPart).toBe('doorFrontLeft')
   expect(parts.size).toBe(17)
+  disposeVehicleModel(model)
+})
+
+it('resolves a clicked mesh to its nearest logical part, including a door-attached window', () => {
+  const model = createVehicleModel()
+  const parts = bindVehicleParts(model)
+  expect(findVehiclePart(parts.get('windowFrontLeft')!.children[0])).toBe('windowFrontLeft')
+  expect(findVehiclePart(parts.get('doorRearRight')!.children[0])).toBe('doorRearRight')
+  expect(findVehiclePart(model.getObjectByName('body')!.children[0])).toBeNull()
+  expect(findVehiclePart(null)).toBeNull()
   disposeVehicleModel(model)
 })

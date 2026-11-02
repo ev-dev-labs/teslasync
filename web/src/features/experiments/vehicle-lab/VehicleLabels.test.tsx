@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { deriveVehicleLabState } from './vehicleLabState'
 import VehicleReadings from './VehicleReadings'
 import VehicleTireLabels from './VehicleTireLabels'
@@ -55,4 +56,11 @@ it('marks a high tire pressure without confusing unavailable pressure with a war
   render(<VehicleTireLabels state={state} />)
   expect(screen.getAllByText('Outside normal band')).toHaveLength(1)
   expect(screen.getAllByText('Unavailable')).toHaveLength(3)
+})
+
+it('selects a wheel from its anchored label', async () => {
+  const onSelect = vi.fn()
+  render(<VehicleTireLabels state={deriveVehicleLabState(null)} onSelect={onSelect} />)
+  await userEvent.click(screen.getByRole('button', { name: /Rear-right tire/ }))
+  expect(onSelect).toHaveBeenCalledWith('wheelRearRight')
 })

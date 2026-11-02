@@ -1,37 +1,23 @@
 import { useTranslation } from 'react-i18next'
-import { Heading, Text } from '@/components/ui'
-import { mapVehiclePartStates, type VehicleLabState } from './vehicleLabState'
+import { Button, GlassPanel, Heading, Text } from '@/components/ui'
+import type { VehicleLabState } from './vehicleLabState'
+import { useVehicleReadings, type VehicleReadingId } from './useVehicleReadings'
 
-const PARTS = [
-  ['doorFrontLeft', 'Front-left door'], ['doorFrontRight', 'Front-right door'],
-  ['doorRearLeft', 'Rear-left door'], ['doorRearRight', 'Rear-right door'],
-  ['windowFrontLeft', 'Front-left window'], ['windowFrontRight', 'Front-right window'],
-  ['windowRearLeft', 'Rear-left window'], ['windowRearRight', 'Rear-right window'],
-  ['wheelFrontLeft', 'Front-left tire'], ['wheelFrontRight', 'Front-right tire'],
-  ['wheelRearLeft', 'Rear-left tire'], ['wheelRearRight', 'Rear-right tire'],
-  ['frunk', 'Front trunk'], ['trunk', 'Rear trunk'], ['chargePort', 'Charge port'],
-  ['headlights', 'Headlights'], ['taillights', 'Taillights'],
-] as const
-
-export default function VehicleSummary({ state }: { state: VehicleLabState }) {
+export default function VehicleSummary({ state, onSelect }: { state: VehicleLabState; onSelect: (id: VehicleReadingId) => void }) {
   const { t } = useTranslation()
-  const parts = mapVehiclePartStates(state)
-  const labels = {
-    open: t('common.open', 'Open'), closed: t('common.closed', 'Closed'),
-    partial: t('digitalTwin.partial', 'Partial'), available: t('experiments.vehicleLab.available', 'Available'),
-    unknown: t('experiments.vehicleLab.unavailable', 'Unavailable'),
-  }
+  const readings = useVehicleReadings(state)
   return (
-    <section aria-labelledby="vehicle-state-heading" className="rounded-shape-md border border-[var(--border-default)] p-4">
+    <GlassPanel role="region" aria-labelledby="vehicle-state-heading" padding="md">
       <Heading level="panel" id="vehicle-state-heading">{t('experiments.vehicleLab.summary', 'Vehicle state')}</Heading>
-      <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {PARTS.map(([part, fallback]) => (
-          <div key={part} className="min-w-0 border-l-2 border-[var(--border-default)] pl-3">
-            <Text as="dt" variant="bodySm">{t(`experiments.vehicleLab.parts.${part}`, fallback)}</Text>
-            <Text as="dd" variant="caption" className="mt-1">{labels[parts[part]]}</Text>
+      <Text as="p" variant="caption" className="mt-2">{t('experiments.vehicleLab.inspectHint', 'Select a reading or a vehicle part to inspect it.')}</Text>
+      <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
+        {readings.map(({ id, label, value }) => (
+          <div key={id} className="grid min-w-0 grid-cols-[1fr_auto] items-center gap-2 border-b border-[var(--border-default)] pb-2">
+            <dt><Button variant="ghost" wrapLabel className="min-h-11 justify-start px-2 text-left" aria-label={t('experiments.vehicleLab.inspect', 'Inspect {{part}}', { part: label })} onClick={() => onSelect(id)}>{label}</Button></dt>
+            <Text as="dd" variant="caption" className="max-w-36 break-words text-right">{value}</Text>
           </div>
         ))}
       </dl>
-    </section>
+    </GlassPanel>
   )
 }
