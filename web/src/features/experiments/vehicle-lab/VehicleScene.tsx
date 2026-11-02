@@ -6,6 +6,7 @@ import { FreshnessDot } from '@/components/data-display'
 import { canUseWebGL } from './sceneCapabilities'
 import VehicleSummary from './VehicleSummary'
 import { useVehicleLabState } from './useVehicleLabState'
+import VehicleReadings from './VehicleReadings'
 
 const VehicleStudioCanvas = lazy(() => import('./VehicleStudioCanvas'))
 
@@ -27,6 +28,7 @@ export default function VehicleScene() {
         ]} />
         <FreshnessDot updatedAt={state.observedAt} isFetching={query.isFetching} isStale={state.stale || state.observedAt === null} isError={query.isError} onRefresh={vehicleId === null ? undefined : () => { void query.refetch() }} source={t('experiments.vehicleLab.summary', 'Vehicle state')} />
       </div>
+      <VehicleReadings state={state} />
       <ErrorBoundary name="vehicle-studio" fallback={unavailable}>
         {available ? (
           <Suspense fallback={<Text as="p" role="status">{t('experiments.vehicleLab.loading', 'Opening the vehicle studio...')}</Text>}>

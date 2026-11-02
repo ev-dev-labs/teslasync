@@ -13,8 +13,11 @@ Implementation progress and verification belong in `docs/tasks/STATUS.md` and
 
 `/experiments/vehicle-lab` now has a theme-aware studio, five camera views,
 mouse/touch orbit and zoom, and a readable unknown-state summary without WebGL.
-Live binding is still pending: opening doors, lowering windows, lighting the charge port, and anchoring
-tire-pressure readings beside each wheel. An equally complete text summary and
+Live SI signals now open doors and lids, lower windows and open the charge-port
+flap with interruptible 400ms transitions (immediate under reduced motion).
+Wheel-anchored tire labels use the shared Pa formatter and existing pressure
+thresholds; cabin/outside temperatures, battery and rated range remain readable
+above the scene. Missing and expired readings say unavailable. An equally complete text summary and
 keyboard-accessible part details must remain usable without WebGL. The vehicle
 is illustrative, not a Tesla render or an exact representation of its hardware.
 
@@ -151,3 +154,5 @@ must have a verified CC0 or CC-BY license and a source/author record here.
 | A default-on local, cross-tab preference | Instant, offline-capable hiding; direct routes and stored pins remain intact. | Appearance and navigation |
 | Original stylized vehicle, not a vendor replica | Primitive geometry in meters, +Y up/+Z forward/+X left; separately named hinge groups and door-attached windows support replacement and animation. | Vehicle lab model |
 | Text information is a first-class experience | Keyboard, screen-reader, and WebGL-fallback users must receive the same signals and details. | Vehicle lab and replay |
+| Interruptible, demand-rendered 400ms part transitions | Start from the currently displayed pose; stop frames when settled, and jump immediately with reduced motion. Unknown remains unknown even when geometry returns to its neutral pose. | Vehicle lab |
+| Shared pressure warning band | Wheel labels warn only below 250,000 Pa or above 350,000 Pa, matching the existing pressure page; unavailable values never imply a warning. | Vehicle lab |

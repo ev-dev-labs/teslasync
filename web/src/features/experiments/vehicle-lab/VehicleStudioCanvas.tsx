@@ -8,6 +8,7 @@ import { CAMERA_PRESETS, type CameraPreset } from './cameraPresets'
 import VehicleCameraController from './VehicleCameraController'
 import VehicleModelView from './VehicleModelView'
 import type { VehicleLabState } from './vehicleLabState'
+import VehicleTireLabels from './VehicleTireLabels'
 
 function subscribeVisibility(listener: () => void) {
   document.addEventListener('visibilitychange', listener)
@@ -69,6 +70,7 @@ export default function VehicleStudioCanvas({ state, onUnavailable }: { state: V
           <directionalLight position={[3, 8, 5]} intensity={3} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-6} shadow-camera-right={6} shadow-camera-top={6} shadow-camera-bottom={-6} shadow-normalBias={.025} />
           <directionalLight position={[-4, 3, -5]} intensity={1.5} color={DATA_VISUAL_COLORS.blue} />
           <VehicleModelView palette={palette} state={state} />
+          <VehicleTireLabels state={state} />
           <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
             <circleGeometry args={[8, 64]} />
             <meshStandardMaterial color={mode.surface1} roughness={1} />
