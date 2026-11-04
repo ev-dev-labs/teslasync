@@ -59,9 +59,9 @@ for (const entry of LAZY_ROUTE_IMPORTS) {
 }
 
 describe('LAZY_ROUTE_IMPORTS manifest', () => {
-  it('retains all 126 shared default-module bindings in the exhaustive manifest', () => {
+  it('retains all 132 shared default-module bindings in the exhaustive manifest', () => {
     const loaders = sharedLoaderSpecifiers(loaderSource)
-    expect(loaders.size).toBe(126)
+    expect(loaders.size).toBe(132)
     for (const [name, specifier] of loaders) {
       expect(appBindings).toContainEqual({ name, specifier: `./${toKey(specifier)}` })
       expect(listNamesByKey.get(toKey(specifier))).toBe(name)

@@ -49,6 +49,8 @@ import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useDataState } from '@/hooks/useDataState';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
+import { isProductNavigationVisible } from '@/lib/productPreferences';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useAuthMode } from '@/api/hooks/useAuthMode';
@@ -90,6 +92,7 @@ export default function ExplorePage() {
     .map(entry => t(entry.labelKey, entry.label))
     .join(', ');
   const vehicleCount = vehicles?.length ?? 0;
+  const { preferences } = useProductPreferences();
 
   const query = searchParams.get('q') ?? '';
   const selectedSection = searchParams.get('section') ?? 'all';
@@ -98,11 +101,12 @@ export default function ExplorePage() {
   const visibleCatalog = useMemo(() => {
     const all = buildFeatureCatalog();
     return all.filter((entry) => {
+      if (!isProductNavigationVisible(entry.to, preferences.showExperiments)) return false;
       if (entry.minVehicles && vehicleCount < entry.minVehicles) return false;
       if (entry.requiresAuth && !isForwardAuth) return false;
       return true;
     });
-  }, [vehicleCount, isForwardAuth]);
+  }, [vehicleCount, isForwardAuth, preferences.showExperiments]);
 
   const filtered = useMemo(
     () => filterFeatureCatalog(visibleCatalog, query, (key, fallback) => t(key, fallback)),
@@ -483,7 +487,7 @@ function FeatureCard({
   query: string;
   onNavigate: (to: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['explore', 'experiments']);
   const Icon = entry.icon;
   return (
     <li>
@@ -524,7 +528,7 @@ function FeatureCard({
               variant="bodySm"
               className="mt-1 break-words leading-relaxed"
             >
-              <Highlight text={entry.description} query={query} />
+              <Highlight text={entry.descriptionKey ? t(entry.descriptionKey, entry.description) : entry.description} query={query} />
             </Text>
           </div>
         </div>

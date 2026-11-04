@@ -1,4 +1,10 @@
 /** Shared literal imports keep lazy navigation and prefetch on one Vite preload thunk. */
+export const VehicleLab = () => import('../features/experiments/pages/VehicleLabPage')
+export const RouteFlyover = () => import('../features/experiments/pages/RouteFlyoverPage')
+export const EnergyFlowExperiment = () => import('../features/experiments/pages/EnergyFlowPage')
+export const YearInMotion = () => import('../features/experiments/pages/YearInMotionPage')
+export const BatteryWhatIf = () => import('../features/experiments/pages/BatteryWhatIfPage')
+export const DriveArt = () => import('../features/experiments/pages/DriveArtPage')
 export const Dashboard = () => import('../features/dashboard/pages/DashboardPage')
 export const QuickStats = () => import('../features/dashboard/pages/QuickStatsPage')
 export const GlancePage = () => import('../features/dashboard/pages/GlancePage')

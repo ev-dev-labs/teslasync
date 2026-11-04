@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
 import {
   Badge,
+  DataTable,
   GlassPanel,
   MetricLabel,
   PanelTitle,
-  Table,
   Text,
 } from '@/components/ui';
 
@@ -96,34 +96,34 @@ export function BusiestDays({
         ) : (
           <>
           <div className="hidden sm:block">
-            <Table aria-label={t('utilization.sections.busiest', 'Ranked busiest observed days')}>
-              <thead>
-                <tr>
-                  <th scope="col" className="text-right">#</th>
-                  <th scope="col">{t('common.date', 'Date')}</th>
-                  <th scope="col" className="text-right">{t('utilization.busiest.drivingTime', 'Driving time')}</th>
-                  <th scope="col" className="text-right">{t('utilization.busiest.distance', 'Distance')}</th>
-                  <th scope="col" className="text-right">{t('utilization.busiest.drives', 'Drives')}</th>
-                  <th scope="col" className="text-right">{t('utilization.busiest.energy', 'Energy')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.busiestDays.map((day, index) => (
-                  <tr key={day.day}>
-                    <td className="text-right tabular-nums">
-                      <Badge variant="neutral">{t('utilization.busiest.rank', '#{{rank}}', { rank: index + 1 })}</Badge>
-                    </td>
-                    <th scope="row" className="font-normal">{formatDay(day.day)}</th>
-                    <td className="text-right tabular-nums">{formatDuration(day.drivingS)}</td>
-                    <td className="text-right tabular-nums">{formatDistance(day.distanceM)}</td>
-                    <td className="text-right tabular-nums">{fmtInt(day.driveCount)}</td>
-                    <td className="text-right tabular-nums">
-                      {day.energyWh > 0 ? formatEnergy(day.energyWh) : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+            <DataTable
+              tableId="utilization:busiest-days"
+              caption={t('utilization.sections.busiest', 'Ranked busiest observed days')}
+              data={summary.busiestDays.map((day, index) => ({
+                key: day.day,
+                rank: t('utilization.busiest.rank', '#{{rank}}', { rank: index + 1 }),
+                date: formatDay(day.day),
+                drivingTime: formatDuration(day.drivingS),
+                distance: formatDistance(day.distanceM),
+                drives: fmtInt(day.driveCount),
+                energy: day.energyWh > 0 ? formatEnergy(day.energyWh) : '—',
+              }))}
+              columns={[
+                { key: 'rank', header: '#', defaultWidth: 80, minWidth: 70, render: (row) => <Badge variant="neutral">{row.rank}</Badge> },
+                { key: 'date', header: t('common.date', 'Date'), defaultWidth: 140, minWidth: 120, render: (row) => <Text as="span" size="sm">{row.date}</Text> },
+                { key: 'drivingTime', header: t('utilization.busiest.drivingTime', 'Driving time'), defaultWidth: 150, minWidth: 120, align: 'right', render: (row) => <Text as="span" size="sm">{row.drivingTime}</Text> },
+                { key: 'distance', header: t('utilization.busiest.distance', 'Distance'), defaultWidth: 150, minWidth: 120, align: 'right', render: (row) => <Text as="span" size="sm">{row.distance}</Text> },
+                { key: 'drives', header: t('utilization.busiest.drives', 'Drives'), defaultWidth: 120, minWidth: 100, align: 'right', render: (row) => <Text as="span" size="sm">{row.drives}</Text> },
+                { key: 'energy', header: t('utilization.busiest.energy', 'Energy'), defaultWidth: 150, minWidth: 120, align: 'right', render: (row) => <Text as="span" size="sm">{row.energy}</Text> },
+              ]}
+              keyExtractor={(row) => row.key}
+              variant="embedded"
+              stickyHeader={false}
+              showColumnsMenu={false}
+              columnVisibility={false}
+              searchable={false}
+              exportable={false}
+            />
           </div>
           <ol className="space-y-3 sm:hidden">
             {summary.busiestDays.map((day, index) => (

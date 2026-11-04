@@ -49,6 +49,10 @@
       "shownToast": "Status bar shown",
       "hiddenToast": "Status bar hidden"
     },
+    "experiments": {
+      "show": "Show experiments",
+      "help": "Show playful, experimental experiences in navigation. Direct links still work when hidden."
+    },
     "timeFormat": {
       "label": "Default time format",
       "relative": "Relative (2h ago)",

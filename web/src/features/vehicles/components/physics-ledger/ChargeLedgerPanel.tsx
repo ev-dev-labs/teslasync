@@ -1,11 +1,10 @@
 import type {
   PhysicsLedger
 } from '@/api/types';
-import { Badge, Caption, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { Badge, Caption, DataTable, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 
 import { unknownLabel, useT } from './helpers';
-import { TermRow } from './TermRow';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeLedgerPanel({ ledger }: { ledger: PhysicsLedger }) {
@@ -39,24 +38,51 @@ export function ChargeLedgerPanel({ ledger }: { ledger: PhysicsLedger }) {
           </Badge>
         ) : null}
       </div>
-      <Table aria-label={t('physicsLedger.charge.title', 'Charge physics')}>
-        <tbody>
-          <tr>
-            <th scope="row" className="font-normal">
-              <Text as="span" size="sm">
-                {t('physicsLedger.charge.added', 'Energy added')}
-              </Text>
-            </th>
-            <td className="text-right tabular-nums">
-              <Text as="span" size="sm">
-                {c.energy_added_wh != null ? formatEnergy(c.energy_added_wh) : unknownLabel(t)}
-              </Text>
-            </td>
-          </tr>
-          <TermRow label={t('physicsLedger.charge.wall', 'Wall energy')} term={c.wall_wh} format={(v) => formatEnergy(v)} />
-          <TermRow label={t('physicsLedger.charge.precondition', 'Preconditioning')} term={c.precondition_wh} format={(v) => formatEnergy(v)} />
-        </tbody>
-      </Table>
+      <DataTable
+        tableId="physics:charge-ledger"
+        caption={t('physicsLedger.charge.title', 'Charge physics')}
+        data={[
+          {
+            key: 'energy-added',
+            label: t('physicsLedger.charge.added', 'Energy added'),
+            value: c.energy_added_wh != null ? formatEnergy(c.energy_added_wh) : unknownLabel(t),
+          },
+          {
+            key: 'wall',
+            label: t('physicsLedger.charge.wall', 'Wall energy'),
+            value: c.wall_wh?.value_wh != null ? formatEnergy(c.wall_wh.value_wh) : unknownLabel(t),
+          },
+          {
+            key: 'precondition',
+            label: t('physicsLedger.charge.precondition', 'Preconditioning'),
+            value: c.precondition_wh?.value_wh != null ? formatEnergy(c.precondition_wh.value_wh) : unknownLabel(t),
+          },
+        ]}
+        columns={[
+          {
+            key: 'label',
+            header: t('physicsLedger.charge.title', 'Charge physics'),
+            defaultWidth: 180,
+            minWidth: 140,
+            render: (row) => <Text as="span" size="sm">{row.label}</Text>,
+          },
+          {
+            key: 'value',
+            header: t('common.value', 'Value'),
+            defaultWidth: 140,
+            minWidth: 120,
+            align: 'right',
+            render: (row) => <Text as="span" size="sm">{row.value}</Text>,
+          },
+        ]}
+        keyExtractor={(row) => row.key}
+        variant="embedded"
+        stickyHeader={false}
+        showColumnsMenu={false}
+        columnVisibility={false}
+        searchable={false}
+        exportable={false}
+      />
       <Caption>
         {t('physicsLedger.charge.efficiency', 'Efficiency')}:{' '}
         {c.efficiency_known && c.efficiency_pct != null ? `${fmtNumber(c.efficiency_pct)} %` : unknownLabel(t)}

@@ -8,6 +8,8 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
+import { useProductPreferences } from '@/hooks/useProductPreferences'
+import { isProductNavigationVisible } from '@/lib/productPreferences'
 import { useDataState } from '@/hooks/useDataState'
 import type { TFunction } from 'i18next'
 import { Input } from './Input'
@@ -528,10 +530,12 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
   // Hide auth-gated nav items (e.g. /me/activity) from search when running in
   // open mode — same policy as the sidebar nav.
   const isForwardAuth = useIsForwardAuth()
+  const { preferences } = useProductPreferences()
 
   const navItems: PaletteItem[] = useMemo(() =>
     navSections.flatMap(section =>
       section.items
+        .filter(item => isProductNavigationVisible(item.to, preferences.showExperiments))
         .filter(item => !('requiresAuth' in item) || !(item as { requiresAuth?: boolean }).requiresAuth || isForwardAuth)
         .map(item => {
           const keywords = navSearchKeywords[item.to] ?? []
@@ -551,7 +555,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
           }
         })
     ),
-  [go, t, isForwardAuth])
+  [go, t, isForwardAuth, preferences.showExperiments])
 
   // ── Pinned destinations ───────────────────────────────────────────────────
   //
@@ -796,7 +800,9 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
     void recentVersion
     const now = Date.now()
     const sectionLabel = t('palette.section.recent', 'Recent')
-    return getRecentPages(RECENT_PAGES_DISPLAY_LIMIT).map(
+    return getRecentPages(RECENT_PAGES_DISPLAY_LIMIT)
+      .filter(entry => isProductNavigationVisible(entry.path, preferences.showExperiments))
+      .map(
       (entry: RecentEntry): PaletteItem => ({
         // Prefix the path so this row never collides with the matching
         // nav/registry entry that may also be in `allItems`. Same trick
@@ -811,7 +817,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
         action: () => go(entry.path),
       }),
     )
-  }, [query, recentVersion, t, go])
+  }, [query, recentVersion, t, go, preferences.showExperiments])
 
   // ── Vehicle selector items ────────────────────────────────────────────────
 

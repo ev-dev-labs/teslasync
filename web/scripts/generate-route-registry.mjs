@@ -140,10 +140,13 @@ export function buildRegistrySource(appSrc, labels = {}) {
     routes
       .map(
         (r) =>
-          `  { path: ${JSON.stringify(r.path)}, name: ${JSON.stringify(r.name)}, label: ${JSON.stringify(r.label)}, i18nKey: ${JSON.stringify(r.i18nKey)}${r.hidden ? ', hidden: true' : ''} },`,
+          `  { path: ${JSON.stringify(r.path)}, name: ${JSON.stringify(r.name)}, label: ${JSON.stringify(r.label)}${r.hidden ? ', hidden: true' : ''} },`,
       )
       .join('\n') +
-    `\n] as const\n`
+    `\n].map(entry => ({\n` +
+    `  ...entry,\n` +
+    `  i18nKey: 'routes.' + entry.name.charAt(0).toLowerCase() + entry.name.slice(1),\n` +
+    `}))\n`
 
   return { source: header + body, count: routes.length }
 }

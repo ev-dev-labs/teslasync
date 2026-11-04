@@ -355,6 +355,13 @@ const WatchFace = lazy(routeLoaders.WatchFace)
 // Server picker (standalone — no Layout, pre-auth)
 const ConnectPage = lazy(routeLoaders.ConnectPage)
 
+const VehicleLab = lazy(routeLoaders.VehicleLab)
+const RouteFlyover = lazy(routeLoaders.RouteFlyover)
+const EnergyFlowExperiment = lazy(routeLoaders.EnergyFlowExperiment)
+const YearInMotion = lazy(routeLoaders.YearInMotion)
+const BatteryWhatIf = lazy(routeLoaders.BatteryWhatIf)
+const DriveArt = lazy(routeLoaders.DriveArt)
+
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation.
  *  Uses PageLoadSkeleton (layout-shaped) instead of a plain spinner so the page
  *  doesn't reflow when the lazy chunk arrives — important for our CLS budget.
@@ -906,6 +913,12 @@ export default function App() {
         <Route path="me/activity" element={<SafeRoute name="MyActivity"><MyActivity /></SafeRoute>} />
         {/* Phase 40 / Prompt 41 — global app-wide entity search */}
         <Route path="search" element={<SafeRoute name="Search"><Search /></SafeRoute>} />
+        <Route path="experiments/vehicle-lab" element={<SafeRoute name="VehicleLab"><VehicleLab /></SafeRoute>} />
+        <Route path="experiments/route-flyover" element={<SafeRoute name="RouteFlyover"><RouteFlyover /></SafeRoute>} />
+        <Route path="experiments/energy-flow" element={<SafeRoute name="EnergyFlowExperiment"><EnergyFlowExperiment /></SafeRoute>} />
+        <Route path="experiments/year-in-motion" element={<SafeRoute name="YearInMotion"><YearInMotion /></SafeRoute>} />
+        <Route path="experiments/battery-what-if" element={<SafeRoute name="BatteryWhatIf"><BatteryWhatIf /></SafeRoute>} />
+        <Route path="experiments/drive-art" element={<SafeRoute name="DriveArt"><DriveArt /></SafeRoute>} />
         {/* Phase 40 / Prompt 38 — catch-all inside Layout so unknown URLs still
             render with the sidebar/header chrome instead of a blank Outlet. */}
         <Route path="*" element={<SafeRoute name="NotFound"><NotFound /></SafeRoute>} />

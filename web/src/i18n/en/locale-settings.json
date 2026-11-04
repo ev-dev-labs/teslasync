@@ -3371,6 +3371,10 @@
       "spacious": "Spacious",
       "spaciousHelp": "Roomy — easier to read at distance"
     },
+    "experiments": {
+      "help": "Show playful, experimental experiences in navigation. Direct links still work when hidden.",
+      "show": "Show experiments"
+    },
     "moreOptions": "More appearance options",
     "statusBar": {
       "hiddenToast": "Status bar hidden",

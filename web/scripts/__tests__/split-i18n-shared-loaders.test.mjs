@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
 import { buildCatalogArtifacts, routeBundlePaths, routeBundleSources } from '../split-i18n-catalog.mjs'
-import { staticClosure } from '../i18n-source-graph.mjs'
+import { staticClosure, translationNamespaces } from '../i18n-source-graph.mjs'
 
 const sourceRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'src')
 const module = './lib/routeLoaders'
@@ -13,6 +14,25 @@ const shared = "export const Drives = () => import('../features/driving/pages/Dr
 const route = '<Route path="drives" element={<SafeRoute name="Drives"><Drives /></SafeRoute>} />'
 const manifest = JSON.parse(readFileSync(join(sourceRoot, 'i18n', 'en', 'usage-manifest.json'), 'utf8'))
 const bundles = new Set(Object.keys(manifest.bundles))
+
+test('static namespace evidence covers computed registry keys without treating unrelated strings as translations', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'i18n-registry-'))
+  const file = join(directory, 'registry.ts')
+  try {
+    writeFileSync(file, `
+      const registry = [
+        { i18nKey: 'routes.' + name.charAt(0).toLowerCase() + name.slice(1) },
+        { i18nKey: \`nav.items.\${name}\` },
+        { i18nKey: 'common.save' },
+        { label: 'unrelated.value' },
+        { i18nKey: dynamicName },
+      ]
+    `)
+    assert.deepEqual([...translationNamespaces(file)].sort(), ['common', 'nav', 'routes'])
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
 
 test('shared and inline lazy imports resolve identical route roots and static dependency closures', () => {
   const inline = `const Drives = lazy(() => import('./features/driving/pages/DrivesListPage')); ${route}`
@@ -32,7 +52,7 @@ test('every current route root and dependency closure matches the original inlin
   const loaders = readFileSync(join(sourceRoot, 'lib', 'routeLoaders.ts'), 'utf8')
   const imports = new Map([...loaders.matchAll(/export const (\w+) = \(\) => import\('([^']+)'\)/g)]
     .map(([, name, specifier]) => [name, specifier.replace(/^\.\.\//, './')]))
-  assert.equal(imports.size, 126)
+  assert.equal(imports.size, 132)
   const inline = app.replace(/^import \* as routeLoaders from '\.\/lib\/routeLoaders'\r?\n/m, '')
     .replace(/lazy\(routeLoaders\.(\w+)\)/g, (_, name) => {
       assert.ok(imports.has(name), `missing original module for ${name}`)

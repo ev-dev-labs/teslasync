@@ -42,6 +42,7 @@ export interface FeatureCatalogEntry {
   color: string;
   /** 1-line description shown under the label on a feature card. */
   description: string;
+  descriptionKey?: string;
   /** Optional gating from navSections — surfaced to the page so it can hide rows. */
   minVehicles?: number;
   requiresAuth?: boolean;
@@ -295,6 +296,13 @@ const DESCRIPTIONS: Record<string, string> = {
 
   // ── About ──────────────────────────────────────────────────────────
   '/roadmap': 'Upcoming features grouped by quarter.',
+
+  '/experiments/vehicle-lab': 'Explore live vehicle signals through an interactive, self-made 3D vehicle.',
+  '/experiments/route-flyover': 'Replay a recorded drive as a cinematic journey along its actual route.',
+  '/experiments/energy-flow': 'Trace charge and drive energy from grid to battery to wheels, as one flow.',
+  '/experiments/year-in-motion': 'Watch a year of recorded journeys unfold as an animated map and timeline.',
+  '/experiments/battery-what-if': 'Model battery degradation and range projections from real charge and discharge history.',
+  '/experiments/drive-art': 'Turn a drive into a generated piece of art from its route, speed and power.',
 };
 
 /**
@@ -321,6 +329,9 @@ export function buildFeatureCatalog(): FeatureCatalogEntry[] {
         description:
           DESCRIPTIONS[item.to] ??
           `Open ${item.label}.` /* visible fallback so the page never breaks */,
+        descriptionKey: item.to.startsWith('/experiments/')
+          ? `experiments.${item.to.slice('/experiments/'.length).replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase())}.description`
+          : undefined,
         minVehicles: item.minVehicles,
         requiresAuth: item.requiresAuth,
       });
@@ -367,7 +378,8 @@ export function filterFeatureCatalog(
   if (exactSection) return entries.filter((entry) => entry.section === exactSection);
   const tokens = q.split(/\s+/);
   return entries.filter((e) => {
-    const haystack = `${e.label} ${translate(e.labelKey, e.label)} ${e.section} ${translate(e.sectionKey, e.section)} ${e.description} ${e.to}`.toLowerCase();
+    const description = e.descriptionKey ? translate(e.descriptionKey, e.description) : e.description;
+    const haystack = `${e.label} ${translate(e.labelKey, e.label)} ${e.section} ${translate(e.sectionKey, e.section)} ${e.description} ${description} ${e.to}`.toLowerCase();
     return tokens.every((tok) => haystack.includes(tok));
   });
 }

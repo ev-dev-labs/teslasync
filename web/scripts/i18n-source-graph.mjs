@@ -124,5 +124,20 @@ export function translationKeys(file) {
 }
 
 export function translationNamespaces(file) {
-  return new Set([...translationKeys(file)].map((key) => key.split('.')[0]))
+  const namespaces = new Set([...translationKeys(file)].map((key) => key.split('.')[0]))
+  const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true)
+  const prefixOf = (node) => {
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) return prefixOf(node.left)
+    if (ts.isTemplateExpression(node)) return node.head.text
+    return ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) ? node.text : ''
+  }
+  const visit = (node) => {
+    if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name) && node.name.text === 'i18nKey') {
+      const prefix = prefixOf(node.initializer)
+      if (/^[A-Za-z][\w-]*\./.test(prefix)) namespaces.add(prefix.split('.')[0])
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(source)
+  return namespaces
 }

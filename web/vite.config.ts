@@ -338,9 +338,12 @@ export default defineConfig({
     }),
   ],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+    alias: [
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+      // The published source modules let the lazy engine share core/renderer
+      // implementations without shipping one over-budget prebundled module.
+      { find: /^three$/, replacement: path.resolve(__dirname, 'node_modules', 'three', 'src', 'Three.js') },
+    ],
   },
   server: {
     port: 3000,
@@ -424,6 +427,8 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query', 'i18next', 'react-i18next', 'framer-motion'],
           'vendor-charts': ['recharts'],
           'vendor-map': ['leaflet', 'react-leaflet'],
+          'vendor-three-core': ['three/src/Three.Core.js'],
+          'vendor-three-renderer': ['three/src/renderers/WebGLRenderer.js'],
           // lucide-react is deliberately NOT force-grouped. Naming it here
           // hoisted every icon the whole app imports — 426 modules — into a
           // single chunk that the entry statically imports, so ~200 icons that

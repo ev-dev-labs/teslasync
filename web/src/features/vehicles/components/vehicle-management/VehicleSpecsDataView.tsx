@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/feedback'
-import { Badge, Table, Text } from '@/components/ui'
+import { DataTable, Text } from '@/components/ui'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 import { isSensitiveManagementKey } from './managementJson'
 import { parseManagementScalarFields } from './managementData'
@@ -52,36 +52,30 @@ export function VehicleSpecsDataView({ data }: VehicleSpecsDataViewProps) {
           { count: fields.length },
         )}
       </Text>
-      <Table aria-label={t('vehicleManagement.specs.title', 'Vehicle specifications')}>
-        <tbody>
-          {fields.map((field) => (
-            <tr key={field.key}>
-              <th scope="row" className="font-normal">
-                <Text variant="label">{field.label}</Text>
-              </th>
-              <td className={typeof field.value === 'number' ? 'text-right tabular-nums' : undefined}>
-                {typeof field.value === 'boolean' ? (
-                  <Badge variant={field.value ? 'success' : 'neutral'}>
-                    {field.value
-                      ? t('vehicleManagement.data.true', 'Yes')
-                      : t('vehicleManagement.data.false', 'No')}
-                  </Badge>
-                ) : (
-                  <Text
-                    variant="body"
-                    weight="semibold"
-                    mono={typeof field.value === 'number'}
-                  >
-                    {typeof field.value === 'number' && !retainsSourcePrecision(field.key)
-                      ? fmtNumber(field.value)
-                      : String(field.value)}
-                  </Text>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
+      <DataTable
+        tableId="vehicle-management:specs"
+        caption={t('vehicleManagement.specs.title', 'Vehicle specifications')}
+        data={fields.map((field) => ({
+          key: field.key,
+          label: field.label,
+          value: typeof field.value === 'boolean'
+            ? (field.value ? t('vehicleManagement.data.true', 'Yes') : t('vehicleManagement.data.false', 'No'))
+            : typeof field.value === 'number' && !retainsSourcePrecision(field.key)
+              ? fmtNumber(field.value)
+              : String(field.value),
+        }))}
+        columns={[
+          { key: 'label', header: t('vehicleManagement.specs.title', 'Vehicle specifications'), defaultWidth: 220, minWidth: 180, render: (row) => <Text variant="label">{row.label}</Text> },
+          { key: 'value', header: t('common.value', 'Value'), defaultWidth: 180, minWidth: 140, align: 'right', render: (row) => <Text variant="body" weight="semibold" mono>{row.value}</Text> },
+        ]}
+        keyExtractor={(row) => row.key}
+        variant="embedded"
+        stickyHeader={false}
+        showColumnsMenu={false}
+        columnVisibility={false}
+        searchable={false}
+        exportable={false}
+      />
       <ManagementRawDetails value={data} />
     </div>
   )

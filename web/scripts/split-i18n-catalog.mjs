@@ -53,7 +53,8 @@ const SHELL_RUNTIME_KEYS_PATH = join(I18N_ROOT, 'shell-runtime-keys.json')
 const KNOWN_MISSING_PATH = join(I18N_ROOT, 'known-missing-keys.json')
 // Shared controls used across dashboard, list, and detail routes should not
 // trigger a separate network request for each common label on first paint.
-const COMPLETE_SHELL_NAMESPACES = new Set(['nav', 'common', 'workspace', 'dataSources', 'a11y', 'changelog'])
+// Registry-derived route keys must also resolve before lazy catalogs load.
+const COMPLETE_SHELL_NAMESPACES = new Set(['nav', 'routes', 'common', 'workspace', 'dataSources', 'a11y', 'changelog'])
 // Driving spans independent analysis routes. Pack their source closure together,
 // but resolve undiscovered keys from the existing narrow namespace fallbacks.
 const DETAIL_FALLBACK_FEATURES = new Set(['driving'])
@@ -417,7 +418,7 @@ function usageManifest(catalog) {
   }
 
   const shellNamespaces = new Set(
-    [...shellInlineKeys, ...shellDeferredKeys].map((key) => key.split('.')[0]),
+    [...COMPLETE_SHELL_NAMESPACES, ...[...shellInlineKeys, ...shellDeferredKeys].map((key) => key.split('.')[0])],
   )
   const namespaceToBundle = {}
   const bundles = {}

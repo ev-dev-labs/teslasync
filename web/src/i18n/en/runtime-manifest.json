@@ -106,6 +106,7 @@
     "entityContext",
     "error",
     "errorBoundary",
+    "experiments",
     "explorer",
     "export",
     "exports",
