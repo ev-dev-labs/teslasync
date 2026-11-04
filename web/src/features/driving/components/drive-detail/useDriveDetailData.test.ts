@@ -174,6 +174,19 @@ it('converts canonical signed fractional watts to drive-detail kW without fillin
   expect(result.current.chartData.map(point => point.power)).toEqual([1.2505, -2.50025, 0, null]);
 });
 
+it('BUG3 derives fallback average power from observed elapsed intervals rather than row count', () => {
+  const { result } = setup(drive({
+    endTs: '2024-01-01T08:00:10Z', durationS: 10,
+    telemetry: [
+      tele({ createdAt: '2024-01-01T08:00:00Z', power: 10 }),
+      tele({ createdAt: '2024-01-01T08:00:01Z', power: -10 }),
+      tele({ createdAt: '2024-01-01T08:00:02Z', power: -10 }),
+      tele({ createdAt: '2024-01-01T08:00:03Z', power: -10 }),
+    ],
+  }));
+  expect(result.current.stats?.avgPower).toBe(-8);
+});
+
 // Positions are read through an `any` cast in the hook (snake_case fallback),
 // so the factory accepts arbitrary extra keys and casts the result.
 function pos(o: Record<string, unknown> = {}): DrivePosition {
@@ -769,8 +782,8 @@ describe('useDriveDetailData — stats', () => {
         durationS: 3600,
         // maxSpeedMps / avgSpeedMps / avgPowerW / energyUsedWh / regenEnergyWh all null
         telemetry: [
-          tele({ latitude: 1, longitude: 1, createdAt: 't0', speed: 5, power: -10 }),
-          tele({ latitude: 2, longitude: 2, createdAt: 't1', speed: 10, power: -20 }),
+          tele({ latitude: 1, longitude: 1, createdAt: '2024-01-01T08:00:00Z', speed: 5, power: -10 }),
+          tele({ latitude: 2, longitude: 2, createdAt: '2024-01-01T08:30:00Z', speed: 10, power: -20 }),
         ],
       }),
       METRIC,
@@ -781,7 +794,7 @@ describe('useDriveDetailData — stats', () => {
     expect(s.avgSpd).toBe(0); // no avgSpeedMps
     expect(s.powerMax).toBe(-10); // max of [-10,-20]
     expect(s.powerMin).toBe(-20);
-    expect(s.avgPower).toBe(-15); // mean of chart powers
+    expect(s.avgPower).toBe(-15); // observed time-weighted power over equal half-hour intervals
     expect(s.energyWh).toBeCloseTo(-15000, 5); // signed net pack power * 1h
     expect(s.regenWh).toBeCloseTo(15000, 5); // (10+20) * (1/2) * 1000
     expect(s.minSpd).toBeCloseTo(5 * MPS_TO_KMH, 5); // 18 km/h
@@ -839,8 +852,8 @@ describe('useDriveDetailData — stats', () => {
     expect(debrief.beats.find((beat) => beat.id === 'regen')?.honesty).toBe('live');
   });
 
-  it.each([NaN, Infinity, -1])('does not estimate energy from invalid duration %s', (durationS) => {
-    const { result } = setup(drive({ durationS, telemetry: [tele({ power: -0.5 })] }));
+  it.each([NaN, Infinity, -1])('does not estimate energy from invalid duration %s when there is no end instant', (durationS) => {
+    const { result } = setup(drive({ durationS, endTs: null, telemetry: [tele({ power: -0.5 })] }));
     expect(result.current.stats!.energyEvidence).toMatchObject({
       energyWh: null, regenWh: null, energySource: 'missing', regenSource: 'missing',
     });
@@ -848,7 +861,11 @@ describe('useDriveDetailData — stats', () => {
 
   it('preserves fractional signed estimates and reports their provenance', () => {
     const { result } = setup(drive({
-      durationS: 1.8, telemetry: [tele({ power: -0.5 }), tele({ power: 0.25 })],
+      durationS: 1.8, endTs: '2024-01-01T08:00:01.800Z',
+      telemetry: [
+        tele({ createdAt: '2024-01-01T08:00:00Z', power: -0.5 }),
+        tele({ createdAt: '2024-01-01T08:00:00.900Z', power: 0.25 }),
+      ],
     }));
     const s = result.current.stats!;
     expect(s.energyWh).toBeCloseTo(-0.0625);
@@ -862,20 +879,25 @@ describe('useDriveDetailData — stats', () => {
   it('uses all eligible power observations, including positive and zero, without treating gaps as zero', () => {
     const { result } = setup(drive({
       durationS: 3600,
-      telemetry: [-0.5, 0.25, 0, null, NaN, Infinity, -Infinity].map((power) => tele({ power })),
+      telemetry: [-0.5, 0.25, 0, null, NaN, Infinity, -Infinity].map((power, index) => tele({
+        power, createdAt: `2024-01-01T08:${String(Math.min(index * 10, 59)).padStart(2, '0')}:00Z`,
+      })),
     }));
     expect(result.current.stats!.energyEvidence).toMatchObject({
       powerObservationCount: 3, powerSampleCount: 7,
       energySource: 'estimated', regenSource: 'estimated',
     });
-    expect(result.current.stats!.energyEvidence!.energyWh).toBeCloseTo(-250 / 3);
-    expect(result.current.stats!.energyEvidence!.regenWh).toBeCloseTo(500 / 3);
+    expect(result.current.stats!.energyEvidence!.energyWh).toBeCloseTo(-250 / 6);
+    expect(result.current.stats!.energyEvidence!.regenWh).toBeCloseTo(500 / 6);
     expect(result.current.chartData.map((point) => point.power)).toEqual([-0.5, 0.25, 0, null, null, null, null]);
   });
 
   it.each([0, 0.25])('keeps nonnegative observed power %s as a known zero regeneration estimate', (power) => {
     const { result } = setup(drive({
-      durationS: 3600, telemetry: [tele({ power }), tele()],
+      durationS: 3600, telemetry: [
+        tele({ createdAt: '2024-01-01T08:00:00Z', power }),
+        tele({ createdAt: '2024-01-01T09:00:00Z' }),
+      ],
     }));
     expect(result.current.stats!.energyEvidence).toMatchObject({
       energyWh: power * 1000, regenWh: 0,
@@ -885,7 +907,11 @@ describe('useDriveDetailData — stats', () => {
 
   it('uses eligible position power observations for regeneration coverage', () => {
     const { result } = setup(drive({
-      durationS: 3600, positions: [pos({ power: -0.5 }), pos({ power: 0 }), pos()],
+      durationS: 3600, positions: [
+        pos({ createdAt: '2024-01-01T08:00:00Z', power: -0.5 }),
+        pos({ createdAt: '2024-01-01T08:30:00Z', power: 0 }),
+        pos({ createdAt: '2024-01-01T09:00:00Z' }),
+      ],
     }));
     expect(result.current.stats!.energyEvidence).toMatchObject({
       energyWh: -250, regenWh: 250, powerObservationCount: 2, powerSampleCount: 3,
@@ -899,8 +925,11 @@ describe('useDriveDetailData — stats', () => {
     expect(result.current.stats!.energyEvidence).toMatchObject({ energyWh: null, regenWh: null, hasPower: false });
   });
 
-  it('estimates from position power when telemetry is absent', () => {
-    const { result } = setup(drive({ durationS: 1800, positions: [pos({ power: -0.25 })] }));
+  it('estimates from position power using duration only when telemetry and an end instant are absent', () => {
+    const { result } = setup(drive({
+      durationS: 1800, endTs: null,
+      positions: [pos({ createdAt: '2024-01-01T08:00:00Z', power: -0.25 })],
+    }));
     expect(result.current.stats!.energyEvidence).toMatchObject({ energyWh: -125, regenWh: 125, hasPower: true });
   });
 

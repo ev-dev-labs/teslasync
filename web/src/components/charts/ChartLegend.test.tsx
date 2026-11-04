@@ -25,7 +25,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
-import type { ReactElement } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 
 // Replace recharts' <Legend> with a prop-capturing double so the real
 // onClick / formatter closures ChartLegend builds can be invoked in isolation
@@ -242,6 +242,49 @@ describe('LegendSeriesLabel', () => {
 })
 
 describe('ChartLegend — recharts wiring', () => {
+  it('anchors horizontal legend content to the viewport rather than negative axis margins', () => {
+    render(<ChartLegend verticalAlign="top" align="right" />)
+    expect(H.legendProps?.wrapperStyle).toEqual(expect.objectContaining({
+      left: 0, width: '100%', maxWidth: '100%',
+    }))
+  })
+
+  it('keeps the content component stable across updates so mounted controls retain focus', () => {
+    const mounted = render(<ChartLegend state={makeSource()} />)
+    const content = H.legendProps?.content
+    mounted.rerender(<ChartLegend state={makeSource(['solar'])} />)
+    expect(H.legendProps?.content).toBe(content)
+  })
+
+  it('allocates dense horizontal controls in a wrapping grid without dropping labels or toggle state', () => {
+    const source = makeSource(['battery'])
+    const payload = [
+      { dataKey: 'solar', value: 'Solar', color: '#91b4d2', type: 'line' },
+      { dataKey: 'load', value: 'Household load', color: '#91b4d2', type: 'line' },
+      { dataKey: 'vehicle', value: 'Vehicle charging', color: '#91b4d2', type: 'line' },
+      { dataKey: 'battery', value: 'Powerwall (+charge/-discharge)', color: '#91b4d2', type: 'line' },
+      { dataKey: 'import', value: 'Grid import', color: '#91b4d2', type: 'line' },
+      { dataKey: 'export', value: 'Grid export (shown negative)', color: '#91b4d2', type: 'line' },
+    ] as const
+    render(<ChartLegend state={source} />)
+    const content = H.legendProps?.content
+    expect(content).toBeTypeOf('function')
+    const renderContent = content as (props: Record<string, unknown>) => ReactNode
+    const mounted = render(<>{renderContent({
+      payload, iconSize: 14, layout: 'horizontal', formatter: H.legendProps?.formatter,
+    })}</>)
+    expect(mounted.container.querySelector('[data-chart-legend-layout]')).toHaveClass(
+      '[&_.recharts-default-legend]:grid',
+      '[&_.recharts-default-legend]:grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))]',
+    )
+    for (const entry of payload) {
+      expect(screen.getByRole('button', { name: entry.value })).toHaveAttribute(
+        'aria-pressed', entry.dataKey === 'battery' ? 'true' : 'false',
+      )
+    }
+    expect(mounted.container.querySelectorAll('.recharts-surface')).toHaveLength(6)
+  })
+
   function legend(): {
     onClick: (data: LegendPayloadEntry, i?: number, e?: unknown) => void
     formatter: (value: unknown, entry: unknown, i?: number) => ReactElement
@@ -258,13 +301,22 @@ describe('ChartLegend — recharts wiring', () => {
     expect(ChartLegend.displayName).toBe('Legend')
   })
 
-  it('passes wrapperStyle / verticalAlign / align straight through to recharts <Legend>', () => {
+  it('preserves caller wrapper styles and alignment alongside responsive allocation', () => {
     const style = { fontSize: 12 }
     render(<ChartLegend state={makeSource()} wrapperStyle={style} verticalAlign="top" align="right" />)
     const p = legend()
-    expect(p.wrapperStyle).toBe(style)
+    expect(p.wrapperStyle).toEqual(expect.objectContaining(style))
     expect(p.verticalAlign).toBe('top')
     expect(p.align).toBe('right')
+  })
+
+  it('preserves explicit vertical positioning and custom legend content', () => {
+    const style = { right: 12, top: 16 }
+    const content = <div>Custom legend</div>
+    render(<ChartLegend layout="vertical" wrapperStyle={style} content={content} />)
+    expect(H.legendProps?.wrapperStyle).toBe(style)
+    expect(H.legendProps?.content).toBe(content)
+    expect(H.legendProps?.layout).toBe('vertical')
   })
 
   it('preserves payload series colors, IDs and ordering without imposing a palette', () => {

@@ -15,8 +15,7 @@
  *   • cross-tab mirroring via the broadcast bus WITHOUT echoing/looping
  *   • the exposed theme/mode registries and `modeCategoryOrder`
  *
- * Network is fully mocked: `@/api/client`'s `request` is a spy, and the raw
- * `fetch` used by the mount settings load is stubbed per test. The broadcast
+ * Network is fully mocked through `@/api/client`'s `request` spy. The broadcast
  * bus (`@/lib/broadcast`) is mocked so we can both assert emitted envelopes and
  * synthesise inbound messages from a peer tab. `window.matchMedia` is polyfilled
  * here (jsdom ships no implementation) with a controllable listener set.
@@ -92,23 +91,24 @@ function emitSystemPreference(matches: boolean) {
   })
 }
 
-// ── fetch stubs for the mount settings load ──
 function mockFetch(settings: Record<string, unknown> | null) {
-  global.fetch = vi.fn().mockResolvedValue({
-    ok: settings !== null,
-    json: async () => settings,
-  }) as unknown as typeof fetch
+  mockedRequest.mockReset()
+  mockedRequest.mockResolvedValue({})
+  mockedRequest.mockResolvedValueOnce(settings)
 }
 
 function mockFetchRejecting() {
-  global.fetch = vi.fn().mockRejectedValue(new Error('network down')) as unknown as typeof fetch
+  mockedRequest.mockReset()
+  mockedRequest.mockRejectedValueOnce(new Error('network down'))
+  mockedRequest.mockResolvedValue({})
 }
 
 function mockFetchPending() {
-  global.fetch = vi.fn().mockReturnValue(new Promise(() => {})) as unknown as typeof fetch
+  mockedRequest.mockReset()
+  mockedRequest.mockReturnValueOnce(new Promise(() => {}))
 }
 
-/** Drain microtasks/macrotasks so the mount fetch chain (and its state
+/** Drain microtasks/macrotasks so the mount request chain (and its state
  *  updates) settles inside `act`. */
 async function flush() {
   await act(async () => {
@@ -344,7 +344,7 @@ describe('backend settings load', () => {
 
   it('requests the settings endpoint without an /api/v1 double prefix', async () => {
     await renderSettled()
-    expect(global.fetch).toHaveBeenCalledWith('/api/v1/settings', { headers: new Headers() })
+    expect(mockedRequest).toHaveBeenCalledWith('/settings')
   })
 
   it('tolerates a failed settings fetch yet still unlocks backend writes', async () => {
@@ -439,7 +439,9 @@ describe('setTheme / setMode / setCustomColors', () => {
       modeId: 'dark',
     })
     // …but the backend write is gated behind initialisation.
-    expect(mockedRequest).not.toHaveBeenCalled()
+    expect(
+      mockedRequest.mock.calls.some((call) => (call[1] as RequestInit | undefined)?.method === 'PUT'),
+    ).toBe(false)
   })
 })
 

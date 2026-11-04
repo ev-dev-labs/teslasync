@@ -14,6 +14,7 @@ import { zonedDateParts } from '@/lib/dateFormat';
 import { chartTokens } from '@/lib/tokens';
 import { WidgetBigNumber, WidgetChartSummary } from './shared';
 import { WidgetShell } from './WidgetShell';
+import { ChargeConnector } from './instruments/ChargeInstruments';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -196,6 +197,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
         onRefresh={handleRefresh}
       >
         {hasData ? (
+          <div className="flex h-full min-w-0 items-center justify-center gap-3">
           <WidgetBigNumber
             value={todayEnergy == null ? null : fmt(todayEnergy)}
             unit={todayEnergy == null ? undefined : unitPrefs.energy}
@@ -203,6 +205,8 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
             align="center"
             animated={false}
           />
+          <ChargeConnector />
+          </div>
         ) : (
           <WidgetChartSummary
             compact
@@ -238,7 +242,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
         stats={[]}
         chart={
           <div className="flex h-full min-h-0 flex-col gap-2">
-            <div className="shrink-0">
+            <div className="flex shrink-0 items-center justify-between gap-3">
             <WidgetBigNumber
               value={todayEnergy == null ? null : fmt(todayEnergy)}
               unit={todayEnergy == null ? undefined : unitPrefs.energy}
@@ -246,6 +250,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
               align="start"
               animated={false}
             />
+            <ChargeConnector />
             </div>
             <div className="min-h-0 flex-1">
             <EmbeddedChart

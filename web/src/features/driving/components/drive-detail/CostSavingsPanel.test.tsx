@@ -20,6 +20,13 @@ beforeEach(() => {
 });
 
 describe('Configured-rate cost estimates', () => {
+  it('owns its estimate caveat in the shared summary before its unchanged cost matrix', () => {
+    render(<CostSavingsPanel drive={driveFixture()} stats={statsFixture()} />);
+    expect(screen.getByText(/not a charging invoice/).closest('[data-card-slot="summary"]')).not.toBeNull();
+    expect(screen.getByRole('table').closest('[data-card-slot="body"]')).not.toBeNull();
+    expect(screen.getByRole('heading', { name: 'Cost and savings' }).closest('[data-card-slot="header"]')).not.toBeNull();
+  });
+
   it('keeps all cost rows visible, with explicit unknown gas comparison and estimate caveat', () => {
     render(<CostSavingsPanel drive={driveFixture({ distanceM: 50000, energyUsedWh: 10000 })} stats={statsFixture()} />);
     expect(value('Trip cost')).toBe('$1.20');

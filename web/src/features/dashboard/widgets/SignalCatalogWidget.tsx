@@ -157,7 +157,7 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
             <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
               <ul className="m-0 list-none space-y-2 p-0" aria-label={t('widget.signalCatalog.signalsAvailable', 'Signals available')}>
                 {categoryEntries.map(([destination, signals]) => (
-                    <li key={destination} className="min-w-0 rounded-panel border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2">
+                    <li key={destination} className="min-w-0 border-b border-[var(--border-subtle)] py-2 last:border-b-0">
                       <h4
                         aria-label={t('widget.signalCatalog.destination', 'Destination: {{destination}}', { destination })}
                         className="break-words text-sm font-medium text-[var(--text-primary)]"

@@ -16,14 +16,14 @@ rationale.
 |---|---|
 | Upstream repository | `github.com/teslamotors/fleet-telemetry` |
 | Upstream path | `protos/vehicle_data.proto` |
-| Upstream tag | untagged (`Cabin12vPortKeepOn` / `Cabin48vPortKeepOn`) |
-| Upstream commit | `3d366a3da23c41b6fe4eb538409d071402c4884b` |
-| Upstream commit date | 2026-09-24 |
-| Upstream raw URL | <https://raw.githubusercontent.com/teslamotors/fleet-telemetry/3d366a3da23c41b6fe4eb538409d071402c4884b/protos/vehicle_data.proto> |
-| Upstream tree URL | <https://github.com/teslamotors/fleet-telemetry/blob/3d366a3da23c41b6fe4eb538409d071402c4884b/protos/vehicle_data.proto> |
-| File size | 22,007 bytes |
-| SHA256 | `7E82B52A098B156671DC75701928792DC84B69D1C3A80956CAC68693AA00A301` |
-| Fetched on | 2026-09-25 |
+| Upstream tag | untagged (Semi streaming fields) |
+| Upstream commit | `18800f7738757a741479e71b38ece584d363ef2d` |
+| Upstream commit date | 2026-10-28 |
+| Upstream raw URL | <https://raw.githubusercontent.com/teslamotors/fleet-telemetry/18800f7738757a741479e71b38ece584d363ef2d/protos/vehicle_data.proto> |
+| Upstream tree URL | <https://github.com/teslamotors/fleet-telemetry/blob/18800f7738757a741479e71b38ece584d363ef2d/protos/vehicle_data.proto> |
+| File size | 23,217 bytes |
+| SHA256 | `9283B8E0697E845DC0774A0657D1D976B0CCC18220CC6161C718696A7A7F1344` |
+| Fetched on | 2026-10-29 |
 | Vendored by | upstream proto refresh |
 
 The same checksum is recorded in `CHECKSUM` (one-line hex, uppercase) and the
@@ -38,6 +38,21 @@ re-vendoring; the workflow never modifies production code automatically.
 The two Semi cabin-port states are subscribed from generated metadata, decoded
 to canonical `Off` / `On` / `Unknown` strings, persisted in `signal_log`, and
 available in the existing live-signal explorer and signal history UI.
+
+The 2026-10-28 revision adds `AccessoryRail`, `PowerTransferStatus`,
+`AutomaticEmergencyBrakingState`, `RollingResistanceCoefficient`,
+`LifetimeDcChargeEnergyKwh`, and `SemiVehicleMassKg` (Semi only), plus
+`CarTypeSemiTruckV2` and `CarTypeCybercab`. Tesla marks the new fields as first
+available in firmware 2026.32.300 and 2026.38.6.
+
+The lifetime DC counter is normalized from kWh to Wh before reaching live state
+or `signal_log`; mass remains kg and rolling resistance is dimensionless.
+AEB operating state is not the user enable setting or a collision-event count.
+The pinned producer in `Dockerfile.fleet-telemetry` includes Tesla's device-client
+1.3.0 AEB enum correction; downstream codecs must not apply that shift again.
+After deploying the API and rebuilt producer, reapply the generated subscription
+to existing vehicles using the normal configuration flow or `cmd/resubscribe`.
+Fields remain unavailable until supported vehicles actually report them.
 
 ## Why we vendor instead of `go get`-ing
 

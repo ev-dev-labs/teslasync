@@ -492,15 +492,35 @@ describe('WidgetShell - freshness and content state', () => {
     expect(root(container).className).not.toContain('shadow-[0_0_12px');
   });
 
-  it('reduces retained widget content to 45 percent opacity when data is stale', () => {
-    render(
+  it('keeps stale values readable but suppresses their activity cues', () => {
+    const { container } = render(
       <WidgetShell title="Battery" updatedAt={100} isStale>
         <Child />
       </WidgetShell>,
     );
     const content = screen.getByTestId('child').parentElement;
-    expect(content).toHaveClass('opacity-[0.45]');
+    expect(content).not.toHaveClass('opacity-[0.45]');
     expect(content).toHaveAttribute('data-content-degraded', 'true');
+    expect(root(container)).toHaveAttribute('data-motion-suppressed', 'true');
+  });
+
+  it('does not confuse refetch eligibility with stale source activity', () => {
+    const state = deriveDataState({ data: { charge: 65 }, dataUpdatedAt: Date.now() }, { provenance: 'live' });
+    const { container } = render(
+      <WidgetShell title="Battery" dataState={state} isStale><Child /></WidgetShell>,
+    );
+    expect(root(container)).not.toHaveAttribute('data-motion-suppressed');
+  });
+
+  it('retains readable content and stops activity after a failed live refresh', () => {
+    const state = deriveDataState({
+      data: { charge: 72 }, dataUpdatedAt: Date.now(), isError: true, error: new Error('Refresh failed'),
+    }, { provenance: 'live' });
+    const { container } = render(<WidgetShell title="Battery" dataState={state}><Child /></WidgetShell>);
+    expect(screen.getByTestId('child')).toBeVisible();
+    expect(screen.getByTestId('child').parentElement).not.toHaveClass('opacity-[0.45]');
+    expect(root(container)).toHaveAttribute('data-motion-suppressed', 'true');
+    expect(screen.getByTestId('trust-warning')).toHaveTextContent('stale');
   });
 
   it('adds a full-title tooltip and truncation to long widget headings', () => {

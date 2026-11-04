@@ -42,3 +42,37 @@ func TestTeslaSyncMQTTEventTimeEnvelope(t *testing.T) {
 		t.Fatalf("body without timestamp = %s, want value-only envelope", body)
 	}
 }
+
+func TestTeslaSyncMQTTNewStreamingEnums(t *testing.T) {
+	payload := &protos.Payload{
+		CreatedAt: timestamppb.New(time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)),
+		Data: []*protos.Datum{
+			{Key: protos.Field_PowerTransferStatus, Value: &protos.Value{Value: &protos.Value_PowerTransferStatusValue{
+				PowerTransferStatusValue: protos.PowerTransferStatusValue_PowerTransferStatusChargeEnabled,
+			}}},
+			{Key: protos.Field_AutomaticEmergencyBrakingState, Value: &protos.Value{Value: &protos.Value_AutomaticEmergencyBrakingStateValue{
+				AutomaticEmergencyBrakingStateValue: protos.AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateUnknown,
+			}}},
+		},
+	}
+	values := (&Producer{}).payloadToMap(payload)
+	for field, want := range map[string]string{
+		"PowerTransferStatus":            "PowerTransferStatusChargeEnabled",
+		"AutomaticEmergencyBrakingState": "AutomaticEmergencyBrakingStateUnknown",
+	} {
+		body, err := marshalVehicleField(values[field], payload)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got struct {
+			Value string `json:"value"`
+			TS    string `json:"ts"`
+		}
+		if err := json.Unmarshal(body, &got); err != nil {
+			t.Fatal(err)
+		}
+		if got.Value != want || got.TS != "2026-10-28T12:00:00Z" {
+			t.Fatalf("%s MQTT envelope = %+v, want %s with source timestamp", field, got, want)
+		}
+	}
+}

@@ -8,6 +8,7 @@ import { pointFixture, statsFixture, driveFixture } from './detailTestFixtures';
 import type { ChartDataPoint } from './types';
 import type { ReactNode } from 'react';
 import { chartTokens } from '@/lib/tokens';
+import type { DriveDetail, DriveTelemetryPoint } from '@/types/driving';
 vi.mock('@/components/charts', async () => ({
   ...await vi.importActual<typeof import('@/components/charts')>('@/components/charts'),
   ...(await import('@/test/chartTestDoubles')).inertCartesianParts,
@@ -29,11 +30,11 @@ vi.mock('@/api/hooks/useAnnotations', () => ({
   useChartAnnotations: () => ({ data: [], isPending: false, isLoading: false, isFetching: false, isError: false, error: null, fetchStatus: 'idle', dataUpdatedAt: 0, refetch: vi.fn() }),
   useChartAnnotationsAsData: () => ({ annotations: [] }), useCreateAnnotation: () => ({ mutate: vi.fn() }), useDeleteAnnotation: () => ({ mutate: vi.fn() }),
 }));
-function show(points: ChartDataPoint[]) {
+function show(points: ChartDataPoint[], drive: DriveDetail = driveFixture()) {
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <MemoryRouter><ChartTimeRangeProvider syncId="drive-detail">
-        <PowerProfileChart chartData={points} stats={statsFixture({ powerMax: 999 })} drive={driveFixture()} />
+        <PowerProfileChart chartData={points} stats={statsFixture({ powerMax: 999 })} drive={drive} />
       </ChartTimeRangeProvider></MemoryRouter>
     </QueryClientProvider>,
   );
@@ -44,6 +45,25 @@ const summaryTerm = (label: string) => screen.getByText((_, el) => el?.tagName =
 const value = (label: string) => summaryTerm(label).nextElementSibling?.textContent;
 
 describe('Observed power evidence', () => {
+  it('BUG3 weights sparse signed observations by elapsed time, not emission frequency', () => {
+    const telemetry: DriveTelemetryPoint[] = [
+      [0, 10000], [1, -10000], [2, -10000], [3, -10000],
+    ].map(([second, power]) => ({
+      ...pointFixture(), batteryLevel: null, latitude: null, longitude: null,
+      tirePressureFl: null, tirePressureFr: null, tirePressureRl: null, tirePressureRr: null,
+      isClimateOn: null, timestamp: `2026-09-01T10:00:0${second}Z`,
+      createdAt: `2026-09-01T10:00:0${second}Z`, power,
+    }));
+    show([pointFixture({ power: 10 }), ...Array.from({ length: 3 }, () => pointFixture({ power: -10 }))],
+      driveFixture({ telemetry, endTs: '2026-09-01T10:00:10Z', durationS: 10 }));
+    expect(value('Observed power (time-weighted)')).toBe('-8.00');
+    expect(value('Average power')).toBe('16.00');
+  });
+
+  it('BUG3 does not invent an observed mean from rows without actual interval evidence', () => {
+    show([pointFixture({ power: 80 }), pointFixture({ power: -20 })]);
+    expect(value('Observed power (time-weighted)')).toBe('—');
+  });
   it('uses shared power and zero-line paint without losing fractional regenerative signs', () => {
     show([pointFixture({ power: -5.25 }), pointFixture({ power: 12.5 })]);
     expect(screen.getByTestId('power-series')).toHaveAttribute('data-stroke', chartTokens.series[2]);
@@ -75,9 +95,9 @@ describe('Observed power evidence', () => {
     expect(screen.queryByText('999')).toBeNull();
   });
 
-  it('distinguishes arithmetic sample mean from persisted aggregate average', () => {
+  it('does not equate untimed chart rows with a persisted aggregate average', () => {
     show([pointFixture({ power: 80 }), pointFixture({ power: -20 })]);
-    expect(value('Mean sampled power')).toBe('30.00');
+    expect(value('Observed power (time-weighted)')).toBe('—');
     expect(value('Average power')).toBe('16.00');
   });
 
@@ -98,7 +118,7 @@ describe('Observed power evidence', () => {
   it('rejects null/non-finite samples rather than displaying an invented zero peak', () => {
     show([pointFixture({ power: null }), pointFixture({ power: NaN }), pointFixture({ power: Infinity })]);
     expect(value('Maximum power')).toBe('—');
-    expect(value('Mean sampled power')).toBe('—');
+    expect(value('Observed power (time-weighted)')).toBe('—');
     expect(screen.queryByText(/NaN|Infinity/)).toBeNull();
   });
 
@@ -106,7 +126,7 @@ describe('Observed power evidence', () => {
     show([pointFixture({ power: 0 }), pointFixture({ power: 20 })]);
     expect(value('Maximum power')).toBe('20');
     expect(value('Maximum regen')).toBe('0');
-    expect(value('Mean sampled power')).toBe('10.00');
+    expect(value('Observed power (time-weighted)')).toBe('—');
   });
 
   it('keeps minimum moving speed distinct from stationary zeroes and shows units', () => {

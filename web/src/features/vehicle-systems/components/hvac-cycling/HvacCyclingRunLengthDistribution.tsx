@@ -71,20 +71,21 @@ export function HvacCyclingRunLengthDistribution({
 
   return (
     <section data-testid="hvac-cycling-run-distribution">
-      <LayoutCard title={t('hvacCycling.distribution.title', 'Run-length distribution')}>
+      <LayoutCard title={t('hvacCycling.distribution.title', 'Run-length distribution')} summary={
         <Text as="p" variant="caption" className="mb-3">
           {t(
             'hvacCycling.distribution.subtitle',
             'Observed run fragments by duration and state; quantiles include partial support and are labeled accordingly.',
           )}
         </Text>
+      }>
         <HvacCyclingSectionBody
           summary={summary}
           state={state}
           requirement="runs"
           skeletonHeight={220}
         >
-          <EmbeddedChart toolbar exportable size="standard"
+          <EmbeddedChart toolbar exportable size="standard" headerPlacement="card"
             className="border-0 bg-transparent p-0 shadow-none"
             title={t('hvacCycling.distribution.plotTitle', 'Run fragments by duration band')}
             ariaLabel={t(

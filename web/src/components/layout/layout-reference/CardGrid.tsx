@@ -37,7 +37,7 @@ export function CardGrid({ items, label }: CardGridProps) {
           // The span lives on the grid item itself: custom sections that
           // never read the placement context (the common case) previously
           // dropped their span and collapsed to a single column.
-          <div key={item.id} className={cn(colSpanClass(spans[index]), 'min-w-0')}>
+          <div key={item.id} data-card-layout="item" className={cn(colSpanClass(spans[index]), 'min-w-0')}>
             <CardPlacementContext.Provider value={{ size: item.size, span: spans[index], width }}>
               {item.content}
             </CardPlacementContext.Provider>

@@ -313,7 +313,7 @@ describe('EnergyProductsPage — ready dashboard', () => {
     expect(reserve).toHaveAttribute('aria-valuetext', '20.00%');
     expect(screen.getByText('5.00 kW')).toBeInTheDocument(); // rated power (W → kW)
     expect(screen.getByText(/Firmware: 23\.44\.0/)).toBeInTheDocument(); // firmware label + version
-    expect(screen.getByText(/America\/Los_Angeles/)).toBeInTheDocument(); // timezone
+    expect(screen.queryByText(/America\/Los_Angeles/)).not.toBeInTheDocument();
     expect(screen.getByText('tou_capable: available')).toBeInTheDocument();
     expect(screen.getByText('PG&E EV2-A')).toBeInTheDocument(); // TOU rate plan
 

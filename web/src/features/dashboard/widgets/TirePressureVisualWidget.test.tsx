@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { COLOR, CHART_NEUTRAL } from '@/lib/colors';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -30,11 +29,6 @@ import type { WidgetProps, WidgetSize } from './types';
 
 const mockVehicles = vi.mocked(useVehicles);
 const mockLatest = vi.mocked(useLatestTirePressure);
-
-const GREEN = COLOR.GOOD;
-const AMBER = COLOR.WARN;
-const RED = COLOR.BAD;
-const GREY = CHART_NEUTRAL;
 
 function queryResult(over: Record<string, unknown> = {}): never {
   return {
@@ -90,18 +84,17 @@ describe('TirePressureVisualWidget redesign', () => {
     expect(mockLatest).toHaveBeenCalledWith(42, 10_000);
   });
 
-  it('renders the After hierarchy with four actual Pa-derived values and no separate FL labels', () => {
+  it('renders the current vehicle with four positioned Pa-derived corner readouts', () => {
     const { container } = renderWidget({ cols: 2, rows: 2 });
     expect(screen.getByRole('heading', { name: 'Tire pressure', level: 3 })).toBeVisible();
     expect(screen.getAllByText('2.50')).toHaveLength(4);
     expect(screen.getByText('All normal')).toBeInTheDocument();
     expect(container.textContent).toContain('bar');
-    expect(container.querySelectorAll('rect')).toHaveLength(4 + 1);
-    expect(container.querySelectorAll(`rect[fill="${GREEN}"]`)).toHaveLength(4);
-    expect(screen.queryByText('FL')).toBeNull();
-    expect(screen.queryByText('FR')).toBeNull();
-    expect(screen.queryByText('RL')).toBeNull();
-    expect(screen.queryByText('RR')).toBeNull();
+    expect(container.querySelector('[data-vehicle-studio]')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-pressure-status="success"]')).toHaveLength(4);
+    for (const corner of ['FL', 'FR', 'RL', 'RR']) {
+      expect(screen.getByRole('group', { name: corner })).toBeInTheDocument();
+    }
   });
 
   it('converts 290000 Pa through the shared pressure format without fabrication', () => {
@@ -125,10 +118,10 @@ describe('TirePressureVisualWidget redesign', () => {
       }),
     }));
     const { container } = renderWidget({ cols: 2, rows: 2 });
-    expect(container.querySelectorAll(`rect[fill="${GREEN}"]`)).toHaveLength(1);
-    expect(container.querySelectorAll(`rect[fill="${AMBER}"]`)).toHaveLength(1);
-    expect(container.querySelectorAll(`rect[fill="${RED}"]`)).toHaveLength(1);
-    expect(container.querySelectorAll(`rect[fill="${GREY}"]`)).toHaveLength(1);
+    expect(container.querySelectorAll('[data-pressure-status="success"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-pressure-status="warning"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-pressure-status="danger"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-pressure-status="neutral"]')).toHaveLength(1);
     expect(screen.getByText('Check pressure')).toBeInTheDocument();
   });
 
@@ -150,7 +143,7 @@ describe('TirePressureVisualWidget redesign', () => {
     }));
     const { container } = renderWidget({ cols: 2, rows: 2 });
     expect(screen.getAllByText('—')).toHaveLength(4);
-    expect(container.querySelectorAll(`rect[fill="${GREY}"]`)).toHaveLength(4);
+    expect(container.querySelectorAll('[data-pressure-status="neutral"]')).toHaveLength(4);
     expect(screen.getByText('Unknown')).toBeInTheDocument();
   });
 

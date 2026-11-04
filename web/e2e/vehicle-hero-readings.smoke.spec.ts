@@ -80,6 +80,57 @@ async function openDashboardHero(page: Page, theme: 'light' | 'dark', reading: R
   return mocks;
 }
 
+for (const theme of ['light', 'dark'] as const) {
+  for (const width of [320, 1440]) {
+    test(`vehicle streaming fields render at ${width}px in ${theme}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await seedBrowserState(page, theme, '/vehicles/7');
+      const mocks = await installApiMocks(page, 'populated', theme);
+      await installDetailsFixtures(page, mocks);
+      const state = {
+        ...fixture('regen'),
+        accessory_rail: false,
+        power_transfer_status: 'ChargeEnabled',
+        automatic_emergency_braking_state: 'Unavailable',
+        lifetime_dc_charge_energy_wh: 12500,
+        rolling_resistance_coefficient: 0.006123456789,
+        semi_vehicle_mass_kg: 36500.5,
+      };
+      const envelope = {
+        state, live: true, observed_at: new Date().toISOString(),
+        freshness: 'fresh', verified_fields: Object.keys(state),
+      };
+      await page.route('**/api/v1/vehicles/7/state*', (route) =>
+        fulfillApiFixture(route, mocks, { json: envelope }));
+      await page.route('**/api/v1/vehicles/states*', (route) => fulfillApiFixture(route, mocks, {
+        json: {
+          now: envelope.observed_at, total: 1, limit: 250,
+          vehicles: [{ vehicle_id: 7, outcome: 'resolved', ...envelope }],
+        },
+      }));
+      await page.goto('/vehicles/7');
+      await waitForHarnessReady(page, mocks);
+      const panel = page.locator('[data-vehicle-source="Live state"]');
+      for (const label of [
+        'Accessory rail', 'Power transfer status', 'AEB operating state',
+        'Lifetime DC charge energy', 'Rolling resistance coefficient', 'Semi vehicle mass',
+      ]) {
+        await expect(panel.getByText(label, { exact: true })).toBeVisible();
+      }
+      await expect(panel.getByText('ChargeEnabled', { exact: true })).toBeVisible();
+      await expect(panel.getByText('Unavailable', { exact: true })).toBeVisible();
+      await expect(panel.getByText(/12\.50?\s+kWh/)).toBeVisible();
+      await expect(panel.getByText('0.00612', { exact: true })).toBeVisible();
+      await expect(panel.getByText(/36,500\.50? kg/)).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+      await panel.screenshot({
+        path: test.info().outputPath(`streaming-fields-${width}-${theme}.png`),
+      });
+      await assertMockApiComplete(page, mocks);
+    });
+  }
+}
+
 for (const reading of ['unknown', 'zero'] as const) {
   test(`dashboard battery accessibility preserves ${reading} readings`, async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 900 });

@@ -1,4 +1,4 @@
-import { Legend } from 'recharts'
+import { DefaultLegendContent, Legend } from 'recharts'
 import { useChartHiddenSeries } from './ChartHiddenSeriesContext'
 import type { ChartLegendState } from './useChartLegendState'
 import type { HiddenSeriesState } from '@/hooks/useHiddenSeries'
@@ -156,6 +156,17 @@ export interface ChartLegendProps
   state?: ChartLegendToggleSource
 }
 
+function HorizontalLegendContent(props: React.ComponentPropsWithoutRef<typeof DefaultLegendContent>) {
+  return (
+    <div
+      data-chart-legend-layout="horizontal"
+      className="min-w-0 max-w-full [&_.recharts-default-legend]:grid [&_.recharts-default-legend]:grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] [&_.recharts-default-legend]:gap-1 [&_.recharts-legend-item]:!m-0 [&_.recharts-legend-item]:!flex [&_.recharts-legend-item]:min-w-0 [&_.recharts-legend-item]:items-center [&_.recharts-legend-item]:justify-center [&_.recharts-legend-item>svg]:shrink-0 [&_.recharts-legend-item-text]:min-w-0"
+    >
+      <DefaultLegendContent {...props} />
+    </div>
+  )
+}
+
 /**
  * Recharts `<Legend>` wrapper that toggles series visibility on click and
  * persists the hidden set via the supplied (or context-resolved) state.
@@ -170,6 +181,9 @@ export interface ChartLegendProps
  */
 export function ChartLegend({
   state,
+  layout = 'horizontal',
+  content,
+  wrapperStyle,
   ...legendProps
 }: ChartLegendProps) {
   const contextState = useChartHiddenSeries()
@@ -177,6 +191,11 @@ export function ChartLegend({
   return (
     <Legend
       {...legendProps}
+      layout={layout}
+      wrapperStyle={layout === 'horizontal'
+        ? { left: 0, width: '100%', maxWidth: '100%', ...wrapperStyle }
+        : wrapperStyle}
+      content={content ?? (layout === 'horizontal' ? HorizontalLegendContent : undefined)}
       onClick={(data) => toggleFromLegend(resolved, data as LegendPayloadEntry)}
       formatter={(value, entry) => (
         <LegendSeriesLabel

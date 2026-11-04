@@ -13,6 +13,8 @@ import {
 import type { WidgetHelp } from './types';
 import { WidgetTitleContext } from './WidgetTitleContext';
 import { WidgetHeaderContext } from './WidgetHeaderContext';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
+import '../dashboard.css';
 
 export interface WidgetShellProps {
   title?: string;
@@ -74,6 +76,7 @@ export function WidgetShell({
 }: WidgetShellProps) {
   const { t } = useTranslation();
   const header = useContext(WidgetHeaderContext);
+  const { reduce: reduceMotion } = useMotionPreference();
   const visibleTitle = title ?? t('widget.overview', 'Widget overview');
   const initialLoading = dataState ? dataState.status === 'initial' : loading;
   const fatalError = dataState ? dataState.fatalError : error ? new Error(error) : null;
@@ -82,6 +85,12 @@ export function WidgetShell({
   const showFreshness = updatedAt !== undefined || query !== undefined;
   const degradedContent = Boolean(
     isStale || isError || query?.isStale || query?.isError || dataState?.status === 'stale',
+  );
+  const suppressActivity = reduceMotion || Boolean(
+    initialLoading || fatalError ||
+    (dataState
+      ? dataState.status === 'stale' || dataState.status === 'unavailable' || dataState.isRefreshBlocked
+      : degradedContent),
   );
   let freshnessEl: ReactNode = null;
   if (showFreshness) {
@@ -118,6 +127,7 @@ export function WidgetShell({
       )}
       aria-busy={Boolean(initialLoading || dataState?.isRefreshing)}
       data-data-state={dataState?.status}
+      data-motion-suppressed={suppressActivity || undefined}
     >
         <div className={dashboardTokens.header} data-role="widget-shell-header">
           <div className="flex min-w-0 w-full items-center gap-2" data-role="widget-header-line">
@@ -160,7 +170,6 @@ export function WidgetShell({
         className={cn(
           dashboardTokens.body,
           !noPadding ? 'px-4 pb-3' : 'flex flex-col',
-          degradedContent && 'opacity-[0.45] transition-opacity duration-fast motion-reduce:transition-none',
         )}
         data-content-degraded={degradedContent || undefined}
       >

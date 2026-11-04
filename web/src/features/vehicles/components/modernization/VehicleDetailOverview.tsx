@@ -9,6 +9,7 @@ import type { VehicleState } from '@/api/types';
 import { BatteryRangePanel, LiveStateIndicators } from '../vehicle-detail';
 import { VehiclePanelGrid } from './VehiclePanelGrid';
 import { VehicleSourcePanel } from './VehicleSourcePanel';
+import { StreamingTelemetryDetails } from '../vehicle-detail/StreamingTelemetryDetails';
 
 export function VehicleDetailOverview({ state, stateQuery }: {
   state: VehicleState | undefined;
@@ -45,6 +46,7 @@ export function VehicleDetailOverview({ state, stateQuery }: {
                       {t('vehicles.detail.liveState', 'Live state')}
                     </PanelTitle>
                     <LiveStateIndicators state={state} />
+                    <StreamingTelemetryDetails state={state} />
                   </GlassPanel>
                 ) : null}
               </VehicleSourcePanel>

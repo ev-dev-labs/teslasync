@@ -53,6 +53,7 @@ export function WidgetStatGrid({ stats, compact, cols, maxPerRow }: WidgetStatGr
     <div
       className={cn(
         'grid min-w-0',
+        dashboardTokens.statRail,
         compact ? 'gap-2' : dashboardTokens.density.statGap,
         dashboardTokens.columns[resolvedMaxPerRow] ?? dashboardTokens.columns[2],
       )}

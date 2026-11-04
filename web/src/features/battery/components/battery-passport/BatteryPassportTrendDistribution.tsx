@@ -2,7 +2,7 @@ import { BarChart3, BetweenHorizontalStart, Sigma } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { MetricBar, MetricCard } from '@/components/data-display';
-import { LayoutCard } from '@/components/layout';
+import { LayoutCard, MetricGrid } from '@/components/layout';
 
 import type {
   BatteryPassportAnalysis,
@@ -91,7 +91,7 @@ export function BatteryPassportTrendDistribution({
                 />
               ))}
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <MetricGrid>
               <MetricCard
                 label={t(
                   'batteryPassport.distribution.minimum',
@@ -170,7 +170,7 @@ export function BatteryPassportTrendDistribution({
                 icon={<Sigma className="h-5 w-5" />}
                 color="purple"
               />
-            </div>
+            </MetricGrid>
           </div>
         </BatteryPassportSectionBody>
       </LayoutCard>

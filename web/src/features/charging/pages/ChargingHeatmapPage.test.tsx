@@ -279,7 +279,8 @@ describe('ChargingHeatmapPage — KPI band branches', () => {
       expect(grid.parentElement?.parentElement?.querySelectorAll('span[aria-hidden="true"]')).toHaveLength(5);
       const figure = screen.getByRole('figure', { name: 'Weekly Charging Heatmap' });
       expect(within(figure).getAllByRole('row')).toHaveLength(169);
-      expect(within(figure).getByRole('button', { name: 'Export chart' })).toBeEnabled();
+      const card = figure.closest<HTMLElement>('[data-card]')!;
+      expect(within(card).getByRole('button', { name: 'Export chart' })).toBeEnabled();
       expect(screen.getByRole('img', { name: 'Charging session counts at the most frequently used locations' })).toBeInTheDocument();
       expect(screen.getByRole('img', { name: 'Charging session counts for each day of the week' })).toBeInTheDocument();
       expect(screen.getAllByText(/This is not a complete-history total/).length).toBeGreaterThan(0);

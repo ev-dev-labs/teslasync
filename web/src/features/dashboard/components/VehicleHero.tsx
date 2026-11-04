@@ -6,7 +6,7 @@ import {
   Gauge, Clock, Eye, MapPin, BatteryCharging, Monitor, HelpCircle,
   type LucideIcon,
 } from 'lucide-react';
-import { GlassPanel, Heading, Text, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui';
+import { Heading, Text, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui';
 import { severityTokens, gaugeTone } from '@/lib/tokens';
 import { StatusBadge } from '@/components/data-display';
 import { LinearGauge, ambientTemperatureGaugeRange } from '@/components/charts';
@@ -23,6 +23,9 @@ import type {
 import type { VehicleStatus, VehicleStateReadings } from '@/api/types';
 import type { Vehicle } from '../types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import VehicleStudio from '../widgets/vehicle-instruments/VehicleStudio';
+import { useVerifiedDriving } from '../widgets/vehicle-instruments/useVerifiedDriving';
+import { observedVehicleReadings } from '../lib/observedVehicleReadings';
 
 interface VehicleHeroProps {
   vehicle: Vehicle;
@@ -86,7 +89,7 @@ export const VehicleHero = memo(function VehicleHero({
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatPower } = useUnits();
-  const state = observedState ?? NO_READINGS;
+  const state = observedVehicleReadings(observedState, verifiedFields) ?? NO_READINGS;
   /* THE shared precedence: verified charging → verified motion → verified FSM
    * state. `null` means Unknown and is rendered as such — it must never fall
    * through to "offline", which is what made the hero and Fleet Posture
@@ -97,6 +100,7 @@ export const VehicleHero = memo(function VehicleHero({
     verifiedFields,
   });
   const unknownStatus = status == null;
+  const driving = useVerifiedDriving({ state: observedState, freshness, observedAt, verifiedFields });
   /* Both ends converted together so the arc means the same thing in °C and
    * °F, with a sub-zero floor so cold outside readings still render. */
   const tempRange = ambientTemperatureGaugeRange(toTemperatureDisplay);
@@ -106,7 +110,6 @@ export const VehicleHero = memo(function VehicleHero({
 
   return (
     <div className="relative h-full overflow-y-auto overflow-x-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-[var(--surface-2)] via-transparent to-transparent" />
       <div className="relative p-4 sm:p-6 lg:p-8">
         {/* Vehicle name + status */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
@@ -147,12 +150,15 @@ export const VehicleHero = memo(function VehicleHero({
         </Text>
 
         {observedState == null && (
-          <GlassPanel className="mt-4 p-3">
+          <div className="mt-4">
             <Text as="p" size="sm" color="muted">
               {t('hero.noReadings', 'No vehicle readings available')}
             </Text>
-          </GlassPanel>
+          </div>
         )}
+        <div className="mt-5">
+          <VehicleStudio vehicle={vehicle} driving={driving} size="lg" />
+        </div>
           <div className="mt-6">
             {/* Context-aware gauges. Bars need horizontal room, so they sit in
                 a responsive grid rather than the single wrapping row the old
@@ -196,7 +202,7 @@ export const VehicleHero = memo(function VehicleHero({
 
             {/* Charging details — only when charging */}
             {status === 'charging' && (
-              <div className={cn('mb-4 p-3 rounded-xl border', severityTokens.success.bg, severityTokens.success.border)}>
+              <div className="mb-4 border-t border-[var(--border-subtle)] pt-3">
                 <div className="flex items-center gap-2 mb-2">
                   <BatteryCharging className={cn('h-4 w-4 animate-pulse', severityTokens.success.fg)} aria-hidden />
                   <Text as="span" size="sm" weight="medium" className={severityTokens.success.fg}>
@@ -235,7 +241,7 @@ export const VehicleHero = memo(function VehicleHero({
               }, t, status).map((item) => (
                 <div
                   key={item.label}
-                  className="flex items-center gap-2 p-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border-subtle)]"
+                  className="widget-status-tile flex items-center gap-2 py-2"
                 >
                   <item.icon className="h-4 w-4 shrink-0" style={{ color: item.color }} aria-hidden />
                   <div className="min-w-0">

@@ -28,7 +28,7 @@ export default function QuickNavWidget(_props: WidgetProps) {
               key={item.to}
               to={item.to}
               className={cn(
-                'group flex min-h-11 min-w-0 items-center gap-2 border border-[var(--border-subtle)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
+                'group flex min-h-11 min-w-0 items-center gap-2 transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
                 dashboardTokens.radius.inner,
                 dashboardTokens.density.itemPadding,
               )}

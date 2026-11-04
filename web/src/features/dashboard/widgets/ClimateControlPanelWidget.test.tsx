@@ -105,6 +105,20 @@ beforeEach(() => {
 });
 
 describe('ClimateControlPanelWidget — After card layout', () => {
+  it('keeps HVAC ribbons static for retained stale data and animates a current active observation', () => {
+    setQuery({ data: makeClimate({ hvac_power: true, ts: new Date().toISOString() }) });
+    const active = renderWidget();
+    expect(active.container.querySelector('[data-climate-airflow]')).toHaveAttribute('data-climate-airflow', 'active');
+    active.unmount();
+    setQuery({
+      data: makeClimate({ hvac_power: true, ts: new Date().toISOString() }),
+      isError: true, error: new Error('unavailable'),
+    });
+    const retained = renderWidget();
+    expect(retained.container.querySelector('[data-climate-airflow]')).toHaveAttribute('data-climate-airflow', 'static');
+    expect(screen.getByText('HVAC on')).toBeInTheDocument();
+  });
+
   it('renders headline cabin and secondary outside temperatures with a setpoint and unit', () => {
     setQuery({ data: makeClimate({
       inside_temp_c: 22, outside_temp_c: 23, driver_setpoint_c: 21,

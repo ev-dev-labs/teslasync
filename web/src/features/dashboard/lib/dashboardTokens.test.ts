@@ -5,8 +5,8 @@ const AFTER_LIGHT = ['#1779e1', '#009d9e', '#20a04e', '#ca8000', '#e75c3a', '#d4
 const AFTER_DARK = ['#65a7fa', '#25c2c2', '#5bbd74', '#eba941', '#f78955', '#f37986', '#ab91f2', '#8a9bb3'];
 
 describe('dashboardTokens legacy exports', () => {
-  it('keeps every pre-redesign export working with identical values', () => {
-    expect(dashboardTokens.shell).toBe('relative flex h-full min-w-0 flex-col');
+  it('retains shared layout contracts within the scoped cockpit shell', () => {
+    expect(dashboardTokens.shell).toBe('dashboard-widget relative flex h-full min-w-0 flex-col');
     expect(dashboardTokens.header).toBe('flex w-full shrink-0 flex-col pl-4 pr-4 pb-2 pt-3');
     expect(dashboardTokens.body).toContain('overflow-y-auto');
     expect(dashboardTokens.footer).toBe('shrink-0 border-t border-[var(--border-subtle)] px-4 py-2');

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { Text } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { LayoutCard, MetricGrid } from '@/components/layout';
 
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
@@ -34,7 +34,7 @@ export function BatteryPassportUsageProfile({
             'Neutral descriptions of server rollups used by the certificate; no causal attribution or charging prescription.',
           )} actions={<Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <MetricGrid>
             <MetricCard
               label={t(
                 'batteryPassport.usage.efc',
@@ -80,7 +80,7 @@ export function BatteryPassportUsageProfile({
               icon={<Target className="h-5 w-5" />}
               color="cyan"
             />
-          </div>
+          </MetricGrid>
           <AlertBanner className="mt-4" variant="info">
             <Text as="p" variant="caption">
               {t(

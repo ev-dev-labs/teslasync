@@ -694,6 +694,8 @@ describe('ApiLogsPage', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Show or hide Latency (ms)' }));
     expect(within(table).queryByRole('columnheader', { name: /Latency/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('datatable-column-menu-reset'));
+    const confirmation = screen.getByRole('dialog', { name: 'Reset columns?' });
+    await act(async () => fireEvent.click(within(confirmation).getByRole('button', { name: 'Reset', exact: true })));
     expect(within(table).getByRole('columnheader', { name: /Latency/ })).toBeInTheDocument();
   });
 

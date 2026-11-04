@@ -382,7 +382,7 @@ for (const theme of ['dark', 'light'] as const) {
       const component = page.getByRole('button', { name: 'Show forecast for Tires', exact: true });
       await expect(component).toHaveAttribute('aria-pressed', 'true');
       // The basis renders twice: inside the selector card and in the forecast detail panel below it.
-      await expect(page.getByText('Basis: Measured tread trend', { exact: true }).nth(1)).toBeVisible();
+      await expect(page.getByText('Basis: Whole-life odometer estimate', { exact: true }).nth(1)).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Health forecast · Tires', exact: true })).toBeVisible();
       await component.click();
       await expect(component).toHaveAttribute('aria-pressed', 'true');

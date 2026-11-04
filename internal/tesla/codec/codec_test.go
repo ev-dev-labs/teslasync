@@ -12,6 +12,46 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+func TestDecode_NewStreamingFields(t *testing.T) {
+	payload := &ftproto.Payload{
+		Vin:       "TEST-STREAMING",
+		CreatedAt: timestamppb.New(time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)),
+		Data: []*ftproto.Datum{
+			{Key: ftproto.Field_AccessoryRail, Value: &ftproto.Value{Value: &ftproto.Value_BooleanValue{BooleanValue: false}}},
+			{Key: ftproto.Field_PowerTransferStatus, Value: &ftproto.Value{Value: &ftproto.Value_PowerTransferStatusValue{PowerTransferStatusValue: ftproto.PowerTransferStatusValue_PowerTransferStatusChargeEnabled}}},
+			{Key: ftproto.Field_AutomaticEmergencyBrakingState, Value: &ftproto.Value{Value: &ftproto.Value_AutomaticEmergencyBrakingStateValue{AutomaticEmergencyBrakingStateValue: ftproto.AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateStandby}}},
+			{Key: ftproto.Field_RollingResistanceCoefficient, Value: &ftproto.Value{Value: &ftproto.Value_DoubleValue{DoubleValue: 0.006123456789}}},
+			{Key: ftproto.Field_LifetimeDcChargeEnergyKwh, Value: &ftproto.Value{Value: &ftproto.Value_DoubleValue{DoubleValue: 1234567.890123}}},
+			{Key: ftproto.Field_SemiVehicleMassKg, Value: &ftproto.Value{Value: &ftproto.Value_DoubleValue{DoubleValue: 36500.5}}},
+			{Key: ftproto.Field_CarType, Value: &ftproto.Value{Value: &ftproto.Value_CarTypeValue{CarTypeValue: ftproto.CarTypeValue_CarTypeSemiTruckV2}}},
+		},
+	}
+	wire, err := proto.Marshal(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	atoms, err := Decode(wire)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := make(map[string]any, len(atoms))
+	for _, atom := range atoms {
+		got[atom.Field] = atom.Value
+	}
+	want := map[string]any{
+		"AccessoryRail":                  false,
+		"PowerTransferStatus":            "ChargeEnabled",
+		"AutomaticEmergencyBrakingState": "Standby",
+		"RollingResistanceCoefficient":   float64(0.006123456789),
+		"LifetimeDcChargeEnergyKwh":      float64(1234567.890123),
+		"SemiVehicleMassKg":              float64(36500.5),
+		"CarType":                        "SemiTruckV2",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("decoded = %#v, want %#v", got, want)
+	}
+}
+
 // makeMixedPayload builds a Payload with one entry from each broad
 // category the codec must handle: a happy scalar, a happy enum, a
 // fully-populated proto compound (Location), a JSON-shaped string

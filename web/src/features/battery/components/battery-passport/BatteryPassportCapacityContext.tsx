@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { Text } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { LayoutCard, MetricGrid } from '@/components/layout';
 
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
@@ -34,7 +34,7 @@ export function BatteryPassportCapacityContext({
             'The certificate reports capacity_kwh and original_capacity_kwh as separate kWh fields; their quotient is shown transparently.',
           )} actions={<BatteryMedium className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <MetricGrid>
             <MetricCard
               label={t(
                 'batteryPassport.capacity.reported',
@@ -92,7 +92,7 @@ export function BatteryPassportCapacityContext({
               icon={<Divide className="h-5 w-5" />}
               color="green"
             />
-          </div>
+          </MetricGrid>
           <AlertBanner className="mt-4" variant="info">
             <Text as="p" variant="caption">
               {t(

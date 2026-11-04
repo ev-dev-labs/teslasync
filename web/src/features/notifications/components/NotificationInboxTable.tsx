@@ -6,9 +6,9 @@ import { Badge, Button, DataTable, Select, useTableExpansion, type Column, type 
 import type { AlertRule, NotificationLog, Vehicle } from '@/api/types';
 import type { NotificationFilters } from '@/api/hooks/useNotifications';
 import { notificationEventTypeFallback } from '@/lib/notificationEventType';
-import { cn } from '@/lib/cn';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { NotificationInboxDetails } from './NotificationInboxDetails';
+import { NotificationInboxSummary } from './NotificationInboxSummary';
 import { NotificationInboxDelivery } from './NotificationInboxDelivery';
 import { NotificationFilterBar } from './NotificationFilterBar';
 import type { TableControls } from '@/components/forms';
@@ -76,7 +76,7 @@ export function NotificationInboxTable({
     "critical": t("notifications.inbox.filter.severity.critical", "Critical"),
   };
 
-  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isMobile = useMediaQuery('(max-width: 1279px)');
   const { expandedKeys, setExpandedKeys, clear } = useTableExpansion<number>();
   const rowIds = rows.map(row => row.id).join(',');
   const vehicles = useMemo(() => Object.values(vehicleMap), [vehicleMap]);
@@ -105,6 +105,7 @@ export function NotificationInboxTable({
       key: 'title',
       header: t('notifications.inbox.columns.title', 'Notification'),
       visibleOnMobile: true,
+      required: true,
       defaultWidth: 300,
       minWidth: 210,
       filterActive: Boolean(filters.q || (isMobile && (filters.severity?.length || filters.vehicle_id?.length || filters.rule_id?.length || filters.source || filters.read !== undefined))),
@@ -115,32 +116,8 @@ export function NotificationInboxTable({
       }),
       filter: <NotificationFilterBar section={isMobile ? 'all' : 'search'} includeReadState={isMobile}
         filters={filters} onChange={onFiltersChange} vehicles={vehicles} rules={rules} />,
-      render: log => (
-        <div className="min-w-0 space-y-1 max-md:max-w-56">
-          <Button
-          type="button"
-          variant="ghost"
-          className="!h-auto !min-h-11 md:!min-h-9 w-full !justify-start !px-0 !py-1 text-left"
-          onClick={() => onActivate(log)}
-          aria-label={t('notifications.inbox.row.open', 'Open notification: {{title}}', { title: log.title || '—' })}
-        >
-          <span className={cn('line-clamp-2 break-words', log.read_at ? 'text-[var(--text-secondary)]' : 'font-semibold text-[var(--text-primary)]')}>
-            {log.title || '—'}
-          </span>
-          </Button>
-          <span className="block truncate text-xs text-[var(--text-muted)]" title={log.event_type}>
-            {log.event_type ? eventLabels[log.event_type] ?? notificationEventTypeFallback(log.event_type) : '—'}
-          </span>
-          <span className="block text-xs text-[var(--text-muted)] md:hidden">
-            {log.created_at && Number.isFinite(Date.parse(log.created_at)) ? <DateTime value={log.created_at} in="user" /> : '—'}
-          </span>
-          <span className="block text-xs text-[var(--text-secondary)] md:hidden">
-            <NotificationInboxDelivery status={log.status} />
-            <span aria-hidden="true"> · </span>
-            {log.read_at ? t('notifications.inbox.columns.read', 'Read') : t('notifications.inbox.columns.unread', 'Unread')}
-          </span>
-        </div>
-      ),
+      render: log => <NotificationInboxSummary log={log} onActivate={onActivate}
+        eventLabel={log.event_type ? eventLabels[log.event_type] ?? notificationEventTypeFallback(log.event_type) : '—'} />,
     },
     {
       key: 'message',
@@ -281,7 +258,8 @@ export function NotificationInboxTable({
       showSelectionSummary={false}
       rowContextMenu={onContextMenu}
       mobileColumns={['title']}
-      className="min-w-0 w-full max-w-full max-md:[&_th]:!w-auto max-md:[&_th]:!min-w-0"
+      mobileBreakpoint="xl"
+      className="min-w-0 w-full max-w-full max-xl:[&_th[data-column-key]]:!w-auto max-xl:[&_th[data-column-key]]:!min-w-0"
       density="compact"
       columnVisibility
       columnReorder

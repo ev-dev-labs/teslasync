@@ -643,8 +643,8 @@ describe('ExportsPage — populated', () => {
     expect(within(table).getAllByRole('checkbox', { name: /export,/ })).toHaveLength(JOBS.length);
 
     fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }));
-    const menu = screen.getByRole('menu', { name: 'Reorder or hide columns' });
-    fireEvent.click(within(menu).getByRole('checkbox', { name: 'Show or hide Format' }));
+    const columnsDialog = screen.getByRole('dialog', { name: 'Reorder or hide columns' });
+    fireEvent.click(within(columnsDialog).getByRole('checkbox', { name: 'Show or hide Format' }));
     expect(window.localStorage.getItem('teslasync.table.exports:jobs.columns')).not.toBeNull();
     expect(window.localStorage.getItem('teslasync.table.Export jobs.columns')).toBeNull();
     expect(mutateAsyncSpy).not.toHaveBeenCalled();
@@ -1068,12 +1068,16 @@ describe('ExportsPage — refresh', () => {
 
     it('keeps actual column choices under exports:jobs across refresh failure and remount, including exported column order', async () => {
       const view = renderPage();
-      fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }));
-      const menu = screen.getByRole('menu', { name: 'Reorder or hide columns' });
-      fireEvent.click(within(menu).getByRole('checkbox', { name: 'Show or hide Format' }));
-      fireEvent.click(within(menu).getByRole('button', { name: 'Move Type down' }));
-      fireEvent.click(within(menu).getByRole('button', { name: 'Move Size up' }));
-      fireEvent.keyDown(document, { key: 'Escape' });
+      const columnsTrigger = screen.getByRole('button', { name: 'Reorder or hide columns' });
+      columnsTrigger.focus();
+      fireEvent.click(columnsTrigger);
+      const columnsDialog = screen.getByRole('dialog', { name: 'Reorder or hide columns' });
+      fireEvent.click(within(columnsDialog).getByRole('checkbox', { name: 'Show or hide Format' }));
+      fireEvent.click(within(columnsDialog).getByRole('button', { name: 'Move Type down' }));
+      fireEvent.click(within(columnsDialog).getByRole('button', { name: 'Move Size up' }));
+      fireEvent.keyDown(columnsDialog, { key: 'Escape' });
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Reorder or hide columns' })).not.toBeInTheDocument());
+      await waitFor(() => expect(columnsTrigger).toHaveFocus());
       const saved = window.localStorage.getItem('teslasync.table.exports:jobs.columns');
       expect(JSON.parse(saved ?? 'null')).toEqual({
         order: ['format', 'file_size', 'type', 'created_at', 'status', 'actions'],

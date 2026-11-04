@@ -43,6 +43,8 @@
       "headingReorder": "Columns",
       "showAll": "Show all",
       "reset": "Reset",
+      "resetTitle": "Reset columns?",
+      "resetMessage": "Restore the default column order and visibility for this table? Row data will not change.",
       "toggleColumn": "Show or hide {{col}}",
       "moveUp": "Move {{col}} up",
       "moveDown": "Move {{col}} down",

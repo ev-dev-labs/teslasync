@@ -1,0 +1,149 @@
+/* One shared row anatomy; absent optional slots contribute no intrinsic height. */
+[data-card-layout="grid"][data-card-layout-aligned="true"] {
+  row-gap: 0;
+  margin-block-end: calc(var(--card-layout-margin-end, 0px) - var(--card-layout-gutter));
+}
+
+/* The gutter separates complete cards, not the six internal anatomy tracks. */
+[data-card-layout="grid"][data-card-layout-aligned="true"] > * {
+  grid-row: span 6;
+  margin-block-end: var(--card-layout-gutter);
+}
+
+[data-card-layout="item"] {
+  display: grid;
+  min-width: 0;
+}
+
+[data-card-stretch="relay"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  align-self: stretch;
+  flex: 1;
+}
+
+[data-card-stretch="column"],
+[data-card-stretch="empty"] {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  align-self: stretch;
+}
+
+[data-card-stretch="empty"] {
+  flex: 1;
+}
+
+[data-surface-variant="standalone"][data-card-stretch="surface"] {
+  flex: 1;
+  align-self: stretch;
+}
+
+/* Only percentage fill borrows row allocation; preserve bounded scroll viewports. */
+[data-surface-variant="standalone"][data-card-stretch="surface"].h-full {
+  height: auto;
+}
+
+/* A fluid chart shares its host with a heading; 100% plus that heading spills. */
+[data-surface-variant="standalone"]:not([data-card-layout="surface"]):has(> [data-chart-variant="embedded"][data-chart-fluid="true"]) {
+  display: flex;
+  flex-direction: column;
+}
+
+[data-surface-variant="standalone"]:not([data-card-layout="surface"]) > [data-chart-variant="embedded"][data-chart-fluid="true"] {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+[data-card-layout="surface"][data-card-layout-aligned="true"],
+[data-card-layout="relay"][data-card-layout-aligned="true"],
+[data-card-layout="item"][data-card-layout-aligned="true"] {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 6;
+  row-gap: 0;
+  min-width: 0;
+  height: auto;
+  align-self: stretch;
+  /* Query containers impose layout containment, which disables borrowed tracks. */
+  container-type: normal;
+}
+
+[data-card-slot="header"] { grid-row: 1; }
+[data-card-slot="summary"] { grid-row: 2; }
+[data-card-slot="body"] { grid-row: 3 / span 3; }
+[data-card-slot="plot"] { grid-row: 3; }
+[data-card-slot="caption"] { grid-row: 4; }
+[data-card-slot="annotations"] { grid-row: 5; }
+[data-card-slot="footer"] { grid-row: 6; }
+
+.card-layout-summary:empty { display: none; }
+.card-layout-summary:not(:empty) { margin-bottom: 0.75rem; }
+
+[data-flow-axis="column"] .flow-grid-arrow-row,
+[data-flow-axis="row"] .flow-grid-arrow-column {
+  display: none;
+}
+
+[data-card-slot="column"] {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+[data-card-layout="surface"] > [data-card-slot="header"] {
+  margin-bottom: 0.75rem;
+}
+
+[data-card-layout="surface"] > [data-card-slot="footer"] {
+  margin-top: 0.75rem;
+}
+
+/* Query within an allocated slot, never on a track-relaying boundary. */
+[data-card-layout="surface"] [data-card-slot] {
+  container-type: inline-size;
+}
+
+/* A chart delegates the first five slots; its enclosing card retains the footer. */
+[data-card-layout="surface"] [data-card-slot="delegate"],
+[data-card-layout="surface"] [data-card-slot="relay"],
+[data-card-layout="surface"] [data-card-slot="chart"] {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: 1 / span 5;
+  row-gap: 0;
+  min-width: 0;
+  container-type: normal;
+}
+
+.card-layout-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.75rem;
+}
+
+.card-layout-content > [data-empty-state],
+.card-layout-plot > [data-empty-state] {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+}
+
+figure[data-print-card]:fullscreen [data-card-slot="plot"] {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+figure[data-print-card]:fullscreen [data-chart-viewport] {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}

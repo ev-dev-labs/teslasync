@@ -47,6 +47,7 @@ vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
     ...actual,
     useVehicles: vi.fn(),
     useVehicleState: vi.fn(),
+    useSecurityLatest: vi.fn(),
   };
 });
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
@@ -76,7 +77,7 @@ vi.mock('@/hooks/useSettings', async (importOriginal) => {
   return { ...actual, useSettings: vi.fn() };
 });
 
-import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
+import { useVehicles, useVehicleState, useSecurityLatest } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { useSettings } from '@/hooks/useSettings';
 import VehicleHeroWidget from './VehicleHeroWidget';
@@ -122,10 +123,107 @@ it.each([1, 2, 3])('retains the vehicle heading after a failed refresh at %i col
 
 const mockVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 const mockVehicleState = useVehicleState as unknown as ReturnType<typeof vi.fn>;
+const mockSecurity = useSecurityLatest as unknown as ReturnType<typeof vi.fn>;
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 const mockSettings = useSettings as unknown as ReturnType<typeof vi.fn>;
 
 const STANDARD = { cols: 2, rows: 2 };
+
+describe('VehicleHeroWidget — state-coherent real vehicle studio', () => {
+  it.each([6, 7, 14])('keeps bounded natural height at %i rows while preserving the charge meter and all cabin chips', rows => {
+    setup();
+    const { container } = renderWidget(<VehicleHeroWidget size={{ cols: 2, rows }} />);
+    expect(container.querySelector('[data-studio-layout="bounded"]')).toHaveClass('h-40');
+    expect(screen.getByRole('meter', { name: 'Battery' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Range' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Inside' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Outside' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Details/ })).toBeInTheDocument();
+  });
+
+  it('moves the road and both wheels for current verified driving and stops at the observation expiry', () => {
+    vi.useFakeTimers();
+    try {
+      setup({ state: makeQuery({ data: makeStateData({ fsmState: 'driving' }) }) });
+      const { container } = renderWidget(<VehicleHeroWidget size={STANDARD} />);
+      expect(screen.getByTestId('vehicle-road-motion')).toHaveClass('widget-state-motion', 'widget-road-motion');
+      expect(screen.getByTestId('vehicle-road-motion')).toHaveAttribute('d', 'M536 196H24');
+      expect(screen.getByTestId('vehicle-road-far-motion')).toBeInTheDocument();
+      expect(container.querySelector('.widget-road-grain-motion')).toBeInTheDocument();
+      expect(screen.getByTestId('vehicle-road-motion').closest('svg')).toHaveClass('widget-road-strip');
+      expect(container.querySelectorAll('.widget-wheel-motion')).toHaveLength(2);
+      for (const wheel of container.querySelectorAll('.widget-wheel-motion')) {
+        expect(wheel).toHaveClass('widget-state-motion');
+      }
+      act(() => vi.advanceTimersByTime(120_001));
+      expect(screen.queryByTestId('vehicle-road-motion')).not.toBeInTheDocument();
+      expect(container.querySelectorAll('.widget-wheel-motion')).toHaveLength(0);
+      expect(container.querySelector('.widget-road-grain-motion')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    { freshness: 'stale' as const },
+    { freshness: 'unknown' as const },
+    { verifiedFields: [] },
+    { observedAt: null },
+    { observedAt: Date.now() + 180_000 },
+  ])('keeps the vehicle studio static without current verified driving: %o', evidence => {
+    setup({ state: makeQuery({ data: makeStateData({ fsmState: 'driving', ...evidence }) }) });
+    const { container } = renderWidget(<VehicleHeroWidget size={STANDARD} />);
+    expect(container.querySelector('[data-vehicle-studio]')).toHaveAttribute('data-activity', 'static');
+    expect(screen.queryByTestId('vehicle-road-motion')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.widget-wheel-motion')).toHaveLength(0);
+  });
+
+  it('stops activity after a failed refresh while retaining the actual vehicle and readings', () => {
+    setup({ state: makeQuery({
+      data: makeStateData({ fsmState: 'driving' }), isError: true, error: new Error('unavailable'),
+    }) });
+    const { container } = renderWidget(<VehicleHeroWidget size={STANDARD} />);
+    expect(container.querySelector('[data-vehicle-studio]')).toHaveAttribute('data-activity', 'static');
+    expect(screen.getByText('My Tesla · Model 3 Performance')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+  });
+
+  it('shows distinct light pools only for current reported lights and expires them without hiding the road', () => {
+    vi.useFakeTimers();
+    try {
+      setup({
+        state: makeQuery({ data: makeStateData({ fsmState: 'driving' }) }),
+        security: makeQuery({ data: { vehicle_id: 1, ts: new Date().toISOString(), lights_high_beams: true } }),
+      });
+      const { container } = renderWidget(<VehicleHeroWidget size={STANDARD} />);
+      const front = container.querySelector('.widget-road-headlight-pool')!;
+      const rear = container.querySelector('.widget-road-taillight-pool')!;
+      expect(front).toBeInTheDocument();
+      expect(rear).toBeInTheDocument();
+      expect(Number(front.getAttribute('rx'))).toBeGreaterThan(Number(rear.getAttribute('rx')) * 2);
+      expect(front.getAttribute('fill')).not.toBe(rear.getAttribute('fill'));
+      expect(container.querySelector('[data-vehicle-road-surface]')).toBeInTheDocument();
+      act(() => vi.advanceTimersByTime(120_001));
+      expect(container.querySelector('[data-vehicle-road-lighting]')).not.toBeInTheDocument();
+      expect(container.querySelector('[data-vehicle-road-surface]')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    { data: { vehicle_id: 1, ts: new Date().toISOString(), lights_high_beams: false } },
+    { data: { vehicle_id: 1, ts: new Date().toISOString(), lights_high_beams: null } },
+    { data: { vehicle_id: 1, ts: new Date(Date.now() - 180_000).toISOString(), lights_high_beams: true } },
+    { data: { vehicle_id: 2, ts: new Date().toISOString(), lights_high_beams: true } },
+    { data: { vehicle_id: 1, ts: new Date().toISOString(), lights_high_beams: true }, isError: true },
+  ])('does not infer exterior lighting from driving or untrusted security: %o', security => {
+    setup({ state: makeQuery({ data: makeStateData({ fsmState: 'driving' }) }), security: makeQuery(security) });
+    const { container } = renderWidget(<VehicleHeroWidget size={STANDARD} />);
+    expect(screen.getByTestId('vehicle-road-motion')).toBeInTheDocument();
+    expect(container.querySelector('[data-vehicle-road-lighting]')).not.toBeInTheDocument();
+  });
+});
 
 function makeQuery(over: Record<string, unknown> = {}) {
   return {
@@ -210,7 +308,7 @@ function makeStateData(over: {
     // widget passes this through instead of `dataUpdatedAt`.
     observedAt: over.observedAt === undefined ? Date.now() : over.observedAt,
     freshness: over.freshness ?? 'fresh',
-    verifiedFields: over.verifiedFields ?? ['state', 'software_version'],
+    verifiedFields: over.verifiedFields ?? Object.keys(state),
   };
 }
 
@@ -257,10 +355,12 @@ function setup(
     state?: unknown;
     units?: unknown;
     settings?: unknown;
+    security?: unknown;
   } = {},
 ) {
   mockVehicles.mockReturnValue(opts.vehicles ?? makeQuery({ data: [makeVehicle()] }));
   mockVehicleState.mockReturnValue(opts.state ?? makeQuery({ data: makeStateData() }));
+  mockSecurity.mockReturnValue(opts.security ?? makeQuery());
   mockUnits.mockReturnValue(opts.units ?? makeUnits());
   mockSettings.mockReturnValue(opts.settings ?? makeSettings());
 }
@@ -320,6 +420,31 @@ describe('VehicleHeroWidget — vehicle resolution', () => {
 });
 
 describe('VehicleHeroWidget — After layout', () => {
+  it('does not present unverified default zeros or false security flags as observations', () => {
+    setup({ state: makeQuery({ data: makeStateData({
+      batteryLevel: 0, ratedRangeM: 0, insideTemp: 0, outsideTemp: 0,
+      isLocked: false, sentryMode: false, verifiedFields: [],
+    }) }) });
+    renderWidget(<VehicleHeroWidget size={STANDARD} />);
+    expect(screen.queryByRole('meter', { name: 'Battery', exact: true })).not.toBeInTheDocument();
+    for (const label of ['Range', 'Inside', 'Outside']) {
+      expect(screen.getByRole('group', { name: label, exact: true })).toHaveAccessibleDescription('Unknown');
+    }
+    expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
+    expect(screen.queryByText('Off')).not.toBeInTheDocument();
+    expect(screen.getByText('0 verified fields')).toBeInTheDocument();
+  });
+
+  it('retains a verified zero battery during stale refreshes without exposing unverified temperatures', () => {
+    setup({ state: makeQuery({ data: makeStateData({
+      batteryLevel: 0, insideTemp: 0, freshness: 'stale',
+      verifiedFields: ['battery_level'],
+    }) }) });
+    renderWidget(<VehicleHeroWidget size={STANDARD} />);
+    expect(screen.getByRole('meter', { name: 'Battery', exact: true })).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByRole('group', { name: 'Inside', exact: true })).toHaveAccessibleDescription('Unknown');
+  });
+
   it.each([null, Number.NaN])('announces unavailable range and temperatures (%s) without numeric meters', (value) => {
     setup({ state: makeQuery({ data: makeStateData({
       ratedRangeM: value, insideTemp: value, outsideTemp: value,
@@ -391,7 +516,6 @@ describe('VehicleHeroWidget — After layout', () => {
         data: makeStateData({
           isCharging: true,
           etaHours: 2.5,
-          verifiedFields: ['state', 'is_charging'],
         }),
       }),
     });
@@ -424,7 +548,7 @@ describe('VehicleHeroWidget — After layout', () => {
   });
 
   it('renders the verified-field count and Details link in the footer', () => {
-    setup();
+    setup({ state: makeQuery({ data: makeStateData({ verifiedFields: ['state', 'software_version'] }) }) });
     renderWidget(<VehicleHeroWidget size={STANDARD} />);
     expect(screen.getByText('2 verified fields')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Details/ })).toHaveAttribute('href', '/vehicles/1');

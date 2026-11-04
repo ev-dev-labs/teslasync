@@ -94,7 +94,7 @@ export function PostureTaxonomy({ counts, pending }: PostureTaxonomyProps) {
           return (
             <div
               key={category}
-              className="grid min-h-14 grid-cols-[1.75rem_minmax(0,1fr)] grid-rows-2 items-center gap-x-2 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2"
+              className="widget-status-tile grid min-h-14 grid-cols-[1.75rem_minmax(0,1fr)] grid-rows-2 items-center gap-x-2 py-2"
               title={hints[category]}
             >
               <dt className="col-span-2 grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-x-2 whitespace-normal break-words [overflow-wrap:anywhere] text-xs font-medium text-[var(--text-muted)]">

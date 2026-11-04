@@ -1,5 +1,6 @@
-import { type ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { CardLayoutContext } from './layout-reference/CardLayoutContext';
 
 type Breakpoint = 'default' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
 
@@ -68,11 +69,16 @@ export function Grid({
   children,
   className,
 }: GridProps) {
+  const [grid, setGrid] = useState<HTMLDivElement | null>(null);
   return (
+    <CardLayoutContext.Provider value={grid}>
     <div
+      ref={setGrid}
+      data-card-layout="grid"
+      style={{ '--card-layout-gutter': `${(GAP_CLASSES[gap] ? gap : 4) * 0.25}rem` } as CSSProperties}
       data-layout={minItemWidth ? 'auto-fit' : 'responsive-columns'}
       className={cn(
-        'grid min-w-0',
+        'grid min-w-0 items-stretch [&>*]:min-w-0',
         minItemWidth
           ? AUTO_FIT_CLASSES[minItemWidth]
           : [
@@ -90,5 +96,6 @@ export function Grid({
     >
       {children}
     </div>
+    </CardLayoutContext.Provider>
   );
 }

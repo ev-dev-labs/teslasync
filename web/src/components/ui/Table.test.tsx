@@ -4,6 +4,11 @@ import { Table } from './Table';
 import { Button } from './Button';
 
 describe('Table', () => {
+  it('BUG3 makes native header and value alignment inherit the shared table alignment', () => {
+    render(<Table aria-label="Evidence"><tbody><tr><th scope="row">Distance</th><td>12 km</td></tr></tbody></Table>);
+    expect(screen.getByRole('table', { name: 'Evidence' }))
+      .toHaveClass('[&_th]:[text-align:inherit]', '[&_td]:[text-align:inherit]');
+  });
   it('uses only row dividers when embedded inside an existing panel', () => {
     const ref = createRef<HTMLTableElement>();
     render(<Table variant="embedded" ref={ref} aria-label="Drive readings">

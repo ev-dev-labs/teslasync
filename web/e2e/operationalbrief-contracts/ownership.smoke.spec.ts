@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { closeTableToolbarControls, openTableToolbarControls } from '../tableToolbarControls';
 import type { ComplianceFiling, CreateFilingRequest } from '../../src/types/ownership';
 import {
   assertMockApiComplete, expectThemeApplied, fulfillApiFixture, installApiMocks,
@@ -609,7 +610,8 @@ for (const width of [320, 1440]) {
     // At 320px the invoice list renders as cards titled "ref · provider",
     // so scope by grid frame with a substring match rather than by table.
     const grid = page.locator('[data-grid-frame]').filter({ has: page.getByText(invoice.invoice_ref) });
-    await grid.getByRole('button', { name: 'Export list', exact: true }).click();
+    const controls = await openTableToolbarControls(grid);
+    await controls.getByRole('button', { name: 'Export list', exact: true }).click();
     const menu = page.getByRole('menu', { name: 'Export list', exact: true });
     const pending = page.waitForEvent('download');
     await menu.getByRole('menuitem', { name: 'Download as JSON', exact: true }).click();
@@ -627,6 +629,7 @@ for (const width of [320, 1440]) {
     }]);
     // Server list total is 81, but export contains the one loaded statement.
     expect(api.seen.has('GET /charging-reconciliation/invoices?vehicle_id=7&limit=50&offset=0')).toBe(true);
+    await closeTableToolbarControls(controls);
     await expectNoHorizontalOverflow(page);
   });
 }

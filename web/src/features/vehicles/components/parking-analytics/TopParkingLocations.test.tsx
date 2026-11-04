@@ -220,6 +220,11 @@ describe('ParkingTemporalProfile locale-aware hour labels', () => {
     value.hourly[0].stints = 1;
     const originalHours = value.hourly.map(bucket => ({ ...bucket }));
     const { rerender } = render(<ParkingTemporalProfile summary={value} state={state} />);
+    const grid = screen.getByTestId('parking-temporal').querySelector('[data-card-layout="grid"]');
+    expect(grid).toHaveClass('grid-rows-2', 'lg:grid-rows-1', 'min-h-0');
+    const viewports = screen.getByTestId('parking-temporal').querySelectorAll('[data-chart-variant="embedded"] [data-chart-viewport]');
+    expect(viewports).toHaveLength(2);
+    viewports.forEach(viewport => expect(viewport).toHaveClass('min-h-0', 'sm:min-h-0'));
     const formatter = new Intl.DateTimeFormat(locale, {
       timeZone: 'UTC', hour: '2-digit', minute: '2-digit',
     });
@@ -237,6 +242,20 @@ describe('ParkingTemporalProfile locale-aware hour labels', () => {
     rerender(<ParkingTemporalProfile summary={value} state={state} />);
     expect(screen.getAllByRole('table', { hidden: true })[0]).toHaveTextContent('23:00');
     expect(value.hourly).toEqual(originalHours);
+  });
+
+  it('aligns the parking tables through shared title, summary and table-body slots', () => {
+    const state = { isLoading: false, error: null, onRetry: vi.fn() };
+    render(<MemoryRouter><TopParkingLocations summary={summary()} state={state} />
+      <LongestParkingStints summary={summary()} state={state} /></MemoryRouter>);
+    for (const id of ['parking-locations', 'parking-longest']) {
+      const section = screen.getByTestId(id);
+      expect(section.querySelector('[data-card-slot="header"]')).not.toBeNull();
+      expect(section.querySelector('[data-card-slot="summary"]')).not.toBeNull();
+      expect(section.querySelector('[data-card-slot="body"]')).not.toBeNull();
+    }
+    const table = within(screen.getByTestId('parking-locations')).getByRole('table');
+    expect(table.closest('[data-card-slot="body"]')).not.toBeNull();
   });
 
   it('keeps the empty section for invalid or missing range dates', () => {

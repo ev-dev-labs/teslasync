@@ -66,6 +66,9 @@ export default function LivePowerFlowWidget(_props: WidgetProps) {
   const homeKw = homeW == null ? null : homeW / 1000;
 
   const hasData = liveStatus != null;
+  const observedAt = Date.parse(liveStatus?.timestamp ?? '');
+  const hasFreshFlow = Number.isFinite(observedAt) && observedAt > 0
+    && Date.now() - observedAt <= 120_000 && observedAt <= Date.now() + 5_000;
   const dataState = useDataState({
     data: hasData ? liveStatus : isLoading || isError ? undefined : null,
     error: liveError ?? sitesError,
@@ -75,6 +78,7 @@ export default function LivePowerFlowWidget(_props: WidgetProps) {
     refetch: handleRefresh,
   }, {
     provenance: 'cached',
+    maxAgeMs: hasData ? 120_000 : undefined,
     partial: hasData && [solarW, batteryW, gridW, homeW].some((value) => value == null),
   });
 
@@ -233,7 +237,7 @@ export default function LivePowerFlowWidget(_props: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <div className="mx-auto h-full min-h-0 w-full max-w-72 px-5 py-7 [&>svg]:overflow-visible [&_text]:fill-[var(--text-secondary)] [&_circle]:fill-[var(--surface-2)] [&_circle]:stroke-[var(--border-default)] motion-reduce:[&_.flow-active]:animate-none">
+      <div className="widget-flow-frame flex h-full min-h-0 w-full items-center" data-motion-suppressed={!hasFreshFlow || undefined}>
         <WidgetFlowDiagram
           nodes={nodes}
           arrows={arrows}

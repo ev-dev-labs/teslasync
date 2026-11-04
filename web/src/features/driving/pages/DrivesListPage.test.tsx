@@ -1277,7 +1277,7 @@ describe('DrivesListPage — pagination clamp', () => {
 
 describe('DrivesListPage — standard controls', () => {
   it.each([false, true])('exports the full vehicle/range without claiming filtered or selected scope (desktop=%s)', (desktop) => {
-    mockMediaQuery.mockReturnValue(desktop);
+    mockMediaQuery.mockImplementation((query: string) => query.startsWith(desktop ? '(min-width:' : '(max-width:'));
     const downloads: HTMLAnchorElement[] = [];
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
       downloads.push(this);
@@ -1287,6 +1287,7 @@ describe('DrivesListPage — standard controls', () => {
       fireEvent.click(within(screen.getByRole('table', { name: 'Drive evidence' })).getByRole('checkbox', { name: /Select.*Apr/ }));
     } else {
       fireEvent.click(within(listRegion()).getByRole('checkbox'));
+      fireEvent.click(screen.getByRole('button', { name: 'More', exact: true }));
     }
     expect(screen.getByText('Exports include every drive in the selected vehicle and date range, without list filters or selection.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
@@ -1316,7 +1317,7 @@ describe('DrivesListPage — standard controls', () => {
   });
 
   it('places one controlled search and density selector in the continuous desktop frame', async () => {
-    mockMediaQuery.mockReturnValue(true);
+    mockMediaQuery.mockImplementation((query: string) => query.startsWith('(min-width:'));
     renderPage([`${DEFAULT_RANGE}&size=1&page=2`]);
     const table = screen.getByRole('table', { name: 'Drive evidence' });
     const frame = table.closest('[data-grid-frame]') as HTMLElement;
@@ -1333,7 +1334,9 @@ describe('DrivesListPage — standard controls', () => {
   });
 
   it('keeps mobile cards and all their evidence when choosing compact density', () => {
+    mockMediaQuery.mockImplementation((query: string) => query.startsWith('(max-width:'));
     renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'More', exact: true }));
     fireEvent.click(screen.getByRole('radio', { name: 'Compact' }));
     expect(screen.getByTestId('location')).toHaveTextContent('density=compact');
     const row = within(listRegion()).getByText('100.00 km');

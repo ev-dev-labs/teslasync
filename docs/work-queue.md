@@ -1,1600 +1,453 @@
-# Work queue — branch `fix/post-merge-followups` (PR #202, draft)
+# Work queue — branch `fix/post-202-polish` (this branch's draft PR)
 
 Master status file per `docs/agent-playbook.md` section 1. Status values:
-`not started | in progress | done | blocked (reason)`. Freshness rule and
-kept twins (`vehicle-twin`, `digital-twin-mini`) apply to every part.
+`not started | in progress | done | blocked (reason)`.
 
-## Final source-head verification — PR #202 (2026-10-26 02:46Z)
+## Bug 3: Drive evidence, presentation and app-wide card layout
 
-- **Green source/test head: `25d47baa31eae8fc645acc346371a8faad64b3c9`.**
-  Actual `gh pr checks 202` exits **0**: **200 success / 3 skipped /
-  0 failed / 0 pending**. All **65 visual/Windows-named checks pass**.
-  Evidence: `r147-checks.json` and `r148-source-green.txt` in the existing
-  session CI evidence directory. The PR remains **open and draft**; not merged.
-- The three existing conditional skips are Optional authenticated production
-  smoke, AI Evaluation full/blocking-on-main, and AI Evaluation judged/nightly
-  drift. No skip, suppression, relaxed threshold or workflow change was added.
-- Completed the handed-off source/calendar work and CI roots: selected-clock
-  calendar boundaries and real grouping; shared header scope; localized
-  instants/ranges without duplicate zone captions; fixed certificate-day/hash
-  semantics; chart/hero/source-binding preservation; actual widget document
-  ownership and late-request isolation. Earlier verified hero accessibility,
-  startup **399.5 KB**, native observer binding and redesign repairs are
-  retained. Detailed red/green evidence and exact commits remain below.
-- Windows baseline work remains the previously completed **six reviewed
-  shards**, regenerated once for intended redesign/palette changes and then
-  verified read-only **10/10**. The prior handoff recorded a clean mirror.
-  This continuation did not use the mirror or change any baseline; current
-  visual CI passes without another regeneration.
-- Follow-ups outside this PR-green task remain explicit: deferred Part 3
-  call-site adoption, the Part 4 owner/review items, and separate Part 6
-  Tailwind work. The additional standalone E2E type project reports errors in
-  unchanged legacy-unit/nullable fixtures and missing app ambient types;
-  it was not declared clean or weakened. The required application TypeScript,
-  unchanged lint and configured full CI pass. The isolated local Timescale
-  case was not run without its disposable DSN; local golangci-lint was absent.
-- This final checkpoint changes documentation only. Current PR checks are the
-  authoritative result for that follow-up head; verify them after pushing.
-  No further product change, baseline regeneration or merge is requested.
+- Status: in progress (final strict CI); branch `fix/post-202-polish`,
+  draft PR #223. Parts A/B/C and native Windows baseline regeneration are
+  locally verified; current-head workflow acceptance is outstanding.
+- Part A roots confirmed before changes: `SignalLogReader.RegenEnergy` treats
+  the fraction of negative-current change events as a fraction of elapsed time.
+  Fleet Telemetry is a sparse change feed, so this overweights frequently
+  changing regen samples. `DriveAggregates` separately averages voltage and
+  current instead of pairing their time-aligned observations; the power chart
+  also averages emitted rows without duration weights. Completion applies
+  `Abs` to mean power, masking rather than resolving sign inconsistencies.
+  Ingest preserves current sign; no normalizer sign inversion was found.
+  Fixes must retain positive draw/negative regen and integrate elapsed time,
+  not clamp recovery or force every drive's net power positive.
+- Additional Part A root found during integration: `StateReader.Timeline`
+  correctly seeds prevailing values but emits only change-event timestamps.
+  The drive API omits the leading boundary state; a long initial draw interval
+  can therefore disappear from the frontend mean even after duration weighting.
+  Both telemetry endpoints need a derived start-boundary row from the canonical
+  state reader, without inventing unknown values or duplicating a real start row.
+- Climate roots confirmed: the drive telemetry projection never includes
+  canonical boolean `HvacPower` or `is_climate_on`, although the frontend expects
+  the latter. The codec also stores fan status as text, while the frontend
+  requires numeric fan readings; the projection now explicitly parses finite
+  nonnegative speeds, preserving null and measured zero.
+  A fan observation above zero can establish activity when the explicit
+  HVAC state is unavailable; a temperature request alone cannot.
+- Independent-field audit so far: codec/normalizer preserve field identity;
+  range mappings use `IdealBatteryRange` and `RatedRange` separately; tire
+  mappings use all four distinct `TpmsPressure*` signals; the shared timeline
+  fold copies per-signal values, not one pointer into every output. Equal
+  production readings alone do not prove copying. Add distinct-value and
+  missing-field regressions rather than fabricate different readings.
+  BUG 1 is a separate boundary-coordinate/geocoding repair problem.
+- Part B: implemented and committed as `5ccba95dbb`. Shared precision,
+  explicit average/start-end labels, fractional fan, unit-aware elevation,
+  collapsed ranges, distinguishable coincident series, fitted pressure axes,
+  neutral links and aligned tables/icons pass 405 affected unit tests.
+  Two actual light/390 metric and dark/1280 imperial browser regressions pass
+  with zero proxy escapes. All 74 shell/header references remain present;
+  final combined-source browser/layout acceptance remains Part C's gate.
+- Part C roots confirmed: grid stretch stops at animation wrappers, leaving
+  enclosed cards short; chart-card title and embedded chart toolbar have
+  separate owners, placing download actions below the title. Shared layout
+  and card anatomy fixes plus precise route-guard regressions are in progress.
+- Part C design refinement requested by the user: use one reusable, responsive
+  card-layout mechanism with explicit header/summary/body/footer slots and
+  declarative call sites. Do not scatter long DOM-depth-dependent Tailwind
+  selector chains through `CardGrid`, chart cards, or page components.
+  The first named-slot implementation passes 177 focused tests, actual
+  TypeScript, full frontend lint and the hermetic build, but is NOT accepted:
+  scrolled browser captures expose 198px/125px power/elevation cards whose
+  canvases overlap following content. All four v1 matrix processes were stopped.
+  Partial diagnostics also flag empty centering, gaps and offsets; they are not
+  final coverage. Fix shared intrinsic chart/slot allocation and add an actual
+  browser chart-fit regression before another consolidated acceptance run.
+  The retained worker's v4 production source is now frozen. Root corrections
+  remove containment at borrowed subgrid boundaries, distinguish transparent
+  relays from true row owners, propagate natural stretch through Card and
+  GlassPanel, allocate fluid plots alongside their headings and unify chart
+  actions under one header. Shared EvidencePanel columns and local empty-state
+  allocation participate without dropping sections or changing hook URLs.
+  Actual bounded receipts show 284 unit tests, six chart-fit/fullscreen cases
+  and 22 sampled routes passing; all eleven screenshot pairs were inspected.
+  The old chart-overflow images remain rejected evidence, not current captures.
+  The broader sample still had 14 unmatched synthetic requests; the worker is
+  correcting exact typed fixtures and running a 277-route 1280/dark preflight
+  before the final eight-variant matrix. No complete-matrix pass is claimed.
+- Part C continuation: v7's shared table placement assigns
+  actions to the card header and search/provenance to its summary track, with
+  ordinary inline fallback outside participating cards. The debugger adopts
+  this shared API without page-specific sizing; rebuilt browsers confirm its
+  real 132px offset is zero at all eight required variants. All 303 affected
+  worker-run tests pass with unchanged geometry thresholds and no route
+  exemptions. Its page retains 12 surfaces and 1118 -> 1120 lines; including
+  direct components, 23 surfaces and 2645 -> 2647 lines. The parent expanded
+  exact typed fixtures, including downstream reads exposed by populated
+  responses. Unknown endpoints still fail.
+  The earlier fixture-only diagnostic recorded 277 route names but had 25
+  unmatched signatures and 16 readiness/navigation errors; closed-page records
+  are not successful rendering coverage. Those 25 signatures now have explicit
+  responses; the real guard's bounded chunks must verify them on the new build.
+  Per-route guard receipts now also reject console/ErrorBoundary, uncaught
+  runtime, resource and failed-data errors.
+  The v7 consolidated mock build passes (50.55 seconds), as do actual
+  app/guard TypeScript, full frontend lint and scoped fixture/guard lint;
+  that build is now stale because actual browser findings require more fixes.
+  The coherent RUL nominal-distance fixture passes all four affected browser
+  cases with zero proxy escapes.
+  The real bounded preflight produced 275 unique records: 256 passed and 19
+  had actual findings. A widget-only 366-day assertion threw on the legitimate
+  90-day mileage request, losing `/mileage` and `/signal-deadband`; it was not
+  an established memory failure. Six chart-fit/fullscreen cases pass, but all
+  eight debugger variants fail existing timestamp checks, not geometry.
+  The remaining geometry/sizing roots were fixed in the v8 continuation below.
+  Parent fixture corrections use actual certificate envelopes, maintenance
+  schedules, independent unavailable charge-ledger/telemetry contracts and an
+  exact guard-owned mileage resolver; the original widget assertion remains.
+  Public share `date` is a calendar value per `share/handler.go`, not the ISO
+  instant mistakenly supplied by the new fixture; no production share change
+  is warranted. Five real display regressions fail before fixes and pass after:
+  frozen clock formatting, redundant comfort/site timezone suffixes, hazard
+  timestamp precision and second-precision physics boundaries. Existing source
+  instants, selected-zone reactivity, zero and missing-value behavior remain.
+  All six affected parent suites pass 330 tests (214 fixture contracts);
+  strict fixture TypeScript and scoped ESLint pass.
+  V8 source is frozen and rebuilt (58.37 seconds). Shared FormSection surface
+  ownership, preserved bounded API-browser scrolling, SchemaCatalogCard slots,
+  HVAC header/summary delegation, container-responsive MetricGrid adoption and
+  FlowGrid orientation resolve the inventoried allocation/narrow roots.
+  All 277 unique real preflight records now pass, with no missing/duplicate
+  routes, layout/runtime/unmatched/escape findings or wrapper failures.
+  The actual debugger passes all 12 existing width/theme variants, and six
+  real chart-fit/fullscreen/restore cases pass: 18 tests, zero proxy escapes.
+  Worker suites pass 649 consumer tests and 92 adapter tests (overlapping
+  groups); parent suites pass 361 tests. Three changed frozen producers have
+  all 231 translation calls verified before sanctioned receipt generation;
+  all 7,728 frozen contracts then pass. No translation keys or tests were
+  weakened. Full frontend lint, actual app TypeScript and strict guard/fixture
+  TypeScript pass. Whole-source audit still reports 35 pre-existing findings
+  in 21 files unchanged since before BUG 3; no new finding belongs to this work.
+  The earlier eleven-file count came from truncated audit stdout; complete
+  untruncated grep and byte comparisons establish 21, without changing the
+  35-finding total.
+  Eleven AFTER images were refreshed from the frozen build; all eleven
+  capture cases pass with zero escapes. All eleven pairs were visually
+  inspected with no new shared-layout regression observed. All eleven BEFORE
+  hashes and 34 frozen source hashes remain unchanged; ten measured feature
+  scopes preserve their sections/surfaces and exceed the 70% line minimum.
+  The first required-matrix batch exposes additional width-specific roots:
+  three shards pass 32 cases each; the fourth passes 26 and fails six.
+  Ingest X-ray has a 40px mobile plot spill and raw mobile timestamps;
+  vehicle detail has 25px/17px sibling body offsets at 1920px. These are
+  real findings, not tolerated exceptions. The fifth shard was stopped;
+  no complete-matrix pass is claimed. The retained shared-layout worker
+  owns the bounded v9 fixes. The four dark-theme diagnostic shards now
+  contain all 831 expected unique 390/768/1920px records: 814 passing,
+  17 violating across 14 routes, no missing/duplicate/unexpected records,
+  runtime errors, unmatched mocks or proxy escapes. The remaining roots
+  are shared chart containment/header/body anatomy and six 195px passport
+  metric cells; thresholds are unchanged. The exact 17 failed browser
+  cases have a separate discovered red/green selector.
+  Additional populated-dashboard BEFORE evidence passes with eight
+  canonical owner widgets, existing catalogue sources and the real
+  auto-arrange control at 1280x1600. Console/page/API diagnostics and an
+  explicit unmocked-outbound fallback are clean; its AFTER image awaits
+  v9. The original eleven BEFORE files and frozen route fixtures remain
+  unchanged. Owned preview processes and temporary capture specs stopped.
+  V9 bounded checkpoint passes 404 tests in 17 suites, app TypeScript
+  and scoped ESLint. Seven measured feature scopes preserve their
+  sections/tables and at least 70% of original lines. Its frozen build
+  completes in 49.88 seconds. The exact browser replay now passes nine
+  cases and fails eight (71 unique route records, 63 passing), proxy
+  escapes zero. Vehicles, ingest, score, drive detail, advisor and all
+  three parking variants are genuinely clean. Two motor chart surfaces
+  still spill 20px; the other formerly failing dynamics plots are clean.
+  The retained worker owns a bounded v10 continuation for these motor
+  surfaces and the seven remaining route variants, not a threshold change.
+  V10 resolves all seventeen original failing browser cases: all 71 unique
+  target/neighbor records pass, with zero escapes. The deduplicated affected
+  run passes 43 suites / 1,317 tests; verified producer generation restores
+  all 7,728 frozen contracts. Visual review nevertheless rejects a detached
+  shared legend: actual glyphs sit 155px from their markers despite clean
+  containment. A new real-browser regression fails on V10; the shared fix
+  retains its responsive grid but centers intrinsic marker/label groups.
+  V11 gives 12px gaps for both elevation series at 390/1280 in both themes;
+  all six chart-fit/fullscreen cases and 59 focused chart tests pass.
+  Full lint, actual app TypeScript and targeted guard/fixture/chart TypeScript
+  pass. The broad existing E2E project still has legacy library/declaration
+  configuration and unmodified caller errors; it is not claimed clean.
+  The corrected mock build completes in 48.11 seconds. Its 123 changed
+  source/fixture files, built index and twelve BEFORE images are hashed;
+  all 2,216 required variants now run under a fresh V11 receipt prefix.
+  All twelve AFTER captures pass; all 24 PNGs were reviewed with no new
+  shared-layout regression, within their documented synthetic/crop limits.
+  Final V11 inventory verification passes all 2,216 unique expected records:
+  every one of 277 routes at four required widths in both themes. Missing,
+  unexpected, duplicate and finding arrays are empty; all sixteen bounded
+  wrappers pass 512 browser cases with zero proxy escapes. Source and
+  protected-image hashes remain unchanged; owned preview processes and
+  temporary capture specs are stopped/removed.
+  Committed and pushed this acceptance as `80bd1caac5`. Its completed CI
+  reports 177 successful, 23 failed and one skipped check.
+  Failures include downstream aggregate gates, seven unit shards, eight
+  Windows visual shards, two responsive shards and the startup budget.
+  CI root causes: the shared visible chart title lost its canonical marker
+  and host title-ID relationship; several consumers still expected controls
+  inside the figure or prohibited the shared dynamic gutter variable.
+  Responsive catalogue captures additionally expose float32 SVG viewport
+  rounding under scrolling (0.00003px), not a layout movement. Native
+  SVG-local measurement now passes exact scroll identity while still rejecting
+  a real 0.0001px displacement, without rounding or tolerance changes.
+  Actual repaired-consumer, ownership and menu tests pass 577 assertions in
+  28 suites. The build-preload helper and existing Vite contracts pass seven
+  more assertions in two suites. V13 passes ten chart/native/pagination browser
+  cases and all six exact responsive CI replays, with zero proxy escapes.
+  Visual inspection caught a limitation of that first pagination check:
+  IntersectionObserver/main bounds do not detect fixed status-bar occlusion.
+  V14 additionally requires actual wheel scrolling and corner/center hit tests
+  for every visible pagination control; both themes pass and the resulting
+  exposed, operable footer images were inspected.
+  Startup was 401.4KB against the unchanged 400KB budget. Annotation-editor
+  and image-export deferrals were tested and rejected/reverted: export code
+  was never in the startup closure. Source-map attribution identifies the
+  closed context-menu renderer as genuine conditional work. Its tested split
+  plus canonical JavaScript preload ordering passes all strict limits at
+  399.8KB: every dependency is retained, CSS order/positions are unchanged.
+  An additional composite-project check caught TS6305 from putting a build-only
+  helper in the app source project. It now belongs under scripts/ and the Node
+  project, not the app. Actual app, Node and affected browser compilers and
+  full lint pass; V13/V14 are not final frozen-source acceptance.
+  Seven reviewed Windows shards retain their content; five dashboard changes
+  are intended flattening. Linux pagination reachability is proven, but native
+  confirmation/baseline updates remain blocked by four unrelated HTML files
+  in the Windows mirror. They are untouched. Settings shard 18 needs its
+  separate intended-difference review. That review found a real regression:
+  the linked Settings shortcut surface shrinks below its full-height cell.
+  Four actual browser regressions reproduce 175px surfaces in 239px/260px
+  cells at 1440/1920 in both themes. The relay is correctly registered but
+  its authored block display wins the CSS cascade; resetting the child's
+  percentage height therefore cannot borrow grid/flex allocation.
+  The shared correction registers relays before deciding whether native
+  percentage fill can be replaced, skips display:contents boxes, and preserves
+  percentage fill when the actual generated parent is not grid/flex. It never
+  overrides authored display or unhides responsive wrappers. All four formerly
+  failing browser cases now fill their cells exactly. The guard additionally
+  rejects unfilled single-card relay cells, including a 45px gap below the
+  existing large-hole threshold, while retaining real padding.
+  V14 matrix wrappers were stopped; partial receipts/captures remain diagnostic,
+  not acceptance. V15 freezes 145 source/config/fixture files, all twelve
+  BEFORE images, the original dist and the current mock index. Fourteen affected
+  suites pass 177 tests, including the stronger geometry oracle and authored
+  block-relay regression. Vitest erases even ?raw CSS imports in this
+  configuration; the annotation fixture now reads the actual shared stylesheet
+  from disk instead of silently injecting an empty string. All existing
+  assertions remain. Final runtime private-map build passes the unchanged
+  strict limits at 399.8KB startup.   Final combined V15 verification accepts 2,216 unique expected passing records
+  (277 routes, four widths, both themes); missing, unexpected, duplicate and
+  finding arrays are empty. All sixteen bounded wrappers pass with zero proxy
+  escapes, using the completed fresh shard 12 rather than its interrupted
+  predecessor. All twelve AFTER captures pass and were reviewed.
+  No Windows baselines are approved.
+  Committed/pushed the verified source and captures as `c4a21553e5`.
+  Recovery audit: `344e43e920` has successful CI, Security, Performance and
+  SI workflows, but its strict frontend run 41018731970 was cancelled.
+  Manual run 41018927032 succeeded in snapshot-update mode, not comparison
+  mode, and produced no updated-snapshot artifacts. Its staging paths were
+  inconsistent with the workflow's web working directory; its green status
+  does not establish visual acceptance. That unapproved regeneration mode
+  is removed, restoring unconditional Windows comparisons and preserving
+  the playbook's mirror-only baseline provenance. No CI-generated PNGs were
+  accepted. The recovery also removes the clearly agent-created root junk
+  file `none}` left by a malformed pre-reboot patch.
+  Restored strict comparisons and the regression contract are committed/pushed
+  as `00638d611d`. Fresh actionlint across all workflows, 24 harness contracts,
+  actual TypeScript, full frontend lint and the scoped six-pattern audit pass.
+  Rechecking all 159 frozen hashes finds no changes; matrix receipts again
+  accept all 2,216 expected unique variants. Strict frontend run 41086199287
+  completes with seven intended Windows snapshot-difference shards (1, 5,
+  10, 13, 14, 17, 56) plus their failing aggregate. An additional large-fleet
+  readiness failure on shard 39 is not dismissed as baseline drift: its trace
+  shows successful requests and no runtime error; an isolated Linux readiness
+  replay passes (5.2s, proxy0), and its unchanged native rerun job 124185786813
+  passes. That temporary diagnostic spec is preserved only in session files.
+  Final code-head PR checks: 192 successful, eight failed, one intentionally
+  skipped; frontend attempt 2 has 146 successful, eight failed, one skipped.
+  All failures are the seven snapshot comparisons and their aggregate.
+  CI, Security, Performance, SI, Ops and protomodel workflows pass.
+  Current dashboard mobile and forced-colors comparisons were reviewed:
+  the differences remove the requested nested shortcut-card outlines while
+  retaining link labels/icons and the outer surface. Notification comparisons
+  retain all rows; the stronger wheel/five-point footer tests pass.
+  No comparison image was copied into expected snapshots.
+  Windows Git reconfirms the native mirror at `bfecead853` on
+  `fix/post-merge-followups`, with four unrelated untracked files:
+  `Claude outputs/battery-immersive.html`, `battery-minimal.html`,
+  `battery-pack-3d.html`, `battery-widgets-live.html`. They remain untouched.
+  Playbook section 4 forbids syncing a dirty mirror, so native baseline
+  regeneration is genuinely blocked; neither test tolerances nor checks may
+  be weakened to bypass it.
+  The user's renewed continuation after the separate-clean-mirror option
+  resolves the environment boundary without touching the original mirror.
+  An isolated shallow clone at `D:/repos/teslasync-pr223-visual-20261030`
+  starts clean at pushed `fa4da80703`. Native Node 26.8.1/npm 11.19.0 and
+  locked Playwright 1.63.0 are used. The initial build reports missing Vite;
+  one native `npm ci --legacy-peer-deps` restores the locked dependencies.
+  The Windows hermetic mock build completes in 43.86s and is reused for every
+  bounded shard. Native comparison reproduces the intended 951-pixel mobile
+  dashboard difference before regeneration.
+  Only reviewed shards 1/5/10/13/14/17/56 are regenerated, sequentially using
+  the existing update command. Exactly seven PNGs change: five dashboard
+  variants and two notification variants. All old/new images were reviewed;
+  they preserve the flattened links, content, status labels and actual data.
+  Three regenerated PNGs are also byte-identical to their reviewed CI actual
+  artifacts, but every accepted PNG came from native regeneration, not an
+  artifact copy. Subsequent strict native comparisons pass all thirteen
+  cases across the seven shards with zero proxy escapes.
+  Native notification wheel/interaction/five-point hit tests pass in both
+  themes (two more cases, zero escapes); their exposed-footer images were
+  inspected. Actual frontend TypeScript passes. Only those seven generated
+  PNGs are copied to WSL; the isolated mirror's generated changes are then
+  restored to its clean source state. The original mirror's four unrelated
+  HTML files remain untouched.
+  Next: commit/push the seven reviewed native baselines and this provenance,
+  require every strict PR workflow to pass, and fix any new failures without
+  relaxing tests, changing visual tolerances or reintroducing update-mode CI.
+- Part A implementation: paired state-reader timelines feed signed elapsed-time
+  power integration. Both normal completion and restart recovery preserve the
+  mean's sign and real zero, never substitute peak power, and write SI watts
+  exactly once. Frontend fallback estimates use actual bounded instants, stop
+  at unknown samples, and do not extrapolate uncovered intervals.
+  Both drive telemetry endpoints now share a start-boundary projection from
+  canonical state, preserving the leading held interval without duplicating
+  an exact-start event, fabricating unknown observations, or losing zero/false.
+- Repair boundary: extended the existing dry-run-first operator command only;
+  never execute against production. Reconstruct only from retained original
+  signals; absent/corrupted original telemetry cannot be recovered by guessing.
+  Energy repair deliberately targets one completed drive at a time:
+  `go run ./cmd/drive-address-repair -energy -drive-id 555 -dry-run`.
+  Review against an isolated copy before `-dry-run=false`. Missing/incomplete
+  paired history is logged as unrepairable; original energy counters and raw
+  range/tire observations remain unchanged. Unit tests execute dry run first,
+  apply once, then prove a second apply writes nothing. No repair was run
+  against production. The available local read-only `/drives/555` returns 404;
+  original production range/tire observations were not available to establish
+  whether their equal values were already equal at the vehicle.
+- Part A actual red receipt: sparse 60-second SQL fixture returned -2.788 kW
+  and 0.0738 kWh recovered before the fix, versus time-aligned +13.404 kW
+  and 0.0126 kWh. All missing-climate cases failed before projection changes.
+  Corrected isolated PostgreSQL race regression passes; affected signal,
+  drives, telemetry and repair race suites and `go build ./...` pass.
+  Four frontend interval regressions pass; actual `npx tsc --noEmit`,
+  scoped ESLint, all six audit counts (zero), and driving hook-route checks pass.
+  Follow-up red receipt: both HTTP endpoints omitted a 52-second initial draw
+  interval and returned only the final regen row. The endpoint regression,
+  five boundary/null/zero/error cases, affected race suites and full Go build
+  now pass. CI explicitly runs the sparse-power PostgreSQL regression against
+  its isolated test service; workflow actionlint passes.
+- Local final verification passes: full lint, app/affected harness TypeScript,
+  affected units, frozen contracts, all 2,216 route variants and all twelve
+  reviewed before/after pairs. The full audit retains 35 verified legacy
+  findings, not a whole-tree zero. C commit/push and current-head draft PR
+  checks remain; no CI success is claimed yet.
+- Full `web/src` violations skill scan: static styles 0, raw controls 33,
+  direct imports 2, old API imports 0, double prefix 0, camelCase parameters 0,
+  TypeScript pass. All 35 findings' files are unchanged since the pre-BUG3
+  `adc001fea8` baseline, verified separately; do not claim a whole-tree zero or
+  expand this repair into unrelated controls. Full existing npm lint passes.
+- Early current-head CI findings: Trivy flags transitive `go-jose/v4` 4.1.4
+  (CVE-2026-116587; patched in 4.1.6). Its cloud-storage/backup consumer and
+  full Go build pass with the targeted patch. The SI gate incorrectly rejects
+  the newly vendored immutable `LifetimeDcChargeEnergyKwh` Tesla field; its
+  hand-maintained whole-line exception list was stale and could also hide
+  unrelated bad identifiers on the same line. The replacement recognizes exact
+  authoritative proto field tokens while retaining strict application-field,
+  JSON/storage-tag, unknown-name and same-line checks. Four focused regressions
+  reproduce both failure classes before the fix and pass afterward; the actual
+  branch diff has zero legacy application identifiers/deprecated callers.
+  Both changed workflows pass actionlint. At `fbec5e010b`, Security Scan and
+  both SI checks pass; no security check has been bypassed.
+  Frontend unit shards reveal stale
+  frozen i18n receipts (21 additional leaves and changed producer bytes)
+  and consumer tests still querying the old column-menu role after the shared
+  column control became a focus-managed dialog. Preserve the old catalog
+  predecessor assertions and all interaction coverage while refreshing verified
+  receipts with sanctioned generators and updating consumers to the dialog API.
+  The physical catalog comparison against accepted `b4099b42e4` is reviewed:
+  21 additions, no removals, and two intentional energy-method copy corrections.
+  Typed verification passes for all six changed frozen producers and both
+  shared controls. The sanctioned generators retain exact static assertions;
+  all seven affected frozen test files plus drive/toolbar consumers pass
+  7,791 tests. Global catalog verification reports 41,924 calls and 237 unresolved
+  runtime expressions, not universal dynamic-key verification.
+  Two actual missing keys in the shared More/Done controls now use the existing
+  translated global keys instead of relying on English defaults. The separate
+  SafetySettingsPage casing mismatch predates these fixes and is not checkpointed.
+  Column-dialog, focus-restoration and keyboard compact-export coverage passes
+  97 tests. Real CI also exposes a shared toolbar layout root: putting the
+  full export-scope description inside the action flex row displaces headings
+  and actions by 13–46 px. Move that description to its own shared toolbar row;
+  retain compact More dialogs and update responsive consumers to actually open
+  them, preserving every export, selection, column and geometry assertion.
+  Final combined-source browser validation now passes 101 affected cases:
+  32 drive/API-log, 59 FSD/shared-table and ten operational cases, all with
+  zero proxy escapes. Compact consumers open the actual More dialog and
+  dismiss search history before clicking underlying column filters; export
+  selection/delete actions remain in their separate bulk bar.
+  An earlier graph had 173 successes, 26 failures, one queued and one
+  conditional skip; this is not green. Reviewed Windows dashboard pixels show
+  the intended flattened Quick navigation links versus the old nested borders.
+  Baseline regeneration remains blocked because the designated Windows mirror
+  has unrelated uncommitted work; never clean it or generate Windows baselines
+  on Linux.
+  Verified translation/column-dialog repairs are pushed as `fc30372cad`.
+  That head exposed a coupled generated-artifact omission: replacing the
+  missing Done reference also requires regenerating the locale usage manifest.
+  The generator now removes both nonexistent common.done/common.more references
+  after the shared controls switch to real existing keys. Exact split-catalog
+  verification passes (57 bundles, 182 fallbacks, 1,264 shell keys, no new
+  known-missing keys). Actual combined-source TypeScript and full npm lint pass.
+  Realistic min/max viewport query mocks retain mobile More-dialog export and
+  density coverage rather than pretending every media query matches.
+  All ten old-head Windows before/actual pairs from nine failing shards were
+  inspected: flattened dashboard links, retained notification kind metadata
+  and export-scope toolbar reflow are visible. These are diagnostic, not final
+  C-source captures or permission to replace baselines from CI artifacts.
+  At pushed `f52df66e9f`, all eight frontend unit shards, generated artifacts,
+  frontend build, all backend race/database/build checks and Security Scan pass.
+  The completed graph is 180 successes, 20 failures and one conditional skip:
+  the remaining roots are nine responsive browser shards and nine Windows
+  snapshot shards, plus their aggregate gates. Actual final v4 TypeScript,
+  full npm lint and scoped browser-consumer ESLint pass. Seven frozen i18n
+  contracts pass 7,728 tests. The full route-layout matrix is still pending
+  exact mock-fixture closure and preflight; none of these bounded checks
+  substitutes for that acceptance gate or current-head CI.
+  Pushed `13d4e6dbc0` now has 192 successes, eight failures and one conditional
+  skip: every responsive shard passes; seven Windows snapshot shards and their
+  aggregate fail. This does not validate uncommitted v6 source. The mirror's
+  full native status includes unrelated untracked `Claude outputs/`; tracked-only
+  cleanliness is insufficient, so it remains untouched and baseline regeneration
+  remains blocked under playbook section 4.
+- Initial card guard runs exposed real layout findings and were stopped before
+  acceptance when the user requested the shared-slot architecture refinement.
+  Partial old-build logs are diagnostic only, never passing matrix evidence.
+- Next step: finish the reusable shared card-slot mechanism, rebuild once,
+  complete the 2,216-route-variant guard and targeted drive/browser checks,
+  review after screenshots, commit C/verified CI repairs and push, then fix actual current-head
+  CI failures until green.
 
-## Continuation after `98e23bed33` (2026-10-25)
+## Bug 1: Drive detail shows same address for Start and Destination (non-round-trip)
 
-- Responsive-8 document-teardown phase gate (after pushed `3ae15d4777`):
-  all 32 hosted tests pass, but the unchanged wrapper correctly fails on
-  two preview proxy escapes: `/climate/latest?vehicle_id=7` and
-  `/security/latest?vehicle_id=7`. These occur during the two dashboard
-  auto-fit/persistence cases, which close multiple live application pages.
-  Downloaded the complete job artifact. A four-case targeted replay with
-  traces passes with zero escapes; no claim that the race was reproduced.
-  The existing usage/physics tests already unload the old app before
-  removing its mocks. Applying that lifecycle to owned dashboard documents:
-  validate complete late API activity, navigate to blank with interception
-  still installed, then close. A new native contract schedules both late
-  requests, verifies fulfillment and per-document isolation, and confirms
-  the surviving document still works.
-  Stronger completion exposed two previously unfulfilled widget dependencies.
-  This geometry case now supplies explicit valid null-configuration and
-  typed empty-history responses, verified against both unchanged hook
-  domains/router. No general fallback or endpoint exception was added.
-  The new post-close runtime assertion also reproduced a real opaque-origin
-  storage error: seeding application storage in a blank teardown document.
-  Browser seeding now operates only in origin-backed HTTP(S) documents;
-  the runtime assertion remains strict and passes after that repair.
-  Targeted repeated lifecycle cases pass **10/10**; both complete affected
-  specs then pass **28/28** over two repetitions, with **zero escapes**,
-  every original drag/resize/viewport/persistence assertion, negative
-  beacon contracts and post-close runtime checks intact. Actual required
-  TypeScript and full unchanged lint pass; final touched-file ESLint passes.
-  The additional standalone E2E project typecheck does **not** pass:
-  it reports errors in unchanged legacy-unit/nullable fixtures and missing
-  application ambient declarations. No such error was reported in these
-  three changed files. That separate baseline was not weakened or swept into
-  this test-only lifecycle correction.
-  **Pushed:** `25d47baa31`. Its complete graph is green as recorded above.
-  Evidence: `r131-responsive8`, `r132-responsive8-artifacts`,
-  `r133-dashboard-repro` and `r133-dashboard-results`.
-  Final before-fix graph at 02:13Z: **198 pass / 2 fail / 3 skipped**;
-  failures are responsive-8 and its dependent aggregate, no others.
-  Final evidence: `r134-*`, `r136-*`, `r137-*`, `r138-*`, `r139-*`,
-  `r140-teardown-reviewed.diff`, `r140-checks`.
-- Passport preservation-contract CI round (after pushed `39bf1313ff`):
-  frontend unit shard 3/8 reports **1 failure / 11,699 pass**. The only
-  failure requires the old literal caption `calendar dates in UTC`, rather
-  than the fixed source-calendar behavior already verified by the pure,
-  rendered and native download cases. Updated that expectation to the
-  truthful source-calendar caveat and strengthened the same test with
-  raw `point.date` preservation plus explicit table and axis day-key
-  formatting checks. All original chart-frame/export/cap/scenario checks
-  and all 36 preservation cases remain.
-  Targeted preservation plus battery behavior passes **123/123**; actual
-  TypeScript and full unchanged lint pass. Production, catalogs, endpoints
-  and browser output are unchanged from verified `39bf1313ff`.
-  Evidence: `r124-unit3`, `r125-passport-preservation`,
-  `r125-preservation-types-lint`.
-  Before-fix graph at 01:24Z: **86 pass / 1 fail / 107 pending / 3 skipped**.
-  **Pushed:** `3ae15d4777`. Continue the
-  current-head CI loop. Wait five minutes only when no actionable failure
-  remains; diagnose new failures from their actual logs/artifacts.
-- Battery-passport fixed-calendar phase gate (after pushed `4b24bb653f`):
-  unchanged five-width guards reproduce **5 failures**, each with 11 visible
-  zone labels and no layout/instant/duplicate failures. Two new selected-clock
-  unit cases reproduce raw issue and first-observed instants in Field Directory.
-  The presentation repair preserves source-owned daily aggregates, canonical
-  hash days, precision, frozen diagnostic clock, all 14 sections and raw JSON.
-  Instants use shared selected-clock formatting; real calendar days use
-  zone-stable localized day-key formatters. The canonical empty-day sentinel
-  remains an explicit protocol value. Source-calendar and hash explanations
-  replace zone captions without removing any caveat or threshold.
-  All three affected unit suites pass **87/87**, including both clocks,
-  full export and all retained/error/empty-state contracts. Four existing
-  fallback capitalization mismatches now match the catalog; the corresponding
-  paused/loading assertions preserve their complete state checks.
-  Generated catalogs and all eight verified producer sources are checkpointed
-  through the authorized generators. Final affected plus frozen gate passes
-  **7,815/7,815** (87 battery cases and 7,728 receipt cases). Both source
-  scopes pass actual TypeScript and six zero audit counts; unchanged full
-  lint, both hook routes and the hermetic build pass.
-  **11/11** browser cases pass, zero escapes: all five unchanged route
-  widths, four native operand/review combinations, and two new actual-clock
-  cases that check fixed source days and complete raw JSON downloads.
-  All 14 source cards remain. Production page plus components total
-  **3,663 → 3,668 lines**; page 501/501, Field Directory 466/463,
-  provenance 353/358 and timeline 116/119. All 12 methodology items remain.
-  Evidence: `r111-passport-red`, `r113-passport-unit-red`, `r114-*`,
-  `r115-*`, `r116-*`, `r117-*`, `r119-*`.
-  **Pushed:** `39bf1313ff`. Inspect the current PR head's
-  actual failing jobs/artifacts. If only pending, recheck every five minutes;
-  rerun only hosted-setup failures after their containing run completes.
-  Last `4b24bb653f` graph at 01:09Z: **77 pass / 114 pending / 3 skipped**,
-  incomplete. No baseline, source math, storage, workflow or tolerance edit.
-- Tesla usage selected-calendar phase gate (after pushed `dae94b1d54`):
-  reproduced absent calendar query/cache identity and three accepted invalid
-  backend calendars. The handler now validates the optional IANA calendar,
-  defaults legacy requests to UTC, forwards exact instants and caps 366
-  civil days correctly across fall DST. Both SQL signal groups and outbound
-  requests use the same selected-calendar day/Monday week; raw sources,
-  four prices, sparse periods, pagination totals and fixed epoch-anchored
-  30-day cycles are preserved. Race-tested pure boundaries include both
-  clocks, DST, skipped and repeated midnight; both Go packages pass.
-  The isolated Timescale integration case was extended but is **not run**
-  locally: its required disposable DSN is absent.
-  History now consumes the shared header, retains one-year access and
-  exact rolling bounds, and has no competing local picker. Visible labels
-  use shared selected-clock formatters; CSV raw instants remain unchanged.
-  All five affected frontend suites are verified (98 distinct cases; the
-  corrected German ranges and header registration pass 48/48, and the final
-  card/receipt gate passes 7,741/7,741). Stronger existing catalog disclaimer
-  defaults are preserved exactly. Actual TypeScript, six zero audit counts,
-  all-five-source scan, usage hook routing, full unchanged lint and hermetic
-  build pass. OpenAPI parses with all six exact parameters. Both Go packages
-  pass `-race` and targeted `go vet`; golangci-lint is not installed locally,
-  so that remains a CI check, not a claimed local success.
-  Native usage and unchanged route guards pass **9/9**, zero escapes,
-  including both selected clocks, 23/24-hour bounds, weekly dates, four
-  width/theme combinations, one-year history, custom dates and empty states.
-  History lines 242/219, card 118/118, page 92/92; section markers 3/3,
-  0/0 and 5/5. No content section or test scenario removed.
-  Evidence: `r101-usage-hook-red`, `r102-usage-go-red`, `r103-*`,
-  `r104-*`, `r106-*`, `r107-*`, `r108-usage-browser`.
-  **Pushed:** `4b24bb653f`. The next phase is battery-passport's
-  actual fixed source-calendar presentation and instant formatting. Preserve
-  certificate aggregation, qualification and canonical hash bytes. Continue
-  actual CI failure diagnosis while pending, not the full local suite.
-  Fresh `dae94b1d54` graph at 00:55Z: **134 pass / 65 pending / 3 skipped**,
-  no observed failure yet, incomplete. No Windows baseline changes.
-- Timezone route phase gate (2026-10-26, after `02d31f2f09`):
-  the completed graph is **193 pass / 7 fail / 3 skipped**. Five route shards
-  (52/53/54/56/58) expose mileage, notification health aliases, SQL metadata,
-  Tesla usage and battery-passport timezone roots; one hosted setup failed
-  before tests, and the aggregate reflects those failures.
-  Mileage hooks/backend already bucket in the selected clock; only its old
-  UTC copy is stale. That copy now accurately preserves the fixed 24-month
-  source and every completeness/ratio limitation. Notification fatigue's
-  real browser-only weekday/hour attribution now accepts the selected clock,
-  preserving scoring, spans, raw events and legacy pure callers. Two new
-  boundary regressions failed before repair; selected-midnight and DST
-  conservation cases pass afterward. Removed duplicate captions across the
-  three shared notification panels while retaining selected timestamp
-  formatting and frozen source/as-of semantics. SQL's six timestamp hints now
-  use localized instant descriptions, with all names, timestamptz types,
-  other columns and read-only behavior intact.
-  Initial affected units pass **282/282**; the final mileage suite including
-  its additional copy regression passes **27/27**. All seven affected
-  production sources pass actual TypeScript and six zero audit counts.
-  Full unchanged lint, both hook-domain route checks, generated catalog,
-  **7,728/7,728** frozen receipts and the hermetic build pass. The unchanged
-  five-width guards pass **25/25** across all five repaired routes; native
-  notification-health operand contracts pass **4/4**. Both wrappers report
-  zero escapes. Original/current lines: mileage 465/465, fatigue 433/431,
-  burn 289/289, latency 308/308, SQL card 122/130; panel/chart markers
-  remain 0/0, 8/8, 6/6, 7/7 and 1/1 respectively. No section removed.
-  Mileage's six LayoutCard sections also remain 6/6.
-  Evidence: `r93-fatigue-red`, `r94-timezone-unit`, `r95-*`, `r96-*`,
-  `r98-timezone-route`, `r99-notification-native`.
-  **Exact next:** push this verified phase and finish the Tesla-usage /
-  battery-passport roots while fresh CI runs. Tesla usage really buckets
-  both sources in UTC and owns a conflicting local calendar; extend its
-  read-time grouping and consume the shared header. Battery-passport dates
-  originate in fixed certificate aggregates and canonical hashing; preserve
-  that source calendar instead of shifting date-only evidence as instants.
-  A new source push naturally retries hosted setup; rerun only setup jobs
-  once no source fixes remain. No workflow or baseline changes.
-- Hosted setup retry pending (2026-10-26 00:16Z, head `02d31f2f09`):
-  responsive-33 job `121331078018` never ran tests. Playwright dependency
-  setup failed because Microsoft's Ubuntu 24.04 APT repository returned
-  HTTP 403 for `InRelease`; exit 100. The unrelated Ubuntu mirrors worked.
-  Both CLI and API confirm this job cannot be retried while its containing
-  run `40246842498` is still active (API: "The workflow run containing this
-  job is already running"). No workflow, repository, dependency, test or
-  tolerance changes are justified. Latest graph **149 pass / 49 pending /
-  1 fail / 3 skipped**, incomplete.
-  **Exact next:** continue five-minute checks, diagnose any application
-  failures, and once that run completes rerun failed setup job(s) only with
-  `gh run rerun 40246842498 --failed`. Preserve successful shards.
-  Evidence: `r90-responsive33`, `r90-run`, `r91-responsive33-api`.
-- CI command-contract phase (after pushed `5be78d19c5`):
-  responsive-10's four actual failures required removed Lock/Climate-off
-  actions rather than the intentional redesign's stable six-action set.
-  The independent catalogue guard now pins **Unlock, Climate control,
-  Frunk, Trunk, Flash Lights, Horn**, checks every button visible/enabled,
-  and focuses Unlock without issuing any command. The source-content regex
-  likewise checks Unlock. No production actions, permissions or behavior
-  changed; existing dispatch/running-state/write-block tests pass **19/19**.
-  Both native widths/themes pass **4/4**, escapes=0, preserving all other
-  command/media readings and unchanged geometry tolerances.
-  Actual TypeScript, full unchanged lint and six zero source-audit counts
-  pass. Evidence: `r82-responsive10`, `r84-commands-unit`,
-  `r84-commands-native`, `r84-lint`, `r85-commands-audit`.
-  At 23:52Z CI is **162 pass / 36 pending / 1 fail / 3 skipped**; the
-  remaining observed failure is this now-locally-repaired root. Responsive
-  21/38 are still pending, not yet CI-confirmed. No baseline changes.
-  Pushed as `02d31f2f09`. At 23:59Z its fresh graph is **19 pass /
-  171 pending / 2 skipped**, incomplete, with no observed failures.
-  **Exact next:** continue current-head CI at five-minute intervals, fixing
-  only actual failed roots. Do not rerun full local quality.
-- CI contract follow-up (23:26Z, after pushed insurance `e5174b3521`):
-  actual CI has two observed failing roots: responsive-21's native sleep
-  fixtures still pinned date-only bounds, and responsive-38's home-energy
-  evidence still required the intentionally removed redundant UTC caption.
-  All three sleep request sites now share the exact four-parameter fixture
-  with `2026-08-04T00:00:00.000Z` inclusive start and
-  `2026-08-07T00:00:00.000Z` exclusive end. Vehicle/days, duplicate-key
-  rejection, full reading/provenance checks and retained-source retry ledger
-  remain strict. Planning keeps every modeled value, limitation, focus and
-  geometry check, and its exact 24-hour half-open interval proof; it now
-  also rejects the old duplicate UTC phrase.
-  Final targeted browser gates pass **17/17 sleep + 4/4 planning**, both
-  escapes=0; actual TypeScript, full unchanged lint, affected ESLint and six
-  zero fixture-source audit categories pass. No production/page, catalog,
-  baseline, workflow, tolerance or skip changes. Evidence: `r70-responsive21`,
-  `r74-responsive38`, `r73-sleep-native`, `r74-sleep-audit`,
-  `r75-lint`, `r77-home-native`, `r77-tsc`, `r77-eslint`.
-  Latest pre-push graph **124 pass / 70 pending / 2 fail / 3 skipped**;
-  the two observed failure roots are repaired locally, not yet CI-confirmed.
-  Pushed as `5be78d19c5`. At 23:32Z the fresh graph is **22 pass /
-  20 pending / 3 skipped**, still incomplete, with no observed failures.
-  **Exact next:** refresh actual current-head checks and failed logs, then
-  continue the CI green loop. If only pending, wait five minutes between
-  checks; do not rerun full local quality.
-- Insurance phase gate (23:04Z, after pushed sleep `98cbb1a1b2`):
-  seven boundary cases reproduced UTC-only trip-start attribution.
-  The shared selected clock now owns the typed hook/cache/query, service
-  overnight classification and Sunday-start trend weeks. Legacy callers
-  without timezone still use UTC; invalid/Local zones fail before I/O.
-  Added response `timezone`, documented the additive query contract and
-  v2 limited-checksum canonicalization including that zone. Driver
-  fingerprints explicitly retain their existing UTC policy despite sharing
-  the night-band helper. The full-trip-distance proxy and every limitation
-  remain; no measured-night-distance claim, storage or schema change.
-  Service/source-window conservation, weekly boundaries and classifier
-  tests pass `-race`; the real handler package compiles (no package tests).
-  Actual TypeScript, six zero source-audit categories, hook routing, full
-  unchanged lint, affected ESLint, hermetic build, **123/123** affected
-  units and **7,728/7,728** frozen cases pass. The native insurance
-  full-operand contract passes **4/4** and the unchanged five-width route
-  guard passes **5/5**, each with zero proxy escapes. Typed native fixtures
-  validate the new exact query and full response; all raw operands and
-  proxy caveats remain checked. Page lines 975/975, section markers 12/12.
-  **Exact next after push:** all named queued semantic timezone roots are
-  now repaired. Refresh `gh pr checks 202`, obtain actual failed logs and
-  artifacts for any failures, group roots and fix them. If only pending,
-  wait five minutes between checks without rerunning full local quality.
-  Latest sleep-head graph **50 pass / 143 pending / 3 skipped**, incomplete,
-  not green. Evidence: `r62-insurance-red`, `r65-insurance-go`,
-  `r66-insurance-*`, `r67-insurance-route`, `r67-insurance-native`.
-  No Windows mirror or baseline changes.
-- Sleep-efficiency phase gate (22:53Z): export repair is pushed as
-  `4922899147`. Sleep now sends the shared header's actual half-open
-  instants rather than date-only UTC bounds. Its exact coverage window
-  and historical as-of clamp use those same instants; elapsed exposure
-  remains 23/25 hours across DST and rolling windows do not expand to
-  containing calendar days. Calendar labels still count civil dates.
-  Source measurements, union/overlap accounting, unavailable dwell/drain
-  semantics and every one of the fourteen sections are preserved.
-  The endpoint keeps legacy date-only `(from,to]` SQL behavior; exact
-  RFC3339 starts include the first instant by normalizing the existing
-  strict-lower predicate at database microsecond precision. Sub-day exact
-  windows report at least one period day rather than the old thirty-day
-  fallback. OpenAPI documents both contracts; no SQL/storage/schema change.
-  Four new model cases and two backend cases first failed against old code.
-  Final **220/220** affected units and the Go package `-race` pass,
-  including mounted shared-clock requery and all original source contracts.
-  Three production audit targets each report six zero counts plus actual
-  TypeScript pass; full unchanged lint, affected ESLint, energy-hook routing,
-  hermetic build and all **7,728/7,728** frozen cases pass. The unchanged
-  five-width guard passes **5/5**, escapes=0. Lines: page 227/229,
-  model 1302/1317, coverage 314/316, methodology 136/136, evidence 151/153;
-  section definitions 14/14. No baseline changes.
-  **Exact next after push:** selected-clock insurance overnight trip-start
-  attribution (retain explicit proxy limitations, never label it measured
-  night distance), inspect actual CI failures, then finish the green loop.
-  Latest export-head graph **31 pass / 159 pending / 3 skipped**, incomplete.
-  Evidence: `r57-sleep-*` red, `r58-sleep-go`, `r60-sleep-*`, `r61-sleep-route`.
-- Export phase gate (22:44Z, following pushed `47b4fa59c9`): both
-  independent job forms now resolve civil dates in the shared selected
-  clock and send inclusive-start/exclusive-end RFC3339 instants, including
-  full DST days. Seven-day presets mean seven inclusive calendar dates;
-  omitted bounds remain omitted. The two queued endpoints accept this
-  additive format through the shared date helper, preserving legacy
-  date-only UTC-midnight semantics and inclusive worker/SQL storage at
-  microsecond precision. No schema/MQTT shape changes. Analytics now applies
-  both query bounds and does not silently restrict All time to thirty days.
-  New OpenAPI bound schemas document compatibility on both endpoints.
-  Final affected units pass **89/89**, including a mounted clock-change
-  regression with retained civil values and both real mutation hooks.
-  Both Go packages pass `-race`; synchronous legacy semantics, exact
-  microsecond conversion and both endpoint rejection paths are covered.
-  Actual TypeScript, six zero source audit categories, export-hook routing,
-  full unchanged lint, affected ESLint and hermetic build pass. The unchanged
-  five-width route guard passes **5/5**, proxy escapes=0. All seven frozen
-  suites pass **7,728/7,728** after sanctioned catalog and verified producer
-  receipt generation (114 verified calls replace 118 old caption calls).
-  Page lines 1461/1463, sections 5/5; no content or control removed.
-  **Exact next after push:** inspect current CI and trace sleep-efficiency
-  exact bounds/accounting, then insurance overnight attribution. Latest
-  graph: **76 pass / 117 pending / 3 skipped**, incomplete; no Windows
-  changes. Evidence: `r50` red, `r52-export-go`, `r53-export-*`,
-  `r55-export-frozen` and `r56-export-unit`; do not rerun the full local suite.
-- The latest user clarification supersedes the historical handoff below:
-  ordinary failing tests, commands and CI checks NEVER trigger stopping.
-  Only two consecutive malformed/garbled tool calls trigger that rule.
-  Continue debugging unattended; section 0b still governs usage exhaustion.
-- Section 0 completed on the clean expected branch. Preserved IDE-owned
-  Copilot, Playwright and TypeScript processes; no orphan runner found.
-  At 20:17Z the graph was **16 fail / 181 pass / 2 pending / 3 skipped**,
-  still incomplete (`r20-checks.json`). Unit shard 1 actually passed
-  342 files / 5,726 tests (4 skipped), then artifact upload failed with
-  CreateArtifact ECONNRESET. Do not change tests/workflows for that failure.
-- Signal fixture WIP is now exercised: four signal/tire width/theme cases,
-  four related charging-strategy cases, six negative/positive pressure guard
-  cases and 75 affected widget unit cases pass; proxy escapes=0.
-  The old guard incorrectly expected a tire observer on the intentional
-  five-row LiveSignals redesign. It now proves all six actual telemetry
-  observers and the two real pressure surfaces: latest diagram + history.
-  Exact vehicle/window keys, full original wire fields/nulls/order, Pa
-  equality and observation instant remain checked. The unchanged native
-  observer walker is preserved. Native geometry exposed zero-width pressure
-  values on narrow cards; bounded diagram width restores all four values
-  without bringing back removed wheel labels. Evidence: `r19-unit`,
-  `r19-category`, `r20-native` and paired native JSON artifacts.
-- Energy's old order-dependent guard rejected the intended headline-before-
-  chart hierarchy. The replacement measures the entire headline/stat group,
-  accepts either nonoverlapping order and retains the original one-pixel
-  tolerance; negative geometry tests reject overlapping allocations.
-  This exposes a REAL SolarProduction clipping bug (226px), not a reason
-  to weaken chart bounds. Its headline/chart allocation repair is in local
-  verification. Native fleet content likewise replaces removed taxonomy/
-  details with exact verified fraction, meter and definition rows; header
-  checks exposed the real 28px Expand target against the existing 44px
-  requirement. Its shared-grid fix is also in verification.
-- Actual TypeScript, full unchanged lint and affected ESLint passed before
-  the latest solar/grid edits; 75 solar/grid/shell unit cases pass afterward.
-  **Next:** finish focused solar/fleet browser checks and shared header
-  geometry, rerun final checks, commit/push this phase, then fix responsive
-  7/9/10/11 and 50–58 roots from bounded logs. Downloaded responsive-13's
-  exact artifact; no Windows baselines changed. All evidence is under
-  `files/ci-rounds-20261025/` in the session directory.
-- Verified phase gate (20:37Z): signal/tire 4/4, charging-strategy 4/4,
-  fleet/energy 8/8 and seven native guard cases pass; every wrapper reports
-  escapes=0. The original 44px Expand requirement and 8px peer gap are
-  retained in the real shared-grid control. Header checks now inspect its
-  actual in-header position, excluding only the target itself from peers
-  and retaining rightmost freshness; hover first enters the widget normally.
-  All eight header viewport/theme cases and all 121 widgets in each of six
-  min/default/large view/edit configurations pass unchanged.
-- Solar and wall-connector real headline/chart overflow is fixed without
-  hiding content. The shared `viewportClassName` capability allows bounded
-  energy plots to shrink while preserving auto-height defaults; its new
-  regression failed before implementation. Four chart/energy suites pass
-  87 cases, the solar/grid/shell group passes 75, and the final nine-suite
-  receipt/chart/connector gate passes **7,781/7,781** (including all 7,728
-  frozen cases). Actual TypeScript, six zero audit categories for each
-  production source, all four hook domains, full unchanged lint and the
-  hermetic build pass. Receipt generators verify unchanged translation
-  calls and mechanically refresh only existing Grid/Energy checkpoints.
-  All source line counts/sections are preserved; no baseline changes.
-  Evidence: `r20-shared-header`, `r21-confirmed`, `r21-confirmed-unit`,
-  `r21-final-lint`, `r21-*-audit`, `r21-checkpoint` and build logs.
-  **Next after push:** inspect the new CI graph and the remaining exact
-  responsive-7 telemetry precision, responsive-9/10 catalogue precision,
-  responsive-11 vehicle request fixtures, and responsive-50–58 route-source
-  failures; do not restart the completed signal WIP or update baselines.
-- Next phase (21:08Z, WIP): `e53cd34633` is pushed. Exact redesigned
-  analytics, automation, climate, location and extreme electrical readouts
-  replace obsolete precision/drawer contracts without removing source
-  proofs. Native climate checks retain both curves, full table values and
-  all chart bounds while requiring its intentional zero visible Y axes.
-  Totals/evidence/climate/maps and extreme checks are exercised; charging
-  is still in verification. Its full numeric/unit tick wrap/clipping is
-  repaired, exposing an obsolete full-timestamp axis expectation against
-  the actual shared short-date formatter. Preserve original source instant,
-  locale/vehicle-zone, native observer and tooltip/table proofs when
-  adapting that contract. No ordinary failure is a stopping condition.
-- Reviewed Windows 1/10 diff artifacts: changes are unintended header/body
-  displacement from the 44px Expand target, NOT a palette change.
-  Negative vertical margins preserve the original header allocation and
-  the actual 44px target; all eight header cases and 121 widgets in each
-  of six unchanged geometry configurations pass, escapes=0. No baselines
-  updated. The other three current Windows failures are also dashboard
-  variants (390/1440 light and forced colors); reevaluate after this fix.
-  Latest incomplete graph: **9 fail / 119 pass / 69 pending / 3 skipped**.
-  Source audits for Grid/ChargeHistory report six zero counts plus actual
-  TypeScript pass; full unchanged lint passes. Existing Grid receipt
-  generators ran successfully, but the attempted frozen selector selected
-  only ChargeHistory's three tests; do NOT claim the frozen gate yet.
-  **Exact next:** finish charge date-context proof, run the actual
-  `src/i18n/` frozen suites, lint and commit/push this coherent phase.
-  Then supply the typed `/mileage/daily` (366-day) and
-  `/drive-dynamics/latest` vehicle sources for responsive 11/12, and
-  continue route timezone roots. Evidence: `r22`–`r26` in the existing
-  session CI directory.
-- Precision/header phase gate (21:12Z): charging now passes **4/4** with
-  zero escapes. Short axis/table days and full timestamp tooltips each
-  derive from the original served instant, locale and vehicle zone. Added
-  a real recent-charge observer proof retaining full source fields/nulls/
-  order; the two other charging observers and original AC category/bar
-  proofs remain. Totals, evidence, climate, maps and automation groups each
-  pass 4/4; extreme telemetry passes 4/4 (150.0kW, 400V, 375A). All seven
-  actual frozen suites pass **7,728/7,728**, affected six widget suites
-  pass 93 cases, and actual source audits/TypeScript/full lint/affected
-  ESLint and both API hook domains pass. Source lengths/sections unchanged:
-  Grid 772/772, ChargeHistory 173/173, chart/panel counts 2/2 and 1/1.
-  No baseline updates; Windows dashboard displacement is a code bug fixed
-  by the preserved-height 44px target, not an intended snapshot change.
-- Vehicle source WIP is separately preserved in
-  `dashboardCatalogueVehicleFixtures.ts`: exact typed daily-mileage and
-  live dynamics fixtures validate native vehicle/range/zone query keys.
-  Its eight-case run now has **4 pass / 4 fail**, escapes=0: missing
-  requests are resolved, exposing an obsolete wide VehicleHero `heading`
-  assertion for Aurora. Finish that native contract before committing the
-  fixture. Pre-push incomplete CI: **11 fail / 139 pass / 48 pending /
-  3 skipped** (`r28-checks.json`). Continue semantic route timezone roots
-  afterward. The historical Phase-48 methodology path in instructions is
-  absent on this branch; no API/model/unit-definition change was made.
-- Vehicle phase gate (21:24Z): the precision/header phase is pushed as
-  `6d1e451863`; all five affected grid unit suites also pass **34/34**.
-  Vehicle source WIP is now verified: **8/8** width/theme/motion cases,
-  **63/63** hero/odometer/motor units, affected ESLint and actual
-  TypeScript/source audit pass, escapes=0. Both newly supplied endpoints
-  match the router and validate their exact native request parameters.
-  The native hero contract uses the full name/model heading and existing
-  single Details link, plus its actual 44px keyboard target, 72% meter,
-  410km range, temperatures/access and normalized five-field trust count.
-  It retains all original four-sample six-row/560px migration, two-column
-  allocation, viewport containment and before/after screenshot-geometry
-  equality assertions; removed preview navigation is not restored.
-  No production hero or baseline change. **Exact next after push:** tackle
-  the real home-energy local-hour model (tariff/departure/forecast + KPI),
-  then the remaining timezone route roots. Shared numeric zoned parts and
-  wall-time conversion already exist in `lib/dateFormat.ts` /
-  `lib/dateConvert.ts`; reuse them, do not invent another parser.
-  The latest `6d1e451863` graph is still registering (9 pending / 2 skip),
-  not a completed graph or green. Evidence: `r28-grid-unit`,
-  `r31-vehicle`, `r31-vehicle-unit`, `r31-fixture-audit`, `r31-eslint`.
+- Status: done
+- Example: production `/drives/555` — map route Canyon Park, Bothell → Redmond, but both Start and Destination show "19720 Bothell Everett Highway, Bothell". Positions correct; destination address wrong.
+- Root cause (found): stored `end_place` resolved from the wrong fix at completion time, then stranded. Completion's boundary-snapshot fallback can persist the same fix into both endpoint pairs (documented in `internal/database/signal/reader_aggregations.go` `DriveEndpointCoordinates`), so the end label was geocoded from the start coordinates and written to `end_place`. Later corrections fix the stored/response coordinates (GPS track / `repairDriveEndpoints` in `internal/api/drives/detail.go`) but never re-resolve `end_place`. No live finder selects the stranded rows: `FindMissingAddresses` only selects empty labels, `FindStalePlaceLabels` only selects `place_label_version < 3` (affected rows carry the current version), and `RepairStalePlaceLabels` marks a drive current when only one endpoint resolves, stranding a failed end lookup. Checked and cleared: places cache is keyed by coordinates within 50 m (`internal/database/admin/places_cache_repo.go` `FindNearby`), providers geocode the coordinates they are handed (`internal/geocoding/`), and the frontend reads `startAddress`/`endAddress` independently (`JourneyDetailsPanel.tsx`, `web/src/types/driving.ts`) — the API returns the duplicated stored label. The drive detail response also had no guard against returning an end label identical to the start label while the endpoints are far apart.
+- Next step: investigate Go drive end/address pipeline, reverse-geocoding/address cache, drive API response, and frontend drive detail fields.
+- Fix: start/end addresses from own coordinates; suspect duplicate end label (equal labels, endpoints >0.5 km apart) is suppressed at read/API time so failed/pending end lookup shows unavailable/pending (and coordinates if existing pattern), never start address; partial repair no longer marks drives current.
+- Tests: Go (different coords → different addresses; failed/pending end ≠ start; round trip same; cache key) + frontend (independent start/end rendering incl. unavailable).
+- Data repair: done. `driveaddressrepair.Repairer.Repair` (`internal/driveaddressrepair/repair.go`, also invoked via `TelemetrySessionTracker.RepairDuplicateEndAddresses` at startup) finds drives via `DriveRepo.FindDuplicateEndAddresses` (end label == start label, endpoints >0.5 km apart), re-resolves only the end address from the end coordinates (places cache bypassed, `geocodeRateLimit` pacing, every change logged), is idempotent, and never touches genuine round trips. It also runs at startup from `BackfillAddresses`. Operator command: `go run ./cmd/drive-address-repair -dry-run` (default; lists affected drives and proposed end addresses, writes nothing), then `go run ./cmd/drive-address-repair -dry-run=false` to apply. Not run against production.
+- Repair runbook: build/run the command with the service's config/database environment, run `-dry-run` first and review the logged `old_end`/`proposed_end` rows, then apply with `-dry-run=false`, then re-run `-dry-run` to confirm no affected drives remain.
+- API contract change: none. No field renamed/removed/retyped; a suspect duplicate `end_address` is now returned as null (unavailable) instead of the start address, and the frontend already renders coordinates/unavailable for a null end address.
 
-- Home-energy WIP (21:37Z): `c1ceae7e71` is pushed. Eleven new pure
-  selected-zone/DST regressions first failed against UTC production; all
-  91 affected unit cases and five unchanged route guards now pass after
-  using shared numeric zoned parts, wall-time conversion and civil-day
-  helpers. Tariffs/departures and both historical/projected forecast
-  clocks follow `useDateFormat()`; KPI bounds use the same setting, with
-  exact Tokyo and Los Angeles DST/locale assertions. UTC wire instants,
-  absolute slot durations/24-hour horizons and measured values remain.
-  Persisted v1 numeric clock-hour assumptions retain their values and now
-  follow the active display setting; there is no second stored zone or
-  settings migration. Catalog/fallbacks are synchronized. Actual
-  TypeScript, full unchanged lint, six zero directory audit categories,
-  energy-hook routing and the hermetic build pass. **Exact next:** finish
-  native supported browser contracts after adding explicit UTC arguments
-  to their original seeded-clock expectations, run the new forecast-memo
-  rerender regression/affected ESLint, then commit/push this coherent
-  phase. Latest graph is 8 pending/2 skip, not green. No baseline changes.
-- Home-energy phase gate (21:42Z): all **92/92** affected units now pass,
-  including mounted tariff/departure and both forecast-memo zone-change
-  regressions with unchanged scenario/source bytes and absolute instants.
-  Native supported browser contracts pass **8/8** after explicitly threading
-  their original seeded UTC clock through expectations; canonical exported
-  plans retain the original shape. The unchanged responsive/timezone guard
-  passes **5/5**, and both wrappers report zero proxy escapes. Final actual
-  TypeScript and affected ESLint pass. Full unchanged lint, directory audit,
-  energy-hook verification and build passed on the final production code.
-  Source lengths/section counts remain intact: KPI 127/127, controls
-  207/207, vehicle controls 125/125, hook 346/351, defaults 155/161,
-  forecasts 218/218; the page still renders all ten original sections.
-  **Exact next after push:** inspect current CI, then trace and fix the
-  remaining signal-entropy/TCO/schema-description roots before the larger
-  utilization/export/sleep/insurance/automation calendar models. Latest
-  current-head CI is still queued (8 pending/2 skip); no green claim.
-  Evidence: `r32-local-clock-red`, `r32-home-route`, `r32-home-audit`,
-  `r32-lint`, `r33-home-supported`, `r33-eslint`, `r35-home-unit`,
-  `r35-tsc`, `r35-eslint`. No Windows mirror or baseline changes.
-- Three-route phase gate (21:52Z): home-energy is pushed as `000dcd1095`.
-  Entropy already formatted its axis/table/tooltips with the selected
-  clock; removed only its redundant zone-as-range metadata, retaining the
-  actual unit, every raw instant and reactive selected-zone formatting.
-  TCO still discloses source-calendar/absent-timezone metadata; it does not
-  invent a selected-zone grouping or mention literal zone names in that
-  negative disclosure. Grafana's six `timestamptz` reference descriptions
-  now describe absolute instants through six catalog-backed translations.
-  All 33 ordered columns, types, identifiers, 50 reference codes, manual
-  editor/copy/persistence and propose-only AI behavior remain unchanged;
-  no backend catalog, SQL, storage or exported panel changed.
-  Four new assertions failed before the fixes; **65/65** affected unit/
-  AI-route cases and **15/15** unchanged five-width route guards now pass,
-  escapes=0. Each production audit reports six zero categories plus actual
-  TypeScript pass; affected ESLint, full unchanged lint and the hermetic
-  build pass. Catalog splitting must finish before building (an initial
-  concurrent check correctly failed; the sequenced build passed).
-  Hook URLs match the router; lines/section markers are preserved:
-  entropy 326/326 and 10/10, Grafana 541/543 and 11/11, methodology 56/56
-  and 3/3. Latest graph: **32 pass / 158 pending / 3 skip**, incomplete.
-  **Exact next after push:** selected-zone monthly milestone grouping,
-  then full-range automation trend bucketing (backend aggregate, never
-  the currently loaded rows), followed by utilization/export/sleep/
-  insurance models. Evidence: `r36-zone-captions-red`, `r36-zone-unit`,
-  `r36-eslint`, `r37-build`, `r37-source-audit`, `r37-three-routes`,
-  `r37-lint`, `r37-hooks`. No baseline or mirror changes.
-- Milestone phase gate (22:06Z): three selected-calendar boundary cases
-  cover UTC, Los Angeles and Tokyo, with opposite month/date shifts.
-  Monthly bucketing now uses the selected zone; its UTC-anchored month
-  markers remain calendar labels rather than observed instants. Actual
-  observation/forecast dates use the shared selected formatter.
-  Four assertions failed before implementation; all **80/80** affected
-  model/page/definition/control/brief cases now pass. Mounted rerenders
-  prove changed months without changing the frozen clock, calibration
-  owner, raw rows, cumulative totals or pace evidence. The unchanged
-  five-width route guards pass **5/5**, escapes=0. Source audits report
-  six zero categories and actual TypeScript pass on the component group,
-  model and page; full unchanged lint, affected ESLint, drive-hook routing
-  and hermetic build pass. All eight original sections remain. Source
-  lengths: page 225/227, monthly chart 201/201, methodology 219/219,
-  display helper 42/43, model 655/665. No storage, API or baseline change.
-  **Next before push:** commit the separately generated catalog receipt
-  repair below, then continue full-range automation calendar semantics.
-  Evidence: `r38-milestones-red`, `r38-milestones-unit`, `r38-tsc`,
-  `r38-eslint`, `r38-build`, `r39-milestones-route`, `r39-source-audit`,
-  `r39-lint`, `r39-driving-hooks`.
-- Catalog receipt phase gate (22:07Z): the latest current-head graph is
-  **3 fail / 70 pass / 121 pending / 3 skip**. All three failing unit
-  shards share the same root: frozen catalog counts are exactly six low
-  after the six reviewed/translated Grafana timestamp descriptions.
-  No unrelated failing unit root was found in those logs. Used only the
-  sanctioned `i18n-trio-checkpoint.mjs --typed --checkpoint-catalog` and
-  combined generator: **41,893** used keys verified, other-language keys
-  preserved, original fixture exclusions/assertions unchanged. The seven
-  mechanically regenerated count/hash checkpoints now pass all actual
-  **7,728/7,728** frozen cases. Final actual TypeScript passes. No new
-  exception/baseline/allowlist or manual fingerprint edit.
-  Milestone work is committed as `3117522989`; **exact next:** commit the
-  seven receipt files and push both verified commits, refresh CI, then
-  implement full-range automation day grouping with a validated selected
-  timezone (current SQL hardcodes UTC; do not regroup a page in the UI).
-  Date-only bounds need a truthful contract; absolute header bounds must
-  remain exact. Existing shared `httputil/date_range.go` only implements
-  legacy UTC bounds, not zoned civil-day parsing. No backend edits yet.
-  Evidence: `r39-unit7-failed`, `r40-unit1-failed`, `r40-unit3-failed`,
-  `r40-catalog-checkpoint`, `r40-frozen-unit`, `r40-tsc`.
+## Verification
 
-- Automation-history phase gate (22:19Z): `a1723ab9c5` is pushed; latest
-  incomplete graph is **45 pass / 148 pending / 3 skip**, with no failures
-  observed yet. Both history endpoints now accept optional validated
-  `timezone` for the full-range SQL daily aggregate, bound as a parameter
-  after the existing filters. Default remains UTC. Contract decision:
-  legacy date-only bounds retain UTC semantics; RFC3339 bounds remain exact,
-  including the header's selected-zone/DST instants. The new parameter
-  changes grouping only, never stored timestamps, list rows or summary
-  populations. OpenAPI documents both routes and resolves every new
-  parameter/response reference; no generated OpenAPI client exists here.
-  The page threads the effective shared clock through the typed hook and
-  cache key. Returned civil day keys use the shared day-key formatter;
-  the chart truthfully says daily execution counts, without shifting keys
-  or hiding the previous UTC-only model. Mounted page/hook tests prove a
-  zone-only change refetches/rekeys while preserving original bounds and
-  source bytes. Backend parser/query tests cover DST bounds, both sides of
-  UTC, invalid zones, parameter binding and unpaginated aggregate filters.
-  Both affected Go packages pass with `-race`; **101/101** frontend units,
-  **4/4** native width/theme contracts and **5/5** unchanged route guards
-  pass, proxy escapes=0. Actual TypeScript, six zero source-audit counts,
-  full unchanged lint, affected ESLint, hook routing and hermetic build
-  pass. Sanctioned catalog generators verify 41,893 keys and preserve
-  other languages; all **7,728/7,728** strict frozen cases pass after
-  mechanically accounting for the one verified translation addition.
-  Source preservation: page 205/207, trend 71/68; panel/chart counts remain
-  1/1 in both. No schema, storage, Windows mirror or baseline change.
-  Evidence: `r42-automation-go`, `r42-automation-unit`, `r42-tsc`,
-  `r43-catalog-checkpoint`, `r43-frozen-unit`, `r43-automation-audit`,
-  `r43-automation-hooks`, `r43-lint`, `r43-eslint`, `r43-build`,
-  `r44-history-browser`, `r44-history-route`, `r44-checks`.
-  **Exact next:** commit/push this verified phase, refresh the current-head
-  CI graph, then fix selected-calendar utilization accounting. Continue
-  data-export bounds, sleep-efficiency accounting and insurance overnight
-  grouping afterward; use real failing CI artifacts for any Windows work.
-
-- Utilization phase gate (22:30Z): automation history is pushed as
-  `968047ce31`. Nine new utilization regressions first failed against the
-  UTC model; the selected calendar now owns daily/monthly/weekday/week
-  attribution and duration splitting at actual local midnight. Spring and
-  fall days retain their true 23/25-hour elapsed durations, complete DST
-  weeks are not mislabeled partial, and skipped civil dates add no phantom
-  observation. Calendar month markers remain labels, not source instants.
-  Required explicit model timezone plus optional exact paired bounds
-  replace the page's containing-UTC-envelope workaround. Rolling bounds
-  remain exact; malformed/one-sided bounds fail closed. Source measures,
-  null coverage, clipping, populations and frozen-clock behavior remain.
-  A mounted zone-only rerender proves changed calendar denominators with
-  unchanged rows, bounds, elapsed time, measured totals and as-of clock.
-  All **112/112** affected model/page/table/coverage/KPI cases and **5/5**
-  unchanged five-width route guards pass, escapes=0. Actual TypeScript
-  and three source audits each pass with six zero categories; full
-  unchanged lint, affected ESLint, driving-hook routing and hermetic
-  build pass. Catalog copy now describes the actual selected calendar;
-  approved generators preserve other languages and all **7,728/7,728**
-  strict frozen cases pass. Removed the duplicate inline methodology
-  scope, retaining its one localized details-drawer disclosure; summary
-  scope dates likewise use the shared civil-day formatter. All eight
-  sections remain. Source lengths: page 290/253, model 903/914,
-  methodology 346/336. No API, storage, schema or baseline change.
-  Latest incomplete graph: **52 pass / 138 pending / 3 skip**, no
-  failures observed yet. Evidence: `r45-utilization-red`,
-  `r46-tsc`, `r47-utilization-unit`, `r47-utilization-audit`,
-  `r47-checkpoint`, `r48-frozen-unit`, `r48-eslint`, `r48-lint`,
-  `r48-build`, `r49-utilization-route`, `r49-driving-hooks`, `r49-checks`.
-  **Exact next:** commit/push utilization, then fix queued data-export
-  absolute bounds, followed by sleep-efficiency and insurance overnight
-  semantics. Keep refreshing CI and prioritize newly failing roots.
-
-## CI-until-green continuation (2026-10-25, after `3ca29a42ad`)
-
-- Section 0: fetched/switched/pulled the expected branch; worktree clean.
-  The existing CLI is this session's parent; preserved IDE-owned Copilot,
-  Playwright test-server and TypeScript processes. No orphan runner found.
-  The latest user request overrides the ten-fix stop below: checkpoint and
-  push, but continue until every check passes.
-- Initial current-head observation: 15 failing / 129 passing / 53 pending /
-  3 skipped, still in flight. CI `40213226711`, quality `40213226800`.
-  Exact evidence: `resume-3ca-checks.json`, `resume-ci-failed.log`,
-  `resume-unit-3.log`, and `resume-responsive-*.log` in the existing CI
-  continuation evidence directory.
-- Grouped roots: dashboard redesign assertions plus real energy/battery
-  chart clipping (largest group); a real ToastProvider timeout surviving
-  unmount causes unit shard 3 and three dependent failures despite all its
-  11,692 tests passing; obsolete date/zone drawer assertions across
-  operations, notifications, seasonal driving and charge-advisor contracts;
-  missing fleet-posture contract; live-signal sparkline horizontal overflow;
-  remaining route timezone guards. Exact deduplicated widget evidence:
-  `resume-root-summary.txt`.
-- Round 0 is now complete: **32 failing / 168 passing / 3 skipped**.
-  Bulk quality-log retrieval failed with HTTP/2 cancellation and HTTP/1
-  unexpected EOF; bounded per-job log retrieval works and is the recovery
-  path. Do not repeatedly download the full archive.
-- Fix 1 verified subset: bounded EnergyStats/BatteryDegradation headline
-  allocation repairs real clipping; DriveEfficiency retains its measured
-  mean reference, numeric axis, exact source values and null rolling series.
-  Four native mean-line proofs require y=241.37931034482762 and the exact
-  Avg: 241.38 Wh/km label, palette token, full wire record and observer scope.
-  Its static rolling key appears only with a measured rolling series.
-  Updated exact dashboard counts, version metadata, healthy-service states,
-  dynamics peaks and associated readout units instead of obsolete precision.
-  Speed-heatmap binding requires the actual absent limit parameter, matching
-  its existing request and explicit unit contract; no request
-  or fixture changed and every full-wire/observer invariant remains.
-- Verification: 55 chart unit tests, all 7,728 frozen receipt tests and actual
-  final TypeScript/affected ESLint pass. All three source audits report six
-  zero counts and TypeScript pass; energy hook paths match. Battery browser
-  cases pass 4/4, system/telemetry/charging cases pass 12/12, escapes=0.
-  Source lines 257->260 / 164->166 / 262->286; all three chart frames remain.
-  Sanctioned generators refresh only verified receipts; no baseline change.
-  Evidence: `r4-widget-final-unit`, `r4-final-frozen`, `r4-final-tsc`,
-  `r4-final-eslint`, `r4-audit`, `r4-final-build`, `r4-system-confirmed` logs,
-  and the four `drive-reference-native-contract.json` artifacts.
-- The broader energy/driving groups are NOT passing yet: each still has
-  four failing cases, with zero escapes. Newly exposed roots are CostForecast
-  period-total/header allocation, speed-profile/regen readout precision,
-  coach recommendation vs old score, and missing telemetry readout/geometry.
-  The separate wide-dynamics distribution and motor-history cases also remain.
-  Continue those precise widget and date-contract groups. Full-suite
-  validation remains exclusively CI-owned; inspect the next pushed head.
-- Fix 2: ToastProvider now owns dismissal timers in its effect lifetime,
-  including dismissal, five-toast eviction and unmount cleanup. Absolute
-  deadlines prevent newer toasts extending existing lifetimes and survive
-  StrictMode effect replay. Three new lifecycle assertions fail before
-  the fix; all 41 Toast/actual admin BackupRestore tests now pass.
-  Actual TypeScript and the entire existing lint chain pass. The source
-  audit honestly reports the two unchanged pre-existing raw buttons and
-  zero in its other five violation categories; no markup was changed.
-  Source lines 238->244, no panel/chart/API/hook/baseline changes.
-  Evidence: `r5-toast-red`, `r5-toast-page-unit`, `r5-toast-audit`, `r5-lint`.
-  Next step: restore real compact drive telemetry and wide distribution,
-  bound CostForecast's chart, then fix the remaining exact readout/date
-  contracts. At 6092735f15 CI is still in flight: 0 fail/14 pass/176 pending/
-  3 skipped; do not count pending jobs as an improvement from round 0.
-- Fix 3: CostForecast now reserves content-sized headline height and bounds
-  its chart allocation. The exact browser headline binds $250.00 to the
-  complete two-month horizon (120+130), not the obsolete first-month $120.
-  All nine existing unit cases and all four energy adoption cases pass,
-  including unchanged allocation/Y-axis guards and zero proxy escapes.
-  Actual TypeScript, affected ESLint and all six source-audit counts pass.
-  Source lines 236->238 and the chart frame is retained.
-  Evidence: `r6-cost-unit`, `r6-cost-build`, `r6-cost-audit`, `r6-cost-eslint`,
-  `r6-energy`. Related telemetry changes share the same adoption file and
-  are being verified before the next coherent commit/push.
-- Fixes 4-7 are verified:
-  (4) DriveTelemetry has real latest speed/power, null/loading/error/recovery
-  states and two numeric axes; preserves its interactive series control.
-  (5) Wide dynamics restores the genuine independent source, correctly
-  counting signed G magnitudes in 12 bins rather than treating raw G readings
-  as counts. Narrow layouts keep that request disabled; refresh/recovery
-  and retained samples stay independent of the measured style/peaks.
-  (6) SpeedProfile restores measured SI-watt average power beside sample
-  frequency, with null/signed/unit conversion, a true second axis/curve,
-  exact 3.00/9.60 kW source rows and 20%/80% frequency rows. Existing catalog
-  aria copy already promises both; the caption explicitly rejects an
-  energy-efficiency inference. Preserve interactive series hiding, not
-  a static-key waiver.
-  (7) MotorHistory bounds both real curves and caption, includes torque in
-  its accessible table/tooltips, retains torque-only history and calculates
-  its temperature domain from numbers, never localized tick strings.
-- Current browser evidence: driving 4/4, wide dynamics 4/4, motor 8/8 pass,
-  plus two strict power-curve/table checks; every wrapper reports escapes=0.
-  All 80 tests in six affected suites passed; the added telemetry loading
-  case also passes in its final 9-test suite. All 7,728 frozen receipts pass.
-  Four actual source audits show six zero counts and TypeScript pass; both
-  driving and vehicle hook domains match registered routes.
-  Native heatmap proof now reconciles all 168 accessible rows, 167 unknown
-  speeds and the one exact 64.80 km/h (1 drive) SVG cell, preserving the
-  deliberately caption-free design and the original complete wire record.
-  Source lines/shells/charts: Cost 236->238/2->2/1->1;
-  telemetry 275->304/2->2/1->1;
-  dynamics 146->221/1->1/0->1; speed 321->361/2->2/1->1;
-  motor 292->297/2->2/1->1. Nothing was removed or waived.
-- Final gate passes: shared VisuallyHidden and real interactive legend/hide
-  wiring satisfy the unchanged guards. The entire existing lint chain,
-  18 final telemetry/speed unit cases, 7,728 frozen tests and rebuilt hermetic
-  mock bundle pass. The two final wide driving browser cases also pass,
-  with exact measured power/table/axis proofs and zero proxy escapes.
-  Both final source audits report all six counts zero and actual TypeScript
-  pass. No guard, suppression, tolerance or baseline changed.
-  Evidence: `r8-final-gate`, `r8-final-driving`, `r8-final-telemetry-audit`,
-  `r8-final-speed-audit`, `r8-final-widget-unit`,
-  `r8-source-audits`, `r8-receipts-build`, `r8-driving`, `r8-wide-dynamics`,
-  `r8-motor`, `r8-power-source`, `r8-shared-loading-validation`.
-- Head 3206414200 at 18:25Z: **27 failing / 171 passing / 1 pending /
-  3 skipped**; frontend coverage merge passes. This graph is not final and
-  does not include the unpushed chart phase.
-- That head's completed graph is **28 failing / 172 passing / 3 skipped**,
-  versus round 0's 32 failing / 168 passing / 3 skipped. The chart phase
-  above has not yet been evaluated by CI. Exact graph:
-  `r8-final-prepush-checks.json`.
-- Chart phase pushed as `2d7cd8f906`; its CI graph is newly in flight.
-- Fix 8: operations drawers require the exact localized successful-import
-  timestamp `Aug 5, 2026, 07:00:00 AM` and reject its raw ISO text/title.
-  All eight focused service-report and real eight-day catalog-age cases
-  pass across both widths/themes. Source trust, official-period controls,
-  freshness/retention and recovery contracts remain intact.
-- Fix 9: seasonal coverage requires the real included-row metric (1), no
-  duplicate timezone metric, and exact first/last included dates formatted
-  in UTC from the fixture source. The drawer retains its UTC source scope,
-  metric label and all published values. All four cases pass, preserving
-  excluded/unknown/model-fit accounting, exact uncapped 1,000-row request,
-  focus restoration and geometry. The first diagnosis exposed one obsolete
-  prose caption; it is replaced by the actual row label plus exact count,
-  not by an unbound presence assertion.
-  Both test files pass affected ESLint; every browser wrapper reports zero
-  escapes. No production date, API, storage, i18n or baseline changed.
-  Evidence: `r9-catalog-date`, `r9-seasonal-final`, `r9-date-eslint`.
-- Date-contract fixes 8/9 pushed as `f943f3cde4`.
-- Fix 10: day-ledger interval provenance was genuinely absent. A narrow
-  optional analysisPeriod prop threads through the existing brief/narrative
-  composition to CalculationDetails' native Analysis period row. It now
-  shows exact localized authoritative half-open bounds, explicitly end
-  exclusive, or the existing unavailable-bounds message. No legacy API,
-  raw ISO or duplicate timezone caption is restored.
-  Three new assertions failed before production repair; all 54 day-summary
-  and shared brief/narrative/calculation tests pass, including a 23-hour
-  Los Angeles DST day with unchanged UTC wire instants.
-- All 28 focused day-ledger source/refresh/loading/retry/navigation cases
-  and all eight header layout cases pass, escapes=0. Native Analysis period
-  definitions require exact bounds and reject raw ISO. Header cases retain
-  geometry/focus/copy checks and now additionally require exact vehicle 7,
-  Buenos Aires timezone and day parameters through navigation/manual/today
-  requests instead of a removed duplicate zone badge. API fixture payloads
-  are unchanged; only expected display constants are localized.
-  Full unchanged lint, rebuilt mock bundle, 7,728 frozen tests, all three
-  six-zero-count production audits and actual TypeScript pass. The existing
-  day-log hook matches router.go. Canonical translations are unchanged; the
-  sanctioned split/usage generators expose two existing keys. None of the
-  three changed production files is in the frozen producer manifest.
-  Lines/panels: Brief 375->377/1->1; NarrativeDetails 246->249/0->0;
-  DaySummary 116->122/1->1, no chart removed. Evidence: `r10-day-bounds-red`,
-  `r10-day-bounds-final-unit`, `r10-day-gate`, `r10-day-contract`,
-  `r10-day-header`, `r10-frozen`, `r10-*-audit`, `r10-day-hooks`.
-- Corrected diagnosis: responsive 49 contains 115 route samples, all with
-  tzIso/tzZones/tzDupes=0. Its failures are day-ledger contracts, not a
-  remaining route-zone violation; do not change those passing guards.
-- At 18:55Z, pushed head f943f3cde4 has **1 failing / 97 passing /
-  99 pending / 3 skipped**, not a final graph. First current failure:
-  responsive-26, run `40222371592`, job `121257103490`. The day-ledger phase
-  has not yet been evaluated by CI. This ten-fix checkpoint must be pushed,
-  then continue unattended.
-- Day-ledger fix 10 pushed as `55fe6605c6`.
-- Fix 11: the actual responsive-26 root is the strict cost-forecast source
-  query, not notifications. Its established hook now resolves the saved
-  timezone; the contract requires exactly months=6, vehicle_id=7 and
-  timezone=UTC. No request keys are ignored. All three focused mixed/null/
-  measured-zero cost browser cases pass, retaining exact free-session,
-  unknown-vs-zero, cost/energy, source-ledger and drawer proofs; escapes=0.
-  Affected ESLint passes; no production code or fixture response changed.
-  Evidence: `r11-responsive26`, `r11-cost`.
-- Fix 11 committed as `f6ab2f3f2b`; it will accompany the next coherent push.
-- Fix 12: the advisor directory really still rendered raw business-day
-  keys. It now uses the shared formatDayKey boundary without changing its
-  seven local dates, weekdays, daily assumptions, projections or ranking.
-  Both LA/Tokyo regressions fail before production repair; all 58 page
-  tests now pass after allowing the real entry animation to settle.
-  Existing exact-date assertions are localized, not removed.
-  Supported browser contracts require the entire exact Dec 5, 2025 –
-  Jun 2, 2026 history-window caption, reject raw date keys/redundant UTC,
-  and verify all seven exact projected dates alongside their actual SoC
-  values. All eight supported-history/live-zero/stale/recovery/reserve-floor
-  cases pass, escapes=0. Full unchanged lint, actual TypeScript/six-zero
-  source audit, 7,728 frozen tests and rebuilt mock bundle pass.
-  Source 75->77 lines, section 1->1, no charts/API/storage/catalog or
-  baseline changed. Evidence: `r12-advisor-date-red`, `r12-advisor-final-unit`,
-  `r12-advisor-gate`, `r12-advisor-audit`, `r12-advisor`, `r12-frozen`.
-- Head 55fe6605c6 at 19:09Z is **0 failing / 73 passing / 120 pending /
-  3 skipped**. It has not evaluated fixes 11/12; this is NOT a completed
-  improvement from the last final 28-failure graph.
-- Fix 12 pushed as `fd3c156153`, together with cost-query fix 11.
-- Fix 13: notification activity now retains its exact requested half-open
-  interval in the existing native Analysis period row, separately from its
-  compact calendar scope. Both bounds use the shared selected-zone
-  formatter; end-exclusive semantics and actual UTC request parameters
-  remain unchanged, including when the report is unavailable.
-  Three regressions fail before production repair; all 16 report unit
-  cases pass, including the 23-hour Los Angeles DST window. All eight
-  focused loaded/unavailable browser cases pass with zero proxy escapes,
-  exact request-bound displays, unknown metrics and source shells intact.
-  Actual TypeScript, affected ESLint, full unchanged lint chain and
-  hermetic build pass; the production audit reports six zero counts and
-  the notification hook URLs match registered routes.
-  Source 174->178 lines; all nine panel/chart/brief sites remain.
-  One canonical English bounds key and its generated split/usage entries
-  are added. Sanctioned generators update seven catalog-size/hash receipts
-  mechanically; all 7,728 frozen tests pass without removed assertions,
-  handwritten hashes, suppressions, guard or baseline changes.
-  Evidence: `r13-notification-red`, `r13-notification-unit`,
-  `r13-notification-audit`, `r13-notification-hooks`,
-  `r13-notification-gate`, `r13-notification-browser`, `r13-frozen`.
-- Head fd3c156153 at 19:20Z is **0 failing / 50 passing / 142 pending /
-  3 skipped**, still incomplete. Do not compare this with the completed
-  28-failure graph as a final improvement.
-- Fix 13 pushed as `bc841f3b79`.
-- Fix 14: a real history failure was rendering its entire retry panel in
-  the fixed 56/80px sparkline track. Recovery and retained-history warnings
-  now span the whole row; the trend icon stays in its own first-row track.
-  Current measurements, error detail, retry actions and retained curves are
-  preserved, not clipped or hidden. Both compact/wide new regressions fail
-  before production repair; all 30 signal widget unit cases pass.
-  The unchanged browser guard reproduced exactly four 688/678px overflows.
-  After repair all 121 widgets pass all six min/default/large view/edit
-  configurations, with no missing widgets, header failures, overflow or
-  proxy escapes. This is one related browser spec, not a local full suite.
-  Actual TypeScript, six-zero-count audit, complete unchanged lint,
-  hermetic rebuild, both hook-domain route verifiers and all 7,728 frozen
-  contracts pass. Source 276->281 lines, shell and plot sites 2->2.
-  No translation, receipt, tolerance, guard or baseline changes.
-  Evidence: `r14-overflow-before`, `r14-overflow-unit-red`,
-  `r14-overflow-unit`, `r14-overflow-audit`, `r14-overflow-gate`,
-  `r14-signal-hooks`, `r14-frozen`, `r14-overflow-final`.
-- At 19:34Z, bc841f3b79 is **0 failing / 79 passing / 115 pending /
-  3 skipped**, still incomplete rather than green.
-- Fix 14 committed as `b4c9429ef2`.
-- Fix 15: the dashboard layout contract still selected the removed
-  fixed FleetOperationsBrief/taxonomy instead of the redesigned widget.
-  Both widths now require the real fleet-posture widget, exact verified
-  1/1 headline, native 100% meter bounds/text, Aurora's native definition
-  row and live-state/active labels, and its exact polite announcement.
-  The old fixed brief, taxonomy and workflow chrome must remain absent.
-  The browser clock is tied to the fixture batch's own `now`, not today's
-  wall clock: the fixed August observation correctly becomes unverified
-  in October otherwise. No response payload or production trust logic was
-  changed. Both 390/1440px cases and affected ESLint pass; proxy escapes=0.
-  Evidence: `r15-fleet-browser`, `r15-fleet-final-browser` diagnostic
-  logs, `r15-fleet-native-browser` and `r15-fleet-eslint`.
-- Fixes 14/15 pushed through `7fbfb8a4cc`.
-
-### Required consecutive-failure handoff (2026-10-25 19:41Z)
-
-- The latest user's stop condition fired: two consecutive bounded browser
-  tool calls failed (`355` signal catalogue, `356` workspace catalogue).
-  Stopped starting implementation work; preserve the incomplete fixture
-  repair in an explicitly named WIP commit, update state, push and hand off
-  under section 0b. This is not a completed fix or an all-green claim.
-- Last verified implementation head is `7fbfb8a4cc`, including notification
-  interval provenance, full-row signal history recovery and the native
-  fleet layout contracts described above.
-- **WIP, verify first:** `web/e2e/dashboardCatalogueRemainingFixtures.ts`.
-  The related signal/tire group originally failed all four width/theme
-  cases because five actual one-hour history requests were unmatched:
-  BatteryLevel, ACChargingPower, InsideTemp, OutsideTemp and RatedRange.
-  The WIP supplies those precise typed SI sources, exact hours=1 request
-  checks, matching current/available values, and native value/curve
-  assertions. It preserves Soc and charging-schedule settings. No generic
-  unmatched-request exemption or production API change was added.
-  A missing catalogueWire import caused the first repair attempt to fail;
-  that import is now corrected. Affected ESLint and actual frontend
-  TypeScript pass, but TypeScript does not cover these browser-only files.
-- The subsequent single 390px/light signal case now stops at the unchanged
-  `dashboardCatalogueChargeHistory.ts:152` source-observer guard:
-  `Exactly one source component must own the exact charge observer key`,
-  expected one binding, got zero. Wrapper proxy escapes=0. Diagnose the
-  exact observer owner/key and saved native artifacts; do not remove the
-  guard, ignore request parameters or count this case as passing.
-  Evidence: `r16-signals-before`, `r16-signals-final` (missing-import
-  diagnosis), `r16-signals-focused` and their isolated result directories,
-  plus `r16-signals-eslint` and `r16-tsc`.
-- The separately diagnosed 390px/light workspace case still requires an
-  obsolete Verified listitem in `assertRemainingContent`'s fleet-posture
-  branch. The actual widget uses WidgetBigNumber and a native definition
-  list, as proved by the passing fix-15 layout cases. Update that contract
-  to require the exact native verified fraction, coverage and real vehicle
-  evidence, rather than restoring the deleted taxonomy/listitem chrome.
-  Evidence: `r17-workspace-before`; escapes=0, case is NOT passing.
-- Pre-handoff-push graph for `7fbfb8a4cc` at 19:41Z:
-  **0 failing / 26 passing / 164 pending / 3 skipped**. It is incomplete,
-  not an improvement from the last completed 28-failure graph and not
-  green. `r17-handoff-checks.json` preserves the exact observation; the
-  WIP/documentation push will have a new graph.
-- All owned Bash/browser/build commands are completed; no running helper
-  or created worktree remains. IDE-owned tools were preserved. Windows
-  mirror/baselines, workflows and tolerances are unchanged.
-- Exact next step: verify/fix the WIP signal source-observer binding first,
-  then replace the workspace catalogue's obsolete native selectors.
-  Run the four signal/tire and four workspace cases with retries=0,
-  timeout 20m and zero proxy escapes; also check the charging-strategy
-  consumers of the shared signal fixture. Reuse the existing hermetic
-  build unless production changes. Resume fresh PR checks, address actual
-  remaining sleep/home-energy/CI roots and continue until green.
-
-## Mandatory ten-fix handoff (2026-10-25 16:43Z)
-
-- Ten fixes are complete in this continuation; stop here per section 0b.
-  Latest implementation commit: `f57f163381`. The final documentation
-  checkpoint accompanies `065314d27c`, `664b02a0c8` and `f57f163381`
-  in the final push bundle.
-  PR #202 is **not green**; full-suite validation remains CI-owned.
-- Fix 10 formats Locations scope and both Parking scope/methodology bounds
-  through the existing selected-zone date layer. API UTC instants, range
-  arithmetic, inclusive/exclusive semantics and source coverage are unchanged.
-  Three new regressions failed before the production change; all four
-  affected suites now pass 77/77, covering Los Angeles, Tokyo and saved
-  German/Berlin formatting plus unchanged request bounds and source summaries.
-  The existing Berlin assertion now requires both exact localized boundaries
-  and rejects raw ISO instead of demanding the old raw timestamp.
-- Final verification: actual TypeScript and the complete existing lint/audit
-  chain exit 0. All three seven-category production audits report six zero
-  violation counts and TypeScript pass; Locations/Driving hook URLs match
-  registered routes. Both unchanged 1280px route guards pass with
-  tzIso/tzZones/tzDupes=0 and wrapper proxy escapes=0. Seven existing frozen
-  receipt suites pass 7,728/7,728 after serial sanctioned generators and mock
-  rebuild. Source lines 549->549, 127->129, 124->124; panel/chart section
-  counts stay 1/1/0. No translations, API contracts or baselines changed
-  in this tenth fix.
-- Evidence remains in the CI continuation directory below:
-  `fix-10-window-red.log`, `fix-10-window-unit.log`, `fix-10-tsc.log`,
-  `fix-10-eslint.log`, `fix-10-audits.log`, `fix-10-full-lint.log`,
-  `fix-10-frozen-unit.log`, `fix-10-mock-build.log`,
-  `fix-10-route-guard.log`, and both `fix-10-*-hooks.log` files.
-- Latest graph for the previously pushed `bfecead853`: **8 failing /
-  134 passing / 53 pending / 3 skipped**, still in flight, not a completed
-  improvement from round 0's 42 failures. Failures: responsive shards
-  9/12/13/26/27/31/32/47. CI `40211130150` and quality `40211129921`
-  describe that older head; discover the new head's runs after this push.
-  `round-3-handoff-checks.json` and `round-3-handoff-workflows.json` preserve
-  the exact observation. Completed-job logs can be captured while the parent
-  workflow is running using `gh api --allow-escape-sequences
-  repos/ev-dev-labs/teslasync/actions/jobs/<job-id>/logs > <session-log>`;
-  strip ANSI only when reading bounded summaries. The ordinary full-run
-  `gh run view --log-failed` is unavailable until that workflow completes.
-- **Exact next step:** start section 0, inspect the newest head's
-  `gh pr checks 202`, then group its completed failures using bounded logs.
-  A concrete remaining root in responsive-32 is four operations-brief cases
-  in `e2e/operationalbrief-contracts/operations.smoke.spec.ts` (lines 290/380):
-  the service-report/catalog-age drawer locator still demands the raw title
-  `2026-08-05T07:00:00.000Z`. Inspect the real shared date output and preserve
-  exact source-age/recovery semantics when repairing the contract; do not
-  weaken it to substring or presence-only checks. Evidence:
-  `round-3-responsive-32.log`. Continue the remaining semantic timezone and
-  dashboard-acceptance roots listed below, targeted locally, full suite in CI.
-  Do not rerun a local replica or count this incomplete graph as green.
-- Windows baseline work is complete: the same six reviewed shards were
-  regenerated once and verified read-only (10/10); the mirror is clean.
-  Do not regenerate those baselines again. Handoff preflight confirms every
-  tracked shell command completed and no preview listens on port 4301;
-  IDE-owned processes were preserved. The documentation commit/push is the
-  only remaining operation before the final WSL clean-tree confirmation.
-
-## CI-driven continuation (2026-10-25, after `ec53fca3b5`)
-
-- User strategy override is now reflected in playbook section 3: local
-  TypeScript/lint and related unit/E2E specs ONLY; CI owns full validation.
-  No full local quality suite or replica. Timeouts require inspection and
-  smaller runs, not another identical run or an early stop.
-- Section 0: expected branch fetched/pulled; clean at `ec53fca3b5`.
-  Removed an empty stale `.git/index.lock` only after confirming no git
-  process owned it. Existing CLI is this session's parent; IDE-owned
-  headless Copilot and Playwright test-server remain user tooling.
-- Round 0: **42 failing / 158 passing / 3 skipped** checks at `ec53fca3b5`.
-  CI run `40198967208`: one stale statistics source assertion causes unit
-  shard 1/8, coverage and aggregate failures. CodeQL reports two test-only
-  incomplete-escaping/sanitization patterns. Quality run `40198967056`:
-  dashboard acceptance/design mismatches, real cost-chart clipping,
-  timezone violations on 23 routes, and six failing Windows visual shards
-  (1,5,10,14,39,56 out of 64). No baseline update has run.
-- Evidence:
-  `/home/atul/.copilot/session-state/d279d214-3d92-4a65-b124-08c71e983561/files/ci-rounds-20261025/`.
-  `round-0-checks.json`, `ci-failed.log`, `quality-failed.log`,
-  `quality-failure-summary.json`, `codeql-check.json`,
-  `codeql-annotations.json`. Read bounded summaries, not entire logs.
-- Fixes 1-3 verified: cost breakdown's full-height headline no longer takes
-  the chart's allocated height (wrapped in a content-sized, non-shrinking
-  flex item); added containment regression. All eight signed/eight-decimal
-  axis geometry scenarios pass unchanged, wrapper proxy escapes=0.
-  Updated the statistics source contract to require the canonical shared
-  efficiency conversion already used by production, not inline legacy
-  multiplication. Removed CodeQL-triggering incomplete regex escaping in
-  the pair-table test using exact accessible names, and strengthened the
-  watch privacy assertion with case-insensitive matching and no script DOM.
-  Five targeted suites: 121/121 tests. Actual seven-category production
-  audit: six counts 0, TypeScript passes; complete lint chain exits 0.
-  Evidence: `fix-1-3-unit.log`, `fix-1-axis-browser.log`,
-  `fix-1-audit.log`, `fix-1-3-lint.log`.
-- Fixes 4-5 verified: departure forecast now consumes the shared selected
-  display zone rather than forcing vehicle mode; user/fixed/vehicle
-  provenance stays truthful and model weekday/evidence agree in conflicting
-  Tokyo/Los Angeles cases. Charge-departure source history bounds/counts
-  move into the existing Review details drawer; identical bounds render
-  once, and retained-source recovery links remain usable there.
-  Departure/model tests pass 61/61. Related/frozen run initially passed
-  8,001 tests with one stale card-face assertion failing; the corrected
-  drawer/recovery suite then passed 9/9. All frozen catalog suites passed.
-  Actual TypeScript and affected ESLint exit 0. Both unchanged 1280px route
-  guard cases pass, tzIso/tzZones/tzDupes=0, wrapper proxy escapes=0.
-  Mock build initially failed its catalog check while generators were
-  updating inputs; serial catalog check and rebuild both exit 0 afterward.
-  Source line counts 190->198, 303->308, 126->126, 119->119, 78->83;
-  panel/chart reference counts unchanged (0/3/0/3/0). Driving and charging
-  hook paths all match router registrations. Sanctioned generators also
-  refresh the CostBreakdown producer receipt missed in the first commit.
-  Evidence: `fix-4-departure-unit.log`, `fix-4-5-targeted-unit.log`,
-  `fix-5-alignment-final.log`, `fix-4-5-mock-final.log`,
-  `fix-4-5-tsc.log`, `fix-4-5-eslint.log`, `fix-4-5-browser.log`.
-  All five actual seven-category production audits report six counts 0
-  and TypeScript pass; full existing lint/audit chain exits 0
-  (`fix-4-5-audits.log`, `fix-4-5-full-lint.log`).
-- Round 1 at `2f6aba7b3d` is IN FLIGHT: 1 fail / 43 pass / 146 pending /
-  3 skipped, not a final reduction from round 0. First observed failure:
-  Windows visual shard 1/64; no snapshots changed yet.
-- Windows mirror again confirmed clean; downloaded ONLY failing visual
-  artifacts (1,5,10,14,39,56/64). All six old/new pairs reviewed: dashboard
-  shards 1/5/10/14/56 differ only in the intended compact quick-navigation
-  tiles (including forced colors); shard 39 differs only in semantic
-  battery-bar palette. Approved for one-time targeted regeneration.
-- Fixes 4-5 pushed at `d2c6d9f212`; round 2 has begun (first observation
-  36 pending / 4 pass / 2 skipped; incomplete job graph, not a final count).
-- Fix 6: exact charge observer contracts now require the production
-  20-session chart key/request rather than the obsolete 10-session key.
-  Kept all same-widget/boundary/vehicle/list/full-wire invariants and every
-  negative mutation test; real native observer suite passes 13/13 with
-  proxy escapes=0. Affected ESLint and actual TypeScript exit 0.
-  Evidence: `fix-6-query-binding.log`, `fix-6-eslint.log`, `fix-6-tsc.log`.
-- Windows mirror synced cleanly to pushed `d2c6d9f212`. Its build passes
-  using native `npm.cmd` (plain `npm` resolves to a PowerShell script blocked
-  by the machine's existing execution policy; no policy changed and no
-  dependencies installed). Reviewed-shard regeneration is next.
-- Fix 7: weekly loading/retention/retry/recovery assertions now require the
-  exact redesigned distance AND km unit, instead of obsolete two-decimal
-  substrings; initial/error states also reject the actual zero/value format.
-  All eight theme/viewport/state cases pass, including keyboard retry and
-  real 42->84 recovery; proxy escapes=0, affected lint and TypeScript exit 0.
-  The first anchored title filter selected no tests; the corrected
-  fully-qualified-title filter ran all eight. No case was skipped/deleted.
-  Evidence: `fix-7-weekly-final.log`, `fix-7-eslint.log`, `fix-7-tsc.log`.
-- All six reviewed Windows shards regenerated ONCE, serially (1/5/10/14/
-  39/56 out of 64): 10 tests pass, every wrapper proxy escape count 0.
-  Only the six approved PNG files changed and were copied back; mirror
-  snapshot tree restored clean. Three new files are byte-identical to the
-  reviewed CI actual; the other three differ by only 4/13/4 decoded pixels,
-  with no additional content/layout change. Old/new and generated pairs
-  reviewed. No tolerance/configuration change.
-  Native dependency inspection found pre-existing invalid zod@3.25.76
-  against the synchronized lockfile. Run the permitted single native
-  `npm.cmd ci --legacy-peer-deps`, rebuild, and verify those same shards
-  WITHOUT update-snapshots after syncing the committed images.
-- Then-next step (at seven fixes): commit/push the reviewed images, restore native
-  dependencies as above, then verify them without regenerating; repair
-  remaining exact dashboard readout contracts and semantic timezone roots.
-  Unknown-charger binding now passes; next observed assertion is obsolete
-  detail-energy precision, followed by removed aggregate KPI expectations.
-  Completed fixes this session: 7; final native baseline verification pending.
-- Fix 8 final proof: the one permitted native dependency restore and rebuild
-  both exit 0; `npm.cmd ls --depth=0` now exits 0. All SAME six committed
-  Windows shards pass again WITHOUT `--update-snapshots` (10/10 tests,
-  six proxy-escape counts 0). Mirror `git.exe status --short` is empty.
-  Baselines are committed/pushed at `bfecead853`; evidence
-  `windows-restored-dependency-build.log`, `windows-dependencies-final.json`,
-  `windows-verified-{1,5,10,14,39,56}.log`.
-- Fix 9 verified: exact redesigned detail readings expose a REAL wide-card
-  overflow (SVG bottom 568.75 exceeds card bound 552.75). Shared
-  WidgetChartSummary now reserves non-shrinking caption/legend/stat height
-  and gives its chart a bounded flexible slot; no geometry threshold changed.
-  Regression plus both charging-widget suites pass 113/113; all seven
-  sanctioned frozen receipt suites pass 7,728/7,728. Full signed/8-decimal
-  axis matrix and all four Unknown-source cases pass 12/12, escapes=0.
-  Unknown assertions retain full native wire/scope checks and now require
-  exact 42.0 + associated kWh, the single accessible 42-kWh source row and
-  real tooltip/bar, rather than aggregate tiles absent from the redesign.
-  Actual seven-category shared-source audit: six counts 0, TypeScript pass;
-  affected ESLint passes. Shared source 152->153 lines; all three axis/legend
-  branches remain. No request or hook changed. Evidence: `fix-9-chart-unit`,
-  `fix-9-frozen-unit`, `fix-9-contained-browser`, `fix-9-audit`,
-  `fix-9-source-eslint`, `fix-9-mock-build` logs.
-- Then-next step (at nine fixes): remove raw requested-window instants from
-  Locations/Parking display using the selected-zone formatter, with unchanged
-  API bounds; verify, commit/push, then hand off at ten completed fixes.
-  Full CI for `bfecead853` is queued, not green (CI `40211130150`, Frontend
-  Quality Gates `40211129921`); the small currently registered graph is
-  not full-suite acceptance. Latest observation: 4 failures / 46 passes /
-  142 pending / 3 skipped, still in flight. Completed fixes this session: 9.
-
-## Resume verification (2026-10-25, after `354deb1c1f`)
-
-- Section 0: fetched/pulled the expected branch; working tree clean. Stopped
-  the idle CLI from the clean prior handoff; the IDE-owned Playwright test
-  server is user tooling and was not stopped. Windows mirror confirmation:
-  `git.exe -C D:/repos/teslasync status --short` returned no output.
-- Completed result 1: removed redundant zone-name captions from both
-  ClimateControlPage charts and vehicle-detail RecentDrivesSection. Actual
-  dates still use the selected zone through the existing shared formatter;
-  no hooks, API contracts, storage, sections, or calculations changed.
-  Regression tests failed before (2 failures/100 tests), then passed
-  (100/100). TypeScript, focused ESLint and both seven-category audits pass
-  (six violation counts each: 0). Source lines 1602 -> 1600 and 131 -> 130;
-  panel/chart counts unchanged at 14 and 1. Mock build rebuilt; actual
-  `/climate`, `/climate-control`, `/vehicles/7` guard runs at 1280px pass
-  3/3, each with tzIso/tzZones/tzDupes=0; wrapper proxy escapes=0.
-- Evidence for this resume:
-  `/home/atul/.copilot/session-state/d279d214-3d92-4a65-b124-08c71e983561/files/`.
-  Caption regression/build/audit/browser logs use `timezone-*` and
-  `e2e-build-caption.log`.
-- Completed result 2: startup closure reduced from 413,843 to 409,084 gzip
-  bytes (404.1 -> 399.5 KB; unchanged 400 KB budget). Extracted the unchanged
-  repair-scoped query, fleet-setup keys and signal-kind normalizer into
-  synchronous leaf modules; shell consumers no longer pull route-only
-  useDataRepair/useFleetSetup/useSignals implementations. Re-exported
-  existing public names; no request/response contract or timing changed.
-  Private-map production build and the ENTIRE strict `npm run perf:check`
-  exit 0; source maps confirm the three domain hooks leave startup.
-  Five existing focused suites pass 204/204. Changed request-bearing hooks
-  match registered routes (21/2/5/19/5 patterns; extracted helper: zero).
-  Regenerated split catalogs with the sanctioned generator: dataRepair now
-  lives only in the lazy system bundle, not shell plus a duplicate fallback.
-  Catalog-locality suite passes 132/132, including the new exact locality
-  regression. Full lint/audit chain and TypeScript exit 0. Evidence:
-  `startup-final-*`, `startup-hooks-contract.log`, `catalog-locality-final.log`.
-- Completed result 3: reconciled hero E2E against the already committed
-  compact redesign (one meaningful battery meter, textual range/temperature
-  chips, Details navigation). No production readings/actions were removed.
-  Added named accessible groups and explicit Unknown descriptions for
-  missing/non-finite range/temperature readings in BOTH hero surfaces, and
-  a real 44px hit target for the widget Details link. Added six fail-before/
-  pass-after unit regressions; complete hero suites pass 53/53.
-  E2E retains every unknown/zero/regen case, theme and viewport; validates
-  actual SI-derived numbers and signed power on the shared card (compact
-  dashboard intentionally has no power chip), rejects invented meters/
-  obsolete quick actions, and now activates Details by keyboard and checks
-  the rendered destination. Complete matrix passes 34/34, proxy escapes=0.
-  Explicit null/empty detail-endpoint fixtures preserve strict API matching
-  during the newly tested navigation; no matcher was loosened.
-  TypeScript, focused ESLint, both seven-category audits and full lint pass.
-  Source lines 417 -> 430 and 310 -> 314; shell/panel counts unchanged.
-  Reviewed both surfaces' 320px dark and 1440px light screenshots. Windows
-  baselines remain untouched. Evidence: `hero-*` logs and browser screenshots
-  in `web/test-results/` (not committed; later runs may replace them).
-- Completed results 4-8 (section 3 checks):
-  route registry/template freshness, route/scenario contracts and discovery
-  exit 0 (harness 24/24; discovery 2,094 tests in 89 files);
-  Go build and complete `go test -race ./...` exit 0;
-  accessibility 13/13 and Firefox/WebKit 6/6 pass;
-  browser performance exits 0 with 7 passed and 2 flaky (drives/FSD passed
-  on retry). Successful browser wrappers each report zero proxy escapes.
-  TypeScript and split-catalog check also exit 0. Logs:
-  `replica-contracts.log`, `go-build.log`, `go-test-race.log`,
-  `replica-a11y.log`, `replica-performance.log`, `replica-cross-browser.log`.
-- Completed result 9 (INCOMPLETE validation, not a suite pass): bounded
-  full Vitest attempt with four workers was stopped for handoff after
-  approximately 13 minutes. Its last captured completion markers cover
-  423 files / 21,508 tests with no completed-file failure markers; there
-  is NO final full-suite summary. See `full-vitest.log` and
-  `replica-partial-summary.json`. Do not treat this as full coverage.
-- Completed result 10 (INCOMPLETE validation, not a quality gate pass):
-  parallel local quality replica attempts hit repeated 240s operational
-  timeboxes. Shards 1,2,5,6,9,10,13,14 timed out (124); shards 3,7,11,15
-  were safely stopped; 4,8,12,16 never started. No shard completed its
-  wrapper proxy check; NONE is counted passing. All partial logs and
-  isolated artifacts are `quality-N.log` / `quality-N-results/` in the
-  evidence directory.
-- **Section 0b handoff at the requested ten-result boundary and repeated
-  replica-timeout stop condition.** Three verified source repair commits
-  are persisted. No worktrees were created. All session-owned Vitest/
-  Playwright/preview processes were stopped and checked absent; the
-  IDE-owned Playwright test-server remains user tooling. No Windows
-  baselines were regenerated. Full replica remains incomplete, so this
-  handoff push is NOT a successful part/phase gate.
-- Last observed checks before this handoff push (old `354deb1c1f` HEAD):
-  155 pass / 45 fail / 3 skipped. PR #202 is NOT green. After pulling this
-  handoff, inspect checks for the pushed repair HEAD rather than those
-  historical checks.
-- Exact resume: first collect fresh PR failures; then repair the semantic
-  timezone roots listed in "Exact next step" below and any genuine
-  remaining unit/browser roots. Finish the full unit run and all 16
-  quality shards with adequate bounded per-shard time (the 240s attempt
-  here was insufficient; do not change test timeouts/guards). Reuse
-  verified ancillary results only if no intervening changes affect them.
-  Run the section 3 gate, push, then use the CLEAN Windows mirror under
-  section 4 for reviewed old/new comparisons and ONE intended baseline
-  update. Continue until PR #202 green or the next required handoff.
-- Next: repair sleep/departure/energy-orchestrator timezone semantics and
-  charge-departure duplicate timestamps. Full replica remains incomplete;
-  the once-only reviewed Windows baseline update has NOT run.
-
-## Merge-then-fix execution (2026-10-25)
-
-- Prep: recovered the existing Zod 4.6.7 manifest/lockfile upgrade for the
-  Security Scan finding (Zod 3.25.76; fixed version reported as 4.6.6).
-  Adapted geofence lazy localized validation to Zod 4 error callbacks and
-  preserved the alert place-ID validation message. TypeScript, focused
-  schemas (82/82), ESLint, and split-catalog check pass. Full replica is
-  deferred to the combined validation phase requested for this operation.
-- Shared merge: `origin/feat/shared-patterns` at `c2d4ae5cb2` merged without
-  conflicts. Combined/catalog checkpoint and split generators ran against
-  the merged LF sources; all seven frozen suites pass (7,728/7,728).
-  `npx tsc --noEmit` exits 0. Shared modules are retained.
-- Shared merge committed and pushed as `b235484463`.
-- Palette merge: `origin/feat/chart-palette` at `96ad7e99d1` integrated
-  after shared patterns. One DriveStatCards conflict resolved with the
-  shared energy conversion AND new `COLOR.GOOD` token. Preserved both
-  branches' behavior. Aligned 12 case-only fallback discrepancies to the
-  catalog; verified and regenerated 13 producer checkpoints, combined and
-  catalog fingerprints. Extended the catalog generator to verify and
-  regenerate the canonical fixture digest when approved copy changes;
-  updated the neon-help copy fixture to the intended palette wording.
-  No hash was hand-edited. TypeScript exits 0; eight palette/frozen suites
-  pass (7,782/7,782).
-- Palette merge committed and pushed as `11d3fd570c`.
-- Cleanup done: GitHub automatically marked #205 MERGED into this branch
-  after pushing its merge commit (therefore `gh pr close 205` refused);
-  #204 was already CLOSED. Posted the requested exact comment to both.
-  Both shared/colors worktrees had empty porcelain status and zero commits
-  ahead of their origin branches; verified both branches ancestor-merged,
-  then removed both worktrees without force. The pre-existing detached
-  `/tmp/teslasync-palette-base` worktree was not created here and is retained.
-- Combined validation so far: full frontend lint/audit chain exits 0;
-  actual seven-category violations audit reports all six pattern counts 0
-  and TypeScript passes; backend `go build ./...` and `go test -race ./...`
-  exit 0. Route registry/template checks pass for 266 actual routes;
-  E2E route/scenario contracts pass, harness contracts 24/24 pass,
-  discovery lists 2,087 tests in 88 files before the new scanner contracts.
-  Full Vitest was interrupted at the command time limit (exit 130); it
-  did not produce a passing full-suite result.
-- Windows baseline update BLOCKED: mirror status is
-  `?? docs/widget-redesign/`. Section 4 forbids syncing a dirty mirror;
-  no files there were modified and no baselines regenerated. Use Windows
-  CI artifacts until the mirror is clean.
-- New confirmed failure group: Lighthouse startup closure is 404.1 KB,
-  above the unchanged 400 KB budget. Reproduced on merged production build;
-  public AND private-map production builds exit 0; strict private-map
-  performance check fails only that budget (273/432 startup icons; 13
-  feature modules). No budget or threshold changed.
-- Unit conversion worker replaced 17 guarded factors plus one elevation
-  conversion across 16 source files; 78 focused tests passed, including
-  17 new regressions. Five coupled stale palette assertions fixed to
-  explicit shared tokens; affected suites 26/26 pass. Parent verification
-  and generator-only fingerprint regeneration complete; committed as
-  `0f45d02e08`.
-- Complete CI unit failure inventory collected from all eight shards:
-  69 files / 145 failing assertions, grouped into intended palette
-  expectation changes, deleted production contracts, and shared-format
-  expectations. Full raw logs and file/assertion inventory are in the
-  session evidence directory below; all three disjoint test workers have
-  finished and released their files.
-- Production palette regression fixes: restore InsightsEngine up/down
-  trend glyph records using canonical GOOD/BAD colors (previously only
-  neutral remained, causing runtime crashes); restore TimeMarker's public
-  canonical severityTokens re-export; replace duplicate blue signal-series
-  colors with six distinct canonical teal/violet/amber/green/blue/rose
-  tokens. Original behavioral assertions retained.
-- E2E attribution used a real pre-merge build at `a2308886c3`, not
-  unchanged-source inference. All six representative hero/route cases
-  fail there too; this does NOT establish attribution for every case.
-  Fixed competing dashboard init-script seeding, unknown battery meter
-  semantics, and a timezone scanner visibility bug: descendants of a
-  clipped accessible chart table were falsely treated as visible.
-  New scanner checks real ancestor clipping, including forced-colors
-  overrides; no class allowlist, skip, or tolerance changes. Focused
-  browser proof 12/12, hero unit tests 40/40; parent timezone switch and
-  scanner contracts 9/9, preview proxy escapes 0.
-- Remaining E2E roots (not declared fixed): compact/full hero contracts
-  disagree with old four-gauge/three-action E2E expectations; real visible
-  UTC captions remain on climate, vehicle recent drives, sleep efficiency,
-  departure forecast and energy-orchestrator; charge-departure-alignment
-  repeats two visible friendly timestamps. Full 266-route TZ-5 sweep and
-  16 quality shards still required after repairing these causes.
-- Security Scan on merged PR run now SUCCESS (observed, not assumed).
-- Evidence directory:
-  `/home/atul/.copilot/session-state/da9135b7-c9ba-4ad9-a198-fd85558513da/files/`.
-  Start with `combined-unit-failures.json`, `e2e-root-cause/report.json`,
-  `merged-private-perf.log`, and the final handoff entry below.
-- Verified repair commits: `0f45d02e08` canonical conversion adoption,
-  `725355f7f6` visibility-aware timezone scanning/dashboard seeding/battery
-  semantics, and `54a115d1f0` production palette contracts plus exact
-  intended palette/copy expectations. No Windows baselines changed.
-- Parent combined verification: 81/81 test files and 9,210/9,210 tests
-  pass, covering every collected CI unit failure, changed regression
-  tests and seven frozen i18n suites. Existing changed test/spec assertion
-  calls increased from 4,894 to 4,915; no per-file assertion reductions or
-  new skips. These are targeted results, NOT a passing full Vitest suite.
-  Final actual audit reports six pattern counts of zero and TypeScript
-  passing; full `npm run lint` including all registered audits exits 0.
-  Evidence: `batch-all-affected.log`, `batch-final-audit.log`,
-  `batch-final-lint.log`.
-- Handoff at the requested completed-result/context boundary: repair
-  commits are persisted serially; push this batch and resume in a fresh
-  session. Last observed checks on pre-repair `11d3fd570c`: 124 success,
-  31 failure, 20 in progress, 24 queued, 3 skipped. PR #202 is NOT green.
-- Exact next steps: inspect checks on the new pushed HEAD; rebuild
-  `E2E_MOCKS=1 npm run e2e:build` after the final palette source fix, then
-  fix the unresolved hero behavior/contract mismatch without removing
-  coverage. Repair visible timezone/duplicate-time roots listed above
-  (exact file evidence in `e2e-root-cause/report.json`), then run the full
-  TZ-5 route sweep and TZ-6/7 plus section 3 local replica. Reduce the
-  actual 404.1 KB startup closure below the unchanged 400 KB budget.
-  Full Vitest still required; use a bounded runner and preserve partial
-  output if its command reaches the playbook limit. For visual work,
-  recheck the dirty Windows mirror without changing its unrelated files;
-  use CI artifacts if it remains unavailable. Review old/new visuals and
-  update Windows baselines ONCE only after causes and intended changes
-  have been reconciled; then loop PR checks until green.
-- Combined failure groups to investigate after merging: branch-only
-  vehicle-hero-readings/route-layout regressions (~53 reported; attribution
-  must be re-established rather than trusting the branch handoff), remaining
-  inline feature conversions (18 reported), existing responsive/timezone
-  failures, Security Scan, Windows visual diffs, and any new merge failures.
-- Shared-pattern call sites marked `pending` in
-  `docs/shared-patterns-state.md` remain a separate later adoption task.
-- No Windows baselines have been regenerated in this session.
-
-Last updated: 2026-10-25 by Copilot merge-then-fix session.
-Latest repair commit: `54a115d1f0` (followed by this handoff documentation).
-Both requested branches are merged in order. The removed shared/colors
-worktrees are absent. The pre-existing detached
-`/tmp/teslasync-palette-base` remains untouched. All five batch workers
-are idle/released; no batch-owned preview/test process remains.
-
-## Parts overview
-
-| Part | Name | Status | Last commit / note | Next step |
-|---|---|---|---|---|
-| 1 | Time zone: follow setting everywhere, remove duplicates — TRACK A (`fix/post-merge-followups`) | done | Selected-clock semantics, fixed source-calendar facts and configured route/timezone CI guards pass at `25d47baa31`; startup remains 399.5 KB | No remaining PR #202 timezone failure; retain documented source-calendar distinctions |
-| 2 | Dashboard widget redesign (119 widgets) — one active branch | done | Widget redesign merged at `248c9d13d5`; Track B worktree removed; Phase 4 dashboard scope repaired and verified. Recovery commits `823c8802c8`, `16bf49ebd1`, and `7b3fabbe7a` pushed. | Dashboard suite green; collect remaining PR/TZ failures and continue the one-track fix list |
-| 3 | Shared-pattern consolidation (whole codebase) | in progress | Shared modules merged via `b235484463`; remaining feature conversions adopted via `0f45d02e08` | Call sites marked `pending` in `docs/shared-patterns-state.md` remain a separate later task |
-| 4 | Remaining: product items (A) + security re-check (B) | in progress (verify) | branch commits `e0196914cd..f84aad0ce7` cover A1-A7 + security; A8 owner-decision recorded | Audit plan-vs-branch after Part 3; B re-run audits |
-| 5 | CI green on PR #202 | done | `25d47baa31`: 200 success / 3 existing conditional skips; actual CLI exit 0, no failed or pending checks | Verify the documentation-only checkpoint's current-head checks; never merge |
-| 6 | Tailwind v3 -> v4 (`chore/tailwind-v4`, separate PR) | not started | 4 local commits, unpushed (pre-existing) | Only after Part 5 green |
-
-## Part 1 steps (playbook items 1-8 + tests)
-
-| Step | Status | Last commit | Next step / note |
-|---|---|---|---|
-| TZ-1 core resolver + range helper + unit tests | done | `cf1d4d79c7` | — |
-| TZ-2 zone suffix / duplicate ISO removal (~36 sites + batch) | done | `cf1d4d79c7` | duplicates logged in `docs/followups-plan.md` |
-| TZ-3a prose/duplicate migration + en.json sync + push | done | `0d90f894fc`, `9c3586d103` | — |
-| TZ-3b direct-formatter migration (shared layer) | done | `d4653c5517` src + `86bb6e735d` tests + `330fb6052d` i18n | Full suite 2724/57248 green |
-| Calendar values unshifted (LA + Kiritimati tests) | done | `d4653c5517` + `86bb6e735d` | `formatMonthYear` day-rollover validation; `dateFormat.test.ts` 82 green |
-| `useConversionTimezone` + `resolveRawTimezone` (conversion boundaries) | done | `d4653c5517` + `86bb6e735d` | RateForm + JourneyAssurancePage converted; `timezone.test.ts` extended |
-| TZ-4 API `timezone` sends + backend zone params + Go tests | done | `284851a318..147f180cf3` (7, pushed) | Vitest 2727/57276 + tsc + Go green at push; PR202 run in progress |
-| TZ-5 guard (lint/audit) + configured all-route sweep | done | `25d47baa31` final CI gate | All configured responsive route/timezone shards pass in full CI; targeted local route guards and semantic/native cases are recorded above. |
-| TZ-5c marker-free migration (user update) | done | `2fbe414e..edf280bfeb` (4 + docs + Analytics pin) | `tz-computation` 72->0 verified 0 in web/src, all other `tz-*` 0 (1 absence test kept); playbook no-suppression rule present |
-| WaitOracle backend zone param + useCharging + panel (wip handoff fix) | done | `66eda8c6d5` wip + `a09dc6ec15` fix | Backend `?timezone=` (400/UTC default), store AT TIME ZONE $3, Predict(loc); hook sends effective tz; panel best_hour + no UTC; Go + 43 panel + 43 trips + tsc + split + trio + audit green |
-| TZ-6 e2e spec (UTC browser, LA then Tokyo) | done | TZ-6 spec (this change) | `web/e2e/timezone-display.smoke.spec.ts` 4/4 green (chromium-smoke, mock build reuse); TZ=UTC browser, `tz_display_default=user` + `timezone_user` LA/Tokyo; drive times + Quick-view drawer, timeline daily bucket (Mar 8 LA / Mar 9 Tokyo) + Review-details range drawer (end-inclusive, no Mar 10) + Inspect drawer; no raw ISO / zone names; tsc + split-check green; audit unaffected (specs excluded by design); no markers added. |
-| Freshness-header CORRECTION (owner override: `f6d6be4106` KEPT) | done | `b7c55d6ab2` revert-of-revert + `b3f0ba6272` docs + `658e6563fc` verify | `f6d6be4106` (one shared FreshnessDot per widget, top-right corner, header icons directly left) restored; only `c8aad38605` + `dc22ed9bfb` stay reverted. Header guard (`dashboard-widget-headers` + overflow + unit ownership) STAYS PASSING — never SKIPPED/DROPPED. i18n pins regen via sanctioned `--typed --checkpoint-catalog`; FreshnessDot back, 14 calls, shell/edit-chrome shas + dashboardTokens entry restored; combined 68/68. Vitest dash scope + tsc + split-check green; TZ-6 e2e 4/4. Followups-plan SKIPPED-task wording corrected this change. |
-| TZ-7 i18n regen, targeted local checks, full CI, commit/push | done | `25d47baa31` final CI gate | Catalogs and receipts use authorized generators; 200 checks pass with 3 existing conditional skips. Full local replica was superseded by the user's targeted-local/full-CI strategy. |
-
-## Part 2 summary mirror (updated after every task once started)
-
-Phase 0 gate PASS. Phase 1 Gate 1 PASS (see below). Phase 2 pilots 9/9 done and GATE 2 PASS (pushed 462bde401e): wave1 288598cf28 climate, cde879bcbf onboarding, 357162dda0 recent-drives, ef09f6e589 battery-gauge, ac254eaf53 vehicle-hero; wave2 df582bf4b4 charge-status, 928a3ed11f security-status, e65b7f3136 quick-nav, 11d794a694 fleet-posture. After captures 18 PNGs (light+dark) in docs/widget-redesign/after/ (untracked), self-reviewed: exactly one FreshnessDot top-right per widget, no Live/2m-ago. Gate fixes: 012af5e74b typography tokens (audit 0), aab39c80be i18n keys (checklist.progressDone, widget.batteryGauge.*, widget.verifiedFields, dashboard.fleetPosture.*) + sanctioned re-pins (QuickNav/RecentDrives checkpointed), 7762911dcc hero footer + catalog fallbacks, 462bde401e preservation tests updated to After whole-percent precision. Gate checks: dashboard scope 222 files/4654 green, tsc 0, TZ audit 3726/0, typography 0, i18n 8110/8110, split OK. Deviations/data gaps logged in state.md + data-gaps.md (charge-status charger-type/added-kWh omitted, never fabricated). Phase 1 detail:
-workflow; commits 7d81146653..7f68554fce + gap 1b9f1e9470 on
-`feat/widget-redesign`). Review fixes: 8bc591fbec (status-grid `relative`
-hook; RouteEfficiency bar test → After spec), 900d526fe5 (GMT-offset caption
-removed from WidgetChartSummary; guard R6 restricts offset helpers to .ts
-tick/timeline helpers; 2 new guard tests), dbf279d573 (i18n regen via
-sanctioned generators incl. new key widget.comparison.previousLabel).
-Review follow-up: rank numerals restored in `WidgetRankedList` after the
-first full suite found 1 failure in `shared-library-completion` (caller-ranked
-identity; route-efficiency After preview confirms numerals). Branch pushed,
-tracking `origin/feat/widget-redesign` (never pull/push
-`fix/post-merge-followups` from the worktree). Gate 1 checks: tsc 0, eslint 0,
-TZ audit 0 (3726 files), guard tests 18/18, i18n 8110/8110, split-check OK,
-dashboard scope 222 files green, first full suite 57382/57387 (1 ranked
-failure, now fixed); final full-suite re-run pending. Carry-overs recorded in
-state.md (TimelineItem density, FlowArrow.label adoption, dead barColor
-props). Every Phase 2 pilot task row in state.md is annotated with the TZ
-rule line; the same line goes into every worker prompt. Next: Phase 2 pilots
-(9) via rolling workflow.
-
-## Part 3 counts (once started)
-
-Shared modules and branch state were merged in `b235484463`. Remaining
-call-site adoption is tracked in `docs/shared-patterns-state.md`; rows
-marked `pending` are explicitly deferred to a separate task. No aggregate
-adoption percentage is claimed.
-
-## Decisions log
-
-- Startup-budget fix (Lighthouse red: startup 401.6KB > 400KB; main 398.6KB):
-  TZ-3b..TZ-5c date-layer growth (+636 lines in `dateFormat.ts`, +88 in
-  `timezone.ts`) landed in the shell's startup closure. Fix by moving
-  route-only code out of the entry (real bytes, no suppression, no behavior
-  change): new `web/src/lib/dateConvert.ts` (zone/wall conversions, ISO/GMT
-  helpers, durations, chart labels, conversion-zone hook) + new
-  `web/src/hooks/useDateLabels.ts` (month/weekday/relative-day labels bound
-  to settings) split off `useDateFormat`; `timezone.ts` keeps display
-  resolution only. Updated the TZ guard (`SHARED_DATE_MODULES`,
-  `KNOWN_FORMATTERS`, exempt files, fix hints) and its 16 tests. Moved lib
-  tests keep asserting identical behavior from the new paths; one widget
-  test gained a parallel `useDateLabels` mock (same convention). Result:
-  399.6KB, `perf:check` strict green. NO API CONTRACT change (internal SPA
-  modules only); DATA STORAGE untouched. Duplication note: `dateConvert`
-  carries local `browserTimezone`/`isTzMode` copies (5-line probe + predicate)
-  to stay free of value imports from the widely-mocked `@/lib/timezone`,
-  same documented pattern as the existing `dateFormat.browserTimeZone` copy.
-- Display uses sanitized `resolveTimezone` (invalid -> browser -> UTC,
-
-- Display uses sanitized `resolveTimezone` (invalid -> browser -> UTC,
-  never throws); business-instant conversion uses new unsanitized
-  `resolveRawTimezone` so invalid saved zones throw -> form validation
-  error instead of silently converting in a guessed zone (RateForm;
-  same class audit ongoing for journey/schedule forms).
-- `formatDateRange`: half-open `[start, endExclusive)` minus 1ms via
-  `formatRange`; non-midnight exclusive ends show the civil day of the
-  last included instant (pinned by ThermalPanels fr-FR/Tokyo test).
-- `useDateFormat().tz` is the single resolved display value (settings
-  `tz_display_default` + override + vehicle, browser fallback).
-- Freshness (CORRECTED 2026-10-22, owner override): `f6d6be4106` (one shared
-  dot per widget, top-right corner, header icons directly left) is KEPT and
-  the header guard stays passing — the 2026-10-21 "SKIPPED/frozen, revert
-  everything" directive is void; only `c8aad38605` + `dc22ed9bfb` stay
-  reverted. Uncommitted tree verified (2026-10-21) to contain zero
-  freshness-dot diffs.
-- 2026-10-21 docs-only push (playbook + this file) without the section-3
-  replica: two markdown files cannot affect code checks; full replica
-  runs at the Part 1 gate (TZ-7) as scheduled.
-- TopParkingLocations zone-label assertion was stale (fails on HEAD
-  too) and contradicts spec section 3: flipped to assert absence; the
-  no-shift assertions (the test's actual subject) pass unchanged.
-- Intermediate pushes (TZ-3b batch) go without the section-3 replica:
-  full Vitest + tsc gate them, CI gives the early e2e/visual signal,
-  and the full local replica runs once at the TZ-7 Part 1 gate.
-- TZ-4: backend `?timezone=` validates IANA (400) and defaults UTC;
-  omitted hook zones resolve to `useDateFormat().tz` (Auckland
-  fail-before/pass-after tests). Rolling stats, caller-less legacy
-  getters, the AI cost port (UTC), journey drive-vehicle frame, and
-  automation schedule zones intentionally unchanged (see plan file).
-- TZ-5 resume: pre-compaction triage dump was partly stale
-  (MobileChartTooltip, ErrorBoundary, utils/date.ts don't exist in this
-  tree; counts verified fresh: 83 Intl + 27 toLocale + 5 timeZoneName
-  in non-test source). Trust files over handoff notes.
-- Dev server `npm run dev -- --host` (PIDs 69812/45664, started 10/21
-  12:55 PM, owner unclear) left running; revisit at the TZ-7 replica.
-  Codex runtime node processes are the user's tooling, untouched.
-- TZ-5 guard: `{/* */}` markers for JSX-children positions, `//` for JS
-  and JSX-attribute positions (TS accepts `//` between attributes);
-  attribute-position ISO hoisted to marked consts in 3 files.
-- TZ-5 finding -> Part 3: `formatDateTime(period.start)` shifts date-only
-  boundaries by zone (mileage label fixed via `formatDayKey`; generic
-  StatPeriod renderer + producers need a shared boundary helper).
-- TimestampTool keeps raw ISO rows (`tz-tool-subject`: the converter's
-  subject is the format itself); daylog keeps GMT offsets
-  (`tz-dst-offset`: fall-back disambiguation, same class as
-  `formatChartInstant`); quiet-hours per-window zones stay
-  (`tz-schedule-data`, same class as automation schedules).
-  SUPERSEDED by TZ-5c: all `tz-*` markers removed via shared API
-  (toIsoString/formatGmtOffset/supportedTimeZones); same behaviors kept.
-- TZ-5c shared API: `browserTimeZone()` added to `dateFormat.ts`
-  (mock-safe leaf; `timezone.ts` keeps its own for hook-adjacent code
-  because 40+ tests mock that module); validity results cached in
-  `safeTimeZone` (bucketing calls it per row); `zonedDateParts`
-  normalizes h23 midnight 24->0 for all callers.
-- TZ-5c parity calls: seasonal/hvac canonical-case readback dropped
-  (unpinned; real inputs are canonical IANA ids); midnight hour-24
-  rows now bucket at hour 0 instead of 24/null/crash (chargeAdvisor,
-  drivingRhythm, hvacCycling latent crash, EnergyPage evening-bucket,
-  QuietHoursSummary leg); invalid zone/NaN paths still throw RangeError
-  where the old Intl code threw (daylog keeps its RangeError->ISO catch
-  for bad locales too, pinned by test).
-- TZ-5c guard: R2 stays syntactic (flags ALL toLocale*, dates and
-  numbers) instead of a typechecker program — a full TS program in lint
-  would cost minutes per run, and the shared number layer
-  (@/lib/numberFormat) exists precisely so numbers never format
-  directly either. R4 narrowed: skips `<time dateTime>`, TimeStamp/
-  DateTime props, ISO nested in shared-formatter calls
-  (import-aware + known names); still flags direct, chained
-  (`.slice`), and non-shared (`String(...)`) ISO in JSX.
-- TZ-5c certificate bug: `tz-number-format` markers sat INSIDE the
-  print-document template string and leaked into certificates; removed
-  with the fmtInt migration + regression test.
-- Other markers verdict (user review): `relative-time:` (17),
-  `flow-cta:` (10), `not-destructive` (4) belong to the FROZEN
-  freshness audit — cannot touch (playbook global). `no-action:`
-  (754) belongs to audit-empty-state-cta — each documents a product
-  decision (no meaningful recovery action); removal needs 754 product
-  re-reviews or deleting a workflow gate. All kept; both audits green.
-- i18n: trio regen covers 7 touched producers + pre-existing stale
-  SecretRotationOperationalBrief (stale since `eccca4cdc1`, fixed via
-  the sanctioned generator, translations verified clean).
-- Wip handoff fix (Codex 2026-10-22): `66eda8c6d5` added waitoracle `?timezone=` (400/UTC default), store AT TIME ZONE $3, Predict(loc), journey plumbing (UTC-preserving per TZ-4 intentionally-unchanged), useCharging effective-tz send; but renamed backend JSON `best_hour_utc`->`best_hour` without updating panel/test/en.json, breaking tsc + Lighthouse. Fixed by `a09dc6ec15`: panel/test use `best_hour`, dropped all UTC suffixes per Part 1 rule 3 (subtitle/bestHour/chart title/col), title fallback aligned to catalog sentence case, i18n via sanctioned generators (split + trio producer/combined + catalog pins).
-- API CONTRACT `best_hour_utc`->`best_hour` (waitoracle forecast): all in-repo dependents fixed in same change (hook type, panel, panel test, en.json + split/trio/pins, Go forecast + handler + tests). Repo-wide grep: old name remains only in handler absence-assertion (contract test, intentional) + queue/progress history notes. No OpenAPI (`docs/public/openapi.yaml` has no waitoracle), no `docs/api-reference.md` entry, no generated clients, no e2e/mock harness refs, no scripts, ar/he have no `wait_oracle` keys. External readers: undocumented internal SPA API (only reader is `useCharging` in this repo); old UTC-suffixed name was factually wrong (hours are zone-framed) and violates Part 1 rule 5, so old field NOT kept (intentional breaking rename, pinned by absence test). DATA STORAGE: store uses `AT TIME ZONE $3` query-time only, no migration, stored values unchanged. NO SUPPRESSION: no new exception/marker/allowlist added.
-- Pending user update verified done: `tz-computation` 0 in `web/src` (grep 0), all other `tz-*` 0 in src (1 absence-assertion test kept); playbook global no-suppression rule present (`docs/agent-playbook.md:126`).
-- Queue reconciled 2026-10-22: TZ-5c commits `2fbe414e..edf280bfeb` done/pushed; `docs/widget-redesign/state.md` correctly absent (Part 2 not started; dir holds only inputs).
-- AnalyticsPage `re-scopes and re-fetches` failure was PRE-EXISTING
-  (reproduced on pristine base worktree `4fd5b3bd1c`) and zone-fragile:
-  the test resolved `7d` in the local zone while the page re-resolves
-  the scope preset in the UTC display zone, disagreeing by a day
-  whenever local and UTC dates differ (red in PDT evenings, green in
-  CI/UTC). Fixed by pinning both resolutions to UTC; 20/20 green in
-  PDT, UTC, and Pacific/Kiritimati.
-
-## Blockers and historical notes
-
-- **No open PR #202 check blocker** at the verified source head above.
-- Historical, superseded: run 39699895510 (TZ-4 push) responsive-14/-29/-34 + visual (1/64) red; run 39715700018 Lighthouse CI red from the `best_hour_utc` break, fixed by `a09dc6ec15`. The final current-head graph supersedes these old results.
-- Historical environment note, not re-probed: :8080 served the TeslaSync SPA (user's server via Docker; left untouched).
-  Mock-preview proxy escapes would fail loudly (HTML vs JSON), not via
-  ECONNREFUSED. Caveat recorded for the TZ-7 replica; revisit if escape
-  anomalies appear.
-
-## Exact next step
-
-The requested source work is complete and PR #202 is green at `25d47baa31`.
-Push this documentation-only final record and verify the follow-up head's
-checks without changing source or restarting a local replica. Leave the PR
-open/draft and do not merge. The deferred Part 3/4/6 work and standalone E2E
-type-project baseline are separate follow-ups, not new work for this task.
-Older failure descriptions and next-step entries below are historical.
-
-## Recovery handoff (2026-10-23)
-
-- Dashboard lint/typography/freshness repair commits: `47cec22796`,
-  `d31e666484`, and `ab52bd2631` pushed. Worktree clean.
-- Verified locally: dashboard 174 files / 3079 tests, focused chart tests
-  111/111, freshness 71/71, TypeScript, chart-frame, chart-safety,
-  chart-legend, typography, freshness, SI FE gate, and split i18n check.
-- Production build passes with startup JS 399.6 KB.
-- PR #202 fresh run `40060471218` failed first at generated split-i18n
-  artifacts, then at dashboard source modernization tests and aggregates.
-- The sanctioned split generator is now clean locally. Its two generated
-  removals of obsolete Just-now keys remain to commit.
-- Remaining blocker: 31 frozen i18n producer/checkpoint expectations now
-  mismatch intentional source removals and shared absolute-time formatting.
-  Re-pinned only through the repository trio generators/checkpoints; do not
-  hand-edit hashes or catalog fingerprint counts.
-
-- 2026-10-24 recovery: refreshed the 31 producer/checkpoint group through
-  the sanctioned trio generators (no hash hand edits). Verified combined
-  producers 96; known catalog calls 41,867; 29 source producer checkpoints
-  refreshed; 7 frozen i18n suites pass 7,728/7,728; TypeScript and split
-  catalog checks pass; dashboard code-guardian audit reports 200 files/0
-  violations. Next: commit/push this batch, then collect and fix PR #202
-  remaining failures by root cause.
-  First PR unit batch: stale widget copy assertions and canonical
-  RecentActivity duration fixtures updated; 125/125 focused tests pass.
+- Status: done
+- Done locally: `go build ./...`; `go test` for models/drive, database/drive, database/admin, api/drives, api/telemetry, geocoding; `go vet` + `gofmt` on touched packages; web `tsc --noEmit`; full web `npm run lint`; frontend tests (JourneyDetailsPanel 27/27, drive-detail + DriveDetailPage + driving types 555/555). DB-gated Go repair tests skip without a test DSN and run where one is configured.
+- PR checks (head `cdf3cfb709`): Backend lint, Backend architecture, Backend race tests, Backend database, Go builds and Frontend lint pass. `Security Scan` fails on a pre-existing `github.com/go-jose/go-jose/v4` CVE-2026-116587 (HIGH, fixed in 4.1.6) in dependencies untouched by this branch — not addressed here. Remaining browser/visual shards were still pending at last check.
+- Next step: none for Bug 1. Review remaining PR #223 browser shards when they finish; do not run the repair against production (dry run first, see above).

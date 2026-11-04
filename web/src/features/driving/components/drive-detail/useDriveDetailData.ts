@@ -20,7 +20,7 @@ import { SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS } 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { asFiniteNumber } from '@/lib/typeGuards';
 import { isGpsFix } from '@/lib/geo';
-import { driveEnergyEvidence, type DriveEnergyStats } from './energyEvidence';
+import { driveEnergyEvidence, observedDrivePower, type DriveEnergyStats } from './energyEvidence';
 
 function displaySpeed(value: unknown, unit: 'km/h' | 'mph'): number | null {
   const speed = asFiniteNumber(value);
@@ -217,11 +217,9 @@ export function useDriveDetailData(id: string) {
     const powerValues = chartData.map((d) => d.power).filter((p): p is number => p != null && Number.isFinite(p));
     const powerMax = powerValues.length > 0 ? powerValues.reduce((max, value) => Math.max(max, value), -Infinity) : 0;
     const powerMin = powerValues.length > 0 ? powerValues.reduce((min, value) => Math.min(min, value), Infinity) : 0;
-    const avgPower = drive.avgPowerW != null
-      ? drive.avgPowerW / 1000
-      : (powerValues.length > 0
-        ? powerValues.reduce((sum, value) => sum + value, 0) / powerValues.length
-        : 0);
+    const observedPower = observedDrivePower(drive);
+    const averagePowerW = asFiniteNumber(drive.avgPowerW) ?? observedPower.meanPowerW;
+    const avgPower = averagePowerW != null ? averagePowerW / 1000 : 0;
     const energyEvidence = driveEnergyEvidence(drive);
     const energyWh = energyEvidence.energyWh ?? 0;
     const regenWh = energyEvidence.regenWh ?? 0;

@@ -790,9 +790,11 @@ describe('InboxBody — archived mode', () => {
     const open = await screen.findByRole('button', { name: `Open notification: ${title}` });
     const readMessage = screen.getByRole('button', { name: `Read full message: ${title}` });
     for (const target of [open, readMessage]) {
-      expect(target).toHaveClass('!h-auto', '!min-h-11', 'md:!min-h-9', 'text-left');
+      expect(target).toHaveClass('!h-auto', '!min-h-11', 'text-left');
       expect(target.firstElementChild).toHaveClass('line-clamp-2', 'break-words');
     }
+    expect(open).toHaveClass('xl:!min-h-9');
+    expect(readMessage).toHaveClass('md:!min-h-9');
     expect(screen.getByRole('button', { name: `Inspect notification: ${title}` }))
       .toHaveClass('max-md:!h-auto', 'max-md:!min-h-11');
 
@@ -1192,7 +1194,7 @@ describe('InboxBody — redesigned evidence contracts', () => {
         installRequest({ logs: () => Promise.resolve([makeLog({ title: 'Configurable evidence' })]) });
         renderInbox();
         await screen.findByText('Configurable evidence');
-        expect(screen.getByRole('columnheader', { name: 'Received' })).toHaveClass('hidden', 'md:table-cell');
+        expect(screen.getByRole('columnheader', { name: 'Received' })).toHaveClass('hidden', 'xl:table-cell');
         expect(screen.getByRole('columnheader', { name: /Notification/ })).not.toHaveClass('hidden');
         expect(screen.getByRole('button', { name: 'Expand row: Configurable evidence' })).toHaveAttribute('aria-expanded', 'false');
         const resize = screen.getByRole('separator', { name: 'Resize column Notification' });
@@ -1202,7 +1204,7 @@ describe('InboxBody — redesigned evidence contracts', () => {
         fireEvent.click(screen.getByRole('button', { name: /move.*Notification.*up/i }));
         fireEvent.click(screen.getByRole('checkbox', { name: 'Show or hide Message' }));
         expect(localStorage.getItem('teslasync.table.notifications:inbox.columns')).toContain('"message"');
-        fireEvent.keyDown(document, { key: 'Escape' });
+        fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
         expect(screen.queryByRole('columnheader', { name: 'Message' })).not.toBeInTheDocument();
         expect(screen.queryByText('Select all values')).not.toBeInTheDocument();
       });
@@ -1348,7 +1350,7 @@ describe('InboxBody — controlled column-header filters', () => {
       it('keeps all filters and reset available from the visible mobile Notification header', async () => {
         const originalMatchMedia = window.matchMedia;
         window.matchMedia = vi.fn(query => ({
-          matches: query === '(max-width: 767px)',
+          matches: query === '(max-width: 1279px)',
           media: query,
           onchange: null,
           addEventListener: vi.fn(),

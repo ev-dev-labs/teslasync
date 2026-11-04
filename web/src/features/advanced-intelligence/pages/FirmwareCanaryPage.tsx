@@ -5,7 +5,7 @@ import { useFirmwareCanary } from '@/api/hooks/useAdvancedIntelligence';
 import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 
-import { Grid, PageLayout } from '@/components/layout';
+import { MetricGrid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Card, Icon, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -91,7 +91,7 @@ export default function FirmwareCanaryPage() {
                     </div>
                     <Badge variant={decisionVariant(item.decision)} dot>{decisionLabel(item.decision)}</Badge>
                   </div>
-                  <Grid cols={{ default: 1, sm: 2, lg: 4 }} gap={3}>
+                  <MetricGrid>
                     <StatCard
                       label={t('advancedIntelligence.firmware.targetDelta', 'Target regression')}
                       value={formatRegression(item.vehicle_regression_pct)}
@@ -108,7 +108,7 @@ export default function FirmwareCanaryPage() {
                       label={t('advancedIntelligence.firmware.generated', 'Decision generated')}
                       value={formatDateTime(item.generated_at)}
                     />
-                  </Grid>
+                  </MetricGrid>
                   <div className="mt-4 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3 forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]">
                     <Text as="p" variant="label">
                       {t('advancedIntelligence.firmware.rationale.title', 'Decision rationale')}

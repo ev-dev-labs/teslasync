@@ -76,6 +76,7 @@ interface FullscreenOverlayProps {
   dashboardVehicleId?: number;
   onClose: () => void;
   getWidgetSize: (id: string) => { cols: number; rows: number };
+  motionPaused: boolean;
 }
 
 function FullscreenOverlay({
@@ -84,6 +85,7 @@ function FullscreenOverlay({
   dashboardVehicleId,
   onClose,
   getWidgetSize,
+  motionPaused,
 }: FullscreenOverlayProps) {
   const Component = def.component;
   const size = getWidgetSize(widget.id);
@@ -97,7 +99,7 @@ function FullscreenOverlay({
           <Minimize2 className="h-4 w-4 mr-1" /> {t('dashboard.grid.exitFullscreen', 'Exit fullscreen')}
         </UiButton>
       </div>
-      <GlassPanel className="min-h-0 flex-1 overflow-hidden">
+      <GlassPanel className="dashboard-widget-panel dashboard-canvas min-h-0 flex-1 overflow-hidden" data-motion-paused={motionPaused}>
         <Suspense fallback={<Skeleton className="h-full" />}>
           <Component
             vehicleId={widget.config?.vehicleId ?? dashboardVehicleId}
@@ -220,6 +222,13 @@ export const DashboardGrid = memo(function DashboardGrid({
   // visible feedback. Skipped under reduced motion (the position change
   // itself is the feedback there).
   const { reduce: reduceMotion } = useMotionPreference();
+  const [documentHidden, setDocumentHidden] = useState(() => typeof document !== 'undefined' && document.hidden);
+  useEffect(() => {
+    const updateVisibility = () => setDocumentHidden(document.hidden);
+    document.addEventListener('visibilitychange', updateVisibility);
+    return () => document.removeEventListener('visibilitychange', updateVisibility);
+  }, []);
+  const motionPaused = dashboard.settings?.animateActiveStates === false || reduceMotion || documentHidden;
   const [droppedId, setDroppedId] = useState<string | null>(null);
   const dropFlashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -659,7 +668,7 @@ export const DashboardGrid = memo(function DashboardGrid({
             // `widget-panel`: stable inner target for the edit-mode wobble.
             // (RGL v2 merges `react-grid-item` onto the container root, so
             // transform animations must live here, not on the item.)
-            'widget-panel w-full overflow-clip rounded-xl',
+            'widget-panel dashboard-widget-panel w-full overflow-clip rounded-xl',
             mobile ? 'flex flex-1 min-h-0 flex-col' : 'h-full',
             showWidgetBorders && 'border border-[var(--border-subtle)]',
             panelStyle && 'kiosk-panel',
@@ -699,7 +708,8 @@ export const DashboardGrid = memo(function DashboardGrid({
     <>
       <div
         ref={containerRef as React.RefObject<HTMLDivElement>}
-        className={cn('relative', editMode && 'edit-mode', isDragging && 'dragging-active')}
+        className={cn('dashboard-canvas relative', editMode && 'edit-mode', isDragging && 'dragging-active')}
+        data-motion-paused={motionPaused}
       >
       {/* Edit mode grid dot pattern — only meaningful for the absolute-
           positioned RGL path; on the mobile stack widgets flow naturally. */}
@@ -765,6 +775,7 @@ export const DashboardGrid = memo(function DashboardGrid({
           dashboardVehicleId={dashboardVehicleId}
           onClose={() => setFullscreenWidget(null)}
           getWidgetSize={getWidgetSizeLive}
+          motionPaused={motionPaused}
         />
       )}
     </>

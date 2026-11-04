@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import type { GuardConfig, GuardEventsResponse } from '../src/api/hooks/useGuard';
 import type { FleetTelemetryError, FleetTelemetryErrorVIN } from '../src/api/hooks/useTelemetry';
-import type { SecurityEvent, VehicleDriver, VehicleInvitation } from '../src/api/types';
+import type { SecurityEvent, VehicleDriver, VehicleInvitation, VehicleState } from '../src/api/types';
 import type { APICallLogStats, ConnectionPool, DBStats, SystemHealth } from '../src/types/admin';
 import type { CostBreakdown } from '../src/types/analytics';
 import type { CostForecastData } from '../src/types/charging';
@@ -47,6 +47,20 @@ export async function installDashboardWidgetSources(page: Page, mocks: MockApiCo
   const earlier = new Date(Date.now() - 3_600_000).toISOString();
   const day = now.slice(0, 10);
   const previousDay = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+  const state: VehicleState = {
+    vehicle_id: 7, state: chargingMode ? 'charging' : 'driving',
+    latitude: 37.4, longitude: -122.1, speed: chargingMode ? 0 : 18,
+    power: chargingMode ? -7680 : 14_000, battery_level: 72,
+    rated_range: 410_000, ideal_range: 430_000, odometer: 32_100_000,
+    inside_temp: 21, outside_temp: 18, is_climate_on: false,
+    is_charging: chargingMode, charger_power: chargingMode ? 7680 : 0,
+    charge_rate: chargingMode ? 30_000 : 0, time_to_full_charge: chargingMode ? 3600 : 0,
+    is_locked: true, sentry_mode: true, software_version: '2026.26.3',
+  };
+  const evidence = {
+    state: { ...state, updated_at: now, timestamp: now }, live: true,
+    observed_at: now, freshness: 'fresh', verified_fields: Object.keys(state),
+  };
   const security: SecurityEvent = {
     vehicle_id: 7, ts: now, created_at: now, event_type: 'sentry_mode',
     doors_open: '[]', windows_open: '[]', locked: true, sentry_mode: true,
@@ -100,17 +114,10 @@ export async function installDashboardWidgetSources(page: Page, mocks: MockApiCo
       fetched_at: now, created_at: now,
     }] satisfies VehicleInvitation[],
     '/vehicles/7/mobile-enabled': { data: { enabled: true }, fetched_at: now },
-    '/vehicles/7/state': {
-      vehicle: mockVehicle, live: true, observed_at: now, freshness: 'fresh',
-      verified_fields: ['state', 'power', 'battery_level', 'is_charging', 'charger_power', 'timestamp'],
-      state: {
-        vehicle_id: 7, state: 'driving', power: 14_000, battery_level: 72,
-        is_charging: false, charger_power: 0, updated_at: now, timestamp: now,
-        rated_range: 410_000, ideal_range: 430_000, odometer: 32_100_000,
-        latitude: 37.4, longitude: -122.1, speed: 18, inside_temp: 21,
-        outside_temp: 18, is_climate_on: false, locked: true, is_locked: true,
-        sentry_mode: true, software_version: '2026.26.3',
-      },
+    '/vehicles/7/state': { vehicle: mockVehicle, ...evidence },
+    '/vehicles/states': {
+      now, total: 1, limit: 500, offset: 0, counts: { resolved: 1, missing: 0, failed: 0 },
+      vehicles: [{ vehicle_id: 7, outcome: 'resolved', ...evidence }],
     },
     '/vehicles/7/energy': {
       vehicle_id: 7, period_days: 30, total_energy_used_wh: 12_000,

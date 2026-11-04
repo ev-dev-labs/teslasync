@@ -9,8 +9,9 @@ import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetGaugeHero, WidgetStatGrid } from './shared';
+import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import { batteryColor } from './BatteryGaugeWidget';
+import { ChargeBatteryPack, ChargeMeter, useVerifiedChargeActivity } from './instruments/ChargeInstruments';
 import type { WidgetProps } from './types';
 
 export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProps) {
@@ -23,6 +24,7 @@ export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProp
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const state = stateData?.state;
+  const active = useVerifiedChargeActivity(query);
 
   const isCompact = size.cols === 1 && size.rows === 1;
 
@@ -37,6 +39,7 @@ export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProp
   const chargeLimitRaw = (state as Record<string, unknown> | undefined)?.charge_limit_soc;
   const chargeLimitSoc =
     typeof chargeLimitRaw === 'number' && Number.isFinite(chargeLimitRaw) && chargeLimitRaw >= 0 && chargeLimitRaw <= 100 ? chargeLimitRaw : undefined;
+  const denseShort = size.rows <= 2 && (chargeLimitSoc != null || state?.is_charging === true);
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -56,25 +59,22 @@ export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProp
     >
       <div className="flex min-w-0 flex-col gap-2">
         {batteryLevel != null ? (
-          <WidgetGaugeHero
-            compact={isCompact}
-            gauge={{
-              preserveReadingAndScale: true,
-              value: batteryLevel,
-              max: 100,
-              label: '',
-              ariaLabel: t('widget.batteryLevel', 'Battery'),
-              unit: '%',
-              color: batteryColor(batteryLevel),
-              marker: chargeLimitSoc,
-              markerLabel: chargeLimitSoc != null ? `${t('widget.chargeLimit', 'Limit')} ${chargeLimitSoc}%` : undefined,
-              hideScale: true,
-              decimals: 0,
-              kind: 'measurement',
-            }}
-          >
-            {(rangeText != null || state?.is_charging) && (
-              <div className="flex min-w-0 flex-col items-center gap-1 text-center">
+          <div className={`flex w-full min-w-0 flex-col ${size.rows <= 2 ? 'gap-2' : 'gap-3'}`}>
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <WidgetBigNumber value={batteryLevel} unit="%" decimals={0} animated={false} />
+              <ChargeBatteryPack level={batteryLevel} active={active} className={isCompact || denseShort ? 'w-20' : 'w-28'} />
+            </div>
+            <ChargeMeter
+              value={batteryLevel}
+              label={t('widget.batteryLevel', 'Battery')}
+              color={batteryColor(batteryLevel)}
+              marker={chargeLimitSoc}
+              markerLabel={chargeLimitSoc != null ? `${t('widget.chargeLimit', 'Limit')} ${chargeLimitSoc}%` : undefined}
+              preserveOutOfScaleMarker
+              active={active}
+            />
+            {!isCompact && (rangeText != null || state?.is_charging) && (
+              <div className={denseShort ? 'flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center' : 'flex min-w-0 flex-col items-center gap-1 text-center'}>
                 {rangeText != null && (
                   <p className="text-xs leading-snug text-[var(--text-muted)]">
                     {t('widget.batteryGauge.range', '{{range}} range', { range: rangeText })}
@@ -89,7 +89,7 @@ export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProp
                 )}
               </div>
             )}
-          </WidgetGaugeHero>
+          </div>
         ) : state ? (
           <>
             <WidgetBigNumber value={null} label={t('widget.batteryLevel', 'Battery')} />

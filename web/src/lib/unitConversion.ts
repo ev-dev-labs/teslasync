@@ -305,11 +305,23 @@ export function convertPowerFromSI(watts: number, to: PowerUnitPref): number {
 /** Default fallback string for nullish / NaN inputs. */
 const DEFAULT_EMPTY_DISPLAY = '—'
 
+export const TEMPERATURE_DISPLAY_PRECISION = 1
+
+/** Elevation uses feet for imperial distance preferences, meters otherwise. */
+export function elevationUnit(distance: DistanceUnitPref): 'ft' | 'm' {
+  return distance === 'mi' || distance === 'ft' ? 'ft' : 'm'
+}
+
+/** Convert SI meters of elevation without converting metric elevations to kilometers. */
+export function convertElevationFromSI(meters: number, distance: DistanceUnitPref): number {
+  return elevationUnit(distance) === 'ft' ? convertDistanceFromSI(meters, 'ft') : meters
+}
+
 /** Default precision per quantity when `pref.precision` is unset. */
 const DEFAULT_PRECISION: Record<keyof typeof SI, number> = {
   distance: 1,
   speed: 0,
-  temperature: 1,
+  temperature: TEMPERATURE_DISPLAY_PRECISION,
   pressure: 1,
   energy: 2,
   duration: 0,

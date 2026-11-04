@@ -6,6 +6,7 @@ import {
   seedBrowserState, waitForHarnessReady,
 } from './mockApi';
 import { expectIntegratedGridFooter, expectNoHorizontalOverflow, monitorPage } from './qualityAssertions';
+import { closeTableToolbarControls, openTableToolbarControls } from './tableToolbarControls';
 
 test.skip(process.env.E2E_MOCKS === '0', 'Requires synthetic API diagnostic fixtures');
 
@@ -61,11 +62,13 @@ for (const theme of ['light', 'dark'] as const) {
       await expect.poll(() => requests.some(params => params.get('offset') === '75')).toBe(true);
       await expectIntegratedGridFooter(table);
       const frame = table.locator('xpath=ancestor::*[@data-grid-frame][1]');
-      await expect(frame.getByRole('radio', { name: 'Compact', exact: true })).toBeVisible();
-      await frame.getByRole('radio', { name: 'Comfortable', exact: true }).click();
-      await expect(frame.getByRole('radio', { name: 'Comfortable', exact: true })).toBeChecked();
-      await expect(frame.getByRole('button', { name: 'Export list', exact: true })).toBeVisible();
-      await expect(frame.getByRole('button', { name: 'Reorder or hide columns' })).toBeVisible();
+      const controls = await openTableToolbarControls(frame);
+      await expect(controls.getByRole('radio', { name: 'Compact', exact: true })).toBeVisible();
+      await controls.getByRole('radio', { name: 'Comfortable', exact: true }).click();
+      await expect(controls.getByRole('radio', { name: 'Comfortable', exact: true })).toBeChecked();
+      await expect(controls.getByRole('button', { name: 'Export list', exact: true })).toBeVisible();
+      await expect(controls.getByRole('button', { name: 'Reorder or hide columns' })).toBeVisible();
+      await closeTableToolbarControls(controls);
       const search = frame.getByPlaceholder('Filter by endpoint...', { exact: true });
       await search.fill('/synthetic');
       await expect.poll(() => requests.some(params =>

@@ -17,6 +17,7 @@ import {
   type MobileDataTablePresentation,
 } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { formatValueKind } from '@/api/hooks/useIngestXRay';
 import type { IngestXRayFieldStat } from '@/types/admin-diagnostics';
@@ -43,6 +44,7 @@ function lastSeenEpoch(value: string | null | undefined): number {
 
 export function XRayFieldsTable({ rows, loading }: XRayFieldsTableProps) {
   const { fmtInt } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   const { sortKey, sortDir, onSort } = useSortToggle('sample_count', 'desc');
   const countLabel = useMemo(
@@ -141,14 +143,14 @@ export function XRayFieldsTable({ rows, loading }: XRayFieldsTableProps) {
         switch (key) {
           case 'field': return row.field ?? '—';
           case 'sample_count': return countLabel(row);
-          case 'last_seen_at': return row.last_seen_at ?? '—';
+          case 'last_seen_at': return formatDateTime(row.last_seen_at);
           case 'value_kind': return kindLabel(row);
           default: return null;
         }
       },
       state: loading && sorted.length === 0 ? { kind: 'loading' } : { kind: 'ready' },
     }),
-    [countLabel, kindLabel, loading, sorted.length],
+    [countLabel, kindLabel, formatDateTime, loading, sorted.length],
   );
 
   return (

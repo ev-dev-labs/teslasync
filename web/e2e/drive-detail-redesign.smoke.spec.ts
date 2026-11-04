@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { DRIVE_DETAIL_ID, installDriveDetailMocks } from './driveDetailFixtures';
 import { assertMockApiComplete, fulfillApiFixture, installApiMocks, mockAppSettings, mockDrive, seedBrowserState, waitForHarnessReady } from './mockApi';
 import { expectNoHorizontalOverflow, monitorPage } from './qualityAssertions';
@@ -177,11 +177,12 @@ for (const theme of ['light', 'dark'] as const) {
       });
       expect(journeyBounds.contentWidth).toBeLessThanOrEqual(journeyBounds.width + 1);
       const powerSummary = page.locator('main').getByRole('group', { name: 'Power summary', exact: true });
-      for (const [label, value] of [['Max power (kW)', '19'], ['Max regen (kW)', '-4'], ['Mean sampled power (kW)', '4.74']]) {
+      for (const [label, value] of [['Max power (kW)', '19'], ['Max regen (kW)', '-4'], ['Observed power (time-weighted) (kW)', '5.93']]) {
         const term = powerSummary.getByRole('term').filter({ hasText: label });
         await expect(term).toBeVisible();
         await expect(term.locator('xpath=following-sibling::dd[1]')).toHaveText(value);
       }
+
       await expect(powerSummary).not.toContainText(/\b18700\b|\b9200\b|\b4200\b/);
       await expectNoHorizontalOverflow(page);
       expect(diagnostics.pageErrors).toEqual([]);
@@ -235,6 +236,162 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(summary).not.toContainText(/\bkm\b/);
     await expectNoHorizontalOverflow(page);
     await summary.screenshot({ path: test.info().outputPath(`drive-detail-imperial-${theme}.png`) });
+    await assertMockApiComplete(page, mocks);
+  });
+}
+
+async function expectDiscoverableOverlaps(chart: Locator, keys: readonly string[], coincident: readonly number[]) {
+  const curves = chart.locator('.recharts-line-curve');
+  await expect(curves).toHaveCount(keys.length);
+  const strokes = await curves.evaluateAll(elements => elements.map(element => ({
+    shape: element.getAttribute('d'), dash: element.getAttribute('stroke-dasharray'),
+  })));
+  expect(strokes.every(stroke => stroke.shape && stroke.dash)).toBe(true);
+  expect(new Set(strokes.map(stroke => stroke.dash)).size).toBe(keys.length);
+  expect(new Set(coincident.map(index => strokes[index].shape)).size).toBe(1);
+  const toggle = chart.locator(`button[data-series-key="${keys[keys.length - 1]}"]`);
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await toggle.focus();
+  await toggle.press('Enter');
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(toggle).toBeFocused();
+  await expect(curves).toHaveCount(keys.length - 1);
+  await toggle.press('Enter');
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(curves).toHaveCount(keys.length);
+}
+
+async function hoverChart(page: Page, section: Locator) {
+  await section.scrollIntoViewIfNeeded();
+  const bounds = await section.locator('.recharts-wrapper').boundingBox();
+  if (!bounds) throw new Error('The rendered chart must have measurable bounds');
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 3);
+  const tooltip = section.getByRole('tooltip');
+  await expect(tooltip).toBeVisible();
+  return tooltip;
+}
+
+for (const { theme, width, imperial } of [
+  { theme: 'light', width: 390, imperial: false },
+  { theme: 'dark', width: 1280, imperial: true },
+] as const) {
+  test(`BUG3 presentation evidence at ${width}px in ${theme} with ${imperial ? 'imperial' : 'metric'} units`, async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await seedBrowserState(page, theme, path);
+    await page.addInitScript(() => localStorage.setItem('teslasync-theme', 'tesla-red'));
+    const mocks = await installApiMocks(page, 'populated', theme, 'comfortable', 'tesla-red');
+    await installDriveDetailMocks(page, theme, mocks, { presentation: true, imperial });
+    const diagnostics = monitorPage(page);
+    await page.goto(path);
+    await waitForHarnessReady(page, mocks);
+    await expectDriveSections(page);
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('teslasync-theme'))).toBe('tesla-red');
+
+    const power = page.locator('#power-trace');
+    await expect(power.locator('[data-chart-summary-item="sample-mean-power"] dt'))
+      .toHaveText('Observed power (time-weighted) (kW)');
+    await expect(power.locator('[data-chart-summary-item="sample-mean-power"] dd')).toHaveText('8.75');
+    await expect(power.locator('[data-chart-summary-item="avg-power"] dd')).toHaveText('9.60');
+    await expect(power.locator('[data-chart-summary-item="max-regen"] dd')).toHaveText('-10');
+
+    const temperatures = page.locator('#temperature-trace');
+    const tempUnit = imperial ? '°F' : '°C';
+    const outside = imperial ? '68.5' : '20.3';
+    for (const [id, label, value] of [
+      ['outside', 'Outside temperature', outside],
+      ['inside', 'Inside temperature', imperial ? '71.1' : '21.7'],
+      ['driver', 'Driver temperature', imperial ? '72.0' : '22.2'],
+      ['passenger', 'Passenger temperature', imperial ? '72.0' : '22.2'],
+    ]) {
+      const item = temperatures.locator(`[data-chart-summary-item="${id}"]`);
+      await expect(item.locator('dt')).toHaveText(`${label} (average) (${tempUnit})`);
+      await expect(item.locator('dd')).toHaveText(value);
+    }
+    await expect(temperatures.locator('[data-chart-summary-item="fan"] dd')).toHaveText('Avg 0.4 · Max 4');
+    await expectDiscoverableOverlaps(temperatures, ['outsideTemp', 'insideTemp', 'driverTemp', 'passengerTemp'], [2, 3]);
+    const temperatureTooltip = await hoverChart(page, temperatures);
+    await expect(temperatureTooltip).toContainText(outside);
+    await expect(temperatureTooltip).not.toContainText(`${outside}0`);
+    await page.mouse.move(0, 0);
+
+    const pressure = page.locator('#tire-trace');
+    await expect(pressure.locator('[data-chart-summary-item] dd')).toHaveText(
+      Array.from({ length: 4 }, () => imperial ? '42.00' : '2.90'),
+    );
+    await pressure.scrollIntoViewIfNeeded();
+    const tickLabels = pressure.locator('.recharts-yAxis .recharts-cartesian-axis-tick-value');
+    await expect(tickLabels.first()).toBeVisible();
+    const ticks = (await tickLabels.allTextContents()).map(text => Number(text.replaceAll(',', '')));
+    const measuredPressure = imperial ? 42 : 2.89579794;
+    expect(ticks.every(value => Number.isFinite(value) && Math.abs(value - measuredPressure) < measuredPressure / 4)).toBe(true);
+    expect(Math.max(...ticks) - Math.min(...ticks)).toBeLessThan(measuredPressure / 2);
+    await expectDiscoverableOverlaps(pressure, ['tireFl', 'tireFr', 'tireRl', 'tireRr'], [0, 1, 2, 3]);
+
+    const elevation = page.locator('#elevation-trace');
+    const elevationUnit = imperial ? 'ft' : 'm';
+    await expect(elevation.locator('[data-chart-summary-item] dt')).toHaveText([
+      `Elevation gain (${elevationUnit})`, `Elevation loss (${elevationUnit})`, `Net elevation (${elevationUnit})`,
+    ]);
+    await expect(elevation.locator('[data-chart-summary-item] dd')).toHaveText(
+      imperial ? ['100.00', '50.00', '50.00'] : ['30.48', '15.24', '15.24'],
+    );
+    await expect(elevation.getByRole('button', { name: `Elevation (${elevationUnit})`, exact: true })).toBeVisible();
+    await expect(await hoverChart(page, elevation)).toContainText(imperial ? '150.00' : '45.72');
+    await page.mouse.move(0, 0);
+
+    const evidence = page.locator('#energy-evidence').getByRole('table');
+    const alignment = await evidence.evaluate(table => {
+      const headers = Array.from(table.querySelectorAll('thead th'));
+      return Array.from(table.querySelectorAll('tbody tr')).flatMap(row => Array.from(row.children).map((cell, index) => {
+        const style = getComputedStyle(cell);
+        const header = headers[index];
+        return {
+          cellAlignment: style.textAlign, headerAlignment: getComputedStyle(header).textAlign,
+          offset: Math.abs(cell.getBoundingClientRect().left + Number.parseFloat(style.paddingLeft)
+            - header.getBoundingClientRect().left - Number.parseFloat(getComputedStyle(header).paddingLeft)),
+        };
+      }));
+    });
+    expect(alignment.length).toBeGreaterThan(0);
+    for (const cell of alignment) {
+      expect(['left', 'start']).toContain(cell.cellAlignment);
+      expect(['left', 'start']).toContain(cell.headerAlignment);
+      expect(cell.offset).toBeLessThanOrEqual(1);
+    }
+    for (const name of ['Range (ideal, start → end)', 'Range (rated, start → end)', 'Range (estimated, start → end)']) {
+      await expect(evidence.getByRole('rowheader', { name, exact: true })).toBeVisible();
+    }
+
+    const supervised = page.locator('#fsd-evidence');
+    const neutral = await supervised.getByRole('rowheader', { name: 'Reported distance', exact: true })
+      .locator('span').evaluate(element => getComputedStyle(element).color);
+    for (const name of ['Open FSD insights', 'After firmware 2026.30.2']) {
+      const link = supervised.getByRole('link', { name, exact: true });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveCSS('color', neutral);
+    }
+    for (const name of ['Reported distance', 'Share of drive', 'Evidence window']) {
+      const geometry = await supervised.getByRole('rowheader', { name, exact: true }).evaluate(header => {
+        const label = header.querySelector('span');
+        const icon = label?.querySelector('svg');
+        const text = label && Array.from(label.childNodes).find(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
+        if (!label || !icon || !text) throw new Error('Evidence row needs an inline icon and its label');
+        const range = document.createRange();
+        range.selectNodeContents(text);
+        const textBounds = range.getBoundingClientRect();
+        const iconBounds = icon.getBoundingClientRect();
+        return {
+          centerOffset: Math.abs(iconBounds.y + iconBounds.height / 2 - textBounds.y - textBounds.height / 2),
+          gap: textBounds.left - iconBounds.right,
+        };
+      });
+      expect(geometry.centerOffset).toBeLessThanOrEqual(2);
+      expect(geometry.gap).toBeGreaterThanOrEqual(4);
+    }
+    await expectNoHorizontalOverflow(page);
+    expect(diagnostics.pageErrors).toEqual([]);
     await assertMockApiComplete(page, mocks);
   });
 }

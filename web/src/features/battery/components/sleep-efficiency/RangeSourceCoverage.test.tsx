@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fmtNumber } from '@/lib/numberFormat';
+import { formatDateTime } from '@/lib/dateFormat';
 import { analyzeSleepEfficiency } from '../../lib/sleepEfficiencyAnalysis';
 import { sleepEfficiencyFixture } from '../sleep-efficiency-modernization/sleepEfficiency.fixture';
 import { RangeSourceCoverage } from './RangeSourceCoverage';
@@ -70,6 +71,12 @@ afterEach(() => {
 });
 
 describe('RangeSourceCoverage responsive accounting', () => {
+  it('formats the frozen analysis instant without exposing its storage timestamp', () => {
+    mount(1200);
+    expect(screen.getByText(formatDateTime('2026-08-07T12:00:00.000Z', { tz: 'UTC' }))).toBeInTheDocument();
+    expect(screen.queryByText('2026-08-07T12:00:00.000Z')).not.toBeInTheDocument();
+  });
+
   it.each(['light', 'dark'])('preserves eleven desktop rows and formatted counts in %s mode', mode => {
     document.documentElement.setAttribute('data-mode', mode);
     mount(1200);

@@ -225,6 +225,9 @@ describe('FleetApiConfigTool', () => {
   it('renders config values, the authenticated badge and region chips', async () => {
     install()
     const card = await findToolCard('Config')
+    const configGrid = within(card).getByText('Base URL').closest('[data-metric-grid]')
+    expect(configGrid).not.toBeNull()
+    expect(configGrid).toHaveClass('[grid-template-columns:repeat(auto-fit,minmax(min(100%,12.5rem),1fr))]')
 
     expect(within(card).getByText('https://fleet.tesla.example')).toBeInTheDocument()
     expect(within(card).getByText('cid-123')).toBeInTheDocument()

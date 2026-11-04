@@ -2,16 +2,17 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
-  ChartTooltip, AREA_DEFAULTS,
-  LineChart, Line, Legend,
+  ChartLegend, ChartTooltip, AREA_DEFAULTS,
+  LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { ChartCard, ChartSummary } from '@/components/layout';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
+import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 
-import { LEGEND_STYLE } from './helpers';
+import { DETAIL_SERIES_DASHES, LEGEND_STYLE } from './helpers';
 import type { ChartDataPoint, DriveStats } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -51,10 +52,11 @@ interface WheelSummary {
 }
 
 export function TirePressureSection({ chartData, stats }: TirePressureSectionProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtRange } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const pressureUnit = unitPrefs.pressure;
+  const hidden = useHiddenSeries('drive-detail-tire-pressure');
 
   // The page always passes an array, but a defensive `?? []` keeps a future
   // caller — or a partially-hydrated error-boundary retry — from crashing the
@@ -96,11 +98,12 @@ export function TirePressureSection({ chartData, stats }: TirePressureSectionPro
               id: wheel.key,
               label: t('driveDetail.tirePressureRange', '{{wheel}} pressure range', { wheel: wheel.label }),
               unit: pressureUnit,
-              value: wheel.min != null && wheel.max != null ? `${fmtNumber(wheel.min)}–${fmtNumber(wheel.max)}` : '—',
+              value: fmtRange(wheel.min, wheel.max),
             }))}
           />
         )}
         title={t('driveDetail.tirePressure', 'Tire pressure during drive')}
+        chartKey="drive-detail-tire-pressure"
         ariaLabel={t('driveDetail.tirePressureAria', 'Front and rear tire pressure lines over the drive timeline')}
         height={310}
         size="standard"
@@ -115,9 +118,9 @@ export function TirePressureSection({ chartData, stats }: TirePressureSectionPro
               <LineChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
                 <XAxis dataKey="time" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} interval="preserveStartEnd" />
-                <YAxis tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
+                <YAxis domain={['dataMin', 'dataMax']} tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend wrapperStyle={LEGEND_STYLE} />
+                <ChartLegend state={hidden} wrapperStyle={LEGEND_STYLE} />
                 {wheels
                   .filter((w) => w.present)
                   .map((w) => (
@@ -126,6 +129,8 @@ export function TirePressureSection({ chartData, stats }: TirePressureSectionPro
                       {...AREA_DEFAULTS}
                       dataKey={w.key}
                       stroke={w.color}
+                      strokeDasharray={DETAIL_SERIES_DASHES[TIRE_WHEELS.findIndex(wheel => wheel.key === w.key)]}
+                      hide={hidden.isHidden(w.key)}
                       name={`${w.abbr} (${pressureUnit})`}
                     />
                   ))}

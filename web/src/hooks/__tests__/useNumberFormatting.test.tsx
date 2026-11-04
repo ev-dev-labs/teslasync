@@ -11,6 +11,14 @@ beforeEach(() => {
 })
 
 describe('useNumberFormatting', () => {
+  it('refreshes equal-range collapsing when selected precision or locale changes', () => {
+    const { result } = renderHook(() => useNumberFormatting())
+    expect(result.current.fmtRange(42.01, 42.04)).toBe('42.01–42.04')
+    act(() => setGlobalPrecision(1))
+    expect(result.current.fmtRange(42.01, 42.04)).toBe('42.0')
+    act(() => setGlobalLocale('de-DE'))
+    expect(result.current.fmtRange(42.01, 42.04)).toBe('42,0')
+  })
   it('updates existing formatters when the settings bridge changes precision', () => {
     const { result } = renderHook(() => useNumberFormatting())
     const original = result.current.fmtNumber

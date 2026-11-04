@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 import {
   setGlobalPrecision,
@@ -8,6 +8,7 @@ import {
   safeNumber,
   isFiniteNumber,
   fmtNumber,
+  fmtRange,
   fmtScientificNumber,
   fmtWithUnit,
   fmtPercent,
@@ -26,6 +27,23 @@ beforeEach(() => {
   setGlobalPrecision(2)
   setGlobalLocale('en-US')
 })
+
+describe('displayed numeric ranges', () => {
+  it('shows one value when endpoints agree at display precision and retains real ranges', () => {
+    expect(fmtRange(42, 42)).toBe('42.00');
+    expect(fmtRange(42.001, 42.004)).toBe('42.00');
+    expect(fmtRange(41.8, 42.2)).toBe('41.80–42.20');
+    expect(fmtRange(-5, -2, 1, 'de-DE')).toBe('-5,0–-2,0');
+    expect(fmtRange(0, 0)).toBe('0.00');
+  });
+
+  it('keeps absent or non-finite endpoints unknown rather than inventing zeroes', () => {
+    expect(fmtRange(null, 42)).toBe('—');
+    expect(fmtRange(42, undefined)).toBe('—');
+    expect(fmtRange(NaN, 42)).toBe('—');
+    expect(fmtRange(42, Infinity)).toBe('—');
+  });
+});
 
 describe('numberFormat — global precision', () => {
   it('round-trips a valid precision through the setter/getter', () => {
@@ -151,6 +169,27 @@ describe('numberFormat — isFiniteNumber', () => {
 })
 
 describe('numberFormat — fmtNumber', () => {
+  it('reuses formatters across values without mixing locale or precision', () => {
+    const NumberFormat = Intl.NumberFormat
+    const constructor = vi.spyOn(Intl, 'NumberFormat').mockImplementation(function (locale, options) {
+      return new NumberFormat(locale, options)
+    })
+    try {
+      expect(fmtNumber(1234.5, 3, 'es-MX')).toBe('1,234.500')
+      expect(fmtNumber(-0, 3, 'es-MX')).toBe('-0.000')
+      expect(fmtNumber(null, 3, 'es-MX')).toBe('0.000')
+      expect(constructor).toHaveBeenCalledTimes(1)
+
+      expect(fmtNumber(1234.5, 4, 'es-MX')).toBe('1,234.5000')
+      expect(fmtNumber(1234.5, 3, 'de-AT')).toBe((1234.5).toLocaleString('de-AT', {
+        minimumFractionDigits: 3, maximumFractionDigits: 3,
+      }))
+      expect(constructor).toHaveBeenCalledTimes(3)
+    } finally {
+      constructor.mockRestore()
+    }
+  })
+
   it('formats with locale grouping at the global precision', () => {
     expect(fmtNumber(1234.567)).toBe('1,234.57')
     expect(fmtNumber(1000)).toBe('1,000.00')

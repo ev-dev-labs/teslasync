@@ -2,14 +2,14 @@ import { useState, useMemo, useEffect, useCallback, useId } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
-import { PageLayout } from '@/components/layout';
+import { PageLayout, Grid, ChartCard, LayoutCard } from '@/components/layout';
 import { GlassPanel, Button, DataTable, HelpTooltip, Select, Pagination, CopyButton, PanelTitle, Caption, Text } from '@/components/ui';
 
 import type { Column, MobileDataTablePresentation } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, AlertBanner } from '@/components/feedback';
 import {
-  ChartContainer, PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   ChartTooltip, CHART_COLORS,
 } from '@/components/charts';
 import { useVehicleStateMachine } from '@/api/hooks/useAdmin';
@@ -89,7 +89,7 @@ export default function StateMachineDebuggerPage() {
    * the production deploy was a PST user's evening drives recorded at
    * next-day UTC falling outside the UTC-midnight filter). The
    * The API and timeline chart share these exact half-open bounds. */
-  const { tz: vehicleTz } = useDateFormat();
+  const { tz: vehicleTz, formatDateTime } = useDateFormat();
   const { start, end, startInstant, endInstantExclusive, presetId } = useRangeState({
     persistKey: 'fsm-debugger.range',
     defaultPresetId: '7d',
@@ -372,7 +372,7 @@ export default function StateMachineDebuggerPage() {
     },
     displayValue: (row, key) => {
       switch (key) {
-        case 'time': return row.ts;
+        case 'time': return formatDateTime(row.ts);
         case 'fsm_name': return row.fsm_name?.replace('_', ' ') ?? 'vehicle';
         case 'from_state': return row.from_state;
         case 'to_state': return row.to_state;
@@ -873,10 +873,11 @@ export default function StateMachineDebuggerPage() {
       <FadeIn delay={0.21}>
         <section
           aria-label={t('fsm.analysis', 'Transition analysis')}
-          className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+          className="grid gap-4"
         >
-          <Caption as="p" className="lg:col-span-2">{pageScope}</Caption>
-          <ChartContainer
+          <Caption as="p">{pageScope}</Caption>
+          <Grid cols={{ default: 1, lg: 2 }} gap={4}>
+          <ChartCard
             title={t('fsm.distributionByState', 'State distribution')}
             ariaLabel={t('fsm.distributionByStateAria', 'FSM state distribution donut chart with per-state counts')}
             data={transTrust.hasData ? pieData.map((p) => ({ name: p.name, value: p.value })) : undefined}
@@ -888,6 +889,7 @@ export default function StateMachineDebuggerPage() {
             error={transError}
             onRetry={() => refetchTrans()}
             height={280}
+            size="standard"
           >
             {transInitial ? (
               transitionPlaceholder(t('fsm.distributionByState', 'State distribution'), 240)
@@ -928,18 +930,17 @@ export default function StateMachineDebuggerPage() {
             ) : (
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyRangeMessage} />
             )}
-          </ChartContainer>
+          </ChartCard>
 
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-4">
-              {t('fsm.transitionCounts', 'Transition counts')}
-            </PanelTitle>
+          <LayoutCard title={t('fsm.transitionCounts', 'Transition counts')}>
             {transInitial ? (
               transitionPlaceholder(t('fsm.transitionCounts', 'Transition counts'), 48, 4)
             ) : transError ? (
               <QueryError error={transError} onRetry={() => refetchTrans()} />
             ) : summaryRows.length > 0 ? (
               <DataTable<StatSummaryRow>
+                cardLayout
+                variant="embedded"
                 tableId="system:fsm-summary"
                 enableValueFilters={false}
                 columns={summaryColumns}
@@ -950,7 +951,8 @@ export default function StateMachineDebuggerPage() {
             ) : (
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyRangeMessage} />
             )}
-          </GlassPanel>
+          </LayoutCard>
+          </Grid>
         </section>
       </FadeIn>
 

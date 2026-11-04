@@ -22,6 +22,8 @@ import type { ApiRequestOptions } from '@/api/client';
 import type { ChartAnnotationRow } from '@/types/annotations';
 import type { ChartAnnotationsConfig } from '../ChartContainer';
 import { neonColorMap, typography } from '@/lib/tokens';
+import { LayoutCard } from '../../layout/layout-reference/LayoutCard';
+import { Button } from '../../ui/Button';
 
 const { requestMock, toastSuccess, toastError, invalidateMock } = vi.hoisted(() => ({
   requestMock: vi.fn<(path: string, options?: ApiRequestOptions) => Promise<ChartAnnotationRow | ChartAnnotationRow[]>>(),
@@ -87,6 +89,122 @@ function renderWithProviders(ui: React.ReactNode, route = '/page') {
     </QueryClientProvider>,
   );
 }
+
+it('keeps visible supporting captions outside the bounded plot while retaining the accessible table', () => {
+  renderWithProviders(<ChartContainer title="Charge evidence" ariaLabel="Charge power"
+    caption={<span>AC: 3 retained sessions</span>}
+    data={[{ power: 5000 }]} dataColumns={[{ key: 'power', label: 'Power (W)' }]}>
+    <span>Unchanged plot</span>
+  </ChartContainer>);
+  const caption = screen.getByText('AC: 3 retained sessions');
+  expect(caption.closest('[data-card-slot="caption"]')).not.toBeNull();
+  expect(caption.closest('[data-chart-viewport]')).toBeNull();
+  expect(screen.getByText('Unchanged plot').closest('[data-chart-viewport]')).not.toBeNull();
+  expect(screen.getByRole('table', { hidden: true })).toHaveTextContent('5000');
+});
+
+it('keeps short annotated titles intrinsically word-sized beside the full canonical toolbar', () => {
+  renderWithProviders(<ChartContainer title="Score trend" ariaLabel="Recorded scores"
+    data={[{ score: 87 }]} dataColumns={[{ key: 'score', label: 'Score' }]}
+    annotations={{ vehicleId: 7, scope: 'efficiency' }} exportable fullscreen>
+    <span>Unchanged score plot</span>
+  </ChartContainer>);
+  const heading = screen.getByRole('heading', { name: 'Score trend' });
+  const titleGroup = heading.closest('[data-card-title-group]');
+  expect(titleGroup).toHaveClass('min-w-min');
+  expect(titleGroup).not.toHaveClass('min-w-[min(100%,12rem)]');
+  expect(screen.getByText('Unchanged score plot')).toBeVisible();
+  expect(screen.getByRole('button', { name: /Add annotation/i })).toBeVisible();
+});
+
+it('shares explicit host summary and action slots for a differently titled embedded plot without displacing its body', () => {
+  renderWithProviders(
+    <LayoutCard title="Run-length distribution" summary={<span>Original source scope</span>}>
+      <EmbeddedChart title="Run fragments by duration band" ariaLabel="Observed run fragments" headerPlacement="card"
+        toolbar exportable={false} action={<Button>Download original fragments</Button>}
+        data={[{ band: 'Under one minute', count: 2 }]}
+        dataColumns={[{ key: 'band', label: 'Band' }, { key: 'count', label: 'Fragments' }]}>
+        <span>Complete original fragment plot</span>
+      </EmbeddedChart>
+    </LayoutCard>,
+  );
+  const card = screen.getByRole('heading', { name: 'Run-length distribution' }).closest('[data-card]')!;
+  const header = card.querySelector<HTMLElement>('[data-card-slot="header"]')!;
+  const summary = card.querySelector<HTMLElement>('[data-card-slot="summary"]')!;
+  const body = card.querySelector<HTMLElement>('[data-card-content]')!;
+  expect(within(header).getByRole('button', { name: 'Download original fragments' })).toBeVisible();
+  expect(within(summary).getByText('Original source scope')).toBeVisible();
+  expect(summary.querySelector('[data-card-header]')).not.toBeNull();
+  expect(body.querySelector('[data-card-header]')).toBeNull();
+  expect(within(body).getByText('Complete original fragment plot')).toBeVisible();
+  expect(within(body).getByRole('figure', { name: 'Run fragments by duration band' })).toBeInTheDocument();
+});
+
+it('shares native-row header and plot tracks between standalone chart panels', () => {
+  const { container } = renderWithProviders(
+    <div style={{ display: 'grid', rowGap: '16px' }}>
+      <ChartContainer title="Duration distribution" ariaLabel="Recorded duration distribution"
+        data={[{ durationS: 300, count: 2 }]} dataColumns={[{ key: 'durationS', label: 'Duration (s)' }, { key: 'count', label: 'Drives' }]}
+        exportable={false} fullscreen={false}><span>Recorded duration evidence</span></ChartContainer>
+      <ChartContainer title="Distance distribution" subtitle="Complete descriptive source context"
+        ariaLabel="Recorded distance distribution" data={[{ distanceM: 1200, count: 3 }]}
+        dataColumns={[{ key: 'distanceM', label: 'Distance (m)' }, { key: 'count', label: 'Drives' }]}
+        exportable={false} fullscreen={false}><span>Recorded distance evidence</span></ChartContainer>
+    </div>,
+  );
+  expect(container.firstElementChild).toHaveAttribute('data-card-layout-aligned', 'true');
+  for (const title of ['Duration distribution', 'Distance distribution']) {
+    const figure = screen.getByRole('figure', { name: title });
+    expect(figure).toHaveAttribute('data-card-layout', 'surface');
+    expect(figure.querySelector('[data-card-slot="header"]')).toContainElement(screen.getByRole('heading', { name: title }));
+    expect(figure.querySelector('[data-card-slot="plot"]')).toBeInTheDocument();
+  }
+});
+
+it('keeps embedded export actions beside the host title and restores them inside the fullscreen figure', () => {
+  const { container } = renderWithProviders(
+    <LayoutCard title="Drain rate trend">
+      <EmbeddedChart title="Drain rate trend" ariaLabel="Recorded drain" toolbar exportable={false}
+        data={[{ timestamp: '2026-04-04T12:00:00Z', drainW: 32 }]}
+        dataColumns={[{ key: 'drainW', label: 'Drain (W)' }]}
+        action={<Button>Download recorded source</Button>}>
+        <span>Complete original plotted source</span>
+      </EmbeddedChart>
+    </LayoutCard>,
+  );
+  const figure = screen.getByRole('figure', { name: 'Drain rate trend' });
+  const header = container.querySelector('[data-card-header]')!;
+  expect(within(header).getByRole('heading', { name: 'Drain rate trend' })).toBeVisible();
+  expect(header).toContainElement(screen.getByRole('button', { name: 'Download recorded source' }));
+  expect(figure).not.toContainElement(screen.getByRole('button', { name: 'Download recorded source' }));
+  const original = Object.getOwnPropertyDescriptor(document, 'fullscreenElement');
+  try {
+    Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: figure });
+    act(() => document.dispatchEvent(new Event('fullscreenchange')));
+    expect(figure).toContainElement(screen.getByRole('button', { name: 'Download recorded source' }));
+    expect(within(figure).getByRole('heading', { name: 'Drain rate trend' })).toBeVisible();
+    expect(screen.getByText('Complete original plotted source')).toBeVisible();
+  } finally {
+    if (original) Object.defineProperty(document, 'fullscreenElement', original);
+    else Reflect.deleteProperty(document, 'fullscreenElement');
+    act(() => document.dispatchEvent(new Event('fullscreenchange')));
+  }
+  expect(header).toContainElement(screen.getByRole('button', { name: 'Download recorded source' }));
+});
+
+it('does not borrow the outer anatomy when a chart is ordinary nested body content', () => {
+  renderWithProviders(
+    <LayoutCard title="Independent outer source">
+      <EmbeddedChart title="Nested source" visibleTitle ariaLabel="Nested history" exportable={false}
+        data={[{ timestamp: '2026-04-04T12:00:00Z', energyWh: 200 }]}
+        dataColumns={[{ key: 'energyWh', label: 'Energy (Wh)' }]}>
+        <span>Independent plotted evidence</span>
+      </EmbeddedChart>
+    </LayoutCard>,
+  );
+  expect(screen.getByRole('figure', { name: 'Nested source' })).not.toHaveAttribute('data-card-slot', 'chart');
+  expect(screen.getByText('Independent plotted evidence')).toBeVisible();
+});
 
 it('lets a bounded host shrink its viewport without changing auto-height chart defaults', () => {
   const data = [{ energy: 1000 }];

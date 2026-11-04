@@ -1,7 +1,8 @@
-import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, useCallback, useRef, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { PanelTitle, Text } from './Typography';
+import { CardSlotContext, useCardLayoutRegistration, useCardStretchRegistration } from '../layout/layout-reference/CardLayoutContext';
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   variant?: 'standalone' | 'embedded';
@@ -12,6 +13,8 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
    */
   padding?: 'none' | 'sm' | 'md' | 'lg' | 'auto';
   hover?: boolean;
+  /** Opt into the nearest native/shared grid's intrinsic named-row anatomy. */
+  layout?: boolean;
 }
 
 // Hoisted to module scope so the padding map is allocated once instead of
@@ -26,17 +29,26 @@ const PADDINGS: Record<NonNullable<CardProps['padding']>, string> = {
 };
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ padding = 'md', hover, className, children, variant = 'standalone', ...props }, ref) => {
+  ({ padding = 'md', hover, layout = false, className, children, variant = 'standalone', ...props }, ref) => {
     const { reduce } = useMotionPreference();
+    const surfaceRef = useRef<HTMLDivElement | null>(null);
+    useCardLayoutRegistration(surfaceRef, layout);
+    useCardStretchRegistration(surfaceRef, variant === 'standalone');
+    const setRef = useCallback((element: HTMLDivElement | null) => {
+      surfaceRef.current = element;
+      if (typeof ref === 'function') ref(element);
+      else if (ref) ref.current = element;
+    }, [ref]);
     return (
       <div
-        ref={ref}
+        ref={setRef}
         // Card and GlassPanel now render the identical panel surface, so they
         // must also print identically. `[data-print-card]` is the print-stylesheet
         // opt-in marker (index.css) that gives a surface a visible border on
         // white and keeps it off a page break; without it a Card printed
         // borderless next to a bordered GlassPanel of the same visual weight.
         data-surface-variant={variant}
+        data-card-layout-opt-in={layout || undefined}
         data-print-card={variant === 'standalone' ? '' : undefined}
         className={cn(
           // Identical panel surface contract to GlassPanel (index.css → PANEL
@@ -77,13 +89,13 @@ export interface CardHeaderProps {
 
 export function CardHeader({ title, subtitle, action }: CardHeaderProps) {
   return (
-    <div className="mb-4 flex min-w-0 flex-wrap items-center justify-between gap-3">
+    <div data-card-header data-card-slot="header" className="mb-4 flex min-w-0 flex-wrap items-start justify-between gap-3">
       <div className="min-w-0 max-w-full flex-auto">
         <PanelTitle className="break-words">{title}</PanelTitle>
         {subtitle && <Text as="p" variant="bodySm" className="break-words">{subtitle}</Text>}
       </div>
       {action != null && (
-        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">{action}</div>
+        <div data-card-actions className="ms-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">{action}</div>
       )}
     </div>
   );
@@ -91,8 +103,19 @@ export function CardHeader({ title, subtitle, action }: CardHeaderProps) {
 
 export function CardFooter({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn('mt-4 flex min-w-0 flex-wrap items-center justify-end gap-2 border-t border-[var(--panel-border)] pt-4 forced-colors:border-[CanvasText]', className)}>
+    <div data-card-slot="footer" className={cn('mt-4 flex min-w-0 flex-wrap items-center justify-end gap-2 border-t border-[var(--panel-border)] pt-4 forced-colors:border-[CanvasText]', className)}>
       {children}
     </div>
+  );
+}
+
+export function CardContent({ children, className, layoutSlot = 'body', as: Element = 'div', ...props }: HTMLAttributes<HTMLDivElement> & {
+  layoutSlot?: 'body' | 'summary' | 'delegate' | 'column';
+  as?: 'div' | 'section';
+}) {
+  return (
+    <CardSlotContext.Provider value={layoutSlot}>
+      <Element {...props} data-card-slot={layoutSlot} className={cn('card-layout-content', className)}>{children}</Element>
+    </CardSlotContext.Provider>
   );
 }

@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { Text } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { LayoutCard, MetricGrid } from '@/components/layout';
 
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
@@ -49,7 +49,7 @@ export function BatteryPassportGradeAudit({
               )}
             </Text>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          <MetricGrid>
             <MetricCard
               label={t(
                 'batteryPassport.gradeAudit.base',
@@ -136,7 +136,7 @@ export function BatteryPassportGradeAudit({
               icon={<Award className="h-5 w-5" />}
               color="red"
             />
-          </div>
+          </MetricGrid>
           {grade.status === 'unavailable' ? (
             <AlertBanner className="mt-4" variant="warning">
               <Text as="p" variant="caption">

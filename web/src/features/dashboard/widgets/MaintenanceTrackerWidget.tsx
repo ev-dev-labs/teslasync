@@ -266,7 +266,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
       {...shellProps}
     >
       <div className="h-full flex min-h-0 flex-col overflow-y-auto">
-        <section data-testid="dashboard-maintenance-forecast-brief" className="mb-2 rounded-panel border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2">
+        <section data-testid="dashboard-maintenance-forecast-brief" className="mb-2 border-b border-[var(--border-subtle)] py-2">
           <Caption className="mb-2 block">{t('widget.maintenance.forecastStatus', 'Maintenance forecast summary')}</Caption>
           <div className="grid grid-cols-3 gap-2">
             <span data-operational-value>{t('widget.maintenance.overdue', 'Overdue')}: {fmtInt(forecastOverdue ?? 0)}</span>
@@ -285,7 +285,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           <div
             role="status"
             aria-label={t('widget.maintenance.forecastStatus', 'Maintenance forecast status')}
-            className="mb-2 flex min-w-0 flex-wrap items-center gap-2 rounded-panel border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2"
+            className="mb-2 flex min-w-0 flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] py-2"
           >
             {forecastOverdue != null && (
               <span className="text-xs text-[var(--text-primary)]">
@@ -337,7 +337,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           {lastServiceEntries.length > 0 ? (
             <ul aria-label={t('widget.maintenance.recentService', 'Recent service')} className="m-0 list-none space-y-2 p-0">
               {recentRecords.slice(0, 3).map((rec, index) => (
-                <li key={rec.itemId || index} className="rounded-panel border border-[var(--border-subtle)] px-3 py-2">
+                <li key={rec.itemId || index} className="border-b border-[var(--border-subtle)] py-2 last:border-b-0">
                   <span className="block text-sm font-medium text-[var(--text-primary)]">{items.find((entry) => entry.id === rec.itemId)?.name ?? rec.itemId ?? '—'}</span>
                   <span className="block text-xs text-[var(--text-muted)]">{rec.notes ?? '—'}</span>
                   <span className="block text-xs text-[var(--text-muted)]">{rec.date ? formatDate(rec.date) : '—'}</span>

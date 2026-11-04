@@ -222,6 +222,12 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+      - name: Sparse drive power database regression
+        if: matrix.suite == 'replay'
+        env:
+          CGO_ENABLED: 1
+          TESLASYNC_TEST_DSN: host=localhost port=5432 user=test password=test dbname=teslasync_test sslmode=disable
+        run: go test -race -count=1 ./internal/database/signal -run '^TestDriveAggregatesWeightSparsePowerIntervals$' -v
       - name: Integration test (telemetry replay)
         if: matrix.suite == 'replay'
         # KNOWN-FAILING (phase-50 in flight): TestTelemetryReplay asserts a

@@ -84,7 +84,7 @@ export default function SessionCurveChart({ curveData }: SessionCurveChartProps)
           className="py-8"
         />
       ) : (
-        <ResponsiveContainer width="100%" height={320}>
+        <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={rows} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
             {areaGradient('curvePowerGrad', CHART_COLORS[0])}
             <CartesianGrid {...chartGrid} />

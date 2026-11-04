@@ -160,7 +160,7 @@ export default function DriveAnalyticsSection({
             exportable
             exportFilename="speed-distribution"
           >
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={speedDistribution}>
                 <defs>
                   <ChartGradient id="speedFill" color={CHART_COLORS[0]} />
@@ -184,7 +184,7 @@ export default function DriveAnalyticsSection({
             exportable
             exportFilename="acceleration-patterns"
           >
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height="100%">
               <ScatterChart>
                 {chartGrid}
                 <XAxis dataKey="distance" type="number" name={t('dynamics.distance', 'Distance')} unit={` ${distanceUnit}`} tick={axisTick} />
@@ -228,7 +228,7 @@ export default function DriveAnalyticsSection({
           exportFilename="power-profile"
         >
           {({ hiddenSeries }) => (
-            <ResponsiveContainer width="100%" height={320}>
+            <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={powerProfile}>
               {areaGradient('powerMaxGrad', CHART_COLORS[0])}
               {areaGradient('powerMinGrad', CHART_COLORS[5], 0.25)}

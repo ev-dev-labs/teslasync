@@ -103,8 +103,27 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
       exportable
       exportFilename="charge-rate-by-type"
       chartKey="charger-type-chart"
+      caption={!isEmpty ? (
+        <div className="mt-3 space-y-1 px-2">
+          {chargerTypeStats.map((ct) => (
+            <div key={ct.categoryId} className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={{ backgroundColor: CHARGER_COLORS[ct.categoryId] ?? CHART_COLORS[3] }}
+                />
+                <Text variant="bodySm">{ct.label}</Text>
+              </div>
+              <Text variant="bodySm">
+                {fmtInt(ct.count)} {t('charging.curve.sessions', 'sessions')} ·{' '}
+                {fmtNumber(ct.avgDuration)} {t('charging.curve.minAvg', 'min avg')}
+              </Text>
+            </div>
+          ))}
+        </div>
+      ) : undefined}
     >
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={chargerTypeStats}
           margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
@@ -150,26 +169,6 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
           </Bar>
         </ComposedChart>
       </ResponsiveContainer>
-      <div className="mt-3 space-y-1 px-2">
-        {chargerTypeStats.map((ct) => (
-          <div
-            key={ct.categoryId}
-            className="flex items-center justify-between"
-          >
-            <div className="flex items-center gap-1.5">
-              <span
-                className="inline-block h-2 w-2 rounded-full"
-                style={{ backgroundColor: CHARGER_COLORS[ct.categoryId] ?? CHART_COLORS[3] }}
-              />
-              <Text variant="bodySm">{ct.label}</Text>
-            </div>
-            <Text variant="bodySm">
-              {fmtInt(ct.count)} {t('charging.curve.sessions', 'sessions')} ·{' '}
-              {fmtNumber(ct.avgDuration)} {t('charging.curve.minAvg', 'min avg')}
-            </Text>
-          </div>
-        ))}
-      </div>
     </ChartContainer>
   );
 }

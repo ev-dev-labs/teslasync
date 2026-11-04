@@ -35,8 +35,8 @@ vi.mock('@/components/charts', async () => ({
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
   ComposedChart: ({ children, data }: { children: ReactNode; data: ChartDataPoint[] }) =>
     <div data-testid="overview-plot" data-powers={JSON.stringify(data.map((point) => point.power))}>{children}</div>,
-  Line: ({ dataKey, stroke }: { dataKey: string; stroke: string }) =>
-    <span data-testid={`series-${dataKey}`} data-stroke={stroke} />,
+  Line: ({ dataKey, stroke, strokeDasharray }: { dataKey: string; stroke: string; strokeDasharray?: string }) =>
+    <span data-testid={`series-${dataKey}`} data-stroke={stroke} data-dash={strokeDasharray ?? 'solid'} />,
   Area: ({ dataKey, stroke }: { dataKey: string; stroke: string }) =>
     <span data-testid={`series-${dataKey}`} data-stroke={stroke} />,
   ReferenceLine: ({ y, stroke }: { y?: number; stroke: string }) =>
@@ -122,6 +122,16 @@ function renderChart(
 }
 
 describe('DriveOverviewChart', () => {
+  it('distinguishes overlapping range estimators and usable SOC without inventing differences', () => {
+    const points = [point({ idealRange: 300, ratedRange: 300, estRange: 300, battery: 80, usableSoc: 80 }),
+      point({ idealRange: 290, ratedRange: 290, estRange: 290, battery: 79, usableSoc: 79 })];
+    renderChart(points);
+    expect(new Set(['idealRange', 'ratedRange', 'estRange']
+      .map(key => screen.getByTestId(`series-${key}`).dataset.dash)).size).toBe(3);
+    expect(screen.getByTestId('series-battery').dataset.dash)
+      .not.toBe(screen.getByTestId('series-usableSoc').dataset.dash);
+    expect(points[0].idealRange).toBe(points[0].ratedRange);
+  });
   it('shares signal colors with the detail charts without changing signed power or range sources', () => {
     renderChart([
       point({ power: -5.25, idealRange: 100, estRange: 90, ratedRange: 80, usableSoc: 50 }),

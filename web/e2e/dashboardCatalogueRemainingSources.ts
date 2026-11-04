@@ -66,9 +66,10 @@ export function catalogueAnalyticsSources(now: string): CatalogueSources {
     battery_trend: [{ date: day, health_score: 94, capacity_wh: 74200,
       degradation_pct: 6, range_km: 438, cycle_count: 184 }],
   };
-  const digest: WeeklyDigestData = {
-    drives: 4, distanceKm: 42, energyKwh: 7, cost: 2.1, efficiency: 166.67,
-    prevDrives: 2, prevDistanceKm: 21, prevEnergyKwh: 4, prevCost: 1.2, prevEfficiency: 190.48,
+  const digest: Omit<WeeklyDigestData, 'energyWh' | 'prevEnergyWh'> &
+    Required<Pick<WeeklyDigestData, 'energy_kwh' | 'prev_energy_kwh'>> = {
+    drives: 4, distanceKm: 42, energy_kwh: 7, cost: 2.1, efficiency: 166.67,
+    prevDrives: 2, prevDistanceKm: 21, prev_energy_kwh: 4, prevCost: 1.2, prevEfficiency: 190.48,
   };
   const lifetime: LifetimeStats = {
     total_drives: 123, total_distance_km: 1234, total_driving_hours: 40,

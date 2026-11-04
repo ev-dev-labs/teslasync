@@ -92,8 +92,22 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
         empty={comparisonSessions.length === 0}
         exportable
         exportFilename="session-comparison"
+        caption={comparisonSessions.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 px-2">
+            {comparisonSessions.map((s, i) => (
+              <div key={s.id} className="flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-2 w-3 rounded-sm"
+                  style={{ backgroundColor: palette[i % palette.length] }}
+                />
+                <Text variant="bodySm">{formatDateShort(s.started_at)}</Text>
+              </div>
+            ))}
+          </div>
+        ) : undefined}
       >
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height="100%">
           <LineChart data={comparisonData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
             <CartesianGrid {...chartGrid} />
             <XAxis
@@ -129,20 +143,6 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
             ))}
           </LineChart>
         </ResponsiveContainer>
-        {comparisonSessions.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 px-2">
-            {comparisonSessions.map((s, i) => (
-              <div key={s.id} className="flex items-center gap-1.5">
-                <span
-                  aria-hidden="true"
-                  className="inline-block h-2 w-3 rounded-sm"
-                  style={{ backgroundColor: palette[i % palette.length] }}
-                />
-                <Text variant="bodySm">{formatDateShort(s.started_at)}</Text>
-              </div>
-            ))}
-          </div>
-        )}
       </ChartContainer>
   );
 }

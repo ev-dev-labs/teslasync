@@ -11,6 +11,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
+import { ChargeBatteryPack, ChargeMeter, ChargeReadings, useVerifiedChargeActivity } from './instruments/ChargeInstruments';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 
@@ -23,7 +24,7 @@ function formatTimeLeft(hours: number | null): string | null {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
+export default function ChargeStatusWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const vehiclesQuery = useVehicles();
   const { data: vehicles } = vehiclesQuery;
@@ -56,8 +57,8 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
     typeof chargeLimitRaw === 'number' && Number.isFinite(chargeLimitRaw) && chargeLimitRaw >= 0 && chargeLimitRaw <= 100
       ? chargeLimitRaw
       : null;
-  const inScale = batteryLevel != null && batteryLevel >= 0 && batteryLevel <= 100;
-  const clampedLevel = batteryLevel != null ? Math.min(100, Math.max(0, batteryLevel)) : null;
+  const active = useVerifiedChargeActivity(query);
+  const isShort = size.rows <= 2;
   const headline =
     batteryLevel != null && chargeLimit != null
       ? `${fmtNumber(batteryLevel, 0)} → ${fmtNumber(chargeLimit, 0)}`
@@ -68,42 +69,16 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
       ? formatTime(Date.now() + timeToFull * 3_600_000)
       : null;
 
-  const meter = inScale && clampedLevel != null ? (
-    <div
-      role="meter"
-      aria-label={t('widget.battery', 'Battery')}
-      aria-valuenow={clampedLevel}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuetext={`${fmtNumber(batteryLevel, 0)}%`}
-      className="w-full min-w-0"
-    >
-      {chargeLimit != null && (
-        <div className="relative h-4" aria-hidden="true">
-          <span
-            data-testid="charge-limit-marker"
-            className="absolute bottom-0 -translate-x-1/2 text-xs font-medium whitespace-nowrap text-[var(--text-muted)]"
-            style={{ left: `${chargeLimit}%` }}
-          >
-            {fmtNumber(chargeLimit, 0)}%
-          </span>
-        </div>
-      )}
-      <div className="relative h-2 w-full overflow-visible rounded-full bg-[var(--surface-2)]">
-        <div
-          className="h-full rounded-full bg-[var(--semantic-success)]"
-          style={{ width: `${clampedLevel}%` }}
-        />
-        {chargeLimit != null && (
-          <span
-            aria-hidden="true"
-            className="absolute top-1/2 h-3.5 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-[var(--text-primary)]"
-            style={{ left: `${chargeLimit}%` }}
-          />
-        )}
-      </div>
-    </div>
-  ) : null;
+  const meter = (
+    <ChargeMeter
+      value={batteryLevel}
+      label={t('widget.battery', 'Battery')}
+      marker={chargeLimit}
+      markerLabel={chargeLimit != null ? `${t('widget.chargeLimit', 'Limit')} ${fmtNumber(chargeLimit, 0)}%` : undefined}
+      markerTestId="charge-limit-marker"
+      active={active}
+    />
+  );
 
   return (
     <WidgetShell
@@ -118,20 +93,25 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
       onRefresh={() => { if (id > 0) void refetch(); else void vehiclesQuery.refetch(); }}
     >
       {state?.is_charging ? (
-        <div className="flex min-w-0 flex-col gap-3">
+        <div className={isShort ? 'grid min-w-0 grid-cols-1 items-start gap-3 @sm:grid-cols-2' : 'flex min-w-0 flex-col gap-3'}>
+          <div className={isShort ? 'flex min-w-0 flex-col gap-1' : 'flex min-w-0 flex-col gap-3'}>
           <div>
             <Badge variant="success" size="sm">{t('widget.charging', 'Charging')}</Badge>
           </div>
-          <div className="flex min-w-0 items-start justify-between gap-3">
-            <WidgetBigNumber value={headline} unit="%" animated={false} />
-            <div className="shrink-0 text-right">
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <WidgetBigNumber value={headline} unit="%" animated={false} />
+              <ChargeBatteryPack level={batteryLevel} active={active} className={isShort ? 'w-20' : 'w-24'} />
+            </div>
+            {meter}
+          </div>
+          <div className={isShort ? 'flex min-w-0 flex-col gap-1' : 'flex min-w-0 flex-col gap-3'}>
+            <div className="text-right">
               {doneAtText && <div className="text-base font-semibold tabular-nums">{doneAtText}</div>}
               <div className={dashboardTokens.metricLabel}>
                 {t('widget.timeToFull', 'Time to full')} {timeLeftText ?? '—'}
               </div>
             </div>
-          </div>
-          {meter}
+          <ChargeReadings short={isShort}>
           <WidgetStatGrid
             cols={3}
             stats={[
@@ -141,21 +121,30 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
               { label: t('widget.range', 'Range'), value: ratedRange != null ? fmtNumber(convertDistanceFromSI(ratedRange, distanceUnit), 0) : null, unit: distanceUnit },
             ]}
           />
+          </ChargeReadings>
+          </div>
         </div>
       ) : state ? (
-        <div className="flex min-w-0 flex-col gap-3">
+        <div className={isShort ? 'grid min-w-0 grid-cols-1 items-center gap-3 @sm:grid-cols-2' : 'flex min-w-0 flex-col gap-3'}>
+          <div className={isShort ? 'flex min-w-0 flex-col gap-1' : 'flex min-w-0 flex-col gap-3'}>
           <div>
             <Badge variant="neutral" size="sm">
               {state.is_charging === false ? t('widget.notCharging', 'Not charging') : t('widget.chargingSchedule.modeUnknown', 'Unknown')}
             </Badge>
           </div>
-          <WidgetBigNumber value={batteryLevel} unit="%" decimals={0} animated={false} />
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <WidgetBigNumber value={batteryLevel} unit="%" decimals={0} animated={false} />
+            <ChargeBatteryPack level={batteryLevel} className={isShort ? 'w-20' : undefined} />
+          </div>
           {meter}
+          </div>
+          <ChargeReadings short={isShort}>
           <WidgetStatGrid
             stats={[
               { label: t('widget.range', 'Range'), value: ratedRange != null ? fmtNumber(convertDistanceFromSI(ratedRange, distanceUnit), 0) : null, unit: distanceUnit },
             ]}
           />
+          </ChargeReadings>
         </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

@@ -30,14 +30,27 @@
  * fallback so the copy we assert on is decoupled from the locale bundle.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import type { IngestXRayFieldStat } from '@/types/admin-diagnostics';
 import type { MobileDataTablePresentation } from '@/components/ui';
+import { formatDateTime } from '@/lib/dateFormat';
 
 const localizedCopy = vi.hoisted(() => ({ kindFallback: null as string | null }));
+const datePreferences = vi.hoisted(() => ({ tz: 'America/Los_Angeles' }));
+beforeEach(() => { datePreferences.tz = 'America/Los_Angeles'; });
+
+vi.mock('@/hooks/useDateFormat', async () => {
+  const { formatDateTime } = await import('@/lib/dateFormat');
+  return {
+    useDateFormat: () => ({
+      formatDateTime: (value: string | null | undefined) =>
+        formatDateTime(value, { locale: 'en-US', tz: datePreferences.tz }),
+    }),
+  };
+});
 
 // ── i18n: return the English fallback (2nd arg) for every t() call ───────────
 vi.mock('react-i18next', async () => {
@@ -151,6 +164,31 @@ vi.mock('@/components/ui', async () => {
 });
 
 import { XRayFieldsTable } from './XRayFieldsTable';
+
+describe('mobile ingest timestamp display', () => {
+  it.each([null, undefined, 'not-a-date'])('keeps unavailable last-seen value %s explicit on mobile', last_seen_at => {
+    const row = Object.assign({}, ALPHA, { last_seen_at });
+    render(<XRayFieldsTable rows={[row]} loading={false} />);
+    expect(tableContract.current?.mobilePresentation?.displayValue?.(row, 'last_seen_at')).toBe('—');
+  });
+
+  it.each(['2026-08-26T16:00:00.000Z', '2026-01-26T16:00:00.000Z'])(
+    'formats %s in the selected timezone without changing the source or sort value', last_seen_at => {
+      datePreferences.tz = 'America/Los_Angeles';
+      const row = { ...ALPHA, last_seen_at };
+      const { rerender } = render(<XRayFieldsTable rows={[row]} loading={false} />);
+      const display = () => tableContract.current?.mobilePresentation?.displayValue?.(row, 'last_seen_at');
+      expect(display()).toBe(formatDateTime(last_seen_at, { locale: 'en-US', tz: datePreferences.tz }));
+      expect(display()).not.toContain('T16:00:00');
+      expect(tableContract.current?.columns.find(column => column.key === 'last_seen_at')?.filterValue?.(row))
+        .toBe(last_seen_at);
+      datePreferences.tz = 'Europe/Berlin';
+      rerender(<XRayFieldsTable rows={[row]} loading={false} />);
+      expect(display()).toBe(formatDateTime(last_seen_at, { locale: 'en-US', tz: datePreferences.tz }));
+      expect(row.last_seen_at).toBe(last_seen_at);
+    },
+  );
+});
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 // Distinct sample_count / last_seen_at / value_kind so every sort key produces
@@ -291,7 +329,8 @@ describe('XRayFieldsTable — cell contract', () => {
     });
     expect(mobile.displayValue(row, 'value_kind')).toBe('kind 99');
     expect(mobile.displayValue(row, 'sample_count')).toBe('300');
-    expect(mobile.displayValue(row, 'last_seen_at')).toBe(row.last_seen_at);
+    expect(mobile.displayValue(row, 'last_seen_at'))
+      .toBe(formatDateTime(row.last_seen_at, { locale: 'en-US', tz: datePreferences.tz }));
     const kind = contract.columns.find(column => column.key === 'value_kind')!;
     expect(kind.sortable).toBe(true);
     expect(kind.filterValue?.(row)).toBe(99);

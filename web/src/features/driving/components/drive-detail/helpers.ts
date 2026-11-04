@@ -18,3 +18,5 @@ export function formatDuration(min: number): string {
 // shared --text-muted token (matching the sibling axis ticks) so the legend
 // stays legible under every theme instead of pinning a dark-mode-only grey.
 export const LEGEND_STYLE = { fontSize: 10, color: 'var(--text-muted)' } as const;
+/** Draw overlapping signals with distinct identities even without color. */
+export const DETAIL_SERIES_DASHES = ['0', '8 3', '2 3', '8 3 2 3'] as const;

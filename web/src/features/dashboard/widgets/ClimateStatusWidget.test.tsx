@@ -34,7 +34,7 @@
  *     disabled (id 0) query when no vehicle exists — always with the 5s poll.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 // ── i18n stub: return the English fallback (2nd arg) or the key. ──
@@ -112,6 +112,33 @@ beforeEach(() => {
 });
 
 describe('ClimateStatusWidget — rendering', () => {
+  it('animates verified active HVAC only until its observation becomes stale', () => {
+    vi.useFakeTimers();
+    try {
+      setup({ climate: makeQuery({ data: makeClimate({ ts: new Date().toISOString() }) }) });
+      const { container } = render(<ClimateStatusWidget size={STANDARD} />);
+      expect(container.querySelector('[data-climate-airflow]')).toHaveAttribute('data-climate-airflow', 'active');
+      expect(container.querySelectorAll('.widget-airflow-motion')).toHaveLength(5);
+      act(() => vi.advanceTimersByTime(120_001));
+      expect(container.querySelector('[data-climate-airflow]')).toHaveAttribute('data-climate-airflow', 'static');
+      expect(container.querySelectorAll('.widget-airflow-motion')).toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    { data: makeClimate({ hvac_power: false, ts: new Date().toISOString() }) },
+    { data: makeClimate({ hvac_power: null, ts: new Date().toISOString() }) },
+    { data: makeClimate({ ts: new Date(Date.now() - 180_000).toISOString() }) },
+    { data: makeClimate({ ts: 'invalid' }) },
+    { data: makeClimate({ ts: new Date().toISOString() }), isError: true, error: new Error('unavailable') },
+  ])('does not imply active airflow for off, unknown, stale or failed source %#', climate => {
+    setup({ climate: makeQuery(climate) });
+    const { container } = render(<ClimateStatusWidget size={STANDARD} />);
+    expect(container.querySelector('[data-climate-airflow]')).toHaveAttribute('data-climate-airflow', 'static');
+  });
+
   it('renders the Inside headline, measured zero and negative Outside temp with the HVAC pill', () => {
     setup({ climate: makeQuery({ data: makeClimate({ inside_temp: 0, outside_temp: -10 }) }) });
     const { container } = render(<ClimateStatusWidget size={STANDARD} />);

@@ -79,23 +79,23 @@ export async function assertCataloguePressureParity(page: Page, historyPanel: Lo
   expect(historyBinding.data, 'History observer must preserve every original row, field and null').toMatchObject(history);
   const bindings = [latestBinding, historyBinding];
   const wheels = [
-    { label: 'FL', field: 'front_left', pa: 280000, bar: '2.80', column: 0, row: 0, x: '78', y: '28' },
-    { label: 'FR', field: 'front_right', pa: 285000, bar: '2.85', column: 2, row: 0, x: '172', y: '28' },
-    { label: 'RL', field: 'rear_left', pa: 290000, bar: '2.90', column: 0, row: 1, x: '78', y: '116' },
-    { label: 'RR', field: 'rear_right', pa: 295000, bar: '2.95', column: 2, row: 1, x: '172', y: '116' },
+    { label: 'FL', field: 'front_left', pa: 280000, bar: '2.80' },
+    { label: 'FR', field: 'front_right', pa: 285000, bar: '2.85' },
+    { label: 'RL', field: 'rear_left', pa: 290000, bar: '2.90' },
+    { label: 'RR', field: 'rear_right', pa: 295000, bar: '2.95' },
   ] as const;
-  const diagram = visualPanel.locator('svg[viewBox="-30 0 320 170"]');
-  const car = diagram.locator('xpath=../..');
-  await expect(diagram).toBeVisible();
+  await expect(visualPanel.getByRole('img', { name: 'Digital twin', exact: true }).first()).toBeVisible();
+  const spatial = new Map<string, { x: number; y: number }>();
   const paired = [];
   for (const [index, wheel] of wheels.entries()) {
     expect(source[wheel.field]).toBe(wheel.pa);
-    const tire = diagram.locator('rect').nth(index);
-    await expect(tire).toHaveAttribute('x', wheel.x);
-    await expect(tire).toHaveAttribute('y', wheel.y);
-    const visualValue = car.locator(':scope > div').nth(wheel.column).locator(':scope > span').nth(wheel.row);
+    const tire = visualPanel.getByRole('group', { name: wheel.label, exact: true });
+    const visualValue = tire.getByText(wheel.bar, { exact: true });
     await expect(visualValue).toHaveText(wheel.bar);
     await expect(visualValue).toBeVisible();
+    const bounds = await tire.boundingBox();
+    if (!bounds) throw new Error(`Missing ${wheel.label} pressure callout geometry`);
+    spatial.set(wheel.label, bounds);
     let historyValue: string | null;
     if (width === 390) {
       const row = historyPanel.getByText(wheel.label, { exact: true }).locator('..');
@@ -111,6 +111,12 @@ export async function assertCataloguePressureParity(page: Page, historyPanel: Lo
     }
     paired.push({ ...wheel, history: historyValue, visual: await visualValue.textContent() });
   }
+  // The actual side photograph faces left: front callouts belong on the left,
+  // with driver/passenger readings above/below each axle rather than swapped.
+  expect(spatial.get('FL')!.x).toBeLessThan(spatial.get('RL')!.x);
+  expect(spatial.get('FR')!.x).toBeLessThan(spatial.get('RR')!.x);
+  expect(spatial.get('FL')!.y).toBeLessThan(spatial.get('FR')!.y);
+  expect(spatial.get('RL')!.y).toBeLessThan(spatial.get('RR')!.y);
   // The redesigned diagram owns the spatial wheel mapping; the shell owns freshness.
   const caption = visualPanel.getByText('bar', { exact: true });
   await expect(caption).toHaveCount(1);

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
@@ -391,6 +392,37 @@ func (s *VehicleService) buildStateFromSignalStoreWithProvenance(
 		}
 	}
 
+	if v := all["AccessoryRail"]; v != nil {
+		if value, ok := v.Raw.(bool); ok {
+			state.AccessoryRail = &value
+			mark("accessory_rail", v)
+		}
+	}
+	if v := all["PowerTransferStatus"]; v != nil {
+		if value, ok := v.Raw.(string); ok && value != "" {
+			state.PowerTransferStatus = &value
+			mark("power_transfer_status", v)
+		}
+	}
+	if v := all["AutomaticEmergencyBrakingState"]; v != nil {
+		if value, ok := v.Raw.(string); ok && value != "" {
+			state.AutomaticEmergencyBrakingState = &value
+			mark("automatic_emergency_braking_state", v)
+		}
+	}
+	if value, ok := signal.Float64Value(all["RollingResistanceCoefficient"]); ok && !math.IsNaN(value) && !math.IsInf(value, 0) {
+		state.RollingResistanceCoefficient = &value
+		mark("rolling_resistance_coefficient", all["RollingResistanceCoefficient"])
+	}
+	if value, ok := signal.Float64Value(all["LifetimeDcChargeEnergyKwh"]); ok && !math.IsNaN(value) && !math.IsInf(value, 0) {
+		state.LifetimeDcChargeEnergyWh = &value
+		mark("lifetime_dc_charge_energy_wh", all["LifetimeDcChargeEnergyKwh"])
+	}
+	if value, ok := signal.Float64Value(all["SemiVehicleMassKg"]); ok && !math.IsNaN(value) && !math.IsInf(value, 0) {
+		state.SemiVehicleMassKg = &value
+		mark("semi_vehicle_mass_kg", all["SemiVehicleMassKg"])
+	}
+
 	// Fall back to signal_log for fields the live store left at their Go zero
 	// value. signal_log is the durable, ADR-001-blessed last-value-per-signal
 	// store; reading from snapshot tables (positions, state_snapshots,
@@ -442,6 +474,36 @@ func fillStateFromSnapshot(
 	selected map[string]bool,
 	verified map[string]bool,
 ) {
+	if state.AccessoryRail == nil {
+		if value, ok := snapBool(snap, "AccessoryRail"); ok {
+			state.AccessoryRail = &value
+		}
+	}
+	if state.PowerTransferStatus == nil {
+		if value, ok := snapString(snap, "PowerTransferStatus"); ok && value != "" {
+			state.PowerTransferStatus = &value
+		}
+	}
+	if state.AutomaticEmergencyBrakingState == nil {
+		if value, ok := snapString(snap, "AutomaticEmergencyBrakingState"); ok && value != "" {
+			state.AutomaticEmergencyBrakingState = &value
+		}
+	}
+	if state.RollingResistanceCoefficient == nil {
+		if value, ok := snapFloat(snap, "RollingResistanceCoefficient"); ok && !math.IsNaN(value) && !math.IsInf(value, 0) {
+			state.RollingResistanceCoefficient = &value
+		}
+	}
+	if state.LifetimeDcChargeEnergyWh == nil {
+		if value, ok := snapFloat(snap, "LifetimeDcChargeEnergyKwh"); ok && !math.IsNaN(value) && !math.IsInf(value, 0) {
+			state.LifetimeDcChargeEnergyWh = &value
+		}
+	}
+	if state.SemiVehicleMassKg == nil {
+		if value, ok := snapFloat(snap, "SemiVehicleMassKg"); ok && !math.IsNaN(value) && !math.IsInf(value, 0) {
+			state.SemiVehicleMassKg = &value
+		}
+	}
 	if !selected["odometer"] {
 		if f, ok := snapFloat(snap, "Odometer"); ok {
 			state.Odometer = f

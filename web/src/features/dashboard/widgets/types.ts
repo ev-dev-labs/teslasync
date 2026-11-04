@@ -125,6 +125,8 @@ export interface DashboardSettings {
   showWidgetBorders: boolean;
   /** Compact mode — reduces grid gaps */
   compactMode: boolean;
+  /** Disable continuous activity motion without pausing data refresh. */
+  animateActiveStates?: boolean;
 }
 
 /**
@@ -139,6 +141,7 @@ export const DEFAULT_DASHBOARD_SETTINGS: Readonly<DashboardSettings> = Object.fr
   refreshInterval: 0,
   showWidgetBorders: false,
   compactMode: false,
+  animateActiveStates: true,
 });
 
 /**
@@ -162,6 +165,8 @@ export function mergeDashboardSettings(
     showWidgetBorders:
       partial?.showWidgetBorders ?? DEFAULT_DASHBOARD_SETTINGS.showWidgetBorders,
     compactMode: partial?.compactMode ?? DEFAULT_DASHBOARD_SETTINGS.compactMode,
+    animateActiveStates: typeof partial?.animateActiveStates === 'boolean'
+      ? partial.animateActiveStates : DEFAULT_DASHBOARD_SETTINGS.animateActiveStates,
   };
   if (partial?.vehicleId != null) {
     merged.vehicleId = partial.vehicleId;

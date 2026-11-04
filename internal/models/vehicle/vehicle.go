@@ -65,6 +65,13 @@ type VehicleState struct {
 	IsLocked        bool       `json:"is_locked"`
 	SentryMode      bool       `json:"sentry_mode"`
 	SoftwareVersion string     `json:"software_version"`
+
+	AccessoryRail                  *bool    `json:"accessory_rail,omitempty"`
+	PowerTransferStatus            *string  `json:"power_transfer_status,omitempty"`
+	AutomaticEmergencyBrakingState *string  `json:"automatic_emergency_braking_state,omitempty"`
+	RollingResistanceCoefficient   *float64 `json:"rolling_resistance_coefficient,omitempty"`
+	LifetimeDcChargeEnergyWh       *float64 `json:"lifetime_dc_charge_energy_wh,omitempty"`
+	SemiVehicleMassKg              *float64 `json:"semi_vehicle_mass_kg,omitempty"`
 }
 
 // CommandLog records a vehicle command execution.

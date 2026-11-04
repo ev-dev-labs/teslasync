@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Route, ChevronRight } from 'lucide-react'
 
-import { GlassPanel, DataTable, PanelTitle, BUTTON_BASE, useSortToggle, type Column, type MobileDataTablePresentation } from '@/components/ui'
+import { DataTable, BUTTON_BASE, useSortToggle, type Column, type MobileDataTablePresentation } from '@/components/ui'
+import { LayoutCard } from '@/components/layout'
 import { EmptyState } from '@/components/feedback'
 import { useUnits } from '@/hooks/useUnits'
 import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion'
@@ -89,24 +90,20 @@ export function RecentDrivesSection({ drives }: RecentDrivesSectionProps) {
   )
 
   return (
-    <GlassPanel className="min-w-0 p-4 sm:p-6">
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <div>
-          <PanelTitle className="flex items-center gap-2">
-            <Route className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-            {t('common.recentDrives', 'Recent drives')}
-          </PanelTitle>
-        </div>
-        <Link
+    <LayoutCard
+      title={t('common.recentDrives', 'Recent drives')}
+      icon={<Route className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
+      actions={<Link
           to="/drives"
           className={`${BUTTON_BASE} min-h-11 min-w-11 shrink-0 gap-1 px-2 text-[var(--text-muted)] hover:text-[var(--text-primary)]`}
         >
           {t('common.viewAll', 'View all')} <ChevronRight className="h-3 w-3" aria-hidden="true" />
-        </Link>
-      </div>
+        </Link>}
+    >
       {sortedDrives.length > 0 ? (
         <DataTable
           tableId="vehicles:detail-recent-drives"
+          cardLayout
           name={t('common.recentDrives', 'Recent drives')}
           columns={driveColumns}
           mobilePresentation={mobilePresentation}
@@ -125,6 +122,6 @@ export function RecentDrivesSection({ drives }: RecentDrivesSectionProps) {
           message={t('common.noDrives', 'No drives recorded yet')}
         />
       )}
-    </GlassPanel>
+    </LayoutCard>
   )
 }

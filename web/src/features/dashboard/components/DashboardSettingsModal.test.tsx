@@ -155,6 +155,7 @@ describe('DashboardSettingsModal', () => {
       refreshInterval: 30,
       showWidgetBorders: true,
       compactMode: false,
+      animateActiveStates: true,
     });
     // Icon was never touched, so its callback must stay silent.
     expect(onChangeIcon).not.toHaveBeenCalled();
@@ -191,6 +192,19 @@ describe('DashboardSettingsModal', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ vehicleId: 2 }));
+  });
+
+  it('persists a deliberate activity pause and restores it when reopening', () => {
+    const { onUpdate, unmount } = renderModal();
+    const toggle = screen.getByRole('switch', { name: 'Animate active states' });
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ animateActiveStates: false }));
+    const saved = onUpdate.mock.calls[0][0] as DashboardSettings;
+    unmount();
+    renderModal({ dashboard: makeDashboard({ settings: saved }) });
+    expect(screen.getByRole('switch', { name: 'Animate active states' })).toHaveAttribute('aria-checked', 'false');
   });
 
   it('flips the compact-mode toggle and persists it', () => {

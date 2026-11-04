@@ -50,15 +50,40 @@ ALLOWLIST_PATHS = {
     "web/src/hooks/useSettings.test.ts",
 }
 
-# Tesla Fleet Telemetry Field enum identifiers are upstream-owned (ADR-004 R2).
-# Wire names may contain Kwh/Mph even though TeslaSync stores SI (Wh, m/s).
-TESLA_PROTO_FIELD_ALLOWLIST = (
-    "NominalFullPackEnergyKwh",
-    "LifetimeEnergyChargedKwh",
-    "MaxSpeedToReachDestinationMph",
-    "SemiCruiseSpeedLimitMph",
-    "ChargeRateMilePerHour",
+def tesla_field_names() -> frozenset[str]:
+    proto = Path(__file__).resolve().parents[2] / "api/proto/tesla/vehicle_data.proto"
+    text = re.sub(r"//[^\n]*|/\*.*?\*/", "", proto.read_text(encoding="utf-8"), flags=re.S)
+    enum = re.search(r"\benum\s+Field\s*\{([^}]+)\}", text)
+    if enum is None:
+        raise ValueError("authoritative Tesla Field enum is missing")
+    names = frozenset(re.findall(r"^\s*(\w+)\s*=\s*\d+", enum.group(1), re.M))
+    if not names:
+        raise ValueError("authoritative Tesla Field enum is empty")
+    return names
+
+
+TESLA_PROTO_FIELDS = tesla_field_names()
+UPSTREAM_TOKEN = re.compile(
+    r'''"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\bField_\w+\b'''
 )
+
+
+def without_upstream_tokens(line: str) -> str:
+    # Upstream enum names are immutable, not application-unit fields. Mask only
+    # exact references; keep JSON/storage tags and other identifiers checked.
+    def replace(match: re.Match[str]) -> str:
+        token = match.group()
+        if token.startswith("Field_"):
+            return "" if token.removeprefix("Field_") in TESLA_PROTO_FIELDS else token
+        if re.search(r"(?:json|db|yaml)\s*:\s*$", line[:match.start()]):
+            return token
+        return re.sub(
+            r"\b\w+\b",
+            lambda name: "" if name.group() in TESLA_PROTO_FIELDS else name.group(),
+            token,
+        )
+
+    return UPSTREAM_TOKEN.sub(replace, line)
 
 
 def iter_added_lines(diff_text: str):
@@ -87,10 +112,9 @@ def check_go(diff_text: str) -> list[str]:
         s = added.lstrip()
         if s.startswith("//") or s.startswith("#") or s.startswith("--"):
             continue
-        if any(name in added for name in TESLA_PROTO_FIELD_ALLOWLIST):
-            continue
+        checked = without_upstream_tokens(added)
         for pat in BANNED:
-            if pat.search(added):
+            if pat.search(checked):
                 violations.append(f"{current_file}: {added.rstrip()}")
                 break
     return violations

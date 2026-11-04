@@ -23,6 +23,12 @@ import { MemoryRouter } from 'react-router-dom';
 import { XRayBucketChart } from './XRayBucketChart';
 import type { IngestXRayBucketPoint } from '@/types/admin-diagnostics';
 
+vi.mock('@/components/charts', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/charts')>(),
+  ResponsiveContainer: ({ height, children }: { height: number | string; children: ReactNode }) =>
+    <div data-testid="allocated-chart-surface" data-height={height}>{children}</div>,
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, fallback: string, opts?: Record<string, unknown>) => {
@@ -83,6 +89,14 @@ function renderChart(props: { buckets: IngestXRayBucketPoint[]; loading: boolean
 }
 
 describe('XRayBucketChart', () => {
+  it('lets the plot use its shared responsive allocation instead of exceeding the mobile viewport', () => {
+    renderChart({ buckets, loading: false });
+    const surface = screen.getByTestId('allocated-chart-surface');
+    expect(surface).toHaveAttribute('data-height', '100%');
+    expect(surface.closest('[data-chart-viewport]')).not.toBeNull();
+    expect(screen.getByRole('table')).toHaveTextContent('1,234');
+  });
+
   it('renders the title, subtitle, and an accessibly-named chart figure', () => {
     renderChart({ buckets, loading: false });
 

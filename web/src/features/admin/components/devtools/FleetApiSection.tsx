@@ -18,6 +18,7 @@ import type { TelemetryError } from './types'
 import { ICON_COLOR_MAP, ONBOARDING_STEPS, TELEMETRY_FIELDS } from './constants'
 import { Icons } from '@/lib/icons';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { MetricGrid } from '@/components/layout';
 
 function resultError(error: unknown, data?: Record<string, unknown>): string | undefined {
   return error ? getErrorMessage(error) : typeof data?.error === 'string' ? data.error : undefined
@@ -49,7 +50,7 @@ function FleetApiConfigTool() {
   return (
     <ToolCard icon={Icons.settings} color="cyan" title={t('devtools.fleet.config', 'Config')} description={t('devtools.fleet.configDesc', 'Config desc')}>
       {configError && <AlertBanner variant="warning">{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(configError)}</AlertBanner>}
-      <div className="grid gap-3 sm:grid-cols-2">
+      <MetricGrid>
         <GlassPanel className="p-3">
           <Caption>{t('devtools.fleet.baseUrl', 'Base URL')}</Caption>
           <div className="mt-1 flex items-center gap-2">
@@ -84,7 +85,7 @@ function FleetApiConfigTool() {
               : <Caption>—</Caption>}
           </div>
         </GlassPanel>
-      </div>
+      </MetricGrid>
     </ToolCard>
   )
 }

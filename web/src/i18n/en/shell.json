@@ -444,9 +444,6 @@
       }
     }
   },
-  "contextMenu": {
-    "menuLabel": "Context menu"
-  },
   "dataSources": {
     "partialMessage": "Available sections remain visible. Source status is tracked independently below.",
     "staleMessage": "Previously loaded data remains visible while affected sources recover.",
@@ -2129,6 +2126,8 @@
       "moveDown": "Move {{col}} down",
       "moveUp": "Move {{col}} up",
       "reset": "Reset",
+      "resetMessage": "Restore the default column order and visibility for this table? Row data will not change.",
+      "resetTitle": "Reset columns?",
       "resizeLabel": "Resize column {{col}}",
       "selectAll": "Select all",
       "showAll": "Show all",
@@ -2311,6 +2310,9 @@
     "statusOnline": "Online",
     "statusIdle": "Idle",
     "statusOffline": "Offline"
+  },
+  "contextMenu": {
+    "menuLabel": "Context menu"
   },
   "metricCard": {
     "moreInfoAbout": "More info about {{label}}"

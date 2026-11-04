@@ -14,8 +14,9 @@ import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
+import { TEMPERATURE_DISPLAY_PRECISION } from '@/lib/unitConversion';
 
-import { LEGEND_STYLE } from './helpers';
+import { DETAIL_SERIES_DASHES, LEGEND_STYLE } from './helpers';
 import type { ChartDataPoint, DriveStats } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -61,13 +62,13 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
             label={t('driveDetail.temperatures', 'Temperatures')}
             items={[
               ...[
-                { id: 'outside', label: t('driveDetail.outsideTemp', 'Outside temperature'), value: stats.avgOutsideTemp },
-                { id: 'inside', label: t('driveDetail.insideTemp', 'Inside temperature'), value: stats.avgInsideTemp },
-                { id: 'driver', label: t('driveDetail.driverTemp', 'Driver temperature'), value: driverAvg },
-                { id: 'passenger', label: t('driveDetail.passengerTemp', 'Passenger temperature'), value: passengerAvg },
-              ].map(row => ({ id: row.id, label: row.label, unit: tempUnit, value: row.value != null ? fmtNumber(row.value) : '—' })),
+                { id: 'outside', label: t('driveDetail.report.averageOutsideTemp', 'Outside temperature (average)'), value: stats.avgOutsideTemp },
+                { id: 'inside', label: t('driveDetail.report.averageInsideTemp', 'Inside temperature (average)'), value: stats.avgInsideTemp },
+                { id: 'driver', label: t('driveDetail.report.averageDriverTemp', 'Driver temperature (average)'), value: driverAvg },
+                { id: 'passenger', label: t('driveDetail.report.averagePassengerTemp', 'Passenger temperature (average)'), value: passengerAvg },
+              ].map(row => ({ id: row.id, label: row.label, unit: tempUnit, value: row.value != null ? fmtNumber(row.value, TEMPERATURE_DISPLAY_PRECISION) : '—' })),
               { id: 'climate', label: t('driveDetail.climate', 'Climate'), value: stats.climateStatus == null ? '—' : stats.climateStatus === 'On' ? t('driveDetail.report.climateOn', 'On') : stats.climateStatus === 'Off' ? t('driveDetail.report.climateOff', 'Off') : t('driveDetail.report.climateMostlyOff', 'Mostly off') },
-              { id: 'fan', label: t('driveDetail.fanStatus', 'Fan status'), value: stats.maxFanSpeed != null ? `${t('driveDetail.avg', 'Avg')} ${fmtInt(stats.avgFanSpeed)} · ${t('driveDetail.max', 'Max')} ${fmtInt(stats.maxFanSpeed)}` : '—' },
+              { id: 'fan', label: t('driveDetail.fanStatus', 'Fan status'), value: stats.maxFanSpeed != null ? `${t('driveDetail.avg', 'Avg')} ${stats.avgFanSpeed != null ? fmtNumber(stats.avgFanSpeed, 1) : '—'} · ${t('driveDetail.max', 'Max')} ${fmtInt(stats.maxFanSpeed)}` : '—' },
             ]}
           />
         )}
@@ -94,19 +95,19 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
                 <XAxis dataKey="time" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} interval="preserveStartEnd" />
                 <YAxis tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
-                <Tooltip content={<ChartTooltip />} />
+                <Tooltip content={<ChartTooltip precision={TEMPERATURE_DISPLAY_PRECISION} />} />
                 <ChartLegend state={hidden} wrapperStyle={LEGEND_STYLE} />
                 {outsideTemps.length > 0 ? (
-                  <Line {...AREA_DEFAULTS} dataKey="outsideTemp" stroke={chartTokens.series[0]} name={`${t('driveDetail.outside', 'Outside')} ${tempUnit}`} hide={hidden.isHidden('outsideTemp')} />
+                  <Line {...AREA_DEFAULTS} dataKey="outsideTemp" stroke={chartTokens.series[0]} strokeDasharray={DETAIL_SERIES_DASHES[0]} name={`${t('driveDetail.outside', 'Outside')} ${tempUnit}`} hide={hidden.isHidden('outsideTemp')} />
                 ) : null}
                 {insideTemps.length > 0 ? (
-                  <Line {...AREA_DEFAULTS} dataKey="insideTemp" stroke={chartTokens.series[2]} name={`${t('driveDetail.inside', 'Inside')} ${tempUnit}`} hide={hidden.isHidden('insideTemp')} />
+                  <Line {...AREA_DEFAULTS} dataKey="insideTemp" stroke={chartTokens.series[2]} strokeDasharray={DETAIL_SERIES_DASHES[1]} name={`${t('driveDetail.inside', 'Inside')} ${tempUnit}`} hide={hidden.isHidden('insideTemp')} />
                 ) : null}
                 {driverTemps.length > 0 ? (
-                  <Line {...AREA_DEFAULTS} dataKey="driverTemp" stroke={chartTokens.series[6]} name={`${t('driveDetail.driver', 'Driver')} ${tempUnit}`} hide={hidden.isHidden('driverTemp')} />
+                  <Line {...AREA_DEFAULTS} dataKey="driverTemp" stroke={chartTokens.series[6]} strokeDasharray={DETAIL_SERIES_DASHES[2]} name={`${t('driveDetail.driver', 'Driver')} ${tempUnit}`} hide={hidden.isHidden('driverTemp')} />
                 ) : null}
                 {passengerTemps.length > 0 ? (
-                  <Line {...AREA_DEFAULTS} dataKey="passengerTemp" stroke={chartTokens.series[4]} name={`${t('driveDetail.passenger', 'Passenger')} ${tempUnit}`} hide={hidden.isHidden('passengerTemp')} />
+                  <Line {...AREA_DEFAULTS} dataKey="passengerTemp" stroke={chartTokens.series[4]} strokeDasharray={DETAIL_SERIES_DASHES[3]} name={`${t('driveDetail.passenger', 'Passenger')} ${tempUnit}`} hide={hidden.isHidden('passengerTemp')} />
                 ) : null}
                 {syncedX != null && (
                   <ReferenceLine

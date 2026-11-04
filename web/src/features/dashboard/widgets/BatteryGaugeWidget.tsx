@@ -10,6 +10,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetBigNumber } from './shared';
 import { WidgetShell } from './WidgetShell';
+import { ChargeBatteryPack, ChargeMeter, useVerifiedChargeActivity } from './instruments/ChargeInstruments';
 import type { WidgetProps } from './types';
 
 /**
@@ -45,10 +46,7 @@ export default function BatteryGaugeWidget({ vehicleId }: WidgetProps) {
     typeof chargeLimitRaw === 'number' && Number.isFinite(chargeLimitRaw) && chargeLimitRaw >= 0 && chargeLimitRaw <= 100
       ? chargeLimitRaw
       : null;
-  const clampedLevel = batteryLevel != null ? Math.min(100, Math.max(0, batteryLevel)) : null;
-  // An out-of-scale reading is retained as the headline number but never
-  // drawn as a clipped meter (it would read as a reachable 0%/100%).
-  const inScale = batteryLevel != null && batteryLevel >= 0 && batteryLevel <= 100;
+  const active = useVerifiedChargeActivity(query);
   const remainingToLimit =
     chargeLimit != null && batteryLevel != null ? Math.round(chargeLimit - batteryLevel) : null;
   const rangeText =
@@ -66,45 +64,20 @@ export default function BatteryGaugeWidget({ vehicleId }: WidgetProps) {
       onRefresh={() => refetch()}
     >
       <div className="flex min-w-0 flex-col gap-2">
-        {batteryLevel != null && clampedLevel != null ? (
+        {batteryLevel != null ? (
           <>
-            <WidgetBigNumber value={batteryLevel} unit="%" decimals={0} animated={false} />
-            {inScale && (
-            <div
-              role="meter"
-              aria-label={t('widget.battery', 'Battery')}
-              aria-valuenow={clampedLevel}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuetext={`${fmtNumber(batteryLevel, 0)}%`}
-              className="w-full min-w-0"
-            >
-              {chargeLimit != null && (
-                <div className="relative h-4" aria-hidden="true">
-                  <span
-                    className="absolute bottom-0 -translate-x-1/2 text-xs font-medium whitespace-nowrap text-[var(--text-muted)]"
-                    style={{ left: `${chargeLimit}%` }}
-                  >
-                    {fmtNumber(chargeLimit, 0)}%
-                  </span>
-                </div>
-              )}
-              <div className="relative h-3 w-full rounded-full bg-[var(--surface-2)]">
-                <div
-                  className="absolute inset-y-0 left-0 rounded-full"
-                  style={{ width: `${clampedLevel}%`, backgroundColor: batteryColor(batteryLevel) }}
-                />
-                {chargeLimit != null && (
-                  <span
-                    data-testid="gauge-marker"
-                    title={t('widget.batteryGauge.limitMarker', 'Charge limit {{pct}}%', { pct: fmtNumber(chargeLimit, 0) })}
-                    className="pointer-events-none absolute -inset-y-1 w-0.5 -translate-x-1/2 rounded-full bg-[var(--text-primary)]"
-                    style={{ left: `${chargeLimit}%` }}
-                  />
-                )}
-              </div>
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <WidgetBigNumber value={batteryLevel} unit="%" decimals={0} animated={false} />
+              <ChargeBatteryPack level={batteryLevel} active={active} />
             </div>
-            )}
+            <ChargeMeter
+              value={batteryLevel}
+              label={t('widget.battery', 'Battery')}
+              marker={chargeLimit}
+              markerLabel={chargeLimit != null ? t('widget.batteryGauge.limitMarker', 'Charge limit {{pct}}%', { pct: fmtNumber(chargeLimit, 0) }) : undefined}
+              color={batteryColor(batteryLevel)}
+              active={active}
+            />
             {state?.is_charging && (
               <p className="text-xs leading-snug text-[var(--text-muted)]">
                 {remainingToLimit != null && remainingToLimit > 0

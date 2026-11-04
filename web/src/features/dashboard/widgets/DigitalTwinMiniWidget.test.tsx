@@ -201,6 +201,18 @@ describe('DigitalTwinMiniWidget — loading states', () => {
 });
 
 describe('DigitalTwinMiniWidget — twin + header chrome', () => {
+  it('retains actual activity in its inspection summary without implying fresh road activity', () => {
+    mockState.mockReturnValue(makeQuery({
+      data: { state: { state: 'driving', speed: 24, is_charging: true } },
+    }));
+    renderWidget();
+
+    const twin = screen.getByRole('img', { name: /digital twin/i });
+    expect(twin).toHaveAccessibleDescription(/digitalTwin.driving: common.on/);
+    expect(twin).toHaveAccessibleDescription(/common.charging: common.charging/);
+    expect(screen.queryByTestId('vehicle-road-motion')).not.toBeInTheDocument();
+  });
+
   it('renders the vehicle digital twin with an accessible image role + label', () => {
     renderWidget();
 

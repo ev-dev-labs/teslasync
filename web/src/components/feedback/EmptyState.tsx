@@ -1,7 +1,9 @@
+import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { Button as CtaButton, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui/Button';
 import { Heading, Text } from '@/components/ui/Typography';
+import { useCardColumnRegistration } from '../layout/layout-reference/CardLayoutContext';
 
 interface EmptyStateProps {
   /** Explicitly identifies a healthy or self-populating informational state. */
@@ -44,13 +46,17 @@ export function EmptyState({
   secondaryActionTo,
   className,
 }: EmptyStateProps) {
+  const emptyRef = useRef<HTMLDivElement>(null);
+  useCardColumnRegistration(emptyRef, true);
   const hasPrimary = actionTo != null || action != null;
   const hasSecondary = secondaryActionTo != null || secondaryAction != null;
   return (
     <div
+      ref={emptyRef}
       role="status"
+      data-empty-state
       data-variant={variant}
-      className={cn('flex min-w-0 flex-col items-center justify-center px-4 py-16 text-center', className)}
+      className={cn('flex min-w-0 flex-1 flex-col items-center justify-center px-4 py-16 text-center', className)}
     >
       {icon && (
         <div className="mb-5 rounded-shape-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-3 text-[var(--text-secondary)]">

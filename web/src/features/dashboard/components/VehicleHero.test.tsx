@@ -463,15 +463,16 @@ describe('VehicleHero — design-system consistency', () => {
     expect(heading.className).toContain('text-[var(--text-primary)]');
   });
 
-  it('paints the charging panel from severity tokens, not a neon surface fill', () => {
+  it('keeps charging details on the main surface with semantic foreground emphasis', () => {
     const { container } = renderHero({
       state: { ...baseState, is_charging: true, charger_power: 11, time_to_full_charge: 2 },
     });
 
     expect(screen.getByText('Charging')).toBeInTheDocument();
     const panel = screen.getByText('Charging').closest('div')?.parentElement as HTMLElement;
-    expect(panel.className).toContain(severityTokens.success.bg);
-    expect(panel.className).toContain(severityTokens.success.border);
+    expect(panel).toHaveClass('border-t', 'border-[var(--border-subtle)]');
+    expect(panel).not.toHaveClass('border', 'rounded-xl', severityTokens.success.bg);
+    expect(screen.getByText('Charging')).toHaveClass(severityTokens.success.fg);
     // No neon fills anywhere, and no fixed white-alpha tile treatment that
     // would disappear against a light theme.
     expect(container.querySelector('[class*="bg-neon-"]')).toBeNull();
@@ -517,13 +518,15 @@ describe('VehicleHero — trust-aware status', () => {
 
   it('reports Unknown when the field backing the claim was never verified', () => {
     renderHero({
-      state: { ...baseState, state: 'online', is_charging: true },
+      state: { ...baseState, state: 'online', is_charging: true, battery_level: 0, inside_temp: 0, outside_temp: 0 },
       freshness: 'fresh',
       observedAt: Date.now(),
       verifiedFields: [],
     });
 
     expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryAllByRole('meter')).toHaveLength(0);
+    expect(screen.queryByText('0°C')).not.toBeInTheDocument();
   });
 
   it('lets verified charging outrank the FSM state', () => {

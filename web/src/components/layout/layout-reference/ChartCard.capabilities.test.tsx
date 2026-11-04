@@ -407,6 +407,26 @@ afterEach(() => {
 });
 
 describe('ChartCard canonical capability opt-ins', () => {
+  it('places optional statistics after the one title/action row and before the plotting viewport', () => {
+    const { container } = mount({
+      toolbar: true, exportable: true,
+      summary: <dl aria-label="Recorded chart statistics"><dt>Original signed energy</dt><dd>-3 Wh</dd></dl>,
+    });
+    const header = container.querySelector('[data-card-header]')!;
+    const stats = container.querySelector('[data-card-stats]')!;
+    const plot = container.querySelector('[data-chart-viewport]')!;
+    expect(plot.closest('[data-chart-body]')).not.toBeNull();
+    expect(plot.closest('[data-card-slot="plot"]')).not.toBeNull();
+    expect(header).toHaveAttribute('data-card-slot', 'header');
+    expect(stats).toHaveAttribute('data-card-slot', 'summary');
+    expect(container.querySelector('figcaption')?.parentElement).toBe(screen.getByRole('figure', { name: title }));
+    expect(header).toContainElement(screen.getByRole('heading', { name: title }));
+    expect(header).toContainElement(screen.getByTestId('canonical-export-menu'));
+    expect(stats).toHaveTextContent('Original signed energy-3 Wh');
+    expect(header.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(stats.compareDocumentPosition(plot) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('retains the lightweight default, one host heading and placement geometry', () => {
     const { container } = mount({ exportData });
     expect(container.querySelector('[data-chart-toolbar]')).toBeNull();
@@ -415,7 +435,7 @@ describe('ChartCard canonical capability opt-ins', () => {
     const figure = screen.getByRole('figure', { name: title });
     const cardHeader = container.querySelector('header');
     expect(cardHeader).not.toBeNull();
-    expect(screen.getAllByRole('heading', { name: title })).toHaveLength(2);
+    expect(screen.getAllByRole('heading', { name: title })).toHaveLength(1);
     expect(within(figure).getByRole('heading', { name: title })).toBeInTheDocument();
     expect(cardHeader ? within(cardHeader).getByRole('heading', { name: title }) : null).toBeVisible();
     expect(figure).toHaveClass('border-0', 'bg-transparent', 'p-0');
@@ -447,6 +467,7 @@ describe('ChartCard canonical capability opt-ins', () => {
     expect(strip).toContainElement(screen.getByTestId('canonical-export-menu'));
     expect(strip).toContainElement(screen.getByTestId('fullscreen-button'));
     expect(strip).toContainElement(screen.getByRole('button', { name: 'Original chart action' }));
+    expect(strip?.closest('[data-card-header]')).toContainElement(screen.getByRole('heading', { name: title }));
     expect(screen.getByTestId('source-icon').parentElement).toHaveAttribute('aria-hidden', 'true');
     expect(figure).not.toHaveClass('rounded-panel', 'shadow-panel', 'p-5');
     expect(within(figure).getByText('Original full range')).toBeInTheDocument();

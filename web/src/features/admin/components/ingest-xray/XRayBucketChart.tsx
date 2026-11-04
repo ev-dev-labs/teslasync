@@ -106,7 +106,7 @@ export function XRayBucketChart({ buckets, loading }: XRayBucketChartProps) {
       exportFilename="ingest-xray-buckets"
       fullscreen
     >
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height="100%">
         <BarChart data={series} margin={chartMargin}>
           {chartGrid}
           <XAxis

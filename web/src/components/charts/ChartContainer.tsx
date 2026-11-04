@@ -1,6 +1,7 @@
 import {
   forwardRef,
   useCallback,
+  useContext,
   useEffect,
   useId,
   useMemo,
@@ -32,6 +33,9 @@ import { getLangDir, textAnchorForDir, type Direction } from '@/lib/i18nDir';
 import { AnnotationList } from './AnnotationList';
 import { AddAnnotationPopover } from './AddAnnotationPopover';
 import { ChartExportMenu } from './ChartExportMenu';
+import { ChartSlotPortal } from './ChartSlotPortal';
+import { CardHeaderContext } from '../layout/layout-reference/CardHeaderContext';
+import { CardSlotContext, useCardLayoutRegistration } from '../layout/layout-reference/CardLayoutContext';
 import { ChartHiddenSeriesProvider } from './ChartHiddenSeriesContext';
 import {
   chartViewportStyle,
@@ -97,6 +101,8 @@ export interface ChartContainerProps {
   /** Opt into an embedded control strip, or explicitly suppress the toolbar.
    * Embedded capability props also opt in; panel defaults remain unchanged. */
   toolbar?: boolean;
+  /** Explicitly share host header/summary slots even when the plot title differs. */
+  headerPlacement?: 'inline' | 'card';
   /** Shared host adapters with their own heading use a hidden text label.
    * Standalone embedded frames retain their original hidden heading. */
   embeddedTitleHeading?: boolean;
@@ -132,6 +138,15 @@ export interface ChartContainerProps {
   /** Navigation empty-state recovery action; takes priority over `emptyAction`. */
   emptyActionTo?: { label: string; to: string };
   action?: React.ReactNode;
+  /** Embedded hosts can share the canonical title/action row without a second surface. */
+  visibleTitle?: boolean;
+  titleId?: string;
+  /** Existing host description/help control, kept inside the shared header. */
+  headerDescription?: React.ReactNode;
+  /** Chart-owned statistics between the shared header and plotting viewport. */
+  summary?: React.ReactNode;
+  /** Visible supporting rows belong below, not inside, the bounded plot. */
+  caption?: React.ReactNode;
   children: ChartContainerChildren;
   className?: string;
   /** Bounded hosts can override viewport minimums without changing auto-height defaults. */
@@ -301,6 +316,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       title,
       variant = 'panel',
       toolbar,
+      headerPlacement = 'inline',
       embeddedTitleHeading = true,
       icon,
       subtitle,
@@ -320,6 +336,11 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       emptyAction,
       emptyActionTo,
       action,
+      visibleTitle = false,
+      titleId: providedTitleId,
+      headerDescription,
+      summary,
+      caption,
       children,
       className,
       viewportClassName,
@@ -345,12 +366,25 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     // rather not couple the fullscreen primitive to an internal
     // implementation detail of the export hook.
     const figureRef = useRef<HTMLElement | null>(null);
+    useCardLayoutRegistration(figureRef, variant === 'panel');
+    const cardSlot = useContext(CardSlotContext);
+    const hostHeader = useContext(CardHeaderContext);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    useEffect(() => {
+      const update = () => setIsFullscreen(document.fullscreenElement === figureRef.current);
+      document.addEventListener('fullscreenchange', update);
+      return () => document.removeEventListener('fullscreenchange', update);
+    }, []);
+    const toolbarTarget = variant === 'embedded' && !visibleTitle && !isFullscreen
+      && (hostHeader?.title === title || headerPlacement === 'card')
+      ? hostHeader?.target ?? null : null;
+    const summaryTarget = toolbarTarget && headerPlacement === 'card' ? hostHeader?.summaryTarget ?? null : null;
     const resolvedHeights = resolveChartHeights(size, height, mobileHeight);
     const chartHeightStyle = chartViewportStyle(resolvedHeights) as CSSProperties;
 
     // Stable ids for figure ↔ figcaption wiring.
     const reactId = useId();
-    const titleId = `chart-title-${reactId}`;
+    const titleId = providedTitleId ?? `chart-title-${reactId}`;
     const fallbackId = `chart-fallback-${reactId}`;
 
     // ── Annotation state (only active when annotationsConfig is supplied) ──
@@ -558,8 +592,10 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
         data-chart-size={size}
         data-chart-key={chartKey}
         data-chart-variant={variant}
+        data-card-layout-opt-in={variant === 'panel' || undefined}
         data-chart-fluid={fluid || undefined}
         data-chart-state={loading ? 'loading' : error ? 'error' : empty ? 'empty' : 'ready'}
+        data-card-slot={variant === 'embedded' && cardSlot === 'delegate' ? 'chart' : undefined}
         data-chart-freshness={metadata?.freshness}
         className={cn(
           // Chart frames are panels too: resolve them from the same panel
@@ -589,11 +625,11 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           // Grid and flex items default to min-width:auto, allowing an SVG's
           // intrinsic width to enlarge the entire page. Keep every chart frame
           // inside its assigned track instead.
-          'min-w-0 max-w-full',
+          'grid min-w-0 max-w-full grid-rows-[auto_auto_1fr_auto_auto]',
           className,
         )}
       >
-        {variant === 'embedded' ? (
+        {variant === 'embedded' && !visibleTitle && !isFullscreen ? (
           <>
             <VisuallyHidden as={embeddedTitleHeading ? 'h3' : 'span'} id={titleId}>
               {title}
@@ -605,15 +641,17 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             )}
           </>
         ) : null}
-        {(variant === 'panel' || showToolbar) && (
-          <div className={cn(
-            'flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4',
+        {(variant === 'panel' || visibleTitle || showToolbar || isFullscreen) && (
+          <ChartSlotPortal target={summaryTarget}>
+          <header data-card-header data-card-slot="header" className={cn(
+            'flex min-w-0 flex-wrap items-start justify-between gap-3',
+            toolbarTarget && !icon && !metadataContent && 'contents',
             variant === 'panel'
               ? 'mb-5 border-b border-[var(--border-subtle)] pb-4'
               : 'mb-3',
           )}>
-          {variant === 'panel' ? (
-          <div className="flex min-w-0 items-start gap-2.5">
+          {variant === 'panel' || visibleTitle || isFullscreen ? (
+          <div data-card-title-group className="flex min-w-min max-w-full flex-1 items-start gap-2.5">
             {icon && (
               <span
                 className={cn('mt-0.5 inline-flex shrink-0', typography.color.muted)}
@@ -623,12 +661,12 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               </span>
             )}
             <div className="min-w-0">
-              <Heading level="panel" id={titleId}>
+              <Heading level="panel" id={titleId} data-card-title>
                 {title}
               </Heading>
-              {subtitle && (
+              {headerDescription ?? (subtitle && (
                 <Text as="p" variant="caption" className="mt-1 leading-relaxed">{subtitle}</Text>
-              )}
+              ))}
               {metadataContent}
             </div>
           </div>
@@ -643,8 +681,10 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             </div>
           ) : null}
           {showToolbar && (
+          <ChartSlotPortal target={toolbarTarget}>
           <div
-            className="flex w-full flex-wrap items-center justify-end gap-1 sm:w-auto"
+            className="ms-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-1"
+            data-card-actions
             data-chart-toolbar
             // Exclude the title-bar action toolbar
             // (annotation buttons, export menu, page-supplied actions)
@@ -748,10 +788,15 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               className="!h-11 !w-11 md:!h-7 md:!w-7"
             />}
           </div>
+          </ChartSlotPortal>
           )}
-          </div>
+          </header>
+          </ChartSlotPortal>
         )}
 
+        {summary != null && <div data-card-stats data-card-slot="summary" className="mb-3 min-w-0">{summary}</div>}
+
+        <div data-chart-body data-card-slot="plot" className="min-h-0 min-w-0">
         {showMarkerRow && (
           <div
             className="mb-2 flex flex-wrap gap-1.5 sm:hidden"
@@ -779,7 +824,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             // Recharts' ResponsiveContainer measures this viewport. Width,
             // overflow, and size containment ensure the measured child can
             // never feed a larger intrinsic size back into its own ancestor.
-            'relative w-full min-w-0 max-w-full overflow-hidden [contain:layout_size]',
+            'card-layout-plot relative flex w-full min-w-0 max-w-full flex-col overflow-hidden [contain:layout_size]',
             fluid
               ? cn(
                   // A minimum height is not a percentage-height basis for the plot.
@@ -861,6 +906,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           </Text>
         )}
 
+        </div>
+        {caption != null && <div data-chart-caption data-card-slot="caption" className="min-w-0">{caption}</div>}
         {/*
           Accessible chart fallback.
 
@@ -879,6 +926,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
         */}
         <VisuallyHidden
           as="figcaption"
+          data-card-slot="caption"
           id={fallbackId}
           className={cn(
             'forced-colors:not-sr-only forced-colors:block',
@@ -971,6 +1019,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           ) : null}
         </VisuallyHidden>
 
+        <div data-card-slot="annotations" className="min-w-0">
         {annotationsEnabled && (
           <section aria-label={t('annotation.listTitle', 'Annotations')} className="mt-2 space-y-2"
             aria-busy={annotationQuery.isFetching || undefined}>
@@ -1005,6 +1054,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             onCancel={closeAnnotation}
           />
         )}
+        </div>
       </figure>
     );
   },

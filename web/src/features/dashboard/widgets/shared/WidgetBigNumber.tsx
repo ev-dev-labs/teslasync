@@ -92,7 +92,7 @@ export function WidgetBigNumber({
   const TrendIcon = delta?.trend ? trendGlyph[delta.trend] : null;
 
   return (
-    <div className={cn('flex h-full min-w-0 flex-col justify-center gap-1', align === 'center' ? 'items-center text-center' : 'items-start')}>
+    <div className={cn('widget-big-number flex h-full min-w-0 flex-col justify-center gap-2', align === 'center' ? 'items-center text-center' : 'items-start')}>
       {label && label !== widgetTitle && (
         <span className={dashboardTokens.metricLabel}>{label}</span>
       )}

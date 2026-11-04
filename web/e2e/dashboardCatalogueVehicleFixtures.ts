@@ -34,6 +34,13 @@ export const vehicleReadings: Record<string, RegExp> = {
   'vehicle-upgrades': /Acceleration Boost/,
 };
 
+export function catalogueDailyMileage(now: string): DailyMileageResponse {
+  return {
+    vehicle_id: 7,
+    days: [{ date: now.slice(0, 10), drive_count: 1, total_km: 17.4, end_odometer_km: 32_100 }],
+  };
+}
+
 export async function installCatalogueVehicleSources(page: Page, mocks: MockApiController, chargingMode = false) {
   const now = new Date().toISOString();
   const earlier = new Date(Date.now() - 3_600_000).toISOString();
@@ -62,10 +69,7 @@ export async function installCatalogueVehicleSources(page: Page, mocks: MockApiC
     data, fetched_at: now,
   });
   const fixtures: Record<string, unknown> = {
-    '/mileage/daily': {
-      vehicle_id: 7,
-      days: [{ date: now.slice(0, 10), drive_count: 1, total_km: 17.4, end_odometer_km: 32_100 }],
-    } satisfies DailyMileageResponse,
+    '/mileage/daily': catalogueDailyMileage(now),
     '/drive-dynamics/latest': {
       lateral_acceleration: 0.2, longitudinal_acceleration: 0.3,
       pedal_position: 35, brake_pedal_position: 0, brake_pedal_active: false,
@@ -105,7 +109,7 @@ export async function installCatalogueVehicleSources(page: Page, mocks: MockApiC
     // No share links were created for this synthetic drive; this is the actual empty-list contract.
     '/drives/101/shares': [],
     '/watch/summary': {
-      vehicle_name: 'Aurora', state: 'online', battery_level: 72, range_km: 410,
+      vehicle_name: 'Aurora', state: 'online', battery_level: 72, range_m: 410000,
       is_charging: false, charge_rate: 0, time_to_full: 0, is_locked: true,
       sentry_mode: true, inside_temp_c: 21, outside_temp_c: 18, is_climate_on: false,
       last_updated: now,

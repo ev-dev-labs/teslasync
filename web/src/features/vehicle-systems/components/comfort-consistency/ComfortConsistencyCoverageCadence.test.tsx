@@ -14,7 +14,7 @@ import type { ComfortConsistencyQueryState } from './types';
 const h = vi.hoisted(() => ({
   locale: 'de-DE',
   tz: 'America/New_York',
-  dates: vi.fn<(value: Date) => void>(),
+  dates: vi.fn<(value: number) => void>(),
   metrics: [] as readonly StatMetric[],
 }));
 
@@ -27,7 +27,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({
     tz: h.tz,
-    formatDateTime: (value: Date) => {
+    formatDateTime: (value: number) => {
       h.dates(value);
       return formatDateTime(value, { locale: h.locale, tz: h.tz });
     },
@@ -94,11 +94,12 @@ describe('ComfortConsistencyCoverageCadence', () => {
     );
     for (const [id, ms] of [['earliest', earliest], ['latest', latest]] as const) {
       expect(screen.getByTestId(id)).toHaveTextContent(
-        `${formatDateTime(new Date(ms), { locale: h.locale, tz: h.tz })} (${h.tz})`,
+        formatDateTime(new Date(ms), { locale: h.locale, tz: h.tz }),
       );
+      expect(screen.getByTestId(id)).not.toHaveTextContent(h.tz);
       expect(h.metrics.find(metric => metric.occurrenceId === id)?.rawValue).toBe(ms);
     }
-    expect(h.dates.mock.calls.map(([date]) => date.getTime())).toEqual([earliest, latest]);
+    expect(h.dates.mock.calls.map(([date]) => date)).toEqual([earliest, latest]);
     for (const id of ['span', 'median', 'p90', 'max']) {
       expect(screen.getByTestId(id)).toHaveTextContent('300 seconds');
     }
@@ -109,8 +110,9 @@ describe('ComfortConsistencyCoverageCadence', () => {
     h.tz = 'Asia/Kolkata';
     rerender(<ComfortConsistencyCoverageCadence summary={data} state={state} locale="en-US" formatDuration={duration} />);
     expect(screen.getByTestId('earliest')).toHaveTextContent(
-      `${formatDateTime(new Date(earliest), { locale: h.locale, tz: h.tz })} (${h.tz})`,
+      formatDateTime(new Date(earliest), { locale: h.locale, tz: h.tz }),
     );
+    expect(screen.getByTestId('earliest')).not.toHaveTextContent(h.tz);
     expect(data.coverage.earliestValidMs).toBe(earliest);
     expect(data.coverage.latestValidMs).toBe(latest);
   });
@@ -133,7 +135,7 @@ describe('ComfortConsistencyCoverageCadence', () => {
     data.coverage.earliestValidMs = 0;
     render(<ComfortConsistencyCoverageCadence summary={data} state={state} locale="en-US" formatDuration={duration} />);
     expect(screen.getByTestId('earliest')).toHaveTextContent(
-      `${formatDateTime(new Date(0), { locale: h.locale, tz: h.tz })} (${h.tz})`,
+      formatDateTime(new Date(0), { locale: h.locale, tz: h.tz }),
     );
     expect(h.metrics.find(metric => metric.occurrenceId === 'earliest')?.rawValue).toBe(0);
   });

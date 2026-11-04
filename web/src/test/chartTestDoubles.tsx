@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { Heading } from '@/components/ui';
 
 interface EmbeddedChartTestContext {
   hiddenSeries: {
@@ -21,6 +22,9 @@ interface EmbeddedChartTestProps {
   height?: number;
   mobileHeight?: number;
   fluid?: boolean;
+  title?: string;
+  titleId?: string;
+  visibleTitle?: boolean;
 }
 
 function EmbeddedChartTestDouble({
@@ -37,6 +41,9 @@ function EmbeddedChartTestDouble({
   height,
   mobileHeight,
   fluid,
+  title,
+  titleId,
+  visibleTitle,
 }: EmbeddedChartTestProps) {
   const resolvedFluid = fluid ?? (height == null && mobileHeight == null);
   const content =
@@ -44,27 +51,29 @@ function EmbeddedChartTestDouble({
       ? children({ hiddenSeries: { isHidden: () => false } })
       : children;
 
-  if (loading) return <Skeleton height={220} />;
-  if (error) return <QueryError error={error} onRetry={onRetry} />;
-
   return (
-    <div
-      role="img"
-      aria-label={ariaLabel}
-      data-testid="embedded-chart"
-      data-chart-key={chartKey}
-      data-chart-height={height}
-      data-chart-mobile-height={mobileHeight}
-      data-chart-fluid={resolvedFluid}
-    >
-      {empty ? (
-        <EmptyState
-          title={emptyTitle}
-          message={emptyMessage ?? 'No data available'}
-          description={emptyDescription}
-        />
-      ) : content}
-    </div>
+    <>
+      {visibleTitle && <Heading id={titleId} level="panel" data-card-title>{title}</Heading>}
+      {loading ? <Skeleton height={220} /> : error ? <QueryError error={error} onRetry={onRetry} /> : (
+        <div
+          role="img"
+          aria-label={ariaLabel}
+          data-testid="embedded-chart"
+          data-chart-key={chartKey}
+          data-chart-height={height}
+          data-chart-mobile-height={mobileHeight}
+          data-chart-fluid={resolvedFluid}
+        >
+          {empty ? (
+            <EmptyState
+              title={emptyTitle}
+              message={emptyMessage ?? 'No data available'}
+              description={emptyDescription}
+            />
+          ) : content}
+        </div>
+      )}
+    </>
   );
 }
 

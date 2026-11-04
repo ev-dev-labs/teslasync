@@ -182,6 +182,12 @@ func TestCoverage_RecentFleetTelemetryFields(t *testing.T) {
 		{269, "SemiCruiseSpeedLimitMph"},
 		{270, "Cabin12vPortKeepOn"},
 		{271, "Cabin48vPortKeepOn"},
+		{272, "AccessoryRail"},
+		{273, "PowerTransferStatus"},
+		{274, "AutomaticEmergencyBrakingState"},
+		{275, "RollingResistanceCoefficient"},
+		{276, "LifetimeDcChargeEnergyKwh"},
+		{277, "SemiVehicleMassKg"},
 	}
 	for _, w := range want {
 		meta, ok := SignalsByEnum[w.num]

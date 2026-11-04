@@ -132,7 +132,7 @@ export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: 
               <Link
                 to={`/lifetime?achievement=${encodeURIComponent(achievement.id)}`}
                 aria-label={t('achievements.viewNamed', 'View achievement: {{name}}', { name })}
-                className="group flex min-h-24 min-w-0 flex-col items-center rounded-lg border border-[var(--border-subtle)] px-2.5 py-2 text-center transition-colors duration-fast motion-reduce:transition-none hover:bg-[var(--surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)]"
+                className="group flex min-h-24 min-w-0 flex-col items-center rounded-lg px-2.5 py-2 text-center transition-colors duration-fast motion-reduce:transition-none hover:bg-[var(--surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)]"
               >
                 <span
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--semantic-warning)]/20 bg-[var(--semantic-warning)]/10 text-amber-300"

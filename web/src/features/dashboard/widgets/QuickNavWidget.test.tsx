@@ -225,14 +225,13 @@ describe('QuickNavWidget — shell + prop-agnostic contract', () => {
     expect(screen.getByRole('link', { name: /drives/i }).className).toContain('focus-visible:ring-2');
   });
 
-  it('renders After bordered link tiles on the shared 8px grid', () => {
+  it('keeps navigation touch targets and focus styling without nested card borders', () => {
     renderWidget();
     const nav = screen.getByRole('navigation');
     // After `.links`: 8px grid gap (dashboardTokens.density.gridGap).
     expect(nav.className).toContain('gap-2');
     for (const link of screen.getAllByRole('link')) {
-      // After `.lk`: bordered 10px tile (radius.inner), 44px target, hover fill.
-      expect(link.className).toContain('border');
+      expect(link).not.toHaveClass('border');
       expect(link.className).toContain('rounded-shape-lg');
       expect(link.className).toContain('min-h-11');
       expect(link.className).toContain('hover:bg-[var(--surface-2)]');

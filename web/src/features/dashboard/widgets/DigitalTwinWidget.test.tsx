@@ -335,6 +335,7 @@ describe('DigitalTwinWidget — independent source failures', () => {
       windowRP: 'closed',
       isDriving: true,
       isCharging: true,
+      animateActivity: false,
       sentryMode: true,
     }));
   }
@@ -363,6 +364,7 @@ describe('DigitalTwinWidget — independent source failures', () => {
         sentryMode: source === 'security' ? null : true,
         isDriving: source !== 'state',
         isCharging: source !== 'charging',
+        animateActivity: false,
       }));
       expect(screen.getByText(source === 'security' ? 'Lock unknown' : 'Unlocked')).toBeInTheDocument();
       expect(screen.getByText(source === 'security' ? 'Windows unknown' : 'Windows closed')).toBeInTheDocument();
@@ -529,9 +531,22 @@ describe('DigitalTwinWidget — vehicle resolution & hook contract', () => {
 // ── Twin scene: size + paint plumbing ────────────────────────────────────────────
 
 describe('DigitalTwinWidget — twin scene', () => {
+  it('preserves actual activity readings while disabling the legacy visual loops', () => {
+    setState({ state: makeVehicleState({ state: 'driving', speed: 24 }) });
+    setCharging(makeCharging({ charging_state: 'Charging' }));
+    renderWidget();
+
+    expect(twinPropsSpy).toHaveBeenLastCalledWith(expect.objectContaining({
+      isDriving: true,
+      isCharging: true,
+      animateActivity: false,
+    }));
+    expect(screen.queryByTestId('vehicle-road-motion')).not.toBeInTheDocument();
+  });
+
   it.each([SMALL, { cols: 2, rows: 5 }])('retains intrinsic scene height for grid auto-fit at %j', (size) => {
     renderWidget(size);
-    const scene = screen.getByTestId('vehicle-twin').parentElement;
+    const scene = screen.getByTestId('vehicle-twin').closest('[data-vehicle-studio]')?.parentElement;
     expect(scene).toHaveClass('shrink-0');
     expect(scene).not.toHaveClass('flex-1');
     expect(scene?.parentElement).not.toHaveClass('justify-center');
@@ -541,7 +556,7 @@ describe('DigitalTwinWidget — twin scene', () => {
     renderWidget(SMALL);
 
     expect(twinPropsSpy).toHaveBeenLastCalledWith(
-      expect.objectContaining({ vehicleId: 7, exteriorColor: 'DeepBlue', driveIn: true }),
+      expect.objectContaining({ vehicleId: 7, exteriorColor: 'DeepBlue', driveIn: false, animateActivity: false }),
     );
   });
 

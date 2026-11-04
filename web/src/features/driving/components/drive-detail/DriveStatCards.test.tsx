@@ -226,6 +226,15 @@ describe('DriveStatCards — km preference', () => {
 
 /* ── Imperial (mi) preference ─────────────────────────────────────────────── */
 describe('DriveStatCards — mi preference', () => {
+  it('uses shared feet conversion for elevation without rewriting SI gain/loss', () => {
+    h.system = 'mi';
+    const stats = makeStats({ elevGain: 30.48, elevLoss: 15.24 });
+    render(<DriveStatCards drive={makeDrive()} stats={stats} />);
+    expect(screen.getByText(`100.00 ft ${UP}`)).toBeInTheDocument();
+    expect(screen.getByText(`50.00 ft ${DOWN}`)).toBeInTheDocument();
+    expect(stats.elevGain).toBe(30.48);
+    expect(stats.elevLoss).toBe(15.24);
+  });
   beforeEach(() => {
     h.system = 'mi';
   });

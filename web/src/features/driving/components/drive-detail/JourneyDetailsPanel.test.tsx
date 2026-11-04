@@ -263,6 +263,32 @@ describe('JourneyDetailsPanel — destination endpoint (ended drive)', () => {
 
     expect(within(destColumn()).getByText(/Battery/)).toHaveTextContent('Battery: 72.00%');
   });
+
+  it('renders start and destination independently', () => {
+    renderPanel({
+      startAddress: '19720 Bothell Everett Highway, Bothell',
+      endAddress: '1 Microsoft Way, Redmond',
+      endTs: END_TS,
+    });
+
+    expect(within(startColumn()).getByText('19720 Bothell Everett Highway, Bothell')).toBeInTheDocument();
+    expect(within(destColumn()).getByText('1 Microsoft Way, Redmond')).toBeInTheDocument();
+    expect(within(destColumn()).queryByText('19720 Bothell Everett Highway, Bothell')).toBeNull();
+  });
+
+  it('shows end coordinates, never the start address, when the end address is unavailable', () => {
+    renderPanel({
+      startAddress: '19720 Bothell Everett Highway, Bothell',
+      endAddress: null,
+      endLat: 47.674,
+      endLon: -122.1215,
+      endTs: END_TS,
+    });
+
+    const col = destColumn();
+    expect(col.querySelector('.font-mono')?.textContent).toContain('47.67');
+    expect(within(col).queryByText('19720 Bothell Everett Highway, Bothell')).toBeNull();
+  });
 });
 
 // ── 5. In-progress drive ─────────────────────────────────────────────────────

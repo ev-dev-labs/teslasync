@@ -168,7 +168,7 @@ describe('WidgetStatusGrid — cell rendering', () => {
   });
 });
 
-describe('WidgetStatusGrid — boxed status cells (After `.sgi`)', () => {
+describe('WidgetStatusGrid — unframed status readings', () => {
   const cases: Array<[StatusCell['status'], string]> = [
     ['ok', 'bg-[var(--semantic-success)]'],
     ['warning', 'bg-[var(--semantic-warning)]'],
@@ -177,22 +177,18 @@ describe('WidgetStatusGrid — boxed status cells (After `.sgi`)', () => {
     ['unknown', 'bg-[var(--text-muted)]'],
   ];
 
-  it.each(cases)('shows the %s status dot on a neutral box', (status, dotBg) => {
+  it.each(cases)('keeps the %s status dot and text without nested card chrome', (status, dotBg) => {
     const { container } = render(<WidgetStatusGrid cells={[makeCell({ status })]} />);
 
     const [cell] = getCellNodes(container);
     expect(getDot(cell).className).toContain(dotBg);
-    // After `.sgi`: bordered 10px box, 8px grid gap — never a status-tinted
-    // fill and never the old flat divider-row treatment.
-    expect(cell.className).toContain('border');
-    expect(cell.className).toContain('rounded-shape-lg');
-    expect(cell.className).toContain('px-2.5');
-    expect(cell.className).not.toContain('border-b');
+    expect(cell).toHaveClass('widget-status-tile', 'py-2');
+    expect(cell).not.toHaveClass('border', 'rounded-shape-lg', 'px-2.5');
     expect(cell.className).not.toContain('bg-[var(--semantic');
     expect(cell).toHaveTextContent(status === 'ok' ? 'Healthy' : status === 'warning' ? 'Warning' : status === 'error' ? 'Error' : status === 'inactive' ? 'Inactive' : 'Unknown');
   });
 
-  it('keeps the 8px grid gap between boxes', () => {
+  it('keeps the 8px grid gap between readings', () => {
     const { container } = render(<WidgetStatusGrid cells={[makeCell({ id: 'a' })]} />);
     expect(getGrid(container).className).toContain('gap-2');
   });
@@ -252,11 +248,9 @@ describe('WidgetStatusGrid — column layout', () => {
     const grid = getGrid(container);
     expect(grid.className).toContain('grid-cols-2');
     expect(grid.className).not.toContain('@sm:grid-cols-4');
-    // Compact boxes keep the bordered `.sgi` chrome with a tighter vertical rhythm.
     const [cell] = getCellNodes(container);
     expect(cell.className).toContain('py-1.5');
-    expect(cell.className).toContain('rounded-shape-lg');
-    expect(cell.className).toContain('px-2.5');
+    expect(cell).not.toHaveClass('border', 'rounded-shape-lg', 'px-2.5');
   });
 });
 

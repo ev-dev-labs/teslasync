@@ -1,8 +1,7 @@
 # TeslaSync agent playbook (autonomous, agent-agnostic, resumable)
 
 This file is the operating instructions for ANY AI agent (Claude, Codex,
-Muse, or another) working on branch `fix/post-merge-followups` (draft PR
-#202). Agents rotate when usage limits are hit or a session crashes. Every
+Muse, or another) working on branch `fix/post-202-polish` (this branch's draft PR). Agents rotate when usage limits are hit or a session crashes. Every
 agent must be able to stop at any moment, and the next agent must be able
 to resume without redoing work.
 
@@ -24,7 +23,7 @@ to resume without redoing work.
    WSL (Linux). Make sure no other agent is running there (no other agent
    CLI, no orphan test runners, preview or dev servers you didn't start;
    stop orphans).
-2. `git fetch`, `git switch fix/post-merge-followups`, `git pull --ff-only`.
+2. `git fetch`, `git switch fix/post-202-polish`, `git pull --ff-only`.
 3. Read, in order:
    - this playbook (`docs/agent-playbook.md`)
    - `docs/work-queue.md` (the master status file; create it from section 1
@@ -42,8 +41,7 @@ to resume without redoing work.
    `wip: unverified handoff - <what>` and record it as a blocker. Commits
    named `wip: unverified handoff ...` from a previous agent must be
    verified and fixed first.
-5. Check this branch's draft PR (`gh pr list --head fix/post-merge-followups`;
-   expected #202). If none exists, create it: `gh pr create --draft --base main`.
+5. Check this branch's draft PR (`gh pr list --head fix/post-202-polish`). If none exists, create it: `gh pr create --draft --base main`.
    Check `gh pr checks <pr>`.
 6. Print a short status (current part/step, done/remaining counts, PR check
    state, uncommitted work found), then continue immediately from the first
@@ -59,7 +57,7 @@ to resume without redoing work.
   `time | agent | part/step | done since last entry | blockers`.
 - After every ten completed fixes, commit verified work, update the work
   queue with the exact next step and push. The user's 2026-10-25 continuation
-  overrides the earlier ten-fix handoff: continue until every PR #202 check
+  overrides the earlier ten-fix handoff: continue until every check on this branch's draft PR
   passes, rather than stopping at that checkpoint. Validation attempts are
   not completed fixes.
 - When your session or usage is about to end: stop starting new tasks,
@@ -92,14 +90,16 @@ each part list its steps with status, last commit, and next step.
 | 2 | Dashboard widget redesign |
 | 3 | Shared-pattern consolidation (whole codebase) |
 | 4 | Remaining items: product items (A) and security re-check (B) |
-| 5 | CI green on PR #202 |
+| 5 | CI green on this branch's draft PR |
 | 6 | Tailwind v3 -> v4 (separate branch and PR) |
 
 Do parts in this order. Skip anything the work queue already marks done.
 
 `main` contains the squash-merged redesign (PR #198). Never merge or
 cherry-pick old branches (`ui/simplification`, `fix/post-redesign-followups`,
-`fix/dashboard-followups-finish`, sidenav / nav-motion / i18n / ui-fixes
+`fix/dashboard-followups-finish`, `fix/post-merge-followups`,
+`feat/shared-patterns`, `feat/chart-palette`, `feat/widget-redesign`,
+sidenav / nav-motion / i18n / ui-fixes
 branches) into main or this branch.
 
 ---
@@ -193,7 +193,7 @@ npm test -- <related-test-files>
 Rebuild with `e2e:build` after source changes. A shard passes only if the
 tests pass AND the wrapper reports no proxy/network escape error.
 
-Push verified fixes, then inspect `gh pr checks 202` and download failing
+Push verified fixes, then inspect `gh pr checks <this branch's draft PR number>` and download failing
 logs with `gh run view <id> --log-failed` to session files. Download failure
 artifacts when logs are insufficient. Group failures by root cause and
 fix the biggest group first. Track failing counts before/after every round
@@ -222,7 +222,7 @@ a reason to stop. Never wait more than 15 minutes without new output.
   2. Sync the mirror (only if its working tree is clean; if not, record a
      blocker instead of touching it):
      `git.exe -C D:/repos/teslasync fetch` then
-     `git.exe -C D:/repos/teslasync checkout -B fix/post-merge-followups origin/fix/post-merge-followups`
+     `git.exe -C D:/repos/teslasync checkout -B fix/post-202-polish origin/fix/post-202-polish`
   3. Run via Windows PowerShell, e.g.:
      `powershell.exe -NoProfile -Command "cd D:\repos\teslasync\web; $env:E2E_MOCKS='1'; npm run e2e:build; $env:E2E_REUSE_BUILD='1'; $env:CI='true'; $env:TZ='UTC'; npm run e2e:visual -- --shard=N/10 --workers=2"`
      (add `--update-snapshots` only for intended, reviewed differences).
@@ -540,7 +540,7 @@ recommendations in `docs/followups-plan.md`.
 
 ## PART 5: CI green
 
-Push and loop until every check on PR #202 passes (section 3 procedure;
+Push and loop until every check on this branch's draft PR passes (section 3 procedure;
 Windows visual failures via section 4). Fix real causes only.
 
 ---

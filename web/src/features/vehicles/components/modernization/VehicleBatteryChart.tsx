@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Battery } from 'lucide-react';
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { OperationalBrief, type StatMetric } from '@/components/data-display';
 import { containerPolicy, useCardPlacement } from '@/components/layout/layout-reference';
 import {
@@ -16,9 +16,7 @@ import { isFiniteNumber } from '@/lib/numberFormat';
 import type { VehicleState } from '@/api/types';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
-/** Compatibility extraction preserves the gauge/readouts BEFORE the bar plot.
- * ChartCard has no prefix slot; nesting it here would add a second surface or
- * move source content. EmbeddedChart remains the exact non-exporting engine. */
+/** The gauge/readouts occupy the shared summary before the unchanged plot. */
 export function VehicleBatteryChart({ state, height: heightOverride }: { state: VehicleState; height?: number }) {
   const placement = useCardPlacement();
   const height = heightOverride ?? containerPolicy(placement?.width ?? 0).chartHeight;
@@ -44,12 +42,10 @@ export function VehicleBatteryChart({ state, height: heightOverride }: { state: 
     { key: 'value', label: t('common.percentage', '%'), format: (v) => isFiniteNumber(v) ? `${fmtNumber(v, displayPrecision)}%` : '—' },
   ], [t, fmtNumber, displayPrecision]);
   return (
-    <GlassPanel className="h-full min-w-0 p-6">
-      <PanelTitle className="mb-4 flex items-center gap-2">
-        <Battery className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-        {t('vehicles.detail.batteryOverview', 'Battery overview')}
-      </PanelTitle>
-      <div className="mb-4 flex min-w-0 flex-wrap items-center gap-4">
+    <LayoutCard
+      title={t('vehicles.detail.batteryOverview', 'Battery overview')}
+      icon={<Battery className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
+      summary={<div className="flex min-w-0 flex-wrap items-center gap-4">
         <LinearGauge value={batteryLevel} max={100} label={t('common.battery', 'Battery')}
           preserveReadingAndScale unit="%" decimals={displayPrecision}
           tone={batteryLevel == null ? 'neutral' : batteryLevel > 60 ? 'success' : batteryLevel > 25 ? 'warning' : 'danger'}
@@ -64,7 +60,8 @@ export function VehicleBatteryChart({ state, height: heightOverride }: { state: 
             provenance={t('vehicles.detail.batterySnapshotSource', 'Supplied vehicle-state response')}
             metrics={metrics} />
         </div>
-      </div>
+      </div>}
+    >
       <EmbeddedChart title={t('vehicles.detail.batteryOverview', 'Battery overview')}
         ariaLabel={t('vehicles.detail.batteryAria', 'Battery current and remaining levels bar chart')}
         data={batteryChartData} dataColumns={batteryColumns} height={height} mobileHeight={height} fluid={false}>
@@ -78,6 +75,6 @@ export function VehicleBatteryChart({ state, height: heightOverride }: { state: 
           </BarChart>
         </ResponsiveContainer>
       </EmbeddedChart>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

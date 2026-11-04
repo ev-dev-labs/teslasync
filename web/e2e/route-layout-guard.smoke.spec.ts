@@ -4,15 +4,22 @@ import { fileURLToPath } from 'node:url'
 import { expect, test, type Page } from '@playwright/test'
 import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
 import { measureTz, type TzSweep } from './timezoneSweep'
+import { auditCardGeometry, measureCardGeometry, type CardGeometry, type CardLayoutViolation } from './cardLayoutGeometry'
+import { installCardLayoutFixtures } from './cardLayoutFixtures'
+import { monitorPage } from './qualityAssertions'
 
 /**
- * Row-17 guard + gallery: every route renders a readable layout at 375px,
- * 768px, 1280px and 1920px. Fails a route/width when:
+ * Row-17 guard + gallery: every route renders a readable layout in both
+ * themes, retaining the original widths and adding the 390px mobile band.
+ * Fails a route/width when:
  * - any card/panel (`[data-surface-variant]`, `.widget-panel`) is narrower
  *   than 200px at >= 768px viewport width;
  * - any short text element wraps per character (its line count approaches
  *   its character count);
  * - the page overflows horizontally (document/body scrollWidth).
+ * - neighboring cards leave a large row hole, titles/actions or sibling
+ *   statistics/plot offsets disagree, or a short empty body is not centered.
+ *   CSS-column masonry is measured within columns, not as equal-height rows.
  *
  * Screenshots (viewport, 1280px + 375px) and per-chunk records land in
  * `web/test-results-guard/<runId>/` — OUTSIDE Playwright's outputDir, which
@@ -23,11 +30,12 @@ import { measureTz, type TzSweep } from './timezoneSweep'
  * curated copy of the JPEGs.
  *
  * `GALLERY_ONLY=/a,/b` restricts the run to those routes (attribution and
- * iteration). Routes are split into up to 64 nonempty chunks x 5 widths.
+ * iteration). Routes are split into up to 64 nonempty chunks x 6 widths x
+ * 2 themes; use Playwright's existing grep and shard options for bounded runs.
  * Small independently seeded batches let CI distribute the expensive route
  * sweep across runners instead of assigning 15 giant tests to one shard.
  *
- * Route table extracted from `src/App.tsx` (`node /tmp/gen-routes.mjs`):
+ * Route table extracted from `src/App.tsx`:
  * 277 entries. Parameterized routes use canonical mock ids (drives/412,
  * charging/201, vehicles/7, trips/1, automations/1/edit,
  * system-status/incidents/1, year-review/2025, s/e2e-token); `*` becomes
@@ -325,6 +333,7 @@ const ROUTES: string[] = [
 
 const WIDTHS = [
   { width: 375, height: 844 },
+  { width: 390, height: 844 },
   { width: 414, height: 896 },
   { width: 768, height: 1024 },
   { width: 1280, height: 900 },
@@ -372,6 +381,12 @@ interface RouteRecord {
   overflow: { root: [number, number]; body: [number, number] } | null
   error: string | null
   tz: TzSweep
+  theme: 'dark' | 'light'
+  geometry: CardGeometry[]
+  layout: CardLayoutViolation[]
+  networkEscapes: string[]
+  unmatchedMocks: string[]
+  runtimeErrors: string[]
 }
 
 function slug(route: string): string {
@@ -388,7 +403,9 @@ function resolveGuardRunId(): string {
   if (pinned) return pinned.replace(/[^a-zA-Z0-9_-]/g, '-')
   return `run-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')}`
 }
-const GUARD_ARTIFACT_DIR = path.resolve(HERE, '../test-results-guard', resolveGuardRunId())
+const GUARD_ARTIFACT_DIR = process.env.GUARD_ARTIFACT_DIR
+  ? path.resolve(process.env.GUARD_ARTIFACT_DIR, resolveGuardRunId())
+  : path.resolve(HERE, '../test-results-guard', resolveGuardRunId())
 async function guardArtifactPath(name: string): Promise<string> {
   await mkdir(GUARD_ARTIFACT_DIR, { recursive: true })
   return path.join(GUARD_ARTIFACT_DIR, name)
@@ -410,7 +427,9 @@ async function settle(page: Page, mockApi: MockApi): Promise<void> {
   }
 }
 
-async function measure(page: Page, width: number): Promise<Pick<RouteRecord, 'cards' | 'narrow' | 'perchar' | 'overflow'>> {
+async function measure(page: Page, width: number): Promise<
+  Pick<RouteRecord, 'cards' | 'narrow' | 'perchar'> & { overflow: NonNullable<RouteRecord['overflow']> }
+> {
   return page.evaluate((viewportWidth: number) => {
     const narrow: NarrowCard[] = []
     let cards = 0
@@ -497,26 +516,34 @@ async function measure(page: Page, width: number): Promise<Pick<RouteRecord, 'ca
 
 for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
   for (const { width, height } of WIDTHS) {
-    test(`route layout guard chunk ${chunk} at ${width}px`, async ({ page }) => {
+    for (const theme of ['dark', 'light'] as const) {
+    test(`route layout guard chunk ${chunk} at ${width}px in ${theme}`, async ({ page }) => {
       test.setTimeout(600_000)
       const routes = ACTIVE_ROUTES.filter((_, index) => index % CHUNKS === chunk)
       if (routes.length === 0) test.skip()
       await page.setViewportSize({ width, height })
-      await seedBrowserState(page, 'dark', '/')
-      const mockApi = await installApiMocks(page, 'populated', 'dark')
+      await seedBrowserState(page, theme, '/')
+      const { mockApi, networkEscapes } = await installCardLayoutFixtures(page, theme)
+      const diagnostics = monitorPage(page)
 
       const records: RouteRecord[] = []
       const violations: string[] = []
 
       for (const route of routes) {
+        mockApi.unmatched.clear()
+        networkEscapes.length = 0
+        for (const errors of Object.values(diagnostics)) errors.length = 0
         const record: RouteRecord = {
           route, width, finalUrl: '', status: 'pass', cards: 0,
           narrow: [], perchar: [], overflow: null, error: null,
           tz: { iso: [], zones: [], dupes: [] },
+          theme, geometry: [], layout: [], networkEscapes: [], unmatchedMocks: [], runtimeErrors: [],
         }
         try {
           await page.goto(route, { waitUntil: 'domcontentloaded' })
           await settle(page, mockApi)
+          record.networkEscapes = [...networkEscapes]
+          record.unmatchedMocks = [...mockApi.unmatched]
           // Top-level routes (glance, watch, onboarding, …) render outside
           // the app Layout and own no <main>; measurable content is the
           // readiness signal, not the landmark.
@@ -531,6 +558,13 @@ for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
           record.narrow = m.narrow
           record.perchar = m.perchar
           record.overflow = m.overflow
+          record.geometry = await measureCardGeometry(page)
+          record.layout = auditCardGeometry(record.geometry)
+          if (record.layout.length > 0) {
+            record.status = 'violation'
+            violations.push(...record.layout.map(hit =>
+              `${route} @${width} ${theme}: ${hit.kind} ${hit.difference}px <${hit.cards.join(' / ')}>`))
+          }
           const over = m.overflow.root[0] > m.overflow.root[1] + 1
             || m.overflow.body[0] > m.overflow.body[1] + 1
           if (m.narrow.length > 0 || m.perchar.length > 0 || over) {
@@ -560,13 +594,13 @@ for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
             ]
             violations.push(`${route} @${width}: TZ ${parts.join('; ')}`)
             await writeFile(
-              await guardArtifactPath(`tz-dom-${slug(route)}-${width}.html`),
+              await guardArtifactPath(`tz-dom-${slug(route)}-${width}-${theme}.html`),
               await page.content(),
             )
           }
-          if (width === 1280 || width === 375) {
+          if (width === 1280 || width === 375 || width === 390) {
             await page.screenshot({
-              path: await guardArtifactPath(`${slug(route)}-${width}.jpg`),
+              path: await guardArtifactPath(`${slug(route)}-${width}-${theme}.jpg`),
               type: 'jpeg',
               quality: 70,
               animations: 'disabled',
@@ -579,17 +613,34 @@ for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
           record.error = raw.replace(ansiPattern, '').slice(0, 160)
           violations.push(`${route} @${width}: LOAD ERROR ${record.error}`)
         }
+        record.unmatchedMocks = [...mockApi.unmatched]
+        record.networkEscapes = [...networkEscapes]
+        record.runtimeErrors = Object.values(diagnostics).flat()
+        if (record.unmatchedMocks.length > 0 || record.networkEscapes.length > 0 || record.runtimeErrors.length > 0) {
+          if (record.status === 'pass') record.status = 'violation'
+          if (record.unmatchedMocks.length > 0) {
+            violations.push(`${route} @${width} ${theme}: unmatched synthetic API requests ${record.unmatchedMocks.join('; ')}`)
+          }
+          if (record.networkEscapes.length > 0) {
+            violations.push(`${route} @${width} ${theme}: attempted external requests ${record.networkEscapes.join('; ')}`)
+          }
+          if (record.runtimeErrors.length > 0) {
+            violations.push(`${route} @${width} ${theme}: runtime errors ${record.runtimeErrors.join('; ')}`)
+          }
+        }
         records.push(record)
-        await writeFile(await guardArtifactPath(`records-chunk${chunk}-${width}.json`), JSON.stringify(records, null, 1))
+        await writeFile(await guardArtifactPath(`records-chunk${chunk}-${width}-${theme}.json`), JSON.stringify(records, null, 1))
         console.log(
-          `[route-guard] ${route} @${width}: ${record.status} `
+          `[route-guard] ${route} @${width} ${theme}: ${record.status} `
           + `cards=${record.cards} narrow=${record.narrow.length} perchar=${record.perchar.length}`
           + ` tzIso=${record.tz.iso.length} tzZones=${record.tz.zones.length} tzDupes=${record.tz.dupes.length}`
+          + ` layout=${record.layout.length}`
           + (record.error ? ` error=${record.error}` : ''),
         )
       }
 
       expect(violations).toEqual([])
     })
+    }
   }
 }

@@ -70,9 +70,13 @@ export function ListExportMenu({
 
   useEffect(() => {
     if (!open || disabled || exporting) return;
-    const items = menuRef.current?.querySelectorAll<HTMLButtonElement>('[role^="menuitem"]');
-    items?.[focusLastRef.current ? items.length - 1 : 0]?.focus();
-    focusLastRef.current = false;
+    // The portalled popover is initially hidden while its position is measured.
+    const frame = requestAnimationFrame(() => {
+      const items = menuRef.current?.querySelectorAll<HTMLButtonElement>('[role^="menuitem"]');
+      items?.[focusLastRef.current ? items.length - 1 : 0]?.focus();
+      focusLastRef.current = false;
+    });
+    return () => cancelAnimationFrame(frame);
   }, [open, disabled, exporting]);
 
   // A newly-created selection is the likely export intent. Preserve explicit

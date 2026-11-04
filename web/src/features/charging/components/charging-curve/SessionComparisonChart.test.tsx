@@ -105,6 +105,7 @@ vi.mock('@/components/charts', () => ({
     empty,
     exportable,
     exportFilename,
+    caption,
     children,
   }: {
     title: string;
@@ -117,6 +118,7 @@ vi.mock('@/components/charts', () => ({
     empty?: boolean;
     exportable?: boolean;
     exportFilename?: string;
+    caption?: ReactNode;
     children?: ReactNode;
   }) => (
     <figure
@@ -133,6 +135,7 @@ vi.mock('@/components/charts', () => ({
       data-export-filename={exportFilename ?? ''}
     >
       {children}
+      <div data-card-slot="caption">{caption}</div>
     </figure>
   ),
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
@@ -231,6 +234,13 @@ function chartPoints(): Point[] {
 }
 
 describe('SessionComparisonChart', () => {
+  it('keeps both session identity swatches in the supporting caption instead of the finite plot', () => {
+    const mounted = render(<SessionComparisonChart sessions={[dcSession, acSession]} />);
+    const swatches = mounted.container.querySelectorAll('span[aria-hidden="true"]');
+    expect(swatches).toHaveLength(2);
+    for (const swatch of swatches) expect(swatch.closest('[data-card-slot="caption"]')).not.toBeNull();
+  });
+
   it('threads localized copy, height and export config into the chart container', () => {
     render(<SessionComparisonChart sessions={[dcSession, acSession]} />);
 

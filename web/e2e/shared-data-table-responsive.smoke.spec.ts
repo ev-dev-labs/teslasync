@@ -2,10 +2,12 @@ import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import { assertMockApiComplete, fulfillApiFixture, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi';
 import { expectNoHorizontalOverflow } from './qualityAssertions';
+import { closeTableToolbarControls, openTableToolbarControls } from './tableToolbarControls';
 test.skip(process.env.E2E_MOCKS === '0', 'Requires synthetic loaded-table evidence');
 
 async function downloadAuditCsv(page: Page): Promise<string> {
-  await page.getByRole('button', { name: 'Export list', exact: true }).click();
+  const controls = await openTableToolbarControls(page.locator('[data-grid-frame]'));
+  await controls.getByRole('button', { name: 'Export list', exact: true }).click();
   const pendingDownload = page.waitForEvent('download');
   await page.getByRole('menuitem', { name: 'Download as CSV', exact: true }).click();
   const download = await pendingDownload;
@@ -13,6 +15,7 @@ async function downloadAuditCsv(page: Page): Promise<string> {
   expect(download.suggestedFilename()).toMatch(/\.csv$/);
   const path = await download.path();
   if (!path) throw new Error('Audit CSV download has no local artifact');
+  await closeTableToolbarControls(controls);
   return readFile(path, 'utf8');
 }
 
@@ -155,11 +158,13 @@ for (const theme of ['light', 'dark'] as const) {
       expect(geometry.right).toBeLessThanOrEqual(geometry.viewport);
       expect(['auto', 'scroll']).toContain(geometry.overflow);
       if (width <= 1024) expect(geometry.scrollWidth).toBeGreaterThan(geometry.width);
-      const download = page.getByRole('button', { name: 'Export list', exact: true });
+      const controls = await openTableToolbarControls(table.locator('xpath=ancestor::*[@data-grid-frame][1]'));
+      const download = controls.getByRole('button', { name: 'Export list', exact: true });
       await expect(download).toBeVisible();
       const bounds = await download.boundingBox();
       expect(bounds!.x).toBeGreaterThanOrEqual(0);
       expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+      await closeTableToolbarControls(controls);
       await expect(page.getByRole('navigation', { name: 'Pagination', exact: true })).toBeVisible();
       await expectNoHorizontalOverflow(page);
       const csv = await downloadAuditCsv(page);

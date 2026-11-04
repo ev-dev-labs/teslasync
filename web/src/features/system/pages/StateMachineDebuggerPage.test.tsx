@@ -61,7 +61,8 @@ describe('StateMachineDebuggerPage — mobile field access', () => {
     renderPage();
 
     const log = await screen.findByRole('group', { name: 'Transition log' });
-    const row = within(log).getByRole('button', { name: '2026-01-07T12:00:00Z' });
+    const row = within(log).getByRole('button', { name: /Jan 7, 2026/ });
+    expect(row).not.toHaveAccessibleName(/2026-01-07T/);
     row.focus();
     expect(row).toHaveFocus();
     fireEvent.keyDown(row, { key: 'Enter' });
@@ -731,6 +732,26 @@ describe('StateMachineDebuggerPage — shared presentation and preservation', ()
     expect(within(title.parentElement!).getByText('Select a transition to inspect its snapshot')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Transition log' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Transition counts' })).toBeInTheDocument();
+  });
+
+  it('shares row anatomy between the distribution plot and the table without putting table controls above its rows', async () => {
+    mockTrans.mockReturnValue(makeQuery({ data: {
+      data: [{ id: 42, vehicle_id: 7, fsm_name: 'vehicle', from_state: 'parked',
+        to_state: 'driving', trigger: 'drive_evidence', ts: '2026-01-07T12:00:00Z' }],
+      total: 1,
+    } }));
+    renderPage();
+    const analysis = screen.getByRole('region', { name: 'Transition analysis' });
+    const card = within(analysis).getByRole('heading', { name: 'Transition counts' }).closest('[data-card]')!;
+    expect(card).not.toBeNull();
+    expect(card.parentElement).toHaveAttribute('data-card-layout', 'grid');
+    expect(card.parentElement).toHaveAttribute('data-card-layout-aligned', 'true');
+    const header = card.querySelector<HTMLElement>('[data-card-slot="header"]')!;
+    const body = card.querySelector<HTMLElement>('[data-card-content]')!;
+    expect(header.querySelector('[role="radiogroup"]')).not.toBeNull();
+    expect(body.querySelector('[role="radiogroup"]')).toBeNull();
+    expect(body.querySelector('[data-grid-frame]')).not.toBeNull();
+    await waitFor(() => expect(within(analysis).getByRole('heading', { name: 'State distribution' })).toBeVisible());
   });
 
   it('preserves selected transition identifiers, guard, duration precision and arbitrary raw details', () => {

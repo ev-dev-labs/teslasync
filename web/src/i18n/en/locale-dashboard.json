@@ -78,6 +78,8 @@
     "display": "Display",
     "showBorders": "Show widget borders",
     "compactMode": "Compact mode (smaller gaps)",
+    "animateActiveStates": "Animate active states",
+    "animateActiveStatesHelp": "Show continuous charging, driving and climate activity. Reduced motion and low-bandwidth preferences always take priority.",
     "vehicleFilterDesc": "Show data for a specific vehicle in all widgets. Widget-level filters take precedence.",
     "refresh0": "Default (per widget)",
     "refresh5": "Every 5 seconds",
@@ -4017,6 +4019,8 @@
     "timeRemaining": "Time left",
     "timeToFull": "Time to full",
     "tireAllNormal": "All normal",
+    "tireFL": "FL",
+    "tireFR": "FR",
     "tirePressure": "Tire pressure",
     "tirePressureHistory": {
       "chartAria": "Front and rear tire pressure history",
@@ -4029,6 +4033,8 @@
       "time": "Time",
       "title": "Tire pressure history"
     },
+    "tireRL": "RL",
+    "tireRR": "RR",
     "tireWarning": "Check pressure",
     "toggle": "Toggle",
     "trendDown": "Decreasing",

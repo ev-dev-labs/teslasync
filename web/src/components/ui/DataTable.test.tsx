@@ -16,6 +16,7 @@ import { Button } from './Button'
 import { downloadRowsAsCSV } from '@/lib/csvExport'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
+import { LayoutCard } from '../layout/layout-reference/LayoutCard'
 
 interface Row {
   id: number
@@ -48,6 +49,61 @@ beforeEach(() => {
 })
 
 describe('DataTable — standard toolbar controls', () => {
+  it('delegates card controls and source context to named header/summary slots instead of displacing table rows', () => {
+    const densityChange = vi.fn()
+    const csv = vi.fn()
+    render(<LayoutCard title="Transition counts">
+      <DataTable cardLayout variant="embedded" tableId="test:card-slots" columns={REORDER_COLS} data={ROWS}
+        keyExtractor={row => row.id} controls={{
+          search: { value: '', onChange: vi.fn(), ariaLabel: 'Search returned transitions' },
+          density: { value: 'compact', onChange: densityChange },
+          exports: { onExportCsv: csv, onExportJson: vi.fn(), description: 'Only returned transition rows' },
+        }} />
+    </LayoutCard>)
+    const card = screen.getByRole('heading', { name: 'Transition counts' }).closest('[data-card]')!
+    const header = card.querySelector<HTMLElement>('[data-card-slot="header"]')!
+    const summary = card.querySelector<HTMLElement>('[data-card-slot="summary"]')!
+    const body = card.querySelector<HTMLElement>('[data-card-content]')!
+    expect(within(header).getByRole('radiogroup', { name: 'List density' })).toBeVisible()
+    expect(within(header).getByRole('button', { name: 'Export list' })).toBeVisible()
+    expect(within(summary).getByRole('searchbox', { name: 'Search returned transitions' })).toBeVisible()
+    expect(within(summary).getByText('Only returned transition rows')).toBeVisible()
+    expect(within(body).queryByRole('radiogroup')).toBeNull()
+    expect(within(body).queryByRole('searchbox')).toBeNull()
+    expect(within(body).getByText('Alpha')).toBeVisible()
+    fireEvent.click(within(header).getByRole('radio', { name: 'Comfortable' }))
+    expect(densityChange).toHaveBeenCalledWith('comfortable')
+    fireEvent.click(within(header).getByRole('button', { name: 'Export list' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }))
+    expect(csv).toHaveBeenCalledWith('visible')
+  })
+
+  it('retains inline controls when card placement is requested outside a card owner', () => {
+    render(<DataTable cardLayout tableId="test:unhosted-slots" columns={REORDER_COLS} data={ROWS}
+      keyExtractor={row => row.id} />)
+    expect(screen.getByRole('radiogroup', { name: 'List density' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Export list' })).toBeVisible()
+    expect(screen.getByText('Alpha')).toBeVisible()
+  })
+
+  it('protects the required mobile identity from individual and bulk column hiding, including saved layouts', () => {
+    localStorage.setItem('teslasync.table.test:required.columns', JSON.stringify({
+      order: ['status', 'name', 'id'], hidden: ['name'],
+    }))
+    const columns = REORDER_COLS.map(column => ({ ...column, required: column.key === 'name' }))
+    const view = render(<DataTable tableId="test:required" columns={columns} data={ROWS}
+      keyExtractor={row => row.id} mobileColumns={['name']} />)
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }))
+    const identity = screen.getByRole('checkbox', { name: 'Show or hide Name' })
+    expect(identity).toBeChecked()
+    expect(identity).toBeDisabled()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all' }))
+    expect(getHeaderOrder(view.container)).toEqual(['name'])
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+  })
+
   it('removes redundant embedded framing while preserving table controls and rows', () => {
     const view = render(<DataTable variant="embedded" tableId="test:embedded" columns={REORDER_COLS}
       data={ROWS} keyExtractor={row => row.id} />);
@@ -455,7 +511,7 @@ describe('DataTable — columnReorder + columnVisibility (Phase-46 / Prompt 45)'
     expect(stored.hidden).toContain('name')
   })
 
-  it('Reset clears the persisted layout and restores defaults', () => {
+  it('Reset clears the persisted layout and restores defaults after confirmation', async () => {
     window.localStorage.setItem(
       'teslasync.table.reorder-4.columns',
       JSON.stringify({ order: ['status', 'id', 'name'], hidden: ['name'] }),
@@ -473,6 +529,9 @@ describe('DataTable — columnReorder + columnVisibility (Phase-46 / Prompt 45)'
     expect(getHeaderOrder(container)).toEqual(['status', 'id'])
     fireEvent.click(screen.getByRole('button', { name: /reorder or hide columns/i }))
     fireEvent.click(screen.getByTestId('datatable-column-menu-reset'))
+    expect(getHeaderOrder(container)).toEqual(['status', 'id'])
+    const confirmation = screen.getByRole('dialog', { name: 'Reset columns?' })
+    await act(async () => fireEvent.click(within(confirmation).getByRole('button', { name: 'Reset', exact: true })))
     // Back to source order with all columns visible.
     expect(getHeaderOrder(container)).toEqual(['id', 'name', 'status'])
     expect(window.localStorage.getItem('teslasync.table.reorder-4.columns')).toBeNull()
@@ -647,7 +706,7 @@ describe('DataTable — cohesive paging footer', () => {
     expect(screen.getByRole('table')).not.toHaveAttribute('aria-describedby')
   })
 
-  it('lets the complete Columns popup escape a short two-row frame without escaping the scrolling viewport', () => {
+  it('keeps column settings outside a short table frame and its scrolling viewport', () => {
     const { container } = render(<DataTable tableId="test:short-popup" columns={REORDER_COLS} data={ROWS.slice(0, 2)}
       keyExtractor={row => row.id} paginationControls={{ ...controls(), page: 1, total: 2 }} />)
     const frame = container.querySelector('[data-grid-frame]')!
@@ -655,7 +714,8 @@ describe('DataTable — cohesive paging footer', () => {
     fireEvent.click(screen.getByRole('button', { name: /reorder or hide columns/i }))
     const lastColumn = screen.getByRole('checkbox', { name: 'Show or hide Status' })
     expect(lastColumn).toBeVisible()
-    expect(frame).toContainElement(lastColumn)
+    expect(frame).not.toContainElement(lastColumn)
+    expect(screen.getByRole('dialog', { name: 'Reorder or hide columns' })).toContainElement(lastColumn)
     expect(viewport).not.toContainElement(lastColumn)
     expect(frame).toHaveClass('overflow-visible')
     expect(frame).not.toHaveClass('overflow-hidden')

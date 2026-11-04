@@ -13,6 +13,7 @@ export type SettingsWire = Omit<AppSettings, 'base_cost_per_kwh'> & { base_cost_
 export function savedSettings(theme: SettingsTheme, overrides: Partial<AppSettings> = {}): AppSettings {
   return {
     ...mockAppSettings,
+    ai_mode: 'off',
     mode: theme,
     tz_display_default: 'utc',
     ui_density: 'comfortable',

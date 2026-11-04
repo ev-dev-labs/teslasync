@@ -49,6 +49,7 @@ describe('DEFAULT_DASHBOARD_SETTINGS', () => {
       refreshInterval: 0,
       showWidgetBorders: false,
       compactMode: false,
+      animateActiveStates: true,
     });
   });
 
@@ -57,6 +58,7 @@ describe('DEFAULT_DASHBOARD_SETTINGS', () => {
     // key absent is what lets `settings.vehicleId?.toString() ?? ''` read blank.
     expect('vehicleId' in DEFAULT_DASHBOARD_SETTINGS).toBe(false);
     expect(Object.keys(DEFAULT_DASHBOARD_SETTINGS).sort()).toEqual([
+      'animateActiveStates',
       'compactMode',
       'refreshInterval',
       'showWidgetBorders',
@@ -87,6 +89,7 @@ describe('mergeDashboardSettings', () => {
     refreshInterval: 0,
     showWidgetBorders: false,
     compactMode: false,
+    animateActiveStates: true,
   };
 
   it('returns a complete settings object for undefined / null / empty input', () => {
@@ -101,11 +104,13 @@ describe('mergeDashboardSettings', () => {
       refreshInterval: 30,
       showWidgetBorders: false,
       compactMode: false,
+      animateActiveStates: true,
     });
     expect(mergeDashboardSettings({ showWidgetBorders: true, compactMode: true })).toEqual({
       refreshInterval: 0,
       showWidgetBorders: true,
       compactMode: true,
+      animateActiveStates: true,
     });
   });
 
@@ -159,6 +164,7 @@ describe('mergeDashboardSettings', () => {
       refreshInterval: 0,
       showWidgetBorders: false,
       compactMode: false,
+      animateActiveStates: true,
       vehicleId: 7,
     });
 
@@ -178,6 +184,13 @@ describe('mergeDashboardSettings', () => {
     expect(a.refreshInterval).toBe(99);
     // Mutating the result must not have disturbed the shared default.
     expect(DEFAULT_DASHBOARD_SETTINGS.refreshInterval).toBe(0);
+  });
+
+  it('preserves paused motion through JSON persistence and defaults legacy dashboards to motion enabled', () => {
+    const paused = JSON.parse(JSON.stringify(mergeDashboardSettings({ animateActiveStates: false })));
+    expect(mergeDashboardSettings(paused).animateActiveStates).toBe(false);
+    expect(mergeDashboardSettings({}).animateActiveStates).toBe(true);
+    expect(mergeDashboardSettings({ animateActiveStates: 'false' } as unknown as Partial<DashboardSettings>).animateActiveStates).toBe(true);
   });
 
   it('does not mutate the caller-supplied partial', () => {

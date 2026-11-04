@@ -448,6 +448,12 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
       throw err
     }
 
+    // Missing/unavailable features are final responses, not transport failures.
+    // Reissuing them serially adds a round trip before shell hooks can settle.
+    if (isApiError(err) && (err.status === 404 || err.status === 501)) {
+      throw err
+    }
+
     // Fall through: rerun via resilientFetch so the original retry,
     // circuit-breaker, and 401-refresh policies still apply for
     // transient or non-sudo failures.

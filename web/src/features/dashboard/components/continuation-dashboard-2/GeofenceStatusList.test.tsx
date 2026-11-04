@@ -13,7 +13,7 @@ describe('geofence rich definition rows', () => {
     render(<GeofenceStatusList fences={fences} hasCoords formatRadius={radius => radius == null ? '—' : `${radius} m`} />);
     const rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(3);
-    for (const row of rows) expect(row).toHaveClass('min-h-[44px]');
+    for (const row of rows) expect(row).toHaveClass('min-h-11');
     expect(within(rows[0]).getByText(fences[0].name)).toBeVisible();
     expect(within(rows[0]).getByText('Radius: 500 m')).toBeVisible();
     expect(within(rows[0]).getByText('Inside')).toBeVisible();

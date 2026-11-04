@@ -335,6 +335,15 @@ afterEach(() => {
 });
 
 describe('ChargeAdvisorPage', () => {
+  it('keeps the daily-trend controls in its host header rather than above the shared plot start', () => {
+    renderPage();
+    const trend = screen.getByTestId('charge-advisor-trend');
+    const toolbar = trend.querySelector('[data-chart-toolbar]');
+    expect(toolbar).not.toBeNull();
+    expect(toolbar?.closest('[data-card-actions]')).not.toBeNull();
+    expect(trend.querySelector('[data-card-content] [data-chart-toolbar]')).toBeNull();
+  });
+
   it('formats source-local charging buckets reactively without changing raw values or ranking', () => {
     const preferences = getFormatterPreferences();
     const analysis = computeChargeAdvice([], [], null, FROZEN_NOW, 'America/Los_Angeles');

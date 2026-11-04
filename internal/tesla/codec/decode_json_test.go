@@ -25,6 +25,10 @@ func TestDecodeJSONField_AtomicScalars(t *testing.T) {
 		{name: "float", field: "Soc", body: "65.5", wantField: "Soc", wantValue: float32(65.5)},
 		{name: "bool", field: "DCDCEnable", body: "true", wantField: "DCDCEnable", wantValue: true},
 		{name: "string", field: "GpsState", body: `"DR_GPS_NAV_LIMITED"`, wantField: "GpsState", wantValue: "DR_GPS_NAV_LIMITED"},
+		{name: "accessory rail off", field: "AccessoryRail", body: "false", wantField: "AccessoryRail", wantValue: false},
+		{name: "rolling resistance double precision", field: "RollingResistanceCoefficient", body: "0.006123456789", wantField: "RollingResistanceCoefficient", wantValue: float64(0.006123456789)},
+		{name: "lifetime DC energy double precision", field: "LifetimeDcChargeEnergyKwh", body: "1234567.890123", wantField: "LifetimeDcChargeEnergyKwh", wantValue: float64(1234567.890123)},
+		{name: "Semi mass", field: "SemiVehicleMassKg", body: "36500.5", wantField: "SemiVehicleMassKg", wantValue: float64(36500.5)},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -59,8 +63,8 @@ func TestDecodeJSONField_AtomicScalars(t *testing.T) {
 }
 
 // TestDecodeJSONField_DispatcherCoversAllValueKinds exercises the
-// dispatcher branches that no real Field declares today (Int32, Int64,
-// Double). The code paths are kept for forward compatibility — a future
+// integer dispatcher branches that no real Field declares today, plus
+// Double. The code paths are kept for forward compatibility — a future
 // proto bump adding an integer Field MUST decode through DecodeJSONField
 // without a code change — so we synthesise a SignalMeta entry, restore
 // it in t.Cleanup, and assert each branch returns the expected typed
@@ -115,6 +119,11 @@ func TestDecodeJSONField_EnumStripsPrefix(t *testing.T) {
 		{name: "bms-state", field: "BMSState", body: `"BMSStateStandby"`, want: "Standby"},
 		{name: "Semi 12V cabin port", field: "Cabin12vPortKeepOn", body: `"CabinPortKeepOnStateOn"`, want: "On"},
 		{name: "Semi 48V cabin port", field: "Cabin48vPortKeepOn", body: `"CabinPortKeepOnStateOff"`, want: "Off"},
+		{name: "power transfer", field: "PowerTransferStatus", body: `"PowerTransferStatusChargeEnabled"`, want: "ChargeEnabled"},
+		{name: "AEB state", field: "AutomaticEmergencyBrakingState", body: `"AutomaticEmergencyBrakingStateStandby"`, want: "Standby"},
+		{name: "AEB unknown is not enabled", field: "AutomaticEmergencyBrakingState", body: `"AutomaticEmergencyBrakingStateUnknown"`, want: "Unknown"},
+		{name: "Semi V2", field: "CarType", body: `"CarTypeSemiTruckV2"`, want: "SemiTruckV2"},
+		{name: "Cybercab", field: "CarType", body: `"CarTypeCybercab"`, want: "Cybercab"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

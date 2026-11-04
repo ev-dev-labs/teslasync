@@ -26,11 +26,11 @@ export function ComfortConsistencyCoverageCadence({
   formatDuration,
 }: ComfortConsistencyCoverageCadenceProps) {
   const { fmtPercent, fmtInt } = useNumberFormatting();
-  const { formatDateTime, tz } = useDateFormat();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   const coverage = summary.coverage;
   const date = (ms: number) => ({
-    value: `${formatDateTime(new Date(ms))} (${tz})`,
+    value: formatDateTime(ms),
     unit: '',
   });
 
