@@ -6,7 +6,7 @@ import { Badge, Text } from '@/components/ui';
 import { deriveDataState } from '@/api/dataState';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
+import { useVehicles, useVehicleState, useSecurityLatest } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 
@@ -16,6 +16,7 @@ import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import VehicleStudio from './vehicle-instruments/VehicleStudio';
 import { useVerifiedDriving } from './vehicle-instruments/useVerifiedDriving';
+import { useVerifiedStudioLights } from './vehicle-instruments/useVerifiedStudioLights';
 import { cn } from '@/lib/cn';
 import { observedVehicleReadings } from '../lib/observedVehicleReadings';
 
@@ -39,6 +40,8 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
   } = useVehicleState(id);
   const state = observedVehicleReadings(stateData?.state, stateData?.verifiedFields);
   const driving = useVerifiedDriving(stateData, isError);
+  const securityQuery = useSecurityLatest(driving ? id : 0);
+  const lightsOn = useVerifiedStudioLights(id, securityQuery);
   /* SI-floor: state.ideal_range in METERS, state.{inside,outside}_temp in °C. */
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -106,11 +109,14 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => refetch()}
+      onRefresh={() => {
+        void refetch();
+        if (driving) void securityQuery.refetch();
+      }}
     >
       {vehicle ? (
         <FadeIn className="grid grid-cols-[minmax(72px,0.28fr)_minmax(0,1fr)] items-center gap-3">
-          <VehicleStudio vehicle={vehicle} driving={driving} compact size="sm" />
+          <VehicleStudio vehicle={vehicle} driving={driving} lightsOn={lightsOn} compact size="sm" />
           <div className="min-w-0" data-vehicle-card-layout="short">
           {isCompact ? (
             <CompactView

@@ -66,6 +66,7 @@ vi.mock('@/api/hooks/useVehicles', async (importActual) => {
     ...actual,
     useVehicles: () => MOCK_VEHICLES,
     useVehicleState: (id: number) => mockUseVehicleState(id),
+    useSecurityLatest: () => ({ data: undefined, isError: false }),
   };
 });
 
@@ -224,7 +225,7 @@ afterEach(() => {
 describe('VehicleHeroCardWidget — full view', () => {
   it.each([1, 2, 3])('bounds artwork beside all instrumentation for a short two-row card at %i columns', cols => {
     const { container } = renderWidget({ cols, rows: 2 });
-    expect(container.querySelector('[data-studio-layout="compact"]')).toHaveClass('h-20');
+    expect(container.querySelector('[data-studio-layout="compact"]')).toHaveClass('h-24');
     expect(container.querySelector('[data-vehicle-card-layout="short"]')).toBeInTheDocument();
     expect(screen.getByText('Battery')).toBeInTheDocument();
     expect(screen.getByText('Range')).toBeInTheDocument();
@@ -235,7 +236,7 @@ describe('VehicleHeroCardWidget — full view', () => {
 
   it.each([2, 5, 6, 12])('keeps natural content height independent of an auto-fit allocation of %i rows', rows => {
     const { container } = renderWidget({ cols: 2, rows });
-    expect(container.querySelector('[data-studio-layout="compact"]')).toHaveClass('h-20');
+    expect(container.querySelector('[data-studio-layout="compact"]')).toHaveClass('h-24');
     expect(container.querySelector('[data-vehicle-card-layout="short"]')).toBeInTheDocument();
     expect(screen.getByText('Outside')).toBeInTheDocument();
     expect(screen.getByText('Battery')).toBeInTheDocument();

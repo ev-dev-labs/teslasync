@@ -16,7 +16,10 @@ package database
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -97,10 +100,44 @@ type queryBudgetCounter struct {
 
 type queryBudgetCtxKey struct{}
 type queryMetricsCtxKey struct{}
+type queryPerformanceCtxKey struct{}
 
 type queryMetrics struct {
 	operation string
 	startedAt time.Time
+	debug     *queryPerformanceDetails
+}
+
+type queryPerformanceDetails struct {
+	fingerprint string
+	statement   string
+}
+
+// QueryPerformance is a debug-only per-query measurement. RowsScannedEstimate
+// is nil because pgx does not expose scanned rows at execution time;
+// capture those separately with EXPLAIN ANALYZE.
+type QueryPerformance struct {
+	Operation           string  `json:"operation"`
+	Fingerprint         string  `json:"fingerprint"`
+	Statement           string  `json:"statement"`
+	DurationMS          float64 `json:"duration_ms"`
+	RowsReturned        int64   `json:"rows_returned"`
+	RowsScannedEstimate *int64  `json:"rows_scanned_estimate"`
+}
+
+// QueryPerformanceSnapshot is the aggregate database portion of one debug
+// request measurement.
+type QueryPerformanceSnapshot struct {
+	QueryCount          int                `json:"query_count"`
+	QueryTimeMS         float64            `json:"query_time_ms"`
+	RowsReturned        int64              `json:"rows_returned"`
+	RowsScannedEstimate *int64             `json:"rows_scanned_estimate"`
+	Queries             []QueryPerformance `json:"queries"`
+}
+
+type queryPerformanceCollector struct {
+	mu      sync.Mutex
+	queries []QueryPerformance
 }
 
 // AttachQueryBudgetCounter installs a fresh counter in ctx. Called by
@@ -119,6 +156,33 @@ func QueryBudgetCount(ctx context.Context) int64 {
 		return 0
 	}
 	return c.count.Load()
+}
+
+// AttachQueryPerformanceCollector enables detailed query measurements for one
+// explicitly opted-in debug request. Normal production requests do not attach
+// a collector, so the tracer performs only a context lookup.
+func AttachQueryPerformanceCollector(ctx context.Context) context.Context {
+	return context.WithValue(ctx, queryPerformanceCtxKey{}, &queryPerformanceCollector{})
+}
+
+// QueryPerformanceMetrics returns a stable copy of the collected measurements.
+func QueryPerformanceMetrics(ctx context.Context) QueryPerformanceSnapshot {
+	collector, _ := ctx.Value(queryPerformanceCtxKey{}).(*queryPerformanceCollector)
+	if collector == nil {
+		return QueryPerformanceSnapshot{}
+	}
+	collector.mu.Lock()
+	defer collector.mu.Unlock()
+
+	snapshot := QueryPerformanceSnapshot{
+		QueryCount: len(collector.queries),
+		Queries:    append([]QueryPerformance(nil), collector.queries...),
+	}
+	for _, query := range snapshot.Queries {
+		snapshot.QueryTimeMS += query.DurationMS
+		snapshot.RowsReturned += query.RowsReturned
+	}
+	return snapshot
 }
 
 // queryBudgetTracer wraps another pgx.QueryTracer and increments the
@@ -140,9 +204,17 @@ func (t *queryBudgetTracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn,
 	if t.inner != nil {
 		ctx = t.inner.TraceQueryStart(ctx, conn, data)
 	}
+	var debug *queryPerformanceDetails
+	if _, enabled := ctx.Value(queryPerformanceCtxKey{}).(*queryPerformanceCollector); enabled {
+		debug = &queryPerformanceDetails{
+			fingerprint: queryFingerprint(data.SQL),
+			statement:   normalizedQuery(data.SQL),
+		}
+	}
 	return context.WithValue(ctx, queryMetricsCtxKey{}, queryMetrics{
 		operation: queryOperation(data.SQL),
 		startedAt: time.Now(),
+		debug:     debug,
 	})
 }
 
@@ -164,10 +236,31 @@ func (t *queryBudgetTracer) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, d
 		if rows := data.CommandTag.RowsAffected(); rows > 0 {
 			repositoryReturnedRows.WithLabelValues(metric.operation).Add(float64(rows))
 		}
+		if collector, ok := ctx.Value(queryPerformanceCtxKey{}).(*queryPerformanceCollector); ok && metric.debug != nil {
+			collector.mu.Lock()
+			collector.queries = append(collector.queries, QueryPerformance{
+				Operation:    metric.operation,
+				Fingerprint:  metric.debug.fingerprint,
+				Statement:    metric.debug.statement,
+				DurationMS:   float64(duration.Microseconds()) / 1000,
+				RowsReturned: data.CommandTag.RowsAffected(),
+			})
+			collector.mu.Unlock()
+		}
 	}
 	if t.inner != nil {
 		t.inner.TraceQueryEnd(ctx, conn, data)
 	}
+}
+
+func queryFingerprint(sql string) string {
+	normalized := normalizedQuery(sql)
+	sum := sha256.Sum256([]byte(normalized))
+	return hex.EncodeToString(sum[:8])
+}
+
+func normalizedQuery(sql string) string {
+	return strings.Join(strings.Fields(strings.TrimSpace(sql)), " ")
 }
 
 func queryOperation(sql string) string {

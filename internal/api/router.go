@@ -587,6 +587,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Use(apimw.CapturePeerAddress) // Must precede RealIP; rate limits use the transport peer, not XFF.
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
+	r.Use(handlermw.PerformanceDebug)
 	r.Use(apimw.Tracing)
 	r.Use(apimw.Logger)
 	r.Use(apimw.Recovery)                        // Enhanced recovery that logs panics as structured errors

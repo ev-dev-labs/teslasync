@@ -12,6 +12,7 @@ import {
   resolveVehicleStateFreshness,
   useVehicles,
   useVehicleState,
+  useSecurityLatest,
 } from '@/api/hooks/useVehicles';
 import type { VerifiedVehicleStateField } from '@/api/hooks/useVehicles';
 import { TELEMETRY_STALE_AFTER_MS } from '@/hooks/useTelemetryFreshness';
@@ -30,6 +31,7 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import VehicleStudio from './vehicle-instruments/VehicleStudio';
 import { useVerifiedDriving } from './vehicle-instruments/useVerifiedDriving';
+import { useVerifiedStudioLights } from './vehicle-instruments/useVerifiedStudioLights';
 import { observedVehicleReadings } from '../lib/observedVehicleReadings';
 
 /** Stable identity so an unresolved read never re-renders the hero body. */
@@ -148,9 +150,6 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
     (celsius: number) => convertTempFromSI(celsius, tempUnit),
     [tempUnit],
   );
-  const handleRefresh = useCallback(() => {
-    void refetch();
-  }, [refetch]);
 
   const dataState = deriveDataState({
     data: vehicle ? { vehicle, stateData } : vehiclesLoading || vehiclesError || isError ? undefined : null,
@@ -163,6 +162,13 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
 
   const verifiedFields = stateData?.verifiedFields ?? EMPTY_VERIFIED_FIELDS;
   const state = observedVehicleReadings(stateData?.state, verifiedFields);
+  const driving = useVerifiedDriving(stateData, isError);
+  const securityQuery = useSecurityLatest(driving ? id : 0);
+  const lightsOn = useVerifiedStudioLights(id, securityQuery);
+  const handleRefresh = useCallback(() => {
+    void refetch();
+    if (driving) void securityQuery.refetch();
+  }, [refetch, driving, securityQuery.refetch]);
   /* The shared precedence: verified charging → verified motion → verified FSM
    * state. `null` means Unknown and is rendered as such — it must never fall
    * through to "offline". */
@@ -172,7 +178,6 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
     verifiedFields,
   });
   const unknownStatus = status == null;
-  const driving = useVerifiedDriving(stateData, isError);
 
   const batteryLevel =
     state?.battery_level != null && Number.isFinite(state.battery_level)
@@ -303,7 +308,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
             )}
           </div>
 
-          <VehicleStudio vehicle={vehicle} driving={driving} size="lg" bounded />
+          <VehicleStudio vehicle={vehicle} driving={driving} lightsOn={lightsOn} size="lg" bounded />
 
           {/* Headline battery + estimated range. Each value appears once. */}
           <div className="flex flex-wrap items-end justify-between gap-3 py-1">

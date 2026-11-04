@@ -105,6 +105,8 @@ export interface VehicleTwinProps extends VehicleTwinState {
   driveIn?: boolean;
   /** Disable continuous state cues without changing the accessible measured state. */
   animateActivity?: boolean;
+  /** Optional CSS-owned wheel motion, allowing the host's pause controls to stop both rotors. */
+  wheelMotionClassName?: string;
   className?: string;
   /**
    * Optional vehicle id — when provided, enables per-vehicle paint
@@ -309,7 +311,7 @@ function InteractiveHotspot({
 function GroundShadow() {
   const { ids } = useTwinCtx();
   return (
-    <g>
+    <g data-twin-ground-shadow="">
       <ellipse
         cx={298}
         cy={263}
@@ -348,10 +350,12 @@ function WheelSVG({
   cx,
   cy,
   driving = false,
+  wheelMotionClassName,
 }: {
   cx: number;
   cy: number;
   driving?: boolean;
+  wheelMotionClassName?: string;
 }) {
   const { ids } = useTwinCtx();
   const spokes = [0, 72, 144, 216, 288];
@@ -366,6 +370,7 @@ function WheelSVG({
       <circle cx={cx} cy={cy} r={34} fill={C.wheelSidewall} stroke="rgba(255,255,255,0.06)" strokeWidth={0.7} />
       <motion.g
         data-svg-wheel-rotor={cx === FRONT_WHEEL_CX ? 'front' : 'rear'}
+        className={wheelMotionClassName}
         initial={driving ? { rotate: 0 } : false}
         animate={{ rotate: driving ? -360 : 0 }}
         transition={
@@ -1181,6 +1186,7 @@ function PhotoWheelSpinner({
   imgTop,
   photoUrl,
   driving,
+  wheelMotionClassName,
 }: {
   wheel: keyof typeof COMPOSITOR_METRICS.wheels;
   imgScale: number;
@@ -1189,6 +1195,7 @@ function PhotoWheelSpinner({
   imgTop: number;
   photoUrl: string;
   driving: boolean;
+  wheelMotionClassName?: string;
 }) {
   const { x: cx, y: cy } = COMPOSITOR_METRICS.wheels[wheel];
 
@@ -1220,7 +1227,7 @@ function PhotoWheelSpinner({
     >
       <motion.div
         data-wheel-rotor={wheel}
-        className="absolute inset-0 origin-center overflow-hidden"
+        className={cn('absolute inset-0 origin-center overflow-hidden', wheelMotionClassName)}
         initial={driving ? { rotate: 0 } : false}
         animate={{ rotate: driving ? -360 : 0 }}
         transition={
@@ -1369,6 +1376,7 @@ export function VehicleTwin({
   interactive = false,
   driveIn = false,
   animateActivity = true,
+  wheelMotionClassName,
   className,
   vehicleId,
   exteriorColor,
@@ -1482,6 +1490,7 @@ export function VehicleTwin({
     <TwinContext.Provider value={ctxValue}>
       <motion.div
         ref={containerRef}
+        data-vehicle-twin=""
         className={cn('relative inline-flex max-w-full items-center justify-center overflow-hidden', className)}
         style={{ width: SIZE_MAP[size], height }}
         role={interactive ? 'group' : 'img'}
@@ -1513,6 +1522,7 @@ export function VehicleTwin({
               imgTop={imgTop}
               photoUrl={photoUrl}
               driving={animateDriving}
+              wheelMotionClassName={isDriving === true ? wheelMotionClassName : undefined}
             />
             <PhotoWheelSpinner
               wheel="rear"
@@ -1522,6 +1532,7 @@ export function VehicleTwin({
               imgTop={imgTop}
               photoUrl={photoUrl}
               driving={animateDriving}
+              wheelMotionClassName={isDriving === true ? wheelMotionClassName : undefined}
             />
           </>
         )}
@@ -1585,8 +1596,10 @@ export function VehicleTwin({
           </g>
           {!photoOn && (
             <g id="wheels">
-              <WheelSVG cx={FRONT_WHEEL_CX} cy={WHEEL_CY} driving={animateDriving} />
-              <WheelSVG cx={REAR_WHEEL_CX} cy={WHEEL_CY} driving={animateDriving} />
+              <WheelSVG cx={FRONT_WHEEL_CX} cy={WHEEL_CY} driving={animateDriving}
+                wheelMotionClassName={isDriving === true ? wheelMotionClassName : undefined} />
+              <WheelSVG cx={REAR_WHEEL_CX} cy={WHEEL_CY} driving={animateDriving}
+                wheelMotionClassName={isDriving === true ? wheelMotionClassName : undefined} />
             </g>
           )}
           <SecurityOverlay locked={locked} sentryMode={sentryMode} interactive={interactive} />

@@ -7,9 +7,8 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { getApiBase } from '@/lib/resilience'
-import { authHeaders } from '@/lib/serverConnection'
 import { request } from '@/api/client'
+import { getBootstrapSettings } from '@/api/settingsBootstrap'
 import { broadcast, subscribe } from '@/lib/broadcast'
 import { TOPICS } from '@/lib/broadcastTopics'
 
@@ -392,12 +391,10 @@ export function FontProvider({ children }: { children: ReactNode }) {
     syncFontStylesheet(prefs)
   }, [prefs])
 
-  // Load persisted font prefs from backend settings on first mount. Raw fetch,
-  // like ThemeProvider — the provider mounts before auth context exists.
+  // Load persisted font prefs from backend settings on first mount.
   useEffect(() => {
-    fetch(`${getApiBase()}/api/v1/settings`, { headers: authHeaders() })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((s: Record<string, unknown> | null) => {
+    getBootstrapSettings()
+      .then((s) => {
         if (!s) return
         const merged = mergeFromBackend(prefsRef.current, s)
         prefsRef.current = merged
