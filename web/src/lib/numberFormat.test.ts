@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 import {
   setGlobalPrecision,
@@ -169,6 +169,27 @@ describe('numberFormat — isFiniteNumber', () => {
 })
 
 describe('numberFormat — fmtNumber', () => {
+  it('reuses formatters across values without mixing locale or precision', () => {
+    const NumberFormat = Intl.NumberFormat
+    const constructor = vi.spyOn(Intl, 'NumberFormat').mockImplementation(function (locale, options) {
+      return new NumberFormat(locale, options)
+    })
+    try {
+      expect(fmtNumber(1234.5, 3, 'es-MX')).toBe('1,234.500')
+      expect(fmtNumber(-0, 3, 'es-MX')).toBe('-0.000')
+      expect(fmtNumber(null, 3, 'es-MX')).toBe('0.000')
+      expect(constructor).toHaveBeenCalledTimes(1)
+
+      expect(fmtNumber(1234.5, 4, 'es-MX')).toBe('1,234.5000')
+      expect(fmtNumber(1234.5, 3, 'de-AT')).toBe((1234.5).toLocaleString('de-AT', {
+        minimumFractionDigits: 3, maximumFractionDigits: 3,
+      }))
+      expect(constructor).toHaveBeenCalledTimes(3)
+    } finally {
+      constructor.mockRestore()
+    }
+  })
+
   it('formats with locale grouping at the global precision', () => {
     expect(fmtNumber(1234.567)).toBe('1,234.57')
     expect(fmtNumber(1000)).toBe('1,000.00')
