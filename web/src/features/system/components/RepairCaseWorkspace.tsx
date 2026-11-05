@@ -37,7 +37,7 @@ export function RepairCaseWorkspace({
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('cases');
   const [filters, setFilters] = useState<RepairCaseFilters>({
     vehicle_id: vehicleId,
-    status: 'open',
+    status: 'active',
     limit: 50,
   });
   const [history, setHistory] = useState<CaseCursor[]>([]);
@@ -60,7 +60,7 @@ export function RepairCaseWorkspace({
     && currentScope.current.scope === casesQuery.currentScope;
 
   useEffect(() => {
-    setFilters({ vehicle_id: vehicleId, status: 'open', limit: 50 });
+    setFilters({ vehicle_id: vehicleId, status: 'active', limit: 50 });
     setHistory([]);
     setSelectedCaseIds([]);
     setActiveCaseId(null);

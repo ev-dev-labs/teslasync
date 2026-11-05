@@ -8,11 +8,14 @@ import {
 } from '@/api/hooks/useDataRepair';
 import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { Badge, Button, ConfirmDialog, Drawer, Text, Textarea } from '@/components/ui';
-import { formatDateTime } from '@/lib/dateFormat';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { RepairCaseCollaboration } from './RepairCaseCollaboration';
 import { RepairCaseControlledActions } from './RepairCaseControlledActions';
+import { RepairCaseBoundaryCorrection } from './RepairCaseBoundaryCorrection';
+import { RepairCaseCorrection } from './RepairCaseCorrection';
 import { RepairCaseEvidencePanel } from './RepairCaseEvidencePanel';
+import { RepairCaseNextSteps } from './RepairCaseNextSteps';
 import {
   repairStatusLabel,
   isStructuralRepairCase,
@@ -33,6 +36,7 @@ export function RepairCaseDrawer({
   writeBlockReason,
 }: RepairCaseDrawerProps) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const detailQuery = useRepairCase(caseId);
   const detailState = useDataState(detailQuery);
   const transition = useTransitionRepairCase();
@@ -132,12 +136,15 @@ export function RepairCaseDrawer({
             {repairCase.status === 'open' || repairCase.status === 'in_review' ? (
               <Button
                 size="sm"
-                variant="primary"
+                variant="secondary"
                 icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
                 onClick={() => { transition.reset(); setResolveOpen(true); }}
                 loading={transition.isPending}
                 disabled={!canWrite}
-                title={!canWrite ? writeBlockReason : undefined}
+                title={!canWrite ? writeBlockReason : t(
+                  'dataRepair.cases.manualResolutionTitle',
+                  'Record a manual resolution; this does not change session data.',
+                )}
                 wrapLabel
               >
                 {t('dataRepair.cases.resolve', 'Resolve case')}
@@ -176,6 +183,23 @@ export function RepairCaseDrawer({
           </div>
 
           <RepairCaseEvidencePanel repairCase={repairCase} />
+          {isStructuralRepairCase(repairCase) && ['open', 'in_review'].includes(repairCase.status) ? (
+            <>
+              <RepairCaseNextSteps repairCase={repairCase} />
+              <RepairCaseBoundaryCorrection
+                key={`boundary-${repairCase.id}`}
+                repairCase={repairCase}
+                canWrite={canWrite}
+                writeBlockReason={writeBlockReason}
+              />
+              <RepairCaseCorrection
+                key={repairCase.id}
+                repairCase={repairCase}
+                canWrite={canWrite}
+                writeBlockReason={writeBlockReason}
+              />
+            </>
+          ) : null}
           <RepairCaseCollaboration
             caseId={repairCase.id}
             assignedTo={repairCase.assigned_to}
@@ -203,6 +227,7 @@ export function RepairCaseDrawer({
         )}
         confirmLabel={t('dataRepair.cases.resolve', 'Resolve case')}
         variant="warning"
+        aboveNotifications
         loading={transition.isPending}
         details={(
           <>

@@ -396,6 +396,11 @@ func (r *CaseRepo) ListCases(ctx context.Context, f systemmodel.RepairCaseListFi
 	if f.Status != nil {
 		qb.add("status = ?", string(*f.Status))
 	}
+	if f.ActiveOnly {
+		qb.add("status = ANY(?::text[])", []string{
+			string(systemmodel.RepairCaseStatusOpen), string(systemmodel.RepairCaseStatusInReview),
+		})
+	}
 	if f.VehicleID != nil {
 		qb.add("vehicle_id = ?", *f.VehicleID)
 	}

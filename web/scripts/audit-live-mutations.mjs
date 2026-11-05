@@ -48,6 +48,7 @@ const LIVE_ONLY_MUTATIONS = {
     'useUpdateDrive',
     'useCloseDrive',
     'useQuarantineDrive',
+    'useApplyRepairCaseCorrection',
     'useTransitionRepairCase',
     'useBulkTransitionRepairCases',
     'useAssignRepairCase',
@@ -105,7 +106,7 @@ const LIVE_ONLY_MUTATIONS = {
 };
 
 const MODE_INDEPENDENT_MUTATIONS = {
-  'hooks/useDataRepair.ts': ['useRepairImpactPreview'],
+  'hooks/useDataRepair.ts': ['useRepairImpactPreview', 'useRepairCaseCorrectionPreview'],
   'hooks/useAdmin.ts': ['useCreateExport'],
   'hooks/useAdvancedIntelligence.ts': [
     'useSimulationMutation',

@@ -4317,8 +4317,12 @@ paths:
             minimum: 1
         - name: status
           in: query
+          description: A specific lifecycle status, or `active` for both open and in-review cases.
           schema:
-            $ref: "#/components/schemas/DataRepairCaseStatus"
+            oneOf:
+              - $ref: "#/components/schemas/DataRepairCaseStatus"
+              - type: string
+                enum: [active]
         - name: kind
           in: query
           schema:
@@ -4511,6 +4515,98 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+
+  /data-repair/cases/{id}/correction-preview:
+    post:
+      operationId: previewDataRepairCaseCorrection
+      summary: Preview a case-linked structural correction
+      description: >
+        Read-only preview of an operator-selected correction. Values use SI units.
+        For a boundary, both related sessions and all overlapping sessions are checked.
+        No source data or case state is changed.
+      tags: [Data Repair]
+      parameters:
+        - $ref: "#/components/parameters/dataRepairID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataRepairCaseCorrectionInput"
+      responses:
+        "200":
+          description: Exact proposed changes and a source snapshot hash
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRepairCaseCorrectionPreview"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The case or supporting source data is no longer current
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          description: Correction source is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /data-repair/cases/{id}/correction:
+    post:
+      operationId: applyDataRepairCaseCorrection
+      summary: Apply a reviewed case-linked structural correction
+      description: >
+        Requires sudo and the source hash returned by preview. The case and
+        source rows are locked and revalidated, and the correction, case outcome,
+        and audit records commit together. Estimated energy-derived charging
+        costs become unknown when the energy is corrected; actual costs are preserved.
+      tags: [Data Repair]
+      parameters:
+        - $ref: "#/components/parameters/dataRepairID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/DataRepairCaseCorrectionInput"
+                - type: object
+                  required: [expected_source_hash]
+      responses:
+        "200":
+          description: Reviewed correction applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRepairCaseCorrectionPreview"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The case, source data, reviewed choice, or overlap check changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          description: Correction source is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /data-repair/cases/{id}/transition:
     post:
@@ -6342,6 +6438,113 @@ components:
             id:
               type: integer
               format: int64
+
+    DataRepairCaseCorrectionInput:
+      type: object
+      additionalProperties: false
+      required: [expected_updated_at, field, mode]
+      properties:
+        expected_updated_at:
+          type: string
+          format: date-time
+          description: Case revision observed before review.
+        field:
+          type: string
+          enum: [duration_s, distance_m, energy_used_wh, regen_energy_wh, total_energy_added_wh, start_odometer_m, end_odometer_m, start_soc_pct, end_soc_pct, ended_at]
+        mode:
+          type: string
+          enum: [derive, replace, clear, boundary]
+          description: >
+            Derive duration from stored boundaries, replace a measurement with
+            a verified SI value, clear it to unknown, or supply an explicit end time.
+            Clearing is limited to regenerated energy and odometer readings;
+            other fields require verified replacements because existing views
+            can display missing values as actual measurements.
+        value:
+          type: number
+          format: double
+          nullable: true
+          description: SI replacement value; null for derive, clear, and boundary.
+        target:
+          type: string
+          enum: [primary, related]
+          description: Session whose end is corrected; required for boundary mode.
+        ended_at:
+          type: string
+          format: date-time
+          description: Explicit corrected end time; required for boundary mode.
+        expected_source_hash:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+          description: Preview hash; required when applying.
+
+    DataRepairCaseCorrectionPreview:
+      type: object
+      required: [case_id, case_updated_at, kind, session_id, started_at, ended_at, source_hash, changes]
+      properties:
+        case_id:
+          type: integer
+          format: int64
+        case_updated_at:
+          type: string
+          format: date-time
+        kind:
+          $ref: "#/components/schemas/DataRepairSessionKind"
+        session_id:
+          type: integer
+          format: int64
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        source_hash:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+        changes:
+          type: array
+          items:
+            type: object
+            required: [field, before, after]
+            properties:
+              field:
+                type: string
+              before:
+                type: number
+                format: double
+                nullable: true
+              after:
+                type: number
+                format: double
+                nullable: true
+              before_text:
+                type: string
+                description: Exact previous timestamp, cost, or cost provenance.
+              after_text:
+                type: string
+                description: Exact proposed timestamp or cost provenance.
+              unit:
+                type: string
+                description: Currency of an estimated cost.
+        other:
+          type: object
+          description: Other session in a reviewed overlap.
+          required: [kind, id, started_at, ended_at]
+          properties:
+            kind:
+              $ref: "#/components/schemas/DataRepairSessionKind"
+            id:
+              type: integer
+              format: int64
+            started_at:
+              type: string
+              format: date-time
+            ended_at:
+              type: string
+              format: date-time
+              nullable: true
 
     DataRepairCaseDetail:
       type: object
