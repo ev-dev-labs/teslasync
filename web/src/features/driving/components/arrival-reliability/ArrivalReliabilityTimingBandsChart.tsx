@@ -17,6 +17,7 @@ import {
 } from '@/components/charts';
 import type { ArrivalReliabilityResult } from '../../lib/arrivalReliability';
 import { ArrivalReliabilitySectionBody } from './ArrivalReliabilitySectionBody';
+import { ArrivalReliabilityRouteTick } from './ArrivalReliabilityRouteTick';
 import type {
   ArrivalReliabilityQueryState,
   DurationFormatter,
@@ -81,7 +82,8 @@ export function ArrivalReliabilityTimingBandsChart({
           'arrivalReliability.bandsChart.description',
           'Durations are historical route summaries; the observed buffer is not an outcome promise.',
         )}
-        height={360}
+        height={Math.max(240, rows.length * 48 + 48)}
+        mobileHeight={Math.max(240, rows.length * 48 + 48)}
         chartKey="arrival-timing-bands"
         exportable={ready}
         exportFilename="arrival-timing-bands"
@@ -143,20 +145,14 @@ export function ArrivalReliabilityTimingBandsChart({
             skeletonHeight={320}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={rows}>
+              <BarChart data={rows} layout="vertical" margin={{ left: 8, right: 12 }}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="var(--glass-border)"
                   strokeOpacity={0.4}
                 />
                 <XAxis
-                  dataKey="route"
-                  tick={axisTick}
-                  tickLine={false}
-                  axisLine={false}
-                  interval={0}
-                />
-                <YAxis
+                  type="number"
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
@@ -166,7 +162,18 @@ export function ArrivalReliabilityTimingBandsChart({
                     )
                   }
                 />
+                <YAxis
+                  type="category"
+                  dataKey="route"
+                  width={160}
+                  tick={<ArrivalReliabilityRouteTick />}
+                  tickLine={false}
+                  axisLine={false}
+                  interval={0}
+                />
                 <Tooltip
+                  position={{ x: 0 }}
+                  wrapperStyle={{ maxWidth: '100%' }}
                   content={<ChartTooltip valueFormatter={duration} />}
                 />
                 <ChartLegend verticalAlign="top" align="right" />
@@ -174,21 +181,21 @@ export function ArrivalReliabilityTimingBandsChart({
                   dataKey="p50"
                   name={p50Name}
                   fill={CHART_COLORS[0]}
-                  radius={[3, 3, 0, 0]}
+                  radius={[0, 3, 3, 0]}
                   hide={hiddenSeries?.isHidden('p50') ?? false}
                 />
                 <Bar
                   dataKey="p90"
                   name={p90Name}
                   fill={CHART_COLORS[2]}
-                  radius={[3, 3, 0, 0]}
+                  radius={[0, 3, 3, 0]}
                   hide={hiddenSeries?.isHidden('p90') ?? false}
                 />
                 <Bar
                   dataKey="buffer"
                   name={bufferName}
                   fill={CHART_COLORS[4]}
-                  radius={[3, 3, 0, 0]}
+                  radius={[0, 3, 3, 0]}
                   hide={hiddenSeries?.isHidden('buffer') ?? false}
                 />
               </BarChart>
