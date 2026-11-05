@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apibulk"
+	chargingdomain "github.com/ev-dev-labs/teslasync/internal/domain/charging"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
@@ -34,6 +35,54 @@ func TestChargingListRejectsInvalidHistoryBoundsBeforeRepositoryRead(t *testing.
 	}
 }
 
+func TestChargingResponsePreservesCostProvenance(t *testing.T) {
+	cost, source := 4.25, "default_estimate"
+	session := &chargingmodel.ChargingSession{CostDecimal: &cost, CostSource: &source}
+	body, err := json.Marshal(chargingSessionResponse(session, false, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var response map[string]any
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatal(err)
+	}
+	if response["cost_source"] != source {
+		t.Fatalf("cost_source = %v, want %s", response["cost_source"], source)
+	}
+}
+
+func TestChargingResponseIncludesLiveElapsedTime(t *testing.T) {
+	session := inProgressChargingSession(11, 42, time.Now().UTC().Add(-20*time.Minute))
+	response := chargingSessionResponse(session, true, nil)
+	duration, ok := response["duration_s"].(float64)
+	if !ok || duration < 1200 || duration > 1202 {
+		t.Fatalf("live duration_s = %v, want elapsed 1200 seconds", response["duration_s"])
+	}
+}
+
+func TestChargingLivePowerDoesNotReplaceHistoricalPeak(t *testing.T) {
+	start := time.Now().UTC().Add(-20 * time.Minute)
+	peak := 150000.0
+	session := inProgressChargingSession(11, 42, start)
+	session.PeakPowerW = &peak
+	state := &fakeStateReader{stateFn: func(_ context.Context, _ int64, _ time.Time) (signal.State, error) {
+		return signal.State{"DCChargingPower": 50000.0}, nil
+	}}
+	h := &ChargingHandler{
+		charging: &fakeChargingByIDFetcher{session: session},
+		state:    state, live: newTestLiveStateReader(state),
+	}
+	rec := httptest.NewRecorder()
+	h.Get(rec, newChargingRequest(t, "11", ""))
+	var response map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	if rec.Code != http.StatusOK || response["peak_power_w"] != peak || response["current_power_w"] != 50000.0 {
+		t.Fatalf("live response must retain peak and expose separate current power: %s", rec.Body.String())
+	}
+}
+
 // fakeChargingByIDFetcher is the in-memory charging session lookup used by
 // charging_handler tests so the migrated handlers can be exercised end-to-end
 // without a real *chargingdb.ChargingRepo / pgx pool.
@@ -41,6 +90,57 @@ type fakeChargingByIDFetcher struct {
 	session *chargingmodel.ChargingSession
 	err     error
 	calls   int
+}
+
+func (f *fakeChargingByIDFetcher) GetByVehicle(context.Context, int64, int, int, time.Time, time.Time) ([]*chargingmodel.ChargingSession, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	if f.session == nil {
+		return nil, nil
+	}
+	return []*chargingmodel.ChargingSession{f.session}, nil
+}
+
+func TestChargingListEnrichesLiveSession(t *testing.T) {
+	start := time.Now().UTC().Add(-20 * time.Minute)
+	state := &fakeStateReader{stateFn: func(_ context.Context, _ int64, at time.Time) (signal.State, error) {
+		if !at.After(start) {
+			return signal.State{"BatteryLevel": 30.0, "ACChargingEnergyIn": 100000.0}, nil
+		}
+		return signal.State{"BatteryLevel": 40.0, "ACChargingEnergyIn": 103000.0, "ACChargingPower": 9000.0}, nil
+	}}
+	h := &ChargingHandler{
+		list:  &fakeChargingByIDFetcher{session: inProgressChargingSession(11, 42, start)},
+		state: state, live: newTestLiveStateReader(state),
+	}
+	rec := httptest.NewRecorder()
+	h.ListByVehicle(rec, httptest.NewRequest(http.MethodGet, "/charging?vehicle_id=42", nil))
+	var rows []map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &rows); err != nil {
+		t.Fatal(err)
+	}
+	if rec.Code != http.StatusOK || len(rows) != 1 {
+		t.Fatalf("list response: status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	row := rows[0]
+	if row["live"] != true || row["current_power_w"] != 9000.0 ||
+		row["end_soc_pct"] != 40.0 || row["total_energy_added_wh"] != 3000.0 ||
+		row["charger_type"] != "AC" {
+		t.Fatalf("missing live evidence: %s", rec.Body.String())
+	}
+	if duration, ok := row["duration_s"].(float64); !ok || duration < 1200 || duration > 1202 {
+		t.Fatalf("duration_s = %v", row["duration_s"])
+	}
+}
+
+func TestChargingListReturnsEmptyArray(t *testing.T) {
+	h := &ChargingHandler{list: &fakeChargingByIDFetcher{}}
+	rec := httptest.NewRecorder()
+	h.ListByVehicle(rec, httptest.NewRequest(http.MethodGet, "/charging?vehicle_id=42", nil))
+	if rec.Code != http.StatusOK || rec.Body.String() != "[]\n" {
+		t.Fatalf("list response: status=%d body=%s", rec.Code, rec.Body.String())
+	}
 }
 
 func (f *fakeChargingByIDFetcher) GetByID(_ context.Context, _ int64) (*chargingmodel.ChargingSession, error) {
@@ -302,7 +402,9 @@ func TestChargingHandler_OverlaysTeslaSuperchargerBill(t *testing.T) {
 	h := &ChargingHandler{
 		charging: &fakeChargingByIDFetcher{session: session},
 		vehicles: fakeVehicleVIN{vin: "5YJ3E1EA7KF000001"},
+		facts:    fakeChargingFacts{254: {InvoiceID: 11}},
 		teslaBills: fakeTeslaBills{entry: &teslamodel.TeslaChargingHistoryEntry{
+			ID:               11,
 			UsageWh:          &usage,
 			TotalDue:         &due,
 			CurrencyCode:     strPtr("USD"),
@@ -343,6 +445,25 @@ func TestChargingHandler_OverlaysTeslaSuperchargerBill(t *testing.T) {
 }
 
 type fakeVehicleVIN struct{ vin string }
+
+type fakeChargingFacts map[int64]chargingdomain.SessionFacts
+
+func (f fakeChargingFacts) LoadSessionFacts(context.Context, []*chargingmodel.ChargingSession) (map[int64]chargingdomain.SessionFacts, error) {
+	return f, nil
+}
+
+func TestChargingBillOverlayRequiresTheSameUniqueInvoice(t *testing.T) {
+	session := &chargingmodel.ChargingSession{ID: 1, VehicleID: 42}
+	h := &ChargingHandler{
+		vehicles:   fakeVehicleVIN{vin: "fixture"},
+		teslaBills: fakeTeslaBills{entry: &teslamodel.TeslaChargingHistoryEntry{ID: 11}},
+	}
+	for _, id := range []int64{0, 12} {
+		if got := h.lookupTeslaBill(context.Background(), session, id); got != nil {
+			t.Fatalf("invoice %d must not expose unrelated bill %+v", id, got)
+		}
+	}
+}
 
 func (f fakeVehicleVIN) GetByID(_ context.Context, _ int64) (*vehiclemodel.Vehicle, error) {
 	return &vehiclemodel.Vehicle{VIN: f.vin}, nil

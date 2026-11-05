@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	chargingdomain "github.com/ev-dev-labs/teslasync/internal/domain/charging"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	signalcounter "github.com/ev-dev-labs/teslasync/internal/signal/counter"
 )
@@ -347,6 +348,20 @@ func TestTrackCharging_ObservesEnergyOnlyPayloads(t *testing.T) {
 	}
 	if delta, ok := trackedChargeEnergyDelta(active); delta != 0 || ok {
 		t.Fatalf("trackedChargeEnergyDelta() = (%v, %v), want (0, false)", delta, ok)
+	}
+}
+
+func TestTrackChargingRetainsChargerOnlyPayloads(t *testing.T) {
+	active := &streamingCharge{VehicleID: 17, lastTelemetryWrite: time.Now().UTC()}
+	tracker := &TelemetrySessionTracker{activeCharges: map[int64]*streamingCharge{17: active}}
+	for _, batch := range []map[string]interface{}{
+		{"FastChargerType": "Supercharger", "DCChargingPower": 150000.0},
+		{"FastChargerType": "Unknown", "DCChargingPower": 0.0},
+	} {
+		tracker.trackCharging(context.Background(), 17, "", batch, nil, time.Now().UTC(), nil)
+	}
+	if got := chargingdomain.ClassifyCharger(active.ChargerEvidence); got != "Supercharger" {
+		t.Fatalf("charger-only batches lost session evidence: %q", got)
 	}
 }
 

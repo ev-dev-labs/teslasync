@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
+	chargingdomain "github.com/ev-dev-labs/teslasync/internal/domain/charging"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
@@ -81,6 +83,7 @@ func stateToLegacyMap(s signal.State) map[string]interface{} {
 
 // streamingCharge tracks comprehensive data during an active charging session.
 type streamingCharge struct {
+	ChargerEvidence      chargingdomain.ChargerEvidence
 	SessionID            int64
 	VehicleID            int64
 	StartTime            time.Time
@@ -282,6 +285,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		t.mu.Lock()
 		if active, ok := t.activeCharges[vehicleID]; ok {
 			observeChargeEnergyCounter(active, signals)
+			chargingsvc.ObserveCharger(&active.ChargerEvidence, signals)
 			active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
 			active.LastSeen = time.Now().UTC()
 			t.maybeFlushChargeTelemetry(ctx, active)
@@ -327,6 +331,12 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 			StartedAt:   startTs,
 			StartSocPct: floatPtr(float64(batteryLevel)),
 		}
+		var chargerEvidence chargingdomain.ChargerEvidence
+		chargingsvc.ObserveCharger(&chargerEvidence, accumulatedSignals)
+		chargingsvc.ObserveCharger(&chargerEvidence, signals)
+		if kind := chargingdomain.ClassifyCharger(chargerEvidence); kind != "" {
+			session.ChargerType = strPtr(kind)
+		}
 		// Persist last-known GPS even when the sample is stale. Parked Home/AC
 		// charges often keep the previous drive's coordinates for hours;
 		// omitting them leaves start_place empty and the list shows
@@ -342,6 +352,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		}
 
 		sc := &streamingCharge{
+			ChargerEvidence:    chargerEvidence,
 			SessionID:          session.ID,
 			VehicleID:          vehicleID,
 			StartTime:          startTs,
@@ -422,6 +433,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		observeChargeEnergyCounter(active, signals)
 
 		// Track charger details
+		chargingsvc.ObserveCharger(&active.ChargerEvidence, signals)
 		if v, ok := signalInt(signals, "ChargerPhases"); ok {
 			active.Phases = intPtr(v)
 		}
@@ -684,19 +696,19 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			}
 		}
 
-		// Charger type detection from snapshot
-		if dcPower, ok := snapFloat(endSnap, "DCChargingPower"); ok && dcPower > 0 {
-			enhancedFields["charger_type"] = "DC"
-		}
+		chargingsvc.ObserveCharger(&active.ChargerEvidence, startSnap)
+		chargingsvc.ObserveCharger(&active.ChargerEvidence, endSnap)
 
 		// Max/avg power from signal_log aggregate during charge window —
 		// kept on signalLogReader because StateReader has no aggregation API.
 		slMaxPower, slAvgPower := t.signalLogReader.ChargeAggregates(ctx, vehicleID, active.StartTime, endTs)
 		if slMaxPower > 0 {
 			enhancedFields["peak_power_w"] = slMaxPower
+			active.ChargerEvidence.PeakPowerW = slMaxPower
 		}
 		if slAvgPower > 0 {
 			enhancedFields["avg_power_w"] = slAvgPower
+			active.ChargerEvidence.AveragePowerW = slAvgPower
 		}
 
 		if active.ChargeCable != nil && *active.ChargeCable != "" {
@@ -749,6 +761,11 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 				}
 			}
 		}
+	}
+
+	chargingsvc.ObserveCharger(&active.ChargerEvidence, signals)
+	if kind := chargingdomain.ClassifyCharger(active.ChargerEvidence); kind != "" {
+		enhancedFields["charger_type"] = kind
 	}
 
 	// A counter reset, invalid sample, or missing baseline makes direct energy
