@@ -1,10 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Route, ArrowUpRight, ArrowRight } from 'lucide-react';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { useDashboardDriveHistory } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';
-import { request } from '@/api/client';
 
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -16,10 +15,9 @@ import { WidgetDetailCard, type DetailEntry } from './shared';
 import { WidgetShell } from './WidgetShell';
 import { IconButton } from '@/components/ui/IconButton';
 import type { WidgetProps } from './types';
-import type { Drive } from '../types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
-export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
+export default function RecentDrivesWidget({ vehicleId, config }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
@@ -28,11 +26,8 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
   const { formatTime } = useDateFormat();
   const { formatRelativeDays, formatWeekdayName } = useDateLabels();
 
-  const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
-    queryKey: ['drives', id, 'recent-5'],
-    queryFn: () => request<Drive[]>(`/drives?vehicle_id=${id}&limit=5`),
-    enabled: id > 0,
-  });
+  const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } =
+    useDashboardDriveHistory(id, { kind: 'recent', limit: 5, range: config?.timeRange });
 
   const driveList = safeArray(drives);
 
@@ -101,7 +96,7 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
       footer={driveList.length > 0 ? (
         <div className="flex min-w-0 items-center justify-between gap-2">
           <span className="min-w-0 text-xs text-[var(--text-muted)]">
-            {t('widget.recentDrivesWeekSummary', '{{count}} drives this week · {{total}}', {
+            {t('widget.recentDrivesSummary', '{{count}} recent drives · {{total}}', {
               count: driveList.length,
               total: footerTotal,
             })}

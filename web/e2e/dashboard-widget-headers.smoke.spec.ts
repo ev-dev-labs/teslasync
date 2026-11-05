@@ -40,3 +40,67 @@ for (const width of [375,768,1280,1920]) for (const theme of ['light','dark'] as
   expect(edit.map(row=>row.right)).toEqual(view.map(row=>row.right));
  });
 }
+
+for (const width of [375, 1440]) for (const theme of ['light', 'dark'] as const) {
+ test(`charge-session caption and legend padding ${width} ${theme}`, async ({ page }, testInfo) => {
+  test.setTimeout(120000);
+  await page.setViewportSize({ width, height: 1600 });
+  await seedBrowserState(page, theme, '/', { preserveDashboardState: true });
+  await page.addInitScript(() => {
+   const layouts = Object.fromEntries([['lg', 4], ['md', 3], ['sm', 2], ['xs', 1]].map(([bp, cols]) => [
+    bp, [{ i: 'charge-padding', x: 0, y: 0, w: Number(cols), h: 8 }],
+   ]));
+   localStorage.setItem('teslasync-dashboards', JSON.stringify([{
+    id: 'charge-padding', name: 'Charge padding',
+    widgets: [{ id: 'charge-padding', widgetId: 'charge-session-chart', config: { vehicleId: 1 } }],
+    layouts, createdAt: '2026-09-13', updatedAt: '2026-09-13', isDefault: true,
+   }]));
+   localStorage.setItem('teslasync-active-dashboard', 'charge-padding');
+   localStorage.setItem('teslasync-row-height-version', '2');
+  });
+  const mocks = await installApiMocks(page, 'populated', theme);
+  let failRefresh = false;
+  await page.route('**/api/v1/charging?*', route => route.fulfill({
+   status: failRefresh ? 503 : 200,
+   contentType: 'application/json',
+   body: JSON.stringify(failRefresh ? { error: 'Temporarily unavailable' } : Array.from({ length: 20 }, (_, index) => ({
+    id: index + 1, vehicle_id: 1,
+    started_at: new Date(Date.UTC(2026, 8, index + 1)).toISOString(),
+    total_energy_added_wh: (index + 1) * 1000,
+    charger_type: ['AC', 'SUPERCHARGER', 'DC', null][index % 4],
+   }))),
+  }));
+  await page.goto('/');
+  await waitForHarnessReady(page, mocks);
+  const widget = page.locator('[data-widget-id="charge-padding"]');
+  const caption = widget.getByText('Energy per session', { exact: false });
+  await expect(caption).toBeVisible();
+  await expect(widget.getByText('Home / AC', { exact: true })).toBeVisible();
+
+  for (const state of ['fresh', 'stale'] as const) {
+   if (state === 'stale') {
+    failRefresh = true;
+    await widget.getByRole('button', { name: /Refresh data/ }).click();
+    await expect(widget.getByTestId('stale-refresh-warning')).toBeVisible({ timeout: 30000 });
+   }
+   await expect.poll(() => widget.evaluate(root => {
+    const body = root.querySelector<HTMLElement>('[data-testid="widget-body"]')!;
+    const header = root.querySelector<HTMLElement>('[data-role="widget-shell-header"]')!;
+    const caption = Array.from(body.querySelectorAll('p')).find(el => el.textContent?.includes('Energy per session'))!;
+    const legend = Array.from(body.querySelectorAll('ul')).find(el => el.textContent?.includes('Home / AC'))!;
+    const bodyRect = body.getBoundingClientRect();
+    const captionRect = caption.getBoundingClientRect();
+    const legendRect = legend.getBoundingClientRect();
+    const inset = parseFloat(getComputedStyle(header).paddingLeft);
+    return {
+     captionAligned: Math.abs(captionRect.left - bodyRect.left - inset) <= 1,
+     legendAligned: Math.abs(legendRect.left - bodyRect.left - inset) <= 1,
+     rightInset: bodyRect.right - legendRect.right >= inset - 1,
+     bottomInset: bodyRect.bottom - legendRect.bottom >= 11,
+     noOverflow: body.scrollWidth <= body.clientWidth && body.scrollHeight <= body.clientHeight + 1,
+    };
+   })).toEqual({ captionAligned: true, legendAligned: true, rightInset: true, bottomInset: true, noOverflow: true });
+   await widget.screenshot({ path: testInfo.outputPath(`charge-padding-${width}-${theme}-${state}.png`), animations: 'disabled' });
+  }
+ });
+}

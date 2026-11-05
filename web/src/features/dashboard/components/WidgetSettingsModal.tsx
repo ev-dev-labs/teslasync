@@ -10,6 +10,23 @@ import { FormSection } from '@/components/forms';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import type { WidgetConfig, WidgetDef, WidgetInstance } from '../widgets/types';
 
+const RANGE_AWARE_WIDGETS = new Set([
+  'recent-drives',
+  'recent-drives-list',
+  'drive-efficiency-chart',
+  'speed-heatmap',
+  'speed-profile',
+  'regen-efficiency',
+  'route-efficiency',
+  'charge-history',
+  'charge-session-chart',
+  'charge-cost-tracker',
+  'analytics-summary',
+  'fleet-stats',
+  'fleet-stats-bar',
+  'battery-health-analytics',
+]);
+
 interface WidgetSettingsModalProps {
   widget: WidgetInstance;
   def: WidgetDef;
@@ -88,7 +105,10 @@ export function WidgetSettingsModal({
         )}
 
         {/* Refresh rate */}
-        <FormSection title={t('dashboard.widgetSettings.refreshInterval', 'Refresh interval')}>
+        <FormSection
+          title={t('dashboard.widgetSettings.refreshInterval', 'Refresh interval')}
+          description={t('dashboard.widgetSettings.refreshHelp', 'Adds periodic refreshes. Live updates and existing polling may arrive more often; dashboard settings apply when Default is selected.')}
+        >
           <UiSelect
             aria-label={t('dashboard.widgetSettings.refreshInterval', 'Refresh interval')}
             value={config.refreshRate?.toString() ?? 'default'}
@@ -111,18 +131,24 @@ export function WidgetSettingsModal({
 
         {/* Time range (for chart widgets) */}
         {isChartWidget && (
-          <FormSection title={t('dashboard.widgetSettings.timeRange', 'Time range')}>
+          <FormSection
+            title={t('dashboard.widgetSettings.timeRange', 'Time range')}
+            description={RANGE_AWARE_WIDGETS.has(def.id)
+              ? t('dashboard.widgetSettings.rangeHistoryHelp', 'Filters historical data by a rolling range. Recent lists and session charts also limit the number of records shown.')
+              : t('dashboard.widgetSettings.rangeFixedHelp', 'This widget uses live data, a fixed period, or the workspace range; changing this selection does not change its data.')}
+          >
             <UiSelect
               aria-label={t('dashboard.widgetSettings.timeRange', 'Time range')}
-              value={config.timeRange ?? '7d'}
+              value={config.timeRange ?? 'default'}
               options={[
+                { value: 'default', label: t('dashboard.widgetSettings.rangeDefault', 'Widget default') },
                 { value: '24h', label: t('dashboard.widgetSettings.24h', 'Last 24 hours') },
                 { value: '7d', label: t('dashboard.widgetSettings.7d', 'Last 7 days') },
                 { value: '30d', label: t('dashboard.widgetSettings.30d', 'Last 30 days') },
                 { value: '90d', label: t('dashboard.widgetSettings.90d', 'Last 90 days') },
               ]}
               onChange={(e) => {
-                setConfig((prev) => ({ ...prev, timeRange: e.target.value }));
+                setConfig((prev) => ({ ...prev, timeRange: e.target.value === 'default' ? undefined : e.target.value }));
               }}
             />
           </FormSection>

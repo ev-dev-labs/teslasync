@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import { BarChart3 } from 'lucide-react';
 import {
   Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -8,12 +7,11 @@ import {
   Cell, useMeasuredAxisWidth,
 } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { request } from '@/api/client';
+import { useDashboardChargingHistory } from '@/api/hooks/useCharging';
 import { deriveDataState, knownNumber, sumKnown } from '@/api/dataState';
 import { WidgetBigNumber, WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import type { ChargingSession } from '@/api/types';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -21,7 +19,7 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { classifyChargingSource } from '@/lib/chargerKind';
 import { CHARGER_COLORS } from '@/lib/colors';
 
-export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
+export default function ChargeHistoryWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtNumber: fmt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const vehiclesQuery = useVehicles();
@@ -30,11 +28,7 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { unitPrefs } = useUnits();
   const { formatDateShort } = useDateFormat();
 
-  const query = useQuery({
-    queryKey: ['charging', id, 'recent-10'],
-    queryFn: () => request<ChargingSession[]>(`/charging?vehicle_id=${id}&limit=10`),
-    enabled: id > 0,
-  });
+  const query = useDashboardChargingHistory(id, { kind: 'recent', range: config?.timeRange });
   const { data: charges, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
 
   const chartData = useMemo(

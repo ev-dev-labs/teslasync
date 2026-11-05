@@ -20,13 +20,13 @@ export function toAnalyticsDistanceDisplay(totalDistanceKm: number, distanceUnit
   return convertDistanceFromSI(totalDistanceKm * METERS_PER_KM, distanceUnit);
 }
 
-export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
+export default function AnalyticsSummaryWidget({ size, config }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { fmtNumber } = useNumberFormatting();
   const { formatCurrency } = useFormatting();
   const { unitPrefs } = useUnits();
   const { startInstant, endInstantExclusive } = useRangeState({ defaultPresetId: '30d' });
-  const query = useFleetAnalytics({ start: startInstant, end: endInstantExclusive });
+  const query = useFleetAnalytics({ start: startInstant, end: endInstantExclusive, widgetRange: config?.timeRange });
   const {
     data,
     isLoading,
@@ -61,7 +61,9 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
 
   const stats: StatGridItem[] = [
     {
-      label: t('widget.analyticsSummary.distance30d', 'Distance (30d)'),
+      label: config?.timeRange
+        ? t('widget.analyticsSummary.distanceRange', 'Distance (selected range)')
+        : t('widget.analyticsSummary.distanceViewRange', 'Distance (view range)'),
       value: distance == null ? null : fmtNumber(distance, 0),
       unit: distanceUnit,
     },

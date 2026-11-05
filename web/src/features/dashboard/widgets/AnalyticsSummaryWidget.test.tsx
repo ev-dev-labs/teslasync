@@ -96,7 +96,7 @@ describe('AnalyticsSummaryWidget — After card', () => {
   it('renders a concise 2-column analytics summary with shared units and freshness', () => {
     const { container } = renderWidget();
     const summary = within(screen.getByTestId('analytics-summary'));
-    expect(summary.getByText('Distance (30d)')).toBeInTheDocument();
+    expect(summary.getByText('Distance (view range)')).toBeInTheDocument();
     expect(summary.getByText('1,000')).toBeInTheDocument();
     expect(summary.getByText('km')).toBeInTheDocument();
     expect(summary.getByText('Avg efficiency')).toBeInTheDocument();

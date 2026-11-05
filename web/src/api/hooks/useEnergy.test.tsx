@@ -309,6 +309,40 @@ describe('useBatteryHealthAnalytics', () => {
     expect(STALE_TIMES.ANALYTICS).toBe(15 * 60_000);
   });
 
+  it('isolates and refreshes the rolling battery widget range', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-03-10T12:00:00.000Z'));
+    try {
+      mockedRequest.mockResolvedValue({ current_soh: 95 });
+      const client = makeClient();
+      const wrapper = makeWrapper(client);
+      const full = renderHook(() => useBatteryHealthAnalytics('42'), { wrapper });
+      await waitFor(() => expect(full.result.current.isSuccess).toBe(true));
+      const ranged = renderHook(
+        () => useBatteryHealthAnalytics('42', undefined, '24h'),
+        { wrapper },
+      );
+      await waitFor(() => expect(ranged.result.current.isSuccess).toBe(true));
+      expect(mockedRequest).toHaveBeenCalledTimes(2);
+      const first = new URL(calledUrl(1), 'http://fixture.test');
+      expect(first.pathname).toBe('/analytics/battery-health');
+      expect(first.searchParams.get('vehicle_id')).toBe('42');
+      expect(first.searchParams.get('start')).toBe('2026-03-09T12:00:00.000Z');
+      expect(first.searchParams.get('end')).toBe('2026-03-10T12:00:00.000Z');
+      expect(calledOpts(1).signal).toBeInstanceOf(AbortSignal);
+      expect(client.getQueryData(['battery-health-analytics', '42', 'widget-range', '24h']))
+        .toEqual({ current_soh: 95 });
+
+      vi.setSystemTime(new Date('2026-03-11T12:00:00.000Z'));
+      await act(async () => { await ranged.result.current.refetch(); });
+      const refreshed = new URL(calledUrl(2), 'http://fixture.test');
+      expect(refreshed.searchParams.get('start')).toBe('2026-03-10T12:00:00.000Z');
+      expect(refreshed.searchParams.get('end')).toBe('2026-03-11T12:00:00.000Z');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('surfaces an analytics failure without a delayed retry cycle', async () => {
     mockedRequest.mockRejectedValue(new Error('analytics timeout'));
     const { result } = renderHook(

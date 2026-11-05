@@ -1,8 +1,9 @@
 /** Shared shell state, single header ownership, controls and freshness wiring. */
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { deriveDataState } from '@/api/dataState';
+import { VisuallyHidden } from '@/components/a11y';
 
 // ── i18n stub: resolve `t(key, defaultString, opts)` and interpolate {{vars}} ──
 vi.mock('react-i18next', () => ({
@@ -100,11 +101,23 @@ vi.mock('@/components/data-display', () => ({
   ),
 }));
 
+vi.mock('@/hooks/useRefreshPolicy', () => ({
+  useRefreshInterval: (interval: number, options: { enabled: boolean }) => options.enabled ? interval : false,
+}));
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetHeaderContext } from './WidgetHeaderContext';
 import type { FreshnessQuery } from '@/components/data-display';
 
 const Child = () => <div data-testid="child">child content</div>;
+
+function visuallyHiddenClass(): string {
+  const { container, unmount } = render(<VisuallyHidden>Reference</VisuallyHidden>);
+  const className = container.firstElementChild?.getAttribute('class') ?? '';
+  unmount();
+  expect(className).not.toBe('');
+  return className;
+}
 
 function makeQuery(over: Partial<FreshnessQuery> = {}): FreshnessQuery {
   return {
@@ -122,6 +135,7 @@ function root(container: HTMLElement): HTMLElement {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
 
@@ -233,6 +247,41 @@ describe('WidgetShell — state machine', () => {
 });
 
 describe('WidgetShell — titled header', () => {
+  it('visually hides the title without removing its accessible heading', () => {
+    const hiddenClass = visuallyHiddenClass();
+    render(
+      <WidgetHeaderContext.Provider value={{ showTitle: false }}>
+        <WidgetShell title="Battery"><Child /></WidgetShell>
+      </WidgetHeaderContext.Provider>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Battery' })).toHaveClass(hiddenClass);
+  });
+
+  it('uses the widget name when a compact widget has no explicit title', () => {
+    const hiddenClass = visuallyHiddenClass();
+    render(
+      <WidgetHeaderContext.Provider value={{ showTitle: false, fallbackTitle: 'Charge status' }}>
+        <WidgetShell><Child /></WidgetShell>
+      </WidgetHeaderContext.Provider>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Charge status' })).toHaveClass(hiddenClass);
+  });
+
+  it('keeps the title visible as a drag handle while editing', () => {
+    const hiddenClass = visuallyHiddenClass();
+    render(
+      <WidgetHeaderContext.Provider value={{ showTitle: false, editMode: true }}>
+        <WidgetShell title="Battery"><Child /></WidgetShell>
+      </WidgetHeaderContext.Provider>,
+    );
+
+    const heading = screen.getByRole('heading', { name: 'Battery' });
+    expect(heading).not.toHaveClass(hiddenClass);
+    expect(heading.closest('.widget-drag-handle')).not.toBeNull();
+  });
+
   it('renders the title as an h3 heading alongside the decorative icon', () => {
     render(
       <WidgetShell title="Battery Health" icon={<span data-testid="icon" />}>
@@ -242,6 +291,51 @@ describe('WidgetShell — titled header', () => {
 
     expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Battery Health');
     expect(screen.getByTestId('icon')).toBeInTheDocument();
+  });
+
+  describe('WidgetShell — configured auto-refresh', () => {
+    it('refreshes loaded data at the configured interval and pauses while fetching', () => {
+      vi.useFakeTimers();
+      const onRefresh = vi.fn();
+      const shell = (isFetching: boolean, pauseAutoRefresh = false) => (
+        <WidgetHeaderContext.Provider value={{ refreshIntervalSeconds: 5, pauseAutoRefresh }}>
+          <WidgetShell title="Battery" updatedAt={1234} isFetching={isFetching} onRefresh={onRefresh}>
+            <Child />
+          </WidgetShell>
+        </WidgetHeaderContext.Provider>
+      );
+      const { rerender } = render(shell(false));
+
+      act(() => vi.advanceTimersByTime(10_000));
+      expect(onRefresh).toHaveBeenCalledTimes(2);
+      rerender(shell(true));
+      act(() => vi.advanceTimersByTime(10_000));
+      expect(onRefresh).toHaveBeenCalledTimes(2);
+      rerender(shell(false, true));
+      act(() => vi.advanceTimersByTime(10_000));
+      expect(onRefresh).toHaveBeenCalledTimes(2);
+      rerender(shell(false));
+      act(() => vi.advanceTimersByTime(5_000));
+      expect(onRefresh).toHaveBeenCalledTimes(3);
+    });
+
+    it('does not refresh an unresolved source or a default interval', () => {
+      vi.useFakeTimers();
+      const onRefresh = vi.fn();
+      const { rerender } = render(
+        <WidgetHeaderContext.Provider value={{ refreshIntervalSeconds: 5 }}>
+          <WidgetShell title="Battery" updatedAt={0} onRefresh={onRefresh}><Child /></WidgetShell>
+        </WidgetHeaderContext.Provider>,
+      );
+      act(() => vi.advanceTimersByTime(10_000));
+      rerender(
+        <WidgetHeaderContext.Provider value={{ refreshIntervalSeconds: 0 }}>
+          <WidgetShell title="Battery" updatedAt={1234} onRefresh={onRefresh}><Child /></WidgetShell>
+        </WidgetHeaderContext.Provider>,
+      );
+      act(() => vi.advanceTimersByTime(10_000));
+      expect(onRefresh).not.toHaveBeenCalled();
+    });
   });
 
   it('renders the help tooltip with an interpolated, i18n aria-label', () => {

@@ -223,6 +223,24 @@ describe('useAnalyticsSummary', () => {
 // ---------------------------------------------------------------------------
 
 describe('useFleetAnalytics', () => {
+  it('uses the widget rolling range instead of workspace bounds and isolates its cache key', async () => {
+    mockedRequest.mockResolvedValue({ period_days: 7 });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result } = renderHook(
+      () => useFleetAnalytics({ start: '2024-01-01', end: '2024-02-01', widgetRange: '7d' }),
+      { wrapper: ({ children }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider> },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const [path, options] = callAt();
+    const url = new URL(path, 'http://fixture.test');
+    expect(url.pathname).toBe('/analytics/fleet');
+    expect(Date.parse(url.searchParams.get('end')!) - Date.parse(url.searchParams.get('start')!))
+      .toBe(7 * 24 * 60 * 60 * 1000);
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+    expect(qc.getQueryData(['analytics', 'fleet', 'widget-range', '7d'])).toEqual({ period_days: 7 });
+    qc.clear();
+  });
+
   it('requests unbounded history when called with no arguments', async () => {
     mockedRequest.mockResolvedValueOnce({ period_days: 0 });
     const { result } = renderHook(() => useFleetAnalytics(), { wrapper });

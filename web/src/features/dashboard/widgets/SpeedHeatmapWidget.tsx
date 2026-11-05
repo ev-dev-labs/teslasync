@@ -1,12 +1,11 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import { Grid3X3 } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { EmbeddedChart } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { useDashboardDriveHistory } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';
-import { request } from '@/api/client';
 import { useTimezone } from '@/lib/timezone';
 
 import { convertSpeedFromSI, type SpeedUnitPref } from '@/lib/unitConversion';
@@ -100,7 +99,7 @@ export function speedToColor(speed: number, maxSpeed: number): string {
 }
 
 
-export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
+export default function SpeedHeatmapWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t, i18n } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
@@ -108,12 +107,8 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
   const { unitPrefs } = useUnits();
   const timezone = useTimezone('vehicle');
 
-  const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
-    queryKey: ['drives', id, 'speed-heatmap'],
-    queryFn: () => request<Drive[]>(`/drives?vehicle_id=${id}`),
-    enabled: id > 0,
-    staleTime: 120_000,
-  });
+  const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } =
+    useDashboardDriveHistory(id, { kind: 'heatmap', range: config?.timeRange });
 
   const grid = useMemo(
     () => buildHeatmap(safeArray(drives), unitPrefs.speed, timezone),

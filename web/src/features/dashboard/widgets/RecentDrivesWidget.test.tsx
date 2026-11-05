@@ -5,7 +5,7 @@
  * single `useQuery('/drives?…limit=5')` result and renders the After design:
  * up to four route rows ("Start → End", "Today 8:12 AM · 22 min" underneath,
  * distance on the right with Wh-per-distance efficiency below it) plus a
- * footer summarising the fetched set ("5 drives this week · 58 mi") with an
+ * footer summarising the fetched set ("5 recent drives · 58 mi") with an
  * "All drives" link — or an empty state. This suite drives the whole component
  * through its accessible surface:
  *
@@ -192,12 +192,12 @@ function routeDrives(drives: Drive[]) {
 const drivesCalls = () =>
   mockRequest.mock.calls.filter((c) => String(c[0]).startsWith('/drives'));
 
-function renderWidget(vehicleId?: number) {
+function renderWidget(vehicleId?: number, timeRange?: string) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   // `size` is required by WidgetProps but unused by this widget.
-  const props = { vehicleId, size: { cols: 2, rows: 2 } } as WidgetProps;
+  const props = { vehicleId, size: { cols: 2, rows: 2 }, config: timeRange ? { timeRange } : undefined } as WidgetProps;
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
@@ -221,15 +221,26 @@ beforeEach(() => {
 // ── Vehicle resolution ─────────────────────────────────────────────────────
 
 describe('RecentDrivesWidget vehicle resolution', () => {
+  it('passes the saved rolling range and both bounds to the server', async () => {
+    routeDrives([]);
+    renderWidget(42, '7d');
+    await waitFor(() => expect(drivesCalls()).toHaveLength(1));
+    const url = new URL(String(drivesCalls()[0][0]), 'http://fixture.test');
+    expect(url.searchParams.get('vehicle_id')).toBe('42');
+    expect(url.searchParams.get('limit')).toBe('5');
+    expect(Date.parse(url.searchParams.get('end')!) - Date.parse(url.searchParams.get('start')!))
+      .toBe(7 * 24 * 60 * 60 * 1000);
+  });
+
   it('prefers the explicit vehicleId prop over the vehicle list', async () => {
     mockUseVehicles.mockReturnValue({ data: [{ id: 7 }] } as never);
     routeDrives([makeDrive()]);
     renderWidget(42);
 
     await waitFor(() =>
-      expect(mockRequest).toHaveBeenCalledWith('/drives?vehicle_id=42&limit=5'),
+      expect(mockRequest).toHaveBeenCalledWith('/drives?vehicle_id=42&limit=5', { signal: expect.any(AbortSignal) }),
     );
-    expect(mockRequest).not.toHaveBeenCalledWith('/drives?vehicle_id=7&limit=5');
+    expect(drivesCalls().map(([path]) => path)).not.toContain('/drives?vehicle_id=7&limit=5');
   });
 
   it('falls back to the first vehicle when no prop is given', async () => {
@@ -238,7 +249,7 @@ describe('RecentDrivesWidget vehicle resolution', () => {
     renderWidget();
 
     await waitFor(() =>
-      expect(mockRequest).toHaveBeenCalledWith('/drives?vehicle_id=7&limit=5'),
+      expect(mockRequest).toHaveBeenCalledWith('/drives?vehicle_id=7&limit=5', { signal: expect.any(AbortSignal) }),
     );
   });
 
@@ -275,7 +286,7 @@ describe('RecentDrivesWidget states', () => {
     expect(empty).toBeInTheDocument();
     expect(empty.closest('[role="status"]')).not.toBeNull();
     // No footer summary or "All drives" link without drives.
-    expect(screen.queryByText(/drives this week/)).toBeNull();
+    expect(screen.queryByText(/^\d+ recent drives/)).toBeNull();
     expect(screen.queryByRole('link', { name: /All drives/ })).toBeNull();
   });
 
@@ -352,7 +363,7 @@ describe('RecentDrivesWidget populated rows', () => {
     expect(formatRelativeDaysSpy).toHaveBeenCalledWith('2024-05-01T10:00:00Z');
 
     // Footer summarises the fetched set and links to the drives index…
-    expect(screen.getByText('1 drives this week · 5 km')).toBeInTheDocument();
+    expect(screen.getByText('1 recent drives · 5 km')).toBeInTheDocument();
     const allDrives = screen.getByRole('link', { name: /All drives/ });
     expect(allDrives).toHaveAttribute('href', '/drives');
 
@@ -389,7 +400,7 @@ describe('RecentDrivesWidget populated rows', () => {
     expect(screen.getByText('Home → Office 4')).toBeInTheDocument();
     expect(screen.queryByText('Home → Office 5')).toBeNull();
     // 5 × 5000 m = 25 km across the fetched set.
-    expect(screen.getByText('5 drives this week · 25 km')).toBeInTheDocument();
+    expect(screen.getByText('5 recent drives · 25 km')).toBeInTheDocument();
     expect(drivesCalls()[0]?.[0]).toBe('/drives?vehicle_id=1&limit=5');
   });
 
@@ -407,7 +418,7 @@ describe('RecentDrivesWidget populated rows', () => {
     expect(screen.getByText('Home → Office 1')).toBeInTheDocument();
     expect(screen.getByText('Home → Office 2')).toBeInTheDocument();
     expect(screen.getByText('Home → Office 3')).toBeInTheDocument();
-    expect(screen.getByText('3 drives this week · 15 km')).toBeInTheDocument();
+    expect(screen.getByText('3 recent drives · 15 km')).toBeInTheDocument();
     expect(drivesCalls()[0]?.[0]).toBe('/drives?vehicle_id=1&limit=5');
   });
 

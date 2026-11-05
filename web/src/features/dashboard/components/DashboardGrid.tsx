@@ -43,6 +43,8 @@ interface DashboardGridProps {
   getWidgetSize: (instanceId: string) => { cols: number; rows: number };
   /** Dashboard-level vehicle filter (widgets inherit unless they have their own) */
   dashboardVehicleId?: number;
+  /** Point-in-time views must not schedule live refreshes. */
+  pauseAutoRefresh?: boolean;
   /** Reduce grid gaps when compact mode is on */
   compactMode?: boolean;
   /** Show a subtle border on each widget */
@@ -101,11 +103,13 @@ function FullscreenOverlay({
       </div>
       <GlassPanel className="dashboard-widget-panel dashboard-canvas min-h-0 flex-1 overflow-hidden" data-motion-paused={motionPaused}>
         <Suspense fallback={<Skeleton className="h-full" />}>
-          <Component
-            vehicleId={widget.config?.vehicleId ?? dashboardVehicleId}
-            config={widget.config}
-            size={{ cols: size.cols, rows: Math.max(size.rows, 4) }}
-          />
+          <WidgetHeaderContext.Provider value={{ showTitle: widget.config?.showTitle, fallbackTitle: def.name }}>
+            <Component
+              vehicleId={widget.config?.vehicleId ?? dashboardVehicleId}
+              config={widget.config}
+              size={{ cols: size.cols, rows: Math.max(size.rows, 4) }}
+            />
+          </WidgetHeaderContext.Provider>
         </Suspense>
       </GlassPanel>
     </Modal>
@@ -120,6 +124,7 @@ export const DashboardGrid = memo(function DashboardGrid({
   onRemoveWidget,
   onOpenSettings,
   dashboardVehicleId,
+  pauseAutoRefresh,
   compactMode,
   showWidgetBorders,
   kioskWidgetOpacity,
@@ -686,7 +691,14 @@ export const DashboardGrid = memo(function DashboardGrid({
                 </div>
               }
             >
-              <WidgetHeaderContext.Provider value={{ actions: headerActions, editMode }}>
+              <WidgetHeaderContext.Provider value={{
+                actions: headerActions,
+                editMode,
+                fallbackTitle: def.name,
+                showTitle: widget.config?.showTitle,
+                refreshIntervalSeconds: widget.config?.refreshRate ?? dashboard.settings?.refreshInterval,
+                pauseAutoRefresh,
+              }}>
               <Component
                 vehicleId={widget.config?.vehicleId ?? dashboardVehicleId}
                 config={widget.config}
@@ -699,7 +711,7 @@ export const DashboardGrid = memo(function DashboardGrid({
       </div>
     );
   }, [
-    t, editMode, getWidgetSizeLive, dashboardVehicleId, panelStyle,
+    t, editMode, getWidgetSizeLive, dashboardVehicleId, dashboard.settings?.refreshInterval, pauseAutoRefresh, panelStyle,
     showWidgetBorders, onRemoveWidget, onOpenSettings, arrangeWidget,
     getArrangeAvailability, droppedId,
   ]);

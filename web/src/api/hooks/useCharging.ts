@@ -30,6 +30,7 @@ import type {
   QueueAdvice,
 } from '@/types/charging';
 import type { ChargingSession as ApiChargingSession, ChargeTelemetryReading } from '../types';
+import { fetchWidgetHistory } from './_widgetHistory';
 
 /** Fetches paginated charging sessions for a vehicle, optionally filtered by date range. */
 export const getChargingSessions = (
@@ -44,6 +45,29 @@ export const getChargingSessions = (
   if (start) params.set('start', start)
   if (end) params.set('end', end)
   return request<ApiChargingSession[]>(`/charging?${params}`, { signal: opts?.signal })
+}
+
+export function useDashboardChargingHistory(
+  vehicleId: number,
+  options: { kind: 'recent' | 'session-chart' | 'cost'; range?: string; start?: string },
+) {
+  const limit = options.kind === 'recent' ? 10 : options.kind === 'session-chart' ? 20 : 100;
+  const suffix = options.kind === 'recent' ? 'recent-10'
+    : options.kind === 'session-chart' ? 'session-chart-20' : 'cost-tracker-30d';
+  return useQuery({
+    queryKey: [
+      'charging', vehicleId, suffix,
+      ...(options.kind === 'cost' && options.range === undefined ? [options.start] : []),
+      ...(options.range !== undefined ? [options.range] : []),
+    ],
+    queryFn: ({ signal }) => fetchWidgetHistory<ApiChargingSession>(
+      vehicleId,
+      { limit, start: options.start, range: options.range, completeRange: options.kind === 'cost' },
+      (params) => request<ApiChargingSession[] | null>(`/charging?${params}`, { signal }),
+    ),
+    enabled: Number.isSafeInteger(vehicleId) && vehicleId > 0,
+    ...(options.kind !== 'recent' ? { staleTime: 60_000 } : {}),
+  });
 }
 
 export const chargingKeys = {

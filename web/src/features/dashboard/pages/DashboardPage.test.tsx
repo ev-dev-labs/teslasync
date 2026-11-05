@@ -213,7 +213,10 @@ vi.mock('../components/DashboardGrid', () => ({
   DashboardGrid: (props: any) => {
     h.gridRenders += 1;
     return (
-    <div data-testid={props.kioskWidgetOpacity !== undefined ? 'kiosk-grid' : 'dashboard-grid'}>
+    <div
+      data-testid={props.kioskWidgetOpacity !== undefined ? 'kiosk-grid' : 'dashboard-grid'}
+      data-refresh-paused={String(Boolean(props.pauseAutoRefresh))}
+    >
       <button type="button" data-testid="grid-open-settings" onClick={() => props.onOpenSettings('w-hero')}>
         open settings
       </button>
@@ -345,13 +348,13 @@ function setDashboard(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function renderPage() {
+function renderPage(initialEntry = '/') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const invalidateSpy = vi.spyOn(qc, 'invalidateQueries');
   const utils = render(
     <QueryClientProvider client={qc}>
       <ToastProvider>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={[initialEntry]}>
           <DashboardPage />
         </MemoryRouter>
       </ToastProvider>
@@ -805,6 +808,20 @@ describe('DashboardPage — kiosk mode', () => {
     renderPage();
     expect(screen.getByTestId('dashboard-grid')).toBeInTheDocument();
     expect(screen.queryByTestId('kiosk-grid')).toBeNull();
+  });
+
+  it('pauses the underlying grid while keeping the kiosk grid active', () => {
+    (h.kiosk as Record<string, unknown>).isKiosk = true;
+    renderPage();
+    expect(screen.getByTestId('dashboard-grid')).toHaveAttribute('data-refresh-paused', 'true');
+    expect(screen.getByTestId('kiosk-grid')).toHaveAttribute('data-refresh-paused', 'false');
+  });
+
+  it('pauses configured refreshes in time-machine mode, including kiosk', () => {
+    (h.kiosk as Record<string, unknown>).isKiosk = true;
+    renderPage('/?as_of=2026-03-10T12%3A00%3A00Z');
+    expect(screen.getByTestId('dashboard-grid')).toHaveAttribute('data-refresh-paused', 'true');
+    expect(screen.getByTestId('kiosk-grid')).toHaveAttribute('data-refresh-paused', 'true');
   });
 });
 

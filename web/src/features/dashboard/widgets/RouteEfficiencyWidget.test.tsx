@@ -153,13 +153,14 @@ function routeRequest(data: RouteEfficiencyData) {
 const routeEffCalls = () =>
   mockRequest.mock.calls.filter((c) => String(c[0]).startsWith('/analytics/route-efficiency'));
 
-function renderWidget(opts: { vehicleId?: number; cols?: number } = {}) {
+function renderWidget(opts: { vehicleId?: number; cols?: number; timeRange?: string } = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   const props = {
     vehicleId: opts.vehicleId,
     size: { cols: opts.cols ?? 2, rows: 2 },
+    config: opts.timeRange ? { timeRange: opts.timeRange } : undefined,
   } as WidgetProps;
   return render(
     <QueryClientProvider client={client}>
@@ -217,6 +218,18 @@ describe('RouteEfficiencyWidget vehicle resolution', () => {
     expect(await screen.findByText('No route data')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(routeEffCalls()).toHaveLength(0);
+  });
+
+  it('requests the selected rolling range for the selected vehicle', async () => {
+    const earliestEnd = Date.now();
+    renderWidget({ vehicleId: 42, timeRange: '7d' });
+    await waitFor(() => expect(routeEffCalls()).toHaveLength(1));
+    const url = new URL(String(routeEffCalls()[0][0]), 'http://fixture.test');
+    const start = Date.parse(url.searchParams.get('start') ?? '');
+    const end = Date.parse(url.searchParams.get('end') ?? '');
+    expect(url.searchParams.get('vehicle_id')).toBe('42');
+    expect(end).toBeGreaterThanOrEqual(earliestEnd);
+    expect(end - start).toBe(7 * 24 * 60 * 60 * 1000);
   });
 });
 

@@ -74,10 +74,10 @@ vi.mock('@/hooks/useUnits', () => ({
 import FleetStatsBarWidget, { toDistanceDisplay } from './FleetStatsBarWidget';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 
-function renderWidget(cols = 4) {
+function renderWidget(cols = 4, timeRange?: string) {
   return render(
     <MemoryRouter initialEntries={['/dashboard']}>
-      <FleetStatsBarWidget size={{ cols, rows: 2 }} />
+      <FleetStatsBarWidget size={{ cols, rows: 2 }} config={timeRange ? { timeRange } : undefined} />
     </MemoryRouter>,
   );
 }
@@ -99,6 +99,16 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('FleetStatsBarWidget — After card', () => {
+  it('applies the widget range only to historical analytics, not live vehicle counts', () => {
+    renderWidget(4, '7d');
+    expect(useFleetAnalytics).toHaveBeenCalledWith(expect.objectContaining({ widgetRange: '7d' }));
+    const strip = within(screen.getByTestId('fleet-stats-bar'));
+    expect(strip.getByText('Vehicles')).toBeInTheDocument();
+    expect(strip.getByText('4')).toBeInTheDocument();
+    expect(strip.getByText('Distance (selected range)')).toBeInTheDocument();
+    expect(strip.getByText('Energy (selected range)')).toBeInTheDocument();
+  });
+
   it('renders one four-cell KPI strip with shared units and truthful source values', () => {
     renderWidget();
     const strip = within(screen.getByTestId('fleet-stats-bar'));
@@ -107,10 +117,10 @@ describe('FleetStatsBarWidget — After card', () => {
     expect(strip.getByText('online')).toBeInTheDocument();
     expect(strip.getByText('2')).toBeInTheDocument();
     expect(strip.getByText('2 asleep/offline')).toBeInTheDocument();
-    expect(strip.getByText('Distance (30d)')).toBeInTheDocument();
+    expect(strip.getByText('Distance (view range)')).toBeInTheDocument();
     expect(strip.getByText('1,234')).toBeInTheDocument();
     expect(strip.getByText('km')).toBeInTheDocument();
-    expect(strip.getByText('Energy (30d)')).toBeInTheDocument();
+    expect(strip.getByText('Energy (view range)')).toBeInTheDocument();
     expect(strip.getByText('250.0')).toBeInTheDocument();
     expect(strip.getByText('kWh')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Refresh/i })).toBeInTheDocument();

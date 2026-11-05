@@ -75,6 +75,7 @@
     "iconLabel": "Icon",
     "vehicleFilter": "Vehicle filter",
     "refresh": "Auto-refresh",
+    "refreshHelp": "Adds periodic refreshes unless a widget has its own interval. Live updates and existing polling may arrive more often.",
     "display": "Display",
     "showBorders": "Show widget borders",
     "compactMode": "Compact mode (smaller gaps)",
@@ -1268,6 +1269,10 @@
       "allVehicles": "All vehicles (first)",
       "appearance": "Appearance",
       "default": "Default",
+      "rangeDefault": "Widget default",
+      "rangeFixedHelp": "This widget uses live data, a fixed period, or the workspace range; changing this selection does not change its data.",
+      "rangeHistoryHelp": "Filters historical data by a rolling range. Recent lists and session charts also limit the number of records shown.",
+      "refreshHelp": "Adds periodic refreshes. Live updates and existing polling may arrive more often; dashboard settings apply when Default is selected.",
       "refreshInterval": "Refresh interval",
       "showTitle": "Show widget title",
       "timeRange": "Time range",
@@ -2896,7 +2901,8 @@
     "analyticsSummary": {
       "avgEfficiency": "Avg efficiency",
       "costPerDist30d": "Cost / {{unit}}",
-      "distance30d": "Distance (30d)",
+      "distanceRange": "Distance (selected range)",
+      "distanceViewRange": "Distance (view range)",
       "energyConsumed": "Energy consumed",
       "noDataMessage": "No analytics readings are available yet. They appear after the analytics source returns data.",
       "summary": {
@@ -3008,6 +3014,8 @@
       "noData": "No charge data",
       "saved": "Saved {{amount}} vs gas",
       "savingsNote": "30-day estimate",
+      "selectedRangeCost": "Cost for selected range",
+      "selectedRangeEstimate": "Estimate for selected range",
       "sessions": "{{count}} sessions",
       "sessions_one": "{{count}} session",
       "sessions_other": "{{count}} sessions",
@@ -3273,6 +3281,7 @@
       "date": "Date",
       "empty": "No efficiency data yet",
       "rolling": "7-day avg",
+      "selectedRangeAverage": "Selected-range average",
       "title": "Drive efficiency",
       "windowAverage": "30-day average"
     },
@@ -3392,8 +3401,10 @@
     },
     "fleetStatsBar": {
       "asleepCount": "{{count}} asleep/offline",
-      "distance30d": "Distance (30d)",
-      "energy30d": "Energy (30d)",
+      "distanceRange": "Distance (selected range)",
+      "distanceViewRange": "Distance (view range)",
+      "energyRange": "Energy (selected range)",
+      "energyViewRange": "Energy (view range)",
       "noData": "No fleet data available",
       "online": "online",
       "title": "Fleet stats",
@@ -3728,7 +3739,7 @@
     "recentDrivesList": "Recent drives",
     "recentDrivesListDrive": "Drive",
     "recentDrivesSubMinute": "<1m",
-    "recentDrivesWeekSummary": "{{count}} drives this week · {{total}}",
+    "recentDrivesSummary": "{{count}} recent drives · {{total}}",
     "recentlyUnlocked": {
       "disabled": "Recently unlocked achievements are hidden in your settings.",
       "title": "Recently unlocked"

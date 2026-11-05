@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import { Zap } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { request } from '@/api/client';
+import { useDashboardChargingHistory } from '@/api/hooks/useCharging';
 import { deriveDataState, knownNumber, sumKnown } from '@/api/dataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
@@ -46,7 +45,7 @@ const CHARGER_SERIES: Record<ChartChargerType, string> = {
   unknown: dashboardTokens.chart.series[4],
 };
 
-export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProps) {
+export default function ChargeSessionChartWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtNumber: fmt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const vehiclesQuery = useVehicles();
@@ -55,12 +54,7 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
   const { formatDateShort } = useDateFormat();
   const { unitPrefs } = useUnits();
 
-  const query = useQuery({
-    queryKey: ['charging', id, 'session-chart-20'],
-    queryFn: () => request<ChargingSession[]>(`/charging?vehicle_id=${id}&limit=20`),
-    enabled: id > 0,
-    staleTime: 60_000,
-  });
+  const query = useDashboardChargingHistory(id, { kind: 'session-chart', range: config?.timeRange });
   const { data: sessions, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
   const handleRefresh = () => {
     if (id > 0) void refetch();
@@ -138,65 +132,67 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
       onRefresh={handleRefresh}
       noPadding
     >
-      <WidgetChartSummary
-        isEmpty={!hasData}
-        emptyMessage={t('widget.chargeSessionChart.empty', 'No charge sessions yet')}
-        emptyIcon={<Zap className="h-5 w-5" />}
-        stats={[]}
-        yAxisLabel={t('widget.chargeSessionChart.energyPerSession', 'Energy per session · last {{count}}', { count: 20 })}
-        legend={(['home', 'supercharger', 'dc', 'unknown'] as const)
-          .filter(type => type !== 'unknown' || chartData.some(point => point.type === 'unknown'))
-          .map(type => ({
-            label: t(`widget.chargeSessionChart.type.${type}`, CHARGER_TYPE_LABEL[type]),
-            color: CHARGER_SERIES[type],
-          }))}
-        chart={
-          <div className="flex h-full w-full flex-col px-2 pb-1">
-            <EmbeddedChart
-              title={t('widget.chargeSessionChart.title', 'Charge Session Chart')}
-              ariaLabel={t(
-                'widget.chargeSessionChart.chartLabel',
-                'Bar chart of energy added per charge session',
-              )}
-              data={chartData}
-              dataColumns={[
-                { key: 'label', label: t('widget.chargeSessionChart.session', 'Session') },
-                { key: 'energy', label: `${t('widget.energyAdded', 'Added')} (${unitPrefs.energy})` },
-                { key: 'type', label: t('widget.chargeSessionChart.chargerType', 'Charger type') },
-              ]}
-              className="min-h-0 flex-1"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
-                  {chartGrid}
-                  <XAxis dataKey="label" tick={tick} tickLine={false} axisLine={false} />
-                  <YAxis
-                    tick={tick}
-                    tickLine={false}
-                    axisLine={false}
-                    width={energyAxisWidth}
-                    tickFormatter={(v: number) => `${fmt(v)}`}
-                  />
-                  <Tooltip
-                    content={<ChartTooltip />}
-                    formatter={(value: number, _name: string, props: { payload?: ChartDatum }) => [
-                      `${fmt(value)} ${unitPrefs.energy}`,
-                      t(`widget.chargeSessionChart.type.${props.payload?.type ?? 'unknown'}`, CHARGER_TYPE_LABEL[props.payload?.type ?? 'unknown']),
-                    ]}
-                    labelFormatter={(label: string) => label}
-                    cursor={{ fill: chartTokens.gridStroke }}
-                  />
-                  <Bar dataKey="energy" radius={[4, 4, 0, 0]} maxBarSize={32}>
-                    {chartData.map((d, i) => (
-                      <Cell key={i} fill={CHARGER_SERIES[d.type]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </EmbeddedChart>
-          </div>
-        }
-      />
+      <div className="min-h-0 flex-1 px-4 pb-3">
+        <WidgetChartSummary
+          isEmpty={!hasData}
+          emptyMessage={t('widget.chargeSessionChart.empty', 'No charge sessions yet')}
+          emptyIcon={<Zap className="h-5 w-5" />}
+          stats={[]}
+          yAxisLabel={t('widget.chargeSessionChart.energyPerSession', 'Energy per session · last {{count}}', { count: 20 })}
+          legend={(['home', 'supercharger', 'dc', 'unknown'] as const)
+            .filter(type => type !== 'unknown' || chartData.some(point => point.type === 'unknown'))
+            .map(type => ({
+              label: t(`widget.chargeSessionChart.type.${type}`, CHARGER_TYPE_LABEL[type]),
+              color: CHARGER_SERIES[type],
+            }))}
+          chart={
+            <div className="flex h-full w-full flex-col px-2 pb-1">
+              <EmbeddedChart
+                title={t('widget.chargeSessionChart.title', 'Charge Session Chart')}
+                ariaLabel={t(
+                  'widget.chargeSessionChart.chartLabel',
+                  'Bar chart of energy added per charge session',
+                )}
+                data={chartData}
+                dataColumns={[
+                  { key: 'label', label: t('widget.chargeSessionChart.session', 'Session') },
+                  { key: 'energy', label: `${t('widget.energyAdded', 'Added')} (${unitPrefs.energy})` },
+                  { key: 'type', label: t('widget.chargeSessionChart.chargerType', 'Charger type') },
+                ]}
+                className="min-h-0 flex-1"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+                    {chartGrid}
+                    <XAxis dataKey="label" tick={tick} tickLine={false} axisLine={false} />
+                    <YAxis
+                      tick={tick}
+                      tickLine={false}
+                      axisLine={false}
+                      width={energyAxisWidth}
+                      tickFormatter={(v: number) => `${fmt(v)}`}
+                    />
+                    <Tooltip
+                      content={<ChartTooltip />}
+                      formatter={(value: number, _name: string, props: { payload?: ChartDatum }) => [
+                        `${fmt(value)} ${unitPrefs.energy}`,
+                        t(`widget.chargeSessionChart.type.${props.payload?.type ?? 'unknown'}`, CHARGER_TYPE_LABEL[props.payload?.type ?? 'unknown']),
+                      ]}
+                      labelFormatter={(label: string) => label}
+                      cursor={{ fill: chartTokens.gridStroke }}
+                    />
+                    <Bar dataKey="energy" radius={[4, 4, 0, 0]} maxBarSize={32}>
+                      {chartData.map((d, i) => (
+                        <Cell key={i} fill={CHARGER_SERIES[d.type]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </EmbeddedChart>
+            </div>
+          }
+        />
+      </div>
     </WidgetShell>
   );
 }

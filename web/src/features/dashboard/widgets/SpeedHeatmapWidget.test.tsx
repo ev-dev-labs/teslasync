@@ -160,7 +160,7 @@ function makeResult(over: Partial<QueryResult> = {}): QueryResult {
 
 interface CapturedQuery {
   queryKey: unknown[];
-  queryFn: () => Promise<unknown>;
+  queryFn: (context: { signal: AbortSignal }) => Promise<unknown>;
   enabled: boolean;
 }
 function lastQueryOptions(): CapturedQuery {
@@ -345,8 +345,9 @@ describe('SpeedHeatmapWidget — query wiring', () => {
 
   it('fetches the snake_case drives endpoint with NO /api/v1 prefix', async () => {
     renderWidget({ cols: 2, rows: 2 }, 42);
-    await lastQueryOptions().queryFn();
-    expect(requestMock).toHaveBeenCalledWith('/drives?vehicle_id=42');
+    const signal = new AbortController().signal;
+    await lastQueryOptions().queryFn({ signal });
+    expect(requestMock).toHaveBeenCalledWith('/drives?vehicle_id=42', { signal });
   });
 });
 

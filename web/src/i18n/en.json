@@ -7257,12 +7257,16 @@
       "title": "{{name}} Settings",
       "vehicle": "Vehicle",
       "refreshInterval": "Refresh interval",
+      "refreshHelp": "Adds periodic refreshes. Live updates and existing polling may arrive more often; dashboard settings apply when Default is selected.",
       "default": "Default",
       "5s": "5 seconds",
       "15s": "15 seconds",
       "30s": "30 seconds",
       "60s": "1 minute",
       "timeRange": "Time range",
+      "rangeDefault": "Widget default",
+      "rangeHistoryHelp": "Filters historical data by a rolling range. Recent lists and session charts also limit the number of records shown.",
+      "rangeFixedHelp": "This widget uses live data, a fixed period, or the workspace range; changing this selection does not change its data.",
       "24h": "Last 24 hours",
       "7d": "Last 7 days",
       "30d": "Last 30 days",
@@ -17404,6 +17408,7 @@
     "iconLabel": "Icon",
     "vehicleFilter": "Vehicle filter",
     "refresh": "Auto-refresh",
+    "refreshHelp": "Adds periodic refreshes unless a widget has its own interval. Live updates and existing polling may arrive more often.",
     "display": "Display",
     "showBorders": "Show widget borders",
     "compactMode": "Compact mode (smaller gaps)",
@@ -18364,6 +18369,8 @@
       },
       "trendAria": "{{metric}} trend",
       "distance30d": "Distance (30d)",
+      "distanceRange": "Distance (selected range)",
+      "distanceViewRange": "Distance (view range)",
       "costPerDist30d": "Cost / {{unit}}"
     },
     "anomalyDetector": {
@@ -18526,6 +18533,8 @@
     "batteryLevel": "Battery",
     "chargeCost": {
       "monthly": "30-day cost",
+      "selectedRangeCost": "Cost for selected range",
+      "selectedRangeEstimate": "Estimate for selected range",
       "noData": "No charge data",
       "title": "Charge cost tracker",
       "totalEnergy": "Total energy",
@@ -18898,7 +18907,8 @@
       "title": "Drive efficiency",
       "empty": "No efficiency data yet",
       "date": "Date",
-      "windowAverage": "30-day average"
+      "windowAverage": "30-day average",
+      "selectedRangeAverage": "Selected-range average"
     },
     "driveScoreGauge": {
       "weekly": "Weekly score",
@@ -19071,6 +19081,10 @@
       "asleepCount": "{{count}} asleep/offline",
       "distance30d": "Distance (30d)",
       "energy30d": "Energy (30d)",
+      "distanceRange": "Distance (selected range)",
+      "energyRange": "Energy (selected range)",
+      "distanceViewRange": "Distance (view range)",
+      "energyViewRange": "Energy (view range)",
       "title": "Fleet stats",
       "noData": "No fleet data available",
       "summary": {
@@ -20171,6 +20185,7 @@
     "exportDone": "Done",
     "overview": "Widget overview",
     "recentDrivesWeekSummary": "{{count}} drives this week · {{total}}",
+    "recentDrivesSummary": "{{count}} recent drives · {{total}}",
     "verifiedFields": "{{count}} verified fields",
     "batteryGauge": {
       "limitMarker": "Charge limit {{pct}}%",

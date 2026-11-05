@@ -60,6 +60,7 @@ import {
   getChargingSessions,
   chargingKeys,
   useChargingSessions,
+  useDashboardChargingHistory,
   useChargingHistory,
   useChargingSession,
   useChargingSessionDetail,
@@ -234,6 +235,42 @@ describe('getTeslaChargingInvoiceURL', () => {
 // ---------------------------------------------------------------------------
 // useChargingSessions
 // ---------------------------------------------------------------------------
+
+describe('useDashboardChargingHistory', () => {
+  it('shares a selected rolling cost range across widget instances', async () => {
+    mockedRequest.mockResolvedValue([]);
+    const { Wrapper, qc } = makeWrapper();
+    const first = renderHook(
+      () => useDashboardChargingHistory(7, { kind: 'cost', start: '2026-01-01', range: '90d' }),
+      { wrapper: Wrapper },
+    );
+    await waitFor(() => expect(first.result.current.isSuccess).toBe(true));
+    const second = renderHook(
+      () => useDashboardChargingHistory(7, { kind: 'cost', start: '2026-01-02', range: '90d' }),
+      { wrapper: Wrapper },
+    );
+    await waitFor(() => expect(second.result.current.isSuccess).toBe(true));
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+    expect(qc.getQueryData(['charging', 7, 'cost-tracker-30d', '90d'])).toEqual([]);
+  });
+
+  it('rejects an invalid range rather than using the cached widget default', async () => {
+    mockedRequest.mockResolvedValue([]);
+    const { Wrapper } = makeWrapper();
+    const first = renderHook(
+      () => useDashboardChargingHistory(7, { kind: 'recent' }),
+      { wrapper: Wrapper },
+    );
+    await waitFor(() => expect(first.result.current.isSuccess).toBe(true));
+    const invalid = renderHook(
+      () => useDashboardChargingHistory(7, { kind: 'recent', range: '' }),
+      { wrapper: Wrapper },
+    );
+    await waitFor(() => expect(invalid.result.current.isError).toBe(true));
+    expect(invalid.result.current.error?.message).toBe('Invalid widget time range');
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('useChargingSessions', () => {
   it('GETs the per-vehicle sessions endpoint with the vehicle_id param', async () => {

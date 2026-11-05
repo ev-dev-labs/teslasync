@@ -41,6 +41,8 @@
       },
       "trendAria": "{{metric}} trend",
       "distance30d": "Distance (30d)",
+      "distanceRange": "Distance (selected range)",
+      "distanceViewRange": "Distance (view range)",
       "costPerDist30d": "Cost / {{unit}}"
     },
     "anomalyDetector": {
@@ -203,6 +205,8 @@
     "batteryLevel": "Battery",
     "chargeCost": {
       "monthly": "30-day cost",
+      "selectedRangeCost": "Cost for selected range",
+      "selectedRangeEstimate": "Estimate for selected range",
       "noData": "No charge data",
       "title": "Charge cost tracker",
       "totalEnergy": "Total energy",
@@ -575,7 +579,8 @@
       "title": "Drive efficiency",
       "empty": "No efficiency data yet",
       "date": "Date",
-      "windowAverage": "30-day average"
+      "windowAverage": "30-day average",
+      "selectedRangeAverage": "Selected-range average"
     },
     "driveScoreGauge": {
       "weekly": "Weekly score",
@@ -748,6 +753,10 @@
       "asleepCount": "{{count}} asleep/offline",
       "distance30d": "Distance (30d)",
       "energy30d": "Energy (30d)",
+      "distanceRange": "Distance (selected range)",
+      "energyRange": "Energy (selected range)",
+      "distanceViewRange": "Distance (view range)",
+      "energyViewRange": "Energy (view range)",
       "title": "Fleet stats",
       "noData": "No fleet data available",
       "summary": {
@@ -1848,6 +1857,7 @@
     "exportDone": "Done",
     "overview": "Widget overview",
     "recentDrivesWeekSummary": "{{count}} drives this week · {{total}}",
+    "recentDrivesSummary": "{{count}} recent drives · {{total}}",
     "verifiedFields": "{{count}} verified fields",
     "batteryGauge": {
       "limitMarker": "Charge limit {{pct}}%",

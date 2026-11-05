@@ -1,14 +1,13 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import { TrendingUp } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, chartGrid, chartAnimation, axisTickSm, useMeasuredAxisWidth, useThemeChartPalette, AREA_DEFAULTS, areaGradient, EmbeddedChart, ChartLegend } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { useDashboardDriveHistory } from '@/api/hooks/useDriving';
 import { useDataState } from '@/hooks/useDataState';
 import { convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
-import { request } from '@/api/client';
 
 import { getEnergyIntensityWhPerKm } from '@/lib/drivesAggregation';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -84,7 +83,7 @@ export function buildDailyEfficiency(
   });
 }
 
-export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetProps) {
+export default function DriveEfficiencyChartWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
@@ -93,25 +92,20 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
   const { formatDateShort, tz } = useDateFormat();
 
-  const query = useQuery({
-    queryKey: ['drives', id, 'efficiency-chart-60'],
-    queryFn: () => request<Drive[]>(`/drives?vehicle_id=${id}&limit=60`),
-    enabled: id > 0,
-    staleTime: 120_000,
-  });
+  const query = useDashboardDriveHistory(id, { kind: 'efficiency', limit: 60, range: config?.timeRange });
   const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
   const trust = useDataState({ ...query, data: drives ?? undefined }, { provenance: 'historical' });
 
   const chartData = useMemo(() => {
     const items = drives ?? [];
-    // Filter to last 30 days
+    // The widget default keeps its original 30-day view; explicit ranges are filtered by the server.
     const cutoff = new Date();
     cutoff.setHours(cutoff.getHours() - 30 * 24);
-    const recent = items.filter(
+    const recent = config?.timeRange ? items : items.filter(
       (d) => d.start_ts && !Number.isNaN(new Date(d.start_ts).getTime()) && new Date(d.start_ts) >= cutoff,
     );
     return buildDailyEfficiency(recent, 7, formatDateShort, tz);
-  }, [drives, formatDateShort, tz]);
+  }, [drives, config?.timeRange, formatDateShort, tz]);
 
   // Convert Wh/km to the user's distance unit.
   const displayData = useMemo(
@@ -255,7 +249,9 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
             <WidgetBigNumber
               value={overallAvg != null ? fmtNumber(overallAvg, 0) : null}
               unit={efficiencyUnit}
-              subtitle={t('widget.driveEfficiencyChart.windowAverage', '30-day average')}
+              subtitle={config?.timeRange && config.timeRange !== '30d'
+                ? t('widget.driveEfficiencyChart.selectedRangeAverage', 'Selected-range average')
+                : t('widget.driveEfficiencyChart.windowAverage', '30-day average')}
               animated={false}
             />
             </div>

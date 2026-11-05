@@ -154,13 +154,18 @@ describe('RegenEfficiencyWidget redesign', () => {
   it('uses the explicit vehicle and disables the query without a vehicle', () => {
     mockVehicles.mockReturnValue({ data: [{ id: 7 }, { id: 9 }] } as never);
     renderWidget(STANDARD, { vehicleId: 42 });
-    expect(mockRegen).toHaveBeenCalledWith('42');
+    expect(mockRegen).toHaveBeenCalledWith('42', undefined, undefined, undefined, undefined);
 
     cleanup();
     mockVehicles.mockReturnValue({ data: [] } as never);
     mockRegen.mockReturnValue(qr({ data: undefined }));
     renderWidget(STANDARD);
-    expect(mockRegen).toHaveBeenCalledWith(undefined);
+    expect(mockRegen).toHaveBeenCalledWith(undefined, undefined, undefined, undefined, undefined);
     expect(screen.getByText('No regen data')).toBeInTheDocument();
+  });
+
+  it('passes the configured range to the regen query', () => {
+    renderWidget(STANDARD, { vehicleId: 42, config: { timeRange: '90d' } });
+    expect(mockRegen).toHaveBeenCalledWith('42', undefined, undefined, undefined, '90d');
   });
 });
