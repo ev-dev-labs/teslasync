@@ -32,8 +32,8 @@ test('existing aggregate names reject any required job that did not succeed', ()
       ['backend-checks', 'backend-tests', 'backend-coverage', 'backend-database', 'backend-build']],
     [ci.jobs, 'frontend', 'Frontend (lint + test + build)',
       ['frontend-checks', 'frontend-tests', 'frontend-coverage']],
-    [ci.jobs, 'ci-gate', 'CI (generated + backend + frontend + Docker)',
-      ['generated', 'backend', 'frontend', 'docker']],
+    [ci.jobs, 'ci-gate', 'CI (all checks)',
+      ['workflow-lint', 'generated', 'backend', 'frontend', 'docs', 'docker']],
     [browser.jobs, 'chromium-quality', 'Chromium responsive, a11y, keyboard, and performance',
       ['contract', 'browser-build', 'chromium-tests']],
     [browser.jobs, 'visual', 'Deliberate visual snapshot gate (Windows baseline)',
@@ -51,7 +51,7 @@ test('existing aggregate names reject any required job that did not succeed', ()
 });
 
 test('independent validation and Docker builds start together; final gate checks their results', () => {
-  for (const id of ['generated', 'backend-checks', 'backend-build', 'backend-database', 'frontend-checks', 'docker']) {
+  for (const id of ['workflow-lint', 'generated', 'backend-checks', 'backend-build', 'backend-database', 'frontend-checks', 'docs', 'docker']) {
     assert.equal(ci.jobs[id].needs, undefined);
   }
   assert.equal(ci.jobs.docker.if, undefined);

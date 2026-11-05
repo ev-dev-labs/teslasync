@@ -1,0 +1,60 @@
+name: Microsoft Store Submission
+
+on:
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: store-production
+  cancel-in-progress: false
+  queue: max
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  submit:
+    name: Submit MSIX to Microsoft Store
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository }}
+    runs-on: windows-latest
+    environment: store-production
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: windows-apps
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: release-assets
+
+      - uses: microsoft/microsoft-store-apppublisher@15abd1c50fcc164b19cb240fb04ef3c49bf715a2 # v1.1
+
+      - name: Configure Microsoft Store CLI
+        shell: pwsh
+        env:
+          AZURE_AD_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+          AZURE_AD_APPLICATION_CLIENT_ID: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
+          AZURE_AD_APPLICATION_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
+          SELLER_ID: ${{ secrets.SELLER_ID }}
+        run: |
+          msstore reconfigure `
+            --tenantId $env:AZURE_AD_TENANT_ID `
+            --sellerId $env:SELLER_ID `
+            --clientId $env:AZURE_AD_APPLICATION_CLIENT_ID `
+            --clientSecret $env:AZURE_AD_APPLICATION_SECRET
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Submit MSIX to Microsoft Store
+        shell: pwsh
+        run: |
+          $packages = @(Get-ChildItem release-assets -Filter *.msix -File)
+          if ($packages.Count -ne 1) {
+            throw "Expected exactly one MSIX artifact; found $($packages.Count)."
+          }
+          msstore publish "$($packages[0].FullName)" -id "9NKH07ZV3V96"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

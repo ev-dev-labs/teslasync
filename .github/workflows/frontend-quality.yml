@@ -94,6 +94,8 @@ jobs:
   chromium-tests:
     name: Chromium ${{ matrix.name }}
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
     needs: browser-build
     strategy:
       fail-fast: false
@@ -188,7 +190,6 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci --legacy-peer-deps
-      - run: npx playwright install --with-deps chromium
       - uses: actions/download-artifact@v8
         with:
           name: e2e-app
@@ -229,6 +230,8 @@ jobs:
   cross-browser-tests:
     name: ${{ matrix.browser }} critical smoke (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
     needs: browser-build
     strategy:
       fail-fast: false
@@ -243,7 +246,6 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci --legacy-peer-deps
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
       - uses: actions/download-artifact@v8
         with:
           name: e2e-app
@@ -345,6 +347,8 @@ jobs:
     name: Optional authenticated production smoke
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.production_base_url != '' }}
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
     needs: contract
     steps:
       - uses: actions/checkout@v7
@@ -354,7 +358,6 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci --legacy-peer-deps
-      - run: npx playwright install --with-deps chromium
       - name: Materialize ephemeral storage state
         env:
           STORAGE_STATE_B64: ${{ secrets.E2E_STORAGE_STATE_B64 }}
