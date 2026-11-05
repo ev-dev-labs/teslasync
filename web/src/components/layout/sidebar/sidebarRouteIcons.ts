@@ -84,7 +84,7 @@ export const SIDEBAR_ROUTE_ICONS: Record<string, LucideIcon> = {
   '/ownership/tariff-lab': SidebarGlyphs.landmark,
   '/intelligence/emergency-resilience': SidebarGlyphs.briefcaseMedical,
   '/data-repair': Icons.undo,
-  '/system-status': SidebarGlyphs.signalLow,
+  '/system-status': SidebarGlyphs.monitorCheck,
   '/ownership/consumables-lifecycle': Icons.archive,
   '/intelligence-packs': SidebarGlyphs.puzzle,
   '/admin/ingest-xray': Icons.arrowDownToDot,
@@ -93,7 +93,7 @@ export const SIDEBAR_ROUTE_ICONS: Record<string, LucideIcon> = {
   '/signal-entropy': SidebarGlyphs.binary,
   '/tesla-region': SidebarGlyphs.globe2,
   '/admin/telemetry/coverage': SidebarGlyphs.radioReceiver,
-  '/mqtt-inspector': SidebarGlyphs.signalZero,
+  '/mqtt-inspector': SidebarGlyphs.cable,
   '/admin/gdpr-exports': Icons.fileDown,
   '/science': SidebarGlyphs.flaskConical,
   '/vehicle-management': SidebarGlyphs.factory,
@@ -123,4 +123,3 @@ export const SIDEBAR_ROUTE_ICONS: Record<string, LucideIcon> = {
   '/tesla-account': Icons.userPlus,
   '/service-intelligence': SidebarGlyphs.bookOpen,
 }
-

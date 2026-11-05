@@ -35,7 +35,6 @@ import { cn } from '@/lib/cn'
 import { RouteTransition } from '@/components/motion/runtime'
 import {
   findMostSpecificNavEntry,
-  isExclusiveActivePath,
   prioritizeCanonicalNavSections,
 } from './sidebar/compactNav'
 import { collectionGroups, collectionPrimaryPath, collectionSidebarSections } from './sidebar/collections'
@@ -59,7 +58,6 @@ import { useAlerts } from '@/api/hooks/useNotifications'
 import { useRepairCaseStats } from '@/api/hooks/useRepairCaseStats'
 import { useSettings, settingsKeys } from '@/api/hooks/useSettings'
 import { useNavigationPins } from '@/api/hooks/useNavigationPins'
-import { getRecentPages, subscribeRecentPages } from '@/lib/recentPages'
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles'
 import { deriveVehicleStatus, type Alert } from '@/api/types'
 import { useSelectedVehicleStore } from '@/store/selectedVehicle'
@@ -764,8 +762,6 @@ export default function Layout() {
   const [recentNavPaths, setRecentNavPathsState] = useState<string[]>(
     () => reconcileNavPaths(getRecentNavPaths()),
   )
-  const [recentPagePaths, setRecentPagePaths] = useState(() => getRecentPages().map(page => page.path))
-  useEffect(() => subscribeRecentPages(() => setRecentPagePaths(getRecentPages().map(page => page.path))), [])
   const [pinnedNavPaths, setPinnedNavPathsState] = useState<string[]>(
     () => reconcileNavPaths(getPinnedNavPaths()),
   )
@@ -1074,19 +1070,6 @@ export default function Layout() {
       .filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth)),
     [pinnedNavPaths, vehicleCount, isForwardAuth],
   )
-  const recentNavItems = useMemo(() =>
-    [...new Set([...recentPagePaths, ...recentNavPaths])]
-      .map(path => findNavItemByExactPath(path))
-      .filter((entry): entry is { section: NavSection; item: NavItem } => Boolean(entry))
-      .map(entry => entry.item)
-      .filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth))
-      // Don't echo the current page in "Recently Used" — it's already
-      // highlighted in its canonical section below, so duplicating it
-      // here just adds visual noise and a confusing two-column "active"
-      // indicator. Quick-jump rows for *other* recent pages remain.
-      .filter(item => !isExclusiveActivePath(location.pathname, item.to, NAV_CATALOG_PATHS)),
-    [recentPagePaths, recentNavPaths, vehicleCount, isForwardAuth, location.pathname],
-  )
 
   const pinnedNavSet = useMemo(() => new Set(pinnedNavPaths), [pinnedNavPaths])
 
@@ -1281,7 +1264,6 @@ export default function Layout() {
           <CommandDeck
             sections={groupedSidebarSections}
             pinnedItems={pinnedNavItems}
-            recentItems={recentNavItems}
             suggestions={sidebarSuggestions}
             pathname={location.pathname}
             navLabel={navLabel}
@@ -1438,7 +1420,8 @@ export default function Layout() {
 
       {/* Command Palette */}
       {presentation.mode === 'standard' && (
-        <CommandPaletteHost onOpen={() => setSidebarOpen(false)} returnFocusFallbackRef={sidebarTriggerRef} />
+        <CommandPaletteHost onOpen={() => setSidebarOpen(false)} returnFocusFallbackRef={sidebarTriggerRef}
+          onPin={pinNavPath} onUnpin={unpinNavPath} />
       )}
 
       {/* Route-change / mutation progress bar —

@@ -391,13 +391,12 @@ describe('CommandDeck', () => {
     expect(secondaryPanel().getByRole('link', { name: 'Drives' })).toHaveAttribute('aria-current', 'page')
   })
 
-  it('remembers Pinned and Recent expansion across remounts without opening filtered groups permanently', () => {
+  it('remembers Pinned expansion across remounts without opening filtered groups permanently', () => {
     const props = baseProps({
       pathname: '/drives',
       activeSectionTitle: 'Driving',
       panelOpen: true,
       pinnedItems: [tripsItem],
-      recentItems: [tripsItem],
     })
     const first = render(
       <MemoryRouter initialEntries={['/drives']}>
@@ -430,23 +429,6 @@ describe('CommandDeck', () => {
     expect(secondaryPanel().getByRole('link', { name: 'Quick access: Trips' })).toBeInTheDocument()
     expect(JSON.parse(window.localStorage.getItem('teslasync-sidenav-collapsed-groups-v2') ?? '{}')).toEqual({ 'section:Driving:pinned': false })
 
-    cleanup()
-    renderControlledDeck({ pathname: '/', recentItems: [tripsItem] })
-    fireEvent.click(desktopRail().getByRole('button', { name: 'Driving' }))
-    const recent = secondaryPanel().getByRole('button', { name: 'Recent' })
-    expect(recent).toHaveAttribute('aria-expanded', 'true')
-    // The Recent row renders beside the section row, not instead of it.
-    expect(secondaryPanel().getAllByRole('link', { name: 'Trips' })).toHaveLength(2)
-    fireEvent.click(recent)
-    expect(recent).toHaveAttribute('aria-expanded', 'false')
-    expect(secondaryPanel().getAllByRole('link', { name: 'Trips' })).toHaveLength(1)
-    cleanup()
-    renderControlledDeck({ pathname: '/', recentItems: [tripsItem] })
-    fireEvent.click(desktopRail().getByRole('button', { name: 'Driving' }))
-    expect(secondaryPanel().getByRole('button', { name: 'Recent' })).toHaveAttribute('aria-expanded', 'false')
-    expect(secondaryPanel().getAllByRole('link', { name: 'Trips' })).toHaveLength(1)
-    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Recent' }))
-    expect(secondaryPanel().getAllByRole('link', { name: 'Trips' })).toHaveLength(2)
   })
 
   it('collapses the secondary panel via its header, returning focus to the rail', () => {
@@ -497,10 +479,9 @@ describe('CommandDeck', () => {
     expect(desktopRail().getByRole('button', { name: 'Home' })).not.toHaveAttribute('aria-current')
   })
 
-  it('shows suggestions with reasons and in-section recents behind a single search field', () => {
+  it('shows suggestions with reasons and canonical groups behind a single search field', () => {
     renderControlledDeck({
       pathname: '/',
-      recentItems: [tripsItem],
       suggestions: [{ ...alertsItem, reason: '1 need attention', kind: 'now' as const }],
     })
     fireEvent.click(desktopRail().getByRole('button', { name: 'Home' }))
@@ -508,12 +489,11 @@ describe('CommandDeck', () => {
     expect(secondaryPanel().getByText('Now')).toBeInTheDocument()
     expect(secondaryPanel().getByRole('link', { name: /All Notifications/ })).toHaveTextContent('1 need attention')
     expect(secondaryPanel().queryByRole('searchbox')).not.toBeInTheDocument()
-    // Recents live beside the section content, not in the suggested view.
     expect(secondaryPanel().queryByText('Recent')).not.toBeInTheDocument()
     fireEvent.click(secondaryPanel().getByRole('button', { name: 'Home' }))
     fireEvent.click(desktopRail().getByRole('button', { name: 'Driving' }))
-    expect(secondaryPanel().getByRole('button', { name: 'Recent' })).toBeInTheDocument()
-    expect(secondaryPanel().getAllByRole('link', { name: 'Trips' })).toHaveLength(2)
+    expect(secondaryPanel().queryByRole('button', { name: 'Recent' })).not.toBeInTheDocument()
+    expect(secondaryPanel().getAllByRole('link', { name: 'Trips' })).toHaveLength(1)
     expect(secondaryPanel().getAllByRole('searchbox')).toHaveLength(1)
   })
 

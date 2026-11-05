@@ -620,7 +620,6 @@ describe('Layout — unified sidebar wiring', () => {
     H.sidebarProps.unified as unknown as {
       sections: Array<{ title: string; items: Array<{ to: string }> }>
       pinnedItems: Array<{ to: string }>
-      recentItems: Array<{ to: string }>
       panelCollapsed: boolean
       panelOpen: boolean
       onTogglePanelCollapsed: () => void
@@ -740,15 +739,15 @@ describe('Layout — unified sidebar wiring', () => {
     expect(sections.map((s) => s.title)).toContain('Security')
   })
 
-  it('passes pinned and recent items through for quick access + recents', async () => {
+  it('passes shared pins without a secondary-panel Recent group', async () => {
     localStorage.setItem('teslasync-pinned-nav-paths', JSON.stringify(['/drives']))
     // defaultPins skips the helper's empty-pin seeding so the seed survives.
     renderLayout('/trips', { defaultPins: true })
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
 
-    const { pinnedItems, recentItems } = unifiedProps()
+    const { pinnedItems } = unifiedProps()
     expect(pinnedItems.map((i) => i.to)).toContain('/drives')
-    expect(Array.isArray(recentItems)).toBe(true)
+    expect(unifiedProps()).not.toHaveProperty('recentItems')
   })
 
   it('leads suggestions with the Action Center while a critical alert is unread', async () => {

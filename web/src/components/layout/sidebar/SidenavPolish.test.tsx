@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
@@ -21,7 +22,7 @@ function Deck({ title = 'Battery', path = '/battery', large = false }: { title?:
     { primary: '/large/13', label: 'Second group', labelKey: 'second', pages: pages.slice(13) },
   ]
   return <MemoryRouter initialEntries={[path]}><CommandDeck sections={large ? [{ title: 'Large', items: largeCollections.map(group => ({ to: group.primary, label: group.label, labelKey: group.labelKey, icon: Icons.home })) }] : sections}
-    collections={large ? largeCollections : collections} pinnedItems={[]} recentItems={[]}
+    collections={large ? largeCollections : collections} pinnedItems={[]}
     pathname={path} activeSectionTitle={large ? 'Large' : title} navLabel={item => item.label} navSectionTitle={section => section.title}
     onPin={() => undefined} onUnpin={() => undefined} panelOpen={open} onPanelOpenChange={setOpen} /></MemoryRouter>
 }
@@ -30,6 +31,36 @@ afterEach(cleanup)
 const svg = (element: Element) => element.querySelector('svg')?.innerHTML
 
 describe('sidenav polish', () => {
+  it('updates both rail fade states at the top, middle and bottom', () => {
+    render(<Deck />)
+    const scroll = screen.getByTestId('rail-scroll')
+    Object.defineProperties(scroll, { clientHeight: { value: 400 }, scrollHeight: { value: 1000 } })
+    const verify = (position: number, top: boolean, bottom: boolean) => {
+      scroll.scrollTop = position
+      fireEvent.scroll(scroll)
+      expect(screen.getByTestId('rail-fade-top')).toHaveAttribute('data-visible', String(top))
+      expect(screen.getByTestId('rail-fade-bottom')).toHaveAttribute('data-visible', String(bottom))
+    }
+    verify(0, false, true)
+    verify(200, true, true)
+    verify(600, true, false)
+    verify(0, false, true)
+  })
+
+  it.each(navSections)('$title resolves real rail, panel and palette glyphs for every destination', section => {
+    const SectionIcon = SIDEBAR_SECTION_ICONS[section.title]
+    expect(SectionIcon).toBeDefined()
+    expect(resolveSectionIcon(section.title)).toBe(SectionIcon)
+    const sectionMarkup = renderToStaticMarkup(<SectionIcon />)
+    expect(sectionMarkup).toContain('<svg')
+    expect(sectionMarkup).toMatch(/<(path|circle|rect|line|polyline|polygon)\b/)
+    for (const item of section.items) {
+      const markup = renderToStaticMarkup(<item.icon />)
+      expect(markup, item.to).toContain('<svg')
+      expect(markup, item.to).toMatch(/<(path|circle|rect|line|polyline|polygon)\b/)
+      expect(markup, item.to).not.toMatch(/lucide-(dot|signal-zero|signal-low)\b/)
+    }
+  })
   it('uses an Inbox caption for Notifications and reserves the bell for the pinned Alerts utility', () => {
     render(<Deck title="Notifications" path="/notifications/inbox" />)
     const rail = screen.getByTestId('command-deck-rail')

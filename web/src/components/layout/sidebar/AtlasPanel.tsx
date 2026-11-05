@@ -22,7 +22,6 @@ export interface AtlasPanelProps {
   onClose?: () => void
   sections: SidebarSectionInput[]
   pinnedItems: SidebarSectionInput['items']
-  recentItems?: SidebarSectionInput['items']
   suggestions?: SidebarSuggestion[]
   pathname: string
   navLabel: (item: { label: string; labelKey: string }) => string
@@ -41,12 +40,14 @@ const GROUP_STORAGE = 'teslasync-sidenav-collapsed-groups-v2'
 function readCollapsed(): Record<string, boolean> {
   try {
     const value: unknown = JSON.parse(localStorage.getItem(GROUP_STORAGE) ?? '{}')
-    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, boolean> : {}
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? Object.fromEntries(Object.entries(value).filter(([key, closed]) => !key.endsWith(':recent') && typeof closed === 'boolean'))
+      : {}
   } catch { return {} }
 }
 
 /** The same section content serves the desktop panel, tablet drawer and phone sheet. */
-export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pinnedItems = [], recentItems = [], suggestions = [], pathname,
+export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pinnedItems = [], suggestions = [], pathname,
   navLabel, navSectionTitle, onPin, onUnpin, pinSyncUnavailable = false, onItemSelect, alertCount = 0, vehicleCount = 0, staleCount = 0, vehicleId, collections = [] }: AtlasPanelProps) {
   const { t } = useTranslation()
   const id = useId()
@@ -66,7 +67,6 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
   const matches = new Set(section && filtering ? searchSidebarSections([section], collections, query, navLabel, { matchSectionTitle: false }).flatMap(result => result.hits.map(item => item.to)) : [])
   const visibleGroups = groups.map(group => ({ ...group, groupKey: group.entries[0].to, entries: !filtering || (group.label && matchesSidebarTokens(`${group.label} ${group.labelKey ? t(group.labelKey, group.label) : ''}`.toLowerCase(), tokenizeSidebarQuery(query))) ? group.entries : group.entries.filter(item => matches.has(item.to)) })).filter(group => group.entries.length > 0)
   const pins = pinnedItems.filter(item => sectionPaths.has(item.to) && !isActive(item.to) && (!filtering || matches.has(item.to)))
-  const recent = recentItems.filter(item => sectionPaths.has(item.to) && !pinned.has(item.to) && (!filtering || matches.has(item.to)))
   const isOpen = (key: string) => filtering ? !filterClosed.has(key) : !collapsed[viewKey + ':' + key]
   const SectionIcon = resolveSectionIcon(section?.title ?? 'Home')
   const toggle = (key: string) => {
@@ -143,8 +143,7 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
         {(!filtering || pins.length > 0) && <div>{groupHeader('pinned', t('nav.sidenav.pinned', 'Pinned'), pins.length)}
           <div id={`${id}-pinned`}>{isOpen('pinned') && (pins.length ? pins.map(item => row(item, `pinned-${item.to}`, true)) : <p className="px-2 py-2 text-xs text-[var(--text-muted)]">{t('nav.deck.noQuickPins', 'Pin a page below to keep it close.')}</p>)}</div>
         </div>}
-        {recent.length > 0 && <div>{groupHeader('recent', t('nav.sidenav.recent', 'Recent'), recent.length)}<div id={`${id}-recent`}>{isOpen('recent') && recent.map(item => row(item, `recent-${item.to}`))}</div></div>}
-        {filtering && visibleGroups.length === 0 && pins.length === 0 && recent.length === 0 && <p role="status" className="px-2 py-4 text-sm text-[var(--text-muted)]">{t('nav.sidenav.noMatches', { query: query.trim(), defaultValue: 'No pages match "{{query}}".' })}</p>}
+        {filtering && visibleGroups.length === 0 && pins.length === 0 && <p role="status" className="px-2 py-4 text-sm text-[var(--text-muted)]">{t('nav.sidenav.noMatches', { query: query.trim(), defaultValue: 'No pages match "{{query}}".' })}</p>}
         {visibleGroups.map(group => {
           const key = group.groupKey
           return <div key={key}>

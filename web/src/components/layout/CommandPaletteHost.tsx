@@ -9,6 +9,8 @@ const LazyCommandPalette = lazy(async () => {
 export interface CommandPaletteHostProps {
   onOpen?: () => void
   returnFocusFallbackRef?: RefObject<HTMLElement>
+  onPin?: (path: string) => void
+  onUnpin?: (path: string) => void
 }
 
 /**
@@ -16,7 +18,7 @@ export interface CommandPaletteHostProps {
  * first invocation. The first event becomes `initialOpen`; subsequent events
  * are handled by the mounted palette itself.
  */
-export function CommandPaletteHost({ onOpen, returnFocusFallbackRef }: CommandPaletteHostProps) {
+export function CommandPaletteHost({ onOpen, returnFocusFallbackRef, onPin, onUnpin }: CommandPaletteHostProps) {
   const [activated, setActivated] = useState(false)
 
   useEffect(() => {
@@ -30,7 +32,7 @@ export function CommandPaletteHost({ onOpen, returnFocusFallbackRef }: CommandPa
 
   return (
     <Suspense fallback={null}>
-      <LazyCommandPalette initialOpen onOpen={onOpen} returnFocusFallbackRef={returnFocusFallbackRef} />
+      <LazyCommandPalette initialOpen onOpen={onOpen} returnFocusFallbackRef={returnFocusFallbackRef} onPin={onPin} onUnpin={onUnpin} />
     </Suspense>
   )
 }

@@ -13,7 +13,6 @@ export type DeckSelection = { kind: 'suggested' } | { kind: 'favorites' } | { ki
 export interface CommandDeckProps {
   sections: SidebarSectionInput[]
   pinnedItems: SidebarSectionInput['items']
-  recentItems?: SidebarSectionInput['items']
   suggestions?: SidebarSuggestion[]
   pathname: string
   navLabel: AtlasPanelProps['navLabel']
