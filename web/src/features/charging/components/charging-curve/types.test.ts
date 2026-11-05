@@ -60,7 +60,7 @@ function makeSession(overrides: Partial<ChargingSession> = {}): ChargingSession 
     start_place: null,
     total_energy_added_wh: 40_000,
     peak_power_w: 150_000,
-    avg_power_w: 120_000,
+    avg_power_w: null,
     cost_decimal: 12.5,
     cost_currency: 'USD',
     charger_type: 'Tesla',

@@ -1105,6 +1105,8 @@
       "chargeLimit": "Charge limit",
       "lastReported": "Last reported"
     },
+    "chargerAc": "AC",
+    "chargingEstimatedLabel": "{{label}} (estimated)",
     "closeWidgetPicker": "Close widget picker",
     "customize": "Customize",
     "customizeHint": "You can customize this dashboard. Tap the + to add widgets.",

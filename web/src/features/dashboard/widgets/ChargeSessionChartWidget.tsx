@@ -17,16 +17,17 @@ import { classifyChargingSource } from '@/lib/chargerKind';
 import { chartTokens } from '@/lib/tokens';
 import { dashboardTokens } from '../lib/dashboardTokens';
 
-type ChartChargerType = 'home' | 'supercharger' | 'dc' | 'unknown';
+type ChartChargerType = 'home' | 'ac' | 'supercharger' | 'dc' | 'unknown';
 
 /** Classify a charging session into a charger-type bucket for color-coding. */
 export function classifyChargerType(session: ChargingSession): ChartChargerType {
-  const kind = classifyChargingSource(session.charger_type);
+  const kind = classifyChargingSource(session);
   return kind === 'acHome' ? 'home' : kind === 'dcFast' ? 'dc' : kind;
 }
 
 const CHARGER_TYPE_LABEL: Record<ChartChargerType, string> = {
   home: 'Home / AC',
+  ac: 'AC',
   supercharger: 'Supercharger',
   dc: 'DC fast',
   unknown: 'Unknown',
@@ -40,6 +41,7 @@ interface ChartDatum extends ChartDataRow {
 
 const CHARGER_SERIES: Record<ChartChargerType, string> = {
   home: dashboardTokens.chart.series[1],
+  ac: dashboardTokens.chart.series[0],
   supercharger: dashboardTokens.chart.series[3],
   dc: dashboardTokens.chart.series[2],
   unknown: dashboardTokens.chart.series[4],
@@ -139,10 +141,10 @@ export default function ChargeSessionChartWidget({ vehicleId, size, config }: Wi
           emptyIcon={<Zap className="h-5 w-5" />}
           stats={[]}
           yAxisLabel={t('widget.chargeSessionChart.energyPerSession', 'Energy per session · last {{count}}', { count: 20 })}
-          legend={(['home', 'supercharger', 'dc', 'unknown'] as const)
+          legend={(['home', 'ac', 'supercharger', 'dc', 'unknown'] as const)
             .filter(type => type !== 'unknown' || chartData.some(point => point.type === 'unknown'))
             .map(type => ({
-              label: t(`widget.chargeSessionChart.type.${type}`, CHARGER_TYPE_LABEL[type]),
+              label: type === 'ac' ? t('dashboard.chargerAc', 'AC') : t(`widget.chargeSessionChart.type.${type}`, CHARGER_TYPE_LABEL[type]),
               color: CHARGER_SERIES[type],
             }))}
           chart={
@@ -176,7 +178,7 @@ export default function ChargeSessionChartWidget({ vehicleId, size, config }: Wi
                       content={<ChartTooltip />}
                       formatter={(value: number, _name: string, props: { payload?: ChartDatum }) => [
                         `${fmt(value)} ${unitPrefs.energy}`,
-                        t(`widget.chargeSessionChart.type.${props.payload?.type ?? 'unknown'}`, CHARGER_TYPE_LABEL[props.payload?.type ?? 'unknown']),
+                        props.payload?.type === 'ac' ? t('dashboard.chargerAc', 'AC') : t(`widget.chargeSessionChart.type.${props.payload?.type ?? 'unknown'}`, CHARGER_TYPE_LABEL[props.payload?.type ?? 'unknown']),
                       ]}
                       labelFormatter={(label: string) => label}
                       cursor={{ fill: chartTokens.gridStroke }}

@@ -16,6 +16,7 @@ import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import type { ChargingSession } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isEstimatedChargingCost } from '@/lib/chargingAggregation';
 
 export interface CostMetrics {
   totalKwh: number | null;
@@ -126,6 +127,14 @@ export default function ChargeCostTrackerWidget({ vehicleId, size, config }: Wid
       || (costPerKwh == null && knownNumber(session.cost_decimal) == null && knownNumber(session.cost) == null)),
   }) : undefined;
   const currency = (value: number | null, decimals?: number) => value == null ? null : formatCurrency(value, decimals);
+  const includesEstimate = (sessions ?? []).some(session => isEstimatedChargingCost(session)
+    || (session.cost_decimal == null && session.cost == null && costPerKwh != null));
+  const periodLabel = config?.timeRange && config.timeRange !== '30d'
+    ? t('widget.chargeCost.selectedRangeCost', 'Cost for selected range')
+    : t('widget.chargeCost.monthly', '30-day cost');
+  const costLabel = includesEstimate
+    ? t('dashboard.chargingEstimatedLabel', '{{label}} (estimated)', { label: periodLabel })
+    : periodLabel;
   // After spec: one headline (30-day cost, saved-vs-gas delta) + 3 stats.
   // Missing operands stay null so tiles show '—'; a measured 0 stays 0.
   const stats: StatGridItem[] = [
@@ -173,7 +182,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size, config }: Wid
         onRefresh={handleRefresh}
       >
         {hasData ? (
-          <WidgetBigNumber value={currency(metrics.totalCost)} label={config?.timeRange && config.timeRange !== '30d' ? t('widget.chargeCost.selectedRangeCost', 'Cost for selected range') : t('widget.chargeCost.monthly', '30-day cost')} animated={false} align="center" />
+          <WidgetBigNumber value={currency(metrics.totalCost)} label={costLabel} animated={false} align="center" />
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<DollarSign className="h-5 w-5" />}
@@ -202,7 +211,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size, config }: Wid
         <div className="flex min-w-0 flex-col gap-3">
           <WidgetBigNumber
             value={currency(metrics.totalCost)}
-            label={config?.timeRange && config.timeRange !== '30d' ? t('widget.chargeCost.selectedRangeCost', 'Cost for selected range') : t('widget.chargeCost.monthly', '30-day cost')}
+            label={costLabel}
             delta={metrics.gasSavings != null ? {
               text: t('widget.chargeCost.saved', 'Saved {{amount}} vs gas', { amount: formatCurrency(metrics.gasSavings) }),
               tone: metrics.gasSavings >= 0 ? 'good' : 'neutral',

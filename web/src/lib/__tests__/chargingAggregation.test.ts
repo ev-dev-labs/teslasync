@@ -30,8 +30,8 @@ function s(overrides: Partial<ChargingSession>): ChargingSession {
     start_lng: null,
     start_place: null,
     total_energy_added_wh: 30_000,
-    peak_power_w: 30_000,
-    avg_power_w: 28_000,
+    peak_power_w: 11_000,
+    avg_power_w: null,
     cost_decimal: 5,
     cost_currency: 'USD',
     charger_type: 'AC/Home',
@@ -43,17 +43,26 @@ function s(overrides: Partial<ChargingSession>): ChargingSession {
 }
 
 describe('getChargerCategory', () => {
+  it('does not invent home charging when charger evidence is missing', () => {
+    expect(getChargerCategory(null)).toBe('unknown');
+    expect(getChargerCategory(undefined)).toBe('unknown');
+  });
+
+  it('distinguishes public AC from a saved home location', () => {
+    expect(getChargerCategory('AC')).toBe('ac');
+  });
+
   it.each([
     ['Tesla Supercharger V3', 'supercharger'],
     ['Supercharger',          'supercharger'],
     ['CCS DC Fast',           'dc'],
     ['ChaDeMo',               'dc'],
     ['DC Fast Charger',       'dc'],
-    ['Home AC',               'home'],
-    ['Wall Connector',        'home'],
+    ['Home AC',               'ac'],
+    ['Wall Connector',        'ac'],
     ['Mystery brand',         'unknown'],
-    [null,                    'home'],
-    [undefined,               'home'],
+    [null,                    'unknown'],
+    [undefined,               'unknown'],
   ] as const)('maps %p → %s', (raw, expected) => {
     expect(getChargerCategory(raw)).toBe(expected);
   });
@@ -119,7 +128,7 @@ describe('blendedRecordedCostPerKwh', () => {
 describe('computeChargingPeriodStats', () => {
   const sessions = [
     s({ id: 1, total_energy_added_wh: 20_000, cost_decimal: 4, charger_type: 'Supercharger', started_at: '2026-04-15T08:00:00Z', ended_at: '2026-04-15T09:00:00Z', start_soc_pct: 20, end_soc_pct: 80 }),
-    s({ id: 2, total_energy_added_wh: 30_000, cost_decimal: 0, charger_type: 'Home AC',      started_at: '2026-04-15T22:00:00Z', ended_at: '2026-04-16T06:00:00Z', start_soc_pct: 30, end_soc_pct: 100 }),
+    s({ id: 2, is_home: true, total_energy_added_wh: 30_000, cost_decimal: 0, charger_type: 'Home AC',      started_at: '2026-04-15T22:00:00Z', ended_at: '2026-04-16T06:00:00Z', start_soc_pct: 30, end_soc_pct: 100 }),
     s({ id: 3, total_energy_added_wh: 50_000, cost_decimal: 12, charger_type: 'DC Fast',     started_at: '2026-04-20T08:00:00Z', ended_at: '2026-04-20T08:30:00Z', start_soc_pct: 10, end_soc_pct: 80 }),
   ];
 
@@ -276,7 +285,7 @@ describe('detectChargingAnomalies', () => {
 
   it('does NOT flag cost_zero on home chargers (free is normal)', () => {
     const anomalies = detectChargingAnomalies([
-      s({ id: 1, total_energy_added_wh: 30_000, cost_decimal: null, charger_type: 'Home AC' }),
+      s({ id: 1, is_home: true, total_energy_added_wh: 30_000, cost_decimal: null, charger_type: 'Home AC' }),
     ]);
     expect(anomalies).toHaveLength(0);
   });

@@ -29,6 +29,16 @@ export function assertCombinedCheckpoint(group: 'canonical' | 'owner', file: str
 export const currentOwnerCheckpointFiles = checkpoints.owner
 
 const dashboardPolishAdditions = [
+  ['dashboard.chargingEstimatedLabel', '{{label}} (estimated)'],
+  ['dashboard.chargerAc', 'AC'],
+  ['charging.stats.energySplitUnknownAria', 'Energy split: {{ac}}% AC, {{dc}}% DC, {{unknown}}% unknown'],
+  ['charging.chargerTypes.ac', 'AC'],
+  ['charging.sessionCharging', 'Charging'],
+  ['charging.sessionPower', 'Power'],
+  ['charging.currentPower', 'Current power'],
+  ['charging.currentPowerValue', '{{value}} kW now'],
+  ['charging.estimatedCostValue', '{{cost}} (estimated)'],
+  ['charging.includesEstimatedCosts', 'Includes estimated charging costs; Tesla invoices and manual amounts take precedence.'],
   ['telemetry.selfDrivingSoftwareVersion', 'FSD software version'],
   ['telemetry.semiTrailerLatched', 'Semi trailer latched'],
   ['dashboard.chargeStatus.chargeLimit', 'Charge limit'],

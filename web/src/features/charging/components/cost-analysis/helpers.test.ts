@@ -55,29 +55,31 @@ describe('categorizeCharger', () => {
   it('classifies Tesla / Supercharger sessions by charger_type (case-insensitive)', () => {
     expect(categorizeCharger(makeSession({ charger_type: 'Tesla' }))).toBe('Supercharger');
     expect(categorizeCharger(makeSession({ charger_type: 'SUPERCHARGER V3' }))).toBe('Supercharger');
-    expect(categorizeCharger(makeSession({ charger_type: 'tesla wall connector' }))).toBe('Supercharger');
+    expect(categorizeCharger(makeSession({ charger_type: 'tesla wall connector' }))).toBe('AC');
   });
 
   it('classifies high-power non-Tesla sessions as Public DC above the 22 kW line', () => {
     expect(categorizeCharger(makeSession({ charger_type: 'CCS', peak_power_w: 150_000 }))).toBe('Public DC');
     expect(categorizeCharger(makeSession({ charger_type: 'CCS', peak_power_w: 22_001 }))).toBe('Public DC');
     // The boundary is exclusive: exactly 22 kW is NOT Public DC.
-    expect(categorizeCharger(makeSession({ charger_type: 'CCS', peak_power_w: 22_000 }))).not.toBe('Public DC');
+    expect(categorizeCharger(makeSession({ charger_type: null, peak_power_w: 22_000 }))).toBe('Unknown');
+    expect(categorizeCharger(makeSession({ charger_type: 'CCS', peak_power_w: 22_000 }))).toBe('Public DC');
   });
 
-  it('classifies work / office locations as Work / L2 when power is modest', () => {
-    expect(categorizeCharger(makeSession({ start_place: 'The Office', peak_power_w: 7_000 }))).toBe('Work / L2');
-    expect(categorizeCharger(makeSession({ start_place: 'Downtown Work Garage', peak_power_w: 11_000 }))).toBe('Work / L2');
+  it('does not infer AC from workplace names and modest power', () => {
+    expect(categorizeCharger(makeSession({ start_place: 'The Office', peak_power_w: 7_000 }))).toBe('Unknown');
+    expect(categorizeCharger(makeSession({ charger_type: 'AC', start_place: 'Downtown Work Garage', peak_power_w: 11_000 }))).toBe('AC');
   });
 
-  it('defaults unmatched sessions to Home', () => {
-    expect(categorizeCharger(makeSession({ start_place: 'Driveway', peak_power_w: 7_400 }))).toBe('Home');
+  it('requires saved home identity and AC evidence for Home', () => {
+    expect(categorizeCharger(makeSession({ start_place: 'Driveway', peak_power_w: 7_400 }))).toBe('Unknown');
+    expect(categorizeCharger(makeSession({ charger_type: 'AC', is_home: true, peak_power_w: 7_400 }))).toBe('Home');
   });
 
   it('is null-safe when charger_type / peak_power_w / start_place are all null', () => {
     expect(
       categorizeCharger(makeSession({ charger_type: null, peak_power_w: null, start_place: null })),
-    ).toBe('Home');
+    ).toBe('Unknown');
   });
 
   it('applies precedence Supercharger > Public DC > Work/L2 > Home', () => {
@@ -142,7 +144,7 @@ describe('charger category labels', () => {
  });
 });
 
-it('retains unknown category codes even when other fields could suggest a category',()=>{
- expect(chargerCategoryCode(makeSession({charger_type:'SpacePort',peak_power_w:250000,start_place:'Home'}))).toBe('SpacePort');
- expect(chargerCategoryCode(makeSession({charger_type:'other'}))).toBe('other');
+it('uses power evidence without exposing arbitrary internal category codes',()=>{
+ expect(chargerCategoryCode(makeSession({charger_type:'SpacePort',peak_power_w:250000,start_place:'Home'}))).toBe('public_dc');
+ expect(chargerCategoryCode(makeSession({charger_type:'other'}))).toBe('unknown');
 });

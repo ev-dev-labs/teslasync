@@ -124,7 +124,7 @@ function makeSession(overrides: Partial<ChargingSession> = {}): ChargingSession 
     start_place: null,
     total_energy_added_wh: 45_000,
     peak_power_w: 150_000,
-    avg_power_w: 120_000,
+    avg_power_w: null,
     cost_decimal: 10,
     cost_currency: 'USD',
     charger_type: 'Tesla',
@@ -363,7 +363,7 @@ describe('TimeToChargeSection', () => {
 
   it('keeps populated AC sessions out of DC thresholds, extremes and yearly totals', () => {
     const explicitAc = makeSession({
-      id: 201, charger_type: 'AC', peak_power_w: 44_000,
+      id: 201, charger_type: 'AC', peak_power_w: 11_000,
       started_at: '2026-08-25T08:00:00Z', ended_at: '2026-08-25T09:00:00Z',
       total_energy_added_wh: 18_000, start_soc_pct: 0, end_soc_pct: 80,
     });
@@ -391,7 +391,7 @@ describe('TimeToChargeSection', () => {
   });
 
   it('keeps unknown DC metrics rather than inventing zero for an explicitly AC-only returned history', () => {
-    render(<TimeToChargeSection sessions={[makeSession({ charger_type: 'AC', peak_power_w: 44_000 })]} />);
+    render(<TimeToChargeSection sessions={[makeSession({ charger_type: 'AC', peak_power_w: 11_000 })]} />);
     expect(cards()).toHaveLength(0);
     expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
     const dialog = openDetails();

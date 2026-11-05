@@ -268,8 +268,8 @@
     },
     {
       "file": "web/src/features/charging/components/ChargingSessionCard.tsx",
-      "calls": 11,
-      "sha256": "13d1c660ab562a01c63f71ae4f46fbb8ffaa3a150739a491551c0db5bf4f85f1"
+      "calls": 15,
+      "sha256": "010a20405a4f561a0518556531df48459184bca2b2d7db912823e544c5e7637a"
     },
     {
       "file": "web/src/features/charging/components/stat-modernization/CostForecastSection.tsx",
@@ -313,8 +313,8 @@
     },
     {
       "file": "web/src/features/dashboard/widgets/ChargeCostTrackerWidget.tsx",
-      "calls": 17,
-      "sha256": "7586a792bd2d053f7ed99ad437f902221ac1af71af6ae24a26cff376c6802c9d"
+      "calls": 16,
+      "sha256": "e292f85f9469b335bdf829f8250d593ca07803409146d8d4c5971de7aab18cdd"
     },
     {
       "file": "web/src/features/dashboard/widgets/CostBreakdownWidget.tsx",

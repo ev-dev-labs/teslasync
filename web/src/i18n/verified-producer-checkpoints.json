@@ -619,8 +619,13 @@
   },
   {
     "file": "web/src/features/charging/components/ChargingSessionCard.tsx",
-    "calls": 11,
-    "sha256": "13d1c660ab562a01c63f71ae4f46fbb8ffaa3a150739a491551c0db5bf4f85f1"
+    "calls": 15,
+    "sha256": "010a20405a4f561a0518556531df48459184bca2b2d7db912823e544c5e7637a"
+  },
+  {
+    "file": "web/src/features/charging/components/ChargingEvidenceTable.tsx",
+    "calls": 32,
+    "sha256": "02f18746d80fb605d99c27c89724c2b9ea1d8f2d23b48fcd6e6a0ddcbcf64b5b"
   },
   {
     "file": "web/src/features/charging/components/WaitOraclePanel.tsx",

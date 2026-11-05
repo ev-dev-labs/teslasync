@@ -30,6 +30,11 @@ export interface ChargingSession {
   /** Session duration in minutes (display-derived; present on the activity shape). */
   duration_min: number;
   cost?: number | null;
+  live?: boolean;
+  duration_s?: number | null;
+  current_power_w?: number | null;
+  is_home?: boolean;
+  cost_source?: 'manual' | 'tesla_actual' | 'geofence_tariff' | 'default_estimate' | 'unknown' | null;
 
   /*
    * Columns the Go model emits with `omitempty` (internal/models/charging).

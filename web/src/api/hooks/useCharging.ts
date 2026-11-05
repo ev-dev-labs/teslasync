@@ -67,6 +67,7 @@ export function useDashboardChargingHistory(
     ),
     enabled: Number.isSafeInteger(vehicleId) && vehicleId > 0,
     ...(options.kind !== 'recent' ? { staleTime: 60_000 } : {}),
+    refetchInterval: query => query.state.data?.some(session => session.live) ? INTERVALS.FAST : false,
   });
 }
 
@@ -197,6 +198,7 @@ export function useChargingSessionsPaginated(
     },
     enabled: vehicleId !== null && Number.isSafeInteger(vehicleId) && vehicleId > 0,
     staleTime: STALE_TIMES.FAST,
+    refetchInterval: query => query.state.data?.some(session => session.live) ? INTERVALS.FAST : false,
     select: safeArray,
   });
 }

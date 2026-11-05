@@ -40,7 +40,7 @@ export default function ChargeHistoryWidget({ vehicleId, size, config }: WidgetP
         .map((s) => ({
           started_at: s.started_at,
           energy: knownNumber(s.total_energy_added_wh) == null ? null : convertEnergyFromSI(s.total_energy_added_wh, unitPrefs.energy),
-          type: classifyChargingSource(s.charger_type),
+          type: classifyChargingSource(s),
         })),
     [charges, unitPrefs.energy],
   );
@@ -120,6 +120,7 @@ export default function ChargeHistoryWidget({ vehicleId, size, config }: WidgetP
         yAxisLabel={undefined}
         legend={[
           { label: t('widget.chargeHistory.home', 'Home'), color: CHARGER_COLORS.home },
+          { label: t('dashboard.chargerAc', 'AC'), color: CHARGER_COLORS.ac },
           { label: t('widget.chargeHistory.supercharger', 'Supercharger'), color: CHARGER_COLORS.supercharger },
           { label: t('widget.chargeHistory.dcFast', 'DC fast'), color: CHARGER_COLORS.dc },
         ]}
@@ -146,13 +147,18 @@ export default function ChargeHistoryWidget({ vehicleId, size, config }: WidgetP
                 <YAxis tick={{ ...axisTickSm, width: undefined }} tickLine={false} axisLine={false} width={axisWidth} tickFormatter={(v: number) => `${fmt(v)} ${unitPrefs.energy}`} />
                 <Tooltip content={<ChartTooltip />} formatter={(value: number, _name: string, props: { payload?: { type?: string } }) => [
                   knownNumber(value) == null ? '—' : `${fmt(value)} ${unitPrefs.energy}`,
-                  t(`widget.chargeHistory.type.${props.payload?.type ?? 'unknown'}`, props.payload?.type === 'supercharger' ? 'Supercharger' : props.payload?.type === 'dcFast' ? 'DC fast' : props.payload?.type === 'acHome' ? 'Home' : 'Unknown'),
+                  props.payload?.type === 'supercharger' ? t('widget.chargeHistory.supercharger', 'Supercharger')
+                    : props.payload?.type === 'dcFast' ? t('widget.chargeHistory.dcFast', 'DC fast')
+                    : props.payload?.type === 'acHome' ? t('widget.chargeHistory.home', 'Home')
+                    : props.payload?.type === 'ac' ? t('dashboard.chargerAc', 'AC')
+                    : t('common.unknown', 'Unknown'),
                 ]} cursor={{ fill: 'var(--border-subtle)', fillOpacity: 0.08 }} />
                 <Bar dataKey="energy" name={unitPrefs.energy} radius={[4, 4, 0, 0]} maxBarSize={32}>
                   {chartData.map((datum, index) => {
                     const color = datum.type === 'supercharger' ? CHARGER_COLORS.supercharger
                       : datum.type === 'dcFast' ? CHARGER_COLORS.dc
                       : datum.type === 'acHome' ? CHARGER_COLORS.home
+                      : datum.type === 'ac' ? CHARGER_COLORS.ac
                       : CHARGER_COLORS.Other;
                     return <Cell key={index} fill={color} />;
                   })}

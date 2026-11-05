@@ -218,8 +218,8 @@ describe('ChargeSessionChartWidget axis gutter', () => {
 
 describe('classifyChargerType', () => {
   it.each([
-    ['AC', 'home'],
-    [' ac ', 'home'],
+    ['AC', 'ac'],
+    [' ac ', 'ac'],
     ['DC', 'dc'],
     [' dc ', 'dc'],
     ['SUPERCHARGER', 'supercharger'],
@@ -228,10 +228,10 @@ describe('classifyChargerType', () => {
     ['', 'unknown'],
     [' ', 'unknown'],
     ['<invalid>', 'unknown'],
-    ['Tesla Wall connector', 'unknown'],
+    ['Tesla Wall connector', 'ac'],
     ['CCS_COMBO_2', 'unknown'],
     ['J1772', 'unknown'],
-    ['home', 'unknown'],
+    ['home', 'ac'],
   ])('preserves charger evidence %s as %s', (charger_type, expected) => {
     expect(classifyChargerType(makeSession({ charger_type }))).toBe(expected);
   });
@@ -303,7 +303,7 @@ describe('ChargeSessionChartWidget standard layout', () => {
     renderWidget({ cols, rows: 4 });
     await waitFor(() => expect(axisCapture.chart.data).toBeDefined());
     expect(axisCapture.chart).toEqual(expect.objectContaining({
-      data: [expect.objectContaining({ type: 'home', energy: 42 })],
+      data: [expect.objectContaining({ type: 'ac', energy: 42 })],
     }));
     expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
   });

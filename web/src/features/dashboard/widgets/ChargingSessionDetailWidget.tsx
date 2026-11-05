@@ -38,8 +38,8 @@ interface ChargerClass {
  * label) keeps this pure/testable and defers the user-visible copy to the
  * render boundary via `t()`.
  */
-function classifyCharger(chargerType: string | null): ChargerClass {
-  const kind = classifyChargingSource(chargerType);
+function classifyCharger(charger: Parameters<typeof classifyChargingSource>[0]): ChargerClass {
+  const kind = classifyChargingSource(charger);
   return { kind, variant: kind === 'supercharger' || kind === 'dcFast' ? 'warning' : 'neutral' };
 }
 
@@ -159,7 +159,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
   }, [telemetry, detail?.peak_power_w, unitPrefs.power]);
 
   const charger = useMemo(
-    () => classifyCharger(detail?.charger_type ?? null),
+    () => classifyCharger(detail),
     [detail],
   );
 
@@ -171,6 +171,8 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
         return t('widget.chargingSessionDetail.chargerDcFast', 'DC fast');
       case 'acHome':
         return t('widget.chargingSessionDetail.chargerAcHome', 'AC / home');
+      case 'ac':
+        return t('dashboard.chargerAc', 'AC');
       default:
         return t('common.unknown', 'Unknown');
     }

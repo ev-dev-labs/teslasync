@@ -291,8 +291,7 @@ describe('ChargerTypeChart — grouping + averaging', () => {
       session(2, 40, { charger_type: 'Tesla', peak_power_w: 150_000, total_energy_added_wh: 60_000 }),
       // DC Fast bucket (no charger_type but peak > 20 kW).
       session(3, 30, { charger_type: null, peak_power_w: 120_000, total_energy_added_wh: 80_000 }),
-      // Home / AC bucket (low power, no charger_type).
-      session(4, 60, { charger_type: null, peak_power_w: 7_000, total_energy_added_wh: 10_000 }),
+      session(4, 60, { charger_type: 'AC', is_home: true, peak_power_w: 7_000, total_energy_added_wh: 10_000 }),
     ]);
 
     // avgKw=(250+150)/2=200, avgKwh=(40+60)/2=50, avgDuration=(20+40)/2=30.
@@ -305,7 +304,7 @@ describe('ChargerTypeChart — grouping + averaging', () => {
   it('mirrors each bucket in the visible legend (label + session count)', () => {
     renderChart([
       session(1, 30, { charger_type: 'Tesla', peak_power_w: 150_000, total_energy_added_wh: 30_000 }),
-      session(2, 45, { charger_type: null, peak_power_w: 6_000, total_energy_added_wh: 8_000 }),
+      session(2, 45, { charger_type: 'AC', is_home: true, peak_power_w: 6_000, total_energy_added_wh: 8_000 }),
     ]);
 
     // The legend is real DOM (Recharts SVG is empty in jsdom) — assert both
@@ -350,9 +349,10 @@ describe('ChargerTypeChart — null safety', () => {
     // and avg([10, NaN]) === NaN → the WHOLE bucket collapsed to "0.0".
     // Hardened `?? 0` keeps the finite reading: avg([10, 0]) === 5 → "5.0".
     renderChart([
-      session(1, 30, { charger_type: null, peak_power_w: 7_000, total_energy_added_wh: 10_000 }),
+      session(1, 30, { charger_type: 'AC', is_home: true, peak_power_w: 7_000, total_energy_added_wh: 10_000 }),
       session(2, 30, {
-        charger_type: null,
+        charger_type: 'AC',
+        is_home: true,
         peak_power_w: 7_000,
         total_energy_added_wh: undefined as unknown as number,
       }),
@@ -367,7 +367,7 @@ describe('ChargerTypeChart — null safety', () => {
   it('coerces a null peak power to a zeroed kW average without crashing', () => {
     expect(() =>
       renderChart([
-        session(1, 15, { charger_type: null, peak_power_w: null, total_energy_added_wh: 5_000 }),
+        session(1, 15, { charger_type: 'AC', is_home: true, peak_power_w: null, total_energy_added_wh: 5_000 }),
       ]),
     ).not.toThrow();
     // peak_power_w null → avgKw 0 → "0.0"; energy 5 kWh survives.

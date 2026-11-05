@@ -15,7 +15,7 @@ interface AcDcStatsPanelProps {
 
 interface AcDcTableRow {
   label: string;
-  id: 'ac' | 'dc';
+  id: 'ac' | 'dc' | 'unknown';
   energy: number;
   cost: number | null;
   count: number;
@@ -65,6 +65,8 @@ export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
     && isFiniteNumber(dcEnergy) && dcEnergy >= 0;
   const acPct = hasEnergy ? (acEnergy / totalEnergy) * 100 : 0;
   const dcPct = hasEnergy ? (dcEnergy / totalEnergy) * 100 : 0;
+  const unknownEnergy = breakdown?.unknown?.energy ?? 0;
+  const unknownPct = hasEnergy ? (unknownEnergy / totalEnergy) * 100 : 0;
 
   return (
     <GlassPanel className="h-full p-5">
@@ -83,11 +85,15 @@ export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
             <div
               className="grid h-4 rounded-full overflow-hidden"
               role="img"
-              aria-label={t('charging.stats.energySplitAria', 'Energy split: {{ac}}% AC, {{dc}}% DC', {
+              aria-label={unknownEnergy > 0
+                ? t('charging.stats.energySplitUnknownAria', 'Energy split: {{ac}}% AC, {{dc}}% DC, {{unknown}}% unknown', {
+                  ac: Math.round(acPct), dc: Math.round(dcPct), unknown: Math.round(unknownPct),
+                })
+                : t('charging.stats.energySplitAria', 'Energy split: {{ac}}% AC, {{dc}}% DC', {
                 ac: Math.round(acPct),
                 dc: Math.round(dcPct),
               })}
-              style={{ gridTemplateColumns: `${acPct}% ${dcPct}%` }}
+              style={{ gridTemplateColumns: unknownPct > 0 ? `${acPct}% ${dcPct}% ${unknownPct}%` : `${acPct}% ${dcPct}%` }}
             >
               {acEnergy > 0 && (
                 <div className="col-start-1 flex items-center justify-center text-xs text-[var(--text-primary)] bg-[var(--surface-3)]">
@@ -97,6 +103,11 @@ export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
               {dcEnergy > 0 && (
                 <div className="col-start-2 flex items-center justify-center text-xs text-[var(--text-primary)] bg-[var(--surface-2)]">
                   {t('charging.detail.dc', 'DC')} {fmtPercent(dcPct)}
+                </div>
+              )}
+              {unknownEnergy > 0 && (
+                <div className="col-start-3 flex items-center justify-center bg-[var(--surface-1)]">
+                  {t('charging.chargerTypes.unknown', 'Unknown')} {fmtPercent(unknownPct)}
                 </div>
               )}
             </div>
@@ -118,7 +129,7 @@ export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
 
       {/* Stats Table */}
       <div className="overflow-x-auto">
-        <AcDcTable ac={breakdown?.ac} dc={breakdown?.dc} />
+        <AcDcTable ac={breakdown?.ac} dc={breakdown?.dc} unknown={breakdown?.unknown} />
       </div>
 
       {/* Free charging total */}
@@ -140,13 +151,14 @@ export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
   );
 }
 
-function AcDcTable({ ac, dc }: { ac?: AcDcBucket; dc?: AcDcBucket }) {
+function AcDcTable({ ac, dc, unknown }: { ac?: AcDcBucket; dc?: AcDcBucket; unknown?: AcDcBucket }) {
   const { fmtWithUnit, fmtNumber } = useNumberFormatting();
   const { currencySymbol } = useFormatting();
   const { t } = useTranslation();
   const data: AcDcTableRow[] = [
     { label: t('charging.table.acCharging', 'AC charging'), id: 'ac' as const, ...(ac ?? EMPTY_BUCKET) },
     { label: t('charging.table.dcCharging', 'DC charging'), id: 'dc' as const, ...(dc ?? EMPTY_BUCKET) },
+    { label: t('charging.chargerTypes.unknown', 'Unknown'), id: 'unknown' as const, ...(unknown ?? EMPTY_BUCKET) },
   ].filter((r) => isFiniteNumber(r.count) && r.count > 0);
 
   const columns: Column<AcDcTableRow>[] = [

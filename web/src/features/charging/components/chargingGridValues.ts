@@ -4,7 +4,7 @@ import {
   parseTableValueSelections, type TableValueSelections,
 } from '@/components/ui';
 import {
-  batteryFriendlyScore, durationMinutes, getChargerCategory, sessionAveragePowerW,
+  batteryFriendlyScore, durationMinutes, getChargerCategory, sessionDisplayPowerW,
 } from '@/lib/chargingAggregation';
 import { distanceAddedM } from './charging-curve/helpers';
 
@@ -27,12 +27,11 @@ export function chargingColumnValue(session: ChargingSession, column: ChargingVa
     case 'date': return Number.isFinite(Date.parse(session.started_at)) ? session.started_at : null;
     case 'location': return endpointLabel({ address: session.start_place, lat: session.start_lat, lon: session.start_lng });
     case 'charger': {
-      const category = getChargerCategory(session.charger_type);
-      return category === 'unknown' ? session.charger_type : category;
+      return getChargerCategory(session);
     }
     case 'duration': return durationMinutes(session) > 0 ? durationMinutes(session) * 60 : null;
     case 'energy': return finite(session.total_energy_added_wh);
-    case 'power': return sessionAveragePowerW(session);
+    case 'power': return sessionDisplayPowerW(session);
     case 'peakPower': return finite(session.peak_power_w);
     case 'batteryStart': return finite(session.start_soc_pct);
     case 'batteryEnd': return finite(session.end_soc_pct);

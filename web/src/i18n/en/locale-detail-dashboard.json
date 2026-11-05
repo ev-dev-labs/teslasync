@@ -1,5 +1,7 @@
 {
   "dashboard": {
+    "chargingEstimatedLabel": "{{label}} (estimated)",
+    "chargerAc": "AC",
     "chargeStatus": {
       "chargeLimit": "Charge limit",
       "lastReported": "Last reported"

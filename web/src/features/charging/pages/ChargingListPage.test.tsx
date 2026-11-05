@@ -301,6 +301,7 @@ function makeSession(over: Partial<ChargingSession> = {}): ChargingSession {
     cost_decimal: 4.5,
     cost_currency: 'USD',
     charger_type: 'Home',
+    is_home: true,
     cable_type: 'Type2',
     startedAt: started,
     duration_min: 60,

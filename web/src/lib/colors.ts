@@ -207,8 +207,12 @@ export const CHARGER_COLORS: Record<string, string> = {
   supercharger: CHART_SEMANTIC.charger.supercharger,
   dc: CHART_SEMANTIC.charger.dc,
   home: CHART_SEMANTIC.charger.home,
+  ac: CHART_SEMANTIC.charger.work,
+  unknown: CHART_SEMANTIC.charger.other,
   // Display-name keys (CostAnalysis page)
   Home: CHART_SEMANTIC.charger.home,
+  AC: CHART_SEMANTIC.charger.work,
+  Unknown: CHART_SEMANTIC.charger.other,
   Supercharger: CHART_SEMANTIC.charger.supercharger,
   'Public DC': CHART_SEMANTIC.charger.dc,
   'Work / L2': CHART_SEMANTIC.charger.work,

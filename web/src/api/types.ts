@@ -180,6 +180,9 @@ export interface ChargingSession {
   charger_type: string | null
   cable_type: string | null
   live?: boolean
+  current_power_w?: number | null
+  is_home?: boolean
+  cost_source?: 'manual' | 'tesla_actual' | 'geofence_tariff' | 'default_estimate' | 'unknown' | null
   start_ts?: string
   end_ts?: string | null
   startedAt: string

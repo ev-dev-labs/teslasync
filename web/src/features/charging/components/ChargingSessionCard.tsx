@@ -20,7 +20,8 @@ import type { ChargingSession } from '@/api/types';
 import { distanceAddedM } from './charging-curve/helpers';
 import {
   durationMinutes,
-  avgPowerW,
+  sessionDisplayPowerW,
+  isEstimatedChargingCost,
   batteryFriendlyScore,
   costPerKwh,
   getChargerCategory,
@@ -50,6 +51,7 @@ interface ChargingSessionCardProps {
 
 const ACCENT: Record<ChargerCategory, 'cyan' | 'green' | 'amber' | 'red' | 'purple' | 'blue'> = {
   home: 'green',
+  ac: 'blue',
   supercharger: 'red',
   dc: 'amber',
   unknown: 'cyan',
@@ -68,28 +70,26 @@ export function ChargingSessionCard({
   const { fmtWithUnit, fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('charging');
   const { formatCurrency } = useFormatting();
-  const cat = getChargerCategory(session.charger_type);
+  const cat = getChargerCategory(session);
   const chargerLabels: Record<ChargerCategory, string> = {
     supercharger: t('chargerTypes.supercharger', 'Supercharger'),
     dc: t('chargerTypes.dc', 'DC fast'),
     home: t('chargerTypes.home', 'Home / AC'),
-    unknown: t('chargerTypes.unknown', 'Charger'),
+    ac: t('charging.chargerTypes.ac', 'AC'),
+    unknown: t('charging.chargerTypes.unknown', 'Unknown'),
   };
 
   const durationMin = durationMinutes(session);
-  // `durationMinutes` returns 0 for in-progress / malformed sessions, which
-  // would otherwise render a misleading "0m". Show the universal placeholder
-  // instead so an open session reads as unknown rather than zero-length.
   const durationLabel = durationMin > 0 ? formatDurationMinutes(durationMin) : '—';
   const avgRateKw = useMemo(() => {
-    const w = avgPowerW(session);
-    return w > 0 ? convertPowerFromSI(w, 'kW') : null;
+    const w = sessionDisplayPowerW(session);
+    return w != null ? convertPowerFromSI(w, 'kW') : null;
   }, [session]);
   const cpk = costPerKwh(session);
   const addedM = distanceAddedM(session);
   const rangeAddedDisplay = addedM != null ? toDistanceDisplay(addedM) : null;
   const energyDisplay = convertEnergyFromSI(session.total_energy_added_wh ?? 0, 'kWh');
-  const isFree = session.cost_decimal === 0;
+  const isFree = session.cost_decimal === 0 && !isEstimatedChargingCost(session);
 
   const showCheckbox = typeof onToggleSelect === 'function';
 
@@ -116,6 +116,7 @@ export function ChargingSessionCard({
       <Badge variant={cat === 'supercharger' ? 'danger' : cat === 'dc' ? 'warning' : 'success'} size="sm">
         {chargerLabels[cat]}
       </Badge>
+      {session.live && <Badge variant="info" size="sm">{t('sessionCharging', 'Charging')}</Badge>}
       {energyDisplay > 0 && (
         <Badge variant="info" size="sm">{fmtWithUnit(energyDisplay, 'kWh')}</Badge>
       )}
@@ -159,7 +160,9 @@ export function ChargingSessionCard({
       {avgRateKw != null && (
         <InlineMetric
           icon={<Plug className="h-3 w-3" aria-hidden />}
-          value={t('metrics.avgPower', '~{{value}} kW avg', { value: fmtNumber(avgRateKw) })}
+          value={session.live
+            ? t('currentPowerValue', '{{value}} kW now', { value: fmtNumber(avgRateKw) })
+            : t('metrics.avgPower', '~{{value}} kW avg', { value: fmtNumber(avgRateKw) })}
         />
       )}
       {durationMin > 0 && (
@@ -171,7 +174,9 @@ export function ChargingSessionCard({
       {typeof session.cost_decimal === 'number' && session.cost_decimal > 0 && (
         <InlineMetric
           icon={<DollarSign className="h-3 w-3" aria-hidden />}
-          value={formatCurrency(session.cost_decimal)}
+          value={isEstimatedChargingCost(session)
+            ? t('estimatedCostValue', '{{cost}} (estimated)', { cost: formatCurrency(session.cost_decimal) })
+            : formatCurrency(session.cost_decimal)}
           className="text-emerald-300"
         />
       )}
