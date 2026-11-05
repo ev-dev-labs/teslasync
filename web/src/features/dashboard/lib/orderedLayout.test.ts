@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeDashboard, orderedLayouts, packOrderedWidgets, widgetHeightBounds } from './orderedLayout';
+import { arrangeOrderedWidget, normalizeDashboard, orderedLayouts, packOrderedWidgets, widgetHeightBounds } from './orderedLayout';
 import type { SavedDashboard, WidgetInstance } from '../widgets/types';
 
 const widget = (id: string, sizeClass: WidgetInstance['sizeClass']): WidgetInstance =>
@@ -58,5 +58,23 @@ describe('ordered dashboard layouts', () => {
   it('uses explicit resize as a bounded ceiling rather than padding a short card', () => {
     expect(widgetHeightBounds({ ...widget('a', 'small'), heightRows: 2 })).toEqual({ min: 72, max: 176 });
     expect(widgetHeightBounds({ ...widget('a', 'small'), heightRows: 40 }).max).toBe(900);
+  });
+
+  it.each([
+    ['full', 2, 'small'],
+    ['large', 2, 'small'],
+    ['full', 3, 'medium'],
+  ] as const)('narrows a %s widget from its visible span at %i columns', (sizeClass, columns, expected) => {
+    const widgets = [widget('a', sizeClass)];
+    const resized = arrangeOrderedWidget(widgets, 'a', 'make-narrower', columns);
+    expect(resized?.[0].sizeClass).toBe(expected);
+    expect(widgets[0].sizeClass).toBe(sizeClass);
+  });
+
+  it('fills presentation space without overwriting the saved size class', () => {
+    const widgets = [widget('a', 'small')];
+    expect(packOrderedWidgets(widgets, 4, new Map(), true)[0].w).toBe(4);
+    expect(orderedLayouts(widgets).lg[0].w).toBe(1);
+    expect(widgets[0].sizeClass).toBe('small');
   });
 });

@@ -119,7 +119,7 @@ export function arrangeOrderedWidget(
   const widget = widgets[index];
   if (action === 'make-wider' || action === 'make-narrower') {
     if (columns === 1) return null;
-    const current = SIZE_CLASSES.indexOf(widgetSizeClass(widget)) + 1;
+    const current = Math.min(columns, SIZE_CLASSES.indexOf(widgetSizeClass(widget)) + 1);
     const requested = current + (action === 'make-wider' ? 1 : -1);
     if (requested < 1 || requested > columns) return null;
     next[index] = { ...widget, sizeClass: sizeClassForColumns(requested) };
