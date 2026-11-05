@@ -93,6 +93,10 @@
     animation: widget-cell-rise 2.4s linear infinite;
   }
 
+  .widget-charge-current {
+    animation: widget-charge-travel 3.2s linear infinite;
+  }
+
   .dashboard-widget .flow-active {
     animation: widget-power-travel 2.4s linear infinite;
   }
@@ -171,6 +175,10 @@
 
 @keyframes widget-cell-rise {
   to { transform: translateY(-48px); }
+}
+
+@keyframes widget-charge-travel {
+  to { stroke-dashoffset: -24; }
 }
 
 @keyframes widget-power-travel {

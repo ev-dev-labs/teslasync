@@ -53,6 +53,14 @@ describe('verified charging activity', () => {
     }
   });
 
+  it('keeps verified charging steady through query invalidation and an in-flight refresh', () => {
+    expect(verifiedChargeActivity({ ...source, isStale: true, isFetching: true, fetchStatus: 'fetching' }, now)).toBe(true);
+    expect(verifiedTelemetryChargeActivity({
+      data: { charging_state: 'Charging', ts: new Date(now - 1_000).toISOString() },
+      isStale: true, isFetching: true, fetchStatus: 'fetching',
+    }, now)).toBe(true);
+  });
+
   it.each([
     { isError: true },
     { error: new Error('refresh failed') },
