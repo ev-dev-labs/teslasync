@@ -12,7 +12,7 @@ describe('exact accepted shell inverse, independent of recovery test registratio
   it('reconstructs the actual Layout canonical predecessor without changing shipping source', () => {
     const file = 'web/src/components/layout/Layout.tsx'
     const current = currentSource(file)
-    expect(hash(current)).toBe('5b3df0325cb2ee6065320d2a6cdd348226b38c434abc6880b01d213bc7e96433')
+    expect(hash(current)).toBe('1f423497b6350dd9844612f4f2265678088a5a2018a18fa887dadbcba917f804')
     expect(hash(restoreAcceptedShellSource(file, current)))
       .toBe('7d4ce1ff038472b093c5d3b750d7319ff64a94000d40c3ac5040e30795e07c64')
     expect(currentSource(file)).toBe(current)
@@ -21,7 +21,7 @@ describe('exact accepted shell inverse, independent of recovery test registratio
   it('reconstructs the palette predecessor before the separately pinned canonical translator inverse', () => {
     const file = 'web/src/components/ui/CommandPalette.tsx'
     const current = currentSource(file)
-    expect(hash(current)).toBe('02ddb99ff8e9b3f31988790acfc4e342a487d09a8cf466535ab9e6d5fad080be')
+    expect(hash(current)).toBe('6eec7c2991ac49d916e044c165deca8552e11622e5d11fc15b38dd8121d62e33')
     const canonical = restoreAcceptedShellSource(file, current)
     expect(hash(canonical)).toBe('5341afdc44459ff67b8798d5835e895dd39135685420a4be375d47228fe830f0')
     const actual = "t('palette.clearScope', 'Clear {{scope}} filter', { scope: getScopeMeta(activeScope).label })"
@@ -79,7 +79,7 @@ describe('exact accepted shell inverse, independent of recovery test registratio
         const original = delta.path === 'web/src/components/layout/ThemeQuickSwitcherPopover.tsx'
           ? 'return { default: module.ThemePicker }'
           : delta.path === 'web/src/components/layout/Layout.tsx'
-          ? 'const { preferences: productPreferences } = useProductPreferences()'
+          ? 'const [feedbackOpen, setFeedbackOpen] = useState(false)'
           : 'const [open, setOpen] = useState(initialOpen)'
         expect(source.split(original)).toHaveLength(2)
         for (const fragment of delta.fragments) {

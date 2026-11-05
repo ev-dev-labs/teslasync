@@ -106,8 +106,8 @@
   "sources": [
     {
       "file": "web/src/components/layout/sidebar/AtlasPanel.tsx",
-      "calls": 30,
-      "sha256": "afd41838de319675b352fd330a0d23601263c7234a35d5e7dd01c27c5f35c813"
+      "calls": 29,
+      "sha256": "c620fb3227ec76b7b279e7ef6523c85e918508a770a111e5b82901d848888b58"
     },
     {
       "file": "web/src/features/admin/components/continuation-admin-1/SchemaKpis.tsx",

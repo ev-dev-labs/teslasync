@@ -57,7 +57,7 @@
   {
     "file": "web/src/components/layout/Layout.tsx",
     "calls": 14,
-    "sha256": "5b3df0325cb2ee6065320d2a6cdd348226b38c434abc6880b01d213bc7e96433",
+    "sha256": "1f423497b6350dd9844612f4f2265678088a5a2018a18fa887dadbcba917f804",
     "dependencies": [
       {
         "file": "web/src/lib/routeRegistry.ts",
@@ -111,8 +111,8 @@
   },
   {
     "file": "web/src/components/layout/sidebar/AtlasPanel.tsx",
-    "calls": 30,
-    "sha256": "afd41838de319675b352fd330a0d23601263c7234a35d5e7dd01c27c5f35c813",
+    "calls": 29,
+    "sha256": "c620fb3227ec76b7b279e7ef6523c85e918508a770a111e5b82901d848888b58",
     "dependencies": [
       {
         "file": "web/src/lib/routeRegistry.ts",
@@ -196,8 +196,8 @@
   },
   {
     "file": "web/src/components/ui/CommandPalette.tsx",
-    "calls": 81,
-    "sha256": "02ddb99ff8e9b3f31988790acfc4e342a487d09a8cf466535ab9e6d5fad080be",
+    "calls": 84,
+    "sha256": "6eec7c2991ac49d916e044c165deca8552e11622e5d11fc15b38dd8121d62e33",
     "dependencies": [
       {
         "file": "web/src/lib/routeRegistry.ts",
