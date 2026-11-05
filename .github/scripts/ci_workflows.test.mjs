@@ -72,6 +72,7 @@ test('browser shards reuse one build and retain isolated performance and Windows
   assert.deepEqual(browser.jobs['cross-browser'].strategy.matrix.browser, ['firefox', 'webkit', 'edge']);
   const edgeInstall = browser.jobs['cross-browser-tests'].steps.find(step => step.run === 'npx playwright install msedge');
   assert.equal(edgeInstall?.if, "matrix.browser == 'edge'");
+  assert.equal(browser.jobs['cross-browser-tests'].steps.find(step => step.name === 'Run lightweight engine smoke')?.env.HOME, '/root');
   assert.match(commands(browser.jobs['cross-browser-tests']), /--shard=\$\{\{ matrix\.shard \}\}\/3/);
   assert.match(commands(browser.jobs['visual-tests']), /--shard=\$\{\{ matrix\.shard \}\}\/32 --workers=2/);
   for (const id of ['chromium-tests', 'visual-tests', 'cross-browser-tests']) {

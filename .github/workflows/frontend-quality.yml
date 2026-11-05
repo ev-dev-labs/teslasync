@@ -225,6 +225,8 @@ jobs:
         env:
           E2E_MOCKS: '1'
           E2E_REUSE_BUILD: '1'
+          # GitHub's container HOME belongs to pwuser, but the job runs as root.
+          HOME: /root
         run: npm run e2e -- --project=${{ matrix.browser }}-smoke --shard=${{ matrix.shard }}/3
       - name: Upload engine failure evidence
         if: always()
