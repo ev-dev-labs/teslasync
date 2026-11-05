@@ -74,7 +74,7 @@ jobs:
           npx vite preview --port 4173 --strictPort > preview.log 2>&1 &
           echo $! > preview.pid
           # Wait for server to be reachable
-          for i in $(seq 1 30); do
+          for ((i = 0; i < 30; i++)); do
             if curl -fsS http://localhost:4173/ -o /dev/null; then
               echo "preview server is up"
               exit 0

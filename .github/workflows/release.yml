@@ -110,9 +110,11 @@ jobs:
           fi
 
           echo "New tag: $NEW_TAG"
-          echo "new_tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "is_prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
+          {
+            echo "new_tag=$NEW_TAG"
+            echo "version=$VERSION"
+            echo "is_prerelease=$IS_PRERELEASE"
+          } >> "$GITHUB_OUTPUT"
 
       # NOTE: the git tag is NOT pushed here. Tagging is a persistent,
       # public release side effect, so it happens in `tag-and-release`
