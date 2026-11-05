@@ -33,6 +33,7 @@ type NotificationLog struct {
 	ID                  int64      `json:"id" db:"id"`
 	ChannelID           int64      `json:"channel_id" db:"channel_id"` // 0 for canonical event rows (SQL NULL)
 	AlertID             *int64     `json:"alert_id,omitempty" db:"alert_id"`
+	VehicleID           *int64     `json:"vehicle_id,omitempty" db:"vehicle_id"`
 	TriggerID           *string    `json:"trigger_id,omitempty" db:"trigger_id"`
 	EventType           *string    `json:"event_type,omitempty" db:"event_type"`
 	Title               string     `json:"title" db:"title"`

@@ -629,6 +629,10 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 		log.Warn().Err(prefsErr).Msg("alert test: formatting settings unavailable; using defaults")
 	}
 	renderSignals := map[string]any{}
+	var renderVehicleID int64
+	if body.VehicleID != nil {
+		renderVehicleID = *body.VehicleID
+	}
 	// Render template with current signal values from the live-state boundary.
 	if h.liveSignals != nil {
 		for _, vid := range h.liveSignals.LocalVehicleIDs() {
@@ -643,6 +647,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 			raw := apisignal.LiveSignalValuesToRaw(values)
 			if len(raw) > 0 {
 				renderSignals = raw
+				renderVehicleID = vid
 				break
 			}
 		}
@@ -675,7 +680,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	triggerID := notification.NewTriggerID()
 	eventRow, err := notification.RecordTrigger(r.Context(), h.notifRepo, &notification.Request{
 		Title: title, Message: message, EventType: "test.alert_rule",
-		Severity: severity, TriggerID: triggerID,
+		Severity: severity, TriggerID: triggerID, VehicleID: renderVehicleID,
 	})
 	if err != nil {
 		log.Error().Err(err).Msg("alert test: event persistence failed")
@@ -712,6 +717,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 				ChannelID:              ch.ID,
 				TriggerID:              triggerID,
 				EventType:              "test.alert_rule",
+				VehicleID:              renderVehicleID,
 				Severity:               severity,
 				SuppressTransportTitle: suppressTransportTitle,
 			}
@@ -734,6 +740,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 					ChannelID:              ch.ID,
 					TriggerID:              triggerID,
 					EventType:              "test.alert_rule",
+					VehicleID:              renderVehicleID,
 					Severity:               severity,
 					SuppressTransportTitle: suppressTransportTitle,
 				}

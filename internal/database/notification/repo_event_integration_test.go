@@ -34,9 +34,11 @@ func eventFixture(t *testing.T) (*NotificationRepo, context.Context) {
 	// no migration or test row touches the persistent database.
 	for _, statement := range []string{
 		`CREATE TEMP TABLE notification_channels (id bigint PRIMARY KEY, kind text NOT NULL)`,
-		`CREATE TEMP TABLE alert_rules (id bigint PRIMARY KEY, vehicle_id bigint)`,
+		`CREATE TEMP TABLE alert_rules (id bigint PRIMARY KEY, vehicle_id bigint, all_vehicles boolean NOT NULL DEFAULT false, updated_at timestamptz NOT NULL DEFAULT now())`,
+		`CREATE TEMP TABLE alert_rule_vehicles (rule_id bigint, vehicle_id bigint, PRIMARY KEY (rule_id, vehicle_id))`,
+		`CREATE TEMP TABLE vehicles (id bigint PRIMARY KEY, vin text, created_at timestamptz NOT NULL DEFAULT now())`,
 		`CREATE TEMP TABLE notification_logs (
-			id bigserial PRIMARY KEY, channel_id bigint, alert_id bigint,
+			id bigserial PRIMARY KEY, channel_id bigint, alert_id bigint, vehicle_id bigint,
 			title text NOT NULL, message text NOT NULL, status text NOT NULL,
 			severity text, error text, created_at timestamptz NOT NULL DEFAULT now(),
 			sent_at timestamptz, scheduled_at timestamptz, latency_ms integer,
@@ -162,9 +164,10 @@ func TestEventInboxReportTwoChannelFanout(t *testing.T) {
 	}
 	triggerID, eventType := uuid.NewString(), "alert.charge_stopped"
 	alertID := int64(42)
+	vehicleID := int64(7)
 	event := &notificationmodel.NotificationLog{
 		Title: "Charging alert", Message: "Charge stopped", Severity: "warn",
-		AlertID: &alertID, TriggerID: &triggerID, EventType: &eventType,
+		AlertID: &alertID, VehicleID: &vehicleID, TriggerID: &triggerID, EventType: &eventType,
 	}
 	if err := repo.CreateEvent(ctx, event); err != nil {
 		t.Fatal(err)

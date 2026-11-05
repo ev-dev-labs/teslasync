@@ -35,7 +35,8 @@ type Request struct {
 	// originating alert_rules row. Required for the frontend's drill-through
 	// from alert toast to context page and for computed-metric alerts to surface
 	// as alert-backed notifications.
-	AlertID int64 `json:"alert_id,omitempty"`
+	AlertID   int64 `json:"alert_id,omitempty"`
+	VehicleID int64 `json:"vehicle_id,omitempty"`
 	// TriggerID identifies one firing across all its delivery channels.
 	TriggerID string `json:"trigger_id,omitempty"`
 	// EventType is a stable producer-defined classification, not a channel kind.
@@ -74,6 +75,7 @@ func RecordTrigger(ctx context.Context, store EventRecorder, req *Request) (*not
 	if req.AlertID > 0 {
 		entry.AlertID = &req.AlertID
 	}
+	applyRequestMetadata(entry, req)
 	if err := store.CreateEvent(ctx, entry); err != nil {
 		return nil, fmt.Errorf("record notification trigger: %w", err)
 	}

@@ -170,7 +170,7 @@ func BuildContext(rule *alertmodel.AlertRule, vehicleName string, signals map[st
 		ctx[k] = v
 	}
 	if rule != nil {
-		ctx["RuleName"] = rule.Name
+		ctx["RuleName"] = ruleTitle(rule)
 		ctx["Severity"] = rule.Severity
 		ctx["SignalName"] = rule.SignalName
 		if rule.ValueNum != nil {
@@ -246,7 +246,7 @@ func RenderTitle(rule *alertmodel.AlertRule, ctx Context) string {
 	if rule == nil {
 		return "Alert"
 	}
-	name := strings.TrimSpace(rule.Name)
+	name := ruleTitle(rule)
 	if name == "" {
 		name = "Alert"
 	}
@@ -277,10 +277,47 @@ func RenderBody(rule *alertmodel.AlertRule, ctx Context) string {
 	}
 	if rule.MsgTemplate != nil {
 		if strings.TrimSpace(*rule.MsgTemplate) != "" {
+			for _, key := range ExtractPlaceholderKeys(*rule.MsgTemplate) {
+				value, exists := ctx[key]
+				meta, signal := protomodel.SignalsByName[key]
+				signal = signal && meta.ProtoEnumNum != 0
+				builtin := key == "Value" || key == "PrevValue" || key == "VehicleName" || key == "Threshold"
+				if (exists || signal || builtin) && strings.TrimSpace(toString(value)) == "" {
+					return RenderTitle(rule, ctx) + ": notification details are unavailable."
+				}
+			}
 			return Substitute(*rule.MsgTemplate, ctx)
 		}
 	}
 	return RenderDefaultBody(rule, ctx)
+}
+
+// Correct only known catalogue names whose predicates do not establish the
+// claimed state. User-authored names and equality rules remain untouched.
+func ruleTitle(rule *alertmodel.AlertRule) string {
+	name := strings.TrimSpace(rule.Name)
+	if rule.Op == "changed" {
+		for _, correction := range []struct{ signal, previous, title string }{
+			{"LightsTurnSignal", "Turn Signal On", "Turn signal changed"},
+			{"DestinationName", "Navigation Started", "Navigation destination changed"},
+			{"SoftwareUpdateVersion", "Software Update Available", "Available software version changed"},
+			{"PowershareStatus", "Powershare Active", "Powershare state changed"},
+			{"ChargePortLatch", "Charge Port Latched", "Charge port latch changed"},
+			{"ChargeCurrentRequest", "Charge Current Request Maxed", "Requested charge current changed"},
+			{"GpsState", "GPS Lost", "GPS state changed"},
+			{"LaneDepartureAvoidance", "Lane Departure Avoidance Off", "Lane departure avoidance changed"},
+			{"SoftwareUpdateScheduledStartTime", "Software Update Scheduled", "Software update schedule changed"},
+			{"TpmsLastSeenPressureTimeFl", "FL Pressure Stale", "Front left tire pressure reporting time changed"},
+			{"TpmsLastSeenPressureTimeFr", "FR Pressure Stale", "Front right tire pressure reporting time changed"},
+			{"TpmsLastSeenPressureTimeRl", "RL Pressure Stale", "Rear left tire pressure reporting time changed"},
+			{"TpmsLastSeenPressureTimeRr", "RR Pressure Stale", "Rear right tire pressure reporting time changed"},
+		} {
+			if rule.SignalName == correction.signal && name == correction.previous {
+				return correction.title
+			}
+		}
+	}
+	return name
 }
 
 // RenderDefaultBody implements the op-aware default formatter. The wording

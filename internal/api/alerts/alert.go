@@ -381,6 +381,9 @@ func (h *AlertHandler) adaptNotificationLogsToAlerts(ctx context.Context, logs [
 			AcknowledgedBy:      l.AcknowledgedBy,
 			AcknowledgementNote: l.AcknowledgementNote,
 		}
+		if l.VehicleID != nil {
+			resp.VehicleID = *l.VehicleID
+		}
 		if l.AlertID != nil {
 			if rule, ok := rules[*l.AlertID]; ok {
 				resp.Type = slugifyRuleName(rule.Name)
@@ -389,16 +392,6 @@ func (h *AlertHandler) adaptNotificationLogsToAlerts(ctx context.Context, logs [
 				resp.AllVehicles = &allVehicles
 				if rule.VehicleIDs != nil {
 					resp.VehicleIDs = append([]int64{}, rule.VehicleIDs...)
-				}
-				switch {
-				case rule.AllVehicles:
-					resp.VehicleID = 0
-				case len(rule.VehicleIDs) == 1:
-					resp.VehicleID = rule.VehicleIDs[0]
-				case rule.VehicleIDs == nil && rule.VehicleID != nil:
-					// Rolling-deploy fallback for repositories that have not
-					// hydrated the canonical junction scope yet.
-					resp.VehicleID = *rule.VehicleID
 				}
 				// Carry the owning rule's identity so the frontend can deep-link from
 				// the alert to the relevant context page (e.g. /battery,

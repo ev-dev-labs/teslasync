@@ -877,8 +877,8 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 		Name:       "Battery low (Model Y)",
 		Severity:   "critical",
 		SignalName: "BatteryLevel",
-		VehicleID:  &vehicleID,
-		VehicleIDs: []int64{vehicleID},
+		VehicleID:  testInt64Ptr(99),
+		VehicleIDs: []int64{99},
 	}
 	infoRule := &alertmodel.AlertRule{
 		ID:          ruleInfoID,
@@ -897,6 +897,7 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	logs := []*notificationmodel.NotificationLog{
 		{
 			ID:                  1001,
+			VehicleID:           &vehicleID,
 			AlertID:             &ruleCritID,
 			Title:               "Battery is low",
 			Message:             "5%",
@@ -961,8 +962,8 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	if resp[0].AllVehicles == nil || *resp[0].AllVehicles {
 		t.Errorf("resp[0].AllVehicles = %v, want false", resp[0].AllVehicles)
 	}
-	if len(resp[0].VehicleIDs) != 1 || resp[0].VehicleIDs[0] != vehicleID {
-		t.Errorf("resp[0].VehicleIDs = %v, want [%d]", resp[0].VehicleIDs, vehicleID)
+	if len(resp[0].VehicleIDs) != 1 || resp[0].VehicleIDs[0] != 99 {
+		t.Errorf("rule applicability should remain distinct from captured event identity: %v", resp[0].VehicleIDs)
 	}
 	// Drill-through metadata.
 	if resp[0].RuleID == nil || *resp[0].RuleID != ruleCritID {

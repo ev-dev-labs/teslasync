@@ -162,8 +162,12 @@ func (e *NotifyExecutor) executeNotifyConfig(ctx context.Context, vehicleID *int
 	title := resolveTemplate(cfg.Title, vars)
 	message := resolveTemplate(cfg.Message, vars)
 	triggerID := notification.NewTriggerID()
+	var subjectID int64
+	if vehicleID != nil {
+		subjectID = *vehicleID
+	}
 	if _, err := notification.RecordTrigger(ctx, e.channelRepo, &notification.Request{
-		Title: title, Message: message, EventType: "automation.notify", TriggerID: triggerID,
+		Title: title, Message: message, EventType: "automation.notify", TriggerID: triggerID, VehicleID: subjectID,
 	}); err != nil {
 		return nil, err
 	}
@@ -203,6 +207,7 @@ func (e *NotifyExecutor) executeNotifyConfig(ctx context.Context, vehicleID *int
 			ChannelID:   ch.ID,
 			TriggerID:   triggerID,
 			EventType:   "automation.notify",
+			VehicleID:   subjectID,
 		}
 
 		sendErr := e.sender(req)
@@ -216,7 +221,7 @@ func (e *NotifyExecutor) executeNotifyConfig(ctx context.Context, vehicleID *int
 			}
 			eventType := req.EventType
 			entry := &notificationmodel.NotificationLog{
-				ChannelID: ch.ID, Title: title, Message: message, Status: status,
+				ChannelID: ch.ID, VehicleID: vehicleID, Title: title, Message: message, Status: status,
 				Error: errText, TriggerID: &triggerID, EventType: &eventType,
 			}
 			if err := logs.CreateLog(ctx, entry); err != nil {

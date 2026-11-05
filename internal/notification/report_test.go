@@ -2,6 +2,7 @@ package notification
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -11,6 +12,34 @@ import (
 type eventStoreFake struct {
 	events []*notificationmodel.NotificationLog
 	err    error
+}
+
+func TestVehicleIdentitySurvivesQueueAndEventDelivery(t *testing.T) {
+	var req Request
+	if err := json.Unmarshal([]byte(`{"vehicle_id":42,"trigger_id":"test-trigger","event_type":"alert.rule"}`), &req); err != nil {
+		t.Fatal(err)
+	}
+	event, err := RecordTrigger(context.Background(), &eventStoreFake{}, &req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	delivery := &notificationmodel.NotificationLog{}
+	applyRequestMetadata(delivery, &req)
+	for _, row := range []*notificationmodel.NotificationLog{event, delivery} {
+		raw, err := json.Marshal(row)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var stored struct {
+			VehicleID *int64 `json:"vehicle_id"`
+		}
+		if err := json.Unmarshal(raw, &stored); err != nil {
+			t.Fatal(err)
+		}
+		if stored.VehicleID == nil || *stored.VehicleID != 42 {
+			t.Fatalf("vehicle lost between queue and storage: %s", raw)
+		}
+	}
 }
 
 func (f *eventStoreFake) CreateEvent(_ context.Context, event *notificationmodel.NotificationLog) error {
