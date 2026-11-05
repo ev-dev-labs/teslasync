@@ -37,3 +37,11 @@ describe('OperationalBrief supported scenario discovery', () => {
     expect(smokeMatches('e2e/unrelated.supported.spec.ts')).toBe(false);
   });
 });
+
+describe('Edge smoke discovery', () => {
+  it('runs the cross-browser smoke suite using the installed Microsoft Edge channel', () => {
+    const project = baseConfig.projects?.find(candidate => candidate.name === 'edge-smoke');
+    expect(project?.testMatch).toEqual(/cross-browser\.smoke\.spec\.ts/);
+    expect(project?.use).toMatchObject({ channel: 'msedge' });
+  });
+});

@@ -84,7 +84,7 @@
     "e2e:contract": "playwright test --config=playwright.contract.config.ts",
     "e2e:scenario-contract": "node scripts/check-e2e-scenario-coverage.mjs",
     "e2e:cross-browser": "node scripts/run-e2e-suite.mjs e2e:cross-browser:run",
-    "e2e:cross-browser:run": "playwright test --project=firefox-smoke --project=webkit-smoke",
+    "e2e:cross-browser:run": "playwright test --project=firefox-smoke --project=webkit-smoke --project=edge-smoke",
     "e2e:visual": "node scripts/run-e2e-suite.mjs e2e:visual:run",
     "e2e:visual:run": "playwright test --config=playwright.visual.config.ts",
     "e2e:update-visual": "node scripts/run-e2e-suite.mjs e2e:update-visual:run",

@@ -62,15 +62,18 @@ test('independent validation and Docker builds start together; final gate checks
 test('browser shards reuse one build and retain isolated performance and Windows baselines', () => {
   const shards = browser.jobs['chromium-tests'].strategy.matrix.include;
   assert.deepEqual(shards.filter(shard => shard.suite === 'quality').map(shard => shard.shard),
-    Array.from({ length: 64 }, (_, i) => `${i + 1}/64`));
+    Array.from({ length: 32 }, (_, i) => `${i + 1}/32`));
   for (const [suite, count] of [['a11y', 13], ['performance', 1]]) {
     assert.deepEqual(shards.filter(shard => shard.suite === suite).map(shard => shard.shard),
       Array.from({ length: count }, (_, i) => `${i + 1}/${count}`));
   }
   assert.deepEqual(browser.jobs['cross-browser-tests'].strategy.matrix,
-    { browser: ['firefox', 'webkit'], shard: [1, 2, 3] });
+    { browser: ['firefox', 'webkit', 'edge'], shard: [1, 2, 3] });
+  assert.deepEqual(browser.jobs['cross-browser'].strategy.matrix.browser, ['firefox', 'webkit', 'edge']);
+  const edgeInstall = browser.jobs['cross-browser-tests'].steps.find(step => step.run === 'npx playwright install msedge');
+  assert.equal(edgeInstall?.if, "matrix.browser == 'edge'");
   assert.match(commands(browser.jobs['cross-browser-tests']), /--shard=\$\{\{ matrix\.shard \}\}\/3/);
-  assert.match(commands(browser.jobs['visual-tests']), /--shard=\$\{\{ matrix\.shard \}\}\/64 --workers=2/);
+  assert.match(commands(browser.jobs['visual-tests']), /--shard=\$\{\{ matrix\.shard \}\}\/32 --workers=2/);
   for (const id of ['chromium-tests', 'visual-tests', 'cross-browser-tests']) {
     const job = browser.jobs[id];
     assert.equal(job.needs, 'browser-build');
@@ -80,7 +83,7 @@ test('browser shards reuse one build and retain isolated performance and Windows
   }
   assert.equal(browser.jobs['visual-tests']['runs-on'], 'windows-latest');
   assert.deepEqual(browser.jobs['visual-tests'].strategy.matrix.shard,
-    Array.from({ length: 64 }, (_, i) => i + 1));
+    Array.from({ length: 32 }, (_, i) => i + 1));
   assert.equal(Object.values(browser.jobs).filter(job => commands(job).includes('npm run e2e:build')).length, 1);
 });
 

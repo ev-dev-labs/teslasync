@@ -98,6 +98,11 @@ export const baseConfig: PlaywrightTestConfig = {
       use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 }, colorScheme: 'dark' },
     },
     {
+      name: 'edge-smoke',
+      testMatch: /cross-browser\.smoke\.spec\.ts/,
+      use: { ...devices['Desktop Edge'], channel: 'msedge', viewport: { width: 1440, height: 900 }, colorScheme: 'dark' },
+    },
+    {
       name: 'harness-contract',
       testMatch: /harness\.contract\.spec\.ts/,
     },
