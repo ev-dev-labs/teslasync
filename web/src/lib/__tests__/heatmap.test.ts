@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { converter, wcagContrast } from 'culori';
 import { CHART_SEQUENTIAL, CHART_SEQUENTIAL_DARK } from '../colors';
-import { createHeatmapScale } from '../heatmap';
+import { createHeatmapScale, HEATMAP_LEVELS, heatmapTextColor } from '../heatmap';
 
 describe('activity heatmap scale', () => {
   it('distributes ordinary active values even with an extreme outlier and many idle days', () => {
@@ -32,6 +32,16 @@ describe('activity heatmap scale', () => {
 
 describe('activity heatmap palette', () => {
   const oklch = converter('oklch');
+  it('keeps numbered-cell text readable against every active fill in both themes', () => {
+    for (const level of HEATMAP_LEVELS) {
+      if (level === 0) continue;
+      const foregrounds = /^light-dark\(([^,]+),\s*([^)]+)\)$/.exec(heatmapTextColor(level));
+      expect(foregrounds).not.toBeNull();
+      expect(wcagContrast(foregrounds![1], CHART_SEQUENTIAL[level])).toBeGreaterThanOrEqual(4.5);
+      expect(wcagContrast(foregrounds![2], CHART_SEQUENTIAL_DARK[level])).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
   it.each([
     ['light', CHART_SEQUENTIAL, ['#ffffff', '#fafbfc', '#f1f5f9'], -1],
     ['dark', CHART_SEQUENTIAL_DARK, ['#11151c', '#171c25', '#434c5e'], 1],

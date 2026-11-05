@@ -1,4 +1,4 @@
-import { CHART_SEQUENTIAL, CHART_SEQUENTIAL_DARK } from './colors';
+import { CHART_SEQUENTIAL, CHART_SEQUENTIAL_DARK, DATA_VISUAL_COLORS } from './colors';
 
 export type HeatmapLevel = 0 | 1 | 2 | 3 | 4;
 export const HEATMAP_LEVELS = [0, 1, 2, 3, 4] as const;
@@ -27,5 +27,5 @@ export function heatmapColor(level: HeatmapLevel | null): string {
 /** Numbered cells need readable text on both ends of the sequential scale. */
 export function heatmapTextColor(level: HeatmapLevel | null): string {
   if (!level) return 'var(--text-secondary)';
-  return `light-dark(${level === 1 ? '#101b25' : '#ffffff'}, #101b25)`;
+  return `light-dark(${level === 1 ? DATA_VISUAL_COLORS.canvasInk : DATA_VISUAL_COLORS.canvasWhite}, ${DATA_VISUAL_COLORS.canvasInk})`;
 }
