@@ -390,7 +390,7 @@ describe('DriveCalendarPage', () => {
     vi.useFakeTimers();
     let view: ReturnType<typeof render> | undefined;
     try {
-      vi.setSystemTime(new Date(2024, 0, 2, 23, 59));
+      vi.setSystemTime(new Date(Date.UTC(2024, 0, 2, 23, 59)));
       useHistoryMock.mockReturnValue(query({
         data: [
           { id: 1, startTs: new Date(2024, 0, 1, 9).toISOString(), distanceM: 1000 },
@@ -403,7 +403,7 @@ describe('DriveCalendarPage', () => {
       expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-streak', '2');
 
       for (const [day, days, streak] of [[3, 4, 2], [4, 5, 0]]) {
-        vi.setSystemTime(new Date(2024, 0, day!, 0, 1));
+        vi.setSystemTime(new Date(Date.UTC(2024, 0, day!, 0, 1)));
         view.rerender(<MemoryRouter initialEntries={[path]}>
           <DriveCalendarPage />
           <LocationProbe />

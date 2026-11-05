@@ -28,7 +28,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { ChargingSession } from '@/api/types';
-import { chartTokens } from '@/lib/tokens';
+import { HEATMAP_LEVELS, heatmapColor } from '@/lib/heatmap';
 import {
   buildGrid,
   heatColor,
@@ -143,52 +143,46 @@ describe('buildGrid', () => {
 });
 
 describe('heatColor', () => {
-  it('returns the floor swatch when count or max is 0', () => {
-    expect(heatColor(0, 10)).toBe(HEAT_LEGEND[0]);
-    expect(heatColor(5, 0)).toBe(HEAT_LEGEND[0]);
-    expect(heatColor(0, 0)).toBe(HEAT_LEGEND[0]);
-    expect(heatColor(-0, 10)).toBe(HEAT_LEGEND[0]);
+  it('returns the neutral floor only for measured zero, not for an isolated active slot', () => {
+    expect(heatColor(0, [10])).toBe(HEAT_LEGEND[0]);
+    expect(heatColor(5, [5])).toBe(HEAT_LEGEND[2]);
+    expect(heatColor(0, [])).toBe(HEAT_LEGEND[0]);
+    expect(heatColor(-0, [10])).toBe(HEAT_LEGEND[0]);
   });
 
-  it('maps each intensity band, honouring exclusive < boundaries', () => {
-    // ratio 0.1 → lowest active band.
-    expect(heatColor(1, 10)).toBe(HEAT_LEGEND[1]);
-    expect(heatColor(25, 100)).toBe(HEAT_LEGEND[2]);
-    expect(heatColor(50, 100)).toBe(HEAT_LEGEND[3]);
-    expect(heatColor(75, 100)).toBe(HEAT_LEGEND[4]);
+  it('maps active quantiles to all four bands despite an extreme busy slot', () => {
+    const counts = [1, 2, 3, 1000];
+    expect(heatColor(1, counts)).toBe(HEAT_LEGEND[1]);
+    expect(heatColor(2, counts)).toBe(HEAT_LEGEND[2]);
+    expect(heatColor(3, counts)).toBe(HEAT_LEGEND[3]);
+    expect(heatColor(1000, counts)).toBe(HEAT_LEGEND[4]);
   });
 
   it('returns the hottest swatch at full intensity', () => {
-    expect(heatColor(10, 10)).toBe(HEAT_LEGEND[4]);
-    expect(heatColor(9, 10)).toBe(HEAT_LEGEND[4]);
+    expect(heatColor(10, [1, 2, 9, 10])).toBe(HEAT_LEGEND[4]);
+    expect(heatColor(100, [1, 2, 9, 10])).toBe(HEAT_LEGEND[4]);
   });
 
-  it.each([null, undefined, NaN, Infinity, -Infinity])(
+  it.each([null, undefined, NaN, Infinity, -Infinity, -1])(
     'keeps missing or invalid input %s distinct from measured zero',
     (value) => {
-      expect(heatColor(value, 10)).toBe('var(--surface-2)');
-      expect(heatColor(5, value)).toBe('var(--surface-2)');
-      expect(heatColor(0, value)).toBe('var(--surface-2)');
-      expect(heatColor(value, 0)).toBe('var(--surface-2)');
-      expect(heatColor(value, 10)).not.toBe(heatColor(0, 10));
+      expect(heatColor(value, [1, 10])).toBe('transparent');
+      expect(heatColor(value, [])).toBe('transparent');
+      expect(heatColor(value, [10])).not.toBe(heatColor(0, [10]));
     },
   );
 
   it.each([
-    [-1, 10, 1],
-    [1, -10, 1],
-    [-25, -100, 2],
-    [-50, -100, 3],
-    [-75, -100, 4],
-    [0.124, 0.5, 1],
-    [0.125, 0.5, 2],
-    [0.249, 0.5, 2],
-    [0.25, 0.5, 3],
-    [0.374, 0.5, 3],
-    [0.375, 0.5, 4],
-    [2, 1, 4],
-  ])('preserves count/max for signed and fractional inputs (%s / %s)', (count, max, stop) => {
-    expect(heatColor(count, max)).toBe(HEAT_LEGEND[stop]);
+    [0.125, [0.125, 0.25, 0.375, 0.5], 1],
+    [0.25, [0.125, 0.25, 0.375, 0.5], 2],
+    [0.375, [0.125, 0.25, 0.375, 0.5], 3],
+    [0.5, [0.125, 0.25, 0.375, 0.5], 4],
+    [5, [5, 5, 5], 2],
+    [5, [5], 2],
+    [1, [1, 2], 1],
+    [2, [1, 2], 4],
+  ] as const)('preserves fractional values and deterministic ties (%s in %s)', (count, counts, stop) => {
+    expect(heatColor(count, counts)).toBe(HEAT_LEGEND[stop]);
   });
 });
 
@@ -199,14 +193,21 @@ describe('HEAT_LEGEND', () => {
   });
 
   it('aligns with heatColor at the floor and ceiling of the scale', () => {
-    expect(HEAT_LEGEND[0]).toBe(heatColor(0, 10));
-    expect(HEAT_LEGEND[HEAT_LEGEND.length - 1]).toBe(heatColor(10, 10));
-    expect(HEAT_LEGEND).toEqual(
-      [4, 15, 40, 55, 75].map(
-        (strength) => `color-mix(in srgb, ${chartTokens.series[0]} ${strength}%, transparent)`,
-      ),
-    );
+    expect(HEAT_LEGEND[0]).toBe(heatColor(0, [1, 10]));
+    expect(HEAT_LEGEND[HEAT_LEGEND.length - 1]).toBe(heatColor(10, [1, 10]));
+    expect(HEAT_LEGEND).toEqual(HEATMAP_LEVELS.map(heatmapColor));
   });
+});
+
+it('buckets charging sessions in the selected timezone, including DST repeated hours', () => {
+  const model = buildGrid([
+    makeSession({ started_at: '2026-11-01T08:30:00Z', total_energy_added_wh: 5000 }),
+    makeSession({ started_at: '2026-11-01T09:30:00Z', total_energy_added_wh: 7000 }),
+    makeSession({ started_at: '2026-11-02T03:30:00Z', total_energy_added_wh: 9000 }),
+  ], 'America/Los_Angeles');
+  expect(model.grid[0][1]).toEqual({ count: 2, totalEnergyWh: 12000 });
+  expect(model.grid[0][19]).toEqual({ count: 1, totalEnergyWh: 9000 });
+  expect(model.grid[1][3].count).toBe(0);
 });
 
 describe('aggregateLocations', () => {

@@ -14,6 +14,7 @@ import { ToastProvider } from '@/components/feedback';
 import type { Drive } from '@/types/driving';
 import { formatDayKey } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
+import { heatmapColor, type HeatmapLevel } from '@/lib/heatmap';
 import { forecastDepartures } from '../lib/departureForecast';
 
 import {
@@ -424,17 +425,20 @@ describe('DepartureForecastPage', () => {
     expect(cells).toHaveLength(168);
     const supported = cells.filter((cell) => !cell.classList.contains('border-dashed'));
     expect(supported.map((cell) => cell.textContent)).toEqual(['1', '4', '8', '16']);
-    expect(supported.map((cell) => cell.className.match(/text-secondary\)_(\d+)%/)?.[1]))
-      .toEqual(['2', '4', '6', '8']);
+    expect(supported.map(cell => cell.dataset.heatmapLevel)).toEqual(['1', '2', '3', '4']);
     for (const cell of supported) {
-      expect(cell).toHaveClass('border-[var(--border-default)]');
+      const probe = document.createElement('div');
+      probe.style.backgroundColor = heatmapColor(Number(cell.dataset.heatmapLevel) as HeatmapLevel);
+      expect(cell.style.backgroundColor).toBe(probe.style.backgroundColor);
+      expect(cell).toHaveClass('border-[var(--border-subtle)]');
       expect(cell.title).toContain(`${cell.textContent} departures across`);
     }
     const unsupported = cells.filter((cell) => cell.classList.contains('border-dashed'));
     expect(unsupported).toHaveLength(164);
     for (const cell of unsupported) {
       expect(cell).toHaveTextContent('·');
-      expect(cell).toHaveClass('bg-[var(--surface-1)]');
+      expect(cell.style.backgroundColor).toBe('transparent');
+      expect(cell).toHaveAttribute('data-heatmap-state', 'unavailable');
       expect(cell.title).toContain('no recorded departures');
     }
   });

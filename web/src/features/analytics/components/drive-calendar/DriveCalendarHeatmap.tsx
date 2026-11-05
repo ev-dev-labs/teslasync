@@ -4,8 +4,8 @@ import { CalendarDays } from 'lucide-react';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { Accordion, Table, HelpTooltip, Caption } from '@/components/ui';
 import { LayoutCard, SourceContent } from '@/components/layout';
+import { HeatmapCell, HeatmapLegend } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
-import { cn } from '@/lib/cn';
 import { formatDayKey } from '@/lib/dateFormat';
 
 import type { DriveCalendar } from '../../lib/driveCalendar';
@@ -13,13 +13,6 @@ import { formatCalendarMonth, getWeekdayLabels } from './labels';
 import type { DriveCalendarSectionState } from './types';
 
 const WEEK_GRID = 'grid grid-flow-col auto-cols-[minmax(1.125rem,1fr)] gap-1';
-const LEVEL_CLASSES = [
-  'bg-[var(--surface-2)]',
-  'bg-[var(--theme-primary)]/25',
-  'bg-[var(--theme-primary)]/45',
-  'bg-[var(--theme-primary)]/70',
-  'bg-[var(--theme-primary)]',
-] as const;
 
 interface DriveCalendarHeatmapProps extends DriveCalendarSectionState {
   calendar: DriveCalendar;
@@ -45,7 +38,7 @@ export function DriveCalendarHeatmap({
           <HelpTooltip
             size="sm"
             i18nKey="help.driveCalendar.body"
-            defaultValue="Each cell is one day; darker means more distance, scaled against your 95th-percentile day so one road trip doesn't flatten the rest. Streaks count consecutive days with at least one drive."
+            defaultValue="Each cell is one day in your selected time zone. Four levels rank active days by distance: darker in light mode, lighter in dark mode. Outlined cells are outside the range or before the first returned drive, not proof of no driving. Continuous coverage is unknown. Streaks count consecutive days with at least one drive."
             ariaLabel={t('help.driveCalendar.iconLabel', 'More info about the calendar')}
           />
         {!isLoading && !error && (
@@ -76,7 +69,7 @@ export function DriveCalendarHeatmap({
         )}
       >
         <div
-          role="img"
+          role="group"
           aria-label={t(
             'driveCalendar.heatmap.aria',
             'Daily driving heatmap for the selected period; {{active}} active days and a {{streak}} day end-of-period streak',
@@ -113,9 +106,20 @@ export function DriveCalendarHeatmap({
                       className="grid grid-rows-7 gap-1"
                     >
                       {week.days.map((day) => (
-                        <div
+                        <HeatmapCell
                           key={day.date}
-                          title={t(
+                          data-date={day.date}
+                          level={day.availability === 'observed' ? day.level : null}
+                          label={day.availability !== 'observed' ? t(
+                            'driveCalendar.heatmap.unavailableCell',
+                            '{{date}} · {{reason}}',
+                            {
+                              date: formatDayKey(day.date, { style: 'long', locale: unitPrefs.locale }),
+                              reason: day.availability === 'outside-range'
+                                ? t('driveCalendar.heatmap.outsideRange', 'Outside the selected range')
+                                : t('driveCalendar.heatmap.beforeFirstDrive', 'Before the first returned drive; coverage unknown'),
+                            },
+                          ) : t(
                             'driveCalendar.heatmap.cell',
                             '{{date}} · {{distance}} · {{count}} drives',
                             {
@@ -127,10 +131,7 @@ export function DriveCalendarHeatmap({
                               count: day.drives,
                             },
                           )}
-                          className={cn(
-                            'h-5 rounded-[3px] border border-[var(--border-subtle)]',
-                            LEVEL_CLASSES[day.level] ?? LEVEL_CLASSES[0],
-                          )}
+                          className="h-5"
                         />
                       ))}
                     </div>
@@ -140,24 +141,13 @@ export function DriveCalendarHeatmap({
             </div>
           </div>
 
-          <div
-            className="mt-3 flex items-center justify-end gap-1.5"
-            aria-label={t('driveCalendar.heatmap.legend', 'Driving intensity from less to more')}
-          >
-            <Caption>{t('driveCalendar.less', 'Less')}</Caption>
-            {LEVEL_CLASSES.map((levelClass, level) => (
-              <span
-                key={level}
-                className={cn(
-                  'h-3.5 w-3.5 rounded-[3px] border border-[var(--border-subtle)]',
-                  levelClass,
-                )}
-                aria-hidden="true"
-              />
-            ))}
-            <Caption>{t('driveCalendar.more', 'More')}</Caption>
-          </div>
         </div>
+        <HeatmapLegend
+          label={t('driveCalendar.heatmap.legend', 'Driving intensity from less to more')}
+          less={t('driveCalendar.less', 'Less')}
+          more={t('driveCalendar.more', 'More')}
+          unavailable={t('driveCalendar.heatmap.unavailable', 'Outside range / before first drive')}
+        />
         <Accordion title={t('card.viewDetails', 'View details')} className="mt-3">
           <Table variant="embedded" aria-label={t('driveCalendar.activity', 'Driving activity')}>
             <thead>
@@ -168,13 +158,19 @@ export function DriveCalendarHeatmap({
               </tr>
             </thead>
             <tbody>
-              {calendar.days.map((day) => (
+              {calendar.days.filter(day => day.availability !== 'outside-range').map((day) => (
                 <tr key={day.date}>
                   <th scope="row">
                     {formatDayKey(day.date, { style: 'long', locale: unitPrefs.locale })}
                   </th>
-                  <td>{formatDistance(day.distanceM)}</td>
-                  <td>{day.drives}</td>
+                  {day.availability === 'before-first-drive' ? (
+                    <td colSpan={2}>{t('driveCalendar.heatmap.beforeFirstDrive', 'Before the first returned drive; coverage unknown')}</td>
+                  ) : (
+                    <>
+                      <td>{formatDistance(day.distanceM)}</td>
+                      <td>{day.drives}</td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>

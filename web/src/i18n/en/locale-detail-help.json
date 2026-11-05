@@ -245,7 +245,7 @@
       "iconLabel": "More info about the advisor"
     },
     "driveCalendar": {
-      "body": "Each cell is one day; darker means more distance, scaled against your 95th-percentile day so one road trip doesn't flatten the rest. Streaks count consecutive days with at least one drive.",
+      "body": "Each cell is one day in your selected time zone. Four levels rank active days by distance: darker in light mode, lighter in dark mode. Outlined cells are outside the range or before the first returned drive, not proof of no driving. Continuous coverage is unknown. Streaks count consecutive days with at least one drive.",
       "iconLabel": "More info about the calendar"
     },
     "explorer": {

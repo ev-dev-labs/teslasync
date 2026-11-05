@@ -1,8 +1,10 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Caption, Text } from '@/components/ui';
+import { HeatmapCell, HeatmapLegend } from '@/components/charts';
 import { DAYS } from '@/lib/constants';
-import { heatColor, HEAT_LEGEND, formatHourLabel, type HeatmapModel } from './heatmapData';
+import { createHeatmapScale } from '@/lib/heatmap';
+import { formatHourLabel, type HeatmapModel } from './heatmapData';
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 
@@ -17,6 +19,7 @@ interface HeatmapGridProps {
   formatEnergy: (wh: number) => string;
   /** The containing chart frame already provides the visualization label. */
   framed?: boolean;
+  dayLabels?: readonly string[];
 }
 
 /**
@@ -25,10 +28,12 @@ interface HeatmapGridProps {
  * sensible min-width and scrolls inside its own container on narrow screens so
  * the page itself never scrolls horizontally.
  */
-export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false }: HeatmapGridProps) {
+export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false, dayLabels = DAYS }: HeatmapGridProps) {
   const { t } = useTranslation();
   const grid = model?.grid ?? [];
-  const maxCount = model?.maxCount ?? 0;
+  const scale = useMemo(() => createHeatmapScale(
+    (model?.grid ?? []).flatMap(row => row.map(cell => cell.count)),
+  ), [model]);
   const [hovered, setHovered] = useState<{ day: number; hour: number } | null>(null);
   const sessionsWord = t('charging.heatmap.sessionsWord', 'sessions');
 
@@ -37,9 +42,10 @@ export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false }
       <div className="overflow-x-auto">
         <div
           {...(framed ? {} : {
-            role: 'img' as const,
+            role: 'group' as const,
             'aria-label': t('charging.heatmap.gridAria', 'Charging sessions by weekday and hour of day'),
           })}
+          data-heatmap-grid
           className="grid min-w-[640px] grid-cols-[56px_repeat(24,minmax(0,1fr))] gap-[2px]"
         >
           {/* Hour header row */}
@@ -51,7 +57,7 @@ export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false }
           ))}
 
           {/* One row per weekday */}
-          {DAYS.map((dayLabel, day) => (
+          {dayLabels.map((dayLabel, day) => (
             <Fragment key={dayLabel}>
               <div className="flex items-center">
                 <Text variant="bodySm">{dayLabel}</Text>
@@ -67,11 +73,11 @@ export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false }
                 const partial = hasEnergy && recordedCount < cell.count;
                 const isHovered = hovered?.day === day && hovered?.hour === hour;
                 return (
-                  <div
+                  <HeatmapCell
                     key={hour}
-                    title={`${dayLabel} ${formatHourLabel(hour)} — ${cell.count} ${sessionsWord}`}
+                    label={`${dayLabel} ${formatHourLabel(hour)} — ${cell.count} ${sessionsWord}`}
+                    level={scale(cell.count)}
                     className={`relative h-7 rounded-sm transition-transform ${isHovered ? 'z-10 scale-125' : ''}`}
-                    style={{ backgroundColor: heatColor(cell.count, maxCount) }}
                     onMouseEnter={() => setHovered({ day, hour })}
                     onMouseLeave={() => setHovered(null)}
                   >
@@ -90,9 +96,9 @@ export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false }
                             {t('charging.heatmap.partialMeasurements', 'Some returned sessions have no recorded value; the total includes recorded values only.')}
                           </Text>
                         )}
-                      </div>
+                          </div>
                     )}
-                  </div>
+                      </HeatmapCell>
                 );
               })}
             </Fragment>
@@ -100,19 +106,11 @@ export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false }
         </div>
       </div>
 
-      {/* Color-scale legend */}
-      <div className="mt-3 flex items-center gap-2">
-        <Caption>{t('charging.heatmap.less', 'Less')}</Caption>
-        {HEAT_LEGEND.map((c) => (
-          <span
-            key={c}
-            aria-hidden="true"
-            className="h-3 w-6 rounded-sm"
-            style={{ backgroundColor: c }}
-          />
-        ))}
-        <Caption>{t('charging.heatmap.more', 'More')}</Caption>
-      </div>
+      <HeatmapLegend
+        label={`${t('charging.heatmap.less', 'Less')} – ${t('charging.heatmap.more', 'More')}`}
+        less={t('charging.heatmap.less', 'Less')}
+        more={t('charging.heatmap.more', 'More')}
+      />
     </div>
   );
 }

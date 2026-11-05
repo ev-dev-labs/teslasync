@@ -1,4 +1,6 @@
 export { LinearGauge } from './LinearGauge';
+export { HeatmapCell } from './HeatmapCell';
+export { HeatmapLegend } from './HeatmapLegend';
 export { BipolarBar, type BipolarBarProps } from './BipolarBar';
 export { ThresholdBar, type ThresholdBarProps, type ThresholdBand } from './ThresholdBar';
 export {

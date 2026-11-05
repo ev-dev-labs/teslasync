@@ -22,7 +22,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
 
-import {formatTime} from '@/lib/dateFormat'
+import {formatTime, zonedDateParts} from '@/lib/dateFormat'
 import {formatWeekdayName} from '@/lib/dateConvert';
 import { chartTokens } from '@/lib/tokens';
 
@@ -45,7 +45,7 @@ export default function ChargingHeatmapPage() {
   const { vehicleId: selectedVehicleId, vehiclesState } = useSelectedVehicle();
   const vehicleId = selectedVehicleId != null && Number.isSafeInteger(selectedVehicleId) && selectedVehicleId > 0
     ? selectedVehicleId : null;
-  const { startInstant, endInstantExclusive } = useRangeState({
+  const { startInstant, endInstantExclusive, timezone } = useRangeState({
     persistKey: 'charging-heatmap.range',
     defaultPresetId: 'all',
   });
@@ -73,7 +73,7 @@ export default function ChargingHeatmapPage() {
   const hasData = sessions.length > 0;
 
   const { formatEnergy } = useUnits();
-  // Labels describe browser-local bucket identities, not real instants to
+  // Labels describe selected-zone bucket identities, not real instants to
   // convert into another timezone. UTC reference dates keep them stable.
   const dayLabels = useMemo(() => {
     return Array.from({ length: 7 }, (_, day) => formatWeekdayName(new Date(Date.UTC(2024, 0, 7 + day)), { locale, tz: 'UTC' }));
@@ -85,7 +85,7 @@ export default function ChargingHeatmapPage() {
     formatTime(new Date(Date.UTC(2024, 0, 7, hour)), { locale, tz: 'UTC' }),
   ), [locale]);
 
-  const model = useMemo(() => buildGrid(sessions), [sessions]);
+  const model = useMemo(() => buildGrid(sessions, timezone), [sessions, timezone]);
   const insights = useMemo(() => deriveInsights(model), [model]);
   const dayOfWeekData = useMemo(() => aggregateByDayOfWeek(model, dayLabels), [model, dayLabels]);
   const locationData = useMemo(
@@ -94,7 +94,7 @@ export default function ChargingHeatmapPage() {
   );
   const loadedScope = t('charging.heatmap.loadedScope', 'Summary of the returned sessions for the shared vehicle and date scope (request limit: 2,000). This is not a complete-history total.');
   const slotData = useMemo(() => {
-    // Match the existing browser-local buckets without treating missing Wh as
+    // Match the selected-zone buckets without treating missing Wh as
     // a measured zero in the keyboard/touch/export alternative.
     const recorded = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
     const energy = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
@@ -102,9 +102,13 @@ export default function ChargingHeatmapPage() {
       if (!session.started_at) continue;
       const started = new Date(session.started_at);
       if (Number.isNaN(started.getTime())) continue;
+      const parts = timezone ? zonedDateParts(started, timezone) : null;
+      if (timezone && !parts) continue;
+      const day = parts?.weekday ?? started.getDay();
+      const hour = parts?.hour ?? started.getHours();
       if (session.total_energy_added_wh != null && Number.isFinite(session.total_energy_added_wh)) {
-        recorded[started.getDay()][started.getHours()] += 1;
-        energy[started.getDay()][started.getHours()] += session.total_energy_added_wh;
+        recorded[day][hour] += 1;
+        energy[day][hour] += session.total_energy_added_wh;
       }
     }
     return model.grid.flatMap((row, day) => row.map((cell, hour) => ({
@@ -123,7 +127,7 @@ export default function ChargingHeatmapPage() {
             ? t('charging.heatmap.partialMeasurements', 'Some returned sessions have no recorded value; the total includes recorded values only.')
             : '',
     })));
-  }, [model, sessions, t, dayLabels, hourLabels]);
+  }, [model, sessions, t, dayLabels, hourLabels, timezone]);
   const slotColumns = [
     { key: 'day', label: t('charging.heatmap.day', 'Day') },
     { key: 'hour', label: t('chart.col.time', 'Time') },
@@ -274,7 +278,7 @@ export default function ChargingHeatmapPage() {
                     height={300}
                     mobileHeight={300}
                   >
-                    <HeatmapGrid model={model} energySlots={slotData} formatEnergy={formatEnergy} framed />
+                    <HeatmapGrid model={model} energySlots={slotData} formatEnergy={formatEnergy} dayLabels={dayLabels} framed />
                   </EmbeddedChart>
                   <Accordion
                     title={t('chart.a11y.fallbackTableLabel', '{{title}} — data table', {

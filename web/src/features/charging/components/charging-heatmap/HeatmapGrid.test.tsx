@@ -76,7 +76,7 @@ const cellIndex = (day: number, hour: number) => day * 24 + hour;
 
 /** All 168 heat cells, in DOM order (day 0 hours 0..23, day 1 …). */
 const heatCells = (container: HTMLElement) =>
-  container.querySelectorAll<HTMLElement>('div[title]');
+  container.querySelectorAll<HTMLElement>('[data-heatmap-grid] div[title]');
 
 /** Normalise rgba serialisation so whitespace differences don't break equality. */
 const norm = (s: string) => s.replace(/\s+/g, '');
@@ -87,12 +87,11 @@ const normalizedCssColor = (value: string) => {
 };
 
 describe('HeatmapGrid — structure & accessibility', () => {
-  it('renders a labelled role="img" grid with all weekdays and hour columns', () => {
+  it('renders a labelled grid group with all weekdays and hour columns', () => {
     render(<HeatmapGrid model={emptyModel()} formatEnergy={makeFormatEnergy()} />);
 
-    // The whole visualization is a single image with a text alternative.
     expect(
-      screen.getByRole('img', {
+      screen.getByRole('group', {
         name: 'Charging sessions by weekday and hour of day',
       }),
     ).toBeInTheDocument();
@@ -138,14 +137,14 @@ describe('HeatmapGrid — colour scale', () => {
     const cells = heatCells(container);
 
     // Busiest slot: ratio 1 → hottest stop.
-    expect(norm(cells[cellIndex(1, 9)].style.backgroundColor)).toBe(normalizedCssColor(heatColor(4, 4)));
+    expect(norm(cells[cellIndex(1, 9)].style.backgroundColor)).toBe(normalizedCssColor(heatColor(4, [1, 4])));
     // Quarter-density slot: distinct mid stop, not the hot one.
-    expect(norm(cells[cellIndex(3, 14)].style.backgroundColor)).toBe(normalizedCssColor(heatColor(1, 4)));
+    expect(norm(cells[cellIndex(3, 14)].style.backgroundColor)).toBe(normalizedCssColor(heatColor(1, [1, 4])));
     expect(norm(cells[cellIndex(3, 14)].style.backgroundColor)).not.toBe(
-      normalizedCssColor(heatColor(4, 4)),
+      normalizedCssColor(heatColor(4, [1, 4])),
     );
     // Empty slot: faintest base fill.
-    expect(norm(cells[cellIndex(0, 0)].style.backgroundColor)).toBe(normalizedCssColor(heatColor(0, 4)));
+    expect(norm(cells[cellIndex(0, 0)].style.backgroundColor)).toBe(normalizedCssColor(heatColor(0, [1, 4])));
   });
 });
 
@@ -202,11 +201,11 @@ describe('HeatmapGrid — legend', () => {
     expect(screen.getByText('Less')).toBeInTheDocument();
     expect(screen.getByText('More')).toBeInTheDocument();
 
-    const swatches = container.querySelectorAll<HTMLElement>('span[aria-hidden="true"]');
+    const swatches = container.querySelectorAll<HTMLElement>('span[aria-hidden="true"] [data-heatmap-level]');
     expect(swatches).toHaveLength(HEAT_LEGEND.length);
     swatches.forEach((swatch, i) => {
       // Swatches are purely decorative and paint the exact scale colours.
-      expect(swatch).toHaveAttribute('aria-hidden', 'true');
+      expect(swatch.parentElement).toHaveAttribute('aria-hidden', 'true');
       expect(norm(swatch.style.backgroundColor)).toBe(normalizedCssColor(HEAT_LEGEND[i]));
     });
   });
@@ -226,10 +225,10 @@ describe('HeatmapGrid — hardening', () => {
     }).not.toThrow();
 
     expect(heatCells(container)).toHaveLength(168);
-    expect(screen.getByRole('img')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Charging sessions by weekday and hour of day' })).toBeInTheDocument();
     // Every slot paints the faint base fill (heatColor(0, 0)).
     expect(norm(heatCells(container)[cellIndex(0, 0)].style.backgroundColor)).toBe(
-      normalizedCssColor(heatColor(0, 0)),
+      normalizedCssColor(heatColor(0, [])),
     );
   });
 

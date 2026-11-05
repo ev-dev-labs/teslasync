@@ -128,20 +128,18 @@ export const CHART_COLORS_NEON_DARK = [
 
 export const CHART_SEQUENTIAL = [
   '#e7eef8',
-  '#a9c7ee',
-  '#5c9bdc',
-  '#1779e1',
-  '#125db0',
-  '#0b3d78',
+  '#5985ad',
+  '#366991',
+  '#214d74',
+  '#102f50',
 ] as const
 
 export const CHART_SEQUENTIAL_DARK = [
   '#17304f',
-  '#224b70',
-  '#2d6696',
-  '#1779e1',
-  '#65a7fa',
-  '#b0cdf8',
+  '#6d9fc9',
+  '#8ab3d5',
+  '#b0d1ea',
+  '#d9eafa',
 ] as const
 
 export const CHART_DIVERGING = [

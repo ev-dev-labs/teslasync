@@ -39,8 +39,8 @@ function DriveCalendarContent() {
   const todayMs = Date.now();
 
   const calendar = useMemo(
-    () => buildDriveCalendar(drivesQuery.data ?? [], todayMs, { start, end }),
-    [drivesQuery.data, start, end, todayMs],
+    () => buildDriveCalendar(drivesQuery.data ?? [], todayMs, { start, end }, timezone),
+    [drivesQuery.data, start, end, todayMs, timezone],
   );
   const compactHeatmap = calendar.weeks.length <= COMPACT_HEATMAP_MAX_WEEKS;
 

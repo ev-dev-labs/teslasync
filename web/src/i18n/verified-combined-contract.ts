@@ -29,6 +29,10 @@ export function assertCombinedCheckpoint(group: 'canonical' | 'owner', file: str
 export const currentOwnerCheckpointFiles = checkpoints.owner
 
 const dashboardPolishAdditions = [
+  ['driveCalendar.heatmap.unavailableCell', '{{date}} · {{reason}}'],
+  ['driveCalendar.heatmap.outsideRange', 'Outside the selected range'],
+  ['driveCalendar.heatmap.beforeFirstDrive', 'Before the first returned drive; coverage unknown'],
+  ['driveCalendar.heatmap.unavailable', 'Outside range / before first drive'],
   ['dashboard.chargingEstimatedLabel', '{{label}} (estimated)'],
   ['dashboard.chargerAc', 'AC'],
   ['charging.stats.energySplitUnknownAria', 'Energy split: {{ac}}% AC, {{dc}}% DC, {{unknown}}% unknown'],
@@ -66,6 +70,9 @@ const dashboardPolishAdditions = [
 /** Assert exact new copy before projecting it out of unchanged historical fingerprints. */
 export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(catalog: T): T {
   const previous = structuredClone(catalog)
+  const heatmapHelp = (previous.help as Record<string, Record<string, unknown>>).driveCalendar
+  expect(heatmapHelp.body).toBe('Each cell is one day in your selected time zone. Four levels rank active days by distance: darker in light mode, lighter in dark mode. Outlined cells are outside the range or before the first returned drive, not proof of no driving. Continuous coverage is unknown. Streaks count consecutive days with at least one drive.')
+  heatmapHelp.body = "Each cell is one day; darker means more distance, scaled against your 95th-percentile day so one road trip doesn't flatten the rest. Streaks count consecutive days with at least one drive."
   // Pin every reviewed notification addition/change before reconstructing the
   // predecessor. The historical catalog counts and hashes remain unchanged.
   for (const change of notificationCopyChanges) {
