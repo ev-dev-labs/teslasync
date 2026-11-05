@@ -362,7 +362,8 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
       expect(ticks.filter(tick => tick.text?.includes('%')).length).toBeGreaterThan(2);
       expect(ticks.filter(tick => !tick.text?.includes('%')).length).toBeGreaterThan(2);
     }
-    await expect(panel.getByText('AC / home', { exact: true })).toBeVisible();
+    await expect(panel.getByText('AC', { exact: true })).toBeVisible();
+    await expect(panel.getByText('AC / home', { exact: true })).toHaveCount(0);
     await expect(panel).not.toContainText('DC fast');
   }
   if (id === 'charge-history') {

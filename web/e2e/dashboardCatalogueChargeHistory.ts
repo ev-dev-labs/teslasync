@@ -173,6 +173,7 @@ export async function assertCatalogueChargeCategories(page: Page, chart: Locator
   expect(session.id).toBe(701);
   expect(session.vehicle_id).toBe(7);
   expect(session.charger_type).toBe('AC');
+  expect(session.is_home).not.toBe(true);
   expect(session.total_energy_added_wh).toBe(42000);
   for (const response of served) {
     expect(data(response.body), 'Every actual charging source preserves same session/order/payload').toEqual(original);
@@ -181,7 +182,8 @@ export async function assertCatalogueChargeCategories(page: Page, chart: Locator
   const detailBinding = await renderedChargeBinding(detail, 'review-charging-session-detail', 'detail');
   assertCatalogueChargeQueryBinding(chartBinding, 'review-charge-session-chart', 'chart', session);
   assertCatalogueChargeQueryBinding(detailBinding, 'review-charging-session-detail', 'detail', session);
-  await expect(detail.getByText('AC / home', { exact: true })).toHaveCount(1);
+  await expect(detail.getByText('AC', { exact: true })).toHaveCount(1);
+  await expect(detail.getByText('AC / home', { exact: true })).toHaveCount(0);
   await positionCataloguePanel(chart);
   await assertCatalogueYAxisTickBounds(chart, 'charge-session-chart', info);
   const table = chart.getByRole('table', { name: 'Charge sessions — data table', exact: true });
@@ -189,7 +191,7 @@ export async function assertCatalogueChargeCategories(page: Page, chart: Locator
   const rows = table.getByRole('row');
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(1).getByRole('cell').nth(1)).toHaveText('42');
-  await expect(rows.nth(1).getByRole('cell').nth(2)).toHaveText('home');
+  await expect(rows.nth(1).getByRole('cell').nth(2)).toHaveText('ac');
   await expect(chart.getByText('Unknown', { exact: true })).toHaveCount(0);
   const paths = chart.locator('.recharts-bar-rectangle .recharts-rectangle');
   const bars = await paths.evaluateAll(nodes => nodes.map(node => {
@@ -208,30 +210,31 @@ export async function assertCatalogueChargeCategories(page: Page, chart: Locator
     }
     return null;
   }));
-  const home = bars.filter(bar => bar !== null && bar.height > 0 && bar.width > 0);
-  expect(home, 'Actual nonzero rendered source bar must be home, never DC guess').toHaveLength(1);
-  const bar = home[0];
-  if (!bar) throw new Error('Missing actually rendered home bar');
-  expect(bar.payload.type).toBe('home');
+  const ac = bars.filter(bar => bar !== null && bar.height > 0 && bar.width > 0);
+  expect(ac, 'Actual nonzero rendered source bar must be AC, never a Home or DC guess').toHaveLength(1);
+  const bar = ac[0];
+  if (!bar) throw new Error('Missing actually rendered AC bar');
+  expect(bar.payload.type).toBe('ac');
   expect(bar.payload.energy).toBe(42);
   expect(bar.value).toBe(42);
   await page.mouse.move(bar.point.x, bar.point.y);
-  const tooltip = chart.getByRole('tooltip').filter({ hasText: 'Home / AC:' });
+  const tooltip = chart.getByRole('tooltip').filter({ hasText: 'AC:' });
   await expect(tooltip).toBeVisible();
-  const homeLabel = tooltip.getByText('Home / AC:', { exact: true });
-  await expect(homeLabel).toBeVisible();
-  const homeRow = homeLabel.locator('..');
-  await expect(homeRow).toContainText('42');
-  await expect(homeRow).toContainText('kWh');
+  const acLabel = tooltip.getByText('AC:', { exact: true });
+  await expect(acLabel).toBeVisible();
+  await expect(tooltip).not.toContainText('Home');
+  const acRow = acLabel.locator('..');
+  await expect(acRow).toContainText('42');
+  await expect(acRow).toContainText('kWh');
   const tooltipText = await tooltip.textContent();
   await captureCataloguePanel(page, chart, info, `charge-session-category-tooltip-${width}-${theme}.png`);
   await page.mouse.move(bar.point.x, bar.point.y);
-  await expect(homeRow).toContainText('42');
+  await expect(acRow).toContainText('42');
   await page.mouse.move(0, 0);
   await expect(tooltip).toBeHidden();
   await writeFile(info.outputPath('charge-session-category-contract.json'), JSON.stringify({
     served, originalSessionOrder: [701], unchangedOriginalEnergyWh: 42000,
-    chartBinding, detailBinding, actualHomeBar: bar, tooltipText, width, theme,
+    chartBinding, detailBinding, actualAcBar: bar, tooltipText, width, theme,
     unknownBrowserCoverage: 'NOT_EXERCISED_ORIGINAL_AC_SOURCE_ONLY; parent91 source tests retained, not browser acceptance',
     noFixturePayloadMutation: true,
   }, null, 2));
