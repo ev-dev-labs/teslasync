@@ -153,7 +153,7 @@ export function WidgetFlowDiagram({
             {flowing && linkLabel && (
               <text
                 x={fromPos.cx === toPos.cx ? midX + 64 : midX}
-                y={fromPos.cx === toPos.cx ? midY + 4 : midY - 36}
+                y={fromPos.cx === toPos.cx ? midY - 4 : midY - 36}
                 textAnchor="middle"
                 fontSize={vertical ? 14 : 10}
                 fontWeight={600}
