@@ -7,7 +7,7 @@ import { catalogueAnalyticsSources, catalogueWire, installCatalogueRoutes, type 
 import { catalogueOperationalSources } from './dashboardCatalogueOperationalSources';
 import { catalogueSystemSources } from './dashboardCatalogueSystemSources';
 import { fulfillApiFixture, resolveApiFixture, type MockApiController } from './mockApi';
-import { assertCatalogueYAxisTickBounds } from './dashboardCatalogueGeometry';
+import { assertCatalogueYAxisTickBounds, catalogueRenderedColumns } from './dashboardCatalogueGeometry';
 import { assertCatalogueQueryScope, catalogueRecordedSources, renderedCatalogueQueryBinding } from './dashboardCatalogueChargeHistory';
 import { assertCataloguePostureContent } from './dashboardCatalogueHeaderCollision';
 
@@ -34,7 +34,7 @@ export const remainingReadings: Record<string, RegExp> = {
   'alert-feed': /Catalogue battery threshold/,
   'notification-stats': /Delivery rate\s*90\.0%/,
   'fleet-stats': /Distance \(30d\)\s*300\s*km/,
-  'fleet-stats-bar': /Distance \(30d\)\s*300\s*km/,
+  'fleet-stats-bar': /Distance \(view range\)\s*300\s*km/,
   'weekly-summary-card': /42\.00/,
   'weekly-digest': /Distance\s*last week 21 km\s*42\s*km\s*100\.00%/,
   'fsd-weekly': /Reported FSD\s*—/,
@@ -45,12 +45,12 @@ export const remainingReadings: Record<string, RegExp> = {
   'anomaly-detector': /Catalogue cabin temperature exceeded baseline/,
   'fsm-distribution': /driving/i,
   'year-review': /Total distance\s*1,234\s*km/,
-  'analytics-summary': /Distance \(30d\)\s*300\s*km/,
+  'analytics-summary': /Distance \(view range\)\s*300\s*km/,
   'recently-unlocked-achievements': /Catalogue first trip/,
   'automation-status': /Catalogue cabin routine/,
   'automation-history': /Catalogue cabin routine/,
-  'charge-status': /Not charging\s*72%/,
-  'charge-status-live': /Not charging\s*72%/,
+  'charge-status': /Not charging\s*Charge limit\s*—\s*72%/,
+  'charge-status-live': /Not charging\s*Charge limit\s*—\s*72%/,
   'charge-history': /42\.00/,
   'charge-session-chart': /Added \(kWh\)/,
   'charge-cost-tracker': /\$6\.72/,
@@ -459,12 +459,13 @@ export async function assertRemainingContent(panel: Locator, id: string, width: 
     }
   }
   if (id === 'live-signal-sparklines') {
+    const endpoint = await catalogueRenderedColumns(panel) >= 3 ? 80 : 56;
     await expect(panel.getByRole('img', { name: 'Increasing', exact: true })).toHaveCount(1);
     await expect(panel.getByRole('img', { name: 'Increasing', exact: true })).toBeVisible();
     await expect(panel.getByRole('img', { name: 'Stable', exact: true })).toHaveCount(2);
     await expect(panel.getByRole('img', { name: 'Battery Level trend', exact: true })).toBeVisible();
     await expect(panel.getByRole('img', { name: 'Battery Level trend', exact: true })
-      .locator('polyline').first()).toHaveAttribute('points', /^0,20 \S+ \S+ 56,0$/);
+      .locator('polyline').first()).toHaveAttribute('points', new RegExp(`^0,20 \\S+ \\S+ ${endpoint},0$`));
   }
   if (id === 'fsd-weekly') {
     const weekly = panel.getByTestId('fsd-weekly-distance');

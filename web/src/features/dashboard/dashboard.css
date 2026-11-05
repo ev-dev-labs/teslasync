@@ -44,7 +44,7 @@
   }
 
   .widget-content-fit .widget-chart-well {
-    height: var(--widget-visual-height, 200px);
+    height: auto;
     min-height: var(--widget-visual-height, 200px);
     flex: none;
   }
@@ -54,12 +54,17 @@
   }
 
   .widget-content-fit [data-chart-fluid="true"] [data-chart-viewport] {
-    min-height: 0;
+    /* Size containment excludes descendants from this intrinsic measurement. */
+    min-height: var(--widget-visual-height, 180px);
   }
 
   .widget-content-fit .leaflet-container {
     height: var(--widget-visual-height, 240px);
     min-height: var(--widget-visual-height, 240px);
+  }
+
+  .widget-content-fit .widget-flow-diagram {
+    max-height: var(--widget-visual-height, 300px);
   }
 
   .dashboard-widget [data-role="widget-shell-header"] {

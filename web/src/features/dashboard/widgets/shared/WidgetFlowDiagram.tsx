@@ -112,7 +112,7 @@ export function WidgetFlowDiagram({
   return (
     <svg
       viewBox={`${viewLeft} 0 360 ${vertical ? 300 : 150}`}
-      className="mx-auto h-full min-h-0 w-full"
+      className="widget-flow-diagram mx-auto h-full min-h-0 w-full"
       role="img"
       aria-label={ariaLabel}
     >
