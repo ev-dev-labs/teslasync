@@ -190,8 +190,12 @@ describe('canonical calendar frames preserve independent source bodies', () => {
       <DriveCalendarHeatmap calendar={populated} isLoading={false} error={null} onRetry={vi.fn()} />
     </MemoryRouter>);
 
-    const heatmap = screen.getByRole('img', { name: /Daily driving heatmap/ });
+    const heatmap = screen.getByRole('group', { name: /Daily driving heatmap/ });
     expect(within(heatmap).getByTitle('Jun 29, 2026 · 12.5 km · 2 drives')).toBeInTheDocument();
+    expect(within(heatmap).getByRole('img', { name: 'Jun 29, 2026 · 12.5 km · 2 drives' }))
+      .toHaveAttribute('data-heatmap-state', 'active');
+    expect(within(heatmap).getByRole('img', { name: 'Jun 28, 2026 · Before the first returned drive; coverage unknown' }))
+      .toHaveAttribute('data-heatmap-state', 'unavailable');
     expect(heatmap.querySelectorAll('[title]')).toHaveLength(
       populated.weeks.reduce((count, week) => count + week.days.length, 0),
     );
@@ -205,13 +209,13 @@ describe('canonical calendar frames preserve independent source bodies', () => {
     expect(within(table).getAllByRole('columnheader').map(header => header.textContent))
       .toEqual(['Date', 'Distance', 'Drives']);
     expect(within(table).getAllByRole('row')).toHaveLength(populated.days.length + 1);
-    for (const [date, distance, count] of [
-      ['Jun 28, 2026', '0.0 km', '0'],
-      ['Jun 29, 2026', '12.5 km', '2'],
-      ['Jun 30, 2026', '0.0 km', '0'],
-    ]) {
+    for (const [date, values] of [
+      ['Jun 28, 2026', ['Before the first returned drive; coverage unknown']],
+      ['Jun 29, 2026', ['12.5 km', '2']],
+      ['Jun 30, 2026', ['0.0 km', '0']],
+    ] as const) {
       const row = within(table).getByRole('rowheader', { name: date }).closest('tr')!;
-      expect(within(row).getAllByRole('cell').map(cell => cell.textContent)).toEqual([distance, count]);
+      expect(within(row).getAllByRole('cell').map(cell => cell.textContent)).toEqual(values);
     }
     expect(heatmap).toBeInTheDocument();
     expect(container.querySelector('[tabindex]:not([tabindex="0"]):not([tabindex="-1"])')).toBeNull();
