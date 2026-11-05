@@ -251,7 +251,7 @@ describe('DBHealthPage — row chart context and count preferences', () => {
     const scope = 'Showing 15 of 16 returned tables by row count. The complete table list is below.';
     expect(screen.getAllByText(scope).length).toBeGreaterThan(0);
     expect(screen.getByRole('figure', { name: 'Rows' }))
-      .toHaveAccessibleDescription(new RegExp(scope.replace(/\./g, '\\.')));
+      .toHaveAccessibleDescription(new RegExp(scope.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     const chartTable = screen.getAllByRole('table').find((table) => table !== tablesGrid())!;
     const rankedNames = within(chartTable).getAllByRole('row').slice(1)
       .map((row) => within(row).getAllByRole('cell')[0].textContent);
@@ -274,7 +274,7 @@ describe('DBHealthPage — row chart context and count preferences', () => {
     renderPage();
     const scope = 'Showing 3 of 3 returned tables by row count. The complete table list is below.';
     expect(screen.getByRole('figure', { name: 'Rows' }))
-      .toHaveAccessibleDescription(new RegExp(scope.replace(/\./g, '\\.')));
+      .toHaveAccessibleDescription(new RegExp(scope.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     expect(screen.getAllByText(scope).length).toBeGreaterThan(0);
     expect(within(tablesGrid()).getAllByRole('row')).toHaveLength(4);
   });
