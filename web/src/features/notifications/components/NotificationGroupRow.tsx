@@ -97,7 +97,7 @@ export function NotificationGroupRow({
   // omits it to avoid duplicating the same row above and below the chevron.
   const latest = group.latest;
   const latestRule = latest.alert_id != null ? ruleMap[latest.alert_id] : undefined;
-  const latestVehicleId = latestRule?.vehicle_id ?? undefined;
+  const latestVehicleId = group.latest?.vehicle_id ?? undefined;
   const latestVehicle = latestVehicleId != null ? vehicleMap[latestVehicleId] : undefined;
 
   const otherMembers = members.filter((m) => m.id !== latest.id);
@@ -272,7 +272,7 @@ export function NotificationGroupRow({
           )}
           {otherMembers.map((m) => {
             const rule = m.alert_id != null ? ruleMap[m.alert_id] : undefined;
-            const vehicle = rule?.vehicle_id != null ? vehicleMap[rule.vehicle_id] : undefined;
+            const vehicle = m.vehicle_id != null ? vehicleMap[m.vehicle_id] : undefined;
             return (
               <NotificationRow
                 key={m.id}

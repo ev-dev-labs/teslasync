@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 import { expect } from 'vitest'
 import ts from 'typescript'
 import checkpoints from './verified-combined-checkpoints.json'
+import notificationCopyChanges from './verified-notification-copy.json'
 
 // These exact files passed the key/default/interpolation/count audit before generation.
 // Keep all historical assertions for producers outside this explicit checkpoint set.
@@ -55,6 +56,16 @@ const dashboardPolishAdditions = [
 /** Assert exact new copy before projecting it out of unchanged historical fingerprints. */
 export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(catalog: T): T {
   const previous = structuredClone(catalog)
+  // Pin every reviewed notification addition/change before reconstructing the
+  // predecessor. The historical catalog counts and hashes remain unchanged.
+  for (const change of notificationCopyChanges) {
+    let parent: Record<string, unknown> = previous
+    for (const part of change.path.slice(0, -1)) parent = parent[part] as Record<string, unknown>
+    const leaf = change.path[change.path.length - 1]
+    expect(parent[leaf], change.path.join('.')).toEqual(change.current)
+    if ('previous' in change) parent[leaf] = change.previous
+    else delete parent[leaf]
+  }
   for (const [key, expected] of dashboardPolishAdditions) {
     const parts = key.split('.')
     let parent: Record<string, unknown> = previous

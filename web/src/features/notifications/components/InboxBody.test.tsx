@@ -282,6 +282,33 @@ afterEach(() => { onlineManager.setOnline(true); });
 /* ── 1. Flat view ─────────────────────────────────────── */
 
 describe('InboxBody — flat view', () => {
+  it('separates evidence columns and uses captured vehicle identity instead of the rule scope', async () => {
+    installRequest({ logs: () => Promise.resolve([makeLog({
+      title: 'Captured vehicle alert', vehicle_id: 2, alert_id: 10, event_type: 'alert.rule',
+      message: 'A complete notification message', severity: 'info',
+    })]) });
+    renderInbox();
+    await screen.findByText('Captured vehicle alert');
+    const table = screen.getByRole('table', { name: 'Inbox' });
+    expect(Array.from(table.querySelectorAll('th[data-column-key]')).map(cell => cell.getAttribute('data-column-key')))
+      .toEqual(['received', 'title', 'message', 'vehicle', 'severity', 'read', 'inspect']);
+    const titleCell = table.querySelector('td[data-column-key="title"]');
+    expect(titleCell).toHaveTextContent(/^Captured vehicle alert$/);
+    expect(within(table).queryByText('Model 1')).not.toBeInTheDocument();
+    expect(within(table).getByText(/Model 2|#2/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }));
+    for (const column of ['Rule', 'Type', 'Channel', 'Status', 'Delivery']) {
+      expect(screen.getByRole('checkbox', { name: `Show or hide ${column}` })).not.toBeChecked();
+    }
+    expect(screen.queryByRole('checkbox', { name: 'Show or hide Source' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Show or hide Type' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Show or hide Rule' }));
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+    expect(within(table).getByText('Alert rule')).toBeInTheDocument();
+    expect(within(table).queryByText('alert.rule')).not.toBeInTheDocument();
+    expect(within(table).getByRole('link', { name: 'Battery Low' })).toHaveAttribute('href', '/notifications/rules?rule=10');
+  });
+
   it('presents the warning URL alias while preserving raw scope and archived lifecycle on unrelated edits', async () => {
     const logs = [
       makeLog({ id: 71, title: 'Warning evidence', severity: 'warning', archived_at: NOW_ISO }),
@@ -342,7 +369,8 @@ describe('InboxBody — flat view', () => {
     expect(screen.getByRole('dialog', { name: 'MQTT recovered' })).toHaveTextContent(
       'The message broker is receiving telemetry again.',
     );
-    expect(screen.getByRole('dialog')).toHaveTextContent('system.mqtt.recovery');
+    expect(screen.getByRole('dialog')).toHaveTextContent('System MQTT recovery');
+    expect(screen.getByRole('dialog')).not.toHaveTextContent('system.mqtt.recovery');
     await waitFor(() => expect(markReadPosts().some(call => JSON.stringify(bodyOf(call)).includes('23'))).toBe(true));
   });
 
@@ -357,12 +385,12 @@ describe('InboxBody — flat view', () => {
     });
     renderInbox();
     await screen.findByText('Recovered');
-    expect(screen.getByText('Legacy channel delivery')).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Source' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Read full message: Recovered' }));
     expect(screen.getByRole('dialog', { name: 'Recovered' })).toHaveTextContent('Full first line');
     expect(screen.getByRole('dialog', { name: 'Recovered' })).toHaveTextContent('Full second line');
     fireEvent.click(screen.getByRole('button', { name: /close/i }));
-    fireEvent.click(screen.getByRole('button', { name: 'Source filter' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Vehicle filter' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Source' }), { target: { value: 'rule' } });
     await waitFor(() => {
       expect(flatCalls().some(([path]) => String(path).includes('source=rule'))).toBe(true);
@@ -413,10 +441,11 @@ describe('InboxBody — flat view', () => {
     renderInbox();
 
     expect(await screen.findByText('Weekly digest sent to Slack')).toBeInTheDocument();
-    expect(screen.getByText('Weekly FSD digest')).toHaveAttribute('title', 'digest.fsd.weekly');
+    expect(screen.queryByText('digest.fsd.weekly')).not.toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Select Weekly digest sent to Slack' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Open notification: Weekly digest sent to Slack' }));
     expect(await screen.findByRole('dialog')).toHaveTextContent('Your weekly driving summary');
+    expect(screen.getByRole('dialog')).toHaveTextContent('Weekly FSD digest');
   });
 
   it('shows five loading skeletons (never a blank panel) while the flat query is in flight', () => {
@@ -622,7 +651,7 @@ describe('InboxBody — grouped view', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Open notification: Persisted critical evidence' }));
       const drawer = await screen.findByRole('dialog');
       await within(drawer).findByRole('button', { name: 'Retry' });
-      expect(within(drawer).getByText('Severity').closest('dt')?.nextElementSibling).toHaveTextContent('critical');
+      expect(within(drawer).getByText('Severity').closest('dt')?.nextElementSibling).toHaveTextContent('Critical');
       expect(within(drawer).getByText('Owner').closest('dt')?.nextElementSibling).toHaveTextContent('Unknown');
       expect(within(drawer).getByText('Resolution state').closest('dt')?.nextElementSibling).toHaveTextContent('Unknown');
       expect(within(drawer).queryByRole('button', { name: 'Acknowledge alert' })).not.toBeInTheDocument();
@@ -733,10 +762,10 @@ describe('InboxBody — archived mode', () => {
     const message = `Full message\n${'unbroken-message-'.repeat(30)}`;
     const error = `Delivery explanation\n${'unbroken-error-'.repeat(30)}`;
     const { container } = render(
-      <NotificationInboxDetails
+      <MemoryRouter><NotificationInboxDetails
         log={makeLog({
           message, error, archived_at: NOW_ISO, read_at: NOW_ISO,
-          scheduled_at: NOW_ISO, latency_ms: 1250, event_type: 'battery.low',
+          scheduled_at: NOW_ISO, latency_ms: 1250, event_type: 'alert.rule', vehicle_id: 1,
         })}
         rule={makeRule({ name: 'Original rule' })}
         vehicle={makeVehicle(1)}
@@ -744,7 +773,7 @@ describe('InboxBody — archived mode', () => {
           { id: 'restore', label: 'Restore notification with its complete long action label', onClick: restore },
           { id: 'delete', label: 'Delete', destructive: true, disabled: true, onClick: vi.fn() },
         ]}
-      />,
+      /></MemoryRouter>,
     );
     const list = container.querySelector('dl');
     expect(list).toHaveClass('sm:grid-cols-2', 'lg:grid-cols-3');
@@ -759,11 +788,11 @@ describe('InboxBody — archived mode', () => {
       expect(field.nextElementSibling?.className).toBe(`${typography.role.bodySm} mt-1 break-words`);
     }
     expect(fields[5].nextElementSibling).toHaveTextContent(/1[,\s]?250 ms/);
-    expect(fields[6].nextElementSibling).toHaveTextContent('battery.low');
+    expect(fields[6].nextElementSibling).toHaveTextContent('Alert rule');
     expect(fields[7].nextElementSibling).toHaveTextContent('Original rule');
     expect(fields[8].nextElementSibling).toHaveTextContent('Model 1');
     expect(fields[9].nextElementSibling).toHaveTextContent('1');
-    expect(fields[10].nextElementSibling).toHaveTextContent('warn');
+    expect(fields[10].nextElementSibling).toHaveTextContent('Warn');
     expect(fields[11].nextElementSibling).toHaveTextContent('Sent');
     for (const value of [message, error]) {
       expect(screen.getByText(value, { exact: true, normalizer: text => text }))
@@ -791,8 +820,10 @@ describe('InboxBody — archived mode', () => {
     const readMessage = screen.getByRole('button', { name: `Read full message: ${title}` });
     for (const target of [open, readMessage]) {
       expect(target).toHaveClass('!h-auto', '!min-h-11', 'text-left');
-      expect(target.firstElementChild).toHaveClass('line-clamp-2', 'break-words');
+      expect(target.firstElementChild).toHaveClass('break-words');
     }
+    expect(readMessage.firstElementChild).toHaveClass('whitespace-pre-wrap');
+    expect(readMessage.firstElementChild).not.toHaveClass('line-clamp-2');
     expect(open).toHaveClass('xl:!min-h-9');
     expect(readMessage).toHaveClass('md:!min-h-9');
     expect(screen.getByRole('button', { name: `Inspect notification: ${title}` }))
@@ -1194,7 +1225,7 @@ describe('InboxBody — redesigned evidence contracts', () => {
         installRequest({ logs: () => Promise.resolve([makeLog({ title: 'Configurable evidence' })]) });
         renderInbox();
         await screen.findByText('Configurable evidence');
-        expect(screen.getByRole('columnheader', { name: 'Received' })).toHaveClass('hidden', 'xl:table-cell');
+        expect(screen.getByRole('columnheader', { name: 'Received' })).toBeVisible();
         expect(screen.getByRole('columnheader', { name: /Notification/ })).not.toHaveClass('hidden');
         expect(screen.getByRole('button', { name: 'Expand row: Configurable evidence' })).toHaveAttribute('aria-expanded', 'false');
         const resize = screen.getByRole('separator', { name: 'Resize column Notification' });
@@ -1221,9 +1252,10 @@ describe('InboxBody — redesigned evidence contracts', () => {
         const details = screen.getByRole('region', { name: 'Notification details' });
         expect(within(details).getByText('0 ms')).toBeInTheDocument();
         expect(within(details).getByText('Connection refused')).toBeInTheDocument();
-        expect(within(details).getByText('system.mqtt.outage')).toBeInTheDocument();
-        expect(within(details).getByText('Sent').nextElementSibling).toHaveTextContent('—');
-        expect(within(details).getByText('Severity').nextElementSibling).toHaveTextContent('—');
+        expect(within(details).getByText('System MQTT outage')).toBeInTheDocument();
+        expect(within(details).queryByText('system.mqtt.outage')).not.toBeInTheDocument();
+        expect(within(details).queryByText('Sent')).not.toBeInTheDocument();
+        expect(within(details).queryByText('Severity')).not.toBeInTheDocument();
         for (const name of ['Mark as read', 'Archive', 'Delete']) {
           expect(within(details).getByRole('button', { name })).toBeInTheDocument();
         }
@@ -1248,7 +1280,7 @@ describe('InboxBody — redesigned evidence contracts', () => {
         renderInbox();
         fireEvent.click(await screen.findByRole('button', { name: 'Open notification: Unknown latency' }));
         const dialog = screen.getByRole('dialog', { name: 'Unknown latency' });
-        expect(within(dialog).getByText('Delivery latency').nextElementSibling).toHaveTextContent('—');
+        expect(within(dialog).queryByText('Delivery latency')).not.toBeInTheDocument();
         expect(within(dialog).queryByText('0 ms')).not.toBeInTheDocument();
         await waitFor(() => expect(markReadPosts()).toHaveLength(1));
       });
@@ -1310,8 +1342,8 @@ describe('InboxBody — controlled column-header filters', () => {
         expect(new URL(String(flatCalls().at(-1)?.[0]), 'http://teslasync.local').searchParams.get('offset')).toBe('0');
         fireEvent.click(screen.getByRole('button', { name: 'Done' }));
 
-        fireEvent.click(screen.getByRole('button', { name: 'Source filter' }));
-        const sourceDialog = screen.getByRole('dialog', { name: 'Source filter' });
+        fireEvent.click(screen.getByRole('button', { name: 'Vehicle filter' }));
+        const sourceDialog = screen.getByRole('dialog', { name: 'Vehicle filter' });
         fireEvent.change(within(sourceDialog).getByRole('combobox', { name: 'Vehicle' }), { target: { value: '1' } });
         await assertQueries({ severity: 'warn', vehicle_id: '1' });
         fireEvent.change(within(sourceDialog).getByRole('combobox', { name: 'Rule' }), { target: { value: '10' } });

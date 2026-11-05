@@ -94,7 +94,9 @@
     "web/src/features/telemetry/components/SignalLogBreakdownPanel.tsx",
     "web/src/features/telemetry/components/statstrip-correlation/CorrelationStatStrip.tsx",
     "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
-    "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx"
+    "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
+    "web/src/features/notifications/components/NotificationInboxTable.tsx",
+    "web/src/features/notifications/components/NotificationInboxDetails.tsx"
   ],
   "owner": [
     "web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx",
@@ -492,7 +494,7 @@
     {
       "file": "web/src/features/notifications/components/InboxBody.tsx",
       "calls": 77,
-      "sha256": "f24d7c1916550fc1ed89bbdf9c722c488b96ee1ef3afa23bba3f325a8eb5d9be"
+      "sha256": "2c5c6e778338d167c2f159de15d6467026e2eba7120667a78b9b53e0613856a1"
     },
     {
       "file": "web/src/features/power-user/pages/SqlPlaygroundPage.tsx",
@@ -593,6 +595,16 @@
       "file": "web/src/features/system/pages/DBHealthPage.tsx",
       "calls": 48,
       "sha256": "bf7254f963e660ea2518bd9a0fd1e4d8642377c258239ba46997088e5ff763af"
+    },
+    {
+      "file": "web/src/features/notifications/components/NotificationInboxTable.tsx",
+      "sha256": "c6df9cd4836a1ef1d6ced51f8ff793bcebf5fc20aa675393808a95790123c690",
+      "calls": 32
+    },
+    {
+      "file": "web/src/features/notifications/components/NotificationInboxDetails.tsx",
+      "sha256": "ca3d6eb3ce62a980c33f8bad5a64d6c92ce7a3f8583973fe3ad019a8f7f95c15",
+      "calls": 18
     }
   ]
 }

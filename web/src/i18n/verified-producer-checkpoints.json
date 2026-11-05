@@ -989,13 +989,13 @@
   },
   {
     "file": "web/src/features/notifications/components/NotificationInboxDetails.tsx",
-    "calls": 19,
-    "sha256": "7fd0abe4db296056a656fe75dfa466f357d186b011089926381240323f63b972"
+    "calls": 18,
+    "sha256": "ca3d6eb3ce62a980c33f8bad5a64d6c92ce7a3f8583973fe3ad019a8f7f95c15"
   },
   {
     "file": "web/src/features/notifications/components/NotificationInboxTable.tsx",
-    "calls": 52,
-    "sha256": "b77607658f4760ddb77c594f3388ed7f0d954c11e64c60d26a4a58a0acadef43"
+    "calls": 32,
+    "sha256": "c6df9cd4836a1ef1d6ced51f8ff793bcebf5fc20aa675393808a95790123c690"
   },
   {
     "file": "web/src/features/notifications/pages/AuditLogPage.tsx",

@@ -4,31 +4,31 @@ import { ruleTemplates } from './alertRuleTemplates';
 const ORIGINAL_NAMES = [
   'Battery Low (< 20%)',
   'Battery Critical (< 10%)',
-  'Battery Full (>= 90%)',
-  'Charge Limit Reached',
+  'Battery at or above 90%',
+  'Battery at or above 80%',
   'Range Below 50 km',
   'Charge Complete',
   'Charging Started',
-  'Charging Stopped Unexpectedly',
+  'Charging stopped',
   'Supercharging (DC Fast)',
   'Slow Charge Rate',
-  'Drive Started',
-  'Drive Ended',
+  'Drive gear engaged',
+  'Park gear engaged',
   'Speed Limit Exceeded',
   'High Speed Alert (> 160 km/h)',
   'Reverse Gear Engaged',
   'Odometer Milestone (100k km)',
-  'Car Unlocked While Parked',
+  'Vehicle unlocked (security alert)',
   'Vehicle Locked',
   'Vehicle Unlocked',
   'Sentry Mode Activated',
-  'Door Opened While Parked',
+  'Door state changed',
   'Window Left Open',
   'Valet Mode Enabled',
   'Guest Mode Enabled',
   'Cabin Overheat (> 40C)',
   'Cabin Freezing (< 0C)',
-  'HVAC Left On While Parked',
+  'HVAC running',
   'Climate Keeper Active',
   'Steering Wheel Heater On',
   'Tire Pressure Low',
@@ -37,24 +37,41 @@ const ORIGINAL_NAMES = [
   'Arrived at Home',
   'Left Home',
   'Arrived at Work',
-  'Navigation Started',
+  'Navigation destination changed',
   'Driver Seatbelt Unbuckled',
   'Speed Limit Mode Active',
   'PIN to Drive Disabled',
   'High Motor Temperature (> 80C)',
   'HVIL Fault',
   'High Regenerative Braking',
-  'Software Update Available',
+  'Available software version changed',
   'Software Update Installing',
   'Music Playing',
   'Volume Too High',
-  'Powershare Active',
+  'Powershare state changed',
 ] as const;
 
 const VALID_OPS = new Set(['=', '!=', '<', '<=', '>', '>=', 'changed', 'between', 'outside']);
 const VALID_SEVERITY = new Set(['info', 'warn', 'critical']);
 
 describe('alertRuleTemplates', () => {
+  it('describes turn-signal changes rather than claiming every state is on', () => {
+    const template = ruleTemplates.find(rule => rule.signal_name === 'LightsTurnSignal');
+    expect(template).toMatchObject({
+      name: 'Turn signal changed', op: 'changed', message: 'Turn signal changed to {{LightsTurnSignal}}',
+    });
+  });
+
+  it('does not claim parked, unexpected stopping, stale pressure or reaching the user charge limit without a predicate', () => {
+    for (const template of ruleTemplates) {
+      expect(template.name).not.toMatch(/While Parked|Stopped Unexpectedly|Pressure Stale|Charge Limit Reached/);
+      expect(template.message).not.toContain('while driving');
+    }
+    expect(ruleTemplates.find(rule => rule.name === 'Battery at or above 80%')).toMatchObject({
+      signal_name: 'BatteryLevel', op: '>=', value_num: 80,
+    });
+  });
+
   it('keeps the original 47 templates', () => {
     const names = new Set(ruleTemplates.map((t) => t.name));
     for (const name of ORIGINAL_NAMES) {

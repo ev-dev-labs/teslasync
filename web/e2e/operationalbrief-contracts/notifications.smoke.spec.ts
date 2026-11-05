@@ -93,9 +93,14 @@ for (const theme of ['light', 'dark'] as const) {
         await metric(backlog, 'inbox-warn', '13');
         await metric(backlog, 'inbox-info', '12');
         await expect(page.getByTestId('inbox-result-count')).toHaveText('83 notifications');
-        const table = page.locator('main').getByRole('table', { name: 'Inbox', exact: true });
-        await expect(table.getByRole('button', { name: /^Open notification:/ })).toHaveCount(25);
-        await expectIntegratedGridFooter(table);
+        const table = width === 320 ? page.locator('main [data-mobile-table]') : page.locator('main').getByRole('table', { name: 'Inbox', exact: true });
+        const rows = table.getByRole('button', { name: width === 320 ? /^Synthetic active notification \d+$/ : /^Open notification:/ });
+        await expect(rows).toHaveCount(25);
+        if (width === 320) {
+          await expect(page.locator('main [data-grid-footer]')).toBeVisible();
+        } else {
+          await expectIntegratedGridFooter(table);
+        }
         const report = await briefMarker(page, 'notification-report-brief');
         await metric(report, 'report-triggered', '120');
         await metric(report, 'report-deliveries', '310');
@@ -115,7 +120,7 @@ for (const theme of ['light', 'dark'] as const) {
         const search = frame.getByPlaceholder('Search messages…', { exact: true });
         await search.fill('notification 83');
         await expect.poll(() => ledger.some(entry => entry.params.get('q') === 'notification 83')).toBe(true);
-        await expect(table.getByRole('button', { name: /^Open notification:/ })).toHaveCount(1);
+        await expect(rows).toHaveCount(1);
         await expect(page.getByTestId('inbox-result-count')).toHaveText('1 notifications');
         await metric(backlog, 'inbox-total', '50');
         await metric(report, 'report-triggered', '120');
@@ -128,8 +133,8 @@ for (const theme of ['light', 'dark'] as const) {
         await search.fill('');
         await search.press('Escape');
         await expect(search).toHaveAttribute('aria-expanded', 'false');
-        await expect(table.getByRole('button', { name: /^Open notification:/ })).toHaveCount(25);
-        const column = width < 768 ? 'Notification' : 'Severity';
+        await expect(rows).toHaveCount(25);
+        const column = 'Severity';
         await table.getByRole('button', { name: `${column} filter`, exact: true }).click();
         const filter = page.getByRole('dialog', { name: `${column} filter`, exact: true });
         await filter.getByRole('button', { name: 'Warn', exact: true }).click();
@@ -154,8 +159,8 @@ for (const theme of ['light', 'dark'] as const) {
         await review(page, brief, 'Backlog severity and read status', [
           'Latest 50 archived entries · all time', '25 of 50', 'Last archived',
         ]);
-        const table = page.locator('main').getByRole('table', { name: 'Archived', exact: true });
-        await table.getByRole('button', { name: 'Open notification: Synthetic archived notification 1', exact: true }).click();
+        const table = width === 320 ? page.locator('main [data-mobile-table]') : page.locator('main').getByRole('table', { name: 'Archived', exact: true });
+        await table.getByRole('button', { name: width === 320 ? 'Synthetic archived notification 1' : 'Open notification: Synthetic archived notification 1', exact: true }).click();
         const detail = page.getByRole('dialog', { name: 'Synthetic archived notification 1', exact: true });
         await expect(detail).toContainText('Recorded synthetic evidence; no inferred delivery timestamp.');
         await expect(detail.getByRole('button', { name: 'Restore', exact: true })).toBeVisible();

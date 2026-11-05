@@ -22681,7 +22681,10 @@
         "schedule": "Schedules",
         "test": "Tests",
         "other": "Other",
-        "unknown": "Unattributed"
+        "unknown": "Unattributed",
+        "alertRule": "Alert rule",
+        "placeEnter": "Place arrival",
+        "placeExit": "Place departure"
       },
       "category": "Category",
       "count": "Count",
@@ -22712,7 +22715,9 @@
         "read": "Read",
         "unread": "Unread",
         "inspect": "Inspect",
-        "readState": "Read state"
+        "readState": "Read state",
+        "channel": "Channel",
+        "delivery": "Delivery"
       },
       "detail": {
         "title": "Notification details",
@@ -22849,7 +22854,8 @@
       },
       "loadedCount": "{{count}} loaded · total unavailable",
       "loadedPageMembership": "{{count}} notifications in loaded threads on this page",
-      "viewArchived": "View archived"
+      "viewArchived": "View archived",
+      "channelNumber": "Channel #{{id}}"
     },
     "bulkRead": {
       "success": "{{count}} marked as read"
@@ -23232,7 +23238,219 @@
         "use": "Use template",
         "noMatchesTitle": "No templates found",
         "noMatches": "No templates match your search",
-        "useTemplate": "Use template {{name}}"
+        "useTemplate": "Use template {{name}}",
+        "battery": {
+          "at": {
+            "or": {
+              "above": {
+                "80": {
+                  "name": "Battery at or above 80%",
+                  "message": "Battery at {{BatteryLevel}}% (threshold: 80%)"
+                },
+                "90": {
+                  "name": "Battery at or above 90%",
+                  "message": "Battery reached {{BatteryLevel}}%"
+                }
+              }
+            }
+          }
+        },
+        "charging": {
+          "stopped": {
+            "name": "Charging stopped",
+            "message": "Charging stopped - {{DetailedChargeState}}"
+          }
+        },
+        "drive": {
+          "gear": {
+            "engaged": {
+              "name": "Drive gear engaged",
+              "message": "Gear changed to {{Gear}}"
+            }
+          }
+        },
+        "park": {
+          "gear": {
+            "engaged": {
+              "name": "Park gear engaged",
+              "message": "Gear changed to {{Gear}}"
+            }
+          }
+        },
+        "vehicle": {
+          "unlocked": {
+            "security": {
+              "alert": {
+                "name": "Vehicle unlocked (security alert)",
+                "message": "Vehicle is unlocked"
+              }
+            }
+          }
+        },
+        "door": {
+          "state": {
+            "changed": {
+              "name": "Door state changed",
+              "message": "Door state: {{DoorState}}"
+            }
+          }
+        },
+        "hvac": {
+          "running": {
+            "name": "HVAC running",
+            "message": "HVAC is running"
+          }
+        },
+        "driver": {
+          "seatbelt": {
+            "unbuckled": {
+              "name": "Driver Seatbelt Unbuckled",
+              "message": "Driver seatbelt is unbuckled"
+            }
+          }
+        },
+        "navigation": {
+          "destination": {
+            "changed": {
+              "name": "Navigation destination changed",
+              "message": "Navigation destination: {{DestinationName}}"
+            }
+          }
+        },
+        "available": {
+          "software": {
+            "version": {
+              "changed": {
+                "name": "Available software version changed",
+                "message": "Available software version: {{SoftwareUpdateVersion}}"
+              }
+            }
+          }
+        },
+        "powershare": {
+          "state": {
+            "changed": {
+              "name": "Powershare state changed",
+              "message": "Powershare state: {{PowershareStatus}}"
+            }
+          }
+        },
+        "charge": {
+          "port": {
+            "latch": {
+              "changed": {
+                "name": "Charge port latch changed",
+                "message": "Charge port latch: {{ChargePortLatch}}"
+              }
+            }
+          }
+        },
+        "requested": {
+          "charge": {
+            "current": {
+              "changed": {
+                "name": "Requested charge current changed",
+                "message": "Requested {{ChargeCurrentRequest}}A of {{ChargeCurrentRequestMax}}A max"
+              }
+            }
+          }
+        },
+        "gps": {
+          "state": {
+            "changed": {
+              "name": "GPS state changed",
+              "message": "GPS state: {{GpsState}}"
+            }
+          }
+        },
+        "lane": {
+          "departure": {
+            "avoidance": {
+              "changed": {
+                "name": "Lane departure avoidance changed",
+                "message": "Lane departure avoidance: {{LaneDepartureAvoidance}}"
+              }
+            }
+          }
+        },
+        "turn": {
+          "signal": {
+            "changed": {
+              "name": "Turn signal changed",
+              "message": "Turn signal changed to {{LightsTurnSignal}}"
+            }
+          }
+        },
+        "software": {
+          "update": {
+            "schedule": {
+              "changed": {
+                "name": "Software update schedule changed",
+                "message": "Software update schedule: {{SoftwareUpdateScheduledStartTime}}"
+              }
+            }
+          }
+        },
+        "front": {
+          "left": {
+            "tire": {
+              "pressure": {
+                "reporting": {
+                  "time": {
+                    "changed": {
+                      "name": "Front left tire pressure reporting time changed",
+                      "message": "FL last seen {{TpmsLastSeenPressureTimeFl}}"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "right": {
+            "tire": {
+              "pressure": {
+                "reporting": {
+                  "time": {
+                    "changed": {
+                      "name": "Front right tire pressure reporting time changed",
+                      "message": "FR last seen {{TpmsLastSeenPressureTimeFr}}"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "rear": {
+          "left": {
+            "tire": {
+              "pressure": {
+                "reporting": {
+                  "time": {
+                    "changed": {
+                      "name": "Rear left tire pressure reporting time changed",
+                      "message": "RL last seen {{TpmsLastSeenPressureTimeRl}}"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "right": {
+            "tire": {
+              "pressure": {
+                "reporting": {
+                  "time": {
+                    "changed": {
+                      "name": "Rear right tire pressure reporting time changed",
+                      "message": "RR last seen {{TpmsLastSeenPressureTimeRr}}"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       "snooze": {
         "badge": "Snoozed until {{time}}",

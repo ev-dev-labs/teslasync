@@ -32,31 +32,31 @@ export const ruleTemplates: RuleTemplate[] = [
   // ── Battery (original) ──────────────────────────────────────────
   { name: 'Battery Low (< 20%)', icon: Icons.battery, category: 'Battery', severity: 'warn', message: 'Battery at {{BatteryLevel}}%', cooldown_min: 30, signal_name: 'BatteryLevel', op: '<', value_num: 20 },
   { name: 'Battery Critical (< 10%)', icon: Icons.battery, category: 'Battery', severity: 'critical', message: 'Battery critically low at {{BatteryLevel}}%!', cooldown_min: 15, signal_name: 'BatteryLevel', op: '<', value_num: 10 },
-  { name: 'Battery Full (>= 90%)', icon: Icons.battery, category: 'Battery', severity: 'info', message: 'Battery reached {{BatteryLevel}}%', cooldown_min: 60, signal_name: 'BatteryLevel', op: '>=', value_num: 90 },
-  { name: 'Charge Limit Reached', icon: Icons.battery, category: 'Battery', severity: 'info', message: 'Battery at charge limit {{ChargeLimitSoc}}%', cooldown_min: 60, signal_name: 'BatteryLevel', op: '>=', value_num: 80 },
+  { name: 'Battery at or above 90%', icon: Icons.battery, category: 'Battery', severity: 'info', message: 'Battery reached {{BatteryLevel}}%', cooldown_min: 60, signal_name: 'BatteryLevel', op: '>=', value_num: 90 },
+  { name: 'Battery at or above 80%', icon: Icons.battery, category: 'Battery', severity: 'info', message: 'Battery at {{BatteryLevel}}% (threshold: 80%)', cooldown_min: 60, signal_name: 'BatteryLevel', op: '>=', value_num: 80 },
   { name: 'Range Below 50 km', icon: Icons.battery, category: 'Battery', severity: 'warn', message: 'Range low: {{RatedRange}} km remaining', cooldown_min: 30, signal_name: 'RatedRange', op: '<', value_num: 50 },
 
   // ── Charging (original) ─────────────────────────────────────────
   { name: 'Charge Complete', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Charging complete at {{BatteryLevel}}%', cooldown_min: 60, signal_name: 'ChargeState', op: '=', value_text: 'Complete' },
   { name: 'Charging Started', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Charging started - {{DetailedChargeState}}', cooldown_min: 15, signal_name: 'DetailedChargeState', op: '=', value_text: 'Charging' },
-  { name: 'Charging Stopped Unexpectedly', icon: Icons.charging, category: 'Charging', severity: 'warn', message: 'Charging stopped - {{DetailedChargeState}}', cooldown_min: 30, signal_name: 'DetailedChargeState', op: '=', value_text: 'Stopped' },
+  { name: 'Charging stopped', icon: Icons.charging, category: 'Charging', severity: 'warn', message: 'Charging stopped - {{DetailedChargeState}}', cooldown_min: 30, signal_name: 'DetailedChargeState', op: '=', value_text: 'Stopped' },
   { name: 'Supercharging (DC Fast)', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Supercharging at {{DCChargingPower}} kW', cooldown_min: 30, signal_name: 'DCChargingPower', op: '>', value_num: 50 },
   { name: 'Slow Charge Rate', icon: Icons.charging, category: 'Charging', severity: 'warn', message: 'Charging slow: {{ChargeAmps}}A', cooldown_min: 60, signal_name: 'ChargeAmps', op: 'between', value_min: 0.01, value_max: 5 },
 
   // ── Driving (original) ──────────────────────────────────────────
-  { name: 'Drive Started', icon: Icons.vehicle, category: 'Driving', severity: 'info', message: 'Drive started - gear is {{Gear}}', cooldown_min: 5, signal_name: 'Gear', op: '=', value_text: 'D' },
-  { name: 'Drive Ended', icon: Icons.vehicle, category: 'Driving', severity: 'info', message: 'Drive ended - gear is {{Gear}}', cooldown_min: 5, signal_name: 'Gear', op: '=', value_text: 'P' },
+  { name: 'Drive gear engaged', icon: Icons.vehicle, category: 'Driving', severity: 'info', message: 'Gear changed to {{Gear}}', cooldown_min: 5, signal_name: 'Gear', op: '=', value_text: 'D' },
+  { name: 'Park gear engaged', icon: Icons.vehicle, category: 'Driving', severity: 'info', message: 'Gear changed to {{Gear}}', cooldown_min: 5, signal_name: 'Gear', op: '=', value_text: 'P' },
   { name: 'Speed Limit Exceeded', icon: Icons.speed, category: 'Driving', severity: 'warn', message: 'Speed {{VehicleSpeed}} km/h exceeded limit', cooldown_min: 15, signal_name: 'VehicleSpeed', op: '>', value_num: 120 },
   { name: 'High Speed Alert (> 160 km/h)', icon: Icons.speed, category: 'Driving', severity: 'critical', message: 'Very high speed: {{VehicleSpeed}} km/h!', cooldown_min: 5, signal_name: 'VehicleSpeed', op: '>', value_num: 160 },
   { name: 'Reverse Gear Engaged', icon: Icons.vehicle, category: 'Driving', severity: 'info', message: 'Vehicle in reverse', cooldown_min: 5, signal_name: 'Gear', op: '=', value_text: 'R' },
   { name: 'Odometer Milestone (100k km)', icon: Icons.vehicle, category: 'Driving', severity: 'info', message: 'Odometer: {{Odometer}} km', cooldown_min: 1440, signal_name: 'Odometer', op: '>', value_num: 100000 },
 
   // ── Security (original) ─────────────────────────────────────────
-  { name: 'Car Unlocked While Parked', icon: Icons.locked, category: 'Security', severity: 'critical', message: 'Vehicle is unlocked and parked!', cooldown_min: 30, signal_name: 'Locked', op: '=', value_bool: false },
+  { name: 'Vehicle unlocked (security alert)', icon: Icons.locked, category: 'Security', severity: 'critical', message: 'Vehicle is unlocked', cooldown_min: 30, signal_name: 'Locked', op: '=', value_bool: false },
   { name: 'Vehicle Locked', icon: Icons.locked, category: 'Security', severity: 'info', message: 'Vehicle locked', cooldown_min: 5, signal_name: 'Locked', op: '=', value_bool: true },
   { name: 'Vehicle Unlocked', icon: Icons.locked, category: 'Security', severity: 'info', message: 'Vehicle unlocked', cooldown_min: 5, signal_name: 'Locked', op: '=', value_bool: false },
   { name: 'Sentry Mode Activated', icon: Icons.security, category: 'Security', severity: 'info', message: 'Sentry mode activated', cooldown_min: 30, signal_name: 'SentryMode', op: '=', value_bool: true },
-  { name: 'Door Opened While Parked', icon: Icons.locked, category: 'Security', severity: 'warn', message: 'Door opened - {{DoorState}}', cooldown_min: 15, signal_name: 'DoorState', op: '!=', value_text: 'Closed' },
+  { name: 'Door state changed', icon: Icons.locked, category: 'Security', severity: 'warn', message: 'Door state: {{DoorState}}', cooldown_min: 15, signal_name: 'DoorState', op: '!=', value_text: 'Closed' },
   { name: 'Window Left Open', icon: Icons.vehicle, category: 'Security', severity: 'warn', message: 'Front driver window is {{FdWindow}}', cooldown_min: 60, signal_name: 'FdWindow', op: '!=', value_text: 'Closed' },
   { name: 'Valet Mode Enabled', icon: Icons.security, category: 'Security', severity: 'info', message: 'Valet mode enabled', cooldown_min: 60, signal_name: 'ValetModeEnabled', op: '=', value_bool: true },
   { name: 'Guest Mode Enabled', icon: Icons.security, category: 'Security', severity: 'warn', message: 'Guest mode enabled', cooldown_min: 60, signal_name: 'GuestModeEnabled', op: '=', value_bool: true },
@@ -64,7 +64,7 @@ export const ruleTemplates: RuleTemplate[] = [
   // ── Climate (original) ──────────────────────────────────────────
   { name: 'Cabin Overheat (> 40C)', icon: Icons.climate, category: 'Climate', severity: 'warn', message: 'Cabin temp: {{InsideTemp}}C', cooldown_min: 30, signal_name: 'InsideTemp', op: '>', value_num: 40 },
   { name: 'Cabin Freezing (< 0C)', icon: Icons.climate, category: 'Climate', severity: 'warn', message: 'Cabin temp: {{InsideTemp}}C - freezing!', cooldown_min: 60, signal_name: 'InsideTemp', op: '<', value_num: 0 },
-  { name: 'HVAC Left On While Parked', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'HVAC running while parked', cooldown_min: 30, signal_name: 'HvacPower', op: '=', value_bool: true },
+  { name: 'HVAC running', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'HVAC is running', cooldown_min: 30, signal_name: 'HvacPower', op: '=', value_bool: true },
   { name: 'Climate Keeper Active', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Climate keeper: {{ClimateKeeperMode}}', cooldown_min: 60, signal_name: 'ClimateKeeperMode', op: '!=', value_text: 'Off' },
   { name: 'Steering Wheel Heater On', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Steering wheel heater level {{HvacSteeringWheelHeatLevel}}', cooldown_min: 30, signal_name: 'HvacSteeringWheelHeatLevel', op: '>', value_num: 0 },
 
@@ -77,10 +77,10 @@ export const ruleTemplates: RuleTemplate[] = [
   { name: 'Arrived at Home', icon: Icons.vehicle, category: 'Location', severity: 'info', message: 'Vehicle arrived at home', cooldown_min: 15, signal_name: 'LocatedAtHome', op: '=', value_bool: true },
   { name: 'Left Home', icon: Icons.vehicle, category: 'Location', severity: 'info', message: 'Vehicle left home', cooldown_min: 15, signal_name: 'LocatedAtHome', op: '=', value_bool: false },
   { name: 'Arrived at Work', icon: Icons.vehicle, category: 'Location', severity: 'info', message: 'Vehicle arrived at work', cooldown_min: 15, signal_name: 'LocatedAtWork', op: '=', value_bool: true },
-  { name: 'Navigation Started', icon: Icons.vehicle, category: 'Location', severity: 'info', message: 'Navigating to {{DestinationName}}', cooldown_min: 10, signal_name: 'DestinationName', op: 'changed' },
+  { name: 'Navigation destination changed', icon: Icons.vehicle, category: 'Location', severity: 'info', message: 'Navigation destination: {{DestinationName}}', cooldown_min: 10, signal_name: 'DestinationName', op: 'changed' },
 
   // ── Safety (original) ───────────────────────────────────────────
-  { name: 'Driver Seatbelt Unbuckled', icon: Icons.security, category: 'Safety', severity: 'warn', message: 'Driver seatbelt unbuckled while driving!', cooldown_min: 5, signal_name: 'DriverSeatBelt', op: '=', value_bool: false },
+  { name: 'Driver Seatbelt Unbuckled', icon: Icons.security, category: 'Safety', severity: 'warn', message: 'Driver seatbelt is unbuckled', cooldown_min: 5, signal_name: 'DriverSeatBelt', op: '=', value_bool: false },
   { name: 'Speed Limit Mode Active', icon: Icons.security, category: 'Safety', severity: 'info', message: 'Speed limit mode active', cooldown_min: 60, signal_name: 'SpeedLimitMode', op: '=', value_bool: true },
   { name: 'PIN to Drive Disabled', icon: Icons.security, category: 'Safety', severity: 'warn', message: 'PIN to Drive has been disabled', cooldown_min: 1440, signal_name: 'PinToDriveEnabled', op: '=', value_bool: false },
 
@@ -90,7 +90,7 @@ export const ruleTemplates: RuleTemplate[] = [
   { name: 'High Regenerative Braking', icon: Icons.charging, category: 'Motor', severity: 'info', message: 'Regen power: {{Power}} kW', cooldown_min: 15, signal_name: 'Power', op: '<', value_num: -50 },
 
   // ── Software (original) ─────────────────────────────────────────
-  { name: 'Software Update Available', icon: Icons.charging, category: 'Software', severity: 'info', message: 'Update available: {{SoftwareUpdateVersion}}', cooldown_min: 1440, signal_name: 'SoftwareUpdateVersion', op: 'changed' },
+  { name: 'Available software version changed', icon: Icons.charging, category: 'Software', severity: 'info', message: 'Available software version: {{SoftwareUpdateVersion}}', cooldown_min: 1440, signal_name: 'SoftwareUpdateVersion', op: 'changed' },
   { name: 'Software Update Installing', icon: Icons.charging, category: 'Software', severity: 'info', message: 'Installing update: {{SoftwareUpdateInstallationPercentComplete}}%', cooldown_min: 30, signal_name: 'SoftwareUpdateInstallationPercentComplete', op: '>', value_num: 0 },
 
   // ── Media (original) ────────────────────────────────────────────
@@ -98,7 +98,7 @@ export const ruleTemplates: RuleTemplate[] = [
   { name: 'Volume Too High', icon: Icons.vehicle, category: 'Media', severity: 'info', message: 'Volume at {{MediaAudioVolume}}', cooldown_min: 30, signal_name: 'MediaAudioVolume', op: '>', value_num: 8 },
 
   // ── Powershare (original) ───────────────────────────────────────
-  { name: 'Powershare Active', icon: Icons.charging, category: 'Powershare', severity: 'info', message: 'Powershare active: {{PowershareInstantaneousPowerKW}} kW', cooldown_min: 60, signal_name: 'PowershareStatus', op: 'changed' },
+  { name: 'Powershare state changed', icon: Icons.charging, category: 'Powershare', severity: 'info', message: 'Powershare state: {{PowershareStatus}}', cooldown_min: 60, signal_name: 'PowershareStatus', op: 'changed' },
 
   // ── Battery (new) ───────────────────────────────────────────────
   { name: 'Battery Low (< 30%)', icon: Icons.battery, category: 'Battery', severity: 'info', message: 'Battery dropped to {{BatteryLevel}}%', cooldown_min: 60, signal_name: 'BatteryLevel', op: '<', value_num: 30 },
@@ -116,14 +116,14 @@ export const ruleTemplates: RuleTemplate[] = [
 
   // ── Charging (new) ──────────────────────────────────────────────
   { name: 'Charge Port Door Open', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Charge port door is open', cooldown_min: 30, signal_name: 'ChargePortDoorOpen', op: '=', value_bool: true },
-  { name: 'Charge Port Latched', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Charge port latch: {{ChargePortLatch}}', cooldown_min: 15, signal_name: 'ChargePortLatch', op: 'changed' },
+  { name: 'Charge port latch changed', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Charge port latch: {{ChargePortLatch}}', cooldown_min: 15, signal_name: 'ChargePortLatch', op: 'changed' },
   { name: 'Fast Charger Present', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'DC fast charger detected ({{FastChargerType}})', cooldown_min: 30, signal_name: 'FastChargerPresent', op: '=', value_bool: true },
   { name: 'AC Charging Power High', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'AC charging at {{ACChargingPower}}', cooldown_min: 30, signal_name: 'ACChargingPower', op: '>', value_num: 10 },
   { name: 'Long Time to Full (> 8h)', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Time to full charge: {{TimeToFullCharge}} h', cooldown_min: 120, signal_name: 'TimeToFullCharge', op: '>', value_num: 8 },
   { name: 'Scheduled Charging Pending', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Scheduled charging is pending', cooldown_min: 120, signal_name: 'ScheduledChargingPending', op: '=', value_bool: true },
   { name: 'Scheduled Charging Mode Changed', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Scheduled charging mode: {{ScheduledChargingMode}}', cooldown_min: 60, signal_name: 'ScheduledChargingMode', op: 'changed' },
   { name: 'Charging Cable Changed', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Cable type: {{ChargingCableType}}', cooldown_min: 30, signal_name: 'ChargingCableType', op: 'changed' },
-  { name: 'Charge Current Request Maxed', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Requested {{ChargeCurrentRequest}}A of {{ChargeCurrentRequestMax}}A max', cooldown_min: 60, signal_name: 'ChargeCurrentRequest', op: 'changed' },
+  { name: 'Requested charge current changed', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Requested {{ChargeCurrentRequest}}A of {{ChargeCurrentRequestMax}}A max', cooldown_min: 60, signal_name: 'ChargeCurrentRequest', op: 'changed' },
   { name: 'Charger Voltage Present', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Charger voltage {{ChargerVoltage}} V', cooldown_min: 30, signal_name: 'ChargerVoltage', op: '>', value_num: 100 },
   { name: 'Three-Phase Charging', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Charger phases: {{ChargerPhases}}', cooldown_min: 60, signal_name: 'ChargerPhases', op: '>=', value_num: 3 },
   { name: 'Charge Port Cold Weather Mode', icon: Icons.climate, category: 'Charging', severity: 'info', message: 'Charge port cold-weather mode on', cooldown_min: 120, signal_name: 'ChargePortColdWeatherMode', op: '=', value_bool: true },
@@ -194,18 +194,18 @@ export const ruleTemplates: RuleTemplate[] = [
   { name: 'Arrival in Under 10 Minutes', icon: Icons.navigation, category: 'Location', severity: 'info', message: '{{MinutesToArrival}} min to {{DestinationName}}', cooldown_min: 15, signal_name: 'MinutesToArrival', op: '<', value_num: 10 },
   { name: 'Arrival in Under 5 km', icon: Icons.navigation, category: 'Location', severity: 'info', message: '{{MilesToArrival}} remaining to destination', cooldown_min: 15, signal_name: 'MilesToArrival', op: '<', value_num: 5 },
   { name: 'Heavy Traffic Delay (> 15 min)', icon: Icons.navigation, category: 'Location', severity: 'info', message: 'Traffic delay {{RouteTrafficMinutesDelay}} min', cooldown_min: 20, signal_name: 'RouteTrafficMinutesDelay', op: '>', value_num: 15 },
-  { name: 'GPS Lost', icon: Icons.location, category: 'Location', severity: 'warn', message: 'GPS state: {{GpsState}}', cooldown_min: 30, signal_name: 'GpsState', op: 'changed' },
+  { name: 'GPS state changed', icon: Icons.location, category: 'Location', severity: 'warn', message: 'GPS state: {{GpsState}}', cooldown_min: 30, signal_name: 'GpsState', op: 'changed' },
 
   // ── Safety / ADAS (new) ─────────────────────────────────────────
   { name: 'Passenger Seatbelt Unbuckled', icon: Icons.security, category: 'Safety', severity: 'warn', message: 'Passenger seatbelt unbuckled', cooldown_min: 5, signal_name: 'PassengerSeatBelt', op: '=', value_bool: false },
   { name: 'Automatic Emergency Braking Off', icon: Icons.security, category: 'Safety', severity: 'critical', message: 'Automatic emergency braking is off', cooldown_min: 60, signal_name: 'AutomaticEmergencyBrakingOff', op: '=', value_bool: true },
   { name: 'Forward Collision Warning', icon: Icons.security, category: 'Safety', severity: 'warn', message: 'Forward collision warning: {{ForwardCollisionWarning}}', cooldown_min: 15, signal_name: 'ForwardCollisionWarning', op: 'changed' },
-  { name: 'Lane Departure Avoidance Off', icon: Icons.security, category: 'Safety', severity: 'warn', message: 'Lane departure avoidance: {{LaneDepartureAvoidance}}', cooldown_min: 60, signal_name: 'LaneDepartureAvoidance', op: 'changed' },
+  { name: 'Lane departure avoidance changed', icon: Icons.security, category: 'Safety', severity: 'warn', message: 'Lane departure avoidance: {{LaneDepartureAvoidance}}', cooldown_min: 60, signal_name: 'LaneDepartureAvoidance', op: 'changed' },
   { name: 'Emergency Lane Departure', icon: Icons.security, category: 'Safety', severity: 'warn', message: 'Emergency lane departure avoidance: {{EmergencyLaneDepartureAvoidance}}', cooldown_min: 30, signal_name: 'EmergencyLaneDepartureAvoidance', op: 'changed' },
   { name: 'Speed Limit Warning', icon: Icons.speed, category: 'Safety', severity: 'info', message: 'Speed limit warning: {{SpeedLimitWarning}}', cooldown_min: 30, signal_name: 'SpeedLimitWarning', op: 'changed' },
   { name: 'Hazards On', icon: Icons.warning, category: 'Safety', severity: 'warn', message: 'Hazard lights are on', cooldown_min: 15, signal_name: 'LightsHazardsActive', op: '=', value_bool: true },
   { name: 'High Beams On', icon: Icons.vehicle, category: 'Safety', severity: 'info', message: 'High beams are on', cooldown_min: 30, signal_name: 'LightsHighBeams', op: '=', value_bool: true },
-  { name: 'Turn Signal On', icon: Icons.vehicle, category: 'Safety', severity: 'info', message: 'Turn signal: {{LightsTurnSignal}}', cooldown_min: 15, signal_name: 'LightsTurnSignal', op: 'changed' },
+  { name: 'Turn signal changed', icon: Icons.vehicle, category: 'Safety', severity: 'info', message: 'Turn signal changed to {{LightsTurnSignal}}', cooldown_min: 15, signal_name: 'LightsTurnSignal', op: 'changed' },
   { name: 'Blind Spot Camera Auto', icon: Icons.security, category: 'Safety', severity: 'info', message: 'Automatic blind-spot camera: {{AutomaticBlindSpotCamera}}', cooldown_min: 120, signal_name: 'AutomaticBlindSpotCamera', op: 'changed' },
   { name: 'Blind Spot Chime Changed', icon: Icons.security, category: 'Safety', severity: 'info', message: 'Blind-spot collision chime: {{BlindSpotCollisionWarningChime}}', cooldown_min: 120, signal_name: 'BlindSpotCollisionWarningChime', op: 'changed' },
   { name: 'Cruise Follow Distance Changed', icon: Icons.speed, category: 'Safety', severity: 'info', message: 'Follow distance {{CruiseFollowDistance}}', cooldown_min: 30, signal_name: 'CruiseFollowDistance', op: 'changed' },
@@ -221,7 +221,7 @@ export const ruleTemplates: RuleTemplate[] = [
 
   // ── Software (new) ──────────────────────────────────────────────
   { name: 'Software Download Progress', icon: Icons.charging, category: 'Software', severity: 'info', message: 'Update download {{SoftwareUpdateDownloadPercentComplete}}%', cooldown_min: 30, signal_name: 'SoftwareUpdateDownloadPercentComplete', op: '>', value_num: 0 },
-  { name: 'Software Update Scheduled', icon: Icons.charging, category: 'Software', severity: 'info', message: 'Update scheduled at {{SoftwareUpdateScheduledStartTime}}', cooldown_min: 180, signal_name: 'SoftwareUpdateScheduledStartTime', op: 'changed' },
+  { name: 'Software update schedule changed', icon: Icons.charging, category: 'Software', severity: 'info', message: 'Software update schedule: {{SoftwareUpdateScheduledStartTime}}', cooldown_min: 180, signal_name: 'SoftwareUpdateScheduledStartTime', op: 'changed' },
   { name: 'Vehicle Software Version Changed', icon: Icons.charging, category: 'Software', severity: 'info', message: 'Software version {{Version}}', cooldown_min: 1440, signal_name: 'Version', op: 'changed' },
   { name: 'Update Duration Changed', icon: Icons.charging, category: 'Software', severity: 'info', message: 'Expected install {{SoftwareUpdateExpectedDurationMinutes}} min', cooldown_min: 180, signal_name: 'SoftwareUpdateExpectedDurationMinutes', op: 'changed' },
 
@@ -315,10 +315,10 @@ export const ruleTemplates: RuleTemplate[] = [
   { name: 'TPMS Soft Warning FR', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'Soft TPMS warning — front right', cooldown_min: 120, signal_name: 'TpmsSoftWarningsFrontRight', op: '=', value_bool: true },
   { name: 'TPMS Soft Warning RL', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'Soft TPMS warning — rear left', cooldown_min: 120, signal_name: 'TpmsSoftWarningsRearLeft', op: '=', value_bool: true },
   { name: 'TPMS Soft Warning RR', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'Soft TPMS warning — rear right', cooldown_min: 120, signal_name: 'TpmsSoftWarningsRearRight', op: '=', value_bool: true },
-  { name: 'FL Pressure Stale', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'FL last seen {{TpmsLastSeenPressureTimeFl}}', cooldown_min: 180, signal_name: 'TpmsLastSeenPressureTimeFl', op: 'changed' },
-  { name: 'FR Pressure Stale', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'FR last seen {{TpmsLastSeenPressureTimeFr}}', cooldown_min: 180, signal_name: 'TpmsLastSeenPressureTimeFr', op: 'changed' },
-  { name: 'RL Pressure Stale', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'RL last seen {{TpmsLastSeenPressureTimeRl}}', cooldown_min: 180, signal_name: 'TpmsLastSeenPressureTimeRl', op: 'changed' },
-  { name: 'RR Pressure Stale', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'RR last seen {{TpmsLastSeenPressureTimeRr}}', cooldown_min: 180, signal_name: 'TpmsLastSeenPressureTimeRr', op: 'changed' },
+  { name: 'Front left tire pressure reporting time changed', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'FL last seen {{TpmsLastSeenPressureTimeFl}}', cooldown_min: 180, signal_name: 'TpmsLastSeenPressureTimeFl', op: 'changed' },
+  { name: 'Front right tire pressure reporting time changed', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'FR last seen {{TpmsLastSeenPressureTimeFr}}', cooldown_min: 180, signal_name: 'TpmsLastSeenPressureTimeFr', op: 'changed' },
+  { name: 'Rear left tire pressure reporting time changed', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'RL last seen {{TpmsLastSeenPressureTimeRl}}', cooldown_min: 180, signal_name: 'TpmsLastSeenPressureTimeRl', op: 'changed' },
+  { name: 'Rear right tire pressure reporting time changed', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'RR last seen {{TpmsLastSeenPressureTimeRr}}', cooldown_min: 180, signal_name: 'TpmsLastSeenPressureTimeRr', op: 'changed' },
 
   // ── Media extras (ecosystem) ────────────────────────────────────
   { name: 'Now Playing Artist Changed', icon: Icons.vehicle, category: 'Media', severity: 'info', message: 'Artist {{MediaNowPlayingArtist}}', cooldown_min: 15, signal_name: 'MediaNowPlayingArtist', op: 'changed' },

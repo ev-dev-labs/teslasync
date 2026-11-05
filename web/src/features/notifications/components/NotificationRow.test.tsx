@@ -76,6 +76,7 @@ beforeEach(() => {
 function makeLog(overrides: Partial<NotificationLog> = {}): NotificationLog {
   return {
     id: 42,
+    vehicle_id: 1,
     channel_id: 1,
     alert_id: 10,
     title: 'Tire pressure low',
@@ -165,7 +166,8 @@ describe('NotificationRow', () => {
       vehicle: undefined,
     });
     expect(screen.getByText('Push received')).toBeInTheDocument();
-    expect(screen.getByText(/system\.web_push/)).toBeInTheDocument();
+    expect(screen.getByText(/System/)).toBeInTheDocument();
+    expect(screen.queryByText(/system\.web_push/)).not.toBeInTheDocument();
   });
 
   it('renders severity, title, message, vehicle name, and rule name', () => {

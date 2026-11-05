@@ -21,6 +21,7 @@ import { DateTime, SeverityBadge } from '@/components/data-display';
 import { Badge, Button, BUTTON_BASE, Caption, Checkbox, Text } from '@/components/ui';
 import { typography } from '@/lib/tokens';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
+import { notificationEventTypeLabel } from '@/lib/notificationEventType';
 import type { NotificationLog, AlertRule, Alert, Vehicle } from '@/api/types';
 
 export interface NotificationRowProps {
@@ -72,7 +73,7 @@ export function NotificationRow({
 
   const synthetic: Alert = {
     id: log.id,
-    vehicle_id: vehicle?.id ?? rule?.vehicle_id ?? 0,
+    vehicle_id: log.vehicle_id ?? 0,
     type: rule?.name ?? log.title,
     severity: severity ?? '',
     title: log.title,
@@ -138,7 +139,7 @@ export function NotificationRow({
           )}
           {log.event_type && (
             <Caption className="truncate">
-              · {log.event_type}
+              · {notificationEventTypeLabel(log.event_type, t)}
             </Caption>
           )}
           {!isRead && <Badge variant="neutral" size="sm">{t('notifications.inbox.columns.unread', 'Unread')}</Badge>}
@@ -149,7 +150,7 @@ export function NotificationRow({
           </Text>
         </div>
         {log.message && (
-          <Caption as="p" className="mt-0.5 line-clamp-1">
+          <Caption as="p" className="mt-0.5 whitespace-pre-wrap break-words">
             {log.message}
           </Caption>
         )}

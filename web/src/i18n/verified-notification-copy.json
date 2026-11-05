@@ -1,0 +1,419 @@
+[
+  {
+    "path": [
+      "notifications",
+      "report",
+      "values",
+      "alertRule"
+    ],
+    "current": "Alert rule"
+  },
+  {
+    "path": [
+      "notifications",
+      "report",
+      "values",
+      "placeEnter"
+    ],
+    "current": "Place arrival"
+  },
+  {
+    "path": [
+      "notifications",
+      "report",
+      "values",
+      "placeExit"
+    ],
+    "current": "Place departure"
+  },
+  {
+    "path": [
+      "notifications",
+      "inbox",
+      "columns",
+      "channel"
+    ],
+    "current": "Channel"
+  },
+  {
+    "path": [
+      "notifications",
+      "inbox",
+      "columns",
+      "delivery"
+    ],
+    "current": "Delivery"
+  },
+  {
+    "path": [
+      "notifications",
+      "inbox",
+      "channelNumber"
+    ],
+    "current": "Channel #{{id}}"
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "battery"
+    ],
+    "current": {
+      "at": {
+        "or": {
+          "above": {
+            "80": {
+              "name": "Battery at or above 80%",
+              "message": "Battery at {{BatteryLevel}}% (threshold: 80%)"
+            },
+            "90": {
+              "name": "Battery at or above 90%",
+              "message": "Battery reached {{BatteryLevel}}%"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "charging"
+    ],
+    "current": {
+      "stopped": {
+        "name": "Charging stopped",
+        "message": "Charging stopped - {{DetailedChargeState}}"
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "drive"
+    ],
+    "current": {
+      "gear": {
+        "engaged": {
+          "name": "Drive gear engaged",
+          "message": "Gear changed to {{Gear}}"
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "park"
+    ],
+    "current": {
+      "gear": {
+        "engaged": {
+          "name": "Park gear engaged",
+          "message": "Gear changed to {{Gear}}"
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "vehicle"
+    ],
+    "current": {
+      "unlocked": {
+        "security": {
+          "alert": {
+            "name": "Vehicle unlocked (security alert)",
+            "message": "Vehicle is unlocked"
+          }
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "door"
+    ],
+    "current": {
+      "state": {
+        "changed": {
+          "name": "Door state changed",
+          "message": "Door state: {{DoorState}}"
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "hvac"
+    ],
+    "current": {
+      "running": {
+        "name": "HVAC running",
+        "message": "HVAC is running"
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "driver"
+    ],
+    "current": {
+      "seatbelt": {
+        "unbuckled": {
+          "name": "Driver Seatbelt Unbuckled",
+          "message": "Driver seatbelt is unbuckled"
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "navigation"
+    ],
+    "current": {
+      "destination": {
+        "changed": {
+          "name": "Navigation destination changed",
+          "message": "Navigation destination: {{DestinationName}}"
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "available"
+    ],
+    "current": {
+      "software": {
+        "version": {
+          "changed": {
+            "name": "Available software version changed",
+            "message": "Available software version: {{SoftwareUpdateVersion}}"
+          }
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "powershare"
+    ],
+    "current": {
+      "state": {
+        "changed": {
+          "name": "Powershare state changed",
+          "message": "Powershare state: {{PowershareStatus}}"
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "charge"
+    ],
+    "current": {
+      "port": {
+        "latch": {
+          "changed": {
+            "name": "Charge port latch changed",
+            "message": "Charge port latch: {{ChargePortLatch}}"
+          }
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "requested"
+    ],
+    "current": {
+      "charge": {
+        "current": {
+          "changed": {
+            "name": "Requested charge current changed",
+            "message": "Requested {{ChargeCurrentRequest}}A of {{ChargeCurrentRequestMax}}A max"
+          }
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "gps"
+    ],
+    "current": {
+      "state": {
+        "changed": {
+          "name": "GPS state changed",
+          "message": "GPS state: {{GpsState}}"
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "lane"
+    ],
+    "current": {
+      "departure": {
+        "avoidance": {
+          "changed": {
+            "name": "Lane departure avoidance changed",
+            "message": "Lane departure avoidance: {{LaneDepartureAvoidance}}"
+          }
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "turn"
+    ],
+    "current": {
+      "signal": {
+        "changed": {
+          "name": "Turn signal changed",
+          "message": "Turn signal changed to {{LightsTurnSignal}}"
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "software"
+    ],
+    "current": {
+      "update": {
+        "schedule": {
+          "changed": {
+            "name": "Software update schedule changed",
+            "message": "Software update schedule: {{SoftwareUpdateScheduledStartTime}}"
+          }
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "front"
+    ],
+    "current": {
+      "left": {
+        "tire": {
+          "pressure": {
+            "reporting": {
+              "time": {
+                "changed": {
+                  "name": "Front left tire pressure reporting time changed",
+                  "message": "FL last seen {{TpmsLastSeenPressureTimeFl}}"
+                }
+              }
+            }
+          }
+        }
+      },
+      "right": {
+        "tire": {
+          "pressure": {
+            "reporting": {
+              "time": {
+                "changed": {
+                  "name": "Front right tire pressure reporting time changed",
+                  "message": "FR last seen {{TpmsLastSeenPressureTimeFr}}"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "path": [
+      "notifications",
+      "alertStudio",
+      "templates",
+      "rear"
+    ],
+    "current": {
+      "left": {
+        "tire": {
+          "pressure": {
+            "reporting": {
+              "time": {
+                "changed": {
+                  "name": "Rear left tire pressure reporting time changed",
+                  "message": "RL last seen {{TpmsLastSeenPressureTimeRl}}"
+                }
+              }
+            }
+          }
+        }
+      },
+      "right": {
+        "tire": {
+          "pressure": {
+            "reporting": {
+              "time": {
+                "changed": {
+                  "name": "Rear right tire pressure reporting time changed",
+                  "message": "RR last seen {{TpmsLastSeenPressureTimeRr}}"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]

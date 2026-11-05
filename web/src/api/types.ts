@@ -1138,6 +1138,7 @@ export interface WebhookSignaturePreviewResult {
 }
 
 export interface NotificationLog {
+  vehicle_id?: number | null
   id: number
   channel_id: number | null
   alert_id: number | null
@@ -1186,7 +1187,7 @@ export interface NotificationReport {
 // `count == unread_count`. The frontend should render the count chip
 // without implying it's a global tally.
 //
-// `vehicle_ids` is `array_remove(array_agg(DISTINCT alert_rules.vehicle_id), NULL)`
+// `vehicle_ids` contains distinct captured notification_logs.vehicle_id values.
 // so it can be empty when every member belonged to a vehicle-less rule.
 //
 // Members are NOT inlined — clients fetch them on expand via
