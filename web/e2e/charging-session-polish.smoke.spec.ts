@@ -65,7 +65,17 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(history.getByText(/kW now/)).toBeVisible();
       }
       await expectNoHorizontalOverflow(page);
-      await page.screenshot({ path: join(process.cwd(), '..', 'docs', 'charging-sessions', `${width}-${theme}.png`), fullPage: true });
+      const historyHeight = await history.evaluate(node => node.scrollHeight);
+      await page.setViewportSize({ width, height: Math.max(1000, historyHeight + 300) });
+      await history.scrollIntoViewIfNeeded();
+      await history.screenshot({ path: join(process.cwd(), '..', 'docs', 'charging-sessions', `${width}-${theme}.png`) });
+      if (width >= 1024) {
+        const liveRow = history.getByRole('table', { name: 'All charging sessions', exact: true })
+          .locator('tbody tr').filter({ hasText: 'Live home session' });
+        await liveRow.locator('[data-column-key="cost"]').scrollIntoViewIfNeeded();
+        await history.screenshot({ path: join(process.cwd(), '..', 'docs', 'charging-sessions', `${width}-${theme}-costs.png`) });
+      }
+      await page.setViewportSize({ width, height: 1000 });
       completed = true;
       await expect(history.getByText('Charging', { exact: true })).toHaveCount(0, { timeout: 30000 });
       await expect(history.getByText('40m', { exact: true }).first()).toBeVisible();

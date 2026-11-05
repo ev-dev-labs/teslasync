@@ -145,10 +145,9 @@ const SETTINGS = {
   base_cost_per_kwh: 0.12,
 };
 
-// Build an ISO instant from a LOCAL wall-clock so getDay()/getHours() inside
-// buildGrid round-trip to the same weekday/hour regardless of the runner's tz.
-function localIso(y: number, mo: number, d: number, h: number, mi = 0): string {
-  return new Date(y, mo, d, h, mi, 0, 0).toISOString();
+// Match the selected UTC display zone, independently of the runner's timezone.
+function utcIso(y: number, mo: number, d: number, h: number, mi = 0): string {
+  return new Date(Date.UTC(y, mo, d, h, mi)).toISOString();
 }
 
 interface SessionOverrides {
@@ -189,12 +188,12 @@ function session(o: SessionOverrides) {
 // Mon-10:00 slot (the busiest); three others are still "live" (no ended_at) so
 // they must be counted but must NOT contribute to the average-duration mean.
 const SESSIONS = [
-  session({ id: 1, started_at: localIso(2024, 0, 1, 10, 0), ended_at: localIso(2024, 0, 1, 12, 0), start_place: 'Home', total_energy_added_wh: 10000, cost_decimal: 4 }),
-  session({ id: 2, started_at: localIso(2024, 0, 1, 10, 30), ended_at: localIso(2024, 0, 1, 12, 30), start_place: 'Home', total_energy_added_wh: 10000, cost_decimal: 4 }),
-  session({ id: 3, started_at: localIso(2024, 0, 1, 10, 45), ended_at: localIso(2024, 0, 1, 12, 45), start_place: 'Home', total_energy_added_wh: 10000, cost_decimal: 4 }),
-  session({ id: 4, started_at: localIso(2024, 0, 2, 14, 0), ended_at: null, start_place: 'Work', total_energy_added_wh: 10000, cost_decimal: 4 }),
-  session({ id: 5, started_at: localIso(2024, 0, 6, 9, 0), ended_at: null, start_place: 'Work', total_energy_added_wh: 10000, cost_decimal: 4 }),
-  session({ id: 6, started_at: localIso(2024, 0, 7, 20, 0), ended_at: null, start_place: 'Cafe', total_energy_added_wh: 5000, cost_decimal: 5 }),
+  session({ id: 1, started_at: utcIso(2024, 0, 1, 10, 0), ended_at: utcIso(2024, 0, 1, 12, 0), start_place: 'Home', total_energy_added_wh: 10000, cost_decimal: 4 }),
+  session({ id: 2, started_at: utcIso(2024, 0, 1, 10, 30), ended_at: utcIso(2024, 0, 1, 12, 30), start_place: 'Home', total_energy_added_wh: 10000, cost_decimal: 4 }),
+  session({ id: 3, started_at: utcIso(2024, 0, 1, 10, 45), ended_at: utcIso(2024, 0, 1, 12, 45), start_place: 'Home', total_energy_added_wh: 10000, cost_decimal: 4 }),
+  session({ id: 4, started_at: utcIso(2024, 0, 2, 14, 0), ended_at: null, start_place: 'Work', total_energy_added_wh: 10000, cost_decimal: 4 }),
+  session({ id: 5, started_at: utcIso(2024, 0, 6, 9, 0), ended_at: null, start_place: 'Work', total_energy_added_wh: 10000, cost_decimal: 4 }),
+  session({ id: 6, started_at: utcIso(2024, 0, 7, 20, 0), ended_at: null, start_place: 'Cafe', total_energy_added_wh: 5000, cost_decimal: 5 }),
 ];
 
 const GRID_ARIA = 'Charging sessions by weekday and hour of day';
@@ -797,8 +796,8 @@ describe('ChargingHeatmapPage — average-duration derivation (regression)', () 
 
   it('shows an honest unknown (never NaN or measured zero) when no session has an end time', async () => {
     const openOnly = [
-      session({ id: 1, started_at: localIso(2024, 0, 1, 10, 0), ended_at: null, total_energy_added_wh: 10000, cost_decimal: 4 }),
-      session({ id: 2, started_at: localIso(2024, 0, 2, 11, 0), ended_at: null, total_energy_added_wh: 10000, cost_decimal: 4 }),
+      session({ id: 1, started_at: utcIso(2024, 0, 1, 10, 0), ended_at: null, total_energy_added_wh: 10000, cost_decimal: 4 }),
+      session({ id: 2, started_at: utcIso(2024, 0, 2, 11, 0), ended_at: null, total_energy_added_wh: 10000, cost_decimal: 4 }),
     ];
     installRequest({ sessions: openOnly });
     renderPage();
