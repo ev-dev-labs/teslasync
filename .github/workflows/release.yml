@@ -993,7 +993,7 @@ jobs:
   store-publish:
     name: Submit MSIX to Microsoft Store
     needs: [version, windows-apps, release-notes]
-    if: ${{ needs.version.outputs.is_prerelease == 'false' }}
+    if: ${{ github.ref == 'refs/heads/main' && needs.version.outputs.is_prerelease == 'false' }}
     runs-on: windows-latest
     environment: store-production
     permissions:
