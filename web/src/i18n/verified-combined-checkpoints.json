@@ -618,7 +618,7 @@
     {
       "file": "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIPolling.tsx",
       "calls": 10,
-      "sha256": "f5de3d37e473f18a8a6209d29025075575988840b7f7c4c5b077d7f7565dd098"
+      "sha256": "3b962b1e7882c3461849ccb740cc67fba5854e31ec76ca402ca81b8a0c96a66d"
     },
     {
       "file": "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIRouteActions.tsx",
@@ -628,7 +628,7 @@
     {
       "file": "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIRouteCatalog.tsx",
       "calls": 18,
-      "sha256": "05ef43852c1ec0a18233aebb6f2f2f309c514c07326007b11403464b04417c8a"
+      "sha256": "270ea7e6d74d793f72d58934a35942ffcf636ecd58a07d3c7c6d0a6de41befdb"
     }
   ]
 }

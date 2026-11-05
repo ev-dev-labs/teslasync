@@ -17,7 +17,7 @@ const catalog = [
 ];
 
 for (const theme of ['light', 'dark'] as const) {
-  for (const width of [390, 1280]) {
+  for (const width of [390, 1280, 1920, 2560]) {
     test(`fleet API presents one control surface at ${width}px ${theme}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 1000 });
       await seedBrowserState(page, theme, '/fleet-api');
@@ -29,7 +29,13 @@ for (const theme of ['light', 'dark'] as const) {
         endpoint_catalog: catalog,
         telemetry_capture: false, telemetry_capture_retention_days: 7,
       };
-      await page.route('**/api/v1/settings', request => fulfillApiFixture(request, mocks, { json: mockAppSettings }));
+      const settings = { ...mockAppSettings, api_suspended: width >= 1920 };
+      await page.route('**/api/v1/settings', request => fulfillApiFixture(request, mocks, { json: settings }));
+      await page.route('**/api/v1/settings/suspend-api', async request => {
+        const update = request.request().postDataJSON() as { suspended: boolean };
+        settings.api_suspended = update.suspended;
+        await fulfillApiFixture(request, mocks, { json: { api_suspended: settings.api_suspended } });
+      });
       await page.route('**/api/v1/settings/polling-config', async request => {
         if (request.request().method() === 'PUT') {
           const update = request.request().postDataJSON() as Partial<typeof config>;
@@ -54,6 +60,42 @@ for (const theme of ['light', 'dark'] as const) {
       });
       await page.setViewportSize({ width, height: 1000 });
       await expectNoHorizontalOverflow(page);
+      await expect(page.getByText(/^Allow all /)).toHaveCount(0);
+      const titleBox = await page.getByText('Tesla API polling', { exact: true }).boundingBox();
+      const masterBox = await page.getByRole('switch', { name: 'Toggle Tesla API polling' }).boundingBox();
+      expect(titleBox).not.toBeNull();
+      expect(masterBox).not.toBeNull();
+      expect(masterBox!.x - titleBox!.x - titleBox!.width).toBeLessThan(90);
+      expect(Math.abs(masterBox!.y + masterBox!.height / 2 - titleBox!.y - titleBox!.height / 2)).toBeLessThan(4);
+      const groupSwitches = await page.getByRole('switch', { name: /^Allow all / }).all();
+      const groupCenters = await Promise.all(groupSwitches.map(async toggle => {
+        const box = await toggle.boundingBox();
+        return box!.x + box!.width / 2;
+      }));
+      expect(Math.max(...groupCenters) - Math.min(...groupCenters)).toBeLessThan(2);
+      if (width >= 1280) {
+        const accessHeader = await page.locator('th[data-column-key="access"]').boundingBox();
+        const switches = await page.getByRole('switch', { name: /^Allow all / }).all();
+        for (const toggle of switches) {
+          const box = await toggle.boundingBox();
+          expect(Math.abs(box!.x + box!.width / 2 - accessHeader!.x - accessHeader!.width / 2)).toBeLessThan(2);
+        }
+        await expect(page.locator('[data-row-group] td[data-column-key="auto"] [role="switch"]')).toHaveCount(0);
+        const overflow = await page.locator('[data-grid-frame]').evaluate(node => {
+          const table = node.querySelector('table')!;
+          return table.getBoundingClientRect().width - node.getBoundingClientRect().width;
+        });
+        expect(overflow).toBeLessThanOrEqual(1);
+      }
+      if (settings.api_suspended) {
+        const badge = await page.getByText('API suspended', { exact: true }).boundingBox();
+        const resume = page.getByRole('button', { name: 'Resume API actions', exact: true });
+        const resumeBox = await resume.boundingBox();
+        expect(resumeBox!.x - badge!.x - badge!.width).toBeLessThanOrEqual(16);
+        await resume.click();
+        await expect(page.getByText('API allowed', { exact: true })).toBeVisible();
+        await expect(page.getByText(/API actions were suspended previously/)).toHaveCount(0);
+      }
       if (width < 768) await page.getByRole('main').getByRole('button', { name: 'More', exact: true }).click();
       await expect(page.getByRole('button', { name: 'Export list' })).toHaveCount(1);
       await page.getByRole('radio', { name: 'Compact', exact: true }).click();

@@ -339,7 +339,9 @@ interface DataTableProps<T> {
   rowGrouping?: {
     key: (row: T) => string
     label: (key: string) => string
+    summary?: (key: string, rows: T[]) => ReactNode
     actions?: (key: string, rows: T[]) => ReactNode
+    actionsColumn?: string
     autoExpand?: boolean
     resetKey?: string
   }
@@ -520,15 +522,21 @@ export function DataTable<T>({
   const { t } = useTranslation()
   const frameRef = useRef<HTMLDivElement>(null)
   const [mobileActive, setMobileActive] = useState(false)
+  const [compactGroups, setCompactGroups] = useState(false)
   const mobileEnabled = mobilePresentation != null
+  const observeFrame = mobileEnabled || rowGrouping?.actionsColumn != null
   useEffect(() => {
-    if (!mobileEnabled || !frameRef.current || typeof ResizeObserver === 'undefined') {
+    if (!observeFrame || !frameRef.current || typeof ResizeObserver === 'undefined') {
       setMobileActive(false)
+      setCompactGroups(false)
       return
     }
     const frame = frameRef.current
     const update = (width: number) => {
-      if (width > 0) setMobileActive(isMobileGridWidth(width))
+      if (width > 0) {
+        setMobileActive(mobileEnabled && isMobileGridWidth(width))
+        setCompactGroups(isMobileGridWidth(width))
+      }
     }
     update(frame.getBoundingClientRect().width)
     const observer = new ResizeObserver(entries => {
@@ -537,7 +545,7 @@ export function DataTable<T>({
     })
     observer.observe(frame)
     return () => observer.disconnect()
-  }, [mobileEnabled])
+  }, [mobileEnabled, observeFrame])
   const [localSearch, setLocalSearch] = useState('')
   const deferredLocalSearch = useDeferredValue(localSearch)
   const localSearchEnabled = searchable && !paginationControls && !controls?.search
@@ -1232,6 +1240,43 @@ export function DataTable<T>({
     return rows
   }
 
+  const renderGroup = (key: string, rows: T[]) => {
+    if (!rowGrouping) return null
+    const columnIndex = visibleColumns.findIndex(column => column.key === rowGrouping.actionsColumn)
+    const column = !compactGroups && columnIndex >= 0 && totalCols > 1 ? visibleColumns[columnIndex] : undefined
+    const before = leadingColCount + columnIndex
+    const after = totalCols - before - 1
+    const actions = rowGrouping.actions?.(key, rows)
+    const actionCell = column && (
+      <td data-column-key={column.key} className={cn(cellPaddingClass, alignClass(column.align),
+        column.groupStart && tableTokens.groupStart, colHiddenClass(column.key), column.className)}>
+        {actions}
+      </td>
+    )
+    return (
+      <tr key={`group:${key}`} data-row-group={key} className={tableTokens.row}>
+        {column && before === 0 && actionCell}
+        <td colSpan={column ? before || after : totalCols} className={cellPaddingClass}>
+          <div className="flex w-full max-w-[calc(100cqw-2rem)] flex-wrap items-center gap-2">
+            <Button variant="ghost" size="sm" className="min-h-11 min-w-11" wrapLabel
+              aria-expanded={groupIsOpen(key)}
+              aria-label={groupIsOpen(key)
+                ? t('table.collapseGroup', 'Collapse {{group}}', { group: rowGrouping.label(key) })
+                : t('table.expandGroup', 'Expand {{group}}', { group: rowGrouping.label(key) })}
+              onClick={() => toggleGroup(key)}>
+              <ChevronRight className={cn('h-4 w-4', groupIsOpen(key) && 'rotate-90')} aria-hidden="true" />
+              {rowGrouping.label(key)}
+            </Button>
+            {rowGrouping.summary?.(key, rows)}
+            {!column && actions && <div className="ml-auto shrink-0">{actions}</div>}
+          </div>
+        </td>
+        {column && before > 0 && actionCell}
+        {column && before > 0 && after > 0 && <td colSpan={after} className={cellPaddingClass} />}
+      </tr>
+    )
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────
   // Sticky headers are on by default (see `stickyHeader` prop) so every
   // DataTable in the app pins its column titles when the body scrolls.
@@ -1686,22 +1731,7 @@ export function DataTable<T>({
                   groups.set(key, rows)
                   return groups
                 }, new Map<string, T[]>())].flatMap(([key, rows]) => [
-                  <tr key={`group:${key}`} data-row-group={key}>
-                    <td colSpan={totalCols} className="bg-[var(--surface-2)] px-3 py-2">
-                      <div className="sticky left-3 flex w-[calc(100cqw-1.5rem-2px)] flex-wrap items-center justify-between gap-2">
-                        <Button variant="ghost" size="sm" className="min-h-11 min-w-11"
-                          aria-expanded={groupIsOpen(key)}
-                          aria-label={groupIsOpen(key)
-                            ? t('table.collapseGroup', 'Collapse {{group}}', { group: rowGrouping.label(key) })
-                            : t('table.expandGroup', 'Expand {{group}}', { group: rowGrouping.label(key) })}
-                          onClick={() => toggleGroup(key)}>
-                          <ChevronRight className={cn('h-4 w-4', groupIsOpen(key) && 'rotate-90')} aria-hidden="true" />
-                          {rowGrouping.label(key)}
-                        </Button>
-                        {rowGrouping.actions?.(key, rows)}
-                      </div>
-                    </td>
-                  </tr>,
+                  renderGroup(key, rows),
                   ...(groupIsOpen(key) ? rows.flatMap(renderDataRow) : []),
                 ])
               ) : (

@@ -91,14 +91,13 @@ export function FleetAPIRouteCatalog({ controller, pollingConfig }: Props) {
                         label: groupLabel,
                         resetKey: `${groupBy}:${selectedGroup}:${search}`,
                         autoExpand: !!search.trim() || selectedGroup !== 'all',
-                        actions: (group, rows) => {
+                        summary: (_, rows) => <Badge size="sm" variant="info">{t('fleetApi.controls.groupCount', '{{count}} routes', { count: rows.length })}</Badge>,
+                        actionsColumn: 'access',
+                        actions: group => {
                           const members = catalog.filter(endpoint => (groupBy === 'category' ? endpoint.category : endpoint.method) === group);
-                          return <div className="flex flex-wrap items-center gap-3">
-                            <Badge size="sm" variant="info">{t('fleetApi.controls.groupCount', '{{count}} routes', { count: rows.length })}</Badge>
-                            <Toggle size="sm" checked={members.every(endpoint => !!pollingConfig.fleet_endpoints[endpoint.key])}
-                              disabled={pollingConfigMut.isPending} onChange={() => toggleGroupAccess(group)}
-                              label={t('fleetApi.allowGroup', 'Allow all {{group}}', { group: groupLabel(group) })} />
-                          </div>;
+                          return <Toggle size="sm" checked={members.every(endpoint => !!pollingConfig.fleet_endpoints[endpoint.key])}
+                            disabled={pollingConfigMut.isPending} onChange={() => toggleGroupAccess(group)}
+                            aria-label={t('fleetApi.allowGroup', 'Allow all {{group}}', { group: groupLabel(group) })} />;
                         },
                       }}
                     />

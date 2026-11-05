@@ -69,6 +69,30 @@ function excludeAllValues() {
 }
 
 describe('DataTable filtered empty copy', () => {
+  it.each([false, true])('aligns group actions with their shared column when reordered=%s', (reversed) => {
+    mount({ columns: reversed ? [...columns].reverse() : columns,
+      rowGrouping: { key: row => row.status, label: key => key, actionsColumn: 'status',
+        actions: key => <Button aria-label={`Allow ${key}`}>Allow</Button> },
+    })
+    const action = screen.getByRole('button', { name: 'Allow Ready' })
+    expect(action.closest('td')).toHaveAttribute('data-column-key', 'status')
+    const cells = action.closest('tr')!.querySelectorAll('td')
+    expect(cells).toHaveLength(2)
+    expect(cells[reversed ? 0 : 1]).toContainElement(action)
+    expect(screen.getByRole('button', { name: 'Expand Ready' })).toBeInTheDocument()
+  })
+
+  it('keeps the group disclosure and action available with only the action column visible', () => {
+    mount({ columns: [columns[1]],
+      rowGrouping: { key: row => row.status, label: key => key, actionsColumn: 'status',
+        actions: key => <Button aria-label={`Allow ${key}`}>Allow</Button> },
+    })
+    const action = screen.getByRole('button', { name: 'Allow Ready' })
+    expect(action.closest('td')).toHaveAttribute('colspan', '1')
+    expect(action.closest('tr')!.querySelectorAll('td')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Expand Ready' })).toBeInTheDocument()
+  })
+
   it('keeps object-property group names independent when another group is expanded', () => {
     mount({ data: [{ ...rows[0], status: 'constructor' }, rows[1]],
       rowGrouping: { key: row => row.status, label: key => key },
