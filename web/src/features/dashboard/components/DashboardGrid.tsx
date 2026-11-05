@@ -60,10 +60,6 @@ interface DashboardGridProps {
   getDraggedWidgetId?: () => string | null;
 }
 
-/* Stable empty fallbacks so a malformed dashboard (undefined widgets/layouts —
-   e.g. from corrupt localStorage or a partial API response) renders an empty
-   state instead of throwing on `.map` / breakpoint indexing. Module-scoped so
-   the reference stays stable across renders (memo/effect deps don't churn). */
 // Placeholder identity for toolbox drag-overs. Size is a fallback —
 // onDropDragOver overrides w/h per dragged widget every time.
 const DROPPING_ITEM = { i: '__dropping__', x: 0, y: 0, w: 1, h: 2 };
@@ -131,9 +127,6 @@ export const DashboardGrid = memo(function DashboardGrid({
   getDraggedWidgetId,
 }: DashboardGridProps) {
   const { t } = useTranslation();
-  // Null-safety: a malformed dashboard (corrupt localStorage, partial API
-  // response) can arrive without widgets/layouts. Fall back to stable empty
-  // references so we never call `.map` / index a breakpoint on undefined.
   const widgets = useMemo(() => normalizeDashboard(dashboard).widgets, [dashboard]);
   const { containerRef, width } = useContainerWidth({
     initialWidth: typeof window !== 'undefined' ? window.innerWidth : 1200,
@@ -160,15 +153,12 @@ export const DashboardGrid = memo(function DashboardGrid({
   const [fullscreenWidget, setFullscreenWidget] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Local layout state breaks the controlled-component feedback loop:
-  // RGL renders from liveLayouts (always up-to-date), while dashboard.layouts
-  // is only read when syncing from external changes.
+  // Gestures own a temporary layout; saved order and measured heights
+  // otherwise determine all breakpoint geometry.
   const [liveLayouts, setLiveLayouts] = useState<RGLLayouts>(generatedLayouts);
   const layoutRef = useRef<RGLLayouts>(generatedLayouts);
   const interactingRef = useRef(false);
   const activeBreakpointRef = useRef<keyof typeof GRID_COLS>('lg');
-  // Latest saved layouts, for no-op persist detection (click-without-move
-  // must not write, toast, or consume an undo entry).
 
   // Sync from parent state. Echo detection is CONTENT-based: when the saved
   // layouts match what the grid already holds, the update is our own persist
@@ -192,13 +182,6 @@ export const DashboardGrid = memo(function DashboardGrid({
     layoutRef.current = incoming;
     setLiveLayouts(incoming);
   }, [generatedLayouts]);
-
-  // react-grid-layout v2: hook provides containerRef + measured width.
-  // Initial width = the browser's viewport (or 1200 in SSR) so the very
-  // first render already picks the correct breakpoint on mobile devices —
-  // otherwise the dashboard mounts as `lg` (RGL render), then re-mounts as
-  // `xs` (flex-stack render) once ResizeObserver measures the real width,
-  // remounting every widget (chart/map flicker, Suspense fallback flash).
 
   // v2 drag/resize config objects (stable references via useMemo)
   const dragConfig = useMemo(() => ({
@@ -362,10 +345,8 @@ export const DashboardGrid = memo(function DashboardGrid({
   const isMobileStack = activeBreakpoint === 'xs' && !editMode;
   activeBreakpointRef.current = activeBreakpoint;
 
-  // Compute widget size from live layouts so widgets adapt during resize.
-  // Reads from the *active* breakpoint's layout (not always lg) so widgets
-  // on mobile receive size.cols matching what the user actually sees,
-  // which is what their compact-mode heuristics depend on.
+  // Width follows the visible span. Keep semantic rows independent of
+  // measured height so compact-mode switches cannot feed back into sizing.
   const getWidgetSizeLive = useCallback((instanceId: string): { cols: number; rows: number } => {
     const layout = (liveLayouts[activeBreakpoint] ?? liveLayouts.lg ?? []) as RGLLayout[];
     const item = layout.find((l) => l.i === instanceId);
@@ -397,45 +378,6 @@ export const DashboardGrid = memo(function DashboardGrid({
     return true;
   }, [activeBreakpoint, onLayoutChange, widgets]);
 
-  // ── Mobile (xs) stack mode ────────────────────────────────────────────
-  //
-  // On the smallest breakpoint each widget is a single full-width column
-  // anyway, so RGL's fixed `h × ROW_HEIGHT` row sizing is the wrong tool —
-  // it pins each widget to its desktop-sized height (e.g. vehicle-hero
-  // h=9 → 720px) which leaves hundreds of pixels of *empty space* below
-  // the actual widget content (each widget then renders an "elongated
-  // blank space" page on a phone).
-  //
-  // Render the same widget JSX inside a vanilla flex column so each
-  // widget's intrinsic content height drives the row height, with a
-  // floor (`min-h-[12rem]` / 192px) reserved for chart and map widgets
-  // whose Recharts `ResponsiveContainer height="100%"` / map canvases
-  // need a definite parent height to compute against. The wrapper is a
-  // flex column so descendants relying on `h-full` resolve via flex
-  // stretch (default `align-items: stretch`).
-  // Preserve the user's saved mobile order if they ever rearranged on
-  // mobile (xs layout y/x); otherwise fall back to widget insertion
-  // order so freshly-added widgets keep showing up at the bottom.
-  const orderedWidgets = useMemo(() => {
-    if (!isMobileStack) return widgets;
-    const xsLayout = (liveLayouts.xs ?? []) as RGLLayout[];
-    if (xsLayout.length === 0) return widgets;
-    const orderMap = new Map<string, number>();
-    xsLayout.forEach((l, i) => {
-      // Encode (y, x, index) into a single sortable scalar so equal y/x
-      // values fall back to layout-array order for determinism.
-      orderMap.set(l.i, l.y * 10000 + l.x * 100 + i / 1000);
-    });
-    return [...widgets].sort((a, b) => {
-      const aOrder = orderMap.get(a.id);
-      const bOrder = orderMap.get(b.id);
-      if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
-      if (aOrder !== undefined) return -1;
-      if (bOrder !== undefined) return 1;
-      return 0;
-    });
-  }, [isMobileStack, widgets, liveLayouts.xs]);
-
   const panelStyle = useMemo(
     () => kioskWidgetOpacity == null ? undefined : kioskPanelStyle(kioskWidgetOpacity),
     [kioskWidgetOpacity],
@@ -448,11 +390,7 @@ export const DashboardGrid = memo(function DashboardGrid({
     ? getWidgetDef(fullscreenInstance.widgetId)
     : null;
 
-  // Render a single widget's body. Used by both the desktop RGL grid path
-  // and the mobile flex-stack path so behaviour stays in sync. The
-  // `mobile` flag swaps `h-full` (RGL gives a definite height) for a
-  // flex-1/min-h pair (mobile auto-height parent gives a min-height
-  // floor that descendants resolve via flex stretch).
+  // Both renderers use the same intrinsic panel and canonical widget order.
   const renderWidgetBody = useCallback((widget: WidgetInstance, mobile: boolean) => {
     const def = getWidgetDef(widget.widgetId);
     if (!def) return null;
@@ -488,8 +426,6 @@ export const DashboardGrid = memo(function DashboardGrid({
         data-widget-id={widget.id}
         className={cn(
           'widget-container relative group',
-          // Mobile: become a flex column so the GlassPanel + nested
-          // `h-full` widget content resolve to the wrapper's min-height.
           mobile && 'flex flex-col',
           widget.id === droppedId && 'widget-just-dropped',
         )}
@@ -590,7 +526,7 @@ export const DashboardGrid = memo(function DashboardGrid({
           className="flex flex-col gap-3"
           data-testid="dashboard-mobile-stack"
         >
-          {orderedWidgets.map((widget) => renderWidgetBody(widget, true))}
+          {widgets.map((widget) => renderWidgetBody(widget, true))}
         </div>
       ) : (
         <ResponsiveGridLayout
