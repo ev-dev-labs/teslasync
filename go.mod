@@ -31,7 +31,7 @@ require (
 	github.com/rs/zerolog v1.35.1
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/sony/gobreaker v0.5.0
-	github.com/teslamotors/fleet-telemetry v0.9.6-0.20261028234511-18800f773875
+	github.com/teslamotors/fleet-telemetry v0.10.0
 	go.mongodb.org/mongo-driver/v2 v2.5.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0
 	go.opentelemetry.io/otel v1.45.0

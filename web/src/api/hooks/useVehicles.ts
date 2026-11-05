@@ -176,6 +176,8 @@ const VEHICLE_STATE_FIELDS = new Set<VerifiedVehicleStateField>([
   'is_locked',
   'sentry_mode',
   'software_version',
+  'self_driving_software_version',
+  'semi_trailer_latched',
   'accessory_rail',
   'power_transfer_status',
   'automatic_emergency_braking_state',

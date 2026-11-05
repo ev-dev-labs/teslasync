@@ -643,6 +643,8 @@ export interface VehicleState {
   is_locked: boolean
   sentry_mode: boolean
   software_version: string
+  self_driving_software_version?: string | null
+  semi_trailer_latched?: boolean | null
   accessory_rail?: boolean | null
   power_transfer_status?: string | null
   automatic_emergency_braking_state?: string | null

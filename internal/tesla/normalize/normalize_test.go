@@ -36,6 +36,9 @@ func TestPipeline_NewStreamingFields(t *testing.T) {
 		{"RollingResistanceCoefficient", "0.006123456789", float64(0.006123456789)},
 		{"LifetimeDcChargeEnergyKwh", "12.5", float64(12500)},
 		{"SemiVehicleMassKg", "36500.5", float64(36500.5)},
+		{"SelfDrivingSoftwareVersion", `"v14.3 Lite"`, "v14.3 Lite"},
+		{"SemiTrailerLatched", "false", false},
+		{"SemiTrailerLatched", "true", true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.field, func(t *testing.T) {

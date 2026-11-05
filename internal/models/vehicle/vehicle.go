@@ -68,6 +68,9 @@ type VehicleState struct {
 	SentryMode        bool       `json:"sentry_mode"`
 	SoftwareVersion   string     `json:"software_version"`
 
+	SelfDrivingSoftwareVersion *string `json:"self_driving_software_version,omitempty"`
+	SemiTrailerLatched         *bool   `json:"semi_trailer_latched,omitempty"`
+
 	AccessoryRail                  *bool    `json:"accessory_rail,omitempty"`
 	PowerTransferStatus            *string  `json:"power_transfer_status,omitempty"`
 	AutomaticEmergencyBrakingState *string  `json:"automatic_emergency_braking_state,omitempty"`

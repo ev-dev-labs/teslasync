@@ -788,6 +788,10 @@ routes:
     dest: signal_log
   - field: SelfDrivingMilesSinceReset
     dest: signal_log
+  - field: SelfDrivingSoftwareVersion
+    dest: signal_log
+  - field: SemiTrailerLatched
+    dest: signal_log
   - field: SemitruckPassengerSeatFoldPosition
     dest: signal_log
   # Semitruck per-position TPMS pressures (safety_security,

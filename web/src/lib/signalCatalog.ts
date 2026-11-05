@@ -278,6 +278,8 @@ const catalog: SignalMeta[] = [
   { name: 'Trim', category: 'Vehicle Config', type: 'string', description: 'Vehicle trim level' },
   { name: 'VehicleName', category: 'Vehicle Config', type: 'string', description: 'User-set vehicle name' },
   { name: 'Version', category: 'Software', type: 'string', description: 'Current software version' },
+  { name: 'SelfDrivingSoftwareVersion', category: 'Software', type: 'string', description: 'Customer-facing FSD version, distinct from vehicle firmware; reported only with FSD control' },
+  { name: 'SemiTrailerLatched', category: 'Vehicle State', type: 'boolean', description: 'Semi fifth wheel latched to a trailer kingpin; unavailable does not mean unlatched' },
   { name: 'WheelType', category: 'Vehicle Config', type: 'string', description: 'Wheel type' },
 
   // ── User Preferences ──────────────────────────────────────────────────

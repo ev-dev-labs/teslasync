@@ -17640,6 +17640,8 @@
     "lifetimeDcChargeEnergy": "Lifetime DC charge energy",
     "rollingResistanceCoefficient": "Rolling resistance coefficient",
     "semiVehicleMass": "Semi vehicle mass",
+    "selfDrivingSoftwareVersion": "FSD software version",
+    "semiTrailerLatched": "Semi trailer latched",
     "streamingAvailability": "Availability depends on vehicle and firmware. Lifetime energy is the vehicle counter, not tracked session totals.",
     "brief": {
       "analysisBounds": "Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.",

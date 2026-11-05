@@ -400,6 +400,18 @@ func (s *VehicleService) buildStateFromSignalStoreWithProvenance(
 		}
 	}
 
+	if v := all["SelfDrivingSoftwareVersion"]; v != nil {
+		if value, ok := v.Raw.(string); ok && value != "" {
+			state.SelfDrivingSoftwareVersion = &value
+			mark("self_driving_software_version", v)
+		}
+	}
+	if v := all["SemiTrailerLatched"]; v != nil {
+		if value, ok := v.Raw.(bool); ok {
+			state.SemiTrailerLatched = &value
+			mark("semi_trailer_latched", v)
+		}
+	}
 	if v := all["AccessoryRail"]; v != nil {
 		if value, ok := v.Raw.(bool); ok {
 			state.AccessoryRail = &value
@@ -490,6 +502,16 @@ func fillStateFromSnapshot(
 	if state.ChargeAmpsA == nil {
 		if value, ok := snapFloat(snap, "ChargeAmps"); ok && value >= 0 && !math.IsInf(value, 0) {
 			state.ChargeAmpsA = &value
+		}
+	}
+	if state.SelfDrivingSoftwareVersion == nil {
+		if value, ok := snapString(snap, "SelfDrivingSoftwareVersion"); ok && value != "" {
+			state.SelfDrivingSoftwareVersion = &value
+		}
+	}
+	if state.SemiTrailerLatched == nil {
+		if value, ok := snap["SemiTrailerLatched"].(bool); ok {
+			state.SemiTrailerLatched = &value
 		}
 	}
 	if state.AccessoryRail == nil {

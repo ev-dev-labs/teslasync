@@ -32769,6 +32769,8 @@
       "telemetry.rpmRear",
       "telemetry.seatEmpty",
       "telemetry.seatOccupied",
+      "telemetry.selfDrivingSoftwareVersion",
+      "telemetry.semiTrailerLatched",
       "telemetry.semiVehicleMass",
       "telemetry.sentryMode",
       "telemetry.serviceMode",

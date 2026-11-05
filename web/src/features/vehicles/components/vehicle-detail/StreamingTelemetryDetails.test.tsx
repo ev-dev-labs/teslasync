@@ -33,7 +33,10 @@ function renderDetails(state: Partial<VehicleState>) {
 describe('StreamingTelemetryDetails', () => {
   it('shows all fields as unknown until supported firmware reports them', () => {
     renderDetails({});
-    expect(screen.getAllByText('—')).toHaveLength(6);
+    expect(screen.getAllByText('—')).toHaveLength(8);
+    expect(screen.getByText('FSD software version')).toBeInTheDocument();
+    expect(screen.getByText('Semi trailer latched')).toBeInTheDocument();
+    expect(screen.queryByText('No')).not.toBeInTheDocument();
     expect(screen.getByText('Accessory rail')).toBeInTheDocument();
     expect(screen.getByText('AEB operating state')).toBeInTheDocument();
     expect(screen.getByText('Semi vehicle mass')).toBeInTheDocument();
@@ -43,6 +46,9 @@ describe('StreamingTelemetryDetails', () => {
 
   it('renders reported states and SI measurements without re-scaling counters', () => {
     renderDetails({
+      self_driving_software_version: 'v14.3 Lite',
+      semi_trailer_latched: false,
+      software_version: '2026.44.3',
       accessory_rail: false,
       power_transfer_status: 'ChargeEnabled',
       automatic_emergency_braking_state: 'Unavailable',
@@ -51,6 +57,9 @@ describe('StreamingTelemetryDetails', () => {
       semi_vehicle_mass_kg: 36500.5,
     });
     expect(screen.getByText('Off')).toBeInTheDocument();
+    expect(screen.getByText('v14.3 Lite')).toBeInTheDocument();
+    expect(screen.getByText('No')).toBeInTheDocument();
+    expect(screen.queryByText('2026.44.3')).not.toBeInTheDocument();
     expect(screen.getByText('ChargeEnabled')).toBeInTheDocument();
     expect(screen.getByText('Unavailable')).toBeInTheDocument();
     expect(screen.getByText('12.5 kWh')).toBeInTheDocument();
@@ -63,7 +72,7 @@ describe('StreamingTelemetryDetails', () => {
     renderDetails({ accessory_rail: true, lifetime_dc_charge_energy_wh: 0 });
     expect(screen.getByText('On')).toBeInTheDocument();
     expect(screen.getByText('0 kWh')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.getAllByText('—')).toHaveLength(6);
   });
 
   it('does not present non-finite measurements as data', () => {
@@ -72,7 +81,13 @@ describe('StreamingTelemetryDetails', () => {
       semi_vehicle_mass_kg: Infinity,
       rolling_resistance_coefficient: NaN,
     });
-    expect(screen.getAllByText('—')).toHaveLength(6);
+    expect(screen.getAllByText('—')).toHaveLength(8);
     expect(formatEnergy).not.toHaveBeenCalled();
+  });
+
+  it('distinguishes a reported latch from a missing FSD version', () => {
+    renderDetails({ semi_trailer_latched: true, self_driving_software_version: '' });
+    expect(screen.getByText('Yes')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(7);
   });
 });

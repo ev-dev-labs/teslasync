@@ -179,7 +179,7 @@ func classifyExplicit(name string) fieldClass {
 		return fieldClass{cat: "vehicle_state", kind: "bool", unit: "none", isSettingUnit: false}
 	case "CurrentLimitMph":
 		return fieldClass{cat: "vehicle_state", kind: "float", unit: "distance", isSettingUnit: false}
-	case "Version":
+	case "Version", "SelfDrivingSoftwareVersion":
 		return fieldClass{cat: "config", kind: "string", unit: "none", isSettingUnit: false}
 	case "TpmsPressureFl":
 		return fieldClass{cat: "safety_security", kind: "float", unit: "pressure", isSettingUnit: false}
@@ -594,7 +594,7 @@ func classifyExplicit(name string) fieldClass {
 		return fieldClass{cat: "driving", kind: "float", unit: "none", isSettingUnit: false}
 	case "Cabin12vPortKeepOn", "Cabin48vPortKeepOn":
 		return fieldClass{cat: "vehicle_state", kind: "enum", unit: "none", isSettingUnit: false}
-	case "AccessoryRail":
+	case "AccessoryRail", "SemiTrailerLatched":
 		return fieldClass{cat: "vehicle_state", kind: "bool", unit: "none", isSettingUnit: false}
 	case "PowerTransferStatus":
 		return fieldClass{cat: "charging", kind: "enum", unit: "none", isSettingUnit: false}

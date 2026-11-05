@@ -62,6 +62,12 @@ only when the vehicle has FSD control; it is not the vehicle firmware version.
 An absent trailer signal means unknown, not unlatched. There are no other
 schema changes relative to the preceding pin.
 
+Both fields use generated subscriptions and the existing `signal_log` route,
+live-signal explorer, and history UI. Vehicle details displays FSD software
+version separately from firmware and preserves unknown/false/true trailer
+state. The API exposes optional `self_driving_software_version` and
+`semi_trailer_latched` fields with the usual live/durable provenance.
+
 ## Why we vendor instead of `go get`-ing
 
 1. **Determinism.** Generated enum tables, signal registries, and unit

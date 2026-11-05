@@ -3199,6 +3199,8 @@
     "rpmRear": "Rear RPM",
     "seatEmpty": "Empty",
     "seatOccupied": "Occupied",
+    "selfDrivingSoftwareVersion": "FSD software version",
+    "semiTrailerLatched": "Semi trailer latched",
     "semiVehicleMass": "Semi vehicle mass",
     "sentryMode": "Sentry Mode",
     "serviceMode": "Service Mode",

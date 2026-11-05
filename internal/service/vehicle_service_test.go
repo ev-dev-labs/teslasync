@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -111,6 +112,8 @@ func TestBuildStateFromSignalStore_ChargeLimitAndCurrent(t *testing.T) {
 
 func TestBuildStateFromSignalStore_NewStreamingFields(t *testing.T) {
 	values := signal.State{
+		"SelfDrivingSoftwareVersion":     "v14.3 Lite",
+		"SemiTrailerLatched":             false,
 		"AccessoryRail":                  false,
 		"PowerTransferStatus":            "ChargeEnabled",
 		"AutomaticEmergencyBrakingState": "Unavailable",
@@ -119,6 +122,8 @@ func TestBuildStateFromSignalStore_NewStreamingFields(t *testing.T) {
 		"SemiVehicleMassKg":              float64(36500.5),
 	}
 	want := map[string]any{
+		"self_driving_software_version":     "v14.3 Lite",
+		"semi_trailer_latched":              false,
 		"accessory_rail":                    false,
 		"power_transfer_status":             "ChargeEnabled",
 		"automatic_emergency_braking_state": "Unavailable",
@@ -165,6 +170,31 @@ func TestBuildStateFromSignalStore_NewStreamingFields(t *testing.T) {
 	}
 }
 
+func TestBuildStateFromSignalStore_TrailerLatchUnknown(t *testing.T) {
+	for _, source := range []string{"live", "durable"} {
+		for _, raw := range []any{true, false, nil, "Unknown"} {
+			t.Run(fmt.Sprintf("%s/%v", source, raw), func(t *testing.T) {
+				store := signal.New()
+				reader := &fakeStateReader{}
+				if source == "live" {
+					store.Update(7, map[string]any{"SemiTrailerLatched": raw})
+				} else {
+					reader.snapshot = signal.State{"SemiTrailerLatched": raw}
+				}
+				state := newSvc(reader).BuildStateFromSignalStore(store, &vehiclemodel.Vehicle{ID: 7})
+				want, known := raw.(bool)
+				if !known {
+					if state.SemiTrailerLatched != nil {
+						t.Fatalf("unknown latch became %v", *state.SemiTrailerLatched)
+					}
+				} else if state.SemiTrailerLatched == nil || *state.SemiTrailerLatched != want {
+					t.Fatalf("latch = %v, want %v", state.SemiTrailerLatched, want)
+				}
+			})
+		}
+	}
+}
+
 func TestBuildStateFromSignalStore_StreamingInvalidMeasurements(t *testing.T) {
 	for _, source := range []string{"live", "durable"} {
 		t.Run(source, func(t *testing.T) {
@@ -196,11 +226,16 @@ func TestBuildStateFromSignalStore_StreamingInvalidMeasurements(t *testing.T) {
 
 func TestBuildStateFromSignalStore_StreamingZeroAndFalseBeatFallback(t *testing.T) {
 	store := newStore(t, 7, map[string]any{
+		"SelfDrivingSoftwareVersion":     "v14.3.13",
+		"SemiTrailerLatched":             false,
+		"Version":                        "2026.44.3",
 		"AccessoryRail":                  false,
 		"LifetimeDcChargeEnergyKwh":      float64(0),
 		"AutomaticEmergencyBrakingState": "Unknown",
 	})
 	reader := &fakeStateReader{snapshot: signal.State{
+		"SelfDrivingSoftwareVersion":     "v14.2",
+		"SemiTrailerLatched":             true,
 		"AccessoryRail":                  true,
 		"LifetimeDcChargeEnergyKwh":      float64(9000),
 		"AutomaticEmergencyBrakingState": "Enabled",
@@ -208,6 +243,12 @@ func TestBuildStateFromSignalStore_StreamingZeroAndFalseBeatFallback(t *testing.
 	}}
 	state, verified := newSvc(reader).BuildStateFromSignalStoreWithProvenance(
 		store, &vehiclemodel.Vehicle{ID: 7})
+	if state.SemiTrailerLatched == nil || *state.SemiTrailerLatched ||
+		state.SelfDrivingSoftwareVersion == nil || *state.SelfDrivingSoftwareVersion != "v14.3.13" ||
+		state.SoftwareVersion != "2026.44.3" ||
+		!verified["self_driving_software_version"] || !verified["semi_trailer_latched"] {
+		t.Fatalf("new live fields lost precedence or overwrote firmware: %+v, verified=%v", state, verified)
+	}
 	if state.AccessoryRail == nil || *state.AccessoryRail ||
 		state.LifetimeDcChargeEnergyWh == nil || *state.LifetimeDcChargeEnergyWh != 0 ||
 		state.AutomaticEmergencyBrakingState == nil || *state.AutomaticEmergencyBrakingState != "Unknown" {

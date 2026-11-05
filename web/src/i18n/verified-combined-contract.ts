@@ -28,6 +28,8 @@ export function assertCombinedCheckpoint(group: 'canonical' | 'owner', file: str
 export const currentOwnerCheckpointFiles = checkpoints.owner
 
 const dashboardPolishAdditions = [
+  ['telemetry.selfDrivingSoftwareVersion', 'FSD software version'],
+  ['telemetry.semiTrailerLatched', 'Semi trailer latched'],
   ['dashboard.chargeStatus.chargeLimit', 'Charge limit'],
   ['dashboard.chargeStatus.lastReported', 'Last reported'],
   ['dashboard.widgetSettings.refreshHelp', 'Adds periodic refreshes. Live updates and existing polling may arrive more often; dashboard settings apply when Default is selected.'],
