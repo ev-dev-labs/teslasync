@@ -210,7 +210,7 @@ function FullChargingView({ metrics, unitPrefs, fmtNumber, t, active, short }: F
         label={t('widget.battery', 'Battery')}
         marker={metrics.chargeLimit}
         showMarkerValue={false}
-        markerLabel={metrics.chargeLimit != null ? `${t('widget.chargeStatus.chargeLimit', 'Charge limit')} ${fmtNumber(metrics.chargeLimit, 0)}%` : undefined}
+        markerLabel={metrics.chargeLimit != null ? `${t('dashboard.chargeStatus.chargeLimit', 'Charge limit')} ${fmtNumber(metrics.chargeLimit, 0)}%` : undefined}
         active={active}
       />
       </div>

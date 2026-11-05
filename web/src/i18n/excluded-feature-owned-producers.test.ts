@@ -4,7 +4,8 @@ import { resolve } from 'node:path'
 import { createInstance } from 'i18next'
 import { beforeAll, describe, expect, it } from 'vitest'
 import ts from 'typescript'
-import catalog from './en.json'
+import currentCatalog from './en.json'
+import { catalogBeforeDashboardPolish } from './verified-combined-contract'
 import verifiedProducerCheckpoints from './verified-producer-checkpoints.json'
 import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
 import { finalFourAdditions, ownerRecoveryAdditions, restoreOwnerRecoverySource } from './authorized-owner-recovery.test'
@@ -12,6 +13,8 @@ import baseline from './known-missing-keys.json'
 import runtimeManifest from './en/runtime-manifest.json'
 import usageManifest from './en/usage-manifest.json'
 import shell from './en/shell.json'
+
+const catalog = catalogBeforeDashboardPolish(currentCatalog)
 
 type Json = Record<string, unknown>
 

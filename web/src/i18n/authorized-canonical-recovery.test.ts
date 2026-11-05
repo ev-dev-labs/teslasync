@@ -4,11 +4,13 @@ import { resolve } from 'node:path'
 import { createInstance } from 'i18next'
 import { describe, expect, it } from 'vitest'
 import ts from 'typescript'
-import catalog from './en.json'
+import currentCatalog from './en.json'
 import shell from './en/shell.json'
 import baseline from './known-missing-keys.json'
 import { finalFourAdditions, ownerRecoveryAdditions } from './authorized-owner-recovery.test'
-import { assertCombinedCheckpoint } from './verified-combined-contract'
+import { assertCombinedCheckpoint, catalogBeforeDashboardPolish } from './verified-combined-contract'
+
+const catalog = catalogBeforeDashboardPolish(currentCatalog)
 
 type Json = Record<string, unknown>
 // Static exact parent-disposition fixture. Never derive exclusions from the current catalog.

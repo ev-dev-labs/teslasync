@@ -1101,6 +1101,10 @@
     "arrangeDropActive": "Release to add and auto-arrange this widget.",
     "arrangeDropHint": "Drag a widget here to add and auto-arrange, or drop it on the grid to choose its position.",
     "autoArrange": "Auto arrange",
+    "chargeStatus": {
+      "chargeLimit": "Charge limit",
+      "lastReported": "Last reported"
+    },
     "closeWidgetPicker": "Close widget picker",
     "customize": "Customize",
     "customizeHint": "You can customize this dashboard. Tap the + to add widgets.",
@@ -3070,10 +3074,6 @@
         "supercharger": "Supercharger",
         "unknown": "Unknown"
       }
-    },
-    "chargeStatus": {
-      "chargeLimit": "Charge limit",
-      "lastReported": "Last reported"
     },
     "chargeStatusLive": "Charge status",
     "charging": "Charging",

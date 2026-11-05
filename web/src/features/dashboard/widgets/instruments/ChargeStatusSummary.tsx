@@ -23,10 +23,10 @@ export function ChargeStatusSummary({ charging, active, limit }: ChargeStatusSum
             : t('widget.chargingSchedule.modeUnknown', 'Unknown')}
       </Badge>
       {charging === true && !active && (
-        <Caption>{t('widget.chargeStatus.lastReported', 'Last reported')}</Caption>
+        <Caption>{t('dashboard.chargeStatus.lastReported', 'Last reported')}</Caption>
       )}
       <Caption>
-        {t('widget.chargeStatus.chargeLimit', 'Charge limit')}{' '}
+        {t('dashboard.chargeStatus.chargeLimit', 'Charge limit')}{' '}
         {hasLimit ? `${fmtNumber(limit, 0)}%` : '—'}
       </Caption>
     </div>

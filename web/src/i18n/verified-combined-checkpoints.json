@@ -291,8 +291,8 @@
     },
     {
       "file": "web/src/features/dashboard/widgets/AnalyticsSummaryWidget.tsx",
-      "calls": 7,
-      "sha256": "8f93c4872b7b4033d31a092e9258b2e0681ecd006178db522248cd703947d520"
+      "calls": 8,
+      "sha256": "94c43b2fd231a1e07cf4c59ef3fae391a97458f8211ea480893fc7f585705055"
     },
     {
       "file": "web/src/features/dashboard/widgets/APIUsageWidget.tsx",
@@ -311,8 +311,8 @@
     },
     {
       "file": "web/src/features/dashboard/widgets/ChargeCostTrackerWidget.tsx",
-      "calls": 14,
-      "sha256": "8af29a65ccaa4add819e44114fc4285be04ef88a5e8063058d7cf911bda5f9cb"
+      "calls": 17,
+      "sha256": "7586a792bd2d053f7ed99ad437f902221ac1af71af6ae24a26cff376c6802c9d"
     },
     {
       "file": "web/src/features/dashboard/widgets/CostBreakdownWidget.tsx",
@@ -332,7 +332,7 @@
     {
       "file": "web/src/features/dashboard/widgets/RegenEfficiencyWidget.tsx",
       "calls": 5,
-      "sha256": "52c95ee2193ab5a6f179d4a32964e4494866275ef05f5f38722d69fcb73418db"
+      "sha256": "4df9a93821b510aa7973d6dfca6630bf6d15360e2cd6164fe6938b3fbbda67da"
     },
     {
       "file": "web/src/features/dashboard/widgets/SignalHealthWidget.tsx",
@@ -376,13 +376,13 @@
     },
     {
       "file": "web/src/features/dashboard/widgets/FleetStatsBarWidget.tsx",
-      "calls": 8,
-      "sha256": "3873240f38df0a7836f9e5c8baa91536c3374f28db42d5621a348f52089ba8ce"
+      "calls": 10,
+      "sha256": "ccc63b9cc5f4dc92dc16ee1b2e4c82ae5dbbf73f0e1f9be9fc8943dec7a517c8"
     },
     {
       "file": "web/src/features/dashboard/widgets/FleetStatsWidget.tsx",
-      "calls": 6,
-      "sha256": "a4c3a74db0a5212be37e51957d4bf9642fcd266bf084e4a719a81add16bb6bae"
+      "calls": 8,
+      "sha256": "cae50adebbae4bfc5a9c9cdcd649c1e1a08df7821aabe9f910413f8a27bc819a"
     },
     {
       "file": "web/src/features/dashboard/widgets/FsdWeeklyWidget.tsx",
@@ -591,8 +591,8 @@
     },
     {
       "file": "web/src/features/system/pages/DBHealthPage.tsx",
-      "calls": 51,
-      "sha256": "126c01ab4e84c678d0fa17b76d6d09ec11ad45af757e8341e69872d668b8695f"
+      "calls": 48,
+      "sha256": "bf7254f963e660ea2518bd9a0fd1e4d8642377c258239ba46997088e5ff763af"
     }
   ]
 }

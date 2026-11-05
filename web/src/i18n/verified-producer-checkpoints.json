@@ -680,7 +680,7 @@
   {
     "file": "web/src/features/dashboard/pages/DashboardPage.tsx",
     "calls": 68,
-    "sha256": "54e728d81cdbdd886bd4d23926ed65ca276f066ff6a72d3372dbf5d48a4f724b"
+    "sha256": "79bb8ba482cc454d528e5c6c322695a35b9bb7f30fe4671a18db7847a20cb824"
   },
   {
     "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
@@ -694,8 +694,8 @@
   },
   {
     "file": "web/src/features/dashboard/widgets/AnalyticsSummaryWidget.tsx",
-    "calls": 7,
-    "sha256": "8f93c4872b7b4033d31a092e9258b2e0681ecd006178db522248cd703947d520"
+    "calls": 8,
+    "sha256": "94c43b2fd231a1e07cf4c59ef3fae391a97458f8211ea480893fc7f585705055"
   },
   {
     "file": "web/src/features/dashboard/widgets/AnomalyDetectorWidget.tsx",
@@ -759,8 +759,8 @@
   },
   {
     "file": "web/src/features/dashboard/widgets/FleetStatsBarWidget.tsx",
-    "calls": 8,
-    "sha256": "3873240f38df0a7836f9e5c8baa91536c3374f28db42d5621a348f52089ba8ce"
+    "calls": 10,
+    "sha256": "ccc63b9cc5f4dc92dc16ee1b2e4c82ae5dbbf73f0e1f9be9fc8943dec7a517c8"
   },
   {
     "file": "web/src/features/dashboard/widgets/FsdWeeklyWidget.tsx",

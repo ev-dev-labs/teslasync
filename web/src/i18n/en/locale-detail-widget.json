@@ -285,10 +285,6 @@
       "session": "Session"
     },
     "chargeStatusLive": "Charge status",
-    "chargeStatus": {
-      "chargeLimit": "Charge limit",
-      "lastReported": "Last reported"
-    },
     "noChargeData": "No charge data",
     "notCharging": "Not charging",
     "voltage": "Voltage",

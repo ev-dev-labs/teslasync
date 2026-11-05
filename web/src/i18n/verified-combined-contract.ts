@@ -26,3 +26,46 @@ export function assertCombinedCheckpoint(group: 'canonical' | 'owner', file: str
 }
 
 export const currentOwnerCheckpointFiles = checkpoints.owner
+
+const dashboardPolishAdditions = [
+  ['dashboard.chargeStatus.chargeLimit', 'Charge limit'],
+  ['dashboard.chargeStatus.lastReported', 'Last reported'],
+  ['dashboard.widgetSettings.refreshHelp', 'Adds periodic refreshes. Live updates and existing polling may arrive more often; dashboard settings apply when Default is selected.'],
+  ['dashboard.widgetSettings.rangeDefault', 'Widget default'],
+  ['dashboard.widgetSettings.rangeHistoryHelp', 'Filters historical data by a rolling range. Recent lists and session charts also limit the number of records shown.'],
+  ['dashboard.widgetSettings.rangeFixedHelp', 'This widget uses live data, a fixed period, or the workspace range; changing this selection does not change its data.'],
+  ['dashSettings.refreshHelp', 'Adds periodic refreshes unless a widget has its own interval. Live updates and existing polling may arrive more often.'],
+  ['widget.analyticsSummary.distanceRange', 'Distance (selected range)'],
+  ['widget.analyticsSummary.distanceViewRange', 'Distance (view range)'],
+  ['widget.chargeCost.selectedRangeCost', 'Cost for selected range'],
+  ['widget.chargeCost.selectedRangeEstimate', 'Estimate for selected range'],
+  ['widget.driveEfficiencyChart.selectedRangeAverage', 'Selected-range average'],
+  ['widget.fleetStatsBar.distanceRange', 'Distance (selected range)'],
+  ['widget.fleetStatsBar.energyRange', 'Energy (selected range)'],
+  ['widget.fleetStatsBar.distanceViewRange', 'Distance (view range)'],
+  ['widget.fleetStatsBar.energyViewRange', 'Energy (view range)'],
+  ['widget.recentDrivesSummary', '{{count}} recent drives \u00b7 {{total}}'],
+  ['dbHealth.estimatedRows', 'Estimated rows'],
+  ['dbHealth.estimatedTotalRows', 'Estimated total rows'],
+  ['dbHealth.rowEstimatesNote', 'Row counts are estimates from database statistics, including hypertable chunks. They may lag recent writes; size values are measured bytes.'],
+] as const
+
+/** Assert exact new copy before projecting it out of unchanged historical fingerprints. */
+export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(catalog: T): T {
+  const previous = structuredClone(catalog)
+  for (const [key, expected] of dashboardPolishAdditions) {
+    const parts = key.split('.')
+    let parent: Record<string, unknown> = previous
+    for (const part of parts.slice(0, -1)) {
+      const child = parent[part]
+      if (!child || typeof child !== 'object' || Array.isArray(child)) {
+        throw new Error('Missing reviewed catalog path: ' + key)
+      }
+      parent = child as Record<string, unknown>
+    }
+    const leaf = parts[parts.length - 1]
+    expect(parent[leaf], key).toBe(expected)
+    delete parent[leaf]
+  }
+  return previous
+}

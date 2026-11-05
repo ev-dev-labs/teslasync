@@ -6938,6 +6938,10 @@
     }
   },
   "dashboard": {
+    "chargeStatus": {
+      "chargeLimit": "Charge limit",
+      "lastReported": "Last reported"
+    },
     "fleetPosture": {
       "eyebrow": "Operational brief",
       "title": "Fleet posture",
@@ -18613,10 +18617,6 @@
       "session": "Session"
     },
     "chargeStatusLive": "Charge status",
-    "chargeStatus": {
-      "chargeLimit": "Charge limit",
-      "lastReported": "Last reported"
-    },
     "noChargeData": "No charge data",
     "notCharging": "Not charging",
     "voltage": "Voltage",

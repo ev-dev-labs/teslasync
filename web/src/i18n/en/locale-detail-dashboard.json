@@ -1,5 +1,9 @@
 {
   "dashboard": {
+    "chargeStatus": {
+      "chargeLimit": "Charge limit",
+      "lastReported": "Last reported"
+    },
     "fleetPosture": {
       "eyebrow": "Operational brief",
       "title": "Fleet posture",
