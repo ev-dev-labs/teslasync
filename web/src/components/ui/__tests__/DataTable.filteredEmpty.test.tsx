@@ -69,6 +69,53 @@ function excludeAllValues() {
 }
 
 describe('DataTable filtered empty copy', () => {
+  it('keeps object-property group names independent when another group is expanded', () => {
+    mount({ data: [{ ...rows[0], status: 'constructor' }, rows[1]],
+      rowGrouping: { key: row => row.status, label: key => key },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Review' }))
+    expect(screen.getByRole('button', { name: 'Expand constructor' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Expand constructor' }))
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+  })
+
+  it('collapses groups without removing matching rows from exports or candidates', async () => {
+    const onExport = vi.fn()
+    mount({ enableValueFilters: true, onExport,
+      rowGrouping: { key: row => row.status, label: key => key },
+    })
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Ready' }))
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+    expect(screen.getByText('Charlie')).toBeInTheDocument()
+    expect(screen.queryByText('Bravo')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }))
+    await waitFor(() => expect(onExport).toHaveBeenCalledWith('csv', rows, 'visible'))
+    fireEvent.click(screen.getByRole('button', { name: 'Status filter' }))
+    expect(screen.getByRole('checkbox', { name: 'Review' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Ready' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    expect(screen.getByText('Bravo')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Expand Ready' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse Review' }))
+    expect(screen.queryByText('Bravo')).not.toBeInTheDocument()
+  })
+
+  it('auto-expands search matches, allows manual collapse, and resets when search clears', async () => {
+    mount({ rowGrouping: { key: row => row.status, label: key => key } })
+    search('Alpha')
+    expect(await screen.findByText('Alpha')).toBeInTheDocument()
+    expect(screen.queryByText('Charlie')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse Ready' }))
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+    search('')
+    await screen.findByRole('button', { name: 'Expand Review' })
+    expect(screen.getByRole('button', { name: 'Expand Ready' })).toBeInTheDocument()
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+  })
+
   it('shows no-match for populated loaded search and keyboard reset restores rows and actions', async () => {
     const action = vi.fn()
     mount({ toolbarActions: <Button onClick={action}>Inspect source</Button>, searchable: true })

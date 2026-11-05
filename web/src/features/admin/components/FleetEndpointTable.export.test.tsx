@@ -137,7 +137,7 @@ describe('FleetEndpointTable existing export serialization', () => {
       pollingEnabled: true, pending: false, tableId: 'fleet:actions-fixture', onEnable, onAuto,
     };
     const view = render(<FleetEndpointTable {...props} />);
-    expect(screen.getByText('vehicle › data › fetch snapshot')).toBeInTheDocument();
+    expect(screen.getByText('fetch snapshot')).toBeInTheDocument();
     expect(screen.getAllByRole('row')).toHaveLength(2);
     expect(screen.getAllByRole('columnheader')).toHaveLength(5);
     const accessSwitch = screen.getByRole('switch', { name: 'Enable GET /api/1/vehicles/{vehicle_id}/data' });

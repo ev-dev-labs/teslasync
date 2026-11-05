@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FleetEndpoint, PollingConfig } from '@/api/hooks/useSettings';
@@ -42,9 +42,9 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown, options?: { count?: number }) => {
+      t: (key: string, fallback?: unknown, options?: Record<string, unknown>) => {
         const text = translations[key] ?? (typeof fallback === 'string' ? fallback : key);
-        return text.replace('{{count}}', String(options?.count ?? 0));
+        return text.replace(/{{(\w+)}}/g, (_, name: string) => String(options?.[name] ?? ''));
       },
       i18n: { language: 'de', changeLanguage: vi.fn() },
     }),
@@ -78,16 +78,15 @@ vi.mock('@/api/hooks/useSettings', async () => {
   };
 });
 
-vi.mock('../../FleetEndpointTable', () => ({
+vi.mock('../../FleetEndpointTable', async () => {
+  const actual = await vi.importActual<typeof import('../../FleetEndpointTable')>('../../FleetEndpointTable');
+  return {
   FleetEndpointTable: (props: TableProps) => {
     fixtures.table(props);
-    return (
-      <div data-testid={props.tableId}>
-        {props.endpoints.map((endpoint) => <span key={endpoint.key} data-testid="route-key">{endpoint.key}</span>)}
-      </div>
-    );
+    return <actual.FleetEndpointTable {...props} />;
   },
-}));
+  };
+});
 
 function CatalogHarness() {
   const controller = useFleetAPIPage();
@@ -104,25 +103,26 @@ function CatalogHarness() {
 function renderCatalog() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   render(<QueryClientProvider client={client}><CatalogHarness /></QueryClientProvider>);
+  fireEvent.click(screen.getByRole('button', { name: 'View options' }));
 }
 
 function routeKeys() {
-  return screen.getAllByTestId('route-key').map((element) => element.textContent);
+  return fixtures.table.mock.lastCall?.[0].endpoints.map(endpoint => endpoint.key);
 }
 
 beforeEach(() => fixtures.table.mockClear());
 afterEach(cleanup);
 
 describe('FleetAPIRouteCatalog source contracts', () => {
-  it('uses the German heading as the region name without translating raw table and candidate identities', () => {
+  it('uses translated group disclosures without translating raw table and candidate identities', () => {
     renderCatalog();
-    const region = screen.getByRole('region', { name: 'Fahrzeugdaten' });
-    expect(within(region).getByRole('heading', { name: 'Fahrzeugdaten' })).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Vehicle data' })).not.toBeInTheDocument();
-    expect(within(region).getByTestId('admin:fleet-endpoints:category:Vehicle data')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand Fahrzeugdaten' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Expand Vehicle data' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('table')).toHaveLength(1);
     expect(fixtures.table).toHaveBeenLastCalledWith(expect.objectContaining({
-      endpoints: [fixtures.catalog[1], fixtures.catalog[0]],
-      candidates: [fixtures.catalog[0], fixtures.catalog[1]],
+      tableId: 'admin:fleet-endpoints',
+      endpoints: [fixtures.catalog[1], fixtures.catalog[0], fixtures.catalog[2]],
+      candidates: fixtures.catalog,
       access: fixtures.polling.fleet_endpoints,
       auto: fixtures.polling.auto_endpoints,
       pollingEnabled: true,
@@ -148,16 +148,15 @@ describe('FleetAPIRouteCatalog source contracts', () => {
     fireEvent.click(screen.getByRole('button', { name: 'HTTP method' }));
     expect(screen.getByRole('button', { name: 'HTTP method' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Category' })).toHaveAttribute('aria-pressed', 'false');
-    const postRegion = screen.getByRole('region', { name: 'POST' });
-    expect(within(postRegion).getByRole('heading', { name: 'POST' })).toBeInTheDocument();
-    expect(within(postRegion).getByTestId('admin:fleet-endpoints:method:POST')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand POST' })).toBeInTheDocument();
+    expect(fixtures.table.mock.lastCall?.[0].grouping?.key(fixtures.catalog[2])).toBe('POST');
     fireEvent.click(screen.getByRole('button', { name: /^POST\s*1$/ }));
-    expect(screen.queryByRole('region', { name: 'GET' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Expand GET' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Category' }));
     expect(screen.getByRole('button', { name: 'Category' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'All routes 3' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('region', { name: 'Fahrzeugdaten' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Fahrzeugbefehle' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand Fahrzeugdaten' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand Fahrzeugbefehle' })).toBeInTheDocument();
   });
 
   it.each([
@@ -168,6 +167,7 @@ describe('FleetAPIRouteCatalog source contracts', () => {
     { case: 'auto', value: 'auto', keys: ['vehicle.z', 'vehicle.a'], reversed: ['vehicle.a', 'vehicle.z'], direction: 'Sort ascending' },
   ])('runs the $case sort selection and direction handlers', ({ value, keys, reversed, direction }) => {
     renderCatalog();
+    fireEvent.click(screen.getByRole('button', { name: /^Fahrzeugdaten\s*2$/ }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Sort routes by' }), { target: { value } });
     expect(screen.getByRole('combobox', { name: 'Sort routes by' })).toHaveValue(value);
     expect(routeKeys()).toEqual(keys);
@@ -194,13 +194,15 @@ describe('FleetAPIRouteCatalog source contracts', () => {
     expect(routeKeys()).toEqual(['vehicle.a', 'vehicle.z', 'command.lock']);
   });
 
-  it('retains the no-match message and executes the clear-search action without changing the selected group', () => {
+  it('retains the no-match message and executes the clear-search action without changing the selected group', async () => {
     renderCatalog();
+    fireEvent.click(screen.getByRole('button', { name: /^Fahrzeugdaten\s*2$/ }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Fixture search' }), { target: { value: 'missing-fixture-route' } });
     expect(screen.getByText('No API routes match that search.')).toBeInTheDocument();
-    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('table')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /^Collapse Fahrzeug/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
-    expect(screen.getByRole('textbox', { name: 'Fixture search' })).toHaveValue('');
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Fixture search' })).toHaveValue(''));
     expect(screen.getByRole('button', { name: /^Fahrzeugdaten\s*2$/ })).toHaveAttribute('aria-pressed', 'true');
     expect(routeKeys()).toEqual(['vehicle.a', 'vehicle.z']);
   });

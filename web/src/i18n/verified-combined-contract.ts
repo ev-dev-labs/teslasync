@@ -29,6 +29,17 @@ export function assertCombinedCheckpoint(group: 'canonical' | 'owner', file: str
 export const currentOwnerCheckpointFiles = checkpoints.owner
 
 const dashboardPolishAdditions = [
+  ['table.expandGroup', 'Expand {{group}}'],
+  ['table.collapseGroup', 'Collapse {{group}}'],
+  ['fleetApi.connectionDetails', 'Connection details'],
+  ['fleetApi.apiUnknown', 'API status unknown'],
+  ['fleetApi.apiSuspended', 'API suspended'],
+  ['fleetApi.apiAllowed', 'API allowed'],
+  ['fleetApi.counts', '{{total}} endpoints · {{enabled}} enabled · {{auto}} selected for auto-poll'],
+  ['fleetApi.copyPath', 'Copy {{path}}'],
+  ['fleetApi.allowBeforePolling', 'Allow this endpoint before selecting auto-poll.'],
+  ['fleetApi.viewOptions', 'View options'],
+  ['fleetApi.allowGroup', 'Allow all {{group}}'],
   ['driveCalendar.heatmap.unavailableCell', '{{date}} · {{reason}}'],
   ['driveCalendar.heatmap.outsideRange', 'Outside the selected range'],
   ['driveCalendar.heatmap.beforeFirstDrive', 'Before the first returned drive; coverage unknown'],

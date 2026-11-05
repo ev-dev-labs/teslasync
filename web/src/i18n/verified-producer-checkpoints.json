@@ -423,6 +423,11 @@
     "sha256": "bd5c8aaa26877bc773e3a3f0c8849e4da73839219dbf2b7e7ecf47cbf269bf12"
   },
   {
+    "file": "web/src/features/admin/hooks/useFleetAPIPage.ts",
+    "calls": 9,
+    "sha256": "87abb602b1af663688f6a6443139cbfb8fee4232345af9a7d299ac4d9cc29d3d"
+  },
+  {
     "file": "web/src/features/admin/hooks/useSecretRotationPage.ts",
     "calls": 10,
     "sha256": "793c3430d1abe27c4bd6adb94014f982c552b3d3d57283178e9a922da6e45112"
@@ -461,6 +466,11 @@
     "file": "web/src/features/admin/pages/DiskForecastPage.tsx",
     "calls": 52,
     "sha256": "e8c5f041368c5cb0b5f900e42f3341e1faa6ab6093e977f910042310b2a9cbc5"
+  },
+  {
+    "file": "web/src/features/admin/pages/FleetAPIPage.tsx",
+    "calls": 3,
+    "sha256": "3383cb95ee0cbb89f885c8960f59b54976d689e73fbb98853a30f376f448c656"
   },
   {
     "file": "web/src/features/admin/pages/FleetTelemetryCoveragePage.tsx",
@@ -618,14 +628,14 @@
     "sha256": "b19e87d794bbc451d7d7af5b03b0ead08d5439c71f17c508b837a23197b3bb17"
   },
   {
-    "file": "web/src/features/charging/components/ChargingSessionCard.tsx",
-    "calls": 15,
-    "sha256": "010a20405a4f561a0518556531df48459184bca2b2d7db912823e544c5e7637a"
-  },
-  {
     "file": "web/src/features/charging/components/ChargingEvidenceTable.tsx",
     "calls": 32,
     "sha256": "02f18746d80fb605d99c27c89724c2b9ea1d8f2d23b48fcd6e6a0ddcbcf64b5b"
+  },
+  {
+    "file": "web/src/features/charging/components/ChargingSessionCard.tsx",
+    "calls": 15,
+    "sha256": "010a20405a4f561a0518556531df48459184bca2b2d7db912823e544c5e7637a"
   },
   {
     "file": "web/src/features/charging/components/WaitOraclePanel.tsx",

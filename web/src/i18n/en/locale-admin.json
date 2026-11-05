@@ -1921,6 +1921,15 @@
     "errorMessage": "Something went wrong fetching your Tesla feature configuration. Check your connection and try again."
   },
   "fleetApi": {
+    "connectionDetails": "Connection details",
+    "apiUnknown": "API status unknown",
+    "apiSuspended": "API suspended",
+    "apiAllowed": "API allowed",
+    "counts": "{{total}} endpoints · {{enabled}} enabled · {{auto}} selected for auto-poll",
+    "copyPath": "Copy {{path}}",
+    "allowBeforePolling": "Allow this endpoint before selecting auto-poll.",
+    "viewOptions": "View options",
+    "allowGroup": "Allow all {{group}}",
     "subtitle": "Choose which Tesla Fleet API routes are available and which can be polled automatically",
     "status": {
       "polling": "Polling enabled",

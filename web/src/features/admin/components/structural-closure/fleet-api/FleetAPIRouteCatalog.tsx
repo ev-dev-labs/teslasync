@@ -1,6 +1,5 @@
-import { ArrowDown, ArrowUp, Search } from 'lucide-react';
-import { Badge, PanelTitle, Caption, Button, Select } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
+import { ArrowDown, ArrowUp } from 'lucide-react';
+import { Accordion, Badge, Caption, Button, Select, Toggle } from '@/components/ui';
 import { FleetEndpointTable } from '../../FleetEndpointTable';
 import type { useFleetAPIPage } from '../../../hooks/useFleetAPIPage';
 
@@ -11,10 +10,11 @@ type Props = {
 };
 
 export function FleetAPIRouteCatalog({ controller, pollingConfig }: Props) {
-  const { t, setSearch, groupBy, setGroupBy, selectedGroup, setSelectedGroup, sortBy, setSortBy, sortDescending, setSortDescending, pollingConfigMut, catalog, endpointGroups, groups, groupLabel, toggleEndpoint, toggleAuto, totalCount } = controller;
+  const { t, search, setSearch, groupBy, setGroupBy, selectedGroup, setSelectedGroup, sortBy, setSortBy, sortDescending, setSortDescending, pollingConfigMut, catalog, endpointGroups, groups, groupLabel, toggleEndpoint, toggleAuto, toggleGroupAccess, totalCount } = controller;
 
   return (
 <div className="min-w-0 space-y-3">
+              <Accordion title={t('fleetApi.viewOptions', 'View options')}>
               <div className="flex flex-wrap items-center gap-2">
                 <Caption>{t('fleetApi.controls.groupBy', 'Group by')}</Caption>
                 <Button size="sm" variant={groupBy === 'category' ? 'primary' : 'secondary'}
@@ -53,6 +53,7 @@ export function FleetAPIRouteCatalog({ controller, pollingConfig }: Props) {
                   </Button>
                 </div>
               </div>
+              </Accordion>
               <nav aria-label={t('fleetApi.controls.categoryFilter', 'Route groups')}
                 className="flex flex-wrap gap-2 pb-1">
                 <Button size="sm" variant={selectedGroup === 'all' ? 'primary' : 'secondary'}
@@ -69,35 +70,38 @@ export function FleetAPIRouteCatalog({ controller, pollingConfig }: Props) {
                   </Button>
                 ))}
               </nav>
-              <div className="min-w-0 space-y-3">
-                {endpointGroups.length === 0 ? (
-                  <EmptyState
-                    icon={<Search className="h-8 w-8" />}
-                    message={t('fleetApi.controls.noMatches', 'No API routes match that search.')}
-                    action={{ label: t('fleetApi.controls.clearSearch', 'Clear search'), onClick: () => setSearch('') }}
-                  />
-                ) : endpointGroups.map(([group, endpoints]) => (
-                  <section key={group} aria-label={groupLabel(group)} className="overflow-hidden rounded-xl border border-[var(--border-default)]">
-                    <div className="flex items-center justify-between gap-2 bg-[var(--surface-2)] px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <PanelTitle>{groupLabel(group)}</PanelTitle>
-                        <Badge size="sm" variant="info">{t('fleetApi.controls.groupCount', '{{count}} routes', { count: endpoints.length })}</Badge>
-                      </div>
-                    </div>
                     <FleetEndpointTable
-                      tableId={`admin:fleet-endpoints:${groupBy}:${group}`}
-                      endpoints={endpoints}
-                      candidates={catalog.filter((endpoint) => (groupBy === 'category' ? endpoint.category : endpoint.method) === group)}
+                      tableId="admin:fleet-endpoints"
+                      endpoints={endpointGroups.flatMap(([, endpoints]) => endpoints)}
+                      candidates={catalog}
                       access={pollingConfig.fleet_endpoints}
                       auto={pollingConfig.auto_endpoints}
                       pollingEnabled={pollingConfig.auto_polling_enabled}
                       pending={pollingConfigMut.isPending}
                       onEnable={toggleEndpoint}
                       onAuto={toggleAuto}
+                      controls={{ search: {
+                        value: search,
+                        onChange: value => { setSearch(value); if (value) setSelectedGroup('all'); },
+                        ariaLabel: t('fleetApi.controls.search', 'Search API routes'),
+                        placeholder: t('fleetApi.controls.search', 'Search API routes'),
+                      } }}
+                      grouping={{
+                        key: endpoint => groupBy === 'category' ? endpoint.category : endpoint.method,
+                        label: groupLabel,
+                        resetKey: `${groupBy}:${selectedGroup}:${search}`,
+                        autoExpand: !!search.trim() || selectedGroup !== 'all',
+                        actions: (group, rows) => {
+                          const members = catalog.filter(endpoint => (groupBy === 'category' ? endpoint.category : endpoint.method) === group);
+                          return <div className="flex flex-wrap items-center gap-3">
+                            <Badge size="sm" variant="info">{t('fleetApi.controls.groupCount', '{{count}} routes', { count: rows.length })}</Badge>
+                            <Toggle size="sm" checked={members.every(endpoint => !!pollingConfig.fleet_endpoints[endpoint.key])}
+                              disabled={pollingConfigMut.isPending} onChange={() => toggleGroupAccess(group)}
+                              label={t('fleetApi.allowGroup', 'Allow all {{group}}', { group: groupLabel(group) })} />
+                          </div>;
+                        },
+                      }}
                     />
-                  </section>
-                ))}
-              </div>
             </div>
   );
 }

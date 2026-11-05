@@ -8,6 +8,7 @@
  */
 
 import { PageLayout } from '@/components/layout';
+import { Accordion } from '@/components/ui';
 import { useFleetAPIPage } from '../hooks/useFleetAPIPage';
 import { FleetAPIBrief } from '../components/operationalbrief-a-g/FleetAPIBrief';
 import { FleetAPIPolling } from '../components/structural-closure/fleet-api/FleetAPIPolling';
@@ -24,10 +25,12 @@ export default function FleetAPIPage() {
       query={[settingsQuery, pollingQuery, versionQuery]}
       dataSources={dataSources}
     >
-      <FleetAPIBrief controller={controller} />
       <FleetAPIPolling controller={controller} />
       <FleetAPIEndpointControls controller={controller} />
-      <FleetAPIConfiguredEndpoints controller={controller} />
+      <Accordion title={t('fleetApi.connectionDetails', 'Connection details')}>
+        <FleetAPIConfiguredEndpoints controller={controller} />
+        <FleetAPIBrief controller={controller} />
+      </Accordion>
     </PageLayout>
   );
 }

@@ -2116,6 +2116,7 @@
       "region": "Bulk actions",
       "selected": "{{count}} selected"
     },
+    "collapseGroup": "Collapse {{group}}",
     "columns": {
       "button": "Columns",
       "empty": "No columns to configure",
@@ -2138,6 +2139,7 @@
       "column": "Expand row",
       "expand": "Expand row"
     },
+    "expandGroup": "Expand {{group}}",
     "export": {
       "fullResultScope": "Non-selected exports use the full-result handler; selection exports include only selected loaded rows.",
       "loadedScope": "Exports include only matching loaded rows, or selected loaded rows."

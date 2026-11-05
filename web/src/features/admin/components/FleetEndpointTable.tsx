@@ -1,6 +1,9 @@
+import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FleetEndpoint } from '@/api/hooks/useSettings';
-import { Badge, Caption, Code, DataTable, Text, Toggle, type Column } from '@/components/ui';
+import { Badge, Caption, Code, CopyButton, DataTable, Text, Toggle, Tooltip, type Column } from '@/components/ui';
+
+type TableProps = ComponentProps<typeof DataTable<FleetEndpoint>>;
 
 interface FleetEndpointTableProps {
   endpoints: FleetEndpoint[];
@@ -12,10 +15,13 @@ interface FleetEndpointTableProps {
   tableId: string;
   onEnable: (endpoint: FleetEndpoint) => void;
   onAuto: (key: string) => void;
+  grouping?: TableProps['rowGrouping'];
+  controls?: TableProps['controls'];
+  toolbarActions?: TableProps['toolbarActions'];
 }
 
 export function FleetEndpointTable({
-  endpoints, candidates, access, auto, pollingEnabled, pending, tableId, onEnable, onAuto,
+  endpoints, candidates, access, auto, pollingEnabled, pending, tableId, onEnable, onAuto, grouping, controls, toolbarActions,
 }: FleetEndpointTableProps) {
   const { t } = useTranslation();
   const columns: Column<FleetEndpoint>[] = [
@@ -30,13 +36,18 @@ export function FleetEndpointTable({
       header: t('fleetApi.controls.sortName', 'Operation'),
       filterValue: (endpoint) => endpoint.key,
       exportValue: (endpoint) => endpoint.key,
-      render: (endpoint) => <Text size="sm" weight="medium">{endpoint.key.replace(/\./g, ' › ').replace(/_/g, ' ')}</Text>,
+      render: (endpoint) => <Text size="sm" weight="medium">{(endpoint.key.split('.').pop() ?? endpoint.key).replace(/_/g, ' ')}</Text>,
     },
     {
       key: 'path',
       header: t('fleetApi.controls.sortPath', 'API path'),
       filterValue: (endpoint) => endpoint.path,
-      render: (endpoint) => <Code className="block break-all">{endpoint.path}</Code>,
+      exportValue: (endpoint) => endpoint.path,
+      render: (endpoint) => <div className="flex items-start gap-1">
+        <Code className="block max-w-80 break-all text-[var(--text-secondary)]">{endpoint.path}</Code>
+        <CopyButton text={endpoint.path} iconOnly className="min-h-11 min-w-11"
+          ariaLabel={t('fleetApi.copyPath', 'Copy {{path}}', { path: endpoint.path })} />
+      </div>,
     },
     {
       key: 'access',
@@ -69,6 +80,11 @@ export function FleetEndpointTable({
         : null,
       filterValueLabel: (value) => value == null ? '—' : value ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
       render: (endpoint) => endpoint.pollable ? (
+        <Tooltip multiline content={!pollingEnabled
+          ? t('fleetApi.controls.pausedHint', 'Turn on Tesla API Polling to change auto-poll selections. Existing selections are retained while paused.')
+          : !access[endpoint.key] ? t('fleetApi.allowBeforePolling', 'Allow this endpoint before selecting auto-poll.')
+            : t('fleetApi.controls.bulkHint', 'Auto-poll selects only enabled routes with a scheduled job.')}>
+        <span className="inline-flex" tabIndex={!pollingEnabled || !access[endpoint.key] ? 0 : undefined}>
         <Toggle
           checked={!!access[endpoint.key] && !!auto[endpoint.key]}
           onChange={() => onAuto(endpoint.key)}
@@ -76,6 +92,8 @@ export function FleetEndpointTable({
           size="sm"
           aria-label={`${t('fleetApi.controls.poll', 'Auto-poll')} ${endpoint.method} ${endpoint.path}`}
         />
+        </span>
+        </Tooltip>
       ) : (
         <Caption title={t('fleetApi.controls.onDemandOnly', 'Not scheduled')} aria-label={t('fleetApi.controls.onDemandOnly', 'Not scheduled')}>—</Caption>
       ),
@@ -90,6 +108,10 @@ export function FleetEndpointTable({
       filterData={candidates}
       keyExtractor={(endpoint) => endpoint.key}
       enableValueFilters
+      rowGrouping={grouping}
+      controls={controls}
+      toolbarActions={toolbarActions}
+      showDensityControl
       emptyMessage={t('fleetApi.controls.noMatches', 'No API routes match that search.')}
     />
   );

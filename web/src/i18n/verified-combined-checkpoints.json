@@ -96,7 +96,11 @@
     "web/src/features/telemetry/pages/SignalCorrelationPage.tsx",
     "web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx",
     "web/src/features/notifications/components/NotificationInboxTable.tsx",
-    "web/src/features/notifications/components/NotificationInboxDetails.tsx"
+    "web/src/features/notifications/components/NotificationInboxDetails.tsx",
+    "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIEndpointControls.tsx",
+    "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIPolling.tsx",
+    "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIRouteActions.tsx",
+    "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIRouteCatalog.tsx"
   ],
   "owner": [
     "web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx",
@@ -605,6 +609,26 @@
       "file": "web/src/features/notifications/components/NotificationInboxDetails.tsx",
       "sha256": "ca3d6eb3ce62a980c33f8bad5a64d6c92ce7a3f8583973fe3ad019a8f7f95c15",
       "calls": 18
+    },
+    {
+      "file": "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIEndpointControls.tsx",
+      "calls": 4,
+      "sha256": "bbdb9078beae061eb5f14abc6cb866737c55ea12da3de8fe1c37a70eb100bb43"
+    },
+    {
+      "file": "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIPolling.tsx",
+      "calls": 10,
+      "sha256": "f5de3d37e473f18a8a6209d29025075575988840b7f7c4c5b077d7f7565dd098"
+    },
+    {
+      "file": "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIRouteActions.tsx",
+      "calls": 6,
+      "sha256": "7b22d56b9e98ae3cc1e726c69f98a51d3013f72c5339af8653815af6be3211ca"
+    },
+    {
+      "file": "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIRouteCatalog.tsx",
+      "calls": 18,
+      "sha256": "05ef43852c1ec0a18233aebb6f2f2f309c514c07326007b11403464b04417c8a"
     }
   ]
 }

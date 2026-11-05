@@ -335,6 +335,14 @@ interface DataTableProps<T> {
   onExpandedChange?: (keys: RowKey[]) => void
   /** Required when `expandable` is true: render the row drawer body. */
   renderExpanded?: (row: T) => ReactNode
+  /** Collapse display only; all matching rows remain available to filters and exports. */
+  rowGrouping?: {
+    key: (row: T) => string
+    label: (key: string) => string
+    actions?: (key: string, rows: T[]) => ReactNode
+    autoExpand?: boolean
+    resetKey?: string
+  }
 
   // RESIZE
   /** Allow users to drag column right edges to resize. Persists per-column
@@ -487,6 +495,7 @@ export function DataTable<T>({
   expandedKeys,
   onExpandedChange,
   renderExpanded,
+  rowGrouping,
   resizable = Boolean(tableId),
   showColumnsMenu,
   columnVisibility,
@@ -561,6 +570,18 @@ export function DataTable<T>({
     pending: !Object.is(localSearch, deferredLocalSearch),
   } : undefined)
   const hasValueFilters = valueColumns.some(column => valueSelections[column.key] != null)
+  const groupScope = JSON.stringify([rowGrouping?.resetKey, valueSelections, deferredLocalSearch])
+  const [groupExpansion, setGroupExpansion] = useState<{ scope: string; open: Record<string, boolean> }>({ scope: '', open: {} })
+  const groupsExpandedByFilter = !!rowGrouping?.autoExpand || hasValueFilters || !!deferredLocalSearch.trim()
+  const groupIsOpen = (key: string) => groupExpansion.scope === groupScope && typeof groupExpansion.open[key] === 'boolean'
+    ? groupExpansion.open[key] : groupsExpandedByFilter
+  const toggleGroup = (key: string) => {
+    const open = !groupIsOpen(key)
+    setGroupExpansion(previous => ({
+      scope: groupScope,
+      open: { ...(previous.scope === groupScope ? previous.open : {}), [key]: open },
+    }))
+  }
   // Incoming rows are loaded evidence, not full server history or the current pagination slice.
   const localFilterNoMatch = data.length > 0 && filteredData.length === 0
   const noMatchMessage = t('combobox.noResults', 'No results')
@@ -1006,7 +1027,7 @@ export function DataTable<T>({
   // Only enabled when explicitly opted in AND there's no `expandable` slot
   // (variable row heights are out of scope). When the user passes both, we
   // gracefully fall back to non-virtualized rendering with a dev warning.
-  const virtualizationActive = virtualized && !mobileActive && !expandable && data.length > 0
+  const virtualizationActive = virtualized && !mobileActive && !expandable && !rowGrouping && data.length > 0
   // Density-aware default row-height estimate. When `density='auto'`,
   // read the live body data attr at mount; otherwise pick the matching
   // fixed height. The virtualizer adapts to actual rendered sizes so
@@ -1369,6 +1390,7 @@ export function DataTable<T>({
     <div ref={frameRef} className={cn(
       variant === 'embedded' ? 'min-w-0 max-w-full' : tableTokens.frame,
       'space-y-0 overflow-visible p-0',
+      rowGrouping && '[container-type:inline-size]',
       mobilePresentation && 'mgr-host',
     )}
       data-grid-frame="" data-grid-variant={variant}>
@@ -1656,6 +1678,32 @@ export function DataTable<T>({
                     </tr>
                   )}
                 </>
+              ) : rowGrouping ? (
+                [...paginatedData.reduce((groups, row) => {
+                  const key = rowGrouping.key(row)
+                  const rows = groups.get(key) ?? []
+                  rows.push(row)
+                  groups.set(key, rows)
+                  return groups
+                }, new Map<string, T[]>())].flatMap(([key, rows]) => [
+                  <tr key={`group:${key}`} data-row-group={key}>
+                    <td colSpan={totalCols} className="bg-[var(--surface-2)] px-3 py-2">
+                      <div className="sticky left-3 flex w-[calc(100cqw-1.5rem-2px)] flex-wrap items-center justify-between gap-2">
+                        <Button variant="ghost" size="sm" className="min-h-11 min-w-11"
+                          aria-expanded={groupIsOpen(key)}
+                          aria-label={groupIsOpen(key)
+                            ? t('table.collapseGroup', 'Collapse {{group}}', { group: rowGrouping.label(key) })
+                            : t('table.expandGroup', 'Expand {{group}}', { group: rowGrouping.label(key) })}
+                          onClick={() => toggleGroup(key)}>
+                          <ChevronRight className={cn('h-4 w-4', groupIsOpen(key) && 'rotate-90')} aria-hidden="true" />
+                          {rowGrouping.label(key)}
+                        </Button>
+                        {rowGrouping.actions?.(key, rows)}
+                      </div>
+                    </td>
+                  </tr>,
+                  ...(groupIsOpen(key) ? rows.flatMap(renderDataRow) : []),
+                ])
               ) : (
                 paginatedData.flatMap(renderDataRow)
               )}
