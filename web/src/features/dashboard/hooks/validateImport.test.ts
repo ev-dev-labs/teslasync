@@ -374,4 +374,18 @@ describe('buildMinimalExport', () => {
     expect(dashboard.widgets.map((w) => w.widgetId)).toEqual([REAL_A, REAL_B]);
     expect(dashboard.widgets[0].config).toEqual({ chartType: 'line' });
   });
+
+  it('round-trips canonical order, size classes and explicit height ceilings through shared links', () => {
+    const source = makeDashboard({
+      layoutVersion: 1,
+      widgets: [
+        { id: 'b', widgetId: REAL_B, sizeClass: 'full', heightRows: 5.5 },
+        { id: 'a', widgetId: REAL_A, sizeClass: 'small' },
+      ],
+    });
+    const encoded = toUrlSafeBase64(buildMinimalExport(source));
+    const imported = expectValidDashboard(validateImportData(fromUrlSafeBase64(encoded)));
+    expect(imported.layoutVersion).toBe(1);
+    expect(imported.widgets).toEqual(source.widgets);
+  });
 });

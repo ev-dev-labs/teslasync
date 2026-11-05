@@ -2,71 +2,35 @@ package devtools
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
 
-// DatabaseStats returns public table names, row counts, and database size.
+// DatabaseStats returns public table metadata, estimated row counts, and database size.
 func (h *DevToolsHandler) DatabaseStats(w http.ResponseWriter, r *http.Request) {
-	if h.db == nil {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "devtools.DatabaseStats")
+	defer span.End()
+	if h.dbStatsRepo == nil {
 		httpx.WriteError(w, http.StatusServiceUnavailable, "database not configured")
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	rows, err := h.db.Pool.Query(ctx,
-		"SELECT schemaname, tablename FROM pg_tables WHERE schemaname = 'public'")
+	stats, err := h.dbStatsRepo.Stats(ctx)
 	if err != nil {
-		httpx.WriteError(w, http.StatusInternalServerError, "failed to list tables: "+err.Error())
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to read database statistics")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read database statistics")
 		return
 	}
-	defer rows.Close()
-
-	type tableInfo struct {
-		Schema   string `json:"schema"`
-		Name     string `json:"name"`
-		RowCount int64  `json:"row_count"`
-	}
-
-	var tables []tableInfo
-	for rows.Next() {
-		var t tableInfo
-		if err := rows.Scan(&t.Schema, &t.Name); err != nil {
-			httpx.WriteError(w, http.StatusInternalServerError, "failed to scan table row: "+err.Error())
-			return
-		}
-		tables = append(tables, t)
-	}
-	if err := rows.Err(); err != nil {
-		httpx.WriteError(w, http.StatusInternalServerError, "row iteration error: "+err.Error())
-		return
-	}
-
-	for i := range tables {
-		query := fmt.Sprintf("SELECT COUNT(*) FROM %q.%q", tables[i].Schema, tables[i].Name)
-		if err := h.db.Pool.QueryRow(ctx, query).Scan(&tables[i].RowCount); err != nil {
-			log.Warn().Err(err).Str("table", tables[i].Name).Msg("failed to count rows")
-		}
-	}
-
-	var dbSize int64
-	if err := h.db.Pool.QueryRow(ctx,
-		"SELECT pg_database_size(current_database())").Scan(&dbSize); err != nil {
-		log.Warn().Err(err).Msg("failed to get database size")
-	}
-
-	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"tables":        tables,
-		"table_count":   len(tables),
-		"database_size": dbSize,
-	})
+	httpx.WriteJSON(w, http.StatusOK, stats)
 }
 
 // MigrationStatus returns the current schema migration version.

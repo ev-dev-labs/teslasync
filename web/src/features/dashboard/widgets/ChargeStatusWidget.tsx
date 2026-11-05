@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
-import { Badge } from '@/components/ui';
 import { deriveDataState, knownNumber } from '@/api/dataState';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
@@ -12,7 +11,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import { ChargeBatteryPack, ChargeMeter, ChargeReadings, useVerifiedChargeActivity } from './instruments/ChargeInstruments';
-import { dashboardTokens } from '../lib/dashboardTokens';
+import { ChargeStatusSummary } from './instruments/ChargeStatusSummary';
 import type { WidgetProps } from './types';
 
 /** Hours (float) → "2h 30m" / "45m"; negative or non-finite stays unknown. */
@@ -49,10 +48,8 @@ export default function ChargeStatusWidget({ vehicleId, size }: WidgetProps) {
   const chargerPower = knownNumber(state?.charger_power);
   const chargeRate = knownNumber(state?.charge_rate);
   const timeToFull = knownNumber(state?.time_to_full_charge);
-  // charge_limit_soc may be present on extended state payloads (same source
-  // BatteryGaugeWidget / BatteryLinearGaugeWidget read). Validate it is a
-  // finite 0–100 number before use so a malformed field never leaks NaN.
-  const chargeLimitRaw = (state as Record<string, unknown> | undefined)?.charge_limit_soc;
+  const chargeLimitRaw = state?.charge_limit_soc_pct;
+  const chargeAmps = knownNumber(state?.charge_amps_a);
   const chargeLimit =
     typeof chargeLimitRaw === 'number' && Number.isFinite(chargeLimitRaw) && chargeLimitRaw >= 0 && chargeLimitRaw <= 100
       ? chargeLimitRaw
@@ -74,6 +71,7 @@ export default function ChargeStatusWidget({ vehicleId, size }: WidgetProps) {
       value={batteryLevel}
       label={t('widget.battery', 'Battery')}
       marker={chargeLimit}
+      showMarkerValue={false}
       markerLabel={chargeLimit != null ? `${t('widget.chargeLimit', 'Limit')} ${fmtNumber(chargeLimit, 0)}%` : undefined}
       markerTestId="charge-limit-marker"
       active={active}
@@ -95,9 +93,7 @@ export default function ChargeStatusWidget({ vehicleId, size }: WidgetProps) {
       {state?.is_charging ? (
         <div className={isShort ? 'grid min-w-0 grid-cols-1 items-start gap-3 @sm:grid-cols-2' : 'flex min-w-0 flex-col gap-3'}>
           <div className={isShort ? 'flex min-w-0 flex-col gap-1' : 'flex min-w-0 flex-col gap-3'}>
-          <div>
-            <Badge variant="success" size="sm">{t('widget.charging', 'Charging')}</Badge>
-          </div>
+            <ChargeStatusSummary charging={state.is_charging} active={active} limit={chargeLimit} />
             <div className="flex min-w-0 items-center justify-between gap-2">
               <WidgetBigNumber value={headline} unit="%" animated={false} />
               <ChargeBatteryPack level={batteryLevel} active={active} className={isShort ? 'w-20' : 'w-24'} />
@@ -105,20 +101,17 @@ export default function ChargeStatusWidget({ vehicleId, size }: WidgetProps) {
             {meter}
           </div>
           <div className={isShort ? 'flex min-w-0 flex-col gap-1' : 'flex min-w-0 flex-col gap-3'}>
-            <div className="text-right">
-              {doneAtText && <div className="text-base font-semibold tabular-nums">{doneAtText}</div>}
-              <div className={dashboardTokens.metricLabel}>
-                {t('widget.timeToFull', 'Time to full')} {timeLeftText ?? '—'}
-              </div>
-            </div>
           <ChargeReadings short={isShort}>
           <WidgetStatGrid
             cols={3}
             stats={[
               /* VehicleService exposes charger_power in kW, unlike canonical signal-store watts. */
               { label: t('widget.power', 'Power'), value: chargerPower != null ? fmtNumber(chargerPower, 1) : null, unit: 'kW' },
+              { label: t('widget.chargingTelemetry.current', 'Current'), value: chargeAmps != null && chargeAmps >= 0 ? fmtNumber(chargeAmps, 1) : null, unit: 'A' },
               { label: t('widget.rate', 'Rate'), value: chargeRate != null ? fmtNumber(convertDistanceFromSI(chargeRate, distanceUnit), 0) : null, unit: `${distanceUnit}/h` },
               { label: t('widget.range', 'Range'), value: ratedRange != null ? fmtNumber(convertDistanceFromSI(ratedRange, distanceUnit), 0) : null, unit: distanceUnit },
+              { label: t('widget.timeToFull', 'Time to full'), value: timeLeftText },
+              { label: t('widget.doneAt', 'Done'), value: doneAtText },
             ]}
           />
           </ChargeReadings>
@@ -127,11 +120,7 @@ export default function ChargeStatusWidget({ vehicleId, size }: WidgetProps) {
       ) : state ? (
         <div className={isShort ? 'grid min-w-0 grid-cols-1 items-center gap-3 @sm:grid-cols-2' : 'flex min-w-0 flex-col gap-3'}>
           <div className={isShort ? 'flex min-w-0 flex-col gap-1' : 'flex min-w-0 flex-col gap-3'}>
-          <div>
-            <Badge variant="neutral" size="sm">
-              {state.is_charging === false ? t('widget.notCharging', 'Not charging') : t('widget.chargingSchedule.modeUnknown', 'Unknown')}
-            </Badge>
-          </div>
+          <ChargeStatusSummary charging={state.is_charging} active={active} limit={chargeLimit} />
           <div className="flex min-w-0 items-center justify-between gap-3">
             <WidgetBigNumber value={batteryLevel} unit="%" decimals={0} animated={false} />
             <ChargeBatteryPack level={batteryLevel} className={isShort ? 'w-20' : undefined} />
@@ -141,6 +130,7 @@ export default function ChargeStatusWidget({ vehicleId, size }: WidgetProps) {
           <ChargeReadings short={isShort}>
           <WidgetStatGrid
             stats={[
+              { label: t('widget.chargingTelemetry.current', 'Current'), value: chargeAmps != null && chargeAmps >= 0 ? fmtNumber(chargeAmps, 1) : null, unit: 'A' },
               { label: t('widget.range', 'Range'), value: ratedRange != null ? fmtNumber(convertDistanceFromSI(ratedRange, distanceUnit), 0) : null, unit: distanceUnit },
             ]}
           />

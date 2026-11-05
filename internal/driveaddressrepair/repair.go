@@ -220,7 +220,7 @@ func (r *Repairer) Repair(ctx context.Context, dryRun bool) (Report, error) {
 				r.pace()
 				continue
 			}
-			fields := map[string]interface{}{"end_place": newEnd}
+			fields := map[string]interface{}{"end_place": newEnd, "end_geofence_id": nil}
 			if lookup.GeofenceID != nil {
 				fields["end_geofence_id"] = *lookup.GeofenceID
 			}

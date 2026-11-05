@@ -22,6 +22,8 @@ export interface WidgetSize {
   rows: number; // 1-8
 }
 
+export type WidgetSizeClass = 'small' | 'medium' | 'large' | 'full';
+
 export interface WidgetConfig {
   vehicleId?: number;
   refreshRate?: number;
@@ -64,6 +66,8 @@ export interface WidgetDef {
   defaultSize: WidgetSize;
   minSize: WidgetSize;
   maxSize: WidgetSize;
+  defaultSizeClass?: WidgetSizeClass;
+  contentHeight?: { min: number; max: number };
   component: LazyExoticComponent<ComponentType<WidgetProps>>;
   /**
    * Optional help metadata. When set, forward this to `WidgetShell`'s `help`
@@ -75,6 +79,9 @@ export interface WidgetDef {
 export interface WidgetInstance {
   id: string;
   widgetId: string;
+  sizeClass?: WidgetSizeClass;
+  /** User-selected content viewport ceiling, in the existing grid row units. */
+  heightRows?: number;
   config?: WidgetConfig;
 }
 
@@ -186,6 +193,8 @@ export interface SavedDashboard {
    */
   vehicleId?: number | null;
   widgets: WidgetInstance[];
+  /** Version 1 stores canonical order in widgets; layouts are a derived preview cache. */
+  layoutVersion?: 1;
   layouts: RGLLayouts;
   createdAt: string;
   updatedAt: string;

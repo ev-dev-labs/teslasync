@@ -154,7 +154,7 @@ describe('DashboardGrid — mobile flex stack', () => {
     expect(containers.length).toBe(2);
   });
 
-  it('uses min-h-[12rem] on mobile widget wrappers (chart/map height floor)', () => {
+  it('uses content height bounds instead of a blanket 192px mobile card floor', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 375 });
     renderGrid();
 
@@ -162,11 +162,11 @@ describe('DashboardGrid — mobile flex stack', () => {
     const containers = stack.querySelectorAll(':scope > .widget-container');
     expect(containers.length).toBeGreaterThan(0);
     containers.forEach((c) => {
-      // Tailwind compiles `min-h-[12rem]` to literal class on the element.
-      expect(c.className).toMatch(/min-h-\[12rem\]/);
+      expect(c.className).not.toMatch(/min-h-\[12rem\]/);
       expect(c.className).toMatch(/flex/);
       expect(c.className).toMatch(/flex-col/);
-      expect(c.querySelector('.widget-panel')).toHaveClass('flex', 'flex-col', 'flex-1');
+      expect(c.querySelector('.widget-panel')).toHaveClass('flex', 'flex-col', 'widget-content-fit');
+      expect(c.querySelector('.widget-panel')).toHaveStyle({ minHeight: '72px', maxHeight: '900px' });
     });
   });
 });

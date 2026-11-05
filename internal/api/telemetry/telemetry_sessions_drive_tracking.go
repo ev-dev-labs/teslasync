@@ -1436,7 +1436,9 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 	if !ok {
 		return false
 	}
-	fields := map[string]interface{}{field: lookup.Name}
+	// A successful non-geofence lookup must detach any old place link,
+	// otherwise drive reads overwrite the newly resolved address again.
+	fields := map[string]interface{}{field: lookup.Name, geofenceField: nil}
 	if lookup.GeofenceID != nil {
 		fields[geofenceField] = *lookup.GeofenceID
 	}

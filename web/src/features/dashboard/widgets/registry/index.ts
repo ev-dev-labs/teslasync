@@ -36,6 +36,15 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
   ...MAP_WIDGETS,
 ];
 
+for (const widget of WIDGET_REGISTRY) {
+  widget.defaultSizeClass ??= widget.defaultSize.rows <= 2 && widget.minSize.cols === 1
+    ? 'small'
+    : widget.defaultSize.cols >= 4 ? 'full'
+      : widget.defaultSize.cols === 3 ? 'large'
+        : widget.defaultSize.cols === 2 ? 'medium' : 'small';
+  widget.contentHeight ??= { min: 72, max: 900 };
+}
+
 // O(1) id → definition index. getWidgetDef runs once per widget instance on
 // every dashboard render (DashboardGrid, MiniGridPreview, TemplateGallery,
 // useDashboardLayout), so a linear WIDGET_REGISTRY.find() rescans all 100+

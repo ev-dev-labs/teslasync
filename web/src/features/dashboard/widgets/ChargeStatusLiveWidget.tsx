@@ -9,6 +9,7 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import { ChargeBatteryPack, ChargeMeter, ChargeReadings, useVerifiedChargeActivity, useTelemetryChargeActivity } from './instruments/ChargeInstruments';
+import { ChargeStatusSummary } from './instruments/ChargeStatusSummary';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
@@ -53,9 +54,6 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
   const { fmtNumber } = useNumberFormatting();
 
   const state = stateData?.state;
-  const idleLabel = state?.is_charging === false
-    ? t('widget.notCharging', 'Not charging')
-    : t('widget.chargingSchedule.modeUnknown', 'Unknown');
   const isLoading = (stateLoading || telemetryLoading) && !stateData && !telemetry;
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
@@ -65,7 +63,8 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
   const metrics = {
     power: powerWatts,
     voltage: knownNumber(telemetry?.charger_voltage),
-    amps: knownNumber(telemetry?.charger_actual_current),
+    amps: knownNumber(state?.charge_amps_a) ?? knownNumber(telemetry?.charger_actual_current),
+    chargeLimit: knownNumber(state?.charge_limit_soc_pct) ?? knownNumber(telemetry?.charge_limit_soc_pct),
     energyAdded: knownNumber(telemetry?.charge_energy_added_wh),
     timeToFull: knownNumber(state?.time_to_full_charge),
     batteryLevel: knownNumber(state?.battery_level) ?? (state == null ? knownNumber(telemetry?.battery_level) : null),
@@ -77,9 +76,8 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
     })(),
   };
   const hasChargingData = telemetry != null || state != null;
-  const statusIsCharging = state
-    ? state.is_charging === true
-    : telemetry?.charging_state === 'Charging';
+  const charging = state ? state.is_charging : telemetry?.charging_state != null ? telemetry.charging_state === 'Charging' : null;
+  const statusIsCharging = charging === true;
   const stateActivity = useVerifiedChargeActivity(stateQuery);
   const telemetryActivity = useTelemetryChargeActivity(telemetryQuery, state == null);
   const active = state ? stateActivity : telemetryActivity;
@@ -106,10 +104,11 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
       isError={isError || telemetryError}
       onRefresh={() => { void refetch(); void telemetryQuery.refetch?.(); }}
     >
+      {hasChargingData && (isCompact || !statusIsCharging) && <ChargeStatusSummary charging={charging} active={active} limit={metrics.chargeLimit} />}
       {hasChargingData ? (
         statusIsCharging ? (
           isCompact ? (
-            <CompactChargingView power={metrics.power} batteryLevel={metrics.batteryLevel} active={active} />
+            <CompactChargingView power={metrics.power} batteryLevel={metrics.batteryLevel} amps={metrics.amps} active={active} />
           ) : (
             <FullChargingView
               metrics={metrics}
@@ -121,11 +120,10 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
             />
           )
         ) : isCompact ? (
-          <CompactIdleView batteryLevel={metrics.batteryLevel} statusLabel={idleLabel} />
+          <CompactIdleView batteryLevel={metrics.batteryLevel} amps={metrics.amps} />
         ) : (
           <IdleView
             metrics={metrics}
-            statusLabel={idleLabel}
             short={size.rows <= 2}
           />
         )
@@ -142,11 +140,12 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
 }
 
 /* ── Compact: charging ── */
-function CompactChargingView({ power, batteryLevel, active }: { power: number | null; batteryLevel: number | null; active: boolean }) {
+function CompactChargingView({ power, batteryLevel, amps, active }: { power: number | null; batteryLevel: number | null; amps: number | null; active: boolean }) {
   const { fmtNumber } = useNumberFormatting();
   const { unitPrefs } = useUnits();
+  const { t } = useTranslation('dashboard');
   return (
-    <div className="flex h-full min-w-0 items-center justify-center gap-3">
+    <div className="flex min-w-0 items-center justify-center gap-3">
       <ChargeBatteryPack level={batteryLevel} active={active} className="w-16" />
       <div className="flex min-w-0 flex-col items-center gap-1">
       <WidgetBigNumber
@@ -157,18 +156,21 @@ function CompactChargingView({ power, batteryLevel, active }: { power: number | 
         size="secondary"
       />
       <span className={dashboardTokens.metricLabel}>{batteryLevel == null ? '—' : `${fmtNumber(batteryLevel, 0)}%`}</span>
+      <WidgetStatGrid compact stats={[{ label: t('widget.chargingTelemetry.current', 'Current'), value: amps == null ? null : fmtNumber(amps, 1), unit: 'A' }]} />
       </div>
     </div>
   );
 }
 
 /* ── Compact: idle ── */
-function CompactIdleView({ batteryLevel, statusLabel }: { batteryLevel: number | null; statusLabel: string }) {
+function CompactIdleView({ batteryLevel, amps }: { batteryLevel: number | null; amps: number | null }) {
   const { fmtNumber } = useNumberFormatting();
+  const { t } = useTranslation('dashboard');
   return (
-    <div className="flex h-full min-w-0 items-center justify-center gap-3">
+    <div className="flex min-w-0 items-center justify-center gap-3">
       <ChargeBatteryPack level={batteryLevel} className="w-20" />
-      <WidgetBigNumber value={batteryLevel == null ? null : `${fmtNumber(batteryLevel, 0)}%`} label={statusLabel} animated={false} align="center" size="secondary" />
+      <WidgetBigNumber value={batteryLevel == null ? null : `${fmtNumber(batteryLevel, 0)}%`} animated={false} align="center" size="secondary" />
+      <WidgetStatGrid compact stats={[{ label: t('widget.chargingTelemetry.current', 'Current'), value: amps == null ? null : fmtNumber(amps, 1), unit: 'A' }]} />
     </div>
   );
 }
@@ -179,6 +181,7 @@ interface FullChargingViewProps {
     power: number | null;
     voltage: number | null;
     amps: number | null;
+    chargeLimit: number | null;
     energyAdded: number | null;
     timeToFull: number | null;
     batteryLevel: number | null;
@@ -197,11 +200,19 @@ function FullChargingView({ metrics, unitPrefs, fmtNumber, t, active, short }: F
   return (
     <div className={short ? 'grid min-w-0 grid-cols-1 items-start gap-2 @sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : 'flex h-full min-w-0 flex-col justify-center gap-3'}>
       <div className={short ? 'flex min-w-0 flex-col gap-2' : 'contents'}>
+      <ChargeStatusSummary charging active={active} limit={metrics.chargeLimit} />
       <div className="flex min-w-0 items-center justify-between gap-3">
         <WidgetBigNumber value={metrics.batteryLevel} unit="%" decimals={0} animated={false} />
         <ChargeBatteryPack level={metrics.batteryLevel} active={active} className={short ? 'w-20' : undefined} />
       </div>
-      <ChargeMeter value={metrics.batteryLevel} label={t('widget.battery', 'Battery')} active={active} />
+      <ChargeMeter
+        value={metrics.batteryLevel}
+        label={t('widget.battery', 'Battery')}
+        marker={metrics.chargeLimit}
+        showMarkerValue={false}
+        markerLabel={metrics.chargeLimit != null ? `${t('widget.chargeStatus.chargeLimit', 'Charge limit')} ${fmtNumber(metrics.chargeLimit, 0)}%` : undefined}
+        active={active}
+      />
       </div>
       <ChargeReadings short={short}>
       <WidgetStatGrid
@@ -214,7 +225,7 @@ function FullChargingView({ metrics, unitPrefs, fmtNumber, t, active, short }: F
           },
           {
             label: t('widget.chargingTelemetry.current', 'Current'),
-            value: amps == null ? null : fmtNumber(amps, 0),
+            value: amps == null ? null : fmtNumber(amps, 1),
             unit: 'A',
           },
           {
@@ -248,26 +259,24 @@ interface IdleViewProps {
     power: number | null;
     energyAdded: number | null;
     batteryLevel: number | null;
+    amps: number | null;
   };
-  statusLabel: string;
-  t: (k: string, f: string) => string;
   short: boolean;
 }
 
-function IdleView({ metrics, statusLabel, short }: Omit<IdleViewProps, 't'>) {
+function IdleView({ metrics, short }: IdleViewProps) {
   const { fmtNumber } = useNumberFormatting();
+  const { t } = useTranslation('dashboard');
   return (
-    <div className={short ? 'flex h-full min-w-0 items-center justify-center gap-3' : 'flex h-full flex-col items-center justify-center gap-3'}>
+    <div className={short ? 'flex min-w-0 items-center justify-center gap-3' : 'flex flex-col items-center justify-center gap-3'}>
       {!short && <Plug className="h-6 w-6 text-[var(--text-muted)]" />}
       <ChargeBatteryPack level={metrics.batteryLevel} />
       <div className="text-center">
-        <p className={dashboardTokens.metricLabel}>
-          {statusLabel}
-        </p>
         <p className={dashboardTokens.secondaryMetric}>
           {metrics.batteryLevel == null ? '—' : `${fmtNumber(metrics.batteryLevel, 0)}%`}
         </p>
       </div>
+      <WidgetStatGrid compact stats={[{ label: t('widget.chargingTelemetry.current', 'Current'), value: metrics.amps == null ? null : fmtNumber(metrics.amps, 1), unit: 'A' }]} />
     </div>
   );
 }

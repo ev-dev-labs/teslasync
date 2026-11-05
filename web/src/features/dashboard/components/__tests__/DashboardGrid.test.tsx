@@ -296,16 +296,14 @@ describe('DashboardGrid — edit-mode chrome', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Move down' }));
-    const movedLayouts = onLayoutChange.mock.lastCall?.[0] as RGLLayouts;
-    const first = movedLayouts.lg.find((item) => item.i === 'wid-1');
-    const second = movedLayouts.lg.find((item) => item.i === 'wid-2');
-    expect(first?.y).toBeGreaterThan(second?.y ?? Number.MAX_SAFE_INTEGER);
+    const movedWidgets = onLayoutChange.mock.lastCall?.[2] as WidgetInstance[];
+    expect(movedWidgets.map(widget => widget.id)).toEqual(['wid-2', 'wid-1']);
     expect(announcementListener.mock.lastCall?.[0]).toContain(`${W1_NAME} moved down`);
 
     fireEvent.click(screen.getByRole('button', { name: `Arrange ${W1_NAME}` }));
     fireEvent.click(screen.getByRole('button', { name: 'Taller' }));
     const resizedLayouts = onLayoutChange.mock.lastCall?.[0] as RGLLayouts;
-    expect(resizedLayouts.lg.find((item) => item.i === 'wid-1')?.h).toBe(4);
+    expect(resizedLayouts.lg.find((item) => item.i === 'wid-1')?.h).toBe(7);
     expect(announcementListener.mock.lastCall?.[0]).toContain(`${W1_NAME} made taller`);
   });
 });

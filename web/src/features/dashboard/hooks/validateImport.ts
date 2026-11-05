@@ -1,4 +1,5 @@
 import { WIDGET_REGISTRY } from '../widgets/registry';
+import { isWidgetSizeClass } from '../lib/orderedLayout';
 import type {
   SavedDashboard,
   WidgetInstance,
@@ -118,6 +119,9 @@ export function validateImportData(raw: string): ImportValidation {
     validWidgets.push({
       id,
       widgetId: widget.widgetId,
+      ...(isWidgetSizeClass(widget.sizeClass) ? { sizeClass: widget.sizeClass } : {}),
+      ...(isFinitePositive(widget.heightRows) && widget.heightRows > 0
+        ? { heightRows: Math.min(widget.heightRows, 40) } : {}),
       config: typeof widget.config === 'object' && widget.config !== null
         ? (widget.config as Record<string, unknown>)
         : undefined,
@@ -173,6 +177,7 @@ export function validateImportData(raw: string): ImportValidation {
             minH: typeof item.minH === 'number' ? item.minH : undefined,
             maxW: typeof item.maxW === 'number' ? item.maxW : undefined,
             maxH: typeof item.maxH === 'number' ? item.maxH : undefined,
+            ...(item.userSized === true ? { userSized: true } : {}),
           },
           cols,
         ),
@@ -187,6 +192,7 @@ export function validateImportData(raw: string): ImportValidation {
     id: `import-${Date.now()}`,
     name: String(data.name).slice(0, 100),
     widgets: available,
+    ...(data.layoutVersion === 1 ? { layoutVersion: 1 as const } : {}),
     layouts: sanitizedLayouts,
     createdAt: now,
     updatedAt: now,
@@ -229,9 +235,12 @@ export function fromUrlSafeBase64(encoded: string): string {
 export function buildMinimalExport(dashboard: SavedDashboard): string {
   const minimal = {
     name: dashboard.name,
+    ...(dashboard.layoutVersion ? { layoutVersion: dashboard.layoutVersion } : {}),
     widgets: dashboard.widgets.map((w) => ({
       id: w.id,
       widgetId: w.widgetId,
+      ...(w.sizeClass ? { sizeClass: w.sizeClass } : {}),
+      ...(w.heightRows ? { heightRows: w.heightRows } : {}),
       ...(w.config ? { config: w.config } : {}),
     })),
     layouts: dashboard.layouts,

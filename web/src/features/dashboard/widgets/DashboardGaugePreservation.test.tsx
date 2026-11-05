@@ -25,7 +25,7 @@ vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => source.query([{ id: 1 }]),
   useVehicleState: () => source.query({
     live: true,
-    state: { battery_level: source.reading, charge_limit_soc: 90 },
+    state: { battery_level: source.reading, charge_limit_soc_pct: 90 },
   }),
 }));
 

@@ -141,6 +141,7 @@ func TestResolveAndUpdateAddress_NoMatch_NeverCreatesGeofence(t *testing.T) {
 	if !ok {
 		t.Fatalf("resolveAndUpdateAddress = false, want true (geocoder fallback succeeds)")
 	}
+
 	if after != before {
 		t.Fatalf("geofence count = %d -> %d, want unchanged (drive endpoints never auto-create)", before, after)
 	}
@@ -151,5 +152,34 @@ func TestResolveAndUpdateAddress_NoMatch_NeverCreatesGeofence(t *testing.T) {
 	}
 	if startPlace == nil || *startPlace != "Fallback Geocoded Place" {
 		t.Fatalf("start_place = %v, want the geocoder's fallback name", startPlace)
+	}
+}
+
+func TestResolveAndUpdateAddress_NoMatchClearsOldGeofence(t *testing.T) {
+	const lat, lon = 35.614928, -18.23099
+	db := openGeofencePricingDB(t)
+	geofenceID := seedPricingGeofence(t, db, driveGeofenceLat, driveGeofenceLon, "Previous endpoint")
+	tracker := NewTelemetrySessionTracker(db, nil, geocoderWithResult(lat, lon, "Correct endpoint"), nil)
+	t.Cleanup(func() {
+		_, _ = db.Pool.Exec(context.Background(),
+			`DELETE FROM places_cache WHERE latitude=$1 AND longitude=$2 AND display_name='Correct endpoint'`, lat, lon)
+	})
+	for _, isStart := range []bool{true, false} {
+		driveID := seedDriveRow(t, db, 820004)
+		if _, err := db.Pool.Exec(context.Background(),
+			`UPDATE drives SET start_geofence_id=$2, end_geofence_id=$2 WHERE id=$1`, driveID, geofenceID); err != nil {
+			t.Fatal(err)
+		}
+		if !tracker.resolveAndUpdateAddress(driveID, lat, lon, isStart, resolveBypassCache) {
+			t.Fatal("address resolution failed")
+		}
+		placeCol, geofenceCol := "end_place", "end_geofence_id"
+		if isStart {
+			placeCol, geofenceCol = "start_place", "start_geofence_id"
+		}
+		place, attached := readDriveGeofenceFields(t, db, driveID, placeCol, geofenceCol)
+		if place == nil || *place != "Correct endpoint" || attached != nil {
+			t.Fatalf("successful resolution retained stale geofence: place=%v geofence=%v", place, attached)
+		}
 	}
 }

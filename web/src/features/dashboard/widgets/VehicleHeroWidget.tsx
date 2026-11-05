@@ -187,11 +187,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
     state?.rated_range != null && Number.isFinite(state.rated_range)
       ? toDistanceDisplay(state.rated_range)
       : null;
-  /* The charge limit is not part of the typed VehicleState contract; extended
-   * state payloads may carry it as `charge_limit_soc` (the same defensive
-   * read BatteryLinearGaugeWidget performs). A non-finite or out-of-range
-   * value never reaches the meter marker. */
-  const chargeLimitRaw = (state as Record<string, unknown> | null)?.charge_limit_soc;
+  const chargeLimitRaw = state?.charge_limit_soc_pct;
   const chargeLimit =
     typeof chargeLimitRaw === 'number' &&
     Number.isFinite(chargeLimitRaw) &&

@@ -87,6 +87,8 @@ interface LiveState {
   charge_rate: number;
   time_to_full_charge: number;
   battery_level: number;
+  charge_limit_soc_pct?: number | null;
+  charge_amps_a?: number | null;
 }
 
 function makeState(overrides: Partial<LiveState> = {}): LiveState {
@@ -178,6 +180,49 @@ describe('formatTimeRemaining', () => {
 
 // ── Widget render states ─────────────────────────────────────────────────────
 describe('ChargeStatusLiveWidget', () => {
+  it.each([SIZE_COMPACT, SIZE_MEDIUM, { cols: 2, rows: 4 }])('shows the charge target and actual amps at %j size', size => {
+    vehicleStateMock.mockReturnValue({
+      ...makeStateQuery(makeState()),
+      data: {
+        state: makeState({ battery_level: 22, charge_limit_soc_pct: 85, charge_amps_a: 6.25 }),
+        live: true, freshness: 'fresh', observedAt: Date.now(), verifiedFields: ['is_charging'],
+      },
+    });
+    const { container } = renderWidget(<ChargeStatusLiveWidget size={size} />);
+    expect(screen.getByText('Charging')).toBeInTheDocument();
+    expect(screen.getByText('Charge limit 85%')).toBeInTheDocument();
+    expect(screen.getByText('Current')).toBeInTheDocument();
+    expect(screen.getByText('6.3')).toBeInTheDocument();
+    expect(screen.getByText('A')).toBeInTheDocument();
+    expect(screen.queryByText('Last reported')).not.toBeInTheDocument();
+    if (size !== SIZE_COMPACT) {
+      expect(container.querySelector('[data-testid="gauge-marker"]')).toHaveStyle({ left: '85%' });
+    }
+  });
+
+  it('keeps the target and a real zero current when charging stops', () => {
+    vehicleStateMock.mockReturnValue(makeStateQuery(makeState({
+      is_charging: false, charge_limit_soc_pct: 85, charge_amps_a: 0,
+    })));
+    renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
+    expect(screen.getByText('Not charging')).toBeInTheDocument();
+    expect(screen.getByText('Charge limit 85%')).toBeInTheDocument();
+    expect(screen.getByText('0.0')).toBeInTheDocument();
+    expect(screen.queryByText('3.0')).not.toBeInTheDocument();
+  });
+
+  it('labels retained charging evidence and preserves the target after a refresh fails', () => {
+    vehicleStateMock.mockReturnValue(makeStateQuery(makeState({
+      charge_limit_soc_pct: 85, charge_amps_a: 6,
+    }), { isError: true }));
+    const { container } = renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
+    expect(screen.getByText('Charging')).toBeInTheDocument();
+    expect(screen.getByText('Last reported')).toBeInTheDocument();
+    expect(screen.getByText('Charge limit 85%')).toBeInTheDocument();
+    expect(screen.getByText('6.0')).toBeInTheDocument();
+    expect(container.querySelector('.widget-state-motion')).toBeNull();
+  });
+
   it('activates verified current charging without pulsing the pack or moving its fixed percent', () => {
     vehicleStateMock.mockReturnValue({
       ...makeStateQuery(makeState({ battery_level: 72 })),
@@ -275,9 +320,9 @@ describe('ChargeStatusLiveWidget', () => {
   it('renders the compact charging view without the title chrome', () => {
     renderWidget(<ChargeStatusLiveWidget size={SIZE_COMPACT} />);
 
-    // 1×1 tile suppresses the title + the full badge/label chrome.
+    // Compact tiles retain an explicit status instead of relying on animation.
     expect(screen.queryByText('Charge status')).not.toBeInTheDocument();
-    expect(screen.queryByText('Charging')).not.toBeInTheDocument();
+    expect(screen.getByText('Charging')).toBeInTheDocument();
     expect(screen.queryByText('Time left')).not.toBeInTheDocument();
     // ...but still surfaces the power + battery essentials.
     expect(screen.getByText('48')).toBeInTheDocument();

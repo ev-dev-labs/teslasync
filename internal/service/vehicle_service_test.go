@@ -69,6 +69,46 @@ func newStore(t *testing.T, vehicleID int64, signals map[string]interface{}) *si
 	return st
 }
 
+func TestBuildStateFromSignalStore_ChargeLimitAndCurrent(t *testing.T) {
+	for _, source := range []string{"live", "durable", "missing", "invalid"} {
+		t.Run(source, func(t *testing.T) {
+			store := signal.New()
+			durable := &fakeStateReader{}
+			switch source {
+			case "live":
+				// Settings remain valid across sparse updates; live zero amps wins
+				// over an older nonzero durable reading.
+				store.Set(7, "ChargeLimitSoc", int32(85), time.Now().Add(-10*time.Hour))
+				store.Set(7, "ChargeAmps", float32(0), time.Now())
+				durable.snapshot = signal.State{"ChargeLimitSoc": 80.0, "ChargeAmps": 32.0}
+			case "durable":
+				durable.snapshot = signal.State{"ChargeLimitSoc": 85.0, "ChargeAmps": 6.25}
+			case "invalid":
+				store.Update(7, map[string]interface{}{"ChargeLimitSoc": 101.0, "ChargeAmps": math.Inf(1)})
+				durable.snapshot = signal.State{"ChargeLimitSoc": math.NaN(), "ChargeAmps": -1.0}
+			}
+			state, verified := newSvc(durable).BuildStateFromSignalStoreWithProvenance(store, &vehiclemodel.Vehicle{ID: 7})
+			if source == "missing" || source == "invalid" {
+				if state.ChargeLimitSocPct != nil || state.ChargeAmpsA != nil {
+					t.Fatalf("missing/invalid charging readings must stay nil: %+v", state)
+				}
+				return
+			}
+			wantAmps := 6.25
+			if source == "live" {
+				wantAmps = 0
+			}
+			if state.ChargeLimitSocPct == nil || *state.ChargeLimitSocPct != 85 ||
+				state.ChargeAmpsA == nil || *state.ChargeAmpsA != wantAmps {
+				t.Fatalf("charging readings not preserved: %+v", state)
+			}
+			if verified["charge_limit_soc_pct"] != (source == "live") || verified["charge_amps_a"] != (source == "live") {
+				t.Fatalf("wrong charging provenance: %v", verified)
+			}
+		})
+	}
+}
+
 func TestBuildStateFromSignalStore_NewStreamingFields(t *testing.T) {
 	values := signal.State{
 		"AccessoryRail":                  false,

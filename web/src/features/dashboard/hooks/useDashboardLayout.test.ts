@@ -142,7 +142,7 @@ afterEach(() => {
 // ════════════════════════════════════════════════════════════════════════════
 describe('grid constants', () => {
   it('exposes the documented breakpoint pixel widths', () => {
-    expect(GRID_BREAKPOINTS).toEqual({ lg: 1200, md: 996, sm: 768, xs: 480 });
+    expect(GRID_BREAKPOINTS).toEqual({ lg: 1200, md: 996, sm: 600, xs: 0 });
   });
 
   it('maps each breakpoint to a descending column count', () => {
@@ -373,7 +373,7 @@ describe('useDashboardLayout — layout actions', () => {
   it('reconciles saved layouts across breakpoints and records undo history', () => {
     const { result } = render();
     const custom: RGLLayouts = {
-      lg: [{ i: 'default-2', x: 0, y: 0, w: 3, h: 5 }],
+      lg: [{ i: 'default-2', x: 0, y: 0, w: 3, h: 5, userSized: true }],
       md: [],
       sm: [],
       xs: [],
@@ -403,6 +403,7 @@ describe('useDashboardLayout — layout actions', () => {
     const resized = layouts.lg.find((item) => item.i === 'default-2')!;
     resized.w = 3;
     resized.h = 7;
+    resized.userSized = true;
     act(() => result.current.updateLayouts(layouts));
     const saved = result.current.activeDashboard.layouts.lg.find((item) => item.i === 'default-2')!;
     act(() => result.current.autoArrange());
@@ -410,12 +411,12 @@ describe('useDashboardLayout — layout actions', () => {
     expect({ w: arranged.w, h: arranged.h }).toEqual({ w: saved.w, h: saved.h });
   });
 
-  it('carries resized widget dimensions to other widths without moving their saved positions', () => {
+  it('carries resized size classes and height ceilings to recomputed layouts at every width', () => {
     const { result } = render();
     const layouts = structuredClone(result.current.activeDashboard.layouts);
-    const beforeLg = layouts.lg.find((item) => item.i === 'default-3')!;
     layouts.sm.find((item) => item.i === 'default-3')!.w = 2;
     layouts.sm.find((item) => item.i === 'default-3')!.h = 7;
+    layouts.sm.find((item) => item.i === 'default-3')!.userSized = true;
     act(() => result.current.updateLayouts(layouts, 'sm'));
 
     const saved = result.current.activeDashboard.layouts;
@@ -423,8 +424,9 @@ describe('useDashboardLayout — layout actions', () => {
     expect(saved.lg.find((item) => item.i === 'default-3')).toMatchObject({
       w: 2,
       h: 7,
-      x: beforeLg.x,
     });
+    expect(result.current.activeDashboard.widgets.find(widget => widget.id === 'default-3'))
+      .toMatchObject({ sizeClass: 'medium', heightRows: 7 });
     expect(saved.md.find((item) => item.i === 'default-3')?.h).toBe(7);
     expect(saved.xs.find((item) => item.i === 'default-3')?.w).toBe(1);
   });
@@ -883,7 +885,7 @@ describe('useDashboardLayout — migration + resilience', () => {
       JSON.stringify([
         savedDashboard({
           id: 'legacy-heights',
-          layouts: { lg: [{ i: 's1', x: 1, y: 4, w: 2, h: 3, minH: 2, maxH: 6 }] },
+          layouts: { lg: [{ i: 's1', x: 1, y: 4, w: 2, h: 3, minH: 2, maxH: 6, userSized: true }] },
         }),
       ]),
     );
@@ -893,36 +895,31 @@ describe('useDashboardLayout — migration + resilience', () => {
     // The version is stamped forward so the (one-way) migration runs exactly once.
     expect(localStorage.getItem(ROW_VERSION_KEY)).toBe('2');
 
-    // migrateRowHeight rewrites DASHBOARDS_KEY with h/y/minH/maxH scaled ×2.25
-    // (h & minH floored at 2), before reconcile — so the persisted snapshot
-    // carries the rescaled vertical geometry while widths are left untouched.
+    // Scale explicit height ceilings before migrating away from fixed coordinates.
     const persisted = lsDashboards()[0].layouts.lg[0];
     expect(persisted.h).toBe(7); // round(3 × 2.25) = 7
-    expect(persisted.y).toBe(9); // round(4 × 2.25) = 9
-    expect(persisted.minH).toBe(5); // round(2 × 2.25) = 5
-    expect(persisted.maxH).toBe(14); // round(6 × 2.25) = 14
+    expect(persisted.y).toBe(0);
+    expect(lsDashboards()[0].widgets[0]).toMatchObject({ sizeClass: 'medium', heightRows: 7 });
     expect(persisted.w).toBe(2); // width is not a row-height concern
   });
 
-  it('leaves already-migrated (v2) layouts untouched', () => {
+  it('does not rescale v2 user heights when migrating to ordered layouts', () => {
     localStorage.setItem(ROW_VERSION_KEY, '2'); // already on the current row height
     localStorage.setItem(
       DASHBOARDS_KEY,
       JSON.stringify([
         savedDashboard({
           id: 'v2-heights',
-          layouts: { lg: [{ i: 's1', x: 0, y: 0, w: 1, h: 3, minH: 2, maxH: 6 }] },
+          layouts: { lg: [{ i: 's1', x: 0, y: 0, w: 1, h: 3, minH: 2, maxH: 6, userSized: true }] },
         }),
       ]),
     );
 
     render();
 
-    // Version already current → early return: no rescale and no rewrite, so the
-    // persisted geometry is byte-for-byte what we seeded.
     expect(localStorage.getItem(ROW_VERSION_KEY)).toBe('2');
     const persisted = lsDashboards()[0].layouts.lg[0];
     expect(persisted.h).toBe(3);
-    expect(persisted.maxH).toBe(6);
+    expect(lsDashboards()[0].widgets[0]).toMatchObject({ sizeClass: 'small', heightRows: 3 });
   });
 });

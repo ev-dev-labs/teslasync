@@ -3071,6 +3071,10 @@
         "unknown": "Unknown"
       }
     },
+    "chargeStatus": {
+      "chargeLimit": "Charge limit",
+      "lastReported": "Last reported"
+    },
     "chargeStatusLive": "Charge status",
     "charging": "Charging",
     "chargingOptimizer": {

@@ -22,6 +22,46 @@
     --panel-radius: var(--radius-xl);
   }
 
+  .widget-panel.widget-content-fit {
+    align-self: start;
+    flex: none;
+    height: max-content;
+  }
+
+  .widget-content-fit > .dashboard-widget {
+    height: auto;
+    max-height: inherit;
+    flex: 0 1 auto;
+  }
+
+  .widget-content-fit .flex-col > .flex-1 {
+    flex-basis: auto;
+  }
+
+  .widget-content-fit [data-testid="widget-body"] > .h-full,
+  .widget-content-fit [data-testid="widget-body"] > .flex-1 > .h-full {
+    height: auto;
+  }
+
+  .widget-content-fit .widget-chart-well {
+    height: var(--widget-visual-height, 200px);
+    min-height: var(--widget-visual-height, 200px);
+    flex: none;
+  }
+
+  .widget-content-fit .recharts-responsive-container {
+    min-height: var(--widget-visual-height, 180px);
+  }
+
+  .widget-content-fit [data-chart-fluid="true"] [data-chart-viewport] {
+    min-height: 0;
+  }
+
+  .widget-content-fit .leaflet-container {
+    height: var(--widget-visual-height, 240px);
+    min-height: var(--widget-visual-height, 240px);
+  }
+
   .dashboard-widget [data-role="widget-shell-header"] {
     box-shadow: inset 0 -1px 0 var(--border-subtle);
   }

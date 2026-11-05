@@ -47,8 +47,8 @@ function craftedDashboard(): SavedDashboard {
     widgets,
     layouts: {
       md: [
-        { i: 'w-a', x: 0, y: 0, w: 1, h: 4 },
-        { i: 'w-b', x: 1, y: 0, w: 1, h: 2 },
+        { i: 'w-a', x: 0, y: 0, w: 1, h: 4, userSized: true },
+        { i: 'w-b', x: 1, y: 0, w: 1, h: 2, userSized: true },
         { i: 'w-c', x: 2, y: 0, w: 1, h: 2 },
         { i: 'w-d', x: 1, y: 2, w: 1, h: 2 },
         { i: 'w-e', x: 0, y: 4, w: 1, h: 2 },
@@ -128,7 +128,7 @@ describe('useDashboardLayout — autoArrange packs available grid cells', () => 
 });
 
 describe('useDashboardLayout — addWidgetAt (toolbox drops)', () => {
-  it('lands the widget at the drop cell on the source breakpoint', () => {
+  it('uses the drop position for order, then densely packs every breakpoint', () => {
     seedDashboard(craftedDashboard(), '2');
     const { result } = renderHook(() => useDashboardLayout());
 
@@ -141,8 +141,8 @@ describe('useDashboardLayout — addWidgetAt (toolbox drops)', () => {
     expect(widgets).toHaveLength(6);
     const added = widgets.find((w) => w.widgetId === 'quick-nav')!;
     const item = layouts.md.find((l) => l.i === added.id)!;
-    // Lands exactly; other breakpoints bottom-place.
-    expect(item).toMatchObject({ x: 1, y: 4, w: 2, h: 2 });
+    expect(item).toMatchObject({ x: 0, y: 4, w: 2, h: 2 });
+    expect(widgets.at(-1)).toMatchObject({ id: added.id, sizeClass: 'medium' });
     expect(layouts.lg.find((l) => l.i === added.id)).toBeDefined();
     expect(layouts.xs.find((l) => l.i === added.id)).toBeDefined();
   });

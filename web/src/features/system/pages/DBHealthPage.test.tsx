@@ -221,6 +221,23 @@ afterEach(() => {
 });
 
 describe('DBHealthPage — row chart context and count preferences', () => {
+  it('renders measured numeric bytes and labels catalog row estimates throughout the page', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats({ databaseSize: 360 * MB, rowCountsEstimated: true }) }));
+    renderPage();
+    expect(metricValue('Total DB size')).toBe('360.00 MB');
+    expect(metricValue('Estimated total rows')).toBe('905,100');
+    expect(screen.getByRole('figure', { name: 'Estimated rows' })).toBeInTheDocument();
+    expect(within(tablesGrid()).getByText('Estimated rows')).toBeInTheDocument();
+    expect(screen.getByText(/Row counts are estimates from database statistics/)).toBeInTheDocument();
+  });
+
+  it('keeps unavailable database size unknown rather than showing zero bytes', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats({ databaseSize: null }) }));
+    renderPage();
+    assertOperationalMetricUnavailable(screen.getByTestId('db-health-summary-0'), 'Total DB size');
+    expect(screen.queryByText('0.00 B')).not.toBeInTheDocument();
+  });
+
   it('discloses the top fifteen returned tables by rows while keeping all sixteen details and independent sorting', () => {
     const tables = Array.from({ length: 16 }, (_, index): TableInfo => ({
       ...TABLES[0],

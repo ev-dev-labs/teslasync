@@ -736,6 +736,9 @@
     }
   },
   "dbHealth": {
+    "estimatedRows": "Estimated rows",
+    "estimatedTotalRows": "Estimated total rows",
+    "rowEstimatesNote": "Row counts are estimates from database statistics, including hypertable chunks. They may lag recent writes; size values are measured bytes.",
     "rowChartScope": "Showing {{shown}} of {{total}} returned tables by row count. The complete table list is below.",
     "summary": {
       "snapshot": "{{source}} snapshot",

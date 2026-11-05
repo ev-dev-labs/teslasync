@@ -634,6 +634,9 @@ export interface VehicleState {
   outside_temp: number
   is_climate_on: boolean
   is_charging: boolean
+  charge_limit_soc_pct?: number | null
+  /** Actual charging current from ChargeAmps, in amperes. */
+  charge_amps_a?: number | null
   charger_power: number
   charge_rate: number
   time_to_full_charge: number
@@ -2217,6 +2220,7 @@ export interface RouteDetailData {
 // ChargingTelemetry matches the JSON response shape from /charging-telemetry
 // and /charging-telemetry/latest. Backed by signal_log.
 export interface ChargingTelemetry {
+  charge_limit_soc_pct?: number | null
   vehicle_id: number
   ts: string
   session_id: number | null

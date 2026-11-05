@@ -50,7 +50,7 @@ test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
 })
 
-test('drag persists on the active breakpoint without touching the others', async ({ page }) => {
+test('drag persists one order across breakpoints and survives reopening', async ({ page }) => {
   const diagnostics = monitorPage(page)
   let restoredDiagnostics: PageDiagnostics | undefined
   try {
@@ -75,15 +75,19 @@ test('drag persists on the active breakpoint without touching the others', async
   await expect.poll(async () => JSON.stringify(await readLayouts(page))).not.toBe(JSON.stringify(before))
 
   const after = await readLayouts(page)
-  // 1440px viewport with sidebar renders the md breakpoint.
-  const movedId = before.md.find((l) => l.x === 0 && l.y === 0)?.i
-  expect(movedId).toBeDefined()
-  expect(after.md.find((l) => l.i === movedId)?.x).toBe(1)
-  // Untouched breakpoints are byte-identical (cross-breakpoint clobber guard).
-  expect(after.lg).toEqual(before.lg)
-  expect(after.sm).toEqual(before.sm)
-  expect(after.xs).toEqual(before.xs)
-  expect(countOverlaps(after.md)).toBe(0)
+  const beforeOrder = [...before.xs].sort((a, b) => a.y - b.y).map(item => item.i)
+  const afterOrder = [...after.xs].sort((a, b) => a.y - b.y).map(item => item.i)
+  expect(afterOrder).not.toEqual(beforeOrder)
+  expect([...afterOrder].sort()).toEqual([...beforeOrder].sort())
+  for (const [bp, items] of Object.entries(after)) {
+    expect(countOverlaps(items), bp).toBe(0)
+    for (const item of items) {
+      expect({ w: item.w, h: item.h }).toEqual(
+        expect.objectContaining({ w: before[bp].find(other => other.i === item.i)!.w,
+          h: before[bp].find(other => other.i === item.i)!.h }),
+      )
+    }
+  }
 
   // Opening a fresh document in the same context verifies persistence across
   // mounts without navigating the old page while its API mocks are active.
@@ -194,7 +198,11 @@ test(`docked picker drops onto the grid, rejects duplicates, and adds-and-arrang
     return dashboards.find((d) => d.id === localStorage.getItem('teslasync-active-dashboard'))
       ?.widgets.find((w) => w.widgetId === 'odometer-counter')?.id
   })
-  expect(layouts[dropBreakpoint].find((item) => item.i === addedId)?.x).toBe(width === 1920 ? 1 : 0)
+  const dropped = layouts[dropBreakpoint].find((item) => item.i === addedId)!
+  expect(dropped.w).toBe(1)
+  expect(dropped.x + dropped.w).toBeLessThanOrEqual(GRID_COLS[dropBreakpoint])
+  expect(dropped.y).toBeLessThan(Math.max(...layouts[dropBreakpoint].map(item => item.y)))
+  expect(layouts.xs.filter(item => item.i === addedId)).toHaveLength(1)
   await expect(source).toBeDisabled()
   await expect(page.locator('.react-grid-item.dropping')).toHaveCount(0)
 
@@ -380,28 +388,27 @@ test('new widgets fit their content across desktop, tablet, and phone widths', a
     }).toBeLessThanOrEqual(4)
     await expect.poll(
       () => panel.evaluate((element) => element.getBoundingClientRect().height),
-      { message: `${label} should settle at its saved minimum height` },
-    ).toBeGreaterThanOrEqual(minRows * 80)
+      { message: `${label} should respect its content-height minimum` },
+    ).toBeGreaterThanOrEqual(72)
   }
-  const previousHeight = (await readLayouts(page)).md.find((item) => item.i === instanceId)?.h ?? 0
+  const savedBeforeMeasurement = await readLayouts(page)
+  const previousHeight = await widget.locator('.widget-panel').evaluate(panel => panel.getBoundingClientRect().height)
   await widget.getByTestId('widget-body').evaluate((content) => {
     const lateContent = document.createElement('div')
     lateContent.dataset.autofitProbe = 'true'
     lateContent.style.height = '600px'
     content.appendChild(lateContent)
   })
-  await expect.poll(async () =>
-    (await readLayouts(page)).md.find((item) => item.i === instanceId)?.h ?? 0,
-  ).toBeGreaterThan(previousHeight)
+  await expect.poll(() => widget.locator('.widget-panel').evaluate(panel => panel.getBoundingClientRect().height))
+    .toBeGreaterThan(previousHeight + 500)
   await expect.poll(async () => widget.getByTestId('widget-body').evaluate(
     (content) => content.scrollHeight - content.clientHeight,
   )).toBeLessThanOrEqual(4)
   await widget.locator('[data-autofit-probe]').evaluate((probe) => probe.remove())
-  await expect.poll(async () =>
-    (await readLayouts(page)).md.find((item) => item.i === instanceId)?.h ?? 0,
-  ).toBe(previousHeight)
+  await expect.poll(() => widget.locator('.widget-panel').evaluate(panel => panel.getBoundingClientRect().height))
+    .toBeCloseTo(previousHeight, 0)
   await page.waitForTimeout(1200)
-  expect((await readLayouts(page)).md.find((item) => item.i === instanceId)?.h).toBe(previousHeight)
+  expect(await readLayouts(page)).toEqual(savedBeforeMeasurement)
   await closeMockedPage(page, mockApi)
 })
 
@@ -415,10 +422,12 @@ test('repairs oversized saved panels without undoing an explicit resize', async 
   const saved = await page.evaluate(() => {
     const dashboards = JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]') as Array<{
       id: string
+      layoutVersion?: number
       widgets: Array<{ id: string; widgetId: string }>
       layouts: Record<string, LayoutItem[]>
     }>
     const active = dashboards.find((dash) => dash.id === localStorage.getItem('teslasync-active-dashboard'))!
+    delete active.layoutVersion
     const bloated = active.widgets.find((widget) => widget.widgetId === 'battery-gauge')!
     const deliberate = active.widgets.find((widget) => widget.widgetId === 'charge-status')!
     for (const items of Object.values(active.layouts)) {

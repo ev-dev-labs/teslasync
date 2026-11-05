@@ -18613,6 +18613,10 @@
       "session": "Session"
     },
     "chargeStatusLive": "Charge status",
+    "chargeStatus": {
+      "chargeLimit": "Charge limit",
+      "lastReported": "Last reported"
+    },
     "noChargeData": "No charge data",
     "notCharging": "Not charging",
     "voltage": "Voltage",
@@ -25522,6 +25526,9 @@
     }
   },
   "dbHealth": {
+    "estimatedRows": "Estimated rows",
+    "estimatedTotalRows": "Estimated total rows",
+    "rowEstimatesNote": "Row counts are estimates from database statistics, including hypertable chunks. They may lag recent writes; size values are measured bytes.",
     "rowChartScope": "Showing {{shown}} of {{total}} returned tables by row count. The complete table list is below.",
     "summary": {
       "snapshot": "{{source}} snapshot",

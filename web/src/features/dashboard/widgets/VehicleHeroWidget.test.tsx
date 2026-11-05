@@ -299,7 +299,7 @@ function makeStateData(over: {
     software_version: '2024.44.25',
   };
   if (over.chargeLimit !== null) {
-    state.charge_limit_soc = over.chargeLimit === undefined ? 80 : over.chargeLimit;
+    state.charge_limit_soc_pct = over.chargeLimit === undefined ? 80 : over.chargeLimit;
   }
   return {
     state,
@@ -540,7 +540,7 @@ describe('VehicleHeroWidget — After layout', () => {
 
   it('ignores a non-numeric charge limit so no NaN leaks into the meter', () => {
     const data = makeStateData();
-    (data.state as Record<string, unknown>).charge_limit_soc = 'eighty';
+    (data.state as Record<string, unknown>).charge_limit_soc_pct = 'eighty';
     setup({ state: makeQuery({ data }) });
     renderWidget(<VehicleHeroWidget size={STANDARD} />);
     expect(screen.queryByTestId('charge-limit-marker')).not.toBeInTheDocument();
