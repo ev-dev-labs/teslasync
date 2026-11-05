@@ -1,5 +1,5 @@
 import { Icons, type LucideIcon } from '@/lib/icons'
-import { SidebarGlyphs } from '@/lib/sidebarGlyphs'
+import * as SidebarGlyphs from '@/lib/sidebarGlyphs'
 
 // Destination glyphs are stable across navigation styles and when a page is pinned.
 export const SIDEBAR_ROUTE_ICONS: Record<string, LucideIcon> = {

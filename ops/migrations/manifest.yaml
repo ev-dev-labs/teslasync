@@ -522,3 +522,17 @@ migrations:
     irreversible_justification: Explicit down deletes wait steps and durations; export them first. PostgreSQL retains the unused enum label.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-10-10"
+
+  - version: 256
+    name: notification_vehicle
+    forward_compatible: true
+    forward_compatibility_notes: Previous binaries ignore the nullable vehicle column and index. Apply the migration before deploying writers that capture vehicle identity.
+    rollback_notes: Leave applied on binary rollback to preserve captured identity. Explicit down drops vehicle attribution; export notification IDs and vehicle links first. Historical repair is never run by this migration.
+    expected_duration: <30s on a modest inbox; scales with notification_logs size
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Adding the nullable foreign key takes an ACCESS EXCLUSIVE metadata lock and locks the referenced vehicles table. The non-concurrent partial index scans notification_logs and blocks writes; schedule a maintenance window for large histories.
+    reversible: false
+    irreversible_justification: Explicit down loses captured vehicle identities that cannot always be reconstructed from retained messages or current rule scope.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-05"

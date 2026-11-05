@@ -247,7 +247,7 @@ describe('AlertDetailTimeline — timestamp + ordering + wiring', () => {
   beforeEach(() => cleanup());
   afterEach(() => cleanup());
 
-  it('updates populated timestamps when locale and saved zone change without replacing events', () => {
+  it('updates populated timestamps in the user zone even when the display default is vehicle', () => {
     const occurred_at = '2026-07-04T01:00:00Z';
     const events = [
       makeEvent({ occurred_at }),
@@ -263,13 +263,13 @@ describe('AlertDetailTimeline — timestamp + ordering + wiring', () => {
       locale: 'de-DE',
     } as ReturnType<typeof useSettings>);
     vi.mocked(useTimezone).mockImplementation((mode) =>
-      mode === 'vehicle' ? 'America/Los_Angeles' : 'UTC',
+      mode === 'user' ? 'America/Los_Angeles' : 'UTC',
     );
     rerender(<AlertDetailTimeline events={events} />);
     const updatedLabel = formatDateTime(occurred_at, { locale: 'de-DE', tz: 'America/Los_Angeles' });
     expect(within(list).getAllByText(updatedLabel)).toHaveLength(2);
     expect(within(list).queryByText(initialLabel)).not.toBeInTheDocument();
-    expect(vi.mocked(useTimezone)).toHaveBeenCalledWith('vehicle');
+    expect(vi.mocked(useTimezone)).toHaveBeenLastCalledWith('user');
     expect(screen.getByText('Acknowledged by alice')).toBeInTheDocument();
     expect(screen.getByText('Reviewed')).toBeInTheDocument();
     expect(events.map((event) => event.occurred_at)).toEqual([occurred_at, occurred_at]);
