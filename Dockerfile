@@ -30,8 +30,8 @@ RUN GOMEMLIMIT=2GiB CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-s -w -X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.buildTime=${BUILD_TIME}" \
     -o /bin/teslasync ./cmd/teslasync
 
-# Build stage — frontend assets
-FROM node:26-alpine AS web-builder
+# Static frontend assets need native build tools, not target-platform emulation.
+FROM --platform=$BUILDPLATFORM node:26-alpine AS web-builder
 
 WORKDIR /app
 
