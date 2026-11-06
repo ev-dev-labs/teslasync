@@ -7,6 +7,7 @@ import loadConfig from 'tailwindcss/loadConfig';
 import resolveConfig from 'tailwindcss/resolveConfig';
 import { beforeAll, describe, it, expect } from 'vitest';
 import { motion, neonColorMap, semanticToNeon, severityTokens, gaugeTone, glassCardClasses, chartTokens, typography } from '../tokens';
+import { acceptedThemeColors, projectAcceptedThemeColors } from './accepted-theme-colors';
 
 // Independently accepted by phase4-pilot-geometry-token-owner after these
 // historical predecessors. Project exactly these additions, never new hashes
@@ -21,6 +22,16 @@ const acceptedPilotGeometry = [
 function acceptedPilotSourceProjection(source: string): string {
   let projected = source;
   for (const [, name, value] of acceptedPilotGeometry) {
+    const addition = `        '${name}': '${value}',\n`;
+    expect(projected.split(addition), name).toHaveLength(2);
+    projected = projected.replace(addition, '');
+  }
+  return projected;
+}
+
+function acceptedThemeSourceProjection(source: string): string {
+  let projected = source;
+  for (const [name, value] of acceptedThemeColors) {
     const addition = `        '${name}': '${value}',\n`;
     expect(projected.split(addition), name).toHaveLength(2);
     projected = projected.replace(addition, '');
@@ -47,6 +58,15 @@ function acceptedPilotConfigProjection<T extends {
     Reflect.deleteProperty(projected.theme[group], name);
   }
   return projected;
+}
+
+function acceptedHistoricalConfigProjection<T extends {
+  theme: {
+    zIndex?: Record<string, string>;
+    gridTemplateColumns?: Record<string, string>;
+  };
+}>(config: T) {
+  return projectAcceptedThemeColors(acceptedPilotConfigProjection(config));
 }
 
 function finalShellPredecessor(): ReturnType<typeof loadConfig> {
@@ -82,7 +102,7 @@ function moreMenuPredecessorSource(): string {
   expect(source.split(addition)).toHaveLength(2);
   expect(loadConfig(resolve('tailwind.config.js')).theme?.extend?.maxHeight)
     .toHaveProperty('more-menu', 'min(70vh,520px)');
-  return acceptedPilotSourceProjection(source.replace(addition, ''));
+  return acceptedThemeSourceProjection(acceptedPilotSourceProjection(source.replace(addition, '')));
 }
 
 describe('More menu exact single additive geometry role', () => {
@@ -146,7 +166,7 @@ describe('exact two final shell additions', () => {
         zIndex: { ...prior.theme.zIndex, 'shell-status-bar': '55' },
       },
     });
-    const canonical = JSON.stringify(acceptedPilotConfigProjection(prior), (_, value: unknown) => {
+    const canonical = JSON.stringify(acceptedHistoricalConfigProjection(prior), (_, value: unknown) => {
       if (typeof value === 'function') return value.toString();
       if (value && typeof value === 'object' && !Array.isArray(value)) {
         const entries = value as Record<string, unknown>;
@@ -352,7 +372,7 @@ describe('restrained foundation presentation', () => {
         });
         expect(rule.parent?.type).toBe('root');
       }
-      const canonical = JSON.stringify(acceptedPilotConfigProjection(resolved), (_, value: unknown) => {
+      const canonical = JSON.stringify(acceptedHistoricalConfigProjection(resolved), (_, value: unknown) => {
         if (typeof value === 'function') return value.toString();
         if (value && typeof value === 'object' && !Array.isArray(value)) {
           const entries = value as Record<string, unknown>;
@@ -381,7 +401,7 @@ describe('restrained foundation presentation', () => {
         expect(current.theme[group]).toHaveProperty(name, value);
         Reflect.deleteProperty(predecessor.theme[group], name);
       }
-      const canonical = JSON.stringify(acceptedPilotConfigProjection(predecessor), (_, value: unknown) => {
+      const canonical = JSON.stringify(acceptedHistoricalConfigProjection(predecessor), (_, value: unknown) => {
         if (typeof value === 'function') return value.toString();
         if (value && typeof value === 'object' && !Array.isArray(value)) {
           const entries = value as Record<string, unknown>;
@@ -415,7 +435,7 @@ describe('restrained foundation presentation', () => {
         Reflect.set(expected.theme[group], name, value);
       }
       expect(current).toEqual(expected);
-      const canonical = JSON.stringify(acceptedPilotConfigProjection(prior), (_, value: unknown) => {
+      const canonical = JSON.stringify(acceptedHistoricalConfigProjection(prior), (_, value: unknown) => {
         if (typeof value === 'function') return value.toString();
         if (value && typeof value === 'object' && !Array.isArray(value)) {
           const entries = value as Record<string, unknown>;
@@ -456,7 +476,7 @@ describe('restrained foundation presentation', () => {
       Reflect.deleteProperty(previous.theme.fontSize, 'size-inherit');
 
       // Captured before this additive change: includes plugins, screens and all tokens.
-      const canonical = JSON.stringify(acceptedPilotConfigProjection(previous), (_, value: unknown) => {
+      const canonical = JSON.stringify(acceptedHistoricalConfigProjection(previous), (_, value: unknown) => {
         if (typeof value === 'function') return value.toString();
         if (value && typeof value === 'object' && !Array.isArray(value)) {
           const entries = value as Record<string, unknown>;
@@ -500,7 +520,7 @@ describe('restrained foundation presentation', () => {
           fontSize: { ...prior.theme.fontSize, 'size-inherit': 'inherit' },
         },
       });
-      const canonical = JSON.stringify(acceptedPilotConfigProjection(prior), (_, value: unknown) => {
+      const canonical = JSON.stringify(acceptedHistoricalConfigProjection(prior), (_, value: unknown) => {
         if (typeof value === 'function') return value.toString();
         if (value && typeof value === 'object' && !Array.isArray(value)) {
           const entries = value as Record<string, unknown>;
@@ -534,7 +554,7 @@ describe('restrained foundation presentation', () => {
           fontSize: { ...prior.theme.fontSize, 'size-inherit': 'inherit' },
         },
       });
-      const canonical = JSON.stringify(acceptedPilotConfigProjection(prior), (_, value: unknown) => {
+      const canonical = JSON.stringify(acceptedHistoricalConfigProjection(prior), (_, value: unknown) => {
         if (typeof value === 'function') return value.toString();
         if (value && typeof value === 'object' && !Array.isArray(value)) {
           const entries = value as Record<string, unknown>;

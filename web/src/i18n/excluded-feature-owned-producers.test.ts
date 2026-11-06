@@ -3,9 +3,10 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createInstance } from 'i18next'
 import { beforeAll, describe, expect, it } from 'vitest'
-import ts from 'typescript'
 import currentCatalog from './en.json'
 import { catalogBeforeDashboardPolish } from './verified-combined-contract'
+import { producerProjection, projectionDigest, type ProducerProjection } from './producer-projection'
+import { restoreVerifiedThemeSource } from './verified-theme-source-contract'
 import verifiedProducerCheckpoints from './verified-producer-checkpoints.json'
 import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
 import { finalFourAdditions, ownerRecoveryAdditions, restoreOwnerRecoverySource } from './authorized-owner-recovery.test'
@@ -1181,62 +1182,6 @@ const interveningAdditions = [
   ['widget.signalCatalog.lastSeen', 'Last seen: {{timestamp}}'],
 ] as const
 
-type ProducerProjection = {
-  bindings: string[]
-  calls: { call: string; controls: string[] }[]
-}
-
-// Only the diagnosed source-wide fingerprints use this bounded projection.
-// All 291 original path/hash cases remain below. Unchanged sources still use
-// their original byte digests. Changed sources pin real call ASTs, including
-// key/default/arity/options, translator origins, and enclosing branch inputs.
-// No default/catalog-derived expectation or dynamic source baseline is used.
-function producerProjection(file: string, text: string): ProducerProjection {
-  const tree = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
-  const printer = ts.createPrinter({ removeComments: true, newLine: ts.NewLineKind.LineFeed })
-  const print = (node: ts.Node) => printer.printNode(ts.EmitHint.Unspecified, node, tree).trim()
-  const projection: ProducerProjection = { bindings: [], calls: [] }
-  const controls = (call: ts.CallExpression): string[] => {
-    const result: string[] = []
-    let child: ts.Node = call
-    for (let parent = child.parent; parent; child = parent, parent = parent.parent) {
-      if (ts.isIfStatement(parent)) {
-        result.push(`if:${print(parent.expression)}:${child === parent.thenStatement ? 'then' : child === parent.elseStatement ? 'else' : 'condition'}`)
-      } else if (ts.isConditionalExpression(parent)) {
-        result.push(`conditional:${print(parent.condition)}:${child === parent.whenTrue ? 'true' : child === parent.whenFalse ? 'false' : 'condition'}`)
-      } else if (ts.isBinaryExpression(parent)
-        && [ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken].includes(parent.operatorToken.kind)) {
-        result.push(`binary:${ts.tokenToString(parent.operatorToken.kind)}:${child === parent.right ? print(parent.left) : 'left'}`)
-      } else if (ts.isFunctionDeclaration(parent) || ts.isFunctionExpression(parent) || ts.isArrowFunction(parent)) {
-        result.push(`parameters:${parent.parameters.map(print).join(', ')}`)
-      }
-    }
-    return result
-  }
-  const visit = (node: ts.Node) => {
-    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)
-      && ['react-i18next', 'i18next'].includes(node.moduleSpecifier.text)) {
-      projection.bindings.push(print(node))
-    }
-    if (ts.isVariableDeclaration(node) && node.initializer && ts.isCallExpression(node.initializer)
-      && ts.isIdentifier(node.initializer.expression)
-      && ['useTranslation', 'getFixedT', 'useUnits', 'useNumberFormatting'].includes(node.initializer.expression.text)) {
-      projection.bindings.push(print(node))
-    }
-    if (ts.isCallExpression(node) && (ts.isIdentifier(node.expression) && node.expression.text === 't'
-      || ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 't')) {
-      projection.calls.push({ call: print(node), controls: controls(node) })
-    }
-    ts.forEachChild(node, visit)
-  }
-  visit(tree)
-  return projection
-}
-
-function projectionDigest(projection: ProducerProjection): string {
-  return createHash('sha256').update(JSON.stringify(projection)).digest('hex')
-}
-
 // Explicit failing-path allowlist, not permission to rebaseline arbitrary sources.
 // Tuple: path, translator/formatter binding count, actual call count, AST digest.
 // The 1200 real calls retain every applicable frozen canonical call (checked
@@ -1456,7 +1401,7 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
   })
 
   it.each(sourceHashes)('preserves frozen producer contracts across accepted source modernization: %s', (path, sha256) => {
-    const actualSource = readFileSync(resolve(process.cwd(), '..', path), 'utf8')
+    const actualSource = restoreVerifiedThemeSource(path, readFileSync(resolve(process.cwd(), '..', path), 'utf8'))
     // Reviewed current checkpoints pin every source byte after translation verification.
     // Unverified files retain their previous contracts and continue to fail visibly.
     const checkpoint = verifiedProducerCheckpoints.find(entry => entry.file === path)

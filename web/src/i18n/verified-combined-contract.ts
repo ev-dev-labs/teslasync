@@ -6,6 +6,7 @@ import ts from 'typescript'
 import checkpoints from './verified-combined-checkpoints.json'
 import dataRepairCopyChanges from './verified-data-repair-copy.json'
 import notificationCopyChanges from './verified-notification-copy.json'
+import { restoreVerifiedThemeSource } from './verified-theme-source-contract'
 
 // These exact files passed the key/default/interpolation/count audit before generation.
 // Keep all historical assertions for producers outside this explicit checkpoint set.
@@ -13,7 +14,7 @@ export function assertCombinedCheckpoint(group: 'canonical' | 'owner', file: str
   if (!checkpoints[group].includes(file)) return false
   const checkpoint = checkpoints.sources.find(entry => entry.file === file)
   if (!checkpoint) throw new Error('Missing verified combined producer: ' + file)
-  const source = readFileSync(resolve(process.cwd(), '..', file), 'utf8')
+  const source = restoreVerifiedThemeSource(file, readFileSync(resolve(process.cwd(), '..', file), 'utf8'))
   expect(createHash('sha256').update(source).digest('hex'), file).toBe(checkpoint.sha256)
   const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true)
   let calls = 0
@@ -79,9 +80,39 @@ const dashboardPolishAdditions = [
   ['dbHealth.rowEstimatesNote', 'Row counts are estimates from database statistics, including hypertable chunks. They may lag recent writes; size values are measured bytes.'],
 ] as const
 
+const themePolishAdditions = [
+  ['theme.saveFailed', 'Could not save your theme to the server. Your current selection is still applied.'],
+] as const
+
+const themePresetAdditions = {
+  'neon-cyan': 'Signal Blue',
+  'tesla-red': 'Tesla Red',
+  'matrix-green': 'Matrix Green',
+  'royal-purple': 'Royal Purple',
+  'solar-amber': 'Solar Amber',
+  'sky-blue': 'Sky Blue',
+  'ocean-teal': 'Ocean Teal',
+  'emerald-green': 'Emerald Green',
+  'forest-green': 'Forest Green',
+  'lime-green': 'Lime Green',
+  'sunny-yellow': 'Sunny Yellow',
+  'sunset-orange': 'Sunset Orange',
+  coral: 'Coral',
+  'rose-pink': 'Rose Pink',
+  magenta: 'Magenta',
+  lavender: 'Lavender',
+  indigo: 'Indigo',
+  'navy-blue': 'Navy Blue',
+  gold: 'Gold',
+  'slate-gray': 'Slate Gray',
+}
+
 /** Assert exact new copy before projecting it out of unchanged historical fingerprints. */
 export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(catalog: T): T {
   const previous = structuredClone(catalog)
+  const theme = previous.theme as Record<string, unknown>
+  expect(theme.presets, 'theme.presets').toEqual(themePresetAdditions)
+  delete theme.presets
   const heatmapHelp = (previous.help as Record<string, Record<string, unknown>>).driveCalendar
   expect(heatmapHelp.body).toBe('Each cell is one day in your selected time zone. Four levels rank active days by distance: darker in light mode, lighter in dark mode. Outlined cells are outside the range or before the first returned drive, not proof of no driving. Continuous coverage is unknown. Streaks count consecutive days with at least one drive.')
   heatmapHelp.body = "Each cell is one day; darker means more distance, scaled against your 95th-percentile day so one road trip doesn't flatten the rest. Streaks count consecutive days with at least one drive."
@@ -94,7 +125,7 @@ export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(
     if ('previous' in change) parent[leaf] = change.previous
     else delete parent[leaf]
   }
-  for (const [key, expected] of dashboardPolishAdditions) {
+  for (const [key, expected] of [...dashboardPolishAdditions, ...themePolishAdditions]) {
     const parts = key.split('.')
     let parent: Record<string, unknown> = previous
     for (const part of parts.slice(0, -1)) {

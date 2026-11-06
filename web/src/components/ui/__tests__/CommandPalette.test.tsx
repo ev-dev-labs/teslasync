@@ -379,7 +379,7 @@ describe('CommandPalette result presentation', () => {
     fireEvent.mouseEnter(row)
     expect(row).toHaveAttribute('aria-selected', 'true')
     expect(input).toHaveAttribute('aria-activedescendant', row.id)
-    expect(row).toHaveClass('bg-[var(--surface-2)]')
+    expect(row).toHaveClass('bg-[var(--theme-accent-soft)]', 'border-[var(--theme-primary)]')
     expect(row.querySelector('.rtl\\:rotate-180')).toHaveAttribute('aria-hidden', 'true')
     fireEvent.keyDown(input, { key: 'Enter' })
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/drives/77'))

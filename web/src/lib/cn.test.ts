@@ -7,6 +7,7 @@ import tailwindcss from 'tailwindcss'
 import loadConfig from 'tailwindcss/loadConfig'
 import resolveConfig from 'tailwindcss/resolveConfig'
 import { createHash } from 'node:crypto'
+import { projectAcceptedThemeColors } from './__tests__/accepted-theme-colors'
 
 // `cn` is the app-wide className composer (clsx for conditional composition +
 // tailwind-merge for last-wins conflict resolution). It is used in hundreds of
@@ -593,7 +594,7 @@ describe('cn — remaining nineteen geometry roles (MDC-043)', () => {
     for (const [group, name] of remainingGeometry) Reflect.deleteProperty(prior.theme.extend[group], name)
     const previous = resolveConfig(prior)
     const current = resolveConfig(config)
-    const canonical = JSON.stringify(acceptedPhase3Projection(previous), (_, value: unknown) => {
+    const canonical = JSON.stringify(projectAcceptedThemeColors(acceptedPhase3Projection(previous)), (_, value: unknown) => {
       if (typeof value === 'function') return value.toString()
       if (value && typeof value === 'object' && !Array.isArray(value)) {
         const entries = value as Record<string, unknown>
@@ -768,7 +769,7 @@ describe('cn — approved shell overlay geometry (MDC-043)', () => {
     }
     const previous = resolveConfig(prior)
     const current = resolveConfig(config)
-    const canonical = JSON.stringify(acceptedPhase3Projection(previous), (_, value: unknown) => {
+    const canonical = JSON.stringify(projectAcceptedThemeColors(acceptedPhase3Projection(previous)), (_, value: unknown) => {
       if (typeof value === 'function') return value.toString()
       if (value && typeof value === 'object' && !Array.isArray(value)) {
         const entries = value as Record<string, unknown>

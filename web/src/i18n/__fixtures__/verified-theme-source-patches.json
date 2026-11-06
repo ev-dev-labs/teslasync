@@ -1,0 +1,1386 @@
+[
+  {
+    "file": "web/src/components/SignalQueryControls.tsx",
+    "before": "b3d53ae1df6ce4d4a933f69d613d51465a64ab3b0df5ccbc4eb42c0f5c34f00e",
+    "after": "d384be1e54da47f955eaacd29c03a0569964edb08a8ba49ede3a30df44dbe9ae",
+    "hunks": [
+      {
+        "start": 125,
+        "old": [
+          "  num: 'text-cyan-300', str: 'text-emerald-300', bool: 'text-amber-300', null: 'text-[var(--text-muted)]',"
+        ],
+        "new": [
+          "  num: 'text-status-info', str: 'text-emerald-300', bool: 'text-amber-300', null: 'text-[var(--text-muted)]',"
+        ]
+      },
+      {
+        "start": 192,
+        "old": [
+          "            <span key={sig} className=\"inline-flex items-center gap-1 rounded-lg bg-neon-cyan/10 border border-neon-cyan/25 px-2 py-0.5 text-xs font-mono text-neon-cyan\">"
+        ],
+        "new": [
+          "            <span key={sig} className=\"inline-flex items-center gap-1 rounded-lg bg-theme-accent/10 border border-theme-accent/25 px-2 py-0.5 text-xs font-mono text-theme-accent\">"
+        ]
+      },
+      {
+        "start": 292,
+        "old": [
+          "  const inputClass = \"w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-mono text-[var(--text-primary)] outline-none focus:border-neon-cyan/40\""
+        ],
+        "new": [
+          "  const inputClass = \"w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-mono text-[var(--text-primary)] outline-none focus:border-theme-accent\""
+        ]
+      },
+      {
+        "start": 318,
+        "old": [
+          "                    ? \"border-neon-cyan/40 bg-neon-cyan/10 text-[var(--text-primary)]\"",
+          "                    : \"border-white/[0.08] bg-white/[0.03] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-neon-cyan/30\","
+        ],
+        "new": [
+          "                    ? \"border-theme-accent/40 bg-theme-accent/10 text-[var(--text-primary)]\"",
+          "                    : \"border-white/[0.08] bg-white/[0.03] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-theme-accent/30\","
+        ]
+      },
+      {
+        "start": 357,
+        "old": [
+          "          className=\"rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/40\""
+        ],
+        "new": [
+          "          className=\"rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-[var(--text-primary)] outline-none focus:border-theme-accent\""
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/settings/components/AppearanceSettings.tsx",
+    "before": "4a792246ccc65713c01dd07a12d8b48e3214f73a9828c3fbd86b6869f68869b6",
+    "after": "295cd713e3fb91497c4ef428797b71798247b914c5fdbc13ae31ff592e983fba",
+    "hunks": [
+      {
+        "start": 2,
+        "old": [
+          "import { Accordion, GlassPanel, IconBox, ThemePicker, Toggle, Button, RadioCard, HelpIcon, Heading, Text, HelperText, Label, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui'"
+        ],
+        "new": [
+          "import { Accordion, GlassPanel, IconBox, Toggle, Button, RadioCard, HelpIcon, Heading, Text, HelperText, Label, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui'",
+          "import { ThemePicker } from '@/components/ui/theme'"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/forms/FilterSheet.tsx",
+    "before": "a65bc8961bd5d46a1d2f6d2e2ca46e098d1d5649d6f3f98fcfdbf079d036213d",
+    "after": "007e145fa367ab5bcc24de360760907b8ff0229c7b2ab7782fd741a66148d0da",
+    "hunks": [
+      {
+        "start": 106,
+        "old": [
+          "              'bg-cyan-500/20 text-2xs font-semibold tabular-nums text-cyan-300',"
+        ],
+        "new": [
+          "              'bg-theme-accent/20 text-2xs font-semibold tabular-nums text-theme-accent',"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/Layout.tsx",
+    "before": "1f423497b6350dd9844612f4f2265678088a5a2018a18fa887dadbcba917f804",
+    "after": "6eccc90c7d5d701affbd40244f5eed7ca8ad7e2aa7e059c53a1010c171c950dd",
+    "hunks": [
+      {
+        "start": 179,
+        "old": [
+          "      { to: '/', icon: navRouteIcons['/'], label: 'Dashboard', labelKey: 'nav.items.dashboard', color: 'text-blue-400' },",
+          "      { to: '/action-center', icon: Icons.notificationsActive, label: 'Action center', labelKey: 'nav.items.action-center', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/', icon: navRouteIcons['/'], label: 'Dashboard', labelKey: 'nav.items.dashboard', color: 'text-theme-accent' },",
+          "      { to: '/action-center', icon: Icons.notificationsActive, label: 'Action center', labelKey: 'nav.items.action-center', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 183,
+        "old": [
+          "      { to: '/timeline', icon: navRouteIcons['/timeline'], label: 'Timeline', labelKey: 'nav.items.timeline', color: 'text-sky-400' },",
+          "      { to: '/activity', icon: Icons.activity, label: 'Activity timeline', labelKey: 'nav.items.activity', color: 'text-teal-400' },"
+        ],
+        "new": [
+          "      { to: '/timeline', icon: navRouteIcons['/timeline'], label: 'Timeline', labelKey: 'nav.items.timeline', color: 'text-theme-accent' },",
+          "      { to: '/activity', icon: Icons.activity, label: 'Activity timeline', labelKey: 'nav.items.activity', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 192,
+        "old": [
+          "      { to: '/vehicles', icon: Icons.vehicle, label: 'My vehicles', labelKey: 'nav.items.vehicles', color: 'text-sky-400', dataTour: 'vehicle-section' },"
+        ],
+        "new": [
+          "      { to: '/vehicles', icon: Icons.vehicle, label: 'My vehicles', labelKey: 'nav.items.vehicles', color: 'text-theme-accent', dataTour: 'vehicle-section' },"
+        ]
+      },
+      {
+        "start": 194,
+        "old": [
+          "      { to: '/digital-twin', icon: Icons.monitor, label: 'Vehicle live view', labelKey: 'nav.items.digital-twin', color: 'text-cyan-400' },",
+          "      { to: '/day-log', icon: Icons.fileText, label: 'Day log', labelKey: 'nav.items.day-log', color: 'text-teal-400' },"
+        ],
+        "new": [
+          "      { to: '/digital-twin', icon: Icons.monitor, label: 'Vehicle live view', labelKey: 'nav.items.digital-twin', color: 'text-theme-accent' },",
+          "      { to: '/day-log', icon: Icons.fileText, label: 'Day log', labelKey: 'nav.items.day-log', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 198,
+        "old": [
+          "      { to: '/parking', icon: Icons.parking, label: 'Parking analytics', labelKey: 'nav.items.parking', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/parking', icon: Icons.parking, label: 'Parking analytics', labelKey: 'nav.items.parking', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 200,
+        "old": [
+          "      { to: '/time-machine', icon: Icons.history, label: 'Time machine', labelKey: 'nav.items.time-machine', color: 'text-indigo-400' },",
+          "      { to: '/physics-cockpit', icon: Icons.cpu, label: 'Physics cockpit', labelKey: 'nav.items.physics-cockpit', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/time-machine', icon: Icons.history, label: 'Time machine', labelKey: 'nav.items.time-machine', color: 'text-theme-accent' },",
+          "      { to: '/physics-cockpit', icon: Icons.cpu, label: 'Physics cockpit', labelKey: 'nav.items.physics-cockpit', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 211,
+        "old": [
+          "      { to: '/trips', icon: Icons.trip, label: 'Trips', labelKey: 'nav.items.trips', color: 'text-teal-400' },",
+          "      { to: '/journeys', icon: Icons.compass, label: 'Journeys', labelKey: 'nav.items.journeys', color: 'text-sky-400' },"
+        ],
+        "new": [
+          "      { to: '/trips', icon: Icons.trip, label: 'Trips', labelKey: 'nav.items.trips', color: 'text-theme-accent' },",
+          "      { to: '/journeys', icon: Icons.compass, label: 'Journeys', labelKey: 'nav.items.journeys', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 214,
+        "old": [
+          "      { to: '/navigation', icon: Icons.signpost, label: 'Navigation', labelKey: 'nav.items.navigation', color: 'text-teal-400' },"
+        ],
+        "new": [
+          "      { to: '/navigation', icon: Icons.signpost, label: 'Navigation', labelKey: 'nav.items.navigation', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 216,
+        "old": [
+          "      { to: '/mileage', icon: navRouteIcons['/mileage'], label: 'Mileage log', labelKey: 'nav.items.mileage', color: 'text-teal-400' },"
+        ],
+        "new": [
+          "      { to: '/mileage', icon: navRouteIcons['/mileage'], label: 'Mileage log', labelKey: 'nav.items.mileage', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 222,
+        "old": [
+          "      { to: '/cold-start', icon: Icons.cooling, label: 'Cold start cost', labelKey: 'nav.items.cold-start', color: 'text-sky-400' },"
+        ],
+        "new": [
+          "      { to: '/cold-start', icon: Icons.cooling, label: 'Cold start cost', labelKey: 'nav.items.cold-start', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 224,
+        "old": [
+          "      { to: '/explorer', icon: Icons.compass, label: 'Explorer', labelKey: 'nav.items.explorer', color: 'text-teal-400' },"
+        ],
+        "new": [
+          "      { to: '/explorer', icon: Icons.compass, label: 'Explorer', labelKey: 'nav.items.explorer', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 229,
+        "old": [
+          "      { to: '/fsd', icon: Icons.cpu, label: 'FSD insights', labelKey: 'nav.items.fsd', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/fsd', icon: Icons.cpu, label: 'FSD insights', labelKey: 'nav.items.fsd', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 235,
+        "old": [
+          "      { to: '/what-if', icon: Icons.preferences, label: 'What-if simulator', labelKey: 'nav.items.what-if', color: 'text-cyan-400' },",
+          "      { to: '/departure-forecast', icon: Icons.calendarClock, label: 'Departure forecast', labelKey: 'nav.items.departure-forecast', color: 'text-sky-400' },",
+          "      { to: '/arrival-reliability', icon: Icons.timer, label: 'Arrival reliability', labelKey: 'nav.items.arrival-reliability', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/what-if', icon: Icons.preferences, label: 'What-if simulator', labelKey: 'nav.items.what-if', color: 'text-theme-accent' },",
+          "      { to: '/departure-forecast', icon: Icons.calendarClock, label: 'Departure forecast', labelKey: 'nav.items.departure-forecast', color: 'text-theme-accent' },",
+          "      { to: '/arrival-reliability', icon: Icons.timer, label: 'Arrival reliability', labelKey: 'nav.items.arrival-reliability', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 241,
+        "old": [
+          "      { to: '/segments', icon: Icons.flag, label: 'Ghost racing', labelKey: 'nav.items.segments', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/segments', icon: Icons.flag, label: 'Ghost racing', labelKey: 'nav.items.segments', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 251,
+        "old": [
+          "      { to: '/charging-heatmap', icon: Icons.calendarClock, label: 'Charging patterns', labelKey: 'nav.items.charging-heatmap', color: 'text-cyan-400' },",
+          "      { to: '/smart-charge', icon: Icons.calendarClock, label: 'Smart charging', labelKey: 'nav.items.smart-charge', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/charging-heatmap', icon: Icons.calendarClock, label: 'Charging patterns', labelKey: 'nav.items.charging-heatmap', color: 'text-theme-accent' },",
+          "      { to: '/smart-charge', icon: Icons.calendarClock, label: 'Smart charging', labelKey: 'nav.items.smart-charge', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 255,
+        "old": [
+          "      { to: '/charger-resilience', icon: Icons.network, label: 'Charger resilience', labelKey: 'nav.items.charger-resilience', color: 'text-sky-400' },"
+        ],
+        "new": [
+          "      { to: '/charger-resilience', icon: Icons.network, label: 'Charger resilience', labelKey: 'nav.items.charger-resilience', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 269,
+        "old": [
+          "      { to: '/vampire-drain', icon: Icons.moon, label: 'Vampire drain', labelKey: 'nav.items.vampire-drain', color: 'text-indigo-400' },"
+        ],
+        "new": [
+          "      { to: '/vampire-drain', icon: Icons.moon, label: 'Vampire drain', labelKey: 'nav.items.vampire-drain', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 274,
+        "old": [
+          "      { to: '/range-buffer', icon: Icons.battery, label: 'Range buffer', labelKey: 'nav.items.range-buffer', color: 'text-teal-400' },"
+        ],
+        "new": [
+          "      { to: '/range-buffer', icon: Icons.battery, label: 'Range buffer', labelKey: 'nav.items.range-buffer', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 276,
+        "old": [
+          "      { to: '/charge-advisor', icon: Icons.batteryCharging, label: 'Charge advisor', labelKey: 'nav.items.charge-advisor', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/charge-advisor', icon: Icons.batteryCharging, label: 'Charge advisor', labelKey: 'nav.items.charge-advisor', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 288,
+        "old": [
+          "      { to: '/energy-orchestrator', icon: Icons.workflow, label: 'Energy orchestrator', labelKey: 'nav.items.energy-orchestrator', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/energy-orchestrator', icon: Icons.workflow, label: 'Energy orchestrator', labelKey: 'nav.items.energy-orchestrator', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 295,
+        "old": [
+          "      { to: '/climate-control', icon: navRouteIcons['/climate-control'], label: 'Climate control', labelKey: 'nav.items.climate-control', color: 'text-sky-400' },"
+        ],
+        "new": [
+          "      { to: '/climate-control', icon: navRouteIcons['/climate-control'], label: 'Climate control', labelKey: 'nav.items.climate-control', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 297,
+        "old": [
+          "      { to: '/hvac-cycling', icon: Icons.recycle, label: 'HVAC Cycling', labelKey: 'nav.items.hvac-cycling', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/hvac-cycling', icon: Icons.recycle, label: 'HVAC Cycling', labelKey: 'nav.items.hvac-cycling', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 310,
+        "old": [
+          "      { to: '/software-updates', icon: Icons.download, label: 'Software updates', labelKey: 'nav.items.software-updates', color: 'text-teal-400' },"
+        ],
+        "new": [
+          "      { to: '/software-updates', icon: Icons.download, label: 'Software updates', labelKey: 'nav.items.software-updates', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 314,
+        "old": [
+          "      { to: '/diagnostics/service-evidence', icon: Icons.fileJson, label: 'Service evidence pack', labelKey: 'nav.items.diagnostics_service-evidence', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/diagnostics/service-evidence', icon: Icons.fileJson, label: 'Service evidence pack', labelKey: 'nav.items.diagnostics_service-evidence', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 321,
+        "old": [
+          "      { to: '/statistics', icon: navRouteIcons['/statistics'], label: 'Statistics', labelKey: 'nav.items.statistics', color: 'text-cyan-400' },",
+          "      { to: '/analytics', icon: navRouteIcons['/analytics'], label: 'Analytics', labelKey: 'nav.items.analytics', color: 'text-indigo-400' },"
+        ],
+        "new": [
+          "      { to: '/statistics', icon: navRouteIcons['/statistics'], label: 'Statistics', labelKey: 'nav.items.statistics', color: 'text-theme-accent' },",
+          "      { to: '/analytics', icon: navRouteIcons['/analytics'], label: 'Analytics', labelKey: 'nav.items.analytics', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 325,
+        "old": [
+          "      { to: '/temperature-impact', icon: Icons.climateHot, label: 'Temperature impact', labelKey: 'nav.items.temperature-impact', color: 'text-blue-400' },"
+        ],
+        "new": [
+          "      { to: '/temperature-impact', icon: Icons.climateHot, label: 'Temperature impact', labelKey: 'nav.items.temperature-impact', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 351,
+        "old": [
+          "      { to: '/notifications/packs', icon: Icons.package, label: 'Alert packs', labelKey: 'nav.items.notifications_packs', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/notifications/packs', icon: Icons.package, label: 'Alert packs', labelKey: 'nav.items.notifications_packs', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 359,
+        "old": [
+          "      { to: '/notifications/channels', icon: Icons.send, label: 'Notification channels', labelKey: 'nav.items.notifications_channels', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/notifications/channels', icon: Icons.send, label: 'Notification channels', labelKey: 'nav.items.notifications_channels', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 361,
+        "old": [
+          "      { to: '/notifications/quiet-hours', icon: Icons.clock, label: 'Quiet hours', labelKey: 'nav.items.notifications_quiet-hours', color: 'text-indigo-400' },"
+        ],
+        "new": [
+          "      { to: '/notifications/quiet-hours', icon: Icons.clock, label: 'Quiet hours', labelKey: 'nav.items.notifications_quiet-hours', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 369,
+        "old": [
+          "      { to: '/intelligence/twin-lab', icon: Icons.network, label: 'Vehicle twin lab', labelKey: 'nav.items.intelligence_twin-lab', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/intelligence/twin-lab', icon: Icons.network, label: 'Vehicle twin lab', labelKey: 'nav.items.intelligence_twin-lab', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 375,
+        "old": [
+          "      { to: '/intelligence/journey-assurance', icon: Icons.navigationAlt, label: 'Journey assurance', labelKey: 'nav.items.intelligence_journey-assurance', color: 'text-sky-400' },"
+        ],
+        "new": [
+          "      { to: '/intelligence/journey-assurance', icon: Icons.navigationAlt, label: 'Journey assurance', labelKey: 'nav.items.intelligence_journey-assurance', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 387,
+        "old": [
+          "      { to: '/ownership/insurance-telematics', icon: Icons.securityCheck, label: 'Insurance telematics', labelKey: 'nav.items.ownership_insurance-telematics', color: 'text-teal-400' },"
+        ],
+        "new": [
+          "      { to: '/ownership/insurance-telematics', icon: Icons.securityCheck, label: 'Insurance telematics', labelKey: 'nav.items.ownership_insurance-telematics', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 391,
+        "old": [
+          "      { to: '/ownership/warranty-command', icon: Icons.award, label: 'Warranty command', labelKey: 'nav.items.ownership_warranty-command', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/ownership/warranty-command', icon: Icons.award, label: 'Warranty command', labelKey: 'nav.items.ownership_warranty-command', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 393,
+        "old": [
+          "      { to: '/ownership/model-trust', icon: Icons.target, label: 'Model trust lab', labelKey: 'nav.items.ownership_model-trust', color: 'text-sky-400' },",
+          "      { to: '/ownership/jurisdiction-compliance', icon: Icons.globe, label: 'Jurisdiction compliance', labelKey: 'nav.items.ownership_jurisdiction-compliance', color: 'text-indigo-400' },"
+        ],
+        "new": [
+          "      { to: '/ownership/model-trust', icon: Icons.target, label: 'Model trust lab', labelKey: 'nav.items.ownership_model-trust', color: 'text-theme-accent' },",
+          "      { to: '/ownership/jurisdiction-compliance', icon: Icons.globe, label: 'Jurisdiction compliance', labelKey: 'nav.items.ownership_jurisdiction-compliance', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 403,
+        "old": [
+          "      { to: '/tesla-physics', icon: Icons.sparkles, label: 'Physics overview', labelKey: 'nav.items.tesla-physics', color: 'text-cyan-400' },",
+          "      { to: '/science', icon: Icons.analytics, label: 'Science lab', labelKey: 'nav.items.science', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/tesla-physics', icon: Icons.sparkles, label: 'Physics overview', labelKey: 'nav.items.tesla-physics', color: 'text-theme-accent' },",
+          "      { to: '/science', icon: Icons.analytics, label: 'Science lab', labelKey: 'nav.items.science', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 420,
+        "old": [
+          "      { to: '/tesla-account', icon: Icons.user, label: 'Tesla account', labelKey: 'nav.items.tesla-account', color: 'text-blue-400' },",
+          "      { to: '/tesla-orders', icon: Icons.shoppingCart, label: 'Active orders', labelKey: 'nav.items.tesla-orders', color: 'text-teal-400' },",
+          "      { to: '/fleet-api', icon: Icons.cloud, label: 'Fleet API', labelKey: 'nav.items.fleet-api', color: 'text-sky-400' },"
+        ],
+        "new": [
+          "      { to: '/tesla-account', icon: Icons.user, label: 'Tesla account', labelKey: 'nav.items.tesla-account', color: 'text-theme-accent' },",
+          "      { to: '/tesla-orders', icon: Icons.shoppingCart, label: 'Active orders', labelKey: 'nav.items.tesla-orders', color: 'text-theme-accent' },",
+          "      { to: '/fleet-api', icon: Icons.cloud, label: 'Fleet API', labelKey: 'nav.items.fleet-api', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 426,
+        "old": [
+          "      { to: '/account/sessions', icon: Icons.monitor,       label: 'Active sessions', labelKey: 'nav.items.account_sessions',  color: 'text-cyan-400',   requiresAuth: true },"
+        ],
+        "new": [
+          "      { to: '/account/sessions', icon: Icons.monitor,       label: 'Active sessions', labelKey: 'nav.items.account_sessions',  color: 'text-theme-accent',   requiresAuth: true },"
+        ]
+      },
+      {
+        "start": 428,
+        "old": [
+          "      { to: '/me/activity',      icon: Icons.history,       label: 'My activity', labelKey: 'nav.items.me_activity',      color: 'text-cyan-400',   requiresAuth: true },"
+        ],
+        "new": [
+          "      { to: '/me/activity',      icon: Icons.history,       label: 'My activity', labelKey: 'nav.items.me_activity',      color: 'text-theme-accent',   requiresAuth: true },"
+        ]
+      },
+      {
+        "start": 436,
+        "old": [
+          "      { to: '/settings/fleet-setup', icon: Icons.radio, label: 'Fleet setup', labelKey: 'nav.items.settings_fleet-setup', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/settings/fleet-setup', icon: Icons.radio, label: 'Fleet setup', labelKey: 'nav.items.settings_fleet-setup', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 438,
+        "old": [
+          "      { to: '/dev-tools', icon: Icons.hammer, label: 'Developer tools', labelKey: 'nav.items.dev-tools', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/dev-tools', icon: Icons.hammer, label: 'Developer tools', labelKey: 'nav.items.dev-tools', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 448,
+        "old": [
+          "      { to: '/intelligence-packs', icon: Icons.package, label: 'Intelligence packs', labelKey: 'nav.items.intelligence-packs', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/intelligence-packs', icon: Icons.package, label: 'Intelligence packs', labelKey: 'nav.items.intelligence-packs', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 456,
+        "old": [
+          "      { to: '/backup', icon: Icons.databaseBackup, label: 'Backup & restore', labelKey: 'nav.items.backup', color: 'text-teal-400' },"
+        ],
+        "new": [
+          "      { to: '/backup', icon: Icons.databaseBackup, label: 'Backup & restore', labelKey: 'nav.items.backup', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 465,
+        "old": [
+          "      { to: '/tesla-api-usage', icon: Icons.activity, label: 'Tesla API usage', labelKey: 'nav.items.tesla-api-usage', color: 'text-cyan-400' },",
+          "      { to: '/outage', icon: Icons.history, label: 'Outage autobiography', labelKey: 'nav.items.outage', color: 'text-indigo-400' },"
+        ],
+        "new": [
+          "      { to: '/tesla-api-usage', icon: Icons.activity, label: 'Tesla API usage', labelKey: 'nav.items.tesla-api-usage', color: 'text-theme-accent' },",
+          "      { to: '/outage', icon: Icons.history, label: 'Outage autobiography', labelKey: 'nav.items.outage', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 470,
+        "old": [
+          "      { to: '/diagnostics/root-cause', icon: Icons.network, label: 'Root-cause intelligence', labelKey: 'nav.items.diagnostics_root-cause', color: 'text-cyan-400' },",
+          "      { to: '/dashcam', icon: Icons.show, label: 'Dashcam & Sentry', labelKey: 'nav.items.dashcam', color: 'text-indigo-400' },",
+          "      { to: '/signals', icon: Icons.activity, label: 'Live signals', labelKey: 'nav.items.signals', color: 'text-neon-cyan', dataTour: 'live-signals-section' },",
+          "      { to: '/admin/live-signals', icon: Icons.radioTower, label: 'Live signal inspector', labelKey: 'nav.items.admin_live-signals', color: 'text-cyan-400' },",
+          "      { to: '/admin/ingest-xray', icon: Icons.scanSearch, label: 'Ingest X-Ray', labelKey: 'nav.items.admin_ingest-xray', color: 'text-sky-400' },"
+        ],
+        "new": [
+          "      { to: '/diagnostics/root-cause', icon: Icons.network, label: 'Root-cause intelligence', labelKey: 'nav.items.diagnostics_root-cause', color: 'text-theme-accent' },",
+          "      { to: '/dashcam', icon: Icons.show, label: 'Dashcam & Sentry', labelKey: 'nav.items.dashcam', color: 'text-theme-accent' },",
+          "      { to: '/signals', icon: Icons.activity, label: 'Live signals', labelKey: 'nav.items.signals', color: 'text-theme-accent', dataTour: 'live-signals-section' },",
+          "      { to: '/admin/live-signals', icon: Icons.radioTower, label: 'Live signal inspector', labelKey: 'nav.items.admin_live-signals', color: 'text-theme-accent' },",
+          "      { to: '/admin/ingest-xray', icon: Icons.scanSearch, label: 'Ingest X-Ray', labelKey: 'nav.items.admin_ingest-xray', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 480,
+        "old": [
+          "      { to: '/admin/data-quality', icon: Icons.scanSearch, label: 'Data quality', labelKey: 'nav.items.admin_data-quality', color: 'text-sky-400' },",
+          "      { to: '/admin/disk-forecast', icon: Icons.trendUp, label: 'Disk forecast', labelKey: 'nav.items.admin_disk-forecast', color: 'text-teal-400' },",
+          "      { to: '/admin/secret-rotation', icon: Icons.securityCheck, label: 'Secret rotation', labelKey: 'nav.items.admin_secret-rotation', color: 'text-cyan-400' },",
+          "      { to: '/admin/audit-log', icon: Icons.history, label: 'Audit log', labelKey: 'nav.items.admin_audit-log', color: 'text-indigo-400' },"
+        ],
+        "new": [
+          "      { to: '/admin/data-quality', icon: Icons.scanSearch, label: 'Data quality', labelKey: 'nav.items.admin_data-quality', color: 'text-theme-accent' },",
+          "      { to: '/admin/disk-forecast', icon: Icons.trendUp, label: 'Disk forecast', labelKey: 'nav.items.admin_disk-forecast', color: 'text-theme-accent' },",
+          "      { to: '/admin/secret-rotation', icon: Icons.securityCheck, label: 'Secret rotation', labelKey: 'nav.items.admin_secret-rotation', color: 'text-theme-accent' },",
+          "      { to: '/admin/audit-log', icon: Icons.history, label: 'Audit log', labelKey: 'nav.items.admin_audit-log', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 486,
+        "old": [
+          "      { to: '/mqtt-inspector', icon: Icons.radio, label: 'MQTT inspector', labelKey: 'nav.items.mqtt-inspector', color: 'text-blue-400' },",
+          "      { to: '/signal-correlation', icon: Icons.network, label: 'Signal correlation', labelKey: 'nav.items.signal-correlation', color: 'text-cyan-400' },"
+        ],
+        "new": [
+          "      { to: '/mqtt-inspector', icon: Icons.radio, label: 'MQTT inspector', labelKey: 'nav.items.mqtt-inspector', color: 'text-theme-accent' },",
+          "      { to: '/signal-correlation', icon: Icons.network, label: 'Signal correlation', labelKey: 'nav.items.signal-correlation', color: 'text-theme-accent' },"
+        ]
+      },
+      {
+        "start": 494,
+        "old": [
+          "      { to: '/admin/telemetry/coverage', icon: Icons.cloud, label: 'Telemetry coverage', labelKey: 'nav.items.admin_telemetry_coverage', color: 'text-sky-400' },"
+        ],
+        "new": [
+          "      { to: '/admin/telemetry/coverage', icon: Icons.cloud, label: 'Telemetry coverage', labelKey: 'nav.items.admin_telemetry_coverage', color: 'text-theme-accent' },"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/status/ActionItem.tsx",
+    "before": "ea32988e1bc378de447689f8fbe4794526aeec8bce6dbbd4219af3483edc19ff",
+    "after": "7611363c23232a12b672d94bcf9360eef1f810cec55697658a81fe9a1d2d21e3",
+    "hunks": [
+      {
+        "start": 21,
+        "old": [
+          "  info:  { icon: Info,           text: 'text-blue-400',  bg: 'bg-blue-500/10',  ring: 'ring-blue-400/20' },"
+        ],
+        "new": [
+          "  info:  { icon: Info,           text: 'text-status-info',   bg: 'bg-status-info/10',   ring: 'ring-status-info/20' },"
+        ]
+      },
+      {
+        "start": 73,
+        "old": [
+          "    'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',"
+        ],
+        "new": [
+          "    'focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent',"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/ui/CommandPalette.tsx",
+    "before": "6eec7c2991ac49d916e044c165deca8552e11622e5d11fc15b38dd8121d62e33",
+    "after": "02d6cf7376f743d94cb7c3925c84493ad312bdb6cb30065f78da71db19951fe5",
+    "hunks": [
+      {
+        "start": 1498,
+        "old": [
+          "                              'flex h-auto min-h-11 w-full items-center justify-start gap-3 whitespace-normal rounded-shape-sm px-4 py-3 text-start',"
+        ],
+        "new": [
+          "                              'flex h-auto min-h-11 w-full items-center justify-start gap-3 whitespace-normal rounded-shape-sm border-s-2 px-4 py-3 text-start',"
+        ]
+      },
+      {
+        "start": 1500,
+        "old": [
+          "                                ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'",
+          "                                : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'"
+        ],
+        "new": [
+          "                                ? 'border-[var(--theme-primary)] bg-[var(--theme-accent-soft)] text-[var(--text-primary)]'",
+          "                                : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/admin/components/ResponseViewer.tsx",
+    "before": "45b4f830d650bf4ef412d6f004d68883d305bebbc12043b720c41cba8c63fca4",
+    "after": "7ae1d441d6b08cadf35d9cde7e58ad564cb77272a969aba54c56bb33283073fd",
+    "hunks": [
+      {
+        "start": 272,
+        "old": [
+          "                h.method === 'POST' ? 'bg-blue-500/20 text-blue-400' :"
+        ],
+        "new": [
+          "                h.method === 'POST' ? 'bg-status-info/20 text-status-info' :"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/admin/components/SubjectsTable.tsx",
+    "before": "3f6b6b1feba43096ec76a764ec2e4bb6c9203604752a91c41069404fba138586",
+    "after": "f53b6fdf34cf065adb029b8d28cbedba60a1cf612986cb739069a54e4b71550c",
+    "hunks": [
+      {
+        "start": 123,
+        "old": [
+          "          <Users className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        ],
+        "new": [
+          "          <Users className=\"h-4 w-4 text-theme-accent\" aria-hidden=\"true\" />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/admin/components/continuation-admin-1/SchemaFingerprints.tsx",
+    "before": "9c2b17167b2f3789d0220dcf5ef2347ae2357883938247e98afeaea62cb53718",
+    "after": "5bc40591c53d0f140207a2c1fb297c173a8cb542314978ff214629d77b8cc2b7",
+    "hunks": [
+      {
+        "start": 17,
+        "old": [
+          "      actions={<Fingerprint className=\"h-4 w-4 text-cyan-300\" aria-hidden />}>"
+        ],
+        "new": [
+          "      actions={<Fingerprint className=\"h-4 w-4 text-theme-accent\" aria-hidden />}>"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/admin/components/continuation-admin-1/SchemaKpis.tsx",
+    "before": "cdb2a398bc2158d98e394e2eeb4e33f08f175d4df469c755b27244c893d31379",
+    "after": "259a04b7bc7cd9d8308708fdf61836705d3d9c55f31e7290cf32e4bb2442f485",
+    "hunks": [
+      {
+        "start": 23,
+        "old": [
+          "      icon: <Database className=\"h-4 w-4 text-cyan-300\" aria-hidden /> },"
+        ],
+        "new": [
+          "      icon: <Database className=\"h-4 w-4 text-theme-accent\" aria-hidden /> },"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/admin/components/devtools/FleetTelemetryHealth.tsx",
+    "before": "638a9d0da023d0ebbf1f0d4d2fbdcb51ee74413c8157934ab67cd9ef8dd5170e",
+    "after": "33f914a0eac965cb96f16f7bc958186989bd5670f5221256b6144c879edd3092",
+    "hunks": [
+      {
+        "start": 45,
+        "old": [
+          "          className=\"!h-auto !px-0 !py-0 font-mono text-xs text-cyan-300 hover:!bg-transparent hover:underline\""
+        ],
+        "new": [
+          "          className=\"!h-auto !px-0 !py-0 font-mono text-xs text-theme-accent hover:!bg-transparent hover:underline\""
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/admin/components/devtools/ReferenceLinksSection.tsx",
+    "before": "a89d40eb0cf75a4594bf5e14042db2d7241fa1f2cc08cfa703070d5bc006eff0",
+    "after": "eefba437c6df78b2f5c3d0ae36763ba73bd7c443cbdc71899620eaca5859aff0",
+    "hunks": [
+      {
+        "start": 58,
+        "old": [
+          "              className=\"flex items-start gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50\""
+        ],
+        "new": [
+          "              className=\"flex items-start gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent\""
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/admin/components/live-signal-inspector/LiveSignalsTable.tsx",
+    "before": "e9ecfd7e68f8da519dc4ad8ba818d0fb52bda36e4b9314a681a3ef7a35ca0641",
+    "after": "6b45963b06e163faf7d4c26f4c9f5b9b33817d874504899c564701e8ab1b3d60",
+    "hunks": [
+      {
+        "start": 60,
+        "old": [
+          "  if (tx === 'number') return { text: String(v), cls: 'text-cyan-300' };"
+        ],
+        "new": [
+          "  if (tx === 'number') return { text: String(v), cls: 'text-status-info' };"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/admin/components/vehicle-cost/CostByVehicleChart.tsx",
+    "before": "473e42930dc1fc7b49506fa9cb9af0a425fcb1090d706d362ab6afbb55634d09",
+    "after": "9b561f652cddf1cd2c9bcb63d064a880d72544e8a58b4dc5c880330bee03d75b",
+    "hunks": [
+      {
+        "start": 63,
+        "old": [
+          "        <BarChart3 className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        ],
+        "new": [
+          "        <BarChart3 className=\"h-4 w-4 text-theme-accent\" aria-hidden=\"true\" />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/analytics/components/true-cost/TrueCostFixedLedger.tsx",
+    "before": "22e40adb9269646abdf36ffa6c6d10025d3b626728b059b42a4fe83e0e7e2014",
+    "after": "eb232cee91fbbdeec3883afa2b04e794f736300bfecd2f2839f2f985a977339c",
+    "hunks": [
+      {
+        "start": 160,
+        "old": [
+          "          <Wallet className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        ],
+        "new": [
+          "          <Wallet className=\"h-4 w-4 text-theme-accent\" aria-hidden=\"true\" />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/analytics/components/weekly-digest/FsdSection.tsx",
+    "before": "75292facaf9959e6b34fb611c35eb3000d636127b52d566de1f5b999eb070cd0",
+    "after": "2eff19b54dc5954bb62d940a71872d5ad7bc4a68986cf515ccd82984f0f02233",
+    "hunks": [
+      {
+        "start": 43,
+        "old": [
+          "        <Gauge className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        ],
+        "new": [
+          "        <Gauge className=\"h-4 w-4 text-theme-accent\" aria-hidden=\"true\" />"
+        ]
+      },
+      {
+        "start": 110,
+        "old": [
+          "                  : <TrendingUp className=\"h-4 w-4 text-cyan-300\" />"
+        ],
+        "new": [
+          "                  : <TrendingUp className=\"h-4 w-4 text-theme-accent\" />"
+        ]
+      },
+      {
+        "start": 121,
+        "old": [
+          "                  : <TrendingUp className=\"h-4 w-4 text-cyan-300\" />"
+        ],
+        "new": [
+          "                  : <TrendingUp className=\"h-4 w-4 text-theme-accent\" />"
+        ]
+      },
+      {
+        "start": 132,
+        "old": [
+          "            <Link to=\"/fsd?days=7\" className=\"text-cyan-300 hover:text-cyan-200\">"
+        ],
+        "new": [
+          "            <Link to=\"/fsd?days=7\" className=\"text-theme-accent hover:text-theme-accent\">"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/charging/components/ChargingEvidenceTable.tsx",
+    "before": "02f18746d80fb605d99c27c89724c2b9ea1d8f2d23b48fcd6e6a0ddcbcf64b5b",
+    "after": "6ddf3801fa244bea286840463c2b3e644320329f87568293f5170a1fa13acf1e",
+    "hunks": [
+      {
+        "start": 82,
+        "old": [
+          "            <Link to={`/charging/${s.id}`} className=\"rounded font-medium text-[var(--text-primary)] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400\">"
+        ],
+        "new": [
+          "            <Link to={`/charging/${s.id}`} className=\"rounded font-medium text-[var(--text-primary)] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-theme-accent\">"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/charging/components/charging-list/ChartsRow.tsx",
+    "before": "b19e87d794bbc451d7d7af5b03b0ead08d5439c71f17c508b837a23197b3bb17",
+    "after": "cb4ae21048b09b081fc572cec352133c7692cb58e9f3e3fc86e2a2c184b3f334",
+    "hunks": [
+      {
+        "start": 45,
+        "old": [
+          "            <Calendar className=\"h-4 w-4 text-neon-cyan\" aria-hidden=\"true\" />"
+        ],
+        "new": [
+          "            <Calendar className=\"h-4 w-4 text-theme-accent\" aria-hidden=\"true\" />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/dashboard/components/RecentActivity.tsx",
+    "before": "4fb7d92051b21dce5e8d877bc1b2f2f315c9bd866764549fcc1c9925cb5ede45",
+    "after": "4cc301d4dbceb87b1af6d9ef40c1ce1b7a25b47ec550a93ae4f450595f1e776e",
+    "hunks": [
+      {
+        "start": 111,
+        "old": [
+          "            <Activity aria-hidden=\"true\" className=\"h-4 w-4 text-cyan-300\" /> {t('activity.title', 'Recent activity')}"
+        ],
+        "new": [
+          "            <Activity aria-hidden=\"true\" className=\"h-4 w-4 text-status-info\" /> {t('activity.title', 'Recent activity')}"
+        ]
+      },
+      {
+        "start": 113,
+        "old": [
+          "          <Link to=\"/drives\" className=\"text-2xs text-[var(--text-muted)] hover:text-cyan-300 transition-colors\">"
+        ],
+        "new": [
+          "          <Link to=\"/drives\" className=\"text-2xs text-[var(--text-muted)] hover:text-theme-accent transition-colors\">"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/AlertFeedWidget.tsx",
+    "before": "c00eb6ac0d356d2a59d4b6c53ce68f34ab4d4aa9b40dce1c89ac25671cc72232",
+    "after": "23bb35d58d1d88769afe89d282d3c5873e057817c146497724bbf5abac47127e",
+    "hunks": [
+      {
+        "start": 83,
+        "old": [
+          "      icon={<Bell className=\"h-3.5 w-3.5 text-neon-cyan\" />}"
+        ],
+        "new": [
+          "      icon={<Bell className=\"h-3.5 w-3.5 text-status-info\" />}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/AutomationStatusWidget.tsx",
+    "before": "bebcd91a0fe7a319a912f17616438fb01085fd70944b3327e4922cd693a99572",
+    "after": "05c0f6ebeb2edf4f857263befb2d208c47608bc711b1079a69ab966a7f749a6c",
+    "hunks": [
+      {
+        "start": 41,
+        "old": [
+          "      <Workflow className=\"h-5 w-5 text-neon-cyan\" />"
+        ],
+        "new": [
+          "      <Workflow className=\"h-5 w-5 text-status-info\" />"
+        ]
+      },
+      {
+        "start": 181,
+        "old": [
+          "          <Workflow className=\"h-3.5 w-3.5 text-neon-cyan\" />"
+        ],
+        "new": [
+          "          <Workflow className=\"h-3.5 w-3.5 text-status-info\" />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/DestinationETAWidget.tsx",
+    "before": "c21a37100fc07c29c9d2cc590320eeda7c17cd5154d950e7109fb3a2def3798b",
+    "after": "3627811d9e5524df3cbbf8dd1e415b1134fffb6f4eea11257e6963adb446cf58",
+    "hunks": [
+      {
+        "start": 114,
+        "old": [
+          "        icon={<Navigation2 className=\"h-3.5 w-3.5 text-cyan-400\" />}"
+        ],
+        "new": [
+          "        icon={<Navigation2 className=\"h-3.5 w-3.5 text-theme-accent\" />}"
+        ]
+      },
+      {
+        "start": 129,
+        "old": [
+          "        icon={<Navigation2 className=\"h-3.5 w-3.5 text-cyan-400\" />}"
+        ],
+        "new": [
+          "        icon={<Navigation2 className=\"h-3.5 w-3.5 text-theme-accent\" />}"
+        ]
+      },
+      {
+        "start": 150,
+        "old": [
+          "      icon={<Navigation2 className=\"h-3.5 w-3.5 text-cyan-400\" />}"
+        ],
+        "new": [
+          "      icon={<Navigation2 className=\"h-3.5 w-3.5 text-theme-accent\" />}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/FsdWeeklyWidget.tsx",
+    "before": "d1f768c8531cdbaf841bd141e70147377211a0aab582d0ad8b87ec8097366858",
+    "after": "57fdf75b1bd706e646500dfb707676fcae20b48292b525334631f7202a8460e7",
+    "hunks": [
+      {
+        "start": 76,
+        "old": [
+          "      icon={isCompact ? undefined : <Gauge className=\"h-3.5 w-3.5 text-cyan-400\" />}"
+        ],
+        "new": [
+          "      icon={isCompact ? undefined : <Gauge className=\"h-3.5 w-3.5 text-theme-accent\" />}"
+        ]
+      },
+      {
+        "start": 111,
+        "old": [
+          "              <Link to=\"/fsd\" className=\"text-cyan-300 hover:text-cyan-200\">"
+        ],
+        "new": [
+          "              <Link to=\"/fsd\" className=\"text-theme-accent hover:text-theme-accent\">"
+        ]
+      },
+      {
+        "start": 114,
+        "old": [
+          "              <Link to=\"/weekly-digest\" className=\"text-cyan-300 hover:text-cyan-200\">"
+        ],
+        "new": [
+          "              <Link to=\"/weekly-digest\" className=\"text-theme-accent hover:text-theme-accent\">"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/MediaNowPlayingWidget.tsx",
+    "before": "633c440dc45aeb2ff6436040a49b3a8098aaf33d3af8dcabfb47c781b277fe33",
+    "after": "be31646b38f5ae956f141326a855a7a4779a11ecd6882603f4dfa7b951160bba",
+    "hunks": [
+      {
+        "start": 63,
+        "old": [
+          "      icon={<Music className=\"h-3.5 w-3.5 text-neon-cyan\" aria-hidden=\"true\" />}"
+        ],
+        "new": [
+          "      icon={<Music className=\"h-3.5 w-3.5 text-theme-accent\" aria-hidden=\"true\" />}"
+        ]
+      },
+      {
+        "start": 76,
+        "old": [
+          "            <Music className=\"h-5 w-5 text-neon-cyan shrink-0\" aria-hidden=\"true\" />"
+        ],
+        "new": [
+          "            <Music className=\"h-5 w-5 text-theme-accent shrink-0\" aria-hidden=\"true\" />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/NotificationStatsWidget.tsx",
+    "before": "7b7c7d669536a5e30e47af31e650213168b3d359ecb074452af071800e254b8d",
+    "after": "b7d6032950849a6b78c502ee55f64c299b38716743e3bbf3cb277a772ba42fa8",
+    "hunks": [
+      {
+        "start": 95,
+        "old": [
+          "      icon={<Bell className=\"h-3.5 w-3.5 text-neon-cyan\" />}"
+        ],
+        "new": [
+          "      icon={<Bell className=\"h-3.5 w-3.5 text-theme-accent\" />}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/WeeklyDigestWidget.tsx",
+    "before": "bf976ce3a051887b5e8229adfa3aa0f6a88815e075ea9acfcf9fc3578c340198",
+    "after": "9a3cfb60f8a5252e2ea5b25f90c48e186a7177d387a7994c60822728a4666748",
+    "hunks": [
+      {
+        "start": 127,
+        "old": [
+          "      icon={isCompact ? undefined : <CalendarDays className=\"h-3.5 w-3.5 text-cyan-400\" />}"
+        ],
+        "new": [
+          "      icon={isCompact ? undefined : <CalendarDays className=\"h-3.5 w-3.5 text-theme-accent\" />}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/dashboard/widgets/WeeklySummaryCardWidget.tsx",
+    "before": "30fa39f9016e97e194fefacd2bb34dfab431447621f6c569adff9e8e1d203274",
+    "after": "696b204058b589cbbf5d69d5fbbeee1514d788a42cfc7122071f3db377026da5",
+    "hunks": [
+      {
+        "start": 107,
+        "old": [
+          "      icon={isCompact ? undefined : <CalendarDays className=\"h-3.5 w-3.5 text-cyan-400\" />}"
+        ],
+        "new": [
+          "      icon={isCompact ? undefined : <CalendarDays className=\"h-3.5 w-3.5 text-theme-accent\" />}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/driving/components/drive-detail/SupervisedDrivingPanel.tsx",
+    "before": "37b6f20a90f65812848be789abb50ae54313fbc40006bad5c908854cfd6d708c",
+    "after": "7bb1de83bf0e54da00001cd8fcfc12b08c90729b3b2280fa29ba3f52682def34",
+    "hunks": [
+      {
+        "start": 91,
+        "old": [
+          "              <ShieldCheck className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        ],
+        "new": [
+          "              <ShieldCheck className=\"h-4 w-4 text-theme-accent\" aria-hidden=\"true\" />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/driving/components/driving-dynamics/LiveMotorStatus.tsx",
+    "before": "1014a3baaf9dfbb52cfcccf42d9d492f0d3e2e0252dbe61fefc2ebe5a6254879",
+    "after": "9a16e0ce36ac9c6fdc91ef692ed18aca61e7b11bd64ec29c039df37731853125",
+    "hunks": [
+      {
+        "start": 231,
+        "old": [
+          "        <Gauge className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        ],
+        "new": [
+          "        <Gauge className=\"h-4 w-4 text-status-info\" aria-hidden=\"true\" />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/driving/pages/DriveAnomaliesPage.tsx",
+    "before": "46d4abb03b5f5e1e301d6b54a3fe0114e7960441a4b7a03c12187ebc797abd4e",
+    "after": "3604fbf7d2d5cd6dacf537ecf1660d9479701846290f0794050df920037771d8",
+    "hunks": [
+      {
+        "start": 259,
+        "old": [
+          "            <AlertTriangle className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        ],
+        "new": [
+          "            <AlertTriangle className=\"h-4 w-4 text-theme-accent\" aria-hidden=\"true\" />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/driving/pages/EfficiencyLandscapePage.tsx",
+    "before": "ce4030fb056ed2e406a225e6cb9d94a93d5a5ec1d5ae80ae764f70b4f2e0daa7",
+    "after": "0ae965851f6272f4b774f06872003c202f04075e6d0a0e9dfeb3b0fc9bd38523",
+    "hunks": [
+      {
+        "start": 162,
+        "old": [
+          "            <Mountain className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        ],
+        "new": [
+          "            <Mountain className=\"h-4 w-4 text-theme-accent\" aria-hidden=\"true\" />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/maps/components/charging-places/PlacesTable.tsx",
+    "before": "310293d50ca9bbc8c4b2d4e1cb22456d6cd15484db078aa431fbbd79524261fb",
+    "after": "9fd17cf95aaf473f15a4991cb2a30b7918061a1b8db504d754cb923282540f64",
+    "hunks": [
+      {
+        "start": 303,
+        "old": [
+          "        <MapPin className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        ],
+        "new": [
+          "        <MapPin className=\"h-4 w-4 text-theme-accent\" aria-hidden=\"true\" />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/notifications/components/AlertMessageEditor.tsx",
+    "before": "77df47768ec83734cc795e766f242f6c603cfdb1c8919c1b3abf3a038702dcf9",
+    "after": "a828d87aee709431616cb6831e930dfa87136e2e2c4c092bdcb590fd935e52f1",
+    "hunks": [
+      {
+        "start": 641,
+        "old": [
+          "                    ? 'bg-cyan-500/15 text-[var(--text-primary)]'"
+        ],
+        "new": [
+          "                    ? 'bg-status-info/15 text-[var(--text-primary)]'"
+        ]
+      },
+      {
+        "start": 776,
+        "old": [
+          "                  className=\"flex h-auto w-full flex-col items-start gap-1 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] p-3 text-left font-normal hover:border-cyan-500/40 hover:bg-[var(--surface-2)]\""
+        ],
+        "new": [
+          "                  className=\"flex h-auto w-full flex-col items-start gap-1 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] p-3 text-left font-normal hover:border-theme-accent/40 hover:bg-[var(--surface-2)]\""
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/settings/components/AICostCapSpendBar.tsx",
+    "before": "5619c4e8b0b782dcd5f92de7174019cdda00ad7979a698d7be99ba68a7290821",
+    "after": "b4f84023e850a9da055d5b30129868b0d571f93774aa5d4a0bcf5a7d3df6198f",
+    "hunks": [
+      {
+        "start": 37,
+        "old": [
+          "  ok: 'text-cyan-300',"
+        ],
+        "new": [
+          "  ok: 'text-status-info',"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/settings/components/SettingsExportImport.tsx",
+    "before": "3c88e692485ee30b30a780c2eb3a3be74fe2695f426b8a58b8d5644c2c44a763",
+    "after": "402806e73ffd85afd59b351079f679172fe63facbee70173ddefc059a2310b4c",
+    "hunks": [
+      {
+        "start": 339,
+        "old": [
+          "                  ? 'border-neon-cyan bg-neon-cyan/5'"
+        ],
+        "new": [
+          "                  ? 'border-theme-accent bg-theme-accent/5'"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/system/components/chatbot/ChatMessageItem.tsx",
+    "before": "ff582d5b70f7d1a8f4f12782e41fed0ae613a5d1c00e049dec6c73de7e82ddf1",
+    "after": "355091f1dffdfed38ff8072f51bba5fa2505b18eabcab310d2677588820fdf7c",
+    "hunks": [
+      {
+        "start": 158,
+        "old": [
+          "            ? 'max-w-[90%] sm:max-w-[70%] bg-cyan-500/10 border-cyan-500/20'"
+        ],
+        "new": [
+          "            ? 'max-w-[90%] sm:max-w-[70%] bg-theme-accent/10 border-theme-accent/20'"
+        ]
+      },
+      {
+        "start": 233,
+        "old": [
+          "                    className=\"inline-flex items-center rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-0.5 text-2xs font-medium text-cyan-300 transition-colors hover:bg-cyan-500/20\""
+        ],
+        "new": [
+          "                    className=\"inline-flex items-center rounded-full border border-theme-accent/25 bg-theme-accent/10 px-2.5 py-0.5 text-2xs font-medium text-theme-accent transition-colors hover:bg-theme-accent/20\""
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/telemetry/components/SignalCompareControls.tsx",
+    "before": "6b379045543fc72c14c5038fa40a91995aeee295695ca62ed37865b680dc4be2",
+    "after": "be939da18705be356ad9bd81b0ef22ce9864068c9d61cd427cd5cd666f123a5d",
+    "hunks": [
+      {
+        "start": 115,
+        "old": [
+          "            <Label className=\"mb-1.5 flex flex-wrap items-center gap-1 text-cyan-300\">"
+        ],
+        "new": [
+          "            <Label className=\"mb-1.5 flex flex-wrap items-center gap-1 text-theme-accent\">"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/telemetry/components/SignalLogBreakdownPanel.tsx",
+    "before": "6927c3bc393185d7ec20e9cea3ac573c17fc18e63e4f7bf773df5814928832f9",
+    "after": "8b8742842efac0f117e739dab6ceb72fb09320d114c736e5d38475f0135d04f6",
+    "hunks": [
+      {
+        "start": 74,
+        "old": [
+          "          <PieChart className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        ],
+        "new": [
+          "          <PieChart className=\"h-4 w-4 text-theme-accent\" aria-hidden=\"true\" />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/vehicles/components/BatteryComparison.tsx",
+    "before": "e2e9a3e280dae12739d3eed6871c586bc3ed73c640350e0c6c85c01ede3fcd9f",
+    "after": "73dd98d73522201bf5285268896f09f0e4e590549913acf278ebf088af958d12",
+    "hunks": [
+      {
+        "start": 60,
+        "old": [
+          "        <Activity className=\"h-4 w-4 text-cyan-400\" aria-hidden=\"true\" />"
+        ],
+        "new": [
+          "        <Activity className=\"h-4 w-4 text-theme-accent\" aria-hidden=\"true\" />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/vehicles/components/VehicleCard.tsx",
+    "before": "c7293187385a6e92ba19ed2792e773fa600374894f46aa416d6df1db1ec30c9c",
+    "after": "b6c1bb537aa95bf7e719dc45201f93c26a2f9dabda2f8205c7685db0f009845a",
+    "hunks": [
+      {
+        "start": 44,
+        "old": [
+          "      {/* Gradient accent strip */}",
+          "      <div aria-hidden=\"true\" className=\"h-1 bg-gradient-to-r from-cyan-400 via-purple-400 to-green-400 opacity-40 group-hover:opacity-80 transition-opacity\" />"
+        ],
+        "new": [
+          "      <div aria-hidden=\"true\" className=\"h-1 bg-[var(--theme-primary)]\" />"
+        ]
+      },
+      {
+        "start": 67,
+        "old": [
+          "                className=\"text-base font-semibold text-[var(--text-primary)] hover:text-cyan-400 transition-colors truncate\""
+        ],
+        "new": [
+          "                className=\"text-base font-semibold text-[var(--text-primary)] hover:text-theme-accent transition-colors truncate\""
+        ]
+      },
+      {
+        "start": 141,
+        "old": [
+          "                      className=\"h-3.5 w-3.5 text-cyan-400\""
+        ],
+        "new": [
+          "                      className=\"h-3.5 w-3.5 text-theme-accent\""
+        ]
+      },
+      {
+        "start": 164,
+        "old": [
+          "              className=\"rounded-lg p-2 text-[var(--text-muted)] hover:bg-cyan-400/10 hover:text-cyan-400 transition-all\""
+        ],
+        "new": [
+          "              className=\"rounded-lg p-2 text-[var(--text-muted)] hover:bg-theme-accent/10 hover:text-theme-accent transition-all\""
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/vehicles/components/VehicleGauges.tsx",
+    "before": "0958a3ffc1f90d2b682e1867a57617329ca56337fe8956d46efb7c789a3ca38d",
+    "after": "b790e1db02c33c413109a6d33f305c351862dd05b83568c67929ccd19b9b0940",
+    "hunks": [
+      {
+        "start": 99,
+        "old": [
+          "        <div className=\"absolute inset-0 bg-gradient-to-br from-neon-cyan/[0.02] via-transparent to-neon-purple/[0.02]\" />"
+        ],
+        "new": [
+          "        <div className=\"absolute inset-0 bg-gradient-to-br from-theme-accent/[0.02] via-transparent to-neon-purple/[0.02]\" />"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/vehicles/components/telemetry-panels/SecurityPanel.tsx",
+    "before": "aeff6107d86a54ad6a23485d7885ee59d38e7c236c0483e84e08106854d3c79a",
+    "after": "506e9c753ce208a08a258283086bcf0342b252385fc31e0d7fc150943f800de3",
+    "hunks": [
+      {
+        "start": 22,
+        "old": [
+          "        <Shield className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" /> {t('common.security', 'Security')}"
+        ],
+        "new": [
+          "        <Shield className=\"h-4 w-4 text-status-info\" aria-hidden=\"true\" /> {t('common.security', 'Security')}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/vehicles/components/telemetry-panels/TirePressurePanel.tsx",
+    "before": "e69b7ce8d50eae1e786c6eaff867037a224159245a4ff004a63ca81bd669e6bf",
+    "after": "eb1a1e0f09b80e266dbb804d3dd261e56ab656da68acc8d4b5f8265a4012df67",
+    "hunks": [
+      {
+        "start": 39,
+        "old": [
+          "        <Gauge className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />{' '}"
+        ],
+        "new": [
+          "        <Gauge className=\"h-4 w-4 text-theme-accent\" aria-hidden=\"true\" />{' '}"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/features/vehicles/components/telemetry-panels/VehicleStatePanel.tsx",
+    "before": "fa51accb11053234d2a29f97ba41d3280eae5f880dca0a685274d20c0c1c33e8",
+    "after": "a8ed237f69e154aec33e267e7d2e757ae1c52f30488c7978baf4f7023e7151d5",
+    "hunks": [
+      {
+        "start": 87,
+        "old": [
+          "        <Activity className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />{' '}"
+        ],
+        "new": [
+          "        <Activity className=\"h-4 w-4 text-status-info\" aria-hidden=\"true\" />{' '}"
+        ]
+      },
+      {
+        "start": 106,
+        "old": [
+          "          activeClass=\"text-cyan-300\""
+        ],
+        "new": [
+          "          activeClass=\"text-status-info\""
+        ]
+      },
+      {
+        "start": 165,
+        "old": [
+          "          activeClass=\"text-cyan-300\""
+        ],
+        "new": [
+          "          activeClass=\"text-status-info\""
+        ]
+      },
+      {
+        "start": 191,
+        "old": [
+          "          activeClass=\"text-cyan-300\""
+        ],
+        "new": [
+          "          activeClass=\"text-status-info\""
+        ]
+      }
+    ]
+  }
+]
