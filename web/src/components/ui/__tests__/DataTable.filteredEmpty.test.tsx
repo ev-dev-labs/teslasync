@@ -188,6 +188,19 @@ describe('DataTable filtered empty copy', () => {
     expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
   })
 
+  it('discards pre-filter manual expansion when the filter is cleared without toggling a group', async () => {
+    mount({ rowGrouping: { key: row => row.status, label: key => key } })
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Ready' }))
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+    search('Bravo')
+    expect(await screen.findByText('Bravo')).toBeInTheDocument()
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+    search('')
+    await screen.findByRole('button', { name: 'Expand Review' })
+    expect(screen.getByRole('button', { name: 'Expand Ready' })).toBeInTheDocument()
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+  })
+
   it('shows no-match for populated loaded search and keyboard reset restores rows and actions', async () => {
     const action = vi.fn()
     mount({ toolbarActions: <Button onClick={action}>Inspect source</Button>, searchable: true })

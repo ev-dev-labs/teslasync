@@ -2,6 +2,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FleetEndpoint } from '@/api/hooks/useSettings';
 import { Badge, Code, CopyButton, DataTable, Text, Toggle, Tooltip, type Column } from '@/components/ui';
+import { FleetEndpointControls } from './FleetEndpointControls';
 
 type TableProps = ComponentProps<typeof DataTable<FleetEndpoint>>;
 
@@ -31,6 +32,9 @@ export function FleetEndpointTable({
   headerAccess, headerAuto, grouping, controls, toolbarActions,
 }: FleetEndpointTableProps) {
   const { t } = useTranslation();
+  const autoValue = (endpoint: FleetEndpoint) => endpoint.pollable
+    && typeof access[endpoint.key] === 'boolean' && typeof auto[endpoint.key] === 'boolean'
+    ? access[endpoint.key] && auto[endpoint.key] : null;
   const columns: Column<FleetEndpoint>[] = [
     {
       key: 'method',
@@ -63,14 +67,24 @@ export function FleetEndpointTable({
     {
       key: 'access',
       header: t('fleetApi.controls.enabled', 'Access'),
-      fixedWidth: 128,
-      headerAction: headerAccess,
+      fixedWidth: 168,
+      mobileActionWidth: 132,
+      headerAction: headerAccess || headerAuto
+        ? <FleetEndpointControls access={headerAccess} autoPoll={headerAuto} /> : undefined,
       groupStart: true,
-      align: 'center',
+      align: 'right',
       filterValue: (endpoint) => access[endpoint.key] ?? null,
-      exportValue: (endpoint) => typeof access[endpoint.key] === 'boolean' ? access[endpoint.key] : null,
+      exportFields: [
+        { key: 'access', header: t('fleetApi.controls.enabled', 'Access'),
+          value: endpoint => typeof access[endpoint.key] === 'boolean' ? access[endpoint.key] : null },
+        { key: 'auto', header: t('fleetApi.controls.autoPoll', 'Auto-poll'), value: autoValue },
+      ],
       filterValueLabel: (value) => value == null ? '—' : value ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
-      render: (endpoint) => (
+      additionalValueFilters: [{
+        key: 'auto', header: t('fleetApi.controls.autoPoll', 'Auto-poll'), filterValue: autoValue,
+        filterValueLabel: value => value == null ? '—' : value ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
+      }],
+      render: endpoint => <FleetEndpointControls access={
         <Toggle
           checked={!!access[endpoint.key]}
           onChange={() => onEnable(endpoint)}
@@ -78,23 +92,7 @@ export function FleetEndpointTable({
           size="sm"
           aria-label={`${t('fleetApi.controls.enable', 'Enable')} ${endpoint.method} ${endpoint.path}`}
         />
-      ),
-    },
-    {
-      key: 'auto',
-      header: t('fleetApi.controls.autoPoll', 'Auto-poll'),
-      fixedWidth: 128,
-      headerAction: headerAuto,
-      align: 'center',
-      filterValue: (endpoint) => endpoint.pollable && access[endpoint.key] != null && auto[endpoint.key] != null
-        ? access[endpoint.key] && auto[endpoint.key]
-        : null,
-      exportValue: (endpoint) => endpoint.pollable
-        && typeof access[endpoint.key] === 'boolean' && typeof auto[endpoint.key] === 'boolean'
-        ? access[endpoint.key] && auto[endpoint.key]
-        : null,
-      filterValueLabel: (value) => value == null ? '—' : value ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
-      render: (endpoint) => endpoint.pollable ? (
+      } autoPoll={endpoint.pollable ? (
         <Tooltip multiline content={!pollingEnabled
           ? t('fleetApi.controls.pausedHint', 'Turn on Tesla API Polling to change auto-poll selections. Existing selections are retained while paused.')
           : !access[endpoint.key] ? t('fleetApi.allowBeforePolling', 'Allow this endpoint before selecting auto-poll.')
@@ -108,7 +106,7 @@ export function FleetEndpointTable({
           aria-label={`${t('fleetApi.controls.poll', 'Auto-poll')} ${endpoint.method} ${endpoint.path}`}
         />
         </Tooltip>
-      ) : null,
+      ) : null} />,
     },
   ];
 

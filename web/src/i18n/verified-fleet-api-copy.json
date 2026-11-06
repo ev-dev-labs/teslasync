@@ -20,6 +20,8 @@
   },
   { "path": ["fleetApi", "polling", "allowedState"], "current": "Allowed" },
   { "path": ["fleetApi", "polling", "resume"], "current": "Resume" },
+  { "path": ["fleetApi", "polling", "suspendedLabel"], "current": "Suspended" },
+  { "path": ["fleetApi", "polling", "suspensionHelp"], "current": "Live requests and commands are blocked; token refresh continues." },
   { "path": ["fleetApi", "controls", "endpoint"], "current": "Endpoint" },
   { "path": ["fleetApi", "controls", "method"], "current": "Method" },
   {

@@ -15,22 +15,18 @@ export function FleetAPIPolling({ controller }: Props) {
     <FadeIn delay={0.1}>
       <LayoutCard title={t('fleetApi.polling.cardTitle', 'Tesla API')}>
         <div className="space-y-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <div className="flex items-center gap-1">
                 <Text weight="medium">{t('fleetApi.polling.automatic', 'Automatic polling')}</Text>
                 <HelpTooltip text={t('fleetApi.polling.masterDesc', 'Off by default. Turning this off stops scheduled Fleet API reads, not manual requests or token refresh.')} />
               </div>
               {pollingConfig && (
                 <Text as="p" size="sm" color="secondary">
-                  {t('fleetApi.polling.scheduledReads', 'Scheduled reads only · {{state}}', {
-                    state: pollingConfig.auto_polling_enabled
-                      ? t('fleetApi.polling.on', 'On') : t('fleetApi.polling.off', 'Off'),
-                  })}
+                  {pollingConfig.auto_polling_enabled
+                    ? t('fleetApi.polling.on', 'On') : t('fleetApi.polling.off', 'Off')}
                 </Text>
               )}
-            </div>
-            <div className="flex w-32 shrink-0 justify-center">
               {pollingQuery.isLoading && !pollingState.hasData ? <Skeleton width="44px" height={24} />
                 : pollingKnown && pollingConfig ? (
                   <Toggle checked={pollingConfig.auto_polling_enabled}
@@ -39,10 +35,7 @@ export function FleetAPIPolling({ controller }: Props) {
                     disabled={pollingConfigMut.isPending} />
                 ) : null}
             </div>
-          </div>
-
-          <div className="flex min-w-0 items-center gap-3 border-t border-[var(--border-subtle)] pt-3">
-            <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <div className="flex items-center gap-1">
                 <Text weight="medium">{t('fleetApi.polling.actions', 'API actions')}</Text>
                 <HelpTooltip text={t('fleetApi.polling.actionsHelp', 'Suspension blocks supported live requests and commands. Token refresh continues.')} />
@@ -50,11 +43,9 @@ export function FleetAPIPolling({ controller }: Props) {
               <Text as="p" size="sm" color="secondary" className={apiSuspended ? 'text-[var(--semantic-danger)]' : undefined}>
                 {!apiStatusKnown ? t('fleetApi.apiUnknown', 'API status unknown')
                   : apiSuspended
-                    ? t('fleetApi.polling.suspendedState', 'Suspended — live requests and commands are blocked; token refresh continues.')
+                    ? t('fleetApi.polling.suspendedLabel', 'Suspended')
                     : t('fleetApi.polling.allowedState', 'Allowed')}
               </Text>
-            </div>
-            <div className="flex w-32 shrink-0 justify-center">
               {apiSuspended && !settingsState.fatalError && (
                 <Button variant="secondary" size="sm" disabled={suspendMut.isPending}
                   className="h-11 min-h-11 min-w-11 md:h-9 md:min-h-0 md:min-w-0"
@@ -65,7 +56,9 @@ export function FleetAPIPolling({ controller }: Props) {
               )}
             </div>
           </div>
-
+          {apiSuspended && <Text as="p" size="sm" color="secondary" className="text-[var(--semantic-danger)]">
+            {t('fleetApi.polling.suspensionHelp', 'Live requests and commands are blocked; token refresh continues.')}
+          </Text>}
           {pollingState.fatalError ? (
             <QueryError error={pollingState.fatalError} onRetry={() => pollingQuery.refetch()} />
           ) : !pollingQuery.isLoading && !pollingConfig ? (

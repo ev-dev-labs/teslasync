@@ -96,6 +96,7 @@ export function MobileDataTableAdapter<T>({
   const actionColumns = groupedActions ? columns.filter(column => groupedActions[column.key]) : []
   const actionCell = (column: Column<T>, content: ReactNode) => (
     <div key={column.key} data-mobile-action-column={column.key}
+      style={column.mobileActionWidth == null ? undefined : { width: column.mobileActionWidth }}
       className="flex w-14 shrink-0 items-center justify-center">
       {content}
     </div>
@@ -169,7 +170,7 @@ export function MobileDataTableAdapter<T>({
           <div className="flex min-w-0 items-center border-b border-[var(--border-subtle)] py-2">
             <div className="min-w-0 flex-1" />
             {actionColumns.map(column => actionCell(column,
-              <div className="flex flex-col items-center text-center">
+              <div className={cn('flex flex-col', column.align === 'right' ? 'items-end text-right' : 'items-center text-center')}>
                 <Text size="xs" color="muted">{column.header}</Text>
                 {column.headerAction}
               </div>))}

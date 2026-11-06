@@ -146,7 +146,7 @@ describe('FleetEndpointTable existing export serialization', () => {
     expect(screen.getByText('fetch snapshot')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Endpoint access' })).toBeInTheDocument();
     expect(screen.getAllByRole('row')).toHaveLength(2);
-    expect(screen.getAllByRole('columnheader')).toHaveLength(4);
+    expect(screen.getAllByRole('columnheader')).toHaveLength(3);
     const accessSwitch = screen.getByRole('switch', { name: 'Enable GET /api/1/vehicles/{vehicle_id}/data' });
     const autoSwitch = screen.getByRole('switch', { name: 'Auto-poll GET /api/1/vehicles/{vehicle_id}/data' });
     expect(accessSwitch).toHaveAttribute('aria-checked', 'true');
@@ -245,7 +245,7 @@ describe('FleetEndpointTable retained export matrix continuation', () => {
       auto: false, operation: 'vehicle.data.fetch_snapshot', path: '/api/1/vehicles/{vehicle_id}/data', access: false, method: 'GET',
     }]);
     expect(await exportText('CSV')).toBe(
-      'Auto-poll,Operation,API path,Access,HTTP method\r\nfalse,vehicle.data.fetch_snapshot,/api/1/vehicles/{vehicle_id}/data,false,GET',
+      'Operation,API path,Access,Auto-poll,HTTP method\r\nvehicle.data.fetch_snapshot,/api/1/vehicles/{vehicle_id}/data,false,false,GET',
     );
     expect(localStorage.getItem(layoutKey)).toBe(JSON.stringify(layout));
     expect(settings).toEqual({

@@ -1952,6 +1952,8 @@
       "actions": "API actions",
       "actionsHelp": "Suspension blocks supported live requests and commands. Token refresh continues.",
       "suspendedState": "Suspended — live requests and commands are blocked; token refresh continues.",
+      "suspendedLabel": "Suspended",
+      "suspensionHelp": "Live requests and commands are blocked; token refresh continues.",
       "allowedState": "Allowed",
       "resume": "Resume",
       "masterDesc": "Off by default. Turning this off stops scheduled Fleet API reads, not manual requests or token refresh.",

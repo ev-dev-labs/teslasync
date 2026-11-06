@@ -177,9 +177,9 @@ describe('FleetAPIRouteCatalog source contracts', () => {
     expect(routeKeys()).toEqual(reversed);
   });
 
-  it('filters both grouping modes through the shared search without category chips', async () => {
+  it('filters both grouping modes through one shared search alongside category chips', async () => {
     renderCatalog();
-    expect(screen.queryByRole('navigation', { name: 'Route groups' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Route groups' })).toBeInTheDocument();
     fireEvent.change(screen.getByRole('textbox', { name: 'Fixture search' }), { target: { value: 'vehicle.a' } });
     expect(routeKeys()).toEqual(['vehicle.a']);
     fireEvent.click(screen.getByRole('button', { name: 'HTTP method' }));

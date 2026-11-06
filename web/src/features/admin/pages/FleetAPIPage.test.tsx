@@ -209,26 +209,46 @@ describe('FleetAPIPage retained sources', () => {
 });
 
 describe('FleetAPIPage', () => {
-  it('places bulk and group switches in the same four-column shared table', async () => {
+  it('keeps bulk and group controls in one shared access column without an empty auto-poll column', async () => {
     installRequest();
     renderPage({ details: false });
     const table = await screen.findByRole('table');
     expect(screen.getByRole('heading', { name: 'Tesla API' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Endpoint access' })).toBeInTheDocument();
-    expect(within(table).getAllByRole('columnheader')).toHaveLength(4);
+    expect(within(table).getAllByRole('columnheader')).toHaveLength(3);
     const bulkAccess = within(table).getByRole('switch', { name: 'Allow all endpoints' });
     const bulkAuto = within(table).getByRole('switch', { name: 'Auto-poll all eligible endpoints' });
     const groupAccess = within(table).getByRole('switch', { name: 'Allow all Vehicle data' });
     const groupAuto = within(table).getByRole('switch', { name: 'Auto-poll all eligible Vehicle data' });
     expect(bulkAccess.closest('th')).toHaveAttribute('data-column-key', 'access');
-    expect(bulkAuto.closest('th')).toHaveAttribute('data-column-key', 'auto');
+    expect(bulkAuto.closest('th')).toHaveAttribute('data-column-key', 'access');
     expect(groupAccess.closest('td')).toHaveAttribute('data-column-key', 'access');
-    expect(groupAuto.closest('td')).toHaveAttribute('data-column-key', 'auto');
+    expect(groupAuto.closest('td')).toHaveAttribute('data-column-key', 'access');
     for (const control of [bulkAccess, bulkAuto, groupAccess, groupAuto]) {
       expect(control).toHaveAccessibleDescription(/Some enabled/);
     }
-    expect(screen.queryByRole('navigation', { name: 'Route groups' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Route groups' })).toBeInTheDocument();
     expect(screen.queryByText(/Exports include only matching loaded rows/)).not.toBeInTheDocument();
+  });
+
+  it('combines category chips with search and method grouping, then restores collapsed groups', async () => {
+    installRequest();
+    renderPage({ details: false });
+    const categories = await screen.findByRole('group', { name: 'Route groups' });
+    fireEvent.click(within(categories).getByRole('button', { name: 'Vehicle data' }));
+    expect(screen.getByRole('button', { name: 'Collapse Vehicle data' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Expand Vehicle commands' })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search API routes' }), { target: { value: 'charge_state' } });
+    await waitFor(() => expect(screen.getAllByRole('switch', { name: /^Enable / })).toHaveLength(1));
+    fireEvent.click(screen.getByRole('button', { name: 'View options' }));
+    fireEvent.click(screen.getByRole('button', { name: 'HTTP method' }));
+    expect(screen.getByRole('button', { name: 'Collapse GET' })).toBeInTheDocument();
+    expect(within(categories).getByRole('button', { name: 'Vehicle data' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search API routes' }), { target: { value: '' } });
+    await waitFor(() => expect(screen.getAllByRole('switch', { name: /^Enable / })).toHaveLength(4));
+    fireEvent.click(within(categories).getByRole('button', { name: 'All routes' }));
+    expect(screen.getByRole('button', { name: 'Expand GET' })).toBeInTheDocument();
+    expect(screen.queryAllByRole('switch', { name: /^Enable / })).toHaveLength(0);
   });
 
   it('updates all eligible routes in a searched group without changing other groups', async () => {
@@ -294,7 +314,7 @@ describe('FleetAPIPage', () => {
 
     const region = statusCard();
     expect(await within(region).findByText('Allowed', { exact: true })).toBeInTheDocument();
-    expect(within(region).getByText('Scheduled reads only · Off')).toBeInTheDocument();
+    expect(within(region).getByText('Off', { exact: true })).toBeInTheDocument();
 
     const master = screen.getByRole('switch', { name: 'Toggle Tesla API polling' });
     expect(master).toHaveAttribute('aria-checked', 'false');
@@ -319,7 +339,8 @@ describe('FleetAPIPage', () => {
 
     renderPage();
 
-    expect(await within(statusCard()).findByText(/Suspended — live requests and commands are blocked/)).toBeInTheDocument();
+    expect(await within(statusCard()).findByText('Suspended', { exact: true })).toBeInTheDocument();
+    expect(within(statusCard()).getByText('Live requests and commands are blocked; token refresh continues.')).toBeInTheDocument();
 
     expect(screen.queryByRole('switch', { name: 'Suspend Tesla API actions' })).toBeNull();
     expect(screen.getByRole('switch', { name: 'Toggle Tesla API polling' })).toHaveAttribute('aria-checked', 'false');
@@ -371,6 +392,7 @@ describe('FleetAPIPage', () => {
     // The disabled endpoint is flipped on.
     expect((findRequestBody('/settings/polling-config', 'PUT').fleet_endpoints as Record<string, boolean>)['vehicles.nearby_charging_sites']).toBe(true);
     expect(screen.queryByRole('switch', { name: /Auto-poll .*nearby_charging_sites/ })).toBeNull();
+    expect(within(sw.closest('tr') as HTMLElement).queryByText('Auto-poll', { exact: true })).not.toBeInTheDocument();
     await waitFor(() => expect(sw).toHaveAttribute('aria-checked', 'true'));
   });
 

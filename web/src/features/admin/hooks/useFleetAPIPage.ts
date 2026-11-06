@@ -11,6 +11,7 @@ export function useFleetAPIPage() {
   const { t } = useTranslation();
   usePageTitle(t('fleetApi.title', 'Fleet API'));
   const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [groupBy, setGroupBy] = useState<'category' | 'method'>('category');
   const [sortBy, setSortBy] = useState<'name' | 'path' | 'method' | 'access' | 'auto'>('name');
   const [sortDescending, setSortDescending] = useState(false);
@@ -54,6 +55,7 @@ export function useFleetAPIPage() {
   const endpointGroups = useMemo(() => {
     const groups = new Map<string, FleetEndpoint[]>();
     for (const endpoint of catalog) {
+      if (selectedCategory !== 'all' && endpoint.category !== selectedCategory) continue;
       const group = groupBy === 'category' ? endpoint.category : endpoint.method;
       if (normalizedSearch && !`${endpoint.key} ${endpoint.method} ${endpoint.path} ${endpoint.category}`.toLowerCase().includes(normalizedSearch)) {
         continue;
@@ -81,9 +83,11 @@ export function useFleetAPIPage() {
         return (sortDescending ? -compared : compared) || a.key.localeCompare(b.key);
       }),
     ]);
-  }, [catalog, groupBy, normalizedSearch, sortBy, sortDescending, pollingConfig]);
+  }, [catalog, groupBy, normalizedSearch, selectedCategory, sortBy, sortDescending, pollingConfig]);
+  const categories = [...new Set(catalog.map(endpoint => endpoint.category))];
+  const categoryLabel = (category: string) => t(`fleetApi.categories.${category.toLowerCase().replace(/ /g, '')}`, category);
   const groupLabel = (group: string) => groupBy === 'category'
-    ? t(`fleetApi.categories.${group.toLowerCase().replace(/ /g, '')}`, group)
+    ? categoryLabel(group)
     : group;
 
   const toggleEndpoint = (endpoint: FleetEndpoint) => {
@@ -184,6 +188,7 @@ export function useFleetAPIPage() {
 
 
   return {
+    categories, categoryLabel, selectedCategory, setSelectedCategory,
     fmtInt, t, search, setSearch, groupBy, setGroupBy, sortBy, setSortBy, sortDescending, setSortDescending, settingsQuery, pollingQuery, versionQuery, settingsState, pollingState, versionState, dataSources, suspendMut, pollingConfigMut, settings, pollingConfig, version, catalog, endpointGroups, groupLabel, toggleEndpoint, toggleAuto, toggleAllAccess, toggleGroupAccess, toggleAllAuto, toggleGroupAuto, configuredEndpoints, totalCount, enabledCount, autoCount, eligibleCount, apiSuspended, apiStatusKnown, pollingKnown, versionLabel, configuredEndpointMap, hasConfiguredEndpoints
   };
 }

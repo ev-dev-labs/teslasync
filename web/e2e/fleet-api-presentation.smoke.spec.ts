@@ -86,6 +86,13 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(page.getByRole('searchbox', { name: 'Search API routes' })).toHaveCount(1);
       await expect(page.getByText('http://api.test.invalid:8080')).toHaveCount(0);
       await expectNoHorizontalOverflow(page);
+      if (width >= 1280) {
+        const statusLabels = await Promise.all(['Automatic polling', 'API actions']
+          .map(name => page.getByText(name, { exact: true }).boundingBox()));
+        expect(statusLabels.every(box => box !== null)).toBe(true);
+        expect(Math.abs(statusLabels[0]!.y - statusLabels[1]!.y)).toBeLessThanOrEqual(1);
+        await expect(page.getByRole('table').getByRole('columnheader')).toHaveCount(3);
+      }
 
       const cards = await Promise.all([
         page.getByRole('heading', { name: 'Tesla API' }).locator('xpath=ancestor::*[@data-card][1]').boundingBox(),
@@ -97,10 +104,12 @@ for (const theme of ['light', 'dark'] as const) {
       expect(Math.max(...cards.map(box => box!.x + box!.width)) - Math.min(...cards.map(box => box!.x + box!.width))).toBeLessThanOrEqual(1);
 
       if (settings.api_suspended) {
-        await expect(page.getByText(/Suspended — live requests and commands are blocked/)).toBeVisible();
+        await expect(page.getByText('Suspended', { exact: true })).toBeVisible();
+        await expect(page.getByText('Live requests and commands are blocked; token refresh continues.')).toBeVisible();
         await page.getByRole('button', { name: 'Resume API actions', exact: true }).click();
         await expect(page.getByText('Allowed', { exact: true })).toBeVisible();
-        await expect(page.getByText(/Suspended — live requests/)).toHaveCount(0);
+        await expect(page.getByText('Suspended', { exact: true })).toHaveCount(0);
+        await expect(page.getByText('Live requests and commands are blocked; token refresh continues.')).toHaveCount(0);
       }
 
       const accessHeader = page.getByRole('switch', { name: 'Allow all endpoints' });
@@ -126,6 +135,14 @@ for (const theme of ['light', 'dark'] as const) {
         await expect.poll(async () => (await mobileRow.boundingBox())?.height).toBeLessThanOrEqual(80);
       }
       await expectStatusBarClear(page);
+
+      const categories = page.getByRole('group', { name: 'Route groups' });
+      await categories.getByRole('button', { name: 'Vehicle commands', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Collapse Vehicle commands', exact: true })).toBeVisible();
+      await expect(accessRow).toHaveCount(0);
+      await categories.getByRole('button', { name: 'All routes', exact: true }).click();
+      await expect(accessRow).toHaveCount(0);
+      await page.getByRole('button', { name: 'Expand Vehicle data', exact: true }).click();
 
       const copyPath = page.getByRole('button', { name: 'Copy /api/1/vehicles', exact: true });
       if (width < 768) {
@@ -190,6 +207,10 @@ for (const theme of ['light', 'dark'] as const) {
         await filter.getByRole('button', { name: 'Clear', exact: true }).click();
         await expect(page.locator('[data-mobile-group="Vehicle commands"]')).toHaveCount(1);
         await filter.getByRole('button', { name: 'Done', exact: true }).click();
+        await more.getByRole('button', { name: 'Close', exact: true }).first().click();
+        await expect(accessRow).toHaveCount(0);
+        await page.getByRole('button', { name: 'Expand Vehicle data', exact: true }).click();
+        await page.getByRole('main').getByRole('button', { name: 'More', exact: true }).click();
       }
       await expect(page.getByRole('button', { name: 'Export list' })).toHaveCount(1);
       if (width < 768) {

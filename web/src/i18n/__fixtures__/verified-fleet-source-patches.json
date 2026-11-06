@@ -108,7 +108,7 @@
   {
     "file": "web/src/components/ui/DataTable.tsx",
     "before": "b1a798be3d4da3edfa52db2669573dc2907acd3d85b84948e745e6a51f7c614b",
-    "after": "e619df347eaf0a148ffe0a8e86bc01a1888139f4b689ae251dcc927c090f00a8",
+    "after": "ec1ee47be0a8ab77b8247faf3586e7f2833475768c34126fdb10ffb9ebfcd5dc",
     "deletedSource": null,
     "hunks": [
       {
@@ -139,11 +139,13 @@
         "old": [],
         "new": [
           "  /** Non-resizable width in pixels, taking precedence over saved widths. */",
-          "  fixedWidth?: number"
+          "  fixedWidth?: number",
+          "  /** Width of an aligned mobile action column, including composite controls. */",
+          "  mobileActionWidth?: number"
         ]
       },
       {
-        "start": 191,
+        "start": 193,
         "old": [],
         "new": [
           "}",
@@ -163,7 +165,7 @@
         ]
       },
       {
-        "start": 365,
+        "start": 367,
         "old": [
           "  rowGrouping?: {",
           "    key: (row: T) => string",
@@ -180,7 +182,7 @@
         ]
       },
       {
-        "start": 401,
+        "start": 403,
         "old": [],
         "new": [
           "  /** Hide the default export-scope explanatory line without changing export behavior. */",
@@ -188,14 +190,14 @@
         ]
       },
       {
-        "start": 526,
+        "start": 528,
         "old": [],
         "new": [
           "  showExportDescription = true,"
         ]
       },
       {
-        "start": 575,
+        "start": 577,
         "old": [
           "    ? columns.filter(column => column.filterValue != null) : [], [columns, enableValueFilters])"
         ],
@@ -210,7 +212,7 @@
         ]
       },
       {
-        "start": 587,
+        "start": 589,
         "old": [
           "        ?? (value == null ? '—' : extractRenderedText(column.render(row)) ?? String(value))),"
         ],
@@ -219,14 +221,26 @@
         ]
       },
       {
-        "start": 832,
+        "start": 611,
+        "old": [
+          "  const [groupExpansion, setGroupExpansion] = useState<{ scope: string; open: Record<string, boolean> }>({ scope: '', open: {} })"
+        ],
+        "new": [
+          "  const [groupExpansion, setGroupExpansion] = useState<{ scope: string; open: Record<string, boolean> }>({ scope: groupScope, open: {} })",
+          "  if (groupExpansion.scope !== groupScope) {",
+          "    setGroupExpansion({ scope: groupScope, open: {} })",
+          "  }"
+        ]
+      },
+      {
+        "start": 837,
         "old": [],
         "new": [
           "    if (col.fixedWidth != null) return col.fixedWidth"
         ]
       },
       {
-        "start": 963,
+        "start": 968,
         "old": [],
         "new": [
           "    const exportColumns = visibleColumns.flatMap(column => column.exportFields?.length",
@@ -235,7 +249,7 @@
         ]
       },
       {
-        "start": 969,
+        "start": 974,
         "old": [
           "      visibleColumns.forEach(column => {"
         ],
@@ -244,7 +258,7 @@
         ]
       },
       {
-        "start": 971,
+        "start": 976,
         "old": [
           "          record[column.key] = flattened[column.key] ?? null",
           "        } else if (column.exportValue) {",
@@ -257,7 +271,7 @@
         ]
       },
       {
-        "start": 975,
+        "start": 980,
         "old": [
           "          const value = (row as unknown as Record<string, unknown>)[column.key]"
         ],
@@ -266,7 +280,7 @@
         ]
       },
       {
-        "start": 977,
+        "start": 982,
         "old": [
           "          record[column.key] = format === 'csv' && rendered != null ? rendered",
           "            : value === null || typeof value === 'string' || typeof value === 'number'",
@@ -281,7 +295,7 @@
         ]
       },
       {
-        "start": 989,
+        "start": 994,
         "old": [
           "      const csvColumns: CsvColumn<Record<string, CsvCellValue>>[] = visibleColumns.map(column => ({"
         ],
@@ -290,7 +304,7 @@
         ]
       },
       {
-        "start": 995,
+        "start": 1000,
         "old": [
           "  const exportControls = exportable === false ? undefined : controls?.exports"
         ],
@@ -299,7 +313,7 @@
         ]
       },
       {
-        "start": 1006,
+        "start": 1011,
         "old": [],
         "new": [
           "  const exportControls = baseExportControls && !showExportDescription",
@@ -307,7 +321,7 @@
         ]
       },
       {
-        "start": 1278,
+        "start": 1283,
         "old": [],
         "new": [
           "    const groupLabel = (",
@@ -364,7 +378,7 @@
         ]
       },
       {
-        "start": 1345,
+        "start": 1350,
         "old": [
           "            <Button variant=\"ghost\" size=\"sm\" className=\"min-h-11 min-w-11\" wrapLabel",
           "              aria-expanded={groupIsOpen(key)}",
@@ -382,14 +396,14 @@
         ]
       },
       {
-        "start": 1470,
+        "start": 1475,
         "old": [],
         "new": [
           "  const mobileControlsInToolbar = mobileActive && mobilePresentation?.controlsInToolbar === true"
         ]
       },
       {
-        "start": 1474,
+        "start": 1479,
         "old": [
           "    hasSelectionSummary"
         ],
@@ -398,7 +412,7 @@
         ]
       },
       {
-        "start": 1476,
+        "start": 1481,
         "old": [
           "  const renderColumnFilter = (col: Column<T>) => (col.filter || valueOptions.has(col.key)) ? (",
           "    <DataTableHeaderFilter label={col.header}",
@@ -414,7 +428,7 @@
         ]
       },
       {
-        "start": 1483,
+        "start": 1488,
         "old": [
           "          delete next[col.key]"
         ],
@@ -423,7 +437,7 @@
         ]
       },
       {
-        "start": 1486,
+        "start": 1491,
         "old": [
           "        col.onFilterClear?.()",
           "      } : col.onFilterClear}>",
@@ -436,7 +450,7 @@
         ]
       },
       {
-        "start": 1490,
+        "start": 1495,
         "old": [
           "          options={valueOptions.get(col.key) ?? []}",
           "          selected={selectedTableValueKeys(valueSelections[col.key],",
@@ -449,7 +463,7 @@
         ]
       },
       {
-        "start": 1497,
+        "start": 1502,
         "old": [
           "              if (values == null) delete next[col.key]",
           "              else next[col.key] = compactTableValueSelection(values,",
@@ -462,7 +476,7 @@
         ]
       },
       {
-        "start": 1503,
+        "start": 1508,
         "old": [
           "          condition={col.filter}",
           "          conditionActive={col.filterActive}"
@@ -473,7 +487,7 @@
         ]
       },
       {
-        "start": 1506,
+        "start": 1511,
         "old": [
           "      ) : col.filter}"
         ],
@@ -482,7 +496,7 @@
         ]
       },
       {
-        "start": 1509,
+        "start": 1514,
         "old": [],
         "new": [
           "  const renderColumnFilter = (col: Column<T>) => <>",
@@ -517,7 +531,7 @@
         ]
       },
       {
-        "start": 1552,
+        "start": 1557,
         "old": [
           "          collapseBelow={mobileBreakpoint}"
         ],
@@ -526,7 +540,7 @@
         ]
       },
       {
-        "start": 1566,
+        "start": 1571,
         "old": [
           "          actions={toolbarActions}"
         ],
@@ -538,7 +552,7 @@
         ]
       },
       {
-        "start": 1601,
+        "start": 1606,
         "old": [],
         "new": [
           "            compact={mobilePresentation.compactRows === true && (effectiveDensity === 'compact'",
@@ -547,7 +561,7 @@
         ]
       },
       {
-        "start": 1622,
+        "start": 1627,
         "old": [
           "            count={<Text size=\"sm\" color=\"muted\" role=\"status\">"
         ],
@@ -556,7 +570,7 @@
         ]
       },
       {
-        "start": 1630,
+        "start": 1635,
         "old": [
           "            controls={<>",
           "              {visibleColumns.map(col => <div key={col.key} className=\"flex items-center gap-1\">",
@@ -580,7 +594,7 @@
         ]
       },
       {
-        "start": 1639,
+        "start": 1644,
         "old": [
           "        <table tabIndex={footerControls ? 0 : undefined} className={cn(tableTokens.wrapper, footerControls && 'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]')} aria-label={accessibleTableName}"
         ],
@@ -591,7 +605,7 @@
         ]
       },
       {
-        "start": 1721,
+        "start": 1726,
         "old": [
           "                      resizable && 'relative group/th',"
         ],
@@ -600,7 +614,7 @@
         ]
       },
       {
-        "start": 1726,
+        "start": 1731,
         "old": [
           "                    style={w != null ? { width: w, minWidth: w } : undefined}"
         ],
@@ -609,7 +623,7 @@
         ]
       },
       {
-        "start": 1742,
+        "start": 1747,
         "old": [
           "                    <div className={cn('flex items-center gap-1', col.align === 'right' && 'justify-end', col.align === 'center' && 'justify-center')}>"
         ],
@@ -622,7 +636,7 @@
         ]
       },
       {
-        "start": 1782,
+        "start": 1787,
         "old": [
           "                    {resizable && tableId && ("
         ],
@@ -637,7 +651,7 @@
   {
     "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
     "before": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
-    "after": "b08b7add8509a44ce7c6a6c9dfb799fdfe9621e413f91e156d098f0982f5a0bb",
+    "after": "2f27ef4cd6af85620b8aa38790f870a61e0f0cf5e34b89ff5e65c4654bd8180c",
     "deletedSource": null,
     "hunks": [
       {
@@ -689,6 +703,7 @@
           "  const actionColumns = groupedActions ? columns.filter(column => groupedActions[column.key]) : []",
           "  const actionCell = (column: Column<T>, content: ReactNode) => (",
           "    <div key={column.key} data-mobile-action-column={column.key}",
+          "      style={column.mobileActionWidth == null ? undefined : { width: column.mobileActionWidth }}",
           "      className=\"flex w-14 shrink-0 items-center justify-center\">",
           "      {content}",
           "    </div>",
@@ -742,7 +757,7 @@
         ]
       },
       {
-        "start": 150,
+        "start": 151,
         "old": [
           "      <div className=\"flex flex-wrap items-center gap-2 py-2\">{controls}</div>"
         ],
@@ -751,7 +766,7 @@
         ]
       },
       {
-        "start": 167,
+        "start": 168,
         "old": [
           "        {showRows && rows.map(row => {",
           "          const key = keyExtractor(row)",
@@ -777,7 +792,7 @@
           "          <div className=\"flex min-w-0 items-center border-b border-[var(--border-subtle)] py-2\">",
           "            <div className=\"min-w-0 flex-1\" />",
           "            {actionColumns.map(column => actionCell(column,",
-          "              <div className=\"flex flex-col items-center text-center\">",
+          "              <div className={cn('flex flex-col', column.align === 'right' ? 'items-end text-right' : 'items-center text-center')}>",
           "                <Text size=\"xs\" color=\"muted\">{column.header}</Text>",
           "                {column.headerAction}",
           "              </div>))}",
@@ -800,7 +815,7 @@
         ]
       },
       {
-        "start": 192,
+        "start": 193,
         "old": [
           "              <div data-mobile-row-actions=\"\" className=\"flex w-full min-w-0 flex-wrap items-center gap-2 px-3 pb-3 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:break-words\">",
           "                {presentation.inlineActions?.(row)}",
@@ -820,7 +835,7 @@
         ]
       },
       {
-        "start": 194,
+        "start": 195,
         "old": [
           "            {expandedKeys?.has(key) && <div className=\"p-3\">{expandedContent?.(row)}</div>}"
         ],
@@ -829,7 +844,7 @@
         ]
       },
       {
-        "start": 196,
+        "start": 197,
         "old": [
           "        })}"
         ],
@@ -838,7 +853,7 @@
         ]
       },
       {
-        "start": 198,
+        "start": 199,
         "old": [
           "      <div className=\"min-w-0 space-y-2 break-words py-3\">"
         ],
@@ -847,7 +862,7 @@
         ]
       },
       {
-        "start": 202,
+        "start": 203,
         "old": [
           "      </div>"
         ],
@@ -884,7 +899,7 @@
   {
     "file": "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIPolling.tsx",
     "before": "3b962b1e7882c3461849ccb740cc67fba5854e31ec76ca402ca81b8a0c96a66d",
-    "after": "e2132b61009f017baa8f03e01bb869a90b107318fdd7a7952b17f47e9c5ada75",
+    "after": "361a812506753fb20ac7adcf28f549ce040875a6014fee2b9d6b6054a84c74dc",
     "deletedSource": null,
     "hunks": [
       {
@@ -944,8 +959,8 @@
           "    <FadeIn delay={0.1}>",
           "      <LayoutCard title={t('fleetApi.polling.cardTitle', 'Tesla API')}>",
           "        <div className=\"space-y-3\">",
-          "          <div className=\"flex min-w-0 items-center gap-3\">",
-          "            <div className=\"min-w-0 flex-1\">",
+          "          <div className=\"flex flex-wrap items-center gap-x-6 gap-y-3\">",
+          "            <div className=\"flex min-w-0 flex-wrap items-center gap-2\">",
           "              <div className=\"flex items-center gap-1\">",
           "                <Text weight=\"medium\">{t('fleetApi.polling.automatic', 'Automatic polling')}</Text>",
           "                <HelpTooltip text={t('fleetApi.polling.masterDesc', 'Off by default. Turning this off stops scheduled Fleet API reads, not manual requests or token refresh.')} />"
@@ -970,14 +985,10 @@
         "new": [
           "              {pollingConfig && (",
           "                <Text as=\"p\" size=\"sm\" color=\"secondary\">",
-          "                  {t('fleetApi.polling.scheduledReads', 'Scheduled reads only · {{state}}', {",
-          "                    state: pollingConfig.auto_polling_enabled",
-          "                      ? t('fleetApi.polling.on', 'On') : t('fleetApi.polling.off', 'Off'),",
-          "                  })}",
+          "                  {pollingConfig.auto_polling_enabled",
+          "                    ? t('fleetApi.polling.on', 'On') : t('fleetApi.polling.off', 'Off')}",
           "                </Text>",
           "              )}",
-          "            </div>",
-          "            <div className=\"flex w-32 shrink-0 justify-center\">",
           "              {pollingQuery.isLoading && !pollingState.hasData ? <Skeleton width=\"44px\" height={24} />",
           "                : pollingKnown && pollingConfig ? (",
           "                  <Toggle checked={pollingConfig.auto_polling_enabled}",
@@ -986,32 +997,22 @@
           "                    disabled={pollingConfigMut.isPending} />",
           "                ) : null}",
           "            </div>",
-          "          </div>",
-          "",
-          "          <div className=\"flex min-w-0 items-center gap-3 border-t border-[var(--border-subtle)] pt-3\">",
-          "            <div className=\"min-w-0 flex-1\">",
+          "            <div className=\"flex min-w-0 flex-wrap items-center gap-2\">",
           "              <div className=\"flex items-center gap-1\">",
           "                <Text weight=\"medium\">{t('fleetApi.polling.actions', 'API actions')}</Text>",
           "                <HelpTooltip text={t('fleetApi.polling.actionsHelp', 'Suspension blocks supported live requests and commands. Token refresh continues.')} />"
         ]
       },
       {
-        "start": 49,
+        "start": 42,
         "old": [],
         "new": [
           "              <Text as=\"p\" size=\"sm\" color=\"secondary\" className={apiSuspended ? 'text-[var(--semantic-danger)]' : undefined}>",
           "                {!apiStatusKnown ? t('fleetApi.apiUnknown', 'API status unknown')",
           "                  : apiSuspended",
-          "                    ? t('fleetApi.polling.suspendedState', 'Suspended — live requests and commands are blocked; token refresh continues.')",
+          "                    ? t('fleetApi.polling.suspendedLabel', 'Suspended')",
           "                    : t('fleetApi.polling.allowedState', 'Allowed')}",
-          "              </Text>"
-        ]
-      },
-      {
-        "start": 56,
-        "old": [],
-        "new": [
-          "            <div className=\"flex w-32 shrink-0 justify-center\">",
+          "              </Text>",
           "              {apiSuspended && !settingsState.fatalError && (",
           "                <Button variant=\"secondary\" size=\"sm\" disabled={suspendMut.isPending}",
           "                  className=\"h-11 min-h-11 min-w-11 md:h-9 md:min-h-0 md:min-w-0\"",
@@ -1019,14 +1020,13 @@
           "                  onClick={() => suspendMut.mutate(false)}>",
           "                  {t('fleetApi.polling.resume', 'Resume')}",
           "                </Button>",
-          "              )}",
-          "            </div>",
-          "          </div>"
+          "              )}"
         ]
       },
       {
-        "start": 68,
+        "start": 57,
         "old": [
+          "",
           "            {pollingQuery.isLoading && !pollingState.hasData ? (",
           "              <Skeleton height={56} />",
           "            ) : pollingState.fatalError ? (",
@@ -1054,6 +1054,10 @@
           "      </FadeIn>"
         ],
         "new": [
+          "          </div>",
+          "          {apiSuspended && <Text as=\"p\" size=\"sm\" color=\"secondary\" className=\"text-[var(--semantic-danger)]\">",
+          "            {t('fleetApi.polling.suspensionHelp', 'Live requests and commands are blocked; token refresh continues.')}",
+          "          </Text>}",
           "          {pollingState.fatalError ? (",
           "            <QueryError error={pollingState.fatalError} onRetry={() => pollingQuery.refetch()} />",
           "          ) : !pollingQuery.isLoading && !pollingConfig ? (",
@@ -1175,7 +1179,7 @@
   {
     "file": "web/src/features/admin/components/structural-closure/fleet-api/FleetAPIRouteCatalog.tsx",
     "before": "270ea7e6d74d793f72d58934a35942ffcf636ecd58a07d3c7c6d0a6de41befdb",
-    "after": "a6be4206c855dde29b4d46e075c56e7840a59f957f0fd4e74687449321ecbb92",
+    "after": "58ab437b7d53a243fbb7ef07bc3b9e46b1c8d5ba5fbf71c8dae47e0486f1a8f5",
     "deletedSource": null,
     "hunks": [
       {
@@ -1185,11 +1189,19 @@
           "import { Accordion, Badge, Caption, Button, Select, Toggle } from '@/components/ui';"
         ],
         "new": [
-          "import { Badge } from '@/components/ui';"
+          "import { Badge } from '@/components/ui';",
+          "import { PillFilterBar } from '@/components/forms';"
         ]
       },
       {
         "start": 3,
+        "old": [],
+        "new": [
+          "import { FleetEndpointControls } from '../../FleetEndpointControls';"
+        ]
+      },
+      {
+        "start": 5,
         "old": [],
         "new": [
           "import { FleetAPIGroupActions } from './FleetAPIGroupActions';",
@@ -1198,17 +1210,18 @@
         ]
       },
       {
-        "start": 14,
+        "start": 16,
         "old": [
           "  const { t, search, setSearch, groupBy, setGroupBy, selectedGroup, setSelectedGroup, sortBy, setSortBy, sortDescending, setSortDescending, pollingConfigMut, catalog, endpointGroups, groups, groupLabel, toggleEndpoint, toggleAuto, toggleGroupAccess, totalCount } = controller;"
         ],
         "new": [
           "  const { t, fmtInt, search, setSearch, groupBy, pollingConfigMut, catalog,",
-          "    endpointGroups, groupLabel, toggleEndpoint, toggleAuto } = controller;"
+          "    endpointGroups, groupLabel, toggleEndpoint, toggleAuto,",
+          "    categories, categoryLabel, selectedCategory, setSelectedCategory } = controller;"
         ]
       },
       {
-        "start": 18,
+        "start": 21,
         "old": [
           "<div className=\"min-w-0 space-y-3\">",
           "              <Accordion title={t('fleetApi.viewOptions', 'View options')}>",
@@ -1301,6 +1314,11 @@
           "            </div>"
         ],
         "new": [
+          "    <div className=\"min-w-0 space-y-3\">",
+          "    <PillFilterBar semanticMode=\"filters\" ariaLabel={t('fleetApi.controls.categoryFilter', 'Route groups')}",
+          "      items={[{ key: 'all', label: t('fleetApi.controls.allRoutes', 'All routes') },",
+          "        ...categories.map(category => ({ key: category, label: categoryLabel(category) }))]}",
+          "      activeKey={selectedCategory} onChange={setSelectedCategory} />",
           "    <FleetEndpointTable",
           "      tableId=\"admin:fleet-endpoints\"",
           "      endpoints={endpointGroups.flatMap(([, endpoints]) => endpoints)}",
@@ -1323,8 +1341,8 @@
           "      grouping={{",
           "        key: endpoint => groupBy === 'category' ? endpoint.category : endpoint.method,",
           "        label: groupLabel,",
-          "        resetKey: `${groupBy}:${search}`,",
-          "        autoExpand: !!search.trim(),",
+          "        resetKey: `${groupBy}:${selectedCategory}:${search}`,",
+          "        autoExpand: !!search.trim() || selectedCategory !== 'all',",
           "        summary: (_, rows) => <Badge size=\"sm\" variant=\"info\">",
           "          {t('fleetApi.controls.groupCount', '{{count}} routes', { count: rows.length })}",
           "        </Badge>,",
@@ -1333,11 +1351,15 @@
           "          {fmtInt(rows.length)}",
           "        </Badge>,",
           "        actionColumns: {",
-          "          access: group => <FleetAPIGroupActions controller={controller} group={group} kind=\"access\" />,",
-          "          auto: group => <FleetAPIGroupActions controller={controller} group={group} kind=\"auto\" />,",
+          "          access: group => <FleetEndpointControls",
+          "            access={<FleetAPIGroupActions controller={controller} group={group} kind=\"access\" />}",
+          "            autoPoll={catalog.some(endpoint => endpoint.pollable",
+          "              && (groupBy === 'category' ? endpoint.category : endpoint.method) === group)",
+          "              ? <FleetAPIGroupActions controller={controller} group={group} kind=\"auto\" /> : undefined} />,",
           "        },",
           "      }}",
-          "    />"
+          "    />",
+          "    </div>"
         ]
       }
     ]
@@ -1352,11 +1374,18 @@
   {
     "file": "web/src/features/admin/hooks/useFleetAPIPage.ts",
     "before": "87abb602b1af663688f6a6443139cbfb8fee4232345af9a7d299ac4d9cc29d3d",
-    "after": "708f60671f1a16951b0f213dd7163b36b5933551106458797444e2a791cd3658",
+    "after": "3935db457812b075af983c9c3edb87c18c7172ff9af5cfcacb0b45c7a883fef4",
     "deletedSource": null,
     "hunks": [
       {
-        "start": 14,
+        "start": 13,
+        "old": [],
+        "new": [
+          "  const [selectedCategory, setSelectedCategory] = useState('all');"
+        ]
+      },
+      {
+        "start": 15,
         "old": [
           "  const [selectedGroup, setSelectedGroup] = useState('all');"
         ],
@@ -1364,6 +1393,13 @@
       },
       {
         "start": 57,
+        "old": [],
+        "new": [
+          "      if (selectedCategory !== 'all' && endpoint.category !== selectedCategory) continue;"
+        ]
+      },
+      {
+        "start": 59,
         "old": [
           "      if (selectedGroup !== 'all' && !normalizedSearch && group !== selectedGroup) {",
           "        continue;",
@@ -1372,7 +1408,7 @@
         "new": []
       },
       {
-        "start": 83,
+        "start": 85,
         "old": [
           "  }, [catalog, groupBy, normalizedSearch, selectedGroup, sortBy, sortDescending, pollingConfig]);",
           "  const groups = useMemo(() => {",
@@ -1385,11 +1421,22 @@
           "  }, [catalog, groupBy]);"
         ],
         "new": [
-          "  }, [catalog, groupBy, normalizedSearch, sortBy, sortDescending, pollingConfig]);"
+          "  }, [catalog, groupBy, normalizedSearch, selectedCategory, sortBy, sortDescending, pollingConfig]);",
+          "  const categories = [...new Set(catalog.map(endpoint => endpoint.category))];",
+          "  const categoryLabel = (category: string) => t(`fleetApi.categories.${category.toLowerCase().replace(/ /g, '')}`, category);"
         ]
       },
       {
-        "start": 146,
+        "start": 89,
+        "old": [
+          "    ? t(`fleetApi.categories.${group.toLowerCase().replace(/ /g, '')}`, group)"
+        ],
+        "new": [
+          "    ? categoryLabel(group)"
+        ]
+      },
+      {
+        "start": 150,
         "old": [],
         "new": [
           "  const toggleGroupAuto = (group: string) => {",
@@ -1411,7 +1458,7 @@
         ]
       },
       {
-        "start": 175,
+        "start": 179,
         "old": [
           "  const kpiLoading = !settingsState.hasData && !pollingState.hasData && (settingsQuery.isLoading || pollingQuery.isLoading);",
           "",
@@ -1424,11 +1471,12 @@
         "new": []
       },
       {
-        "start": 186,
+        "start": 190,
         "old": [
           "    fmtInt, t, search, setSearch, groupBy, setGroupBy, selectedGroup, setSelectedGroup, sortBy, setSortBy, sortDescending, setSortDescending, settingsQuery, pollingQuery, versionQuery, settingsState, pollingState, versionState, dataSources, suspendMut, pollingConfigMut, settings, pollingConfig, version, catalog, endpointGroups, groups, groupLabel, toggleEndpoint, toggleAuto, toggleAllAccess, toggleGroupAccess, toggleAllAuto, configuredEndpoints, totalCount, enabledCount, autoCount, eligibleCount, apiSuspended, kpiLoading, EM_DASH, apiStatusKnown, pollingKnown, versionLabel, configuredEndpointMap, hasConfiguredEndpoints"
         ],
         "new": [
+          "    categories, categoryLabel, selectedCategory, setSelectedCategory,",
           "    fmtInt, t, search, setSearch, groupBy, setGroupBy, sortBy, setSortBy, sortDescending, setSortDescending, settingsQuery, pollingQuery, versionQuery, settingsState, pollingState, versionState, dataSources, suspendMut, pollingConfigMut, settings, pollingConfig, version, catalog, endpointGroups, groupLabel, toggleEndpoint, toggleAuto, toggleAllAccess, toggleGroupAccess, toggleAllAuto, toggleGroupAuto, configuredEndpoints, totalCount, enabledCount, autoCount, eligibleCount, apiSuspended, apiStatusKnown, pollingKnown, versionLabel, configuredEndpointMap, hasConfiguredEndpoints"
         ]
       }

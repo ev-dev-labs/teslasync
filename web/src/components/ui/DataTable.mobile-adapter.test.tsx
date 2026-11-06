@@ -101,7 +101,7 @@ describe('real DataTable mobile bridge', () => {
   it('retains grouped disclosure and aligned, separate controls on mobile', () => {
     const groupedColumns: Column<Row>[] = [
       columns[0],
-      { key: 'access', header: 'Access', headerAction: <Button>All access</Button>,
+      { key: 'access', header: 'Access', mobileActionWidth: 132, headerAction: <Button>All access</Button>,
         render: row => <Button>{`Access ${row.name}`}</Button> },
       { key: 'auto', header: 'Auto', headerAction: <Button>All auto</Button>,
         render: row => <Button>{`Auto ${row.name}`}</Button> },
@@ -124,6 +124,7 @@ describe('real DataTable mobile bridge', () => {
     const headerAccess = screen.getByRole('button', { name: 'All access' })
     for (const control of [access, groupAccess, headerAccess]) {
       expect(control.closest('[data-mobile-action-column]')).toHaveAttribute('data-mobile-action-column', 'access')
+      expect(control.closest('[data-mobile-action-column]')).toHaveStyle({ width: '132px' })
     }
     expect(access.closest('[role="button"]')).toBeNull()
     expect(screen.getByRole('button', { name: 'Auto Zero' }).closest('[data-mobile-action-column]'))

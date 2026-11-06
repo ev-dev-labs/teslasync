@@ -183,6 +183,8 @@ export interface Column<T> {
   defaultWidth?: number | 'auto'
   /** Non-resizable width in pixels, taking precedence over saved widths. */
   fixedWidth?: number
+  /** Width of an aligned mobile action column, including composite controls. */
+  mobileActionWidth?: number
   /** Min width allowed when resizing. Defaults to 60. */
   minWidth?: number
   /** Max width allowed when resizing. Defaults to 800. */
@@ -607,7 +609,10 @@ export function DataTable<T>({
   } : undefined)
   const hasValueFilters = valueColumns.some(column => valueSelections[column.key] != null)
   const groupScope = JSON.stringify([rowGrouping?.resetKey, valueSelections, deferredLocalSearch])
-  const [groupExpansion, setGroupExpansion] = useState<{ scope: string; open: Record<string, boolean> }>({ scope: '', open: {} })
+  const [groupExpansion, setGroupExpansion] = useState<{ scope: string; open: Record<string, boolean> }>({ scope: groupScope, open: {} })
+  if (groupExpansion.scope !== groupScope) {
+    setGroupExpansion({ scope: groupScope, open: {} })
+  }
   const groupsExpandedByFilter = !!rowGrouping?.autoExpand || hasValueFilters || !!deferredLocalSearch.trim()
   const groupIsOpen = (key: string) => groupExpansion.scope === groupScope && typeof groupExpansion.open[key] === 'boolean'
     ? groupExpansion.open[key] : groupsExpandedByFilter

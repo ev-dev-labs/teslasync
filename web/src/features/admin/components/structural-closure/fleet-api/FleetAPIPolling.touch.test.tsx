@@ -156,7 +156,8 @@ describe('FleetAPIPolling Resume touch contract', () => {
     await screen.findByText('Failed to toggle API suspension');
     expect(screen.getByText('Resume denied')).toBeInTheDocument();
     await waitFor(() => expect(resume).toBeEnabled());
-    expect(screen.getByText(/Suspended — live requests and commands are blocked/)).toBeInTheDocument();
+    expect(screen.getByText('Suspended', { exact: true })).toBeInTheDocument();
+    expect(screen.getByText('Live requests and commands are blocked; token refresh continues.')).toBeInTheDocument();
     expect(screen.queryByText('API resumed')).not.toBeInTheDocument();
     expect(apiSuspended).toBe(true);
   });
