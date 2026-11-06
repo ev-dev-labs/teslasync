@@ -56,7 +56,7 @@ export function DrivingSection({
   return (
     <GlassPanel className="flex h-full flex-col gap-5 p-4 sm:p-5">
       <PanelTitle className="flex items-center gap-2">
-        <Car className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Car className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('analytics.weeklyDigest.drivingSection', 'Driving')}
       </PanelTitle>
 

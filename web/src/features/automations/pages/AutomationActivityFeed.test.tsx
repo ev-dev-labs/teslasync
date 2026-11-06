@@ -386,7 +386,7 @@ describe('AutomationActivityFeed — history rows', () => {
       connectionState: 'reconnecting',
       history: [makeHistory({ status: 'not-a-real-status' as AutomationHistory['status'] })],
     });
-    expect(unknown.querySelector('svg.text-indigo-300')).not.toBeNull();
+    expect(unknown.querySelector('svg.text-status-update')).not.toBeNull();
   });
 });
 
@@ -469,8 +469,8 @@ describe('AutomationActivityFeed — live SSE rows', () => {
     });
     expect(screen.getByText('Mystery Auto')).toBeInTheDocument();
     expect(screen.getByText('mystery')).toBeInTheDocument();
-    // triggered fallback accent = pulsing cyan icon
-    expect(container.querySelector('svg.animate-pulse.text-cyan-300')).not.toBeNull();
+    // The triggered fallback uses the pulsing informational-status icon.
+    expect(container.querySelector('svg.animate-pulse.text-status-info')).not.toBeNull();
   });
 
   it('caps the live feed at the five most recent events', () => {

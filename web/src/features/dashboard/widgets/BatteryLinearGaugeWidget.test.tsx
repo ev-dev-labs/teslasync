@@ -122,7 +122,7 @@ function makeState(over: Partial<VehicleState> = {}): VehicleState {
 
 /** A state object with an extra (untyped) `charge_limit_soc` field attached. */
 function stateWithLimit(limit: unknown, over: Partial<VehicleState> = {}): Record<string, unknown> {
-  return { ...makeState(over), charge_limit_soc: limit };
+  return { ...makeState(over), charge_limit_soc_pct: limit };
 }
 
 /** Build a `useVehicleState`-shaped query result carrying `{ state, live }`. */
@@ -258,7 +258,8 @@ describe('BatteryLinearGaugeWidget — charge-limit overlay + stat', () => {
     );
     renderWidget({ size: { cols: 2, rows: 2 } });
     expect(screen.getByText('172 mi range')).toBeInTheDocument();
-    expect(screen.getByText('Charging · Limit 80%')).toBeInTheDocument();
+    expect(screen.getByText('Charging')).toBeInTheDocument();
+    expect(screen.getByText('Charge limit 80%')).toBeInTheDocument();
   });
 
   it('omits the range line when rated_range is missing, without fabricating 0 mi', () => {

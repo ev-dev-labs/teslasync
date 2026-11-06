@@ -3,7 +3,6 @@ import { renderHook } from '@testing-library/react'
 import { converter, wcagContrast } from 'culori'
 import type { ColorTheme, ModeTheme } from '@/components/ui/ThemeProvider'
 import { useTheme } from '@/components/ui/ThemeProvider'
-import { converter, wcagContrast } from 'culori'
 
 // The palette hook reads the active theme via useTheme(). Mock the provider
 // module so we can drive buildChartPalette with deterministic theme/mode
@@ -19,7 +18,6 @@ import {
   CHART_COLORS,
   CHART_COLORS_CB_SAFE,
   CHART_COLORS_NEON,
-  CHART_COLORS_DARK,
   CHART_COLORS_DARK,
   CHARGER_COLORS,
   STATUS_COLORS,

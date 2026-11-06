@@ -519,7 +519,7 @@ before and pass after; follow the API CONTRACT and DATA STORAGE rules):
 6. Anomaly explanations: backend adds a structured explanation code + typed
    parameters (keep the English prose field for compatibility); the
    frontend renders localized text, falling back to prose.
-7. Automation Duplicate (copy via the create API, "<name> (copy)", disabled
+7. Automation Duplicate (copy via the create API, `"<name> (copy)"`, disabled
    by default, then open it) and Export (JSON download, no secrets). If
    either can't be supported safely, hide that button and record why.
 8. Insurance "0..60": do NOT implement; record it as "needs owner decision"

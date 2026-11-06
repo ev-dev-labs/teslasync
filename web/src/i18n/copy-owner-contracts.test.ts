@@ -7,7 +7,8 @@ import { I18nextProvider } from 'react-i18next'
 import { cleanup, render, renderHook, screen } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import ts from 'typescript'
-import catalog from './en.json'
+import currentCatalog from './en.json'
+import { catalogBeforeDashboardPolish } from './verified-combined-contract'
 import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
 import { finalFourAdditions, ownerRecoveryAdditions } from './authorized-owner-recovery.test'
 import { AIThinkingIndicator } from '@/components/ai/AIThinkingIndicator'
@@ -16,6 +17,8 @@ import { useDrivesListPageCollections } from '@/features/driving/hooks/useDrives
 import type { DriveFsdInsight } from '@/types/fsd'
 
 vi.unmock('react-i18next')
+
+const catalog = catalogBeforeDashboardPolish(currentCatalog)
 
 // Independent static fixture: preservation tests use their own exported fixture,
 // never import this module and thereby register its render tests a second time.

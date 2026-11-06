@@ -10,7 +10,7 @@ export const DRIVE_SESSION_STATE_ENTRIES: Record<DriveSessionState, StateEntry> 
   pending:   { variant: 'warning' },
   active:    { variant: 'success' },
   ending:    { variant: 'warning', overrides: { badgeDot: 'bg-orange-400', bg: 'bg-orange-500/10', text: 'text-orange-400', dot: 'bg-orange-400' } },
-  completed: { variant: 'info',    overrides: { badgeDot: 'bg-indigo-400', bg: 'bg-indigo-500/10', text: 'text-indigo-400', dot: 'bg-indigo-400' } },
+  completed: { variant: 'info',    overrides: { badgeDot: 'bg-status-update', bg: 'bg-status-update/10', text: 'text-status-update', dot: 'bg-status-update' } },
   recovered: { variant: 'neutral', overrides: { badgeDot: 'bg-purple-400', bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' } },
 }
 

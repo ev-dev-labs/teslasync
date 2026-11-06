@@ -68,7 +68,7 @@ export function TopSignalsPanel({ signals, className }: TopSignalsPanelProps) {
   return (
     <GlassPanel className={cn('min-w-0 max-w-full p-4 sm:p-5', className)}>
       <PanelTitle className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
-        <ListOrdered className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+        <ListOrdered className="h-4 w-4 shrink-0 text-theme-accent" aria-hidden="true" />
         {t('liveMonitor.topSignals', 'Most active signals')}
       </PanelTitle>
 

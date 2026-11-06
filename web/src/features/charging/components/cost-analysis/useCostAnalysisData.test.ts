@@ -78,7 +78,8 @@ function makeSession(overrides: Partial<ChargingSession> = {}): ChargingSession 
     avg_power_w: 9_000,
     cost_decimal: 5,
     cost_currency: 'USD',
-    charger_type: null,
+    charger_type: 'AC',
+    is_home: true,
     cable_type: null,
     startedAt: started,
     duration_min: 60,
@@ -115,7 +116,8 @@ const sessionB = makeSession({
   cost_decimal: 4,
   start_odometer_m: 200_000,
   end_odometer_m: 200_000 + MILE_100_M,
-  charger_type: null,
+  charger_type: 'AC',
+  is_home: true,
   peak_power_w: 7_000,
   start_place: 'Home',
 });
@@ -912,8 +914,8 @@ describe('useCostAnalysisData — hardening', () => {
   });
 });
 
-it.each(['__proto__','constructor','SpacePort'])('preserves unknown server category %s without object-key collisions',code=>{
+it.each(['__proto__','constructor','SpacePort'])('labels unknown server category %s safely without object-key collisions',code=>{
  const {current}=render({sessions:[makeSession({charger_type:code})]});
- expect(current.chargerTypeData[0].name).toBe(code);
+ expect(current.chargerTypeData[0].name).toBe('Unknown');
  expect(current.chargerTypeData[0].sessions).toBe(1);
 });

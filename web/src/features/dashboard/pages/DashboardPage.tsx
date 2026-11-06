@@ -31,6 +31,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useAsOfDate } from '@/hooks/useAsOfDate';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import {
   Activity, AlertCircle, ArrowUpRight, BatteryCharging, Check, Download,
@@ -231,6 +232,7 @@ export default function DashboardPage() {
   const { t } = useTranslation('dashboard');
   usePageTitle(t("dashboard.title", 'Fleet operations'));
   const queryClient = useQueryClient();
+  const { asOf } = useAsOfDate();
 
   /* ——— Dashboard layout state ——— */
   const {
@@ -716,6 +718,7 @@ export default function DashboardPage() {
                   onOpenSettings={setSettingsWidgetId}
                   getWidgetSize={getWidgetSize}
                   dashboardVehicleId={dashboardVehicleId}
+                  pauseAutoRefresh={asOf !== null || isKiosk}
                   compactMode={activeDashboard.settings?.compactMode}
                   showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
                   onDropWidget={handleDropWidget}
@@ -822,6 +825,7 @@ export default function DashboardPage() {
             onOpenSettings={() => {}}
             getWidgetSize={getWidgetSize}
             dashboardVehicleId={dashboardVehicleId}
+            pauseAutoRefresh={asOf !== null}
             compactMode={activeDashboard.settings?.compactMode}
             showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
             kioskWidgetOpacity={kioskConfig.widgetOpacity ?? 1}

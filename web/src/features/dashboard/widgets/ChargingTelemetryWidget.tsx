@@ -10,6 +10,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid } from './shared';
 import { ChargeBatteryPack, ChargeReadings, useTelemetryChargeActivity } from './instruments/ChargeInstruments';
+import { ChargeStatusSummary } from './instruments/ChargeStatusSummary';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -29,7 +30,8 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
   const isCompact = size.cols <= 1;
   const isShort = size.rows <= 2;
 
-  const isCharging = data?.charging_state === 'Charging';
+  const charging = data?.charging_state != null ? data.charging_state === 'Charging' : null;
+  const isCharging = charging === true;
   const active = useTelemetryChargeActivity(query);
   const batteryLevel = knownNumber(data?.battery_level);
 
@@ -99,16 +101,20 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
         isError={isError}
         onRefresh={handleRefresh}
       >
+        {data && !isCharging && <ChargeStatusSummary charging={charging} active={active} limit={data.charge_limit_soc_pct} />}
         {isCharging ? (
           <div className={isShort ? 'flex min-w-0 items-center gap-2' : 'flex min-w-0 flex-col gap-2'}>
-            <ChargeBatteryPack level={batteryLevel} active={active} className={isShort ? 'w-16' : 'mx-auto w-24'} />
+            <div className="min-w-0">
+              <ChargeStatusSummary charging={charging} active={active} limit={data?.charge_limit_soc_pct} />
+              <ChargeBatteryPack level={batteryLevel} active={active} className={isShort ? 'w-16' : 'mx-auto w-24'} />
+            </div>
             <ChargeReadings short={isShort}>
             <WidgetStatGrid compact cols={2} stats={stats.slice(0, 4)} />
             </ChargeReadings>
           </div>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<Plug className="h-5 w-5" />}
+            icon={isShort ? undefined : <Plug className="h-5 w-5" />}
             message={data?.charging_state == null ? t('widget.noChargeData', 'No charge data') : t('widget.chargingTelemetry.notCharging', 'Not currently charging')}
             className="py-4"
           />
@@ -130,9 +136,13 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
       isError={isError}
       onRefresh={handleRefresh}
     >
+      {data && !isCharging && <ChargeStatusSummary charging={charging} active={active} limit={data.charge_limit_soc_pct} />}
       {isCharging ? (
         <div className={isShort ? 'flex min-w-0 items-start gap-3' : 'flex h-full flex-col gap-3'}>
-          <ChargeBatteryPack level={batteryLevel} active={active} className={isShort ? 'w-20' : 'mx-auto w-32'} />
+          <div className={isShort ? 'w-32 min-w-0 shrink-0' : 'min-w-0'}>
+            <ChargeStatusSummary charging={charging} active={active} limit={data?.charge_limit_soc_pct} />
+            <ChargeBatteryPack level={batteryLevel} active={active} className={isShort ? 'w-20' : 'mx-auto w-32'} />
+          </div>
           <div className="min-w-0 flex-1">
           <ChargeReadings short={isShort}>
           <WidgetStatGrid
@@ -145,7 +155,7 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
         </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Plug className="h-5 w-5" />}
+          icon={isShort ? undefined : <Plug className="h-5 w-5" />}
           message={data?.charging_state == null ? t('widget.noChargeData', 'No charge data') : t('widget.chargingTelemetry.notCharging', 'Not currently charging')}
           className="py-4"
         />

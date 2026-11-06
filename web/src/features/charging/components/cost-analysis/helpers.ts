@@ -1,13 +1,9 @@
 import type { ChargingSession } from '@/api/types';
 import { KWH_PER_GALLON } from './constants';
+import { getChargerCategory } from '@/lib/chargingAggregation';
 
 export function categorizeCharger(session: ChargingSession): string {
-  const ct = (session.charger_type ?? '').toLowerCase();
-  if (ct.includes('tesla') || ct.includes('supercharger')) return 'Supercharger';
-  if ((session.peak_power_w ?? 0) > 22_000) return 'Public DC';
-  const loc = (session.start_place ?? '').toLowerCase();
-  if (loc.includes('work') || loc.includes('office')) return 'Work / L2';
-  return 'Home';
+  return ({ home: 'Home', ac: 'AC', supercharger: 'Supercharger', dc: 'Public DC', unknown: 'Unknown' } as const)[getChargerCategory(session)];
 }
 
 export function gasEquivalentCost(
@@ -36,6 +32,8 @@ export function chargerCategoryLabel(
   if (suppliedName != null) return suppliedName;
   switch (code) {
     case 'home': return t('costAnalysis.category.home', 'Home');
+    case 'ac': return t('charging.chargerTypes.ac', 'AC');
+    case 'unknown': return t('charging.chargerTypes.unknown', 'Unknown');
     case 'supercharger': return t('costAnalysis.category.supercharger', 'Supercharger');
     case 'public': return t('costAnalysis.category.public', 'Public');
     case 'public_dc': return t('costAnalysis.category.publicDC', 'Public DC');
@@ -46,10 +44,6 @@ export function chargerCategoryLabel(
 }
 
 export function chargerCategoryCode(session: ChargingSession): string {
-  const raw = session.charger_type;
-  const code = raw?.toLowerCase();
-  if (code && ['home','supercharger','public','public_dc','work_l2','other'].includes(code)) return code;
-  if (raw && !/^(?:tesla\b|supercharger\b|ccs\b|ac$|dc$|type[ _-]?2$|j1772$)/i.test(raw)) return raw;
-  const category = categorizeCharger(session);
-  return ({Home:'home',Supercharger:'supercharger','Public DC':'public_dc','Work / L2':'work_l2'} as Record<string,string>)[category] ?? category;
+  const category = getChargerCategory(session);
+  return category === 'dc' ? 'public_dc' : category;
 }

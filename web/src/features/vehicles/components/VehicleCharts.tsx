@@ -82,7 +82,7 @@ export function VehicleCharts({
           <GlassPanel className="overflow-hidden h-full">
             <div className="p-4 pb-0">
               <h3 className="section-title flex items-center gap-2 mb-3">
-                <Navigation className="h-4 w-4 text-cyan-300" aria-hidden="true" />{' '}
+                <Navigation className="h-4 w-4 text-theme-accent" aria-hidden="true" />{' '}
                 {t('common.location', 'Location')}
               </h3>
             </div>
@@ -273,7 +273,7 @@ export function VehicleCharts({
       <FadeIn delay={0.2}>
         <GlassPanel className="p-6 h-full">
           <h3 className="section-title mb-4 flex items-center gap-2">
-            <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Activity className="h-4 w-4 text-theme-accent" aria-hidden="true" />
             {t('common.speedHistory', 'Speed history')}
           </h3>
           {hasSpeedData ? (

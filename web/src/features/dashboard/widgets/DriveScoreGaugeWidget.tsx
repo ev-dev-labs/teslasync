@@ -64,7 +64,7 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.driveScoreGauge.title', 'Drive score')}
-      icon={isCompact ? undefined : <Gauge className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={isCompact ? undefined : <Gauge className="h-3.5 w-3.5 text-theme-accent" />}
       loading={isLoading}
       dataState={score != null || isLoading || isError || error ? trust : undefined}
       updatedAt={dataUpdatedAt}

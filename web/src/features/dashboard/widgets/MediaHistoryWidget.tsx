@@ -33,7 +33,7 @@ function CompactView({
     : t('widget.noMediaPlayed', 'No tracks played');
   return (
     <div className="flex items-center gap-2 min-h-[44px]">
-      <Music className="h-4 w-4 flex-shrink-0 text-neon-cyan" aria-hidden />
+      <Music className="h-4 w-4 flex-shrink-0 text-theme-accent" aria-hidden />
       <div className="min-w-0 flex-1">
         <p className={dashboardTokens.metricLabel} title={label}>{label}</p>
       </div>
@@ -120,7 +120,7 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.mediaHistory', 'Media history')}
-      icon={<ListMusic className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={<ListMusic className="h-3.5 w-3.5 text-theme-accent" />}
       loading={isLoading}
       dataState={{ ...displayState, status: displayState.status === 'initial' && !isLoading && !vehicleQuery.isLoading ? 'unavailable' : displayState.status }}
       updatedAt={dataUpdatedAt}

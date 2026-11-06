@@ -102,7 +102,7 @@ export function Base64Tool() {
               </span>
               <CopyButton text={result.value} />
             </div>
-            <pre className="mt-1 whitespace-pre-wrap break-all text-sm font-mono text-cyan-300">{result.value}</pre>
+            <pre className="mt-1 whitespace-pre-wrap break-all text-sm font-mono text-theme-accent">{result.value}</pre>
           </div>
         )}
       </div>

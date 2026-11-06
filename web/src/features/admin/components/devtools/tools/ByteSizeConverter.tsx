@@ -78,7 +78,7 @@ export function ByteSizeConverterTool() {
                   aria-current={isActive ? 'true' : undefined}
                   className={cn(
                     'rounded px-2 py-1.5 text-center',
-                    isActive ? 'bg-neon-cyan/10 ring-1 ring-neon-cyan/30' : 'bg-[var(--surface-overlay)]',
+                    isActive ? 'bg-theme-accent/10 ring-1 ring-theme-accent/30' : 'bg-[var(--surface-overlay)]',
                   )}
                 >
                   <p className="text-xs text-[var(--text-secondary)]">{c.unit}</p>

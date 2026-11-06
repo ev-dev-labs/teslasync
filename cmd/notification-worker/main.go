@@ -629,7 +629,7 @@ func dispatchComputedMetricNotification(
 	suppressTransportTitle := !rule.IncludeTitle
 	triggerID := notification.NewTriggerID()
 	if _, err := notification.RecordTrigger(ctx, logStore, &notification.Request{
-		Title: title, Message: body, AlertID: rule.ID,
+		Title: title, Message: body, AlertID: rule.ID, VehicleID: vehicleID,
 		Severity: rule.Severity, EventType: "alert.computed_metric", TriggerID: triggerID,
 	}); err != nil {
 		log.Error().Err(err).Str("trace_id", oteltrace.SpanFromContext(ctx).SpanContext().TraceID().String()).
@@ -647,6 +647,7 @@ func dispatchComputedMetricNotification(
 			Message:                body,
 			ChannelID:              ch.ID,
 			AlertID:                rule.ID,
+			VehicleID:              vehicleID,
 			TriggerID:              triggerID,
 			EventType:              "alert.computed_metric",
 			Severity:               rule.Severity,
@@ -663,7 +664,7 @@ func dispatchComputedMetricNotification(
 				}
 				eventType, id := req.EventType, rule.ID
 				if err := logs.CreateLog(ctx, &notificationmodel.NotificationLog{
-					ChannelID: ch.ID, AlertID: &id, Title: title, Message: body,
+					ChannelID: ch.ID, AlertID: &id, VehicleID: &vehicleID, Title: title, Message: body,
 					Status: status, Error: errText, Severity: rule.Severity,
 					TriggerID: &triggerID, EventType: &eventType,
 				}); err != nil {

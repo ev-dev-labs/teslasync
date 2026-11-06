@@ -21,7 +21,7 @@ interface ToggleCommandTileProps {
 }
 
 const onStyles = {
-  default: { panel: 'border-neon-cyan/20 bg-neon-cyan/5', icon: 'bg-neon-cyan/20 text-neon-cyan', dot: 'bg-neon-cyan', text: 'text-cyan-300' },
+  default: { panel: 'border-theme-accent/20 bg-theme-accent/5', icon: 'bg-theme-accent/20 text-theme-accent', dot: 'bg-theme-accent', text: 'text-theme-accent' },
   danger:  { panel: 'border-neon-red/20 bg-neon-red/5',   icon: 'bg-neon-red/20 text-neon-red',   dot: 'bg-neon-red',  text: 'text-rose-300' },
   success: { panel: 'border-neon-green/20 bg-neon-green/5', icon: 'bg-neon-green/20 text-neon-green', dot: 'bg-neon-green', text: 'text-emerald-300' },
 } as const;

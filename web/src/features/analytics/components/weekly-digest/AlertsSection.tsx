@@ -22,7 +22,7 @@ interface AlertsSectionProps {
 const SEVERITY_ICON_CLASS: Record<string, string> = {
   critical: 'text-rose-300',
   warning: 'text-amber-300',
-  info: 'text-sky-300',
+  info: 'text-status-info',
 };
 
 const SEVERITY_BADGE: Record<string, 'danger' | 'warning' | 'info'> = {
@@ -92,7 +92,7 @@ export function AlertsSection({
                   >
                     <span className="flex items-center gap-2">
                       <Icon
-                        className={`h-4 w-4 ${SEVERITY_ICON_CLASS[severity] ?? 'text-sky-300'}`}
+                        className={`h-4 w-4 ${SEVERITY_ICON_CLASS[severity] ?? 'text-status-info'}`}
                         aria-hidden="true"
                       />
                       <Text size="sm" color="primary">

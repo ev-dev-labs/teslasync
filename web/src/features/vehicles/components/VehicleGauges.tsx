@@ -96,7 +96,7 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
   return (
     <FadeIn delay={0.05}>
       <GlassPanel className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/[0.02] via-transparent to-neon-purple/[0.02]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-theme-accent/[0.02] via-transparent to-neon-purple/[0.02]" />
         <div className="relative grid grid-cols-1 lg:grid-cols-[auto,1fr] gap-8 p-6 lg:p-8">
           {/* Car visualization */}
           <div className="flex items-center justify-center">

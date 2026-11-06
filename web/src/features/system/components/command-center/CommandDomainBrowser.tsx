@@ -66,7 +66,7 @@ export function CommandDomainBrowser({
               onClick={() => onDomainChange(domain.id)}
               className={cn(
                 'h-auto min-h-12 justify-start px-3 text-left',
-                selected && 'border-cyan-400/30 bg-cyan-500/10',
+                selected && 'border-theme-accent/30 bg-theme-accent/10',
               )}
             >
               <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />

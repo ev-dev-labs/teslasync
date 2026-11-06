@@ -122,7 +122,7 @@ export function StateEvidenceDirectory({
     <section data-testid="sleep-efficiency-state-directory">
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <BookOpen className="h-4 w-4 text-status-info" aria-hidden="true" />
           {t('sleep.stateDirectory.title', 'State evidence directory')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">

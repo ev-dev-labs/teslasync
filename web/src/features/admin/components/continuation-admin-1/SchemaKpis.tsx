@@ -20,7 +20,7 @@ export function SchemaKpis({ state, isDrifted, retained = false }: {
   const deltas = [
     { key: 'tables', label: t('admin.schemaDrift.tableDelta', 'Tables Δ'),
       delta: drift?.table_count_delta, current: drift?.current?.table_count, expected: drift?.expected?.table_count,
-      icon: <Database className="h-4 w-4 text-cyan-300" aria-hidden /> },
+      icon: <Database className="h-4 w-4 text-theme-accent" aria-hidden /> },
     { key: 'columns', label: t('admin.schemaDrift.columnDelta', 'Columns Δ'),
       delta: drift?.column_count_delta, current: drift?.current?.column_count, expected: drift?.expected?.column_count,
       icon: <Columns3 className="h-4 w-4 text-emerald-300" aria-hidden /> },

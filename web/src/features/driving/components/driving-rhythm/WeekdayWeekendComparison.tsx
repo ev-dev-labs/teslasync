@@ -60,7 +60,7 @@ export function WeekdayWeekendComparison({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <CalendarRange
-            className="h-4 w-4 text-indigo-300"
+            className="h-4 w-4 text-theme-accent"
             aria-hidden="true"
           />
           {t('rhythm.comparison.title', 'Weekday vs weekend')}
@@ -147,7 +147,7 @@ export function WeekdayWeekendComparison({
             ))}
             <div className="flex items-start gap-2 sm:col-span-2">
               <Info
-                className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300"
+                className="mt-0.5 h-4 w-4 shrink-0 text-theme-accent"
                 aria-hidden="true"
               />
               <Text as="p" variant="bodySm">

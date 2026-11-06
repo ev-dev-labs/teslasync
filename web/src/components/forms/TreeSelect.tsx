@@ -525,7 +525,7 @@ export function TreeSelect<T>({
                     className={cn(
                       'flex items-center gap-2 px-2 py-1.5 cursor-pointer outline-none',
                       'hover:bg-[var(--surface-2)]',
-                      'focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset',
+                      'focus-visible:ring-2 focus-visible:ring-theme-accent focus-visible:ring-inset',
                     )}
                     onClick={(e) => {
                       // Header click toggles expand; checkbox click is intercepted.
@@ -597,7 +597,7 @@ export function TreeSelect<T>({
                               'flex items-center gap-2 pl-9 pr-2 py-1 outline-none',
                               !leafDisabled && 'cursor-pointer hover:bg-[var(--surface-2)]',
                               leafDisabled && 'opacity-50 cursor-not-allowed',
-                              'focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset',
+                              'focus-visible:ring-2 focus-visible:ring-theme-accent focus-visible:ring-inset',
                             )}
                             onClick={() => {
                               setFocusIndex(leafRowIndex);

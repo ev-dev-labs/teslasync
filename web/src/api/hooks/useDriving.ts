@@ -32,6 +32,7 @@ import type {
   DriveDiagnosticWindow,
 } from '@/types/admin-diagnostics';
 import type { RoadAnomalyResponse } from '@/types/roadAnomalies';
+import { fetchWidgetHistory, widgetTimeBounds } from './_widgetHistory';
 
 /** Fetches paginated driving sessions for a vehicle, optionally filtered by date range. */
 export const getDrives = (vehicleId: number, limit = 50, offset = 0, start?: string, end?: string) => {
@@ -39,6 +40,26 @@ export const getDrives = (vehicleId: number, limit = 50, offset = 0, start?: str
   if (start) params.set('start', start)
   if (end) params.set('end', end)
   return request<ApiDrive[]>(`/drives?${params}`)
+}
+
+export function useDashboardDriveHistory(
+  vehicleId: number,
+  options: { kind: 'recent' | 'recent-list' | 'efficiency' | 'heatmap'; limit?: number; range?: string },
+) {
+  const suffix = options.kind === 'heatmap' ? 'speed-heatmap'
+    : options.kind === 'efficiency' ? 'efficiency-chart-60'
+    : `${options.kind}-${options.limit}`;
+  const completeRange = options.kind === 'efficiency' || options.kind === 'heatmap';
+  return useQuery({
+    queryKey: ['drives', vehicleId, suffix, ...(options.range !== undefined ? [options.range] : [])],
+    queryFn: ({ signal }) => fetchWidgetHistory<ApiDrive>(
+      vehicleId,
+      { limit: options.limit, range: options.range, completeRange },
+      (params) => request<ApiDrive[] | null>(`/drives?${params}`, { signal }),
+    ),
+    enabled: Number.isSafeInteger(vehicleId) && vehicleId > 0,
+    ...(completeRange ? { staleTime: 120_000 } : {}),
+  });
 }
 
 export const drivingKeys = {
@@ -298,20 +319,23 @@ export function useDrivetrainHealth(vehicleId?: string) {
  * Date-only bounds retain the endpoint's inclusive UTC-calendar semantics.
  * Omit both bounds for full history; a single bound is not supported.
  */
-export function useSpeedProfile(vehicleId?: string, start?: string, end?: string) {
+export function useSpeedProfile(vehicleId?: string, start?: string, end?: string, widgetRange?: string) {
   return useQuery({
-    queryKey: [...drivingKeys.speedProfile(vehicleId), start, end],
+    queryKey: widgetRange === undefined
+      ? [...drivingKeys.speedProfile(vehicleId), start, end]
+      : [...drivingKeys.speedProfile(vehicleId), 'widget-range', widgetRange],
     queryFn: ({ signal }) => {
-      if (start || end) {
-        if (!start || !end || !isDriveDateBound(start)
-          || !isDriveDateBound(end) || Date.parse(start) > Date.parse(end)) {
+      const bounds = widgetRange === undefined ? { start, end } : widgetTimeBounds(widgetRange);
+      if (bounds.start || bounds.end) {
+        if (!bounds.start || !bounds.end || !isDriveDateBound(bounds.start)
+          || !isDriveDateBound(bounds.end) || Date.parse(bounds.start) > Date.parse(bounds.end)) {
           throw new Error('Speed profile requires a valid start and end date range');
         }
       }
       if (!vehicleId) return request<SpeedProfileData>('/analytics/speed-profile', { signal });
       const params = new URLSearchParams({ vehicle_id: vehicleId });
-      if (start) params.set('start', start);
-      if (end) params.set('end', end);
+      if (bounds.start) params.set('start', bounds.start);
+      if (bounds.end) params.set('end', bounds.end);
       return request<SpeedProfileData>(`/analytics/speed-profile?${params}`, { signal });
     },
     enabled: !!vehicleId,
@@ -325,16 +349,25 @@ export function isDriveDateBound(value: string): boolean {
   return new Date(`${calendarDate}T00:00:00Z`).toISOString().slice(0, 10) === calendarDate;
 }
 
-export function useRegenEfficiency(vehicleId?: string, start?: string, end?: string, timezone?: string) {
+export function useRegenEfficiency(
+  vehicleId?: string,
+  start?: string,
+  end?: string,
+  timezone?: string,
+  widgetRange?: string,
+) {
   const { tz } = useDateFormat();
   const zone = timezone ?? tz;
   return useQuery({
-    queryKey: [...drivingKeys.regenEfficiency(vehicleId), start, end, zone],
+    queryKey: widgetRange === undefined
+      ? [...drivingKeys.regenEfficiency(vehicleId), start, end, zone]
+      : [...drivingKeys.regenEfficiency(vehicleId), 'widget-range', widgetRange, zone],
     queryFn: ({ signal }) => {
       if (!vehicleId) return request<RegenEfficiencyData>('/analytics/regen', { signal });
+      const bounds = widgetRange === undefined ? { start, end } : widgetTimeBounds(widgetRange);
       const params = new URLSearchParams({ vehicle_id: vehicleId });
-      if (start) params.set('start', start);
-      if (end) params.set('end', end);
+      if (bounds.start) params.set('start', bounds.start);
+      if (bounds.end) params.set('end', bounds.end);
       params.set('timezone', zone);
       return request<RegenEfficiencyData>(`/analytics/regen?${params}`, { signal });
     },
@@ -342,14 +375,17 @@ export function useRegenEfficiency(vehicleId?: string, start?: string, end?: str
   });
 }
 
-export function useRouteEfficiency(vehicleId?: string, start?: string, end?: string) {
+export function useRouteEfficiency(vehicleId?: string, start?: string, end?: string, widgetRange?: string) {
   return useQuery({
-    queryKey: [...drivingKeys.routeEfficiency(vehicleId), start, end],
+    queryKey: widgetRange === undefined
+      ? [...drivingKeys.routeEfficiency(vehicleId), start, end]
+      : [...drivingKeys.routeEfficiency(vehicleId), 'widget-range', widgetRange],
     queryFn: ({ signal }) => {
       if (!vehicleId) return request<RouteEfficiencyData>('/analytics/route-efficiency', { signal });
+      const bounds = widgetRange === undefined ? { start, end } : widgetTimeBounds(widgetRange);
       const params = new URLSearchParams({ vehicle_id: vehicleId });
-      if (start) params.set('start', start);
-      if (end) params.set('end', end);
+      if (bounds.start) params.set('start', bounds.start);
+      if (bounds.end) params.set('end', bounds.end);
       return request<RouteEfficiencyData>(`/analytics/route-efficiency?${params}`, { signal });
     },
     enabled: !!vehicleId,

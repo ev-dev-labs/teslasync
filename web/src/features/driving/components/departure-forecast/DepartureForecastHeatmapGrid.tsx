@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Text } from '@/components/ui';
+import { HeatmapCell, HeatmapLegend } from '@/components/charts';
 import { cn } from '@/lib/cn';
+import { createHeatmapScale } from '@/lib/heatmap';
 
 import type {
   DepartureForecast,
-  DepartureMatrixCell,
 } from '../../lib/departureForecast';
 import { departureWeekdayShortLabel } from './labels';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -15,32 +16,14 @@ interface DepartureForecastHeatmapGridProps {
   locale: string;
 }
 
-function cellClass(cell: DepartureMatrixCell, maximum: number): string {
-  if (!cell.supported) {
-    return 'border-dashed border-[var(--border-subtle)] bg-[var(--surface-1)] text-[var(--text-muted)]';
-  }
-  const ratio = maximum > 0 ? cell.p / maximum : 0;
-  if (ratio >= 0.8) {
-    return 'border-[var(--border-default)] bg-[color-mix(in_srgb,var(--text-secondary)_8%,var(--surface-1))] text-[var(--text-primary)]';
-  }
-  if (ratio >= 0.55) {
-    return 'border-[var(--border-default)] bg-[color-mix(in_srgb,var(--text-secondary)_6%,var(--surface-1))] text-[var(--text-primary)]';
-  }
-  if (ratio >= 0.3) {
-    return 'border-[var(--border-default)] bg-[color-mix(in_srgb,var(--text-secondary)_4%,var(--surface-1))] text-[var(--text-secondary)]';
-  }
-  return 'border-[var(--border-default)] bg-[color-mix(in_srgb,var(--text-secondary)_2%,var(--surface-1))] text-[var(--text-secondary)]';
-}
-
 export function DepartureForecastHeatmapGrid({
   forecast,
   locale,
 }: DepartureForecastHeatmapGridProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  const maximum = Math.max(
-    0,
-    ...forecast.rates.matrix
+  const scale = createHeatmapScale(
+    forecast.rates.matrix
       .flat()
       .filter((cell) => cell.supported)
       .map((cell) => cell.p),
@@ -119,23 +102,26 @@ export function DepartureForecastHeatmapGrid({
                       },
                     );
                 return (
-                  <div
+                  <HeatmapCell
                     key={cell.hour}
-                    title={title}
-                    className={cn(
-                      'flex h-9 items-center justify-center rounded-md border',
-                      cellClass(cell, maximum),
-                    )}
+                    label={title}
+                    level={cell.supported ? scale(cell.p) : null}
+                    className="flex h-9 items-center justify-center rounded-md"
                   >
-                    <Text as="span" variant="caption">
+                    <Text as="span" variant="caption" className="text-inherit">
                       {cell.supported ? fmtInt(cell.departures) : '·'}
                     </Text>
-                  </div>
+                  </HeatmapCell>
                 );
               })}
             </div>
           ))}
         </div>
+        <HeatmapLegend
+          label={t('departure.heatmap.legendIntensity', 'Color intensity follows supported modeled likelihood.')}
+          less={t('common.less', 'Less')}
+          more={t('common.more', 'More')}
+        />
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Badge variant="neutral">
             {t(

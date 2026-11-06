@@ -20,7 +20,7 @@ describe('parseGear', () => {
 describe('GEAR_COLORS', () => {
   it('has color for D', () => expect(GEAR_COLORS.D).toBe('text-emerald-300'))
   it('has color for R', () => expect(GEAR_COLORS.R).toBe('text-rose-300'))
-  it('has color for P', () => expect(GEAR_COLORS.P).toBe('text-cyan-300'))
+  it('has color for P', () => expect(GEAR_COLORS.P).toBe('text-status-activity'))
   it('has color for N', () => expect(GEAR_COLORS.N).toBe('text-amber-300'))
 })
 

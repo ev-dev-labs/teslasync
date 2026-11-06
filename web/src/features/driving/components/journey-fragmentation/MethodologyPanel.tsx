@@ -10,7 +10,7 @@ export function MethodologyPanel({ result }: JourneyFragmentationSectionProps) {
   return (
     <GlassPanel className="space-y-3 p-4 sm:p-5">
       <div className="flex items-start gap-3">
-        <BookOpen className="mt-0.5 h-5 w-5 shrink-0 text-cyan-300" aria-hidden="true" />
+        <BookOpen className="mt-0.5 h-5 w-5 shrink-0 text-theme-accent" aria-hidden="true" />
         <div>
           <Text as="h2" variant="panelTitle">{t('journeyFragmentation.method.title', 'Methodology and interpretation limits')}</Text>
           <Text as="p" variant="caption" className="mt-1">{t('journeyFragmentation.method.subtitle', 'A frozen, vehicle-local analysis of one returned history window.')}</Text>

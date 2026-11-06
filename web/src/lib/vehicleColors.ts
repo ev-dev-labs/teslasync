@@ -60,6 +60,11 @@ export type PaintPaletteId =
   | 'solid-black'
   | 'red-multicoat';
 
+export const VEHICLE_TWIN_MATERIAL_COLORS = {
+  glassReflection: 'rgba(95,120,150,0.4)',
+  headlightLens: 'rgba(90,115,145,0.85)',
+} as const;
+
 /**
  * The 5 stock Tesla paint colors, hand-tuned for the Digital Twin SVG.
  * Add new entries here and they automatically appear in the picker.

@@ -11,6 +11,7 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetBigNumber } from './shared';
 import { WidgetShell } from './WidgetShell';
 import { ChargeBatteryPack, ChargeMeter, useVerifiedChargeActivity } from './instruments/ChargeInstruments';
+import { ChargeStatusSummary } from './instruments/ChargeStatusSummary';
 import type { WidgetProps } from './types';
 
 /**
@@ -25,7 +26,7 @@ export function batteryColor(level: number | null | undefined): string {
   return gaugeTone.danger;
 }
 
-export default function BatteryGaugeWidget({ vehicleId }: WidgetProps) {
+export default function BatteryGaugeWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -38,10 +39,7 @@ export default function BatteryGaugeWidget({ vehicleId }: WidgetProps) {
   const batteryLevel = knownNumber(state?.battery_level);
   /* SI-floor: state.rated_range arrives in METERS; convert only for display. */
   const ratedRange = knownNumber(state?.rated_range);
-  // charge_limit_soc may be present on extended state payloads (same source
-  // BatteryLinearGaugeWidget reads). Validate it is a finite 0–100 number
-  // before use so a malformed field never leaks a NaN into the marker.
-  const chargeLimitRaw = (state as Record<string, unknown> | undefined)?.charge_limit_soc;
+  const chargeLimitRaw = state?.charge_limit_soc_pct;
   const chargeLimit =
     typeof chargeLimitRaw === 'number' && Number.isFinite(chargeLimitRaw) && chargeLimitRaw >= 0 && chargeLimitRaw <= 100
       ? chargeLimitRaw
@@ -63,33 +61,35 @@ export default function BatteryGaugeWidget({ vehicleId }: WidgetProps) {
       isError={isError}
       onRefresh={() => refetch()}
     >
-      <div className="flex min-w-0 flex-col gap-2">
+      {state && <ChargeStatusSummary charging={state.is_charging} active={active} limit={chargeLimit} />}
+      <div className="flex min-w-0 flex-col gap-1.5">
         {batteryLevel != null ? (
           <>
             <div className="flex min-w-0 items-center justify-between gap-3">
               <WidgetBigNumber value={batteryLevel} unit="%" decimals={0} animated={false} />
-              <ChargeBatteryPack level={batteryLevel} active={active} />
+              <ChargeBatteryPack level={batteryLevel} active={active} className={size.rows <= 2 ? 'w-20' : undefined} />
             </div>
             <ChargeMeter
               value={batteryLevel}
               label={t('widget.battery', 'Battery')}
               marker={chargeLimit}
+              showMarkerValue={false}
               markerLabel={chargeLimit != null ? t('widget.batteryGauge.limitMarker', 'Charge limit {{pct}}%', { pct: fmtNumber(chargeLimit, 0) }) : undefined}
               color={batteryColor(batteryLevel)}
               active={active}
             />
-            {state?.is_charging && (
-              <p className="text-xs leading-snug text-[var(--text-muted)]">
-                {remainingToLimit != null && remainingToLimit > 0
-                  ? t('widget.batteryGauge.chargingToLimit', 'Charging · +{{pct}}% to limit', { pct: remainingToLimit })
-                  : t('widget.charging', 'Charging')}
-              </p>
-            )}
-            {rangeText != null && (
-              <p className="text-xs leading-snug text-[var(--text-muted)]">
-                {t('widget.batteryGauge.range', '{{range}} range', { range: rangeText })}
-              </p>
-            )}
+            <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1">
+              {state?.is_charging && remainingToLimit != null && remainingToLimit > 0 && (
+                <p className="text-xs leading-snug text-[var(--text-muted)]">
+                  {t('widget.batteryGauge.chargingToLimit', 'Charging · +{{pct}}% to limit', { pct: remainingToLimit })}
+                </p>
+              )}
+              {rangeText != null && (
+                <p className="text-xs leading-snug text-[var(--text-muted)]">
+                  {t('widget.batteryGauge.range', '{{range}} range', { range: rangeText })}
+                </p>
+              )}
+            </div>
           </>
         ) : state ? (
           <WidgetBigNumber value={null} label={t('widget.battery', 'Battery')} />

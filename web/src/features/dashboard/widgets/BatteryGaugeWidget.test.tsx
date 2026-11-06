@@ -107,7 +107,7 @@ function makeStateMissingLevel(): VehicleState {
 
 /** A state object with an extra (untyped) `charge_limit_soc` field attached. */
 function makeStateWithLimit(limit: unknown, over: Partial<VehicleState> = {}): VehicleState {
-  return { ...makeState(over), charge_limit_soc: limit } as unknown as VehicleState;
+  return { ...makeState(over), charge_limit_soc_pct: limit } as unknown as VehicleState;
 }
 
 /** Metres in one mile, for building SI rated-range fixtures. */
@@ -312,7 +312,7 @@ describe('BatteryGaugeWidget — populated', () => {
     expect(screen.getByText('64')).toBeInTheDocument();
     expect(screen.getByText('Charging · +16% to limit')).toBeInTheDocument();
     expect(screen.getByText('172 mi range')).toBeInTheDocument();
-    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByText('Charge limit 80%')).toBeInTheDocument();
     const marker = container.querySelector('[data-testid="gauge-marker"]');
     expect(marker).not.toBeNull();
     expect(marker).toHaveStyle({ left: '80%' });

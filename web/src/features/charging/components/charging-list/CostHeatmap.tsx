@@ -4,11 +4,12 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { Clock } from 'lucide-react';
 import { Accordion, Caption, GlassPanel, PanelTitle, Table } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
+import { HeatmapLegend } from '@/components/charts';
 import { DAYS } from '@/lib/constants';
 import { safeNumber } from '@/lib/numberFormat';
 import type { ChargingOptimizerData, OptimizerHeatmapEntry } from '@/types/charging';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { chartTokens } from '@/lib/tokens';
+import { heatmapColor, type HeatmapLevel } from '@/lib/heatmap';
 
 interface CostHeatmapProps {
   heatmap: ChargingOptimizerData['weekly_heatmap'];
@@ -18,25 +19,17 @@ interface CostHeatmapProps {
 /** Hours of the day (0..23) — hoisted so the array identity is stable per render. */
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 
-/** Legend stops (low → high cost) that sample the {@link heatFill} scale. */
-const LEGEND_STOPS = [0.15, 0.3, 0.5, 0.7, 0.9] as const;
-
 /** Default upper bound for the cost colour scale when no peak rate is known. */
 const DEFAULT_MAX_COST = 0.3;
 
 /**
- * Cost intensity (0 = cheap, 1 = expensive) → theme-aware fill at the given alpha.
- * The output is a data-driven value consumed by an inline `style` (dynamic
- * values are the sanctioned exception to the no-inline-style rule — a static
- * className cannot express a continuous scale). Both inputs are `safeNumber`-
- * guarded and clamped to [0, 1] so dirty upstream data (NaN, negatives,
- * out-of-range) can never emit an invalid colour string.
+ * Cost intensity remains relative to the configured peak rate. Positive
+ * evidence uses opaque levels, never lower contrast for fewer sessions.
  */
 export function heatFill(intensity: number, alpha: number): string {
   const t = Math.max(0, Math.min(1, safeNumber(intensity)));
   const a = Math.max(0, Math.min(1, safeNumber(alpha)));
-  const scale = `color-mix(in srgb, ${chartTokens.series[1]} ${(1 - t) * 100}%, ${chartTokens.series[3]})`;
-  return `color-mix(in srgb, ${scale} ${a * 100}%, var(--surface-2))`;
+  return heatmapColor(a === 0 ? 0 : Math.min(4, 1 + Math.floor(t * 4)) as HeatmapLevel);
 }
 
 export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
@@ -118,16 +111,11 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
                 </div>
               ))}
             </div>
-            {/* Legend */}
-            <div className="flex items-center justify-end gap-2 mt-2">
-              <Caption>{t('charging.optimizer.cheap', 'Cheap')}</Caption>
-              <div className="flex gap-0.5" aria-hidden="true">
-                {LEGEND_STOPS.map((o, i) => (
-                  <div key={i} className="w-3 h-3 rounded-sm" style={{ backgroundColor: heatFill(o, 0.6) }} />
-                ))}
-              </div>
-              <Caption>{t('charging.optimizer.expensive', 'Expensive')}</Caption>
-            </div>
+            <HeatmapLegend
+              label={chartLabel}
+              less={t('charging.optimizer.cheap', 'Cheap')}
+              more={t('charging.optimizer.expensive', 'Expensive')}
+            />
           </div>
         </div>
             <Accordion

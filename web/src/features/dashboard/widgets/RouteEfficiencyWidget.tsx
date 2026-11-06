@@ -24,14 +24,14 @@ function efficiencyBadge(
   return { text: t('widget.routeEfficiency.poor', 'Poor'), variant: 'error' };
 }
 
-export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) {
+export default function RouteEfficiencyWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vehicleIdStr = vid != null ? String(vid) : undefined;
 
-  const query = useRouteEfficiency(vehicleIdStr);
+  const query = useRouteEfficiency(vehicleIdStr, undefined, undefined, config?.timeRange);
   const { data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
   const trust = useDataState({ ...query, data: data ?? undefined }, { provenance: 'historical' });
 

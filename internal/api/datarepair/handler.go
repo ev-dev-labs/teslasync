@@ -48,10 +48,16 @@ type driveRepository interface {
 	DeleteWithTx(ctx context.Context, tx database.DBTX, id int64) (bool, error)
 }
 
+type correctionSourceRepository interface {
+	GetSource(context.Context, database.DBTX, datarepairdb.AnomalyKind, int64, bool) (*datarepairdb.CorrectionSource, error)
+	HasBoundaryOverlap(context.Context, database.DBTX, datarepairdb.CorrectionSource, time.Time) (bool, error)
+}
+
 // Compile-time assertions that the production repos satisfy the narrow ports.
 var (
-	_ chargingRepository = (*chargingdb.ChargingRepo)(nil)
-	_ driveRepository    = (*drivedb.DriveRepo)(nil)
+	_ chargingRepository         = (*chargingdb.ChargingRepo)(nil)
+	_ driveRepository            = (*drivedb.DriveRepo)(nil)
+	_ correctionSourceRepository = (*datarepairdb.CorrectionRepo)(nil)
 )
 
 // clockFunc supplies the current time. Injected so tests can pin the
@@ -73,11 +79,12 @@ var errRepairTargetChanged = errors.New("data-repair target changed during mutat
 //     auto-applied: the operator has to call one of these with an id they
 //     reviewed.
 type DataRepairHandler struct {
-	chargingRepo chargingRepository
-	driveRepo    driveRepository
-	caseRepo     CaseRepository
-	scanner      ScannerService
-	clock        clockFunc
+	chargingRepo   chargingRepository
+	driveRepo      driveRepository
+	correctionRepo correctionSourceRepository
+	caseRepo       CaseRepository
+	scanner        ScannerService
+	clock          clockFunc
 
 	// diagnosis is the read-only evidence source behind GetSuggestions and the
 	// re-validation the apply path performs. Nil when the composition root has
@@ -132,9 +139,10 @@ func WithScanner(scanner ScannerService) Option {
 
 func NewDataRepairHandler(db *database.DB, opts ...Option) *DataRepairHandler {
 	h := &DataRepairHandler{
-		chargingRepo: chargingdb.NewChargingRepo(db),
-		driveRepo:    drivedb.NewDriveRepo(db),
-		db:           db,
+		chargingRepo:   chargingdb.NewChargingRepo(db),
+		driveRepo:      drivedb.NewDriveRepo(db),
+		correctionRepo: datarepairdb.NewCorrectionRepo(db),
+		db:             db,
 	}
 	if db != nil {
 		h.caseRepo = datarepairdb.NewCaseRepo(db)

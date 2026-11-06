@@ -313,7 +313,7 @@ describe('ChargingSessionDetailWidget — duration formatting', () => {
 
 describe('ChargingSessionDetailWidget — charger classification', () => {
   it.each([
-    { chargerType: 'AC', label: 'AC / home' },
+    { chargerType: 'AC', label: 'AC' },
     { chargerType: 'DC', label: 'DC fast' },
     { chargerType: null, label: 'Unknown' },
   ].flatMap(source => [1, 2, 3].map(cols => ({ ...source, cols }))))(
@@ -384,7 +384,7 @@ describe('ChargingSessionDetailWidget — charger classification', () => {
 
   it('does not infer Supercharger from a Tesla-branded wall connector', () => {
     renderCompactWithCharger('Tesla Wall connector');
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText('AC')).toBeInTheDocument();
     expect(screen.queryByText('Supercharger')).not.toBeInTheDocument();
   });
 
@@ -473,7 +473,7 @@ describe('ChargingSessionDetailWidget — formatted axis fitting', () => {
     }));
     renderWidget({ cols: 1, rows: 2 });
     expect(screen.getByText('25.0')).toBeInTheDocument();
-    expect(screen.getByText('AC / home')).toBeInTheDocument();
+    expect(screen.getByText('AC')).toBeInTheDocument();
     expect(axisMock).not.toHaveBeenCalled();
     expect(HTMLCanvasElement.prototype.getContext).not.toHaveBeenCalled();
   });

@@ -59,7 +59,7 @@ export function TestTargetFields({ controller }: { controller: AlertRuleEditorCo
                       aria-pressed={isSelected}
                       className={cn(
                         'h-auto rounded-lg border px-3 py-1.5 text-xs transition-colors',
-                        isSelected ? 'border-neon-cyan/30 bg-neon-cyan/10 text-cyan-300'
+                        isSelected ? 'border-theme-accent/30 bg-theme-accent/10 text-theme-accent'
                           : 'border-[var(--border-subtle)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--border-strong)]',
                       )}
                       onClick={() => handleToggleTestChannel(ch.id)}

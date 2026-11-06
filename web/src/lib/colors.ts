@@ -128,20 +128,18 @@ export const CHART_COLORS_NEON_DARK = [
 
 export const CHART_SEQUENTIAL = [
   '#e7eef8',
-  '#a9c7ee',
-  '#5c9bdc',
-  '#1779e1',
-  '#125db0',
-  '#0b3d78',
+  '#5985ad',
+  '#366991',
+  '#214d74',
+  '#102f50',
 ] as const
 
 export const CHART_SEQUENTIAL_DARK = [
   '#17304f',
-  '#224b70',
-  '#2d6696',
-  '#1779e1',
-  '#65a7fa',
-  '#b0cdf8',
+  '#6d9fc9',
+  '#8ab3d5',
+  '#b0d1ea',
+  '#d9eafa',
 ] as const
 
 export const CHART_DIVERGING = [
@@ -207,8 +205,12 @@ export const CHARGER_COLORS: Record<string, string> = {
   supercharger: CHART_SEMANTIC.charger.supercharger,
   dc: CHART_SEMANTIC.charger.dc,
   home: CHART_SEMANTIC.charger.home,
+  ac: CHART_SEMANTIC.charger.work,
+  unknown: CHART_SEMANTIC.charger.other,
   // Display-name keys (CostAnalysis page)
   Home: CHART_SEMANTIC.charger.home,
+  AC: CHART_SEMANTIC.charger.work,
+  Unknown: CHART_SEMANTIC.charger.other,
   Supercharger: CHART_SEMANTIC.charger.supercharger,
   'Public DC': CHART_SEMANTIC.charger.dc,
   'Work / L2': CHART_SEMANTIC.charger.work,
@@ -250,6 +252,13 @@ export const DATA_VISUAL_COLORS = {
   canvasAurora: '#123220',
   canvasEmber: '#3a2a0b',
   glassWash: 'rgba(255,255,255,0.04)',
+} as const
+
+/** External provider identities are not application accent colors. */
+export const CHANNEL_BRAND_COLORS = {
+  discord: '#5865F2',
+  telegram: '#0088cc',
+  pushover: '#249DF1',
 } as const
 
 /** Battery health colors */

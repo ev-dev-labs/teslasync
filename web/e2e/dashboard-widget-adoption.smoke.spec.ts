@@ -22,7 +22,7 @@ import { assertCatalogueCountReference } from './dashboardCatalogueCountReferenc
 import { assertCataloguePressureParity } from './dashboardCataloguePressureParity';
 import { assertCatalogueHeaderCollision } from './dashboardCatalogueHeaderCollision';
 import { compactDrivingReadings, drivingReadings } from './dashboardCatalogueDrivingFixtures';
-import { assertCatalogueAffectedAxes, assertCatalogueAllocation, assertSpeedProfileTickBounds, assertTwinWheelAndPhotoGeometry, catalogueVerticalGap, installCataloguePhotoSource } from './dashboardCatalogueGeometry';
+import { assertCatalogueAffectedAxes, assertCatalogueAllocation, assertSpeedProfileTickBounds, assertTwinWheelAndPhotoGeometry, catalogueRenderedColumns, catalogueVerticalGap, installCataloguePhotoSource } from './dashboardCatalogueGeometry';
 import {
   assertRemainingContent, geometrySourceIDs, installRemainingCatalogueSources,
   remainingBatches, remainingCompactReadings, remainingReadings,
@@ -402,8 +402,8 @@ for (const [batch, ids] of Object.entries(batches)) {
             for (const [label, value] of [
               ['Vehicles', /^Vehicles\s*1$/],
               ['online', /^online\s*1$/],
-              ['Distance (30d)', /^Distance \(30d\)\s*300\s*km$/],
-              ['Energy (30d)', /^Energy \(30d\)\s*42\.0\s*kWh$/],
+              ['Distance (view range)', /^Distance \(view range\)\s*300\s*km$/],
+              ['Energy (view range)', /^Energy \(view range\)\s*42\.0\s*kWh$/],
             ] as const) {
               const metric = totals.getByText(label, { exact: true }).locator('xpath=../..');
               await expect(metric).toBeVisible();
@@ -440,7 +440,7 @@ for (const [batch, ids] of Object.entries(batches)) {
           const def = getWidgetDef(widget.widgetId);
           if (!def) throw new Error(`Missing axis contract registry entry: ${widget.widgetId}`);
           await assertCatalogueAffectedAxes(panel, widget.widgetId, {
-            cols: Math.min(width === 390 ? 1 : 4, batch === 'axis-wide-dynamics' ? 3 : def.defaultSize.cols),
+            cols: await catalogueRenderedColumns(panel),
             rows: def.defaultSize.rows,
           }, test.info());
           if (widget.widgetId === 'speed-profile' && width === 1440) {

@@ -6,6 +6,7 @@ import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { useAsOfDate, AS_OF_QUERY_PARAM } from '@/hooks/useAsOfDate';
+import { widgetTimeBounds } from './_widgetHistory';
 import type {
   EnergyStats,
   BatteryHealth,
@@ -97,17 +98,26 @@ export interface BatteryHealthWindow {
   end: string;
 }
 
-export function useBatteryHealthAnalytics(vehicleId: string | null, window?: BatteryHealthWindow) {
-  const params = new URLSearchParams({ vehicle_id: vehicleId ?? '' });
-  if (window) {
-    params.set('start', window.start);
-    params.set('end', window.end);
-  }
+export function useBatteryHealthAnalytics(
+  vehicleId: string | null,
+  window?: BatteryHealthWindow,
+  widgetRange?: string,
+) {
   return useQuery({
-    queryKey: window
-      ? ['battery-health-analytics', vehicleId, window.start, window.end]
-      : ['battery-health-analytics', vehicleId],
-    queryFn: ({ signal }) => request<BatteryHealthAnalytics>(`/analytics/battery-health?${params.toString()}`, { signal }),
+    queryKey: widgetRange !== undefined
+      ? ['battery-health-analytics', vehicleId, 'widget-range', widgetRange]
+      : window
+        ? ['battery-health-analytics', vehicleId, window.start, window.end]
+        : ['battery-health-analytics', vehicleId],
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams({ vehicle_id: vehicleId ?? '' });
+      const bounds = widgetRange === undefined ? window : widgetTimeBounds(widgetRange);
+      if (bounds) {
+        params.set('start', bounds.start);
+        params.set('end', bounds.end);
+      }
+      return request<BatteryHealthAnalytics>(`/analytics/battery-health?${params.toString()}`, { signal });
+    },
     enabled: vehicleId !== null,
     staleTime: STALE_TIMES.ANALYTICS,
     retry: false,

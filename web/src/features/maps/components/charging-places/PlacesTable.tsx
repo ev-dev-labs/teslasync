@@ -300,7 +300,7 @@ export function PlacesTable({
   return (
     <LayoutCard title={t('chargingPlaces.table.title', 'Place directory')} actions={
       <>
-        <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <MapPin className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         <Badge variant="neutral" size="sm">
           {state.hasData ? rows.length : '—'}
         </Badge>

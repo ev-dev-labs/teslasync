@@ -103,6 +103,7 @@ interface Opts {
   config?: WidgetConfig;
   vehicles?: Vehicle[];
   widgetId?: string;
+  defId?: string;
 }
 
 function setup(o: Opts = {}) {
@@ -111,6 +112,7 @@ function setup(o: Opts = {}) {
   const onSave = vi.fn();
   const widget = makeWidget(o.config, o.widgetId);
   const def = makeDef(o.category ?? 'battery', o.name ?? 'Battery');
+  if (o.defId) def.id = o.defId;
   const utils = render(
     <StrictMode>
       <WidgetSettingsModal
@@ -235,13 +237,40 @@ describe('WidgetSettingsModal — time range', () => {
     expect(screen.queryByRole('combobox', { name: 'Time range' })).toBeNull();
   });
 
-  it('defaults the time range to 7d and commits a change', () => {
+  it('uses the widget default until a time range is selected', () => {
     const { onSave } = setup({ category: 'driving' });
     const select = selectByLabel('Time range');
-    expect(select.value).toBe('7d');
+    expect(select.value).toBe('default');
     fireEvent.change(select, { target: { value: '30d' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(committed(onSave).timeRange).toBe('30d');
+  });
+
+  it('explains that fixed-period widgets do not change their source window', () => {
+    setup({ category: 'battery' });
+    expect(screen.getByText('This widget uses live data, a fixed period, or the workspace range; changing this selection does not change its data.')).toBeInTheDocument();
+  });
+
+  it('explains the historical range and record limits for supported widgets', () => {
+    setup({ category: 'driving', defId: 'recent-drives' });
+    expect(screen.getByText('Filters historical data by a rolling range. Recent lists and session charts also limit the number of records shown.')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['driving', 'speed-profile'],
+    ['driving', 'regen-efficiency'],
+    ['driving', 'route-efficiency'],
+    ['battery', 'battery-health-analytics'],
+  ] as const)('describes the historical range for %s widget %s', (category, defId) => {
+    setup({ category, defId });
+    expect(screen.getByText('Filters historical data by a rolling range. Recent lists and session charts also limit the number of records shown.')).toBeInTheDocument();
+  });
+
+  it('clears a saved range when the widget default is selected', () => {
+    const { onSave } = setup({ category: 'driving', config: { timeRange: '30d' } });
+    fireEvent.change(selectByLabel('Time range'), { target: { value: 'default' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(committed(onSave).timeRange).toBeUndefined();
   });
 });
 
@@ -315,7 +344,7 @@ describe('WidgetSettingsModal — hardening', () => {
     setup({ category: 'battery', config: undefined });
     expect(selectByLabel('Vehicle').value).toBe('all');
     expect(selectByLabel('Refresh interval').value).toBe('default');
-    expect(selectByLabel('Time range').value).toBe('7d');
+    expect(selectByLabel('Time range').value).toBe('default');
     expect(screen.getByRole('switch', { name: 'Show widget title' })).toHaveAttribute(
       'aria-checked',
       'true',

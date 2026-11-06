@@ -1,6 +1,6 @@
 import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from 'react'
 import { cn } from '@/lib/cn'
-import { neonColorMap, type NeonColor } from '@/lib/tokens'
+import type { NeonColor } from '@/lib/tokens'
 import { Text, Caption } from './Typography'
 
 export interface RadioCardProps
@@ -11,7 +11,7 @@ export interface RadioCardProps
   description?: ReactNode
   /** Optional leading icon. */
   icon?: ReactNode
-  /** Accent identity for the checked indicator. Defaults to the app cyan. */
+  /** @deprecated The checked indicator follows the user's accent. */
   accent?: NeonColor
   /** Controlled selected state. */
   checked: boolean
@@ -34,7 +34,7 @@ export const RadioCard = forwardRef<HTMLInputElement, RadioCardProps>(
       label,
       description,
       icon,
-      accent = 'cyan',
+      accent: _accent,
       checked,
       onChange,
       className,
@@ -49,10 +49,6 @@ export const RadioCard = forwardRef<HTMLInputElement, RadioCardProps>(
     const autoId = useId()
     const inputId = id ?? autoId
     const descriptionId = description != null ? `${inputId}-description` : undefined
-    // Fall back to the documented cyan default if an out-of-contract accent
-    // reaches us from an untyped (JS) caller. A shared primitive must never
-    // hard-crash the page on `neonColorMap[bad].border` — degrade instead.
-    const c = neonColorMap[accent] ?? neonColorMap.cyan
     return (
       <label htmlFor={inputId} className={cn('block min-w-0', disabled ? 'cursor-not-allowed' : 'cursor-pointer', className)}>
         <input
@@ -85,14 +81,14 @@ export const RadioCard = forwardRef<HTMLInputElement, RadioCardProps>(
             aria-hidden="true"
             className={cn(
               'mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors duration-fast motion-reduce:transition-none',
-              checked ? c.text : 'text-[var(--text-secondary)]',
+              checked ? 'text-[var(--theme-primary)]' : 'text-[var(--text-secondary)]',
               'border-current forced-colors:text-[ButtonText]',
             )}
           >
             <span
               className={cn(
                 'h-1.5 w-1.5 rounded-full',
-                checked ? cn(c.dot, 'forced-colors:bg-[ButtonText]') : 'bg-transparent',
+                checked ? 'bg-[var(--theme-primary)] forced-colors:bg-[ButtonText]' : 'bg-transparent',
               )}
             />
           </span>

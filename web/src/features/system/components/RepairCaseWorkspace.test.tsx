@@ -499,7 +499,7 @@ describe('RepairCaseWorkspace dismiss scope', () => {
     rerender(<RepairCaseWorkspace vehicleId={4} canWrite />);
 
     expect(await screen.findByText(
-      'Retained source: /data-repair/cases?vehicle_id=3&status=open&limit=50',
+      'Retained source: /data-repair/cases?vehicle_id=3&status=active&limit=50',
     )).toBeInTheDocument();
     expect(screen.getByText('Retained source: /data-repair/cases/stats?vehicle_id=3'))
       .toBeInTheDocument();

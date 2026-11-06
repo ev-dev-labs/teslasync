@@ -11,6 +11,7 @@ import { convertEnergyFromSI } from '@/lib/unitConversion';
 import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, WeeklyDigestData, MonthlyMileageBucket, MonthlyMileageResponse, DailyMileageBucket, DailyMileageResponse, TcoLedgerResponse, TcoLedgerCreate, TcoLedgerEntry } from '@/types/analytics';
 import { FSD_DEFAULT_PERIOD_DAYS, type FsdInsights } from '@/types/fsd';
 import type { FleetAnalytics } from '@/api/types';
+import { widgetTimeBounds } from './_widgetHistory';
 
 export const analyticsKeys = {
   summary: (days: number) => ['analytics', 'summary', days] as const,
@@ -62,22 +63,31 @@ export function useAnalyticsSummary(days = 30) {
  * query errors. Refetch retries this fleet source, not unrelated page queries.
  */
 export function useFleetAnalytics(
-  arg: number | { days?: number; start?: string; end?: string } = {},
+  arg: number | { days?: number; start?: string; end?: string; widgetRange?: string } = {},
   startLegacy?: string,
 ) {
-  const opts: { days?: number; start?: string; end?: string } =
+  const opts: { days?: number; start?: string; end?: string; widgetRange?: string } =
     typeof arg === 'number' ? { days: arg, start: startLegacy } : arg;
 
   const params = new URLSearchParams();
   if (opts.start) params.set('start', opts.start);
   if (opts.end) params.set('end', opts.end);
   if (!opts.start && !opts.end && opts.days != null) params.set('days', String(opts.days));
-  const qs = params.toString();
-
   return useQuery({
-    queryKey: analyticsKeys.fleet(opts.days, opts.start, opts.end),
-    queryFn: ({ signal }) =>
-      request<FleetAnalytics>(qs ? `/analytics/fleet?${qs}` : '/analytics/fleet', { signal }),
+    queryKey: opts.widgetRange === undefined
+      ? analyticsKeys.fleet(opts.days, opts.start, opts.end)
+      : ['analytics', 'fleet', 'widget-range', opts.widgetRange],
+    queryFn: ({ signal }) => {
+      const requestParams = new URLSearchParams(params);
+      if (opts.widgetRange !== undefined) {
+        const bounds = widgetTimeBounds(opts.widgetRange);
+        requestParams.delete('days');
+        requestParams.set('start', bounds.start);
+        requestParams.set('end', bounds.end);
+      }
+      const qs = requestParams.toString();
+      return request<FleetAnalytics>(qs ? `/analytics/fleet?${qs}` : '/analytics/fleet', { signal });
+    },
   });
 }
 

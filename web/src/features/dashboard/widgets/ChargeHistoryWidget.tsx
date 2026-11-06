@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import { BarChart3 } from 'lucide-react';
 import {
   Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -8,12 +7,11 @@ import {
   Cell, useMeasuredAxisWidth,
 } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { request } from '@/api/client';
+import { useDashboardChargingHistory } from '@/api/hooks/useCharging';
 import { deriveDataState, knownNumber, sumKnown } from '@/api/dataState';
 import { WidgetBigNumber, WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import type { ChargingSession } from '@/api/types';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -21,7 +19,7 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { classifyChargingSource } from '@/lib/chargerKind';
 import { CHARGER_COLORS } from '@/lib/colors';
 
-export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
+export default function ChargeHistoryWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtNumber: fmt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const vehiclesQuery = useVehicles();
@@ -30,11 +28,7 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { unitPrefs } = useUnits();
   const { formatDateShort } = useDateFormat();
 
-  const query = useQuery({
-    queryKey: ['charging', id, 'recent-10'],
-    queryFn: () => request<ChargingSession[]>(`/charging?vehicle_id=${id}&limit=10`),
-    enabled: id > 0,
-  });
+  const query = useDashboardChargingHistory(id, { kind: 'recent', range: config?.timeRange });
   const { data: charges, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
 
   const chartData = useMemo(
@@ -46,7 +40,7 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
         .map((s) => ({
           started_at: s.started_at,
           energy: knownNumber(s.total_energy_added_wh) == null ? null : convertEnergyFromSI(s.total_energy_added_wh, unitPrefs.energy),
-          type: classifyChargingSource(s.charger_type),
+          type: classifyChargingSource(s),
         })),
     [charges, unitPrefs.energy],
   );
@@ -126,6 +120,7 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
         yAxisLabel={undefined}
         legend={[
           { label: t('widget.chargeHistory.home', 'Home'), color: CHARGER_COLORS.home },
+          { label: t('dashboard.chargerAc', 'AC'), color: CHARGER_COLORS.ac },
           { label: t('widget.chargeHistory.supercharger', 'Supercharger'), color: CHARGER_COLORS.supercharger },
           { label: t('widget.chargeHistory.dcFast', 'DC fast'), color: CHARGER_COLORS.dc },
         ]}
@@ -152,13 +147,18 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
                 <YAxis tick={{ ...axisTickSm, width: undefined }} tickLine={false} axisLine={false} width={axisWidth} tickFormatter={(v: number) => `${fmt(v)} ${unitPrefs.energy}`} />
                 <Tooltip content={<ChartTooltip />} formatter={(value: number, _name: string, props: { payload?: { type?: string } }) => [
                   knownNumber(value) == null ? '—' : `${fmt(value)} ${unitPrefs.energy}`,
-                  t(`widget.chargeHistory.type.${props.payload?.type ?? 'unknown'}`, props.payload?.type === 'supercharger' ? 'Supercharger' : props.payload?.type === 'dcFast' ? 'DC fast' : props.payload?.type === 'acHome' ? 'Home' : 'Unknown'),
+                  props.payload?.type === 'supercharger' ? t('widget.chargeHistory.supercharger', 'Supercharger')
+                    : props.payload?.type === 'dcFast' ? t('widget.chargeHistory.dcFast', 'DC fast')
+                    : props.payload?.type === 'acHome' ? t('widget.chargeHistory.home', 'Home')
+                    : props.payload?.type === 'ac' ? t('dashboard.chargerAc', 'AC')
+                    : t('common.unknown', 'Unknown'),
                 ]} cursor={{ fill: 'var(--border-subtle)', fillOpacity: 0.08 }} />
                 <Bar dataKey="energy" name={unitPrefs.energy} radius={[4, 4, 0, 0]} maxBarSize={32}>
                   {chartData.map((datum, index) => {
                     const color = datum.type === 'supercharger' ? CHARGER_COLORS.supercharger
                       : datum.type === 'dcFast' ? CHARGER_COLORS.dc
                       : datum.type === 'acHome' ? CHARGER_COLORS.home
+                      : datum.type === 'ac' ? CHARGER_COLORS.ac
                       : CHARGER_COLORS.Other;
                     return <Cell key={index} fill={color} />;
                   })}

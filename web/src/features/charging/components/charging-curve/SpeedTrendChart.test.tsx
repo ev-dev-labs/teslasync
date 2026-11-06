@@ -101,7 +101,7 @@ function makeSession(overrides: Partial<ChargingSession> = {}): ChargingSession 
     start_place: null,
     total_energy_added_wh: 42_500,
     peak_power_w: 150_000,
-    avg_power_w: 90_000,
+    avg_power_w: null,
     cost_decimal: null,
     cost_currency: null,
     charger_type: null,

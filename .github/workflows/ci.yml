@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
     inputs:
       runner:
@@ -29,6 +31,15 @@ env:
   FRONTEND_SHARDS: '8'
 
 jobs:
+  workflow-lint:
+    name: GitHub Actions workflow lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run actionlint
+        # actionlint v1.7.12 predates GitHub's supported concurrency queue key.
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -ignore 'unexpected key "queue" for "concurrency" section' .github/workflows/*.yml
+
   generated:
     name: Generated artifacts are current
     # CLEAN-05: proves every committed generated file is reproducible from its
@@ -430,6 +441,26 @@ jobs:
         run: |
           python3 -c 'import json, os; results = json.loads(os.environ["RESULTS"]); print(results); assert all(job["result"] == "success" for job in results.values()), "A required frontend job failed, was cancelled, or was skipped"'
 
+  docs:
+    name: Docs (build + asset validation)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+      - run: npm ci --legacy-peer-deps
+        working-directory: docs
+      - name: Build docs
+        env:
+          DOCS_BASE: /
+        run: npm run docs:build
+        working-directory: docs
+      - name: Verify custom-domain asset paths
+        run: node docs/scripts/verify-pages-assets.mjs
+
   docker:
     name: Docker · ${{ matrix.image }}
     # Build on independent runners alongside the test shards. The final CI
@@ -514,9 +545,9 @@ jobs:
           echo "unversioned web image reports dev-${PKG_VERSION} (unparseable → handshake verdict 'unknown')"
 
   ci-gate:
-    name: CI (generated + backend + frontend + Docker)
+    name: CI (all checks)
     if: always()
-    needs: [generated, backend, frontend, docker]
+    needs: [workflow-lint, generated, backend, frontend, docs, docker]
     runs-on: ubuntu-latest
     steps:
       - name: Require every CI job

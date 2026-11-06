@@ -106,7 +106,7 @@ import { ChargingSessionCard, getChargerCategory, formatDuration } from './Charg
 
 type CardProps = ComponentProps<typeof ChargingSessionCard>;
 
-/** Build one charging session; defaults describe a completed 30-min AC charge. */
+/** Build a completed 30-minute DC charge with no retained brand. */
 function makeSession(over: Partial<ChargingSession> = {}): ChargingSession {
   return {
     id: 1,
@@ -126,7 +126,7 @@ function makeSession(over: Partial<ChargingSession> = {}): ChargingSession {
     avg_power_w: null,
     cost_decimal: null,
     cost_currency: null,
-    charger_type: null, // null → 'home' category
+    charger_type: null,
     cable_type: null,
     startedAt: '2024-06-01T12:00:00Z',
     duration_min: 30,
@@ -154,10 +154,10 @@ function renderCard(over: Partial<CardProps> = {}) {
 
 describe('getChargerCategory (re-export)', () => {
   it('classifies raw charger_type strings into coarse categories', () => {
-    expect(getChargerCategory(null)).toBe('home'); // null historically means home AC
+    expect(getChargerCategory(null)).toBe('unknown');
     expect(getChargerCategory('Tesla Supercharger')).toBe('supercharger');
     expect(getChargerCategory('CCS')).toBe('dc');
-    expect(getChargerCategory('Wall Connector')).toBe('home');
+    expect(getChargerCategory('Wall Connector')).toBe('ac');
     expect(getChargerCategory('mystery-plug')).toBe('unknown');
   });
 });
@@ -172,6 +172,20 @@ describe('formatDuration (re-export)', () => {
 });
 
 describe('ChargingSessionCard — primary line + badges', () => {
+  it('shows live progress, current power and an explicit rate estimate', () => {
+    renderCard({ session: makeSession({
+      live: true, ended_at: null, duration_s: 1200, charger_type: 'AC', is_home: true,
+      peak_power_w: 11000, current_power_w: 9000, total_energy_added_wh: 3000,
+      end_soc_pct: 50, cost_decimal: 0.9, cost_source: 'default_estimate',
+    }) });
+    expect(screen.getByText('Charging')).toBeInTheDocument();
+    expect(screen.getByText('Home / AC')).toBeInTheDocument();
+    expect(screen.getAllByText('20m').length).toBeGreaterThan(0);
+    expect(screen.getByText(/kW now/)).toBeInTheDocument();
+    expect(screen.getByText(/\(estimated\)/)).toBeInTheDocument();
+    expect(screen.queryByText('Free')).not.toBeInTheDocument();
+  });
+
   it('renders the charger label, energy badge, score and a link to the detail page', () => {
     renderCard({ session: makeSession({ charger_type: 'Tesla Supercharger' }) });
 
@@ -193,7 +207,7 @@ describe('ChargingSessionCard — primary line + badges', () => {
       session: makeSession({ charger_type: null, cost_decimal: 0, total_energy_added_wh: 12_000 }),
     });
 
-    expect(screen.getByText('Home / AC')).toBeInTheDocument();
+    expect(screen.getByText('DC fast')).toBeInTheDocument();
     expect(screen.getByText('Free')).toBeInTheDocument();
   });
 
@@ -208,19 +222,19 @@ describe('ChargingSessionCard — primary line + badges', () => {
     expect(screen.queryByText('Free')).toBeNull();
     expect(screen.queryByText(fmtWithUnit(0, 'kWh'))).toBeNull();
     // The charger label still renders — the primary line is never blank.
-    expect(screen.getByText('Home / AC')).toBeInTheDocument();
+    expect(screen.getByText('DC fast')).toBeInTheDocument();
   });
 
-  it('labels an unclassified charger as the generic "Charger" and renders the anomaly badge', () => {
+  it('labels missing charger evidence as Unknown and renders the anomaly badge', () => {
     const anomaly: ChargingAnomaly = {
       session: makeSession(),
       kind: 'expensive',
       message: 'Expensive charge ($0.75/kWh)',
       actionLabel: 'Compare',
     };
-    renderCard({ session: makeSession({ charger_type: 'mystery-plug' }), anomaly });
+    renderCard({ session: makeSession({ charger_type: 'mystery-plug', peak_power_w: null }), anomaly });
 
-    expect(screen.getByText('Charger')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.getByText('Expensive charge ($0.75/kWh)')).toBeInTheDocument();
   });
 
@@ -278,7 +292,7 @@ describe('ChargingSessionCard — metric chips', () => {
     expect(screen.queryByLabelText('Battery 20.00% to 80.00%')).toBeNull();
     // Primary chrome survives: only one "30m" (the primary duration, no chip).
     expect(screen.getAllByText('30m')).toHaveLength(1);
-    expect(screen.getByText('Home / AC')).toBeInTheDocument();
+    expect(screen.getByText('DC fast')).toBeInTheDocument();
   });
 });
 

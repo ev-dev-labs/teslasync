@@ -219,7 +219,7 @@ const SECTION_FALLBACK: Record<ChangelogChangeType, string> = {
 
 const SECTION_DOT: Record<ChangelogChangeType, string> = {
   added: 'bg-emerald-400/70',
-  changed: 'bg-cyan-400/70',
+  changed: 'bg-status-info/70',
   fixed: 'bg-amber-400/70',
   removed: 'bg-rose-400/70',
   deprecated: 'bg-purple-400/70',

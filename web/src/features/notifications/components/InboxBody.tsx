@@ -539,10 +539,10 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   };
 
   const openedRule = openedLog?.alert_id != null ? ruleMap[openedLog.alert_id] : undefined;
-  const openedVehicle = openedRule?.vehicle_id != null ? vehicleMap[openedRule.vehicle_id] : undefined;
+  const openedVehicle = openedLog?.vehicle_id != null ? vehicleMap[openedLog.vehicle_id] : undefined;
   const openedAlert: Alert | null = openedLog?.alert_id != null ? {
     id: openedLog.id,
-    vehicle_id: openedVehicle?.id ?? openedRule?.vehicle_id ?? 0,
+    vehicle_id: openedLog.vehicle_id ?? 0,
     type: openedRule?.name ?? openedLog.event_type ?? openedLog.title,
     severity: openedLog.severity ?? '',
     title: openedLog.title,
@@ -564,9 +564,6 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     (log: NotificationLog): ContextMenuItem[] => {
       const items: ContextMenuItem[] = [];
       const rule = log.alert_id != null ? ruleMap[log.alert_id] : undefined;
-      const vehicle = log.alert_id != null && rule?.vehicle_id != null
-        ? vehicleMap[rule.vehicle_id]
-        : undefined;
       const isRead = !!log.read_at;
       const isArchived = !!log.archived_at;
       if (!isRead) {
@@ -602,7 +599,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       if (rule) {
         const synthetic: Alert = {
           id: log.id,
-          vehicle_id: vehicle?.id ?? rule.vehicle_id ?? 0,
+          vehicle_id: log.vehicle_id ?? 0,
           type: rule.name ?? log.title,
           severity: log.severity ?? '',
           title: log.title,

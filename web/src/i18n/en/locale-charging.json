@@ -446,6 +446,7 @@
       "totalCost": "Total cost",
       "avgCostPerKwh": "Avg $/kWh",
       "energySplitAria": "Energy split: {{ac}}% AC, {{dc}}% DC",
+      "energySplitUnknownAria": "Energy split: {{ac}}% AC, {{dc}}% DC, {{unknown}}% unknown",
       "noEnergyData": "No energy recorded for these sessions yet.",
       "freeSessions": "{{count}} sessions",
       "noData": "No AC/DC charging data"
@@ -511,8 +512,15 @@
       "supercharger": "Supercharger",
       "dc": "DC fast",
       "home": "Home / AC",
+      "ac": "AC",
       "unknown": "Unknown"
     },
+    "sessionCharging": "Charging",
+    "sessionPower": "Power",
+    "currentPower": "Current power",
+    "currentPowerValue": "{{value}} kW now",
+    "estimatedCostValue": "{{cost}} (estimated)",
+    "includesEstimatedCosts": "Includes estimated charging costs; Tesla invoices and manual amounts take precedence.",
     "curve": {
       "chargerType": "Charge rate by charger type",
       "chargerLabels": {

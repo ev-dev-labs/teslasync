@@ -551,7 +551,7 @@ export interface RepairQuarantine {
 
 export interface RepairCaseFilters {
   vehicle_id?: number;
-  status?: RepairCaseStatus;
+  status?: RepairCaseStatus | 'active';
   kind?: RepairSessionKind;
   confidence?: RepairConfidence;
   assigned_to?: string;
@@ -573,6 +573,100 @@ export interface RepairCaseDetailResponse {
   case: RepairCase;
   comments: RepairCaseComment[];
   quarantine?: RepairQuarantine | null;
+}
+
+export type RepairCorrectionMode = 'derive' | 'replace' | 'clear';
+export type RepairCorrectionField =
+  | 'duration_s'
+  | 'distance_m'
+  | 'energy_used_wh'
+  | 'regen_energy_wh'
+  | 'total_energy_added_wh'
+  | 'start_odometer_m'
+  | 'end_odometer_m'
+  | 'start_soc_pct'
+  | 'end_soc_pct';
+
+interface RepairCaseCorrectionBase {
+  case_id: number;
+  expected_updated_at: string;
+}
+
+export type RepairCaseCorrectionChoice =
+  | { field: RepairCorrectionField; mode: RepairCorrectionMode; value: number | null }
+  | { field: 'ended_at'; mode: 'boundary'; value: null; target: 'primary' | 'related'; ended_at: string };
+
+export type RepairCaseCorrectionInput = RepairCaseCorrectionBase & RepairCaseCorrectionChoice;
+
+export interface RepairCaseCorrectionPreview {
+  case_id: number;
+  case_updated_at: string;
+  kind: RepairSessionKind;
+  session_id: number;
+  started_at: string;
+  ended_at: string | null;
+  source_hash: string;
+  changes: {
+    field: RepairCorrectionField | 'delta_soc_pct' | 'cost_decimal' | 'cost_source' | 'ended_at';
+    before: number | null;
+    after: number | null;
+    before_text?: string;
+    after_text?: string;
+    unit?: string;
+  }[];
+  other?: {
+    kind: RepairSessionKind;
+    id: number;
+    started_at: string;
+    ended_at: string | null;
+  } | null;
+}
+
+export function useRepairCaseCorrectionPreview() {
+  return useMutation({
+    mutationFn: ({ case_id, ...body }: RepairCaseCorrectionInput) =>
+      request<RepairCaseCorrectionPreview>(`/data-repair/cases/${case_id}/correction-preview`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    networkMode: 'always',
+    retry: false,
+  });
+}
+
+export function useApplyRepairCaseCorrection() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: ({ case_id, ...body }: RepairCaseCorrectionInput & { expected_source_hash: string }) =>
+      request<RepairCaseCorrectionPreview>(`/data-repair/cases/${case_id}/correction`, {
+        method: 'POST',
+        requiresLiveMode: true,
+        skipAuthRefresh: true,
+        body: JSON.stringify(body),
+      }),
+    networkMode: 'always',
+    retry: false,
+    onSuccess: (result) => {
+      invalidateRepairViews(qc);
+      invalidateRepairCases(qc);
+      if (result.kind === 'drive') {
+        invalidateDriveDerivedViews(qc);
+      } else {
+        invalidateAndBroadcast(qc, { queryKey: ['charging'] });
+        invalidateAndBroadcast(qc, { queryKey: ['charging-sessions'] });
+        invalidateAndBroadcast(qc, { queryKey: ['charging-session'] });
+        invalidateAndBroadcast(qc, { queryKey: ['geofences'] });
+        invalidateAndBroadcast(qc, { queryKey: ['cost-forecast'] });
+        invalidateAndBroadcast(qc, { queryKey: ['bill-variance'] });
+      }
+      invalidateAndBroadcast(qc, { queryKey: ['analytics'] });
+      invalidateAndBroadcast(qc, { queryKey: ['dashboard', 'stats'] });
+      success('toast.dataRepair.case.correction.success', 'Correction applied');
+    },
+    onError: (e) =>
+      error(e, 'toast.dataRepair.case.correction.error', 'Failed to apply correction'),
+  });
 }
 
 export interface RepairQuarantineFilters {
@@ -675,7 +769,9 @@ export function useTransitionRepairCase() {
         qc.setQueryData(key, {
           ...previous,
           cases: previous.cases.flatMap(item => item.id !== updated.id ? [item]
-            : filters.status && filters.status !== updated.status ? [] : [updated]),
+            : filters.status === 'active'
+              ? (updated.status === 'open' || updated.status === 'in_review' ? [updated] : [])
+              : filters.status && filters.status !== updated.status ? [] : [updated]),
         });
       }
       invalidateRepairCases(qc);

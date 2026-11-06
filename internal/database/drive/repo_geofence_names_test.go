@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 )
 
 // =============================================================================
@@ -43,6 +44,55 @@ RETURNING id`, name).Scan(&id)
 		_, _ = db.Pool.Exec(context.Background(), `DELETE FROM geofences WHERE id = $1`, id)
 	})
 	return id
+}
+
+func TestGeofenceMatchesEndpoint(t *testing.T) {
+	lat, lon, farLat := 15.4, -48.4, 16.5
+	place := &systemmodel.Geofence{PolygonWKT: systemmodel.CircleToPolygonWKT(lat, lon, 75)}
+	if !geofenceMatchesEndpoint(place, &lat, &lon) {
+		t.Fatal("matching endpoint must keep the place name")
+	}
+	if geofenceMatchesEndpoint(place, &farLat, &lon) {
+		t.Fatal("a stale place link must not override a distant endpoint")
+	}
+	if !geofenceMatchesEndpoint(place, nil, nil) {
+		t.Fatal("coordinate-less imports must retain explicit place attachments")
+	}
+	if geofenceMatchesEndpoint(nil, &lat, &lon) {
+		t.Fatal("missing geofence cannot supply a place name")
+	}
+}
+
+func TestDriveGeofenceNames_StaleDestinationKeepsStoredAddress(t *testing.T) {
+	db := openRepairTestDB(t, repairDSNOrSkip(t))
+	repo := NewDriveRepo(db)
+	vehicleID := seedRepairFixture(t, db)
+	geofenceID := seedGeofenceNameFixture(t, db, "Origin saved place")
+	var id int64
+	err := db.Pool.QueryRow(context.Background(), `
+INSERT INTO drives (vehicle_id, started_at, ended_at, start_place, end_place,
+                    start_lat, start_lng, end_lat, end_lng, start_geofence_id, end_geofence_id)
+VALUES ($1, now() - interval '30 minutes', now(), 'Origin street', 'Destination street',
+        0.0005, 0.0005, 1, 1, $2, $2)
+RETURNING id`, vehicleID, geofenceID).Scan(&id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.Pool.Exec(context.Background(), `DELETE FROM drives WHERE id=$1`, id)
+	})
+	drive, err := repo.GetByID(context.Background(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if drive.StartAddress == nil || *drive.StartAddress != "Origin saved place" ||
+		drive.EndAddress == nil || *drive.EndAddress != "Destination street" || drive.EndGeofenceID != nil {
+		t.Fatalf("stale geofence overwrote destination: %+v", drive)
+	}
+	drives, err := repo.GetByVehicle(context.Background(), vehicleID, 10, 0, time.Time{}, time.Time{})
+	if err != nil || len(drives) != 1 || drives[0].EndAddress == nil || *drives[0].EndAddress != "Destination street" {
+		t.Fatalf("list destination differs from detail: drives=%+v err=%v", drives, err)
+	}
 }
 
 func renameGeofence(t *testing.T, db *database.DB, geofenceID int64, newName string) {

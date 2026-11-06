@@ -78,7 +78,7 @@ export function GoalPulse({ summary, state, className }: GoalPulseProps) {
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Activity className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('effTarget.pulse.title', 'Goal pulse')}
         </PanelTitle>
         <Badge variant="neutral" dot>
@@ -149,7 +149,7 @@ export function GoalPulse({ summary, state, className }: GoalPulseProps) {
             )}
           </div>
 
-          <div className="rounded-xl border border-cyan-400/20 bg-cyan-400/[0.04] p-4">
+          <div className="rounded-xl border border-theme-accent/20 bg-theme-accent/[0.04] p-4">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <MetricLabel>

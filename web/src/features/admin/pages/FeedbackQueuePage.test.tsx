@@ -375,7 +375,7 @@ describe('FeedbackQueuePage', () => {
   it('uses restrained issue-link roles and retains every column in the contained mobile table', () => {
     renderPage()
     const link = screen.getByRole('link', { name: /Open issue/i })
-    expect(link).toHaveClass('text-[var(--semantic-info)]', 'min-h-11')
+    expect(link).toHaveClass('text-[var(--theme-primary)]', 'min-h-11')
     expect(link).not.toHaveClass('text-cyan-300', 'text-xs')
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noreferrer noopener')

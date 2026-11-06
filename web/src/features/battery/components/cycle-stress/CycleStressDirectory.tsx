@@ -186,7 +186,7 @@ export function CycleStressDirectory({
       <GlassPanel className="min-w-0 p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <ListTree
-            className="h-4 w-4 text-cyan-300"
+            className="h-4 w-4 text-theme-accent"
             aria-hidden="true"
           />
           {t(

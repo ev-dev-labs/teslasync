@@ -56,7 +56,7 @@ export function ShareCardStyleControls({
               aria-pressed={theme === key}
               onClick={() => onThemeChange(key)}
               className={theme === key
-                ? 'h-11 w-11 rounded-xl border-cyan-400/60 p-0'
+                ? 'h-11 w-11 rounded-xl border-theme-accent/60 p-0'
                 : 'h-11 w-11 rounded-xl border-[var(--border-subtle)] p-0'}
               style={{ background: SHARE_CARD_THEMES[key].bg }}
             >

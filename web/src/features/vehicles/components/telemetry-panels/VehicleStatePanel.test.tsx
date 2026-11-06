@@ -129,7 +129,7 @@ describe('VehicleStatePanel', () => {
 
     const highBeams = valueFor('High beams');
     expect(highBeams).toHaveTextContent('On');
-    expect(highBeams.className).toContain('text-cyan-300');
+    expect(highBeams.className).toContain('text-status-info');
 
     const turn = valueFor('Turn signal');
     expect(turn).toHaveTextContent('Left');
@@ -158,7 +158,7 @@ describe('VehicleStatePanel', () => {
     const highBeams = valueFor('High beams');
     expect(highBeams).toHaveTextContent('Off');
     expect(highBeams.className).toContain('text-[var(--text-muted)]');
-    expect(highBeams.className).not.toContain('text-cyan-300');
+    expect(highBeams.className).not.toContain('text-status-info');
   });
 
   it('treats an explicit "Off" turn-signal string as inactive', () => {
@@ -214,7 +214,7 @@ describe('VehicleStatePanel', () => {
     expect(formatSpeed).toHaveBeenCalledWith(25);
     const speedLimit = valueFor('Speed limit');
     expect(speedLimit).toHaveTextContent('25 mph');
-    expect(speedLimit.className).toContain('text-cyan-300');
+    expect(speedLimit.className).toContain('text-status-info');
   });
 
   it('does not format a speed limit whose value is missing while the mode is on', () => {

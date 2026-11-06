@@ -67,7 +67,7 @@ export function LifetimeSummary({
   ];
   return (
     <CostStatSection title={t('costAnalysis.lifetime.title', 'Lifetime Summary')}
-      icon={<TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />} glow="cyan"
+      icon={<TrendingUp className="h-4 w-4 text-theme-accent" aria-hidden="true" />} glow="cyan"
       isLoading={isLoading} error={error} onRetry={onRetry} retained={hasData}
       isEmpty={!hasData} period={period}
       emptyMessage={t('costAnalysis.lifetime.noData', 'No data')} skeletonHeight={200}>

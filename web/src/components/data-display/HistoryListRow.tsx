@@ -111,7 +111,7 @@ export function HistoryListRow({
       className={cn(
         'p-3 sm:p-4 transition-all duration-normal group cursor-pointer relative',
         actions && actions.length > 0 && 'pe-14',
-        selected && 'border-cyan-400/40 ring-1 ring-cyan-400/20',
+        selected && 'border-[var(--theme-primary)] ring-1 ring-[var(--theme-primary)]',
         className,
       )}
     >
@@ -132,7 +132,7 @@ export function HistoryListRow({
         </div>
 
         {!hideChevron && (
-          <ChevronRight className="h-4 w-4 text-[var(--text-muted)] group-hover:text-cyan-400 transition-colors shrink-0" />
+          <ChevronRight className="h-4 w-4 text-[var(--text-muted)] group-hover:text-[var(--theme-primary)] transition-colors shrink-0" />
         )}
       </div>
     </GlassPanel>

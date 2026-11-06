@@ -81,7 +81,7 @@ function parseBucketRange(bucket: string): [number, number] | null {
   return Number.isFinite(lo) && Number.isFinite(hi) ? [lo, hi] : null;
 }
 
-export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
+export default function SpeedProfileWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
@@ -98,6 +98,7 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
     vid > 0 ? String(vid) : undefined,
     start,
     end,
+    config?.timeRange,
   );
   const {
     data,

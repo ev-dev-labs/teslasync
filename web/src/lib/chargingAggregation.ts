@@ -32,29 +32,31 @@ export type { DateGroup };
 /*  Charger category                                                  */
 /* ------------------------------------------------------------------ */
 
-export type ChargerCategory = 'home' | 'supercharger' | 'dc' | 'unknown';
+export type ChargerCategory = 'home' | 'ac' | 'supercharger' | 'dc' | 'unknown';
 
 /**
- * Map a raw `charger_type` string from the API into a coarse category
- * we can use everywhere (filter pills, breakdown chart, anomaly rules).
- *
- * Mirrors the legacy `getChargerCategory()` from
- * `features/charging/components/ChargingSessionCard.tsx` — kept here
- * so the lib has no React dependency.
+ * Home requires a saved home location. Missing evidence is never AC.
  */
 export function getChargerCategory(
-  type: string | null | undefined,
+  input: string | null | undefined | {
+    charger_type?: string | null;
+    peak_power_w?: number | null;
+    avg_power_w?: number | null;
+    is_home?: boolean;
+  },
 ): ChargerCategory {
-  if (!type) return 'home'; // null type historically means home AC
-  const t = type.toLowerCase();
-  if (t.includes('super') || t.includes('tpc')) return 'supercharger';
+  const session = typeof input === 'object' && input != null ? input : null;
+  const t = (typeof input === 'string' ? input : session?.charger_type)?.trim().toLowerCase() ?? '';
+  if (/\bsupercharger\b/.test(t) || t === 'tesla') return 'supercharger';
+  if (session && [session.peak_power_w, session.avg_power_w]
+    .some(power => power != null && Number.isFinite(power) && power > 22_000)) return 'dc';
   if (
-    t.includes('dc') ||
-    t.includes('ccs') ||
-    t.includes('chademo') ||
-    t.includes('fast')
+    /\bdc\b/.test(t) ||
+    t === 'ccs' ||
+    t === 'chademo'
   ) return 'dc';
-  if (t.includes('home') || t.includes('ac') || t.includes('wall')) return 'home';
+  if (t.includes('home') || t === 'ac' || t === 'ac/home' || t.includes('wall'))
+    return session?.is_home === true ? 'home' : 'ac';
   return 'unknown';
 }
 
@@ -68,6 +70,8 @@ export function getChargerCategory(
  * without `NaN` propagation.
  */
 export function durationMinutes(s: ChargingSession): number {
+  if (s.live && s.ended_at == null && s.duration_s != null && Number.isFinite(s.duration_s))
+    return Math.max(0, s.duration_s) / 60;
   if (!s.started_at || !s.ended_at) return 0;
   const start = Date.parse(s.started_at);
   const end = Date.parse(s.ended_at);
@@ -93,6 +97,15 @@ export function sessionAveragePowerW(s: ChargingSession): number | null {
   if (!canDerive && !Number.isFinite(s.avg_power_w)) return null;
   const value = avgPowerW(s);
   return Number.isFinite(value) ? value : null;
+}
+
+export function sessionDisplayPowerW(s: ChargingSession): number | null {
+  return s.live ? (Number.isFinite(s.current_power_w) ? s.current_power_w ?? null : null)
+    : sessionAveragePowerW(s);
+}
+
+export function isEstimatedChargingCost(s: Pick<ChargingSession, 'cost_source'>): boolean {
+  return s.cost_source === 'default_estimate' || s.cost_source === 'geofence_tariff';
 }
 
 /**
@@ -216,6 +229,7 @@ export function computeChargingPeriodStats(
   let freeCount = 0;
   const byCategory: Record<ChargerCategory, number> = {
     home: 0,
+    ac: 0,
     supercharger: 0,
     dc: 0,
     unknown: 0,
@@ -245,7 +259,7 @@ export function computeChargingPeriodStats(
       powerSum += p;
       powerN += 1;
     }
-    byCategory[getChargerCategory(s.charger_type)] += 1;
+    byCategory[getChargerCategory(s)] += 1;
     if (s.cost_decimal === 0) freeCount += 1;
     const hour = parseStartHour(s.started_at, tz);
     if (hour != null) hourCounts[hour] += 1;
@@ -355,7 +369,7 @@ export function detectChargingAnomalies(
       continue;
     }
     if (energyKwh > 1 && s.cost_decimal == null &&
-        getChargerCategory(s.charger_type) !== 'home') {
+        getChargerCategory(s) !== 'home') {
       out.push({
         session: s,
         kind: 'cost_zero',
@@ -365,7 +379,7 @@ export function detectChargingAnomalies(
       continue;
     }
     if (
-      getChargerCategory(s.charger_type) === 'dc' &&
+      getChargerCategory(s) === 'dc' &&
       dur > 30 &&
       power < 3
     ) {

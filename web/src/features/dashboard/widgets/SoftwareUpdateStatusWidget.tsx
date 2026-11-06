@@ -95,7 +95,7 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.softwareUpdate', 'Software update')}
-      icon={isCompact ? undefined : <MonitorSmartphone className="h-3.5 w-3.5 text-cyan-300" />}
+      icon={isCompact ? undefined : <MonitorSmartphone className="h-3.5 w-3.5 text-status-info" />}
       loading={isLoading}
       dataState={dataState}
       updatedAt={dataUpdatedAt}
@@ -108,7 +108,7 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
         <FadeIn>
           {isCompact ? (
             <div className="h-full min-w-0 flex flex-col items-center justify-center gap-1.5 px-1">
-              <MonitorSmartphone className="h-5 w-5 text-cyan-300" aria-hidden="true" />
+              <MonitorSmartphone className="h-5 w-5 text-status-info" aria-hidden="true" />
               <WidgetBigNumber value={currentVersion} align="center" size="secondary" />
               <SoftwareUpdateBadge status={updateStatus} />
             </div>
@@ -129,7 +129,7 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
                     <span className="text-sm text-[var(--text-secondary)]">
                       {t('widget.updateAvailable', 'Update available')}
                     </span>
-                    <span className="ms-1 text-sm font-semibold text-cyan-300 [overflow-wrap:anywhere]">
+                    <span className="ms-1 text-sm font-semibold text-status-info [overflow-wrap:anywhere]">
                       {updateVersion}
                     </span>
                   </div>

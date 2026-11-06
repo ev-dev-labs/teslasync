@@ -1,13 +1,12 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import { DollarSign } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { deriveDataState, knownNumber, sumKnown } from '@/api/dataState';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { useDashboardChargingHistory } from '@/api/hooks/useCharging';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
-import { request } from '@/api/client';
 
 import { convertDistanceToSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
@@ -17,6 +16,7 @@ import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import type { ChargingSession } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isEstimatedChargingCost } from '@/lib/chargingAggregation';
 
 export interface CostMetrics {
   totalKwh: number | null;
@@ -37,7 +37,7 @@ export interface CostMetrics {
 const AVG_METERS_PER_KWH = convertDistanceToSI(3.5, 'mi');
 
 /**
- * Aggregate 30-day charging sessions into the widget's cost metrics.
+ * Aggregate charging sessions into the widget's cost metrics.
  *
  * `costPerDistFn` and `estimateGasCostFn` both expect an SI-meter distance,
  * so the estimated range is derived in meters (`totalDistanceM`) — passing
@@ -81,7 +81,7 @@ export function computeMetrics(
   };
 }
 
-export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps) {
+export default function ChargeCostTrackerWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
@@ -98,14 +98,10 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
     return d.toISOString();
   }, []);
 
-  const query = useQuery({
-    queryKey: ['charging', id, 'cost-tracker-30d', thirtyDaysAgo],
-    queryFn: () =>
-      request<ChargingSession[]>(
-        `/charging?vehicle_id=${id}&limit=100&start=${thirtyDaysAgo}`,
-      ),
-    enabled: id > 0,
-    staleTime: 60_000,
+  const query = useDashboardChargingHistory(id, {
+    kind: 'cost',
+    start: thirtyDaysAgo,
+    range: config?.timeRange,
   });
   const { data: sessions, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
 
@@ -126,11 +122,19 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
   const energyWh = sumKnown((sessions ?? []).map(session => session.total_energy_added_wh));
   const dataState = sessions ? deriveDataState(query, {
     provenance: 'inferred',
-    partial: sessions.length >= 100 || sessions.some(session =>
+    partial: (!config?.timeRange && sessions.length >= 100) || sessions.some(session =>
       knownNumber(session.total_energy_added_wh) == null
       || (costPerKwh == null && knownNumber(session.cost_decimal) == null && knownNumber(session.cost) == null)),
   }) : undefined;
   const currency = (value: number | null, decimals?: number) => value == null ? null : formatCurrency(value, decimals);
+  const includesEstimate = (sessions ?? []).some(session => isEstimatedChargingCost(session)
+    || (session.cost_decimal == null && session.cost == null && costPerKwh != null));
+  const periodLabel = config?.timeRange && config.timeRange !== '30d'
+    ? t('widget.chargeCost.selectedRangeCost', 'Cost for selected range')
+    : t('widget.chargeCost.monthly', '30-day cost');
+  const costLabel = includesEstimate
+    ? t('dashboard.chargingEstimatedLabel', '{{label}} (estimated)', { label: periodLabel })
+    : periodLabel;
   // After spec: one headline (30-day cost, saved-vs-gas delta) + 3 stats.
   // Missing operands stay null so tiles show '—'; a measured 0 stays 0.
   const stats: StatGridItem[] = [
@@ -178,7 +182,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
         onRefresh={handleRefresh}
       >
         {hasData ? (
-          <WidgetBigNumber value={currency(metrics.totalCost)} label={t('widget.chargeCost.monthly', '30-day cost')} animated={false} align="center" />
+          <WidgetBigNumber value={currency(metrics.totalCost)} label={costLabel} animated={false} align="center" />
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<DollarSign className="h-5 w-5" />}
@@ -207,7 +211,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
         <div className="flex min-w-0 flex-col gap-3">
           <WidgetBigNumber
             value={currency(metrics.totalCost)}
-            label={t('widget.chargeCost.monthly', '30-day cost')}
+            label={costLabel}
             delta={metrics.gasSavings != null ? {
               text: t('widget.chargeCost.saved', 'Saved {{amount}} vs gas', { amount: formatCurrency(metrics.gasSavings) }),
               tone: metrics.gasSavings >= 0 ? 'good' : 'neutral',
@@ -218,7 +222,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
           <WidgetStatGrid stats={stats} cols={3} />
           <p className={`flex min-w-0 flex-wrap gap-x-2 ${dashboardTokens.metricLabel}`}>
             <span>{t('widget.chargeCost.sessions', '{{count}} sessions', { count: metrics.sessionCount })}</span>
-            {isTall && metrics.gasSavings != null ? <span>{t('widget.chargeCost.savingsNote', '30-day estimate')}</span> : null}
+            {isTall && metrics.gasSavings != null ? <span>{config?.timeRange && config.timeRange !== '30d' ? t('widget.chargeCost.selectedRangeEstimate', 'Estimate for selected range') : t('widget.chargeCost.savingsNote', '30-day estimate')}</span> : null}
           </p>
         </div>
       ) : (

@@ -26,7 +26,7 @@ export function ChargeAdvisorScenarioChart({ analysis, state }: ChargeAdvisorCom
         'chargeAdvisor.scenarios.subtitle',
         'Seven complete local days beginning tomorrow; mean and calendar-day p75 paths are descriptive scenarios.',
       )}
-      icon={<Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<Gauge className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
       state={state}
       dependency="drive"
       dataTestId="charge-advisor-scenarios"

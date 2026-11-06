@@ -135,7 +135,7 @@ export function SavingsCalculator({
               <ComparisonCard
                 label={t('costAnalysis.calculator.evCost', 'EV Cost (actual)')}
                 value={formatCurrency(gasComparison.actualCost)}
-                valueClass="text-cyan-300"
+                valueClass="text-status-info"
                 sub={`${formatCurrency(gasComparison.costPerMileEV)}/${unit}`}
               />
               <ComparisonCard

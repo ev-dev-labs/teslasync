@@ -252,7 +252,7 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
   return (
     <WidgetShell
       title={t('widget.tirePressureHistory.title', 'Tire pressure history')}
-      icon={<CircleDot className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={<CircleDot className="h-3.5 w-3.5 text-theme-accent" />}
       loading={isLoading}
       dataState={dataState}
       updatedAt={dataUpdatedAt}

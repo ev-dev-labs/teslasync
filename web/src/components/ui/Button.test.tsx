@@ -61,6 +61,13 @@ describe('Button', () => {
     expect(cls).toContain('text-sm');
   });
 
+  it('keeps the selected primary fill unchanged on hover and press', () => {
+    render(<Button>Save</Button>);
+    const button = screen.getByRole('button', { name: 'Save' });
+    expect(button).toHaveClass('bg-[var(--theme-primary)]');
+    expect(button.className).not.toMatch(/(?:hover|active):(?:brightness|bg-)/);
+  });
+
   it('applies the distinctive class for every variant', () => {
     // Neutral variants resolve from the `--control-*` tokens, not Tailwind's
     // fixed `gray-*` ramp, so they track whichever of the 140 presets is live.

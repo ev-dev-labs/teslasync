@@ -108,7 +108,7 @@ export function RegenKpiBand({
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-4 flex items-center gap-2">
-          <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Activity className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('regen.kpis.title', 'Selected-window evidence')}
         </PanelTitle>
         <Grid cols={KPI_COLUMNS} gap={3}>

@@ -117,15 +117,16 @@ func TestChargingTelemetry_Latest_UsesNow(t *testing.T) {
 			gotAt = at
 			gotVehicleID = vid
 			return signal.State{
-				"ChargerVoltage":       240.0,
-				"ChargerActualCurrent": 32.0,
-				"ACChargingPower":      7700.0,
-				"DCChargingPower":      150000.0, // active DC charge — must override AC
-				"ACChargingEnergyIn":   10000.0,
-				"DCChargingEnergyIn":   12000.0,
-				"BatteryLevel":         65.0,
-				"ChargeState":          "Charging",
-				"IdealBatteryRange":    250.0,
+				"ChargerVoltage":     240.0,
+				"ChargeAmps":         6.0,
+				"ChargeLimitSoc":     85.0,
+				"ACChargingPower":    7700.0,
+				"DCChargingPower":    150000.0, // active DC charge — must override AC
+				"ACChargingEnergyIn": 10000.0,
+				"DCChargingEnergyIn": 12000.0,
+				"BatteryLevel":       65.0,
+				"ChargeState":        "Charging",
+				"IdealBatteryRange":  250.0,
 			}, nil
 		},
 	}
@@ -155,6 +156,9 @@ func TestChargingTelemetry_Latest_UsesNow(t *testing.T) {
 	}
 	if v, ok := got["charger_voltage"].(float64); !ok || v != 240.0 {
 		t.Fatalf("charger_voltage = %v (%T), want 240", got["charger_voltage"], got["charger_voltage"])
+	}
+	if got["charger_actual_current"] != 6.0 || got["charge_limit_soc_pct"] != 85.0 {
+		t.Fatalf("canonical charging signals not projected: %v", got)
 	}
 	if v, ok := got["charging_state"].(string); !ok || v != "Charging" {
 		t.Fatalf("charging_state = %v, want Charging", got["charging_state"])

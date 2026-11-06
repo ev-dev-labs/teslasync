@@ -8,7 +8,7 @@ import { useMotionPreference } from '@/hooks/useMotionPreference';
 // every one of the 140 presets, so a Dracula or Solarized user got buttons
 // that did not belong to their palette. They now track the active theme.
 export const BUTTON_VARIANTS = {
-  primary: 'border border-transparent bg-[var(--theme-primary)] text-[var(--theme-on-primary)] shadow-sm hover:brightness-105 forced-colors:border forced-colors:border-[ButtonBorder] forced-colors:[forced-color-adjust:none] forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',
+  primary: 'border border-transparent bg-[var(--theme-primary)] text-[var(--theme-on-primary)] shadow-sm hover:shadow-e2 active:shadow-none forced-colors:border forced-colors:border-[ButtonBorder] forced-colors:[forced-color-adjust:none] forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',
   secondary: 'bg-[var(--control-bg)] text-[var(--text-primary)] border border-[var(--control-border)] hover:bg-[var(--control-bg-hover)] hover:border-[var(--control-border-hover)] forced-colors:border forced-colors:border-[ButtonBorder]',
   outline: 'border border-[var(--control-border)] bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] hover:border-[var(--control-border-hover)] forced-colors:border-[ButtonBorder]',
   danger: 'border border-[var(--semantic-danger)] bg-[var(--semantic-danger-bg)] text-[var(--semantic-danger)] hover:bg-[var(--control-bg-hover)] active:bg-[var(--control-bg)] forced-colors:border forced-colors:border-[ButtonBorder] forced-colors:[forced-color-adjust:none] forced-colors:bg-[ButtonFace] forced-colors:text-[ButtonText]',

@@ -136,7 +136,7 @@ export function InfrastructureSection() {
         <div className="mt-4">
           <Grid cols={{ default: 3 }} gap={3}>
             <InlineMetric
-              icon={<Database aria-hidden="true" className="h-4 w-4 text-cyan-400" />}
+              icon={<Database aria-hidden="true" className="h-4 w-4 text-theme-accent" />}
               value={fmtInt(pool.total_conns)}
               label={t('systemStatus.infrastructure.totalConns', 'Total conns')}
             />

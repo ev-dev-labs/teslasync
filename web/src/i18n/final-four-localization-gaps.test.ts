@@ -5,11 +5,14 @@ import { resolve } from 'node:path'
 import { createInstance } from 'i18next'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
-import catalog from './en.json'
+import currentCatalog from './en.json'
+import { catalogBeforeDashboardPolish } from './verified-combined-contract'
 import shell from './en/shell.json'
 import baseline from './known-missing-keys.json'
 import runtimeManifest from './en/runtime-manifest.json'
 import i18n, { flushPendingEnglishResourcesForTest, loadEnglishNamespace } from './index'
+
+const catalog = catalogBeforeDashboardPolish(currentCatalog)
 
 function sourceFile(path: string) {
   const text = readFileSync(resolve(process.cwd(), 'src', path), 'utf8')

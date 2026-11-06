@@ -12,21 +12,21 @@ const log: NotificationLog = {
 };
 
 describe('NotificationInboxSummary', () => {
-  it('keeps severity and message context next to an actionable title without opening details', () => {
+  it('shows only the actionable title, with other evidence owned by separate columns', () => {
     const onActivate = vi.fn();
-    render(<NotificationInboxSummary log={log} eventLabel="Alert rule" onActivate={onActivate} />);
-    expect(screen.getByText('Critical')).toBeInTheDocument();
-    expect(screen.getByText(log.message)).toBeInTheDocument();
-    expect(screen.getByText(/Unread$/)).toBeInTheDocument();
+    const { container } = render(<NotificationInboxSummary log={log} onActivate={onActivate} />);
+    expect(container.textContent).toBe(log.title);
+    expect(screen.queryByText('Critical')).not.toBeInTheDocument();
+    expect(screen.queryByText(log.message)).not.toBeInTheDocument();
+    expect(screen.queryByText('alert.rule')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: `Open notification: ${log.title}` }));
     expect(onActivate).toHaveBeenCalledWith(log);
   });
 
-  it.each(['warning', 'future-severity', null])('preserves unknown or missing severity honestly: %s', severity => {
+  it.each(['warning', 'future-severity', null])('does not add secondary metadata or filler for severity %s', severity => {
     const row = { ...log, severity, message: '', created_at: '', read_at: '2026-10-28T16:00:00Z' };
-    render(<NotificationInboxSummary log={row} eventLabel="Alert rule" onActivate={vi.fn()} />);
-    if (severity) expect(screen.getByText(severity === 'warning' ? 'Warn' : severity)).toBeInTheDocument();
-    expect(screen.getByText(/Read$/)).toBeInTheDocument();
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    const { container } = render(<NotificationInboxSummary log={row} onActivate={vi.fn()} />);
+    expect(container.textContent).toBe(row.title);
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
   });
 });

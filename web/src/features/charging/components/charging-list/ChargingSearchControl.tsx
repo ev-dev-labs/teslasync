@@ -23,7 +23,7 @@ export function ChargingSearchControl({ value, onChange, pending }: ChargingSear
           role="status"
           aria-live="polite"
           aria-label={t('filter.pending', 'Filtering…')}
-          className="pointer-events-none absolute right-9 top-1/2 -translate-y-1/2 inline-block h-3 w-3 rounded-full border-2 border-cyan-400/40 border-t-cyan-400 animate-spin"
+          className="pointer-events-none absolute right-9 top-1/2 -translate-y-1/2 inline-block h-3 w-3 rounded-full border-2 border-status-info/40 border-t-status-info animate-spin"
         />
       )}
     </div>

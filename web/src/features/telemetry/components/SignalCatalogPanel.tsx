@@ -184,10 +184,10 @@ export function SignalCatalogPanel({
               className={cn(
                 'touch-target rounded border p-0',
                 checked
-                  ? 'border-cyan-400/50 bg-cyan-400/15 text-cyan-300'
+                  ? 'border-theme-accent/50 bg-theme-accent/15 text-theme-accent'
                   : disabled
                     ? 'border-white/[0.04] bg-white/[0.02] text-[var(--text-muted)] opacity-40 cursor-not-allowed'
-                    : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)] hover:border-cyan-400/40 hover:text-cyan-300',
+                    : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)] hover:border-theme-accent/40 hover:text-theme-accent',
               )}
             >
               {checked ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}

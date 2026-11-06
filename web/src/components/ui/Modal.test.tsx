@@ -98,6 +98,20 @@ function getDialog(): HTMLElement {
 }
 
 describe('Modal — visibility', () => {
+  it('only raises the overlay above notifications when requested', () => {
+    const renderModal = (aboveNotifications = false) => (
+      <Modal open onClose={vi.fn()} title="Review" aboveNotifications={aboveNotifications}>
+        <p>Body</p>
+      </Modal>
+    );
+    const { rerender } = render(renderModal());
+    expect(getDialog().closest('.fixed.inset-0')).toHaveClass('z-overlay');
+    rerender(renderModal(true));
+    const overlay = getDialog().closest('.fixed.inset-0');
+    expect(overlay).toHaveClass('z-[120]');
+    expect(overlay).not.toHaveClass('z-overlay');
+  });
+
   it('keeps footer actions inside the focus trap but outside the scrolling body', () => {
     render(<Modal open title="Preview" onClose={vi.fn()} footer={<button>Install</button>}><p>Rules</p></Modal>);
     const action = screen.getByRole('button', { name: 'Install' });

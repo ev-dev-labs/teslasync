@@ -57,7 +57,7 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
   return (
     <GlassPanel className="p-6 h-full">
       <h3 className="section-title flex items-center gap-2 mb-5">
-        <Cog aria-hidden="true" className="h-4 w-4 text-cyan-300" /> {t('common.powertrain', 'Powertrain')}
+        <Cog aria-hidden="true" className="h-4 w-4 text-theme-accent" /> {t('common.powertrain', 'Powertrain')}
       </h3>
       {motorData ? (
         <div className="space-y-4">

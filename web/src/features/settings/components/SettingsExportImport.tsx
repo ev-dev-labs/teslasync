@@ -336,7 +336,7 @@ export function SettingsExportImport() {
             <div
               className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
                 dragActive
-                  ? 'border-neon-cyan bg-neon-cyan/5'
+                  ? 'border-theme-accent bg-theme-accent/5'
                   : 'border-[var(--border-subtle)] bg-[var(--surface-2)]'
               }`}
               onDrop={handleDrop}

@@ -17,14 +17,14 @@ export function parseGear(raw?: string | null): 'D' | 'R' | 'P' | 'N' | null {
 export const GEAR_COLORS: Record<string, string> = {
   D: 'text-emerald-300',
   R: 'text-rose-300',
-  P: 'text-cyan-300',
+  P: 'text-status-activity',
   N: 'text-amber-300',
 }
 
 export const GEAR_BG_COLORS: Record<string, string> = {
   D: 'bg-neon-green/10 text-neon-green',
   R: 'bg-neon-red/10 text-neon-red',
-  P: 'bg-neon-cyan/10 text-neon-cyan',
+  P: 'bg-status-activity/10 text-status-activity',
   N: 'bg-neon-amber/10 text-neon-amber',
 }
 

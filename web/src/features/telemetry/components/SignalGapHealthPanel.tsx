@@ -64,7 +64,7 @@ export function SignalGapHealthPanel({ analysis, hasVehicle }: SignalGapHealthPa
   return (
     <GlassPanel className="min-w-0 max-w-full p-4 sm:p-5">
       <PanelTitle className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
-        <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Activity className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('signalGap.distributionTitle', 'Signal health distribution')}
       </PanelTitle>
       {hasVehicle && <StaleRefreshWarning state={sourceState} label={t('signalGap.distributionTitle', 'Signal health distribution')} />}

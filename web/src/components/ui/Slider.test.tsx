@@ -222,7 +222,7 @@ describe('Slider', () => {
     );
     const slider = screen.getByRole('slider');
     expect(slider).toHaveClass('appearance-auto', 'h-full', 'min-w-11',
-      'accent-[var(--semantic-info)]', 'focus-visible:outline-[var(--focus-ring)]');
+      'accent-[var(--theme-primary)]', 'focus-visible:outline-[var(--focus-ring)]');
     expect(slider).not.toHaveClass('appearance-none', 'accent-cyan-500');
     expect(slider.parentElement).toHaveClass('h-11', 'md:h-9');
     expect(slider.parentElement?.parentElement).toHaveClass('custom-slider', 'min-w-0');

@@ -42,13 +42,15 @@ function setup() {
   });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   const openKey = dataRepairKeys.cases({ status: 'open' }); const allKey = dataRepairKeys.cases({});
+  const activeKey = dataRepairKeys.cases({ status: 'active' });
   client.setQueryData(openKey, { cases: [current], has_more: false });
   client.setQueryData(allKey, { cases: [current], has_more: false });
+  client.setQueryData(activeKey, { cases: [current], has_more: false });
   const ui = (caseId: number | null) => <QueryClientProvider client={client}><ToastProvider><MemoryRouter>
     <RepairCaseDrawer caseId={caseId} onClose={() => undefined} canWrite />
   </MemoryRouter></ToastProvider></QueryClientProvider>;
   const view = render(ui(7));
-  return { client, request, openKey, allKey, view, ui, setRead: (next: typeof read) => { read = next; } };
+  return { client, request, openKey, allKey, activeKey, view, ui, setRead: (next: typeof read) => { read = next; } };
 }
 async function confirmResolve() {
   fireEvent.click(await screen.findByRole('button', { name: 'Resolve case' }));
@@ -61,6 +63,18 @@ async function confirmResolve() {
 beforeEach(() => { transport.mockReset(); });
 
 describe('RepairCaseDrawer resolution', () => {
+  it('keeps a case visible in the active queue when review begins', async () => {
+    const { client, request, activeKey, openKey } = setup();
+    expect(await screen.findByRole('link', { name: 'Open drive #42 in a new tab' }))
+      .toHaveAttribute('href', '/drives/42');
+    fireEvent.click(screen.getByRole('button', { name: 'Begin review' }));
+    await act(async () => { request.resolve({ ...initial, status: 'in_review', updated_at: '2026-08-25T10:05:00Z' }); });
+    await waitFor(() => expect(client.getQueryData(activeKey)).toMatchObject({
+      cases: [{ id: 7, status: 'in_review' }],
+    }));
+    expect(client.getQueryData(openKey)).toMatchObject({ cases: [] });
+  });
+
   it('sends the existing API contract once on double click, shows progress and updates detail and filtered lists', async () => {
     const { client, request, openKey, allKey } = setup();
     const confirm = await confirmResolve();

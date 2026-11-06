@@ -12,14 +12,14 @@ import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
-export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: WidgetProps) {
+export default function BatteryHealthAnalyticsWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vehicleIdStr = vid != null ? String(vid) : null;
 
-  const query = useBatteryHealthAnalytics(vehicleIdStr);
+  const query = useBatteryHealthAnalytics(vehicleIdStr, undefined, config?.timeRange);
   const {
     data, isLoading, error,
     isFetching, isStale, isError,

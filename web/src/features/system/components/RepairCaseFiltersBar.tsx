@@ -3,7 +3,6 @@ import { FilterX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type {
   RepairCaseFilters,
-  RepairCaseStatus,
   RepairConfidence,
   RepairSessionKind,
 } from '@/api/hooks/useDataRepair';
@@ -23,6 +22,7 @@ export function RepairCaseFiltersBar({ filters, onChange }: RepairCaseFiltersBar
   const hasFilters = Boolean(filters.status || filters.kind || filters.confidence || filters.assigned_to);
   const statusOptions = useMemo(() => [
     { value: '', label: t('dataRepair.cases.filters.allStatuses', 'All statuses') },
+    { value: 'active', label: t('dataRepair.cases.filters.active', 'Open and in review') },
     { value: 'open', label: t('dataRepair.cases.status.open', 'Open') },
     { value: 'in_review', label: t('dataRepair.cases.status.inReview', 'In review') },
     { value: 'quarantined', label: t('dataRepair.cases.status.quarantined', 'Quarantined') },
@@ -51,7 +51,7 @@ export function RepairCaseFiltersBar({ filters, onChange }: RepairCaseFiltersBar
           value={filters.status ?? ''}
           onChange={(event) => setFilter(
             'status',
-            (event.target.value || undefined) as RepairCaseStatus | undefined,
+            (event.target.value || undefined) as RepairCaseFilters['status'],
           )}
         />
         <Select

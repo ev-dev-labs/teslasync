@@ -1,5 +1,7 @@
 {
   "table": {
+    "expandGroup": "Expand {{group}}",
+    "collapseGroup": "Collapse {{group}}",
     "genericName": "Data table",
     "search": {
       "loadedRows": "Search loaded rows"

@@ -4,7 +4,7 @@ import { Grid, PageLayout, Stack } from '@/components/layout';
 import { StaleRefreshWarning } from '@/components/feedback';
 
 import { SavedViewMenu } from '@/components/data-display';
-import { PrintButton } from '@/components/ui';
+import { Caption, PrintButton } from '@/components/ui';
 import { AICostForecastNarration } from '@/components/ai';
 import { useChargingSessionsPaginated, useCostForecast } from '@/api/hooks/useCharging';
 import { useSettings } from '@/hooks/useSettings';
@@ -16,6 +16,7 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useDataState } from '@/hooks/useDataState';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { PAGINATION } from '@/lib/constants';
+import { isEstimatedChargingCost } from '@/lib/chargingAggregation';
 import { DEFAULT_GAS_PRICE, DEFAULT_MPG, DEFAULT_ELECTRICITY_RATE } from '../components/cost-analysis/constants';
 import { useCostAnalysisData } from '../components/cost-analysis/useCostAnalysisData';
 import {
@@ -122,6 +123,9 @@ export default function CostAnalysisPage() {
     >
       <StaleRefreshWarning state={sessionsState} label={t('charging.curve.resource', 'Charging sessions')} />
       <StaleRefreshWarning state={forecastState} label={t('costAnalysis.forecast.title', 'Cost Forecast')} />
+      {(sessions ?? []).some(isEstimatedChargingCost) && (
+        <Caption>{t('charging.includesEstimatedCosts', 'Includes estimated charging costs; Tesla invoices and manual amounts take precedence.')}</Caption>
+      )}
       {/* 1 — KPI band */}
       <div className="min-w-0">
         <section data-tour="cost-analysis" aria-label={t('costAnalysis.kpis', 'Cost summary metrics')}>

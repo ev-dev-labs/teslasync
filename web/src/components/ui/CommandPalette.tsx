@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, type RefObject } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from '@/components/motion/runtime'
 import {
   Search, ArrowRight, Zap, ChevronLeft, Car, ArrowRightLeft,
   Route, BatteryCharging, Bell, BellRing, MapPin, Workflow, Compass, MapPinned,
@@ -18,6 +18,8 @@ import { Skeleton } from '@/components/feedback/Skeleton'
 import { StaleRefreshWarning } from '@/components/feedback/StaleRefreshWarning'
 import { cn } from '@/lib/cn'
 import { navSections } from '@/components/layout/Layout'
+import { resolveSectionIcon } from '@/components/layout/sidebar/sidebarIcons'
+import { Icons } from '@/lib/icons'
 import { navSearchKeywords } from '@/components/layout/navSearchKeywords'
 import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
 import { useVehicles } from '@/api/hooks/useVehicles'
@@ -63,6 +65,8 @@ interface PaletteItem {
   sublabel?: string
   /** Display-only shortcut hint shown next to the item (e.g. "?" or "g d") */
   shortcut?: string
+  navigationPath?: string
+  sectionIcon?: React.ReactNode
 }
 
 type PaletteMode = 'search' | 'vehicle-select' | 'alert-select'
@@ -311,9 +315,11 @@ interface CommandPaletteProps {
   initialOpen?: boolean
   /** Live visible shell control when opening intentionally hides the original invoker. */
   returnFocusFallbackRef?: RefObject<HTMLElement>
+  onPin?: (path: string) => void
+  onUnpin?: (path: string) => void
 }
 
-export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbackRef }: CommandPaletteProps) {
+export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbackRef, onPin, onUnpin }: CommandPaletteProps) {
   const { t } = useTranslation()
   const { reduce, durationMs } = useMotionPreference()
   const [open, setOpen] = useState(initialOpen)
@@ -534,6 +540,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
       section.items
         .filter(item => !('requiresAuth' in item) || !(item as { requiresAuth?: boolean }).requiresAuth || isForwardAuth)
         .map(item => {
+          const SectionIcon = resolveSectionIcon(section.title)
           const keywords = navSearchKeywords[item.to] ?? []
           const sectionLabel = section.titleKey ? t(section.titleKey, section.title) : section.title
           const sublabel = keywords.length > 0
@@ -544,6 +551,8 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
             label: t(item.labelKey, item.label),
             section: t('palette.section.pages', 'Pages'),
             icon: <item.icon className="h-4 w-4" />,
+            sectionIcon: <SectionIcon className="h-4 w-4" />,
+            navigationPath: item.to,
             action: () => go(item.to),
             keywords: [...keywords, item.label],
             sublabel,
@@ -580,7 +589,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
         // Re-key so the canonical "Pages" row keeps its own React key.
         id: `pinned-page-${item.id}`,
         section: sectionLabel,
-        icon: <Bookmark className="h-4 w-4" />,
+        icon: item.sectionIcon ?? item.icon,
         sublabel: item.id,
       }))
   }, [navItemByPath, query, recentVersion, t])
@@ -902,23 +911,23 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
 
   // ── Filtered items ────────────────────────────────────────────────────────
   //
-  // Order matters — recents render first when no query, registry/vehicles
+  // Order matters — shared navigation pins render first when no query, registry/vehicles
   // surface above the long nav list when the query matches them, and the
   // PALETTE_COMMAND_CONFIGS items stay at the bottom (long list).
   //
   // `recentPageItems` slots in directly after `mostUsedItems`. Both are
   // empty when a query is present, so the
   // ordering is irrelevant during search; it only matters in the empty
-  // state, where the user sees Most Used → Recent → Pages → … .
+  // state, where the user sees Pinned before Most Used and Recent.
 
   const allItems = useMemo(
     () => [
       ...searchResultItems,
-      ...mostUsedItems,
       ...pinnedPageItems,
+      ...mostUsedItems,
       ...relatedRouteItems,
       ...recentPageItems,
-      ...savedViewItems,
+      ...(query.trim() ? savedViewItems : []),
       ...contextualActionItems,
       ...registryItems,
       ...vehicleSwitchItems,
@@ -937,6 +946,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
       vehicleSwitchItems,
       navItems,
       commandItems,
+      query,
     ],
   )
 
@@ -1016,6 +1026,9 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
   // it stays in-range even if the list shrunk after a state update.
   const effectiveSelectedIndex =
     displayItems.length > 0 ? Math.min(selectedIndex, displayItems.length - 1) : 0
+  const selectedNavigationItem = mode === 'search' ? displayItems[effectiveSelectedIndex] : undefined
+  const selectedNavigationPath = selectedNavigationItem?.navigationPath
+  const selectedNavigationPinned = selectedNavigationPath ? getPinnedNavPaths().includes(selectedNavigationPath) : false
 
   // ── Effects ───────────────────────────────────────────────────────────────
 
@@ -1402,7 +1415,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
                   visible: mode === 'vehicle-select' || (mode === 'search' && (activeScope === null || activeScope === 'vehicle-switch')),
                   label: t('palette.section.vehicles', 'Vehicles'), empty: t('palette.noVehicles', 'No vehicles available') },
                 { id: 'saved-views', state: savedViewsState, count: savedViewList.length,
-                  visible: mode === 'search' && (activeScope === null || activeScope === 'navigate'),
+                  visible: mode === 'search' && Boolean(scopedTerm) && savedViewsState.status !== 'ok' && (activeScope === null || activeScope === 'navigate'),
                   label: t('palette.section.savedViews', 'Saved views'), empty: t('savedViews.empty', 'No saved views yet') },
                 { id: 'alerts', state: alertsState, count: openAlertList.length, visible: mode === 'alert-select',
                   label: t('palette.section.openAlerts', 'Open alerts'), empty: t('palette.acknowledgeAlert.empty', 'No open alerts to acknowledge') },
@@ -1436,6 +1449,11 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
                 className="max-h-80 min-h-0 overflow-y-auto px-2 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
                 onKeyDown={mode !== 'search' ? handleInputKey : undefined}
               >
+                {mode === 'search' && !query.trim() && pinnedPageItems.length === 0 && (
+                  <Text as="p" variant="caption" className="px-4 py-2">
+                    {t('nav.deck.noQuickPins', 'Pin a page below to keep it close.')}
+                  </Text>
+                )}
                 {displayItems.length === 0 ? remoteUnresolved
                   || (mode === 'vehicle-select' && (vehiclesState.status !== 'ok' || vehicleList.length === 0))
                   || (mode === 'alert-select' && (alertsState.status !== 'ok' || openAlertList.length === 0)) ? null : (
@@ -1477,10 +1495,10 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
                             onClick={item.action}
                             onMouseEnter={() => setSelectedIndex(globalIndex)}
                             className={cn(
-                              'flex h-auto min-h-11 w-full items-center justify-start gap-3 whitespace-normal rounded-shape-sm px-4 py-3 text-start',
+                              'flex h-auto min-h-11 w-full items-center justify-start gap-3 whitespace-normal rounded-shape-sm border-s-2 px-4 py-3 text-start',
                               isSelected
-                                ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
-                                : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
+                                ? 'border-[var(--theme-primary)] bg-[var(--theme-accent-soft)] text-[var(--text-primary)]'
+                                : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
                             )}
                           >
                             <span className="shrink-0 text-[var(--text-muted)]" aria-hidden="true">
@@ -1536,6 +1554,19 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
 
               {/* Footer */}
               <Text as="div" variant="caption" className="shrink-0 border-t border-[var(--glass-border)] px-4 py-3">
+                {selectedNavigationPath && onPin && onUnpin && (
+                  <Button variant="ghost" size="sm" className="mb-2 max-w-full" wrapLabel
+                    icon={<Icons.pin className={cn('h-4 w-4', selectedNavigationPinned && 'fill-current')} aria-hidden />}
+                    onClick={() => {
+                      if (selectedNavigationPinned) onUnpin(selectedNavigationPath)
+                      else onPin(selectedNavigationPath)
+                      inputRef.current?.focus()
+                    }}>
+                    {selectedNavigationPinned
+                      ? t('nav.unpinPage', { page: selectedNavigationItem.label, defaultValue: 'Unpin {{page}}' })
+                      : t('nav.pinPage', { page: selectedNavigationItem.label, defaultValue: 'Pin {{page}} to favorites' })}
+                  </Button>
+                )}
                 <div className="flex items-center gap-4 flex-wrap">
                   <span className="flex items-center gap-1">
                     <Text as="kbd" variant="caption" mono className="rounded-shape-sm bg-[var(--surface-2)] px-1.5 py-0.5">↑↓</Text> {t('palette.navigate', 'Navigate')}

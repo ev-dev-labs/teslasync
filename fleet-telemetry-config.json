@@ -21,6 +21,7 @@
     "connectivity": ["mqtt"]
   },
   "monitoring": {
+    "prometheus_metrics_host": "0.0.0.0",
     "prometheus_metrics_port": 9090
   }
 }

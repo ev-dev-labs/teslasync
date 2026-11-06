@@ -313,7 +313,7 @@ export function TelemetryPipelineCard({
         <div className={cn('flex flex-wrap items-center gap-1.5', typography.size.xs)}>
           {/* MQTT broker connectivity — neutral when connected, warning when not */}
           {mqttConnected ? (
-            <span className="inline-flex items-center gap-1 rounded-md bg-cyan-500/10 px-1.5 py-0.5 text-cyan-300 ring-1 ring-cyan-400/20">
+            <span className="inline-flex items-center gap-1 rounded-md bg-theme-accent/10 px-1.5 py-0.5 text-theme-accent ring-1 ring-theme-accent/20">
               <Radio className="h-3 w-3 shrink-0" aria-hidden="true" />
               {t('systemStatus.pipeline.streamConnected', 'Fleet Telemetry connected')}
             </span>
@@ -352,7 +352,7 @@ export function TelemetryPipelineCard({
       ) : list.length === 0 ? (
         <Text as="p" variant="bodySm" className="rounded-lg bg-white/[0.03] p-4">
           {t('systemStatus.pipeline.emptyBeforeLink', 'No vehicles configured yet. Add a vehicle from the')}{' '}
-          <Link to="/tesla-account" className="text-cyan-300 hover:text-cyan-200">
+          <Link to="/tesla-account" className="text-theme-accent hover:text-theme-accent">
             {t('systemStatus.pipeline.teslaAccount', 'Tesla account')}
           </Link>{' '}
           {t('systemStatus.pipeline.emptyAfterLink', 'page to see per-vehicle telemetry status.')}
@@ -385,7 +385,7 @@ export function TelemetryPipelineCard({
                   <div className="min-w-0">
                     <Link
                       to={`/vehicles/${v.id}`}
-                      className={cn('block break-words hover:text-cyan-300', typography.role.bodySm, typography.weight.medium)}
+                      className={cn('block break-words hover:text-theme-accent', typography.role.bodySm, typography.weight.medium)}
                     >
                       {v.display_name || t('systemStatus.pipeline.vehicleFallback', 'Vehicle {{id}}', { id: v.id })}
                     </Link>
@@ -447,7 +447,7 @@ export function TelemetryPipelineCard({
       <div className="flex flex-wrap gap-2 pt-2 border-t border-white/[0.06]">
         <Link
           to="/admin/telemetry/coverage"
-          className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-1.5 text-cyan-300 ring-1 ring-cyan-400/30 hover:bg-cyan-500/20', typography.size.xs, typography.weight.medium)}
+          className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md bg-theme-accent/15 px-3 py-1.5 text-theme-accent ring-1 ring-theme-accent/30 hover:bg-theme-accent/20', typography.size.xs, typography.weight.medium)}
         >
 
           {t('systemStatus.pipeline.openCoverage', 'Open telemetry coverage')}
@@ -455,7 +455,7 @@ export function TelemetryPipelineCard({
         </Link>
         <Link
           to="/mqtt-inspector"
-          className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 py-1.5 text-cyan-300 hover:bg-white/[0.04]', typography.size.xs)}
+          className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 py-1.5 text-theme-accent hover:bg-white/[0.04]', typography.size.xs)}
         >
           <Radio className="h-3.5 w-3.5 shrink-0" aria-hidden />
 
@@ -463,7 +463,7 @@ export function TelemetryPipelineCard({
         </Link>
         <Link
           to="/vehicles"
-          className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 py-1.5 text-cyan-300 hover:bg-white/[0.04]', typography.size.xs)}
+          className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 py-1.5 text-theme-accent hover:bg-white/[0.04]', typography.size.xs)}
         >
           <Activity className="h-3.5 w-3.5 shrink-0" aria-hidden />
           {t('systemStatus.pipeline.allVehicles', 'All vehicles')}

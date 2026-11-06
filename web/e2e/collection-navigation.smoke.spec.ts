@@ -195,7 +195,7 @@ test('sidebar selection follows the saved accent color and live accent changes',
     .locator('xpath=..').locator(':scope > span[aria-hidden]').first()
   await expect(indicator).toHaveCSS('background-color', 'rgb(245, 158, 11)')
   const chip = section.locator('.sidenav-icon')
-  await expect(chip).toHaveCSS('background-color', 'rgb(217, 119, 6)')
+  await expect(chip).toHaveCSS('background-color', 'rgb(245, 158, 11)')
 
   await page.evaluate(() => {
     document.documentElement.style.setProperty('--theme-primary', '#e31937')

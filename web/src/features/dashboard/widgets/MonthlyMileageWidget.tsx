@@ -177,7 +177,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.monthlyMileage.title', 'Monthly mileage')}
-      icon={<BarChart3 className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={<BarChart3 className="h-3.5 w-3.5 text-theme-accent" />}
       loading={isLoading}
       dataState={dataState}
       updatedAt={dataUpdatedAt}

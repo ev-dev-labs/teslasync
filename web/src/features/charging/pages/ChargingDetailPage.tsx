@@ -56,12 +56,14 @@ import { ChargeBillTruthPanel } from '../components/ChargeBillTruthPanel';
 import { ShareSessionDialog } from '../components/ShareSessionDialog';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { DetailPlacement, DetailSessionStats, DetailSourceOutline } from '../components/detail-modernization';
-import { isDcCharger } from '../lib/chargeBillTruth';
+import { getChargerCategory, isEstimatedChargingCost } from '@/lib/chargingAggregation';
+import { getChargerLabel } from '../components/charging-curve/helpers';
 
 /* ─── helpers ──────────────────────────────────────────────────── */
 
 function isDC(session: ChargingSession): boolean {
-  return isDcCharger(session.charger_type);
+  const category = getChargerCategory(session);
+  return category === 'dc' || category === 'supercharger';
 }
 
 /**
@@ -361,8 +363,9 @@ export default function ChargingDetailPage() {
     rateEnergyWh != null && Number.isFinite(rateEnergyWh)
     ? (rateEnergyWh / 1000) / (durationSeconds / 3600) : null;
   const billedCost = session.billed_cost_decimal ?? null;
-  const displayCost = billedCost ?? session.cost_decimal ?? null;
-  const costDenomination = billedCost != null ? session.billed_currency : session.cost_currency;
+  const manualCost = session.cost_source === 'manual' && session.cost_decimal != null;
+  const displayCost = manualCost ? session.cost_decimal : billedCost ?? session.cost_decimal ?? null;
+  const costDenomination = !manualCost && billedCost != null ? session.billed_currency : session.cost_currency;
   const recordedMoney = (amount: number, denomination: string | null | undefined) =>
     `${fmtNumber(amount)} ${denomination?.trim() || '—'}`;
   const perKwhRate =
@@ -371,14 +374,16 @@ export default function ChargingDetailPage() {
       : session.billed_rate_per_kwh ?? null;
   const displayPerKwhRate = perKwhRate ?? settingsCostPerKwh;
 
-  const costValue =
+  const rawCostValue =
     displayCost != null
       ? recordedMoney(displayCost, costDenomination)
       : displayEnergyWh > 0
         ? formatEnergyCost(displayEnergyWh / 1000)
         : '—';
 
-  const chargerLabel = session.charger_type ?? (dc ? 'DC' : 'AC');
+  const costValue = ((billedCost == null && isEstimatedChargingCost(session)) || displayCost == null) && rawCostValue !== '—'
+    ? t('charging.estimatedCostValue', '{{cost}} (estimated)', { cost: rawCostValue }) : rawCostValue;
+  const chargerLabel = getChargerLabel(session, t);
   // Spoken summary replacing the omitted fallback table on very long
   // sessions (see A11Y_TABLE_ROW_CAP). All samples remain in the API
   // response and every one is drawn in the chart.

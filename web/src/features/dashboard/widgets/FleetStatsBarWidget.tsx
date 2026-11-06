@@ -29,12 +29,12 @@ export function toDistanceDisplay(totalDistanceKm: number, to: DistanceUnitPref)
   return convertDistanceFromSI(totalDistanceKm * 1000, to);
 }
 
-export default function FleetStatsBarWidget({ size }: WidgetProps) {
+export default function FleetStatsBarWidget({ size, config }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { startInstant, endInstantExclusive } = useRangeState({ defaultPresetId: '30d' });
   const vehiclesQuery = useVehicles();
-  const analyticsQuery = useFleetAnalytics({ start: startInstant, end: endInstantExclusive });
+  const analyticsQuery = useFleetAnalytics({ start: startInstant, end: endInstantExclusive, widgetRange: config?.timeRange });
   const { data: vehicles, isLoading: vehiclesLoading } = vehiclesQuery;
   const {
     data: analytics,
@@ -88,21 +88,25 @@ export default function FleetStatsBarWidget({ size }: WidgetProps) {
           : undefined,
       },
       {
-        label: t('widget.fleetStatsBar.distance30d', 'Distance (30d)'),
+        label: config?.timeRange
+          ? t('widget.fleetStatsBar.distanceRange', 'Distance (selected range)')
+          : t('widget.fleetStatsBar.distanceViewRange', 'Distance (view range)'),
         value: isFiniteNumber(analytics?.total_distance_km)
           ? fmtNumber(toDistanceDisplay(analytics.total_distance_km, distanceUnit), 0)
           : null,
         unit: distanceUnit,
       },
       {
-        label: t('widget.fleetStatsBar.energy30d', 'Energy (30d)'),
+        label: config?.timeRange
+          ? t('widget.fleetStatsBar.energyRange', 'Energy (selected range)')
+          : t('widget.fleetStatsBar.energyViewRange', 'Energy (view range)'),
         value: isFiniteNumber(analytics?.total_energy_kwh)
           ? fmtNumber(analytics.total_energy_kwh, 1)
           : null,
         unit: 'kWh',
       },
     ];
-  }, [vehicles, analytics, distanceUnit, t, fmtNumber, fmtInt]);
+  }, [vehicles, analytics, config?.timeRange, distanceUnit, t, fmtNumber, fmtInt]);
 
   return (
     <WidgetShell

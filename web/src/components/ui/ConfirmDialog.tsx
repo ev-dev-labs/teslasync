@@ -26,6 +26,7 @@ export interface ConfirmDialogProps {
   loading?: boolean;
   /** Disable confirmation until caller-owned validation (for example, a required reason) passes. */
   confirmDisabled?: boolean;
+  aboveNotifications?: boolean;
   /**
    * For extra-dangerous actions (delete vehicle, wipe database). The confirm
    * button stays disabled until the user types this exact string into the
@@ -79,6 +80,7 @@ export function ConfirmDialog({
   variant = 'danger',
   loading = false,
   confirmDisabled: disabledByCaller = false,
+  aboveNotifications = false,
   requireTypedConfirmation,
   typedConfirmationLabel,
   silenceKey,
@@ -166,6 +168,7 @@ export function ConfirmDialog({
       onClose={handleModalClose}
       title={title}
       size="sm"
+      aboveNotifications={aboveNotifications}
       footer={(
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           <Button type="button" variant="secondary" wrapLabel className="min-h-11 md:min-h-10" onClick={onCancel} disabled={loading}>

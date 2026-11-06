@@ -40,7 +40,7 @@ export function QuickStatsGrid({ state, status, sourceQuery }: QuickStatsGridPro
         rawValue: state?.battery_level,
         context: <Battery
           className={`h-4 w-4 ${batteryColor(state?.battery_level) === 'red' ? 'text-rose-300'
-            : batteryColor(state?.battery_level) === 'green' ? 'text-emerald-300' : 'text-cyan-300'}`}
+            : batteryColor(state?.battery_level) === 'green' ? 'text-emerald-300' : 'text-status-info'}`}
           aria-hidden="true" data-battery-color={batteryColor(state?.battery_level)} /> },
       { metricId: 'distance', occurrenceId: 'range', label: t('common.range', 'Range'),
         rawValue: state?.rated_range, context: <Navigation className="h-4 w-4" aria-hidden="true" /> },

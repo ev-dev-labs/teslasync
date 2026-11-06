@@ -88,7 +88,7 @@ export function SupervisedDrivingPanel({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <ShieldCheck className="h-4 w-4 text-theme-accent" aria-hidden="true" />
               <h2 className="text-sm font-semibold text-[var(--text-primary)]">
                 {t('driveDetail.fsd.title', 'Supervised driving')}
               </h2>

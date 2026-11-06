@@ -17,6 +17,8 @@ func TestDecode_NewStreamingFields(t *testing.T) {
 		Vin:       "TEST-STREAMING",
 		CreatedAt: timestamppb.New(time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)),
 		Data: []*ftproto.Datum{
+			{Key: ftproto.Field_SelfDrivingSoftwareVersion, Value: &ftproto.Value{Value: &ftproto.Value_StringValue{StringValue: "v14.3 Lite"}}},
+			{Key: ftproto.Field_SemiTrailerLatched, Value: &ftproto.Value{Value: &ftproto.Value_BooleanValue{BooleanValue: false}}},
 			{Key: ftproto.Field_AccessoryRail, Value: &ftproto.Value{Value: &ftproto.Value_BooleanValue{BooleanValue: false}}},
 			{Key: ftproto.Field_PowerTransferStatus, Value: &ftproto.Value{Value: &ftproto.Value_PowerTransferStatusValue{PowerTransferStatusValue: ftproto.PowerTransferStatusValue_PowerTransferStatusChargeEnabled}}},
 			{Key: ftproto.Field_AutomaticEmergencyBrakingState, Value: &ftproto.Value{Value: &ftproto.Value_AutomaticEmergencyBrakingStateValue{AutomaticEmergencyBrakingStateValue: ftproto.AutomaticEmergencyBrakingStateValue_AutomaticEmergencyBrakingStateStandby}}},
@@ -39,6 +41,8 @@ func TestDecode_NewStreamingFields(t *testing.T) {
 		got[atom.Field] = atom.Value
 	}
 	want := map[string]any{
+		"SelfDrivingSoftwareVersion":     "v14.3 Lite",
+		"SemiTrailerLatched":             false,
 		"AccessoryRail":                  false,
 		"PowerTransferStatus":            "ChargeEnabled",
 		"AutomaticEmergencyBrakingState": "Standby",

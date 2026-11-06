@@ -75,7 +75,7 @@ describe('BrowserPermissionPanel', () => {
     expect(setPushPrefs).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps permission and delivery controls mobile-sized without enlarging desktop roles', () => {
+  it('keeps mobile touch targets and the unified desktop delivery-switch size', () => {
     const { rerender } = renderPanel();
     const enable = screen.getByRole('button', { name: /enable browser notifications/i });
     expect(enable).toHaveClass('min-h-11', 'md:min-h-10', 'focus-visible:outline-2');
@@ -91,7 +91,8 @@ describe('BrowserPermissionPanel', () => {
       />,
     );
     for (const control of screen.getAllByRole('switch')) {
-      expect(control).toHaveClass('h-11', 'min-w-11', 'md:h-6', 'md:w-9', 'focus-visible:outline-2');
+      expect(control).toHaveClass('h-11', 'min-w-11', 'md:h-6', 'md:w-11', 'focus-visible:outline-2');
+      expect(control.firstElementChild).toHaveClass('h-6', 'w-11');
       control.focus();
       expect(control).toHaveFocus();
     }

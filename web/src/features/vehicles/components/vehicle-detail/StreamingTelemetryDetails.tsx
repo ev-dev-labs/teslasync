@@ -16,6 +16,17 @@ export function StreamingTelemetryDetails({ state }: { state: VehicleState }) {
     <div className="mt-4 space-y-3">
       <KVList wrap items={[
         {
+          id: 'fsd-software-version',
+          label: t('telemetry.selfDrivingSoftwareVersion', 'FSD software version'),
+          value: state.self_driving_software_version?.trim() || '—',
+        },
+        {
+          id: 'semi-trailer-latched',
+          label: t('telemetry.semiTrailerLatched', 'Semi trailer latched'),
+          value: state.semi_trailer_latched == null ? '—' : state.semi_trailer_latched
+            ? t('common.yes', 'Yes') : t('common.no', 'No'),
+        },
+        {
           id: 'accessory-rail',
           label: t('telemetry.accessoryRail', 'Accessory rail'),
           value: state.accessory_rail == null ? '—' : state.accessory_rail

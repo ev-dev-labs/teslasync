@@ -21,7 +21,7 @@ export function VisitedCandidates({ onReview, onSelectForTemplate }: {
   return (
     <LayoutCard
       title={t('geofences.visits.title', 'Visited places to review')}
-      actions={<><MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" /><Badge variant="neutral" size="sm">{state.hasData ? candidates.length : '—'}</Badge></>}
+      actions={<><MapPin className="h-4 w-4 text-theme-accent" aria-hidden="true" /><Badge variant="neutral" size="sm">{state.hasData ? candidates.length : '—'}</Badge></>}
     >
       <Text size="sm" color="secondary" className="mb-3">
         {t('geofences.visits.description', 'Drive endpoints suggest places; completed charging sessions provide independent charging evidence. Review each location before adding it to your directory.')}

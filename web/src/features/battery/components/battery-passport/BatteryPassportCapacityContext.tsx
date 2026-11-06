@@ -32,7 +32,7 @@ export function BatteryPassportCapacityContext({
           )} description={t(
             'batteryPassport.capacity.subtitle',
             'The certificate reports capacity_kwh and original_capacity_kwh as separate kWh fields; their quotient is shown transparently.',
-          )} actions={<BatteryMedium className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          )} actions={<BatteryMedium className="h-4 w-4 text-theme-accent" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <MetricGrid>
             <MetricCard

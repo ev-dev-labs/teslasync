@@ -28,9 +28,13 @@ describe('notification delivery latency preserves integer milliseconds', () => {
       status: 'sent', created_at: '2026-10-16T12:00:00Z', latency_ms: raw,
     }) as NotificationLog;
     render(<NotificationInboxDetails log={log} />);
-    const field = screen.getByText('Delivery latency', { selector: 'dt' });
-    expect(field.nextElementSibling?.tagName).toBe('DD');
-    expect(field.nextElementSibling?.textContent).toBe(expected);
+    if (raw == null) {
+      expect(screen.queryByText('Delivery latency', { selector: 'dt' })).not.toBeInTheDocument();
+    } else {
+      const field = screen.getByText('Delivery latency', { selector: 'dt' });
+      expect(field.nextElementSibling?.tagName).toBe('DD');
+      expect(field.nextElementSibling?.textContent).toBe(expected);
+    }
     expect(log.latency_ms).toBe(raw);
   });
 });

@@ -110,7 +110,7 @@ export function VehiclePhotoGallery({
               className={cn(
                 'group relative h-full w-full overflow-hidden rounded-lg p-0',
                 'border border-[var(--glass-border)] bg-[var(--surface-1)]',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent',
                 'forced-colors:border-[CanvasText]',
               )}
             >

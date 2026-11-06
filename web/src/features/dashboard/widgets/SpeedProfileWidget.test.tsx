@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { SpeedBucket, SpeedProfileData } from '@/types/driving';
 import type { ReactNode } from 'react';
 import SpeedProfileWidget, { formatBucketLabel } from './SpeedProfileWidget';
+import type { WidgetConfig } from './types';
 
 const { useSpeedProfileMock, useVehiclesMock, useUnitsMock, useRangeStateMock } = vi.hoisted(() => ({
   useSpeedProfileMock: vi.fn(),
@@ -13,8 +14,8 @@ const { useSpeedProfileMock, useVehiclesMock, useUnitsMock, useRangeStateMock } 
 }));
 
 vi.mock('@/api/hooks/useDriving', () => ({
-  useSpeedProfile: (vehicleId?: string, start?: string, end?: string) =>
-    useSpeedProfileMock(vehicleId, start, end),
+  useSpeedProfile: (vehicleId?: string, start?: string, end?: string, widgetRange?: string) =>
+    useSpeedProfileMock(vehicleId, start, end, widgetRange),
 }));
 vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => useVehiclesMock(),
@@ -65,10 +66,14 @@ function query(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function renderWidget(size: { cols: number; rows: number } = { cols: 2, rows: 2 }, vehicleId?: number) {
+function renderWidget(
+  size: { cols: number; rows: number } = { cols: 2, rows: 2 },
+  vehicleId?: number,
+  config?: WidgetConfig,
+) {
   return render(
     <MemoryRouter>
-      <SpeedProfileWidget size={size} vehicleId={vehicleId} />
+      <SpeedProfileWidget size={size} vehicleId={vehicleId} config={config} />
     </MemoryRouter>,
   );
 }
@@ -173,7 +178,13 @@ describe('SpeedProfileWidget redesign', () => {
       '42',
       '2026-09-23',
       '2026-10-22',
+      undefined,
     );
+  });
+
+  it('passes the configured range to the speed profile query', () => {
+    renderWidget({ cols: 2, rows: 2 }, 42, { timeRange: '7d' });
+    expect(useSpeedProfileMock).toHaveBeenCalledWith('42', '2026-09-23', '2026-10-22', '7d');
   });
 
   it('uses compact summary layout with no chart', () => {

@@ -8,7 +8,7 @@ export type ChargeSessionState = (typeof CHARGE_SESSION_STATES)[number]
 
 export const CHARGE_SESSION_STATE_ENTRIES: Record<ChargeSessionState, StateEntry> = {
   pending:    { variant: 'warning' },
-  active:     { variant: 'success', overrides: { badgeDot: 'bg-cyan-400', bg: 'bg-cyan-500/10', text: 'text-cyan-400', dot: 'bg-cyan-400' } },
+  active:     { variant: 'success', overrides: { badgeDot: 'bg-status-activity', bg: 'bg-status-activity/10', text: 'text-status-activity', dot: 'bg-status-activity' } },
   completing: { variant: 'info' },
   done:       { variant: 'success' },
   recovered:  { variant: 'neutral', overrides: { badgeDot: 'bg-purple-400', bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' } },

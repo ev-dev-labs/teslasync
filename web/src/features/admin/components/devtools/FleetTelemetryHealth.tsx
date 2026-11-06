@@ -42,7 +42,7 @@ export function FleetTelemetryHealth() {
         <UiButton
           type="button"
           variant="ghost"
-          className="!h-auto !px-0 !py-0 font-mono text-xs text-cyan-300 hover:!bg-transparent hover:underline"
+          className="!h-auto !px-0 !py-0 font-mono text-xs text-theme-accent hover:!bg-transparent hover:underline"
           onClick={() => setSelectedVin(r.vin === selectedVin ? '' : r.vin)}
         >
           {r.vin}

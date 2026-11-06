@@ -57,7 +57,7 @@ function renderValue(v: unknown): { text: string; cls: string } {
   if (v === null) return { text: 'null', cls: 'text-[var(--text-muted)]' };
   if (v === undefined) return { text: '—', cls: 'text-[var(--text-muted)]' };
   const tx = typeof v;
-  if (tx === 'number') return { text: String(v), cls: 'text-cyan-300' };
+  if (tx === 'number') return { text: String(v), cls: 'text-status-info' };
   if (tx === 'boolean') return { text: String(v), cls: 'text-purple-300' };
   if (tx === 'string') return { text: v as string, cls: 'text-amber-300' };
   try {

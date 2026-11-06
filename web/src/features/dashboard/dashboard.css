@@ -1,5 +1,5 @@
   :is(.dashboard-widget-panel, .dashboard-widget) {
-    --semantic-info: light-dark(#2463b1, #7cbbff);
+    --semantic-info: var(--widget-semantic-info);
     --semantic-success: light-dark(#14664b, #62d5b2);
     --semantic-warning: light-dark(#87551b, #f2bf70);
     --semantic-danger: light-dark(#b33c55, #f294a6);
@@ -20,6 +20,51 @@
     --panel-bg: var(--surface-1);
     --panel-border: var(--border-default);
     --panel-radius: var(--radius-xl);
+  }
+
+  .widget-panel.widget-content-fit {
+    align-self: start;
+    flex: none;
+    height: max-content;
+  }
+
+  .widget-content-fit > .dashboard-widget {
+    height: auto;
+    max-height: inherit;
+    flex: 0 1 auto;
+  }
+
+  .widget-content-fit .flex-col > .flex-1 {
+    flex-basis: auto;
+  }
+
+  .widget-content-fit [data-testid="widget-body"] > .h-full,
+  .widget-content-fit [data-testid="widget-body"] > .flex-1 > .h-full {
+    height: auto;
+  }
+
+  .widget-content-fit .widget-chart-well {
+    height: auto;
+    min-height: var(--widget-visual-height, 200px);
+    flex: none;
+  }
+
+  .widget-content-fit .recharts-responsive-container {
+    min-height: var(--widget-visual-height, 180px);
+  }
+
+  .widget-content-fit [data-chart-fluid="true"] [data-chart-viewport] {
+    /* Size containment excludes descendants from this intrinsic measurement. */
+    min-height: var(--widget-visual-height, 180px);
+  }
+
+  .widget-content-fit .leaflet-container {
+    height: var(--widget-visual-height, 240px);
+    min-height: var(--widget-visual-height, 240px);
+  }
+
+  .widget-content-fit .widget-flow-diagram {
+    max-height: var(--widget-visual-height, 300px);
   }
 
   .dashboard-widget [data-role="widget-shell-header"] {
@@ -46,6 +91,10 @@
 
   .widget-cell-stream {
     animation: widget-cell-rise 2.4s linear infinite;
+  }
+
+  .widget-charge-current {
+    animation: widget-charge-travel 3.2s linear infinite;
   }
 
   .dashboard-widget .flow-active {
@@ -126,6 +175,10 @@
 
 @keyframes widget-cell-rise {
   to { transform: translateY(-48px); }
+}
+
+@keyframes widget-charge-travel {
+  to { stroke-dashoffset: -24; }
 }
 
 @keyframes widget-power-travel {

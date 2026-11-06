@@ -86,7 +86,7 @@ Pending work is recorded here rather than hidden behind lint:
 
 - `npm run test:shared-pattern-guards` is the hermetic guard unit suite.
 - `npm run guard:shared-patterns` is repository-wide and repository-neutral.
-- Static CSS-variable `style={{ ... }}` coverage is added to SP-13 with a unit test and no exception marker.
+- Static CSS-variable inline-style coverage is added to SP-13 with a unit test and no exception marker.
 
 ## Verification final
 

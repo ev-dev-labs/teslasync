@@ -39,8 +39,8 @@ const CATEGORY_PRESENTATION: Record<
   },
   missing: {
     icon: Icons.info,
-    tone: 'text-sky-700 dark:text-sky-300',
-    dot: 'bg-sky-500',
+    tone: 'text-status-info dark:text-status-info',
+    dot: 'bg-status-info',
   },
   failed: {
     icon: Icons.warning,

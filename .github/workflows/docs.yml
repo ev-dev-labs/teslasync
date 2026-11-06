@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "docs/**"
+      - ".github/workflows/docs.yml"
   workflow_dispatch:
     inputs:
       runner:
@@ -16,8 +17,8 @@ on:
         default: ubuntu-latest
 
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: pages-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -25,12 +26,11 @@ permissions:
   id-token: write
 
 jobs:
-  deploy:
-    name: Build & Deploy Docs
+  build:
+    name: Build Docs
     runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -53,13 +53,25 @@ jobs:
       - name: Verify custom-domain asset paths
         run: node docs/scripts/verify-pages-assets.mjs
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v6
-
-      - name: Upload artifact
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
           path: docs/.vitepress/dist
+
+  deploy:
+    name: Deploy Docs
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
 
       - name: Deploy to GitHub Pages
         id: deployment

@@ -57,7 +57,7 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
   return (
     <GlassPanel className="p-5">
       <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-        <Activity className="h-4 w-4 text-cyan-400" aria-hidden="true" />
+        <Activity className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('fleet.batteryStatus', 'Fleet battery status')}
       </h3>
       {isLoading ? (

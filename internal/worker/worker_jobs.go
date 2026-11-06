@@ -317,7 +317,7 @@ func (w *Worker) sendAlertNotifications(ctx context.Context, vehicle *vehiclemod
 	triggerID := notification.NewTriggerID()
 	fullTitle := fmt.Sprintf("🚗 %s: %s", vehicle.DisplayName, rule.Name)
 	if _, err := notification.RecordTrigger(ctx, notifRepo, &notification.Request{
-		Title: fullTitle, Message: message, AlertID: rule.ID,
+		Title: fullTitle, Message: message, AlertID: rule.ID, VehicleID: vehicle.ID,
 		Severity: rule.Severity, TriggerID: triggerID, EventType: "alert.polling",
 	}); err != nil {
 		log.Error().Err(err).Str("trace_id", oteltrace.SpanFromContext(ctx).SpanContext().TraceID().String()).
@@ -340,6 +340,7 @@ func (w *Worker) sendAlertNotifications(ctx context.Context, vehicle *vehiclemod
 				Message:     message,
 				ChannelID:   ch.ID,
 				AlertID:     rule.ID,
+				VehicleID:   vehicle.ID,
 				TriggerID:   triggerID,
 				EventType:   "alert.polling",
 				Severity:    rule.Severity,
@@ -353,7 +354,7 @@ func (w *Worker) sendAlertNotifications(ctx context.Context, vehicle *vehiclemod
 				}
 				eventType, id := req.EventType, rule.ID
 				if err := notifRepo.CreateLog(ctx, &notificationmodel.NotificationLog{
-					ChannelID: ch.ID, AlertID: &id, Title: fullTitle, Message: message,
+					ChannelID: ch.ID, AlertID: &id, VehicleID: &vehicle.ID, Title: fullTitle, Message: message,
 					Status: status, Error: errText, Severity: rule.Severity,
 					TriggerID: &triggerID, EventType: &eventType,
 				}); err != nil {

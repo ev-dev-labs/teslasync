@@ -84,7 +84,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
   return (
     <GlassPanel className="p-6 h-full">
       <h3 className="section-title flex items-center gap-2 mb-5">
-        <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />{' '}
+        <Activity className="h-4 w-4 text-status-info" aria-hidden="true" />{' '}
         {t('telemetry.vehicleState', 'Vehicle state')}
         {sseConnected && (
           <span
@@ -103,7 +103,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
           label={t('telemetry.highBeams', 'High beams')}
           value={live.lightsHighBeams ? t('common.on', 'On') : offLabel}
           active={Boolean(live.lightsHighBeams)}
-          activeClass="text-cyan-300"
+          activeClass="text-status-info"
         />
         <StateRow
           icon={Car}
@@ -162,7 +162,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
           label={t('telemetry.speedLimit', 'Speed limit')}
           value={speedLimitActive ? formatSpeed(currentLimit) : offLabel}
           active={speedLimitActive}
-          activeClass="text-cyan-300"
+          activeClass="text-status-info"
         />
         <StateRow
           icon={Monitor}
@@ -188,7 +188,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
                 : t('telemetry.updateCurrent', 'Current')
           }
           active={Boolean(live.swUpdateAvailable || live.swUpdateInProgress)}
-          activeClass="text-cyan-300"
+          activeClass="text-status-info"
         />
         <StateRow
           icon={Key}

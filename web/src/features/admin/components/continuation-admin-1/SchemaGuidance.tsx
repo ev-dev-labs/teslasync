@@ -11,7 +11,7 @@ export function SchemaGuidance({ state, isDrifted }: { state: SchemaSectionState
   const { drift, isLoading, error, onRetry } = state;
   return (
     <LayoutCard title={t('admin.schemaDrift.guidanceTitle', 'What this means')}
-      actions={<ListChecks className="h-4 w-4 text-cyan-300" aria-hidden />}>
+      actions={<ListChecks className="h-4 w-4 text-theme-accent" aria-hidden />}>
       {isLoading ? <Skeleton height={72} /> : error ? <QueryError error={error} onRetry={onRetry} /> : !drift ? (
         // no-action: seed capture requires an external API restart; the page header already refreshes the shared evidence.
         <EmptyState icon={<Fingerprint className="h-8 w-8" aria-hidden />}

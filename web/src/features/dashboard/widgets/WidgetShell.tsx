@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { HelpTooltip, PinButton } from '@/components/ui';
+import { VisuallyHidden } from '@/components/a11y';
 import type { DataState } from '@/api/dataState';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import {
@@ -13,6 +14,7 @@ import {
 import type { WidgetHelp } from './types';
 import { WidgetTitleContext } from './WidgetTitleContext';
 import { WidgetHeaderContext } from './WidgetHeaderContext';
+import { WidgetAutoRefresh } from './WidgetAutoRefresh';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import '../dashboard.css';
 
@@ -77,10 +79,15 @@ export function WidgetShell({
   const { t } = useTranslation();
   const header = useContext(WidgetHeaderContext);
   const { reduce: reduceMotion } = useMotionPreference();
-  const visibleTitle = title ?? t('widget.overview', 'Widget overview');
+  const visibleTitle = title ?? header.fallbackTitle ?? t('widget.overview', 'Widget overview');
   const initialLoading = dataState ? dataState.status === 'initial' : loading;
   const fatalError = dataState ? dataState.fatalError : error ? new Error(error) : null;
   const retry = onRefresh ?? dataState?.retry ?? (query ? () => { void query.refetch(); } : undefined);
+  const refreshSeconds = header.refreshIntervalSeconds;
+  const canAutoRefresh = Boolean(
+    retry && Number.isFinite(refreshSeconds) && (refreshSeconds ?? 0) > 0 &&
+    (dataState?.hasData || fatalError || (updatedAt ?? 0) > 0 || (query?.dataUpdatedAt ?? 0) > 0 || query?.isError),
+  );
 
   const showFreshness = updatedAt !== undefined || query !== undefined;
   const degradedContent = Boolean(
@@ -129,12 +136,23 @@ export function WidgetShell({
       data-data-state={dataState?.status}
       data-motion-suppressed={suppressActivity || undefined}
     >
+        {canAutoRefresh && retry && (
+          <WidgetAutoRefresh
+            intervalMs={(refreshSeconds ?? 0) * 1000}
+            paused={Boolean(header.pauseAutoRefresh || isFetching || query?.isFetching || dataState?.isRefreshing)}
+            onRefresh={retry}
+          />
+        )}
         <div className={dashboardTokens.header} data-role="widget-shell-header">
           <div className="flex min-w-0 w-full items-center gap-2" data-role="widget-header-line">
           <div className="min-w-0 flex-1">
             <div className={cn('flex min-w-0 items-center gap-2', header.editMode && 'widget-drag-handle cursor-grab active:cursor-grabbing')}>
               {icon && <span aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--text-secondary)] [&>svg]:size-4">{icon}</span>}
-              <h3 data-role="widget-header-title" className={cn(dashboardTokens.title, 'min-w-0 truncate')} title={visibleTitle}>{visibleTitle}</h3>
+              {header.showTitle === false && !header.editMode ? (
+                <VisuallyHidden as="h3" data-role="widget-header-title">{visibleTitle}</VisuallyHidden>
+              ) : (
+                <h3 data-role="widget-header-title" className={cn(dashboardTokens.title, 'min-w-0 truncate')} title={visibleTitle}>{visibleTitle}</h3>
+              )}
             </div>
           </div>
           <div className="ms-auto flex shrink-0 items-center gap-1.5" data-role="widget-header-actions">

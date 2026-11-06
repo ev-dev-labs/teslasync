@@ -13,9 +13,9 @@ describe('notificationEventTypeFallback', () => {
   });
 
   it.each(['Custom.APIReady_event', 'FSD_CUSTOM', '', '__proto__'])(
-    'preserves unknown backend identifiers: %s',
+    'does not expose unknown internal codes: %s',
     value => {
-      expect(notificationEventTypeFallback(value)).toBe(value);
+      expect(notificationEventTypeFallback(value)).toBe('Other');
     },
   );
 });

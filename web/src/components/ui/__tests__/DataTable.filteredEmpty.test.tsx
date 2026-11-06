@@ -69,6 +69,138 @@ function excludeAllValues() {
 }
 
 describe('DataTable filtered empty copy', () => {
+  it('keeps multiple group and header controls in their fixed columns despite saved widths', () => {
+    localStorage.setItem('teslasync.table.filtered-empty:records.widths', JSON.stringify({ access: 350, auto: 400 }))
+    const actionColumns: Column<Row>[] = [
+      columns[0],
+      { key: 'access', header: 'Access', fixedWidth: 120, align: 'center',
+        headerAction: <Button>All access</Button>, render: row => <Button>{`Access ${row.name}`}</Button> },
+      { key: 'auto', header: 'Auto', fixedWidth: 140, align: 'center',
+        headerAction: <Button>All auto</Button>, render: row => <Button>{`Auto ${row.name}`}</Button> },
+    ]
+    const view = mount({ columns: actionColumns, resizable: false,
+      rowGrouping: {
+        key: row => row.status, label: key => key,
+        actionColumns: {
+          access: key => <Button>{`Access group ${key}`}</Button>,
+          auto: key => <Button>{`Auto group ${key}`}</Button>,
+        },
+      },
+    })
+    for (const [key, width] of [['access', '120px'], ['auto', '140px']]) {
+      const header = view.container.querySelector<HTMLElement>(`th[data-column-key="${key}"]`)!
+      expect(header).toHaveStyle({ width, minWidth: width, maxWidth: width })
+    }
+    expect(screen.getByRole('button', { name: 'All access' }).closest('th')).toHaveAttribute('data-column-key', 'access')
+    expect(screen.getByRole('button', { name: 'All auto' }).closest('th')).toHaveAttribute('data-column-key', 'auto')
+    expect(screen.getByRole('button', { name: 'Access group Ready' }).closest('td')).toHaveAttribute('data-column-key', 'access')
+    expect(screen.getByRole('button', { name: 'Auto group Ready' }).closest('td')).toHaveAttribute('data-column-key', 'auto')
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Ready' }))
+    expect(screen.getByRole('button', { name: 'Access Alpha' }).closest('td')).toHaveAttribute('data-column-key', 'access')
+    expect(screen.getByRole('button', { name: 'Auto Alpha' }).closest('td')).toHaveAttribute('data-column-key', 'auto')
+  })
+
+  it('filters a secondary field of a composite column using the full candidate set', () => {
+    mount({
+      columns: [{
+        ...columns[0],
+        additionalValueFilters: [{ key: 'status', header: 'Status', filterValue: row => row.status }],
+      }],
+      filterData: rows,
+      enableValueFilters: true,
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Status filter' }))
+    expect(screen.getByRole('checkbox', { name: 'Ready' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Ready' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+    expect(screen.getByText('Bravo')).toBeInTheDocument()
+  })
+
+  it.each([false, true])('aligns group actions with their shared column when reordered=%s', (reversed) => {
+    mount({ columns: reversed ? [...columns].reverse() : columns,
+      rowGrouping: { key: row => row.status, label: key => key, actionsColumn: 'status',
+        actions: key => <Button aria-label={`Allow ${key}`}>Allow</Button> },
+    })
+    const action = screen.getByRole('button', { name: 'Allow Ready' })
+    expect(action.closest('td')).toHaveAttribute('data-column-key', 'status')
+    const cells = action.closest('tr')!.querySelectorAll('td')
+    expect(cells).toHaveLength(2)
+    expect(cells[reversed ? 0 : 1]).toContainElement(action)
+    expect(screen.getByRole('button', { name: 'Expand Ready' })).toBeInTheDocument()
+  })
+
+  it('keeps the group disclosure and action available with only the action column visible', () => {
+    mount({ columns: [columns[1]],
+      rowGrouping: { key: row => row.status, label: key => key, actionsColumn: 'status',
+        actions: key => <Button aria-label={`Allow ${key}`}>Allow</Button> },
+    })
+    const action = screen.getByRole('button', { name: 'Allow Ready' })
+    expect(action.closest('td')).toHaveAttribute('colspan', '1')
+    expect(action.closest('tr')!.querySelectorAll('td')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Expand Ready' })).toBeInTheDocument()
+  })
+
+  it('keeps object-property group names independent when another group is expanded', () => {
+    mount({ data: [{ ...rows[0], status: 'constructor' }, rows[1]],
+      rowGrouping: { key: row => row.status, label: key => key },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Review' }))
+    expect(screen.getByRole('button', { name: 'Expand constructor' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Expand constructor' }))
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+  })
+
+  it('collapses groups without removing matching rows from exports or candidates', async () => {
+    const onExport = vi.fn()
+    mount({ enableValueFilters: true, onExport,
+      rowGrouping: { key: row => row.status, label: key => key },
+    })
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Ready' }))
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+    expect(screen.getByText('Charlie')).toBeInTheDocument()
+    expect(screen.queryByText('Bravo')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }))
+    await waitFor(() => expect(onExport).toHaveBeenCalledWith('csv', rows, 'visible'))
+    fireEvent.click(screen.getByRole('button', { name: 'Status filter' }))
+    expect(screen.getByRole('checkbox', { name: 'Review' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Ready' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    expect(screen.getByText('Bravo')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Expand Ready' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse Review' }))
+    expect(screen.queryByText('Bravo')).not.toBeInTheDocument()
+  })
+
+  it('auto-expands search matches, allows manual collapse, and resets when search clears', async () => {
+    mount({ rowGrouping: { key: row => row.status, label: key => key } })
+    search('Alpha')
+    expect(await screen.findByText('Alpha')).toBeInTheDocument()
+    expect(screen.queryByText('Charlie')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse Ready' }))
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+    search('')
+    await screen.findByRole('button', { name: 'Expand Review' })
+    expect(screen.getByRole('button', { name: 'Expand Ready' })).toBeInTheDocument()
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+  })
+
+  it('discards pre-filter manual expansion when the filter is cleared without toggling a group', async () => {
+    mount({ rowGrouping: { key: row => row.status, label: key => key } })
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Ready' }))
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+    search('Bravo')
+    expect(await screen.findByText('Bravo')).toBeInTheDocument()
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+    search('')
+    await screen.findByRole('button', { name: 'Expand Review' })
+    expect(screen.getByRole('button', { name: 'Expand Ready' })).toBeInTheDocument()
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+  })
+
   it('shows no-match for populated loaded search and keyboard reset restores rows and actions', async () => {
     const action = vi.fn()
     mount({ toolbarActions: <Button onClick={action}>Inspect source</Button>, searchable: true })

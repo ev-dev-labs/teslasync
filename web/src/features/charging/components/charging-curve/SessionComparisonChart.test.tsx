@@ -223,7 +223,8 @@ const acSession = makeSession({
   peak_power_w: 11_000,
   avg_power_w: null,
   cost_decimal: 4.25,
-  charger_type: null,
+  charger_type: 'AC',
+  is_home: true,
 });
 
 type Point = Record<string, number>;

@@ -147,6 +147,10 @@ export interface Column<T> {
   render: (row: T) => ReactNode
   /** Canonical export value for computed or component-rendered cells. */
   exportValue?: (row: T) => CsvCellValue
+  /** Expand a composite visible cell into separately named export fields. */
+  exportFields?: readonly { key: string; header: string; value: (row: T) => CsvCellValue }[]
+  /** Interactive control displayed beneath the column label. */
+  headerAction?: ReactNode
   /** Optional column-scoped filter opened by the header's filter icon. */
   filter?: ReactNode
   filterActive?: boolean
@@ -154,6 +158,13 @@ export interface Column<T> {
   /** Canonical raw value, independent of display units. Opts the column into enabled value filters. */
   filterValue?: (row: T) => TableRawValue
   filterValueLabel?: (value: TableRawValue, row: T) => string
+  /** Additional independently filterable values shown within a composite cell. */
+  additionalValueFilters?: readonly {
+    key: string
+    header: string
+    filterValue: (row: T) => TableRawValue
+    filterValueLabel?: (value: TableRawValue, row: T) => string
+  }[]
   /** Subtle divider before this column, retained when reordered. */
   groupStart?: boolean
   sortable?: boolean
@@ -170,12 +181,30 @@ export interface Column<T> {
   /** Initial width in pixels (or 'auto'). When `resizable` is true the user's
    *  drag overrides this and is persisted by `tableId`. */
   defaultWidth?: number | 'auto'
+  /** Non-resizable width in pixels, taking precedence over saved widths. */
+  fixedWidth?: number
+  /** Width of an aligned mobile action column, including composite controls. */
+  mobileActionWidth?: number
   /** Min width allowed when resizing. Defaults to 60. */
   minWidth?: number
   /** Max width allowed when resizing. Defaults to 800. */
   maxWidth?: number
   /** Right-align numeric columns; default 'left'. */
   align?: 'left' | 'center' | 'right'
+}
+
+export interface DataTableRowGrouping<T> {
+  key: (row: T) => string
+  label: (key: string) => string
+  summary?: (key: string, rows: T[]) => ReactNode
+  /** Optional shorter group summary for constrained mobile rows. */
+  mobileSummary?: (key: string, rows: T[]) => ReactNode
+  actions?: (key: string, rows: T[]) => ReactNode
+  actionsColumn?: string
+  /** Controls placed in the corresponding visible columns of each group row. */
+  actionColumns?: Readonly<Record<string, (key: string, rows: T[]) => ReactNode>>
+  autoExpand?: boolean
+  resetKey?: string
 }
 
 export interface PaginationConfig {
@@ -335,6 +364,8 @@ interface DataTableProps<T> {
   onExpandedChange?: (keys: RowKey[]) => void
   /** Required when `expandable` is true: render the row drawer body. */
   renderExpanded?: (row: T) => ReactNode
+  /** Collapse display only; all matching rows remain available to filters and exports. */
+  rowGrouping?: DataTableRowGrouping<T>
 
   // RESIZE
   /** Allow users to drag column right edges to resize. Persists per-column
@@ -370,6 +401,8 @@ interface DataTableProps<T> {
    *  toolbars. Pass false for sensitive previews/pickers. exportAll can opt
    *  server tables into full-result export without inventing a server query. */
   exportable?: boolean
+  /** Hide the default export-scope explanatory line without changing export behavior. */
+  showExportDescription?: boolean
   /** Filename for the exported CSV (without extension). Defaults to a
    *  date-stamped fallback like `table-2026-05-01`. */
   exportFilename?: string
@@ -487,11 +520,13 @@ export function DataTable<T>({
   expandedKeys,
   onExpandedChange,
   renderExpanded,
+  rowGrouping,
   resizable = Boolean(tableId),
   showColumnsMenu,
   columnVisibility,
   columnReorder = Boolean(tableId),
   exportable,
+  showExportDescription = true,
   exportFilename,
   exportRow,
   onExport,
@@ -511,15 +546,21 @@ export function DataTable<T>({
   const { t } = useTranslation()
   const frameRef = useRef<HTMLDivElement>(null)
   const [mobileActive, setMobileActive] = useState(false)
+  const [compactGroups, setCompactGroups] = useState(false)
   const mobileEnabled = mobilePresentation != null
+  const observeFrame = mobileEnabled || rowGrouping?.actionsColumn != null
   useEffect(() => {
-    if (!mobileEnabled || !frameRef.current || typeof ResizeObserver === 'undefined') {
+    if (!observeFrame || !frameRef.current || typeof ResizeObserver === 'undefined') {
       setMobileActive(false)
+      setCompactGroups(false)
       return
     }
     const frame = frameRef.current
     const update = (width: number) => {
-      if (width > 0) setMobileActive(isMobileGridWidth(width))
+      if (width > 0) {
+        setMobileActive(mobileEnabled && isMobileGridWidth(width))
+        setCompactGroups(isMobileGridWidth(width))
+      }
     }
     update(frame.getBoundingClientRect().width)
     const observer = new ResizeObserver(entries => {
@@ -528,19 +569,25 @@ export function DataTable<T>({
     })
     observer.observe(frame)
     return () => observer.disconnect()
-  }, [mobileEnabled])
+  }, [mobileEnabled, observeFrame])
   const [localSearch, setLocalSearch] = useState('')
   const deferredLocalSearch = useDeferredValue(localSearch)
   const localSearchEnabled = searchable && !paginationControls && !controls?.search
   const [valueSelections, setValueSelections] = useState<TableValueSelections>({})
   const valueColumns = useMemo(() => enableValueFilters
-    ? columns.filter(column => column.filterValue != null) : [], [columns, enableValueFilters])
+    ? columns.flatMap(column => [
+      ...(column.filterValue ? [{
+        key: column.key, header: column.header, filterValue: column.filterValue,
+        filterValueLabel: column.filterValueLabel, render: column.render,
+      }] : []),
+      ...(column.additionalValueFilters ?? []).map(filter => ({ ...filter, render: undefined })),
+    ]) : [], [columns, enableValueFilters])
   const candidateRows = filterData ?? data
   const valueOptions = useMemo(() => new Map(valueColumns.map(column => [
     column.key,
     buildTableFilterValues(candidateRows, row => column.filterValue?.(row) ?? null,
       (value, row) => column.filterValueLabel?.(value, row)
-        ?? (value == null ? '—' : extractRenderedText(column.render(row)) ?? String(value))),
+        ?? (value == null ? '—' : (column.render && extractRenderedText(column.render(row))) || String(value))),
   ])), [valueColumns, candidateRows])
   const filteredData = useMemo(() => {
     const query = localSearchEnabled ? deferredLocalSearch.trim().toLocaleLowerCase() : ''
@@ -561,6 +608,21 @@ export function DataTable<T>({
     pending: !Object.is(localSearch, deferredLocalSearch),
   } : undefined)
   const hasValueFilters = valueColumns.some(column => valueSelections[column.key] != null)
+  const groupScope = JSON.stringify([rowGrouping?.resetKey, valueSelections, deferredLocalSearch])
+  const [groupExpansion, setGroupExpansion] = useState<{ scope: string; open: Record<string, boolean> }>({ scope: groupScope, open: {} })
+  if (groupExpansion.scope !== groupScope) {
+    setGroupExpansion({ scope: groupScope, open: {} })
+  }
+  const groupsExpandedByFilter = !!rowGrouping?.autoExpand || hasValueFilters || !!deferredLocalSearch.trim()
+  const groupIsOpen = (key: string) => groupExpansion.scope === groupScope && typeof groupExpansion.open[key] === 'boolean'
+    ? groupExpansion.open[key] : groupsExpandedByFilter
+  const toggleGroup = (key: string) => {
+    const open = !groupIsOpen(key)
+    setGroupExpansion(previous => ({
+      scope: groupScope,
+      open: { ...(previous.scope === groupScope ? previous.open : {}), [key]: open },
+    }))
+  }
   // Incoming rows are loaded evidence, not full server history or the current pagination slice.
   const localFilterNoMatch = data.length > 0 && filteredData.length === 0
   const noMatchMessage = t('combobox.noResults', 'No results')
@@ -773,6 +835,7 @@ export function DataTable<T>({
     [widthsStorageKey],
   )
   const widthFor = (col: Column<T>): number | undefined => {
+    if (col.fixedWidth != null) return col.fixedWidth
     const stored = widths[col.key]
     if (typeof stored === 'number') return stored
     if (typeof col.defaultWidth === 'number') return col.defaultWidth
@@ -903,21 +966,24 @@ export function DataTable<T>({
       await onExport(format, sourceRows, scope)
       return
     }
+    const exportColumns = visibleColumns.flatMap(column => column.exportFields?.length
+      ? column.exportFields.map(field => ({ ...field, column }))
+      : [{ key: column.key, header: column.header, value: column.exportValue, column }])
     const rows = sourceRows.map(row => {
       const flattened = exportRow?.(row)
       const record: Record<string, CsvCellValue> = {}
-      visibleColumns.forEach(column => {
+      exportColumns.forEach(({ key, value, column }) => {
         if (flattened) {
-          record[column.key] = flattened[column.key] ?? null
-        } else if (column.exportValue) {
-          record[column.key] = column.exportValue(row)
+          record[key] = flattened[key] ?? null
+        } else if (value) {
+          record[key] = value(row)
         } else {
-          const value = (row as unknown as Record<string, unknown>)[column.key]
+          const raw = (row as unknown as Record<string, unknown>)[column.key]
           const rendered = extractRenderedText(column.render(row))
-          record[column.key] = format === 'csv' && rendered != null ? rendered
-            : value === null || typeof value === 'string' || typeof value === 'number'
-            || typeof value === 'boolean' || typeof value === 'object'
-            ? value : rendered
+          record[key] = format === 'csv' && rendered != null ? rendered
+            : raw === null || typeof raw === 'string' || typeof raw === 'number'
+            || typeof raw === 'boolean' || typeof raw === 'object'
+            ? raw : rendered
         }
       })
       return record
@@ -926,13 +992,13 @@ export function DataTable<T>({
     if (format === 'json') {
       downloadJSON(filename, rows)
     } else {
-      const csvColumns: CsvColumn<Record<string, CsvCellValue>>[] = visibleColumns.map(column => ({
+      const csvColumns: CsvColumn<Record<string, CsvCellValue>>[] = exportColumns.map(column => ({
         key: column.key, header: column.header || column.key,
       }))
       downloadCSV(filename, toCSV(rows, csvColumns))
     }
   }, [exportAll, filteredData, selectedRows, exportFilename, tableId, name, visibleColumns, exportRow, onExport])
-  const exportControls = exportable === false ? undefined : controls?.exports
+  const baseExportControls = exportable === false ? undefined : controls?.exports
     ?? (exportable === true || exportAll || (!paginationControls && !toolbarActions) ? {
       onExportCsv: (scope: ExportScope) => handleExport('csv', scope),
       onExportJson: (scope: ExportScope) => handleExport('json', scope),
@@ -943,6 +1009,8 @@ export function DataTable<T>({
         ? t('table.export.fullResultScope', 'Non-selected exports use the full-result handler; selection exports include only selected loaded rows.')
         : t('table.export.loadedScope', 'Exports include only matching loaded rows, or selected loaded rows.'),
     } : undefined)
+  const exportControls = baseExportControls && !showExportDescription
+    ? { ...baseExportControls, description: undefined } : baseExportControls
 
   // Total visible column count for colSpan calcs (incl. selection / expand).
   const leadingColCount = (isSelectable ? 1 : 0) + (expandable ? 1 : 0)
@@ -1006,7 +1074,7 @@ export function DataTable<T>({
   // Only enabled when explicitly opted in AND there's no `expandable` slot
   // (variable row heights are out of scope). When the user passes both, we
   // gracefully fall back to non-virtualized rendering with a dev warning.
-  const virtualizationActive = virtualized && !mobileActive && !expandable && data.length > 0
+  const virtualizationActive = virtualized && !mobileActive && !expandable && !rowGrouping && data.length > 0
   // Density-aware default row-height estimate. When `density='auto'`,
   // read the live body data attr at mount; otherwise pick the matching
   // fixed height. The virtualizer adapts to actual rendered sizes so
@@ -1149,7 +1217,7 @@ export function DataTable<T>({
                 onKeyDown={(e) => e.stopPropagation()}
                 onChange={() => { /* handled in onClick */ }}
                 aria-label={selectionLabel}
-                className="border-[var(--border-strong)] bg-[var(--surface-2)] text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
+                className="border-[var(--border-strong)] bg-[var(--surface-2)] accent-[var(--theme-primary)] focus:ring-[var(--focus-ring)] focus:ring-offset-0"
               />
             )}
           </td>
@@ -1209,6 +1277,85 @@ export function DataTable<T>({
       )
     }
     return rows
+  }
+
+  const renderGroup = (key: string, rows: T[]) => {
+    if (!rowGrouping) return null
+    const groupLabel = (
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <Button variant="ghost" size="sm" className="min-h-11 min-w-11" wrapLabel
+          aria-expanded={groupIsOpen(key)}
+          aria-label={groupIsOpen(key)
+            ? t('table.collapseGroup', 'Collapse {{group}}', { group: rowGrouping.label(key) })
+            : t('table.expandGroup', 'Expand {{group}}', { group: rowGrouping.label(key) })}
+          onClick={() => toggleGroup(key)}>
+          <ChevronRight className={cn('h-4 w-4', groupIsOpen(key) && 'rotate-90')} aria-hidden="true" />
+          {rowGrouping.label(key)}
+        </Button>
+        {rowGrouping.summary?.(key, rows)}
+      </div>
+    )
+    if (rowGrouping.actionColumns) {
+      const actionColumns = rowGrouping.actionColumns
+      const cells: ReactNode[] = []
+      let span = leadingColCount
+      let labelRendered = false
+      const flush = () => {
+        if (!span) return
+        cells.push(<td key={`label:${cells.length}`} colSpan={span} className={cellPaddingClass}>
+          {!labelRendered && groupLabel}
+        </td>)
+        labelRendered = true
+        span = 0
+      }
+      visibleColumns.forEach(column => {
+        const action = actionColumns[column.key]
+        if (!action) {
+          span += 1
+          return
+        }
+        flush()
+        cells.push(<td key={column.key} data-column-key={column.key} className={cn(
+          cellPaddingClass, alignClass(column.align), column.groupStart && tableTokens.groupStart,
+          colHiddenClass(column.key), column.className,
+        )}>{action(key, rows)}</td>)
+      })
+      flush()
+      if (!labelRendered && cells.length) {
+        return <tr key={`group:${key}`} data-row-group={key} className={tableTokens.row}>
+          <td colSpan={totalCols} className={cellPaddingClass}>
+            {groupLabel}
+            <div className="flex flex-wrap gap-2">{visibleColumns.map(column =>
+              actionColumns[column.key]?.(key, rows))}</div>
+          </td>
+        </tr>
+      }
+      return <tr key={`group:${key}`} data-row-group={key} className={tableTokens.row}>{cells}</tr>
+    }
+    const columnIndex = visibleColumns.findIndex(column => column.key === rowGrouping.actionsColumn)
+    const column = !compactGroups && columnIndex >= 0 && totalCols > 1 ? visibleColumns[columnIndex] : undefined
+    const before = leadingColCount + columnIndex
+    const after = totalCols - before - 1
+    const actions = rowGrouping.actions?.(key, rows)
+    const actionCell = column && (
+      <td data-column-key={column.key} className={cn(cellPaddingClass, alignClass(column.align),
+        column.groupStart && tableTokens.groupStart, colHiddenClass(column.key), column.className)}>
+        {actions}
+      </td>
+    )
+    return (
+      <tr key={`group:${key}`} data-row-group={key} className={tableTokens.row}>
+        {column && before === 0 && actionCell}
+        <td colSpan={column ? before || after : totalCols} className={cellPaddingClass}>
+          <div className="flex w-full max-w-[calc(100cqw-2rem)] flex-wrap items-center gap-2">
+            {groupLabel}
+            {!column && actions && <div className="ml-auto shrink-0">{actions}</div>}
+          </div>
+        </td>
+        {column && before > 0 && actionCell}
+        {column && before > 0 && after > 0 && <td colSpan={after} className={cellPaddingClass} />}
+      </tr>
+    )
   }
 
   // ── Render ──────────────────────────────────────────────────────────────
@@ -1326,49 +1473,81 @@ export function DataTable<T>({
   }, [])
 
   const hasSelectionSummary = showSelectionSummary && isSelectable && selectedRows.length > 0
+  const mobileControlsInToolbar = mobileActive && mobilePresentation?.controlsInToolbar === true
   const showToolbar =
     Boolean(toolbarActions || toolbarHeading || controls || densityControls || searchControls || exportControls) ||
     showColumnMenu ||
-    hasSelectionSummary
+    hasSelectionSummary || mobileControlsInToolbar
 
-  const renderColumnFilter = (col: Column<T>) => (col.filter || valueOptions.has(col.key)) ? (
-    <DataTableHeaderFilter label={col.header}
-      active={col.filterActive || (enableValueFilters && valueSelections[col.key] != null)}
-      onClear={valueOptions.has(col.key) ? () => {
+  const renderFilter = (key: string, label: string, filter?: ReactNode, filterActive?: boolean, onFilterClear?: () => void) =>
+    (filter || valueOptions.has(key)) ? (
+    <DataTableHeaderFilter key={key} label={label}
+      active={filterActive || (enableValueFilters && valueSelections[key] != null)}
+      onClear={valueOptions.has(key) ? () => {
         setValueSelections(previous => {
           const next = { ...previous }
-          delete next[col.key]
+          delete next[key]
           return next
         })
-        col.onFilterClear?.()
-      } : col.onFilterClear}>
-      {valueOptions.has(col.key) ? (
+        onFilterClear?.()
+      } : onFilterClear}>
+      {valueOptions.has(key) ? (
         <DataTableValueFilter
-          options={valueOptions.get(col.key) ?? []}
-          selected={selectedTableValueKeys(valueSelections[col.key],
-            (valueOptions.get(col.key) ?? []).flatMap(option => option.keys ?? [option.value]))}
+          options={valueOptions.get(key) ?? []}
+          selected={selectedTableValueKeys(valueSelections[key],
+            (valueOptions.get(key) ?? []).flatMap(option => option.keys ?? [option.value]))}
           onChange={values => {
             setPage(1)
             setValueSelections(previous => {
               const next = { ...previous }
-              if (values == null) delete next[col.key]
-              else next[col.key] = compactTableValueSelection(values,
-                (valueOptions.get(col.key) ?? []).flatMap(option => option.keys ?? [option.value]))
+              if (values == null) delete next[key]
+              else next[key] = compactTableValueSelection(values,
+                (valueOptions.get(key) ?? []).flatMap(option => option.keys ?? [option.value]))
               return next
             })
           }}
-          condition={col.filter}
-          conditionActive={col.filterActive}
+          condition={filter}
+          conditionActive={filterActive}
         />
-      ) : col.filter}
+      ) : filter}
     </DataTableHeaderFilter>
   ) : null
+  const renderColumnFilter = (col: Column<T>) => <>
+    {renderFilter(col.key, col.header, col.filter, col.filterActive, col.onFilterClear)}
+    {col.additionalValueFilters?.map(filter => renderFilter(filter.key, filter.header))}
+  </>
+  const renderMobileFilter = (key: string, label: string, filter?: ReactNode, active?: boolean, onClear?: () => void) => {
+    const control = renderFilter(key, label, filter, active, onClear)
+    return control && <div key={key} className="flex items-center gap-1">
+      <Text size="sm" color="secondary">{label}</Text>{control}
+    </div>
+  }
+  const mobileControls = <>
+    {visibleColumns.map(col => <div key={col.key} className="flex flex-wrap items-center gap-1">
+      {col.sortable && onSort && <Button size="sm" variant="secondary" className="min-h-11"
+        aria-label={col.header} onClick={() => onSort(col.key)}>
+        {col.header}{sortKey === col.key && (sortDir === 'asc'
+          ? <ChevronUp className="h-3 w-3" aria-hidden="true" />
+          : <ChevronDown className="h-3 w-3" aria-hidden="true" />)}
+      </Button>}
+      {mobileControlsInToolbar ? <>
+        {renderMobileFilter(col.key, col.header, col.filter, col.filterActive, col.onFilterClear)}
+        {col.additionalValueFilters?.map(filter => renderMobileFilter(filter.key, filter.header))}
+      </> : renderColumnFilter(col)}
+    </div>)}
+    {paginationEnabled && <Select
+      aria-label={t('pagination.pageSize', 'Rows per page')}
+      value={String(pageSize)}
+      options={pageSizeOptions.map(size => ({ value: String(size), label: String(size) }))}
+      onChange={event => handlePageSizeChange(Number(event.target.value))} />}
+  </>
 
   return (
     <>
     <div ref={frameRef} className={cn(
       variant === 'embedded' ? 'min-w-0 max-w-full' : tableTokens.frame,
       'space-y-0 overflow-visible p-0',
+      rowGrouping && '[container-type:inline-size]',
       mobilePresentation && 'mgr-host',
     )}
       data-grid-frame="" data-grid-variant={variant}>
@@ -1376,7 +1555,7 @@ export function DataTable<T>({
       {showToolbar && (
         <TableToolbar
           placement={cardLayout ? 'card' : 'inline'}
-          collapseBelow={mobileBreakpoint}
+          collapseBelow={mobileControlsInToolbar ? 'xl' : mobileBreakpoint}
           className={cn(tableTokens.toolbar, 'rounded-t-xl border-b border-[var(--border-default)] p-3',
             mobileActive && '[&_button]:min-h-11 [&_button]:min-w-11 [&_input]:min-h-11')}
           search={searchControls}
@@ -1390,7 +1569,10 @@ export function DataTable<T>({
               </DataTableBulkBar>
             )}
           </> : undefined}
-          actions={toolbarActions}
+          actions={mobileControlsInToolbar ? <>
+            {toolbarActions}
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-2">{mobileControls}</div>
+          </> : toolbarActions}
           columns={showColumnMenu ? (
               <DataTableColumnMenu
                 columns={columns.map(c => ({
@@ -1422,6 +1604,9 @@ export function DataTable<T>({
             rows={paginationEnabled ? filteredData.slice(0, mobilePage * pageSize) : filteredData}
             columns={visibleColumns} allColumns={columns} keyExtractor={keyExtractor}
             presentation={mobileFilteredPresentation ?? mobilePresentation} label={accessibleTableName} rowLabel={rowLabel}
+            compact={mobilePresentation.compactRows === true && (effectiveDensity === 'compact'
+              || (effectiveDensity === 'auto' && globalCompact))}
+            grouping={rowGrouping ? { config: rowGrouping, isOpen: groupIsOpen, onToggle: toggleGroup } : undefined}
             selectedKeys={selectionSet} selectable={isSelectable && Boolean(onSelectionChange)}
             multiSelect={selectable === 'multi'}
             allSelected={allSelected} someSelected={someSelected}
@@ -1440,7 +1625,7 @@ export function DataTable<T>({
               ? () => setMobilePage(previous => previous + 1) : undefined}
             nextCount={Math.min(pageSize, Math.max(0, filteredData.length - mobilePage * pageSize))}
             onClear={searchControls || enableValueFilters || columns.some(column => column.onFilterClear) || mobilePresentation.onClear ? clearFilters : undefined}
-            count={<Text size="sm" color="muted" role="status">
+            count={mobilePresentation.showRowCount === false ? null : <Text size="sm" color="muted" role="status">
               {paginationEnabled && t('developerReference.mobileGrid.footer.showing', 'Showing {{count}} of {{total}}', {
                 count: Math.min(mobilePage * pageSize, filteredData.length), total: filteredData.length,
               })}
@@ -1448,22 +1633,7 @@ export function DataTable<T>({
                 filtered: filteredData.length, loaded: data.length,
               })}
             </Text>}
-            controls={<>
-              {visibleColumns.map(col => <div key={col.key} className="flex items-center gap-1">
-                {col.sortable && onSort && <Button size="sm" variant="secondary" className="min-h-11"
-                  aria-label={col.header} onClick={() => onSort(col.key)}>
-                  {col.header}{sortKey === col.key && (sortDir === 'asc'
-                    ? <ChevronUp className="h-3 w-3" aria-hidden="true" />
-                    : <ChevronDown className="h-3 w-3" aria-hidden="true" />)}
-                </Button>}
-                {renderColumnFilter(col)}
-              </div>)}
-              {paginationEnabled && <Select
-                aria-label={t('pagination.pageSize', 'Rows per page')}
-                value={String(pageSize)}
-                options={pageSizeOptions.map(size => ({ value: String(size), label: String(size) }))}
-                onChange={event => handlePageSizeChange(Number(event.target.value))} />}
-            </>}
+            controls={mobileControlsInToolbar ? null : mobileControls}
           />
         </SectionErrorBoundary>
       ) : <div ref={scrollContainerRef} className={cn(wrapperClass,
@@ -1472,7 +1642,9 @@ export function DataTable<T>({
       )} style={wrapperStyle} data-grid-viewport="">
         {/* Preserve native table semantics, not an ARIA grid with a different cell-navigation contract. */}
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
-        <table tabIndex={footerControls ? 0 : undefined} className={cn(tableTokens.wrapper, footerControls && 'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]')} aria-label={accessibleTableName}
+        <table tabIndex={footerControls ? 0 : undefined} className={cn(tableTokens.wrapper,
+          visibleColumns.some(column => column.fixedWidth != null) && 'table-fixed',
+          footerControls && 'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]')} aria-label={accessibleTableName}
           onKeyDown={event => {
             if (!footerControls || event.defaultPrevented || event.target !== event.currentTarget
               || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
@@ -1552,12 +1724,12 @@ export function DataTable<T>({
                       'whitespace-nowrap font-semibold',
                       col.groupStart && tableTokens.groupStart,
                       col.sortable && sortKey === col.key && 'text-[var(--text-primary)]',
-                      resizable && 'relative group/th',
+                      resizable && col.fixedWidth == null && 'relative group/th',
                       headerReorderEnabled && 'relative cursor-grab active:cursor-grabbing',
                       isDragOverTarget && 'bg-[var(--surface-2)] outline outline-1 outline-[var(--focus-ring)]',
                       col.className,
                     )}
-                    style={w != null ? { width: w, minWidth: w } : undefined}
+                    style={w != null ? { width: w, minWidth: w, ...(col.fixedWidth != null ? { maxWidth: w } : {}) } : undefined}
                     aria-sort={
                       col.sortable && (onSort || sortKey === col.key)
                         ? sortKey === col.key
@@ -1573,7 +1745,11 @@ export function DataTable<T>({
                         : undefined
                     }
                   >
-                    <div className={cn('flex items-center gap-1', col.align === 'right' && 'justify-end', col.align === 'center' && 'justify-center')}>
+                    <div className={cn('flex gap-1', col.headerAction && 'flex-col',
+                      col.align === 'right' && (col.headerAction ? 'items-end' : 'justify-end'),
+                      col.align === 'center' && (col.headerAction ? 'items-center' : 'justify-center'))}>
+                    <div className={cn('flex items-center gap-1',
+                      col.align === 'right' && 'justify-end', col.align === 'center' && 'justify-center')}>
                       {headerReorderEnabled && (
                         <span
                           aria-hidden="true"
@@ -1609,7 +1785,9 @@ export function DataTable<T>({
                       )}
                     {renderColumnFilter(col)}
                     </div>
-                    {resizable && tableId && (
+                    {col.headerAction}
+                    </div>
+                    {resizable && tableId && col.fixedWidth == null && (
                       <DataTableResizer
                         columnKey={col.key}
                         width={w ?? 120}
@@ -1656,6 +1834,17 @@ export function DataTable<T>({
                     </tr>
                   )}
                 </>
+              ) : rowGrouping ? (
+                [...paginatedData.reduce((groups, row) => {
+                  const key = rowGrouping.key(row)
+                  const rows = groups.get(key) ?? []
+                  rows.push(row)
+                  groups.set(key, rows)
+                  return groups
+                }, new Map<string, T[]>())].flatMap(([key, rows]) => [
+                  renderGroup(key, rows),
+                  ...(groupIsOpen(key) ? rows.flatMap(renderDataRow) : []),
+                ])
               ) : (
                 paginatedData.flatMap(renderDataRow)
               )}

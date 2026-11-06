@@ -192,12 +192,12 @@ describe('RateTimeline — charge window highlighting', () => {
 
     const [b0, b1, b2, b3] = bars();
     // Hours 1 & 2 are in [1, 3); 0 & 3 are out.
-    expect(barEl(b1).className).toContain('bg-cyan-400/70');
-    expect(barEl(b1).className).toContain('ring-cyan-400/50');
-    expect(barEl(b2).className).toContain('bg-cyan-400/70');
+    expect(barEl(b1).className).toContain('bg-theme-accent/70');
+    expect(barEl(b1).className).toContain('ring-theme-accent/50');
+    expect(barEl(b2).className).toContain('bg-theme-accent/70');
 
     expect(barEl(b0).className).toContain('bg-emerald-500/40');
-    expect(barEl(b0).className).not.toContain('bg-cyan-400/70');
+    expect(barEl(b0).className).not.toContain('bg-theme-accent/70');
     expect(barEl(b3).className).toContain('bg-emerald-500/40');
   });
 
@@ -208,11 +208,11 @@ describe('RateTimeline — charge window highlighting', () => {
     });
 
     const [h0, h1, h2, h22, h23] = bars();
-    expect(barEl(h0).className).toContain('bg-cyan-400/70'); // 0 < 2 → in
-    expect(barEl(h1).className).toContain('bg-cyan-400/70'); // 1 < 2 → in
-    expect(barEl(h2).className).not.toContain('bg-cyan-400/70'); // 2 is NOT < 2 → out
-    expect(barEl(h22).className).toContain('bg-cyan-400/70'); // 22 >= 22 → in
-    expect(barEl(h23).className).toContain('bg-cyan-400/70'); // 23 >= 22 → in
+    expect(barEl(h0).className).toContain('bg-theme-accent/70'); // 0 < 2 → in
+    expect(barEl(h1).className).toContain('bg-theme-accent/70'); // 1 < 2 → in
+    expect(barEl(h2).className).not.toContain('bg-theme-accent/70'); // 2 is NOT < 2 → out
+    expect(barEl(h22).className).toContain('bg-theme-accent/70'); // 22 >= 22 → in
+    expect(barEl(h23).className).toContain('bg-theme-accent/70'); // 23 >= 22 → in
   });
 });
 

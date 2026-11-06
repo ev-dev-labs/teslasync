@@ -214,7 +214,8 @@ const SESSIONS: ChargingSession[] = [
     ended_at: localIso(2024, 1, 11, 1, 0),
     total_energy_added_wh: 10_000,
     cost_decimal: 0,
-    charger_type: null,
+    charger_type: 'AC',
+    is_home: true,
     peak_power_w: 7_000,
     start_place: 'Home Garage',
     start_odometer_m: 81_000,
@@ -227,7 +228,7 @@ const SESSIONS: ChargingSession[] = [
     ended_at: localIso(2024, 1, 15, 12, 0),
     total_energy_added_wh: 15_000,
     cost_decimal: null,
-    charger_type: null,
+    charger_type: 'AC',
     peak_power_w: 11_000,
     start_place: 'Downtown Office Garage',
     start_odometer_m: 91_000,
@@ -360,20 +361,20 @@ describe('useCostAnalysisData → ChargerTypeData[]', () => {
     groups.forEach(assertChargerTypeDataShape);
 
     // Sorted by cost desc; the two zero-cost groups keep insertion order.
-    expect(groups.map((g) => g.name)).toEqual(['Public DC', 'Supercharger', 'Home', 'Work / L2']);
+    expect(groups.map((g) => g.name)).toEqual(['Public DC', 'Supercharger', 'Home', 'AC']);
 
     const byName = Object.fromEntries(groups.map((g) => [g.name, g]));
     expect(byName['Public DC'].cost).toBe(15);
     expect(byName['Public DC'].energy).toBe(30);
     expect(byName['Supercharger'].cost).toBe(10);
     expect(byName['Home'].cost).toBe(0);
-    expect(byName['Work / L2'].energy).toBe(15);
+    expect(byName['AC'].energy).toBe(15);
 
     // Colours come from the shared CHARGER_COLORS map, not ad-hoc literals.
     expect(byName['Supercharger'].color).toBe(CHARGER_COLORS['Supercharger']);
     expect(byName['Public DC'].color).toBe(CHARGER_COLORS['Public DC']);
     expect(byName['Home'].color).toBe(CHARGER_COLORS['Home']);
-    expect(byName['Work / L2'].color).toBe(CHARGER_COLORS['Work / L2']);
+    expect(byName['AC'].color).toBe(CHARGER_COLORS.AC);
   });
 });
 

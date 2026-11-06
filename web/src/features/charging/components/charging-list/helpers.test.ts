@@ -143,7 +143,7 @@ describe('computeStats', () => {
 
   it('aggregates energy in kWh, power in kW, and categorises each session', () => {
     const stats = computeStats([
-      sessionMin(1, 60, { total_energy_added_wh: 10_000, cost_decimal: 5, peak_power_w: 11_000, charger_type: null }),
+      sessionMin(1, 60, { total_energy_added_wh: 10_000, cost_decimal: 5, peak_power_w: 11_000, charger_type: 'AC', is_home: true }),
       sessionMin(2, 30, { total_energy_added_wh: 50_000, cost_decimal: 20, peak_power_w: 250_000, charger_type: 'Supercharger' }),
       sessionMin(3, 45, { total_energy_added_wh: 30_000, cost_decimal: null, peak_power_w: 100_000, charger_type: 'CCS' }),
     ])!;
@@ -243,8 +243,8 @@ describe('computeCostByType', () => {
   it('groups by charger label with kWh energy and correct $/kWh', () => {
     const result = computeCostByType(
       [
-        sessionMin(1, 60, { total_energy_added_wh: 10_000, cost_decimal: 2, charger_type: null }),
-        sessionMin(2, 60, { total_energy_added_wh: 20_000, cost_decimal: 4, charger_type: null }),
+        sessionMin(1, 60, { total_energy_added_wh: 10_000, cost_decimal: 2, charger_type: 'AC', is_home: true }),
+        sessionMin(2, 60, { total_energy_added_wh: 20_000, cost_decimal: 4, charger_type: 'AC', is_home: true }),
         sessionMin(3, 60, { total_energy_added_wh: 40_000, cost_decimal: 20, charger_type: 'Supercharger' }),
       ],
       labels,
@@ -312,14 +312,13 @@ describe('computeStartLevelDist', () => {
 describe('computeAcDcBreakdown', () => {
   it('splits AC vs DC, sums kWh, and tracks free charging per bucket', () => {
     const b = computeAcDcBreakdown([
-      // AC: no charger_type and peak ≤ 22 kW.
-      sessionMin(1, 60, { total_energy_added_wh: 10_000, cost_decimal: 3, peak_power_w: 7_000 }),
+      sessionMin(1, 60, { charger_type: 'AC', total_energy_added_wh: 10_000, cost_decimal: 3, peak_power_w: 7_000 }),
       // DC: charger_type present.
       sessionMin(2, 30, { total_energy_added_wh: 50_000, cost_decimal: 25, charger_type: 'Supercharger' }),
       // DC: peak > 22 kW, recorded free charging.
       sessionMin(3, 20, { total_energy_added_wh: 20_000, cost_decimal: 0, peak_power_w: 30_000 }),
       // AC: free (cost exactly 0).
-      sessionMin(4, 10, { total_energy_added_wh: 5_000, cost_decimal: 0, peak_power_w: 5_000 }),
+      sessionMin(4, 10, { charger_type: 'AC', total_energy_added_wh: 5_000, cost_decimal: 0, peak_power_w: 5_000 }),
     ]);
 
     // Regression: kWh, NOT Wh (AC 15 kWh, DC 70 kWh).
@@ -448,7 +447,7 @@ describe('computeEnhancedStats', () => {
 describe('filterAndSortSessions', () => {
   const a = sessionMin(1, 60, { total_energy_added_wh: 10_000, cost_decimal: 5, peak_power_w: 50_000, charger_type: 'Supercharger', start_place: 'Home Garage' });
   const b = sessionMin(2, 30, { total_energy_added_wh: 30_000, cost_decimal: 2, peak_power_w: 150_000, charger_type: 'CCS', start_place: 'Mall' });
-  const c = sessionMin(3, 90, { total_energy_added_wh: 20_000, cost_decimal: 8, peak_power_w: 7_000, charger_type: null, start_place: 'Office' });
+  const c = sessionMin(3, 90, { total_energy_added_wh: 20_000, cost_decimal: 8, peak_power_w: 7_000, charger_type: 'AC', is_home: true, start_place: 'Office' });
   const all = [a, b, c];
   const ids = (rows: ChargingSession[]) => rows.map((r) => r.id);
 

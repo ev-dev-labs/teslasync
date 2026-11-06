@@ -81,7 +81,7 @@ export function DriveDnaMethodology({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <PanelTitle className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <BookOpen className="h-4 w-4 text-theme-accent" aria-hidden="true" />
               {t('driveDna.method.title', 'Coverage & methodology')}
             </PanelTitle>
             <Text as="p" variant="caption" className="mt-1">

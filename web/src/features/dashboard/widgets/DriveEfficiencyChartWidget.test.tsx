@@ -228,7 +228,7 @@ function lastDrivesQuery(): {
   queryKey: unknown[];
   enabled: boolean;
   staleTime: number;
-  queryFn: () => Promise<unknown>;
+  queryFn: (context: { signal: AbortSignal }) => Promise<unknown>;
 } {
   const calls = mockUseQuery.mock.calls;
   const last = calls[calls.length - 1];
@@ -554,7 +554,9 @@ describe('DriveEfficiencyChartWidget — data plumbing', () => {
 
     // The request() client auto-prepends /api/v1, so the hook must not; and the
     // query param is snake_case to match the Go router.
-    await lastDrivesQuery().queryFn();
-    expect(mockRequest).toHaveBeenCalledWith('/drives?vehicle_id=7&limit=60');
+    mockRequest.mockResolvedValueOnce([]);
+    const signal = new AbortController().signal;
+    await lastDrivesQuery().queryFn({ signal });
+    expect(mockRequest).toHaveBeenCalledWith('/drives?vehicle_id=7&limit=60', { signal });
   });
 });

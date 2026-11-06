@@ -24,9 +24,9 @@ export interface QuickCommand {
 
 export const COMMANDS: QuickCommand[] = [
   { id: 'unlock', command: 'unlock', icon: Unlock, labelKey: 'glance.action.unlock', labelFallback: 'Unlock', color: 'text-[var(--theme-on-primary)]' },
-  { id: 'climate_on', command: 'climate_on', icon: Thermometer, labelKey: 'widget.climatePanel.title', labelFallback: 'Climate', color: 'text-cyan-300' },
+  { id: 'climate_on', command: 'climate_on', icon: Thermometer, labelKey: 'widget.climatePanel.title', labelFallback: 'Climate', color: 'text-theme-accent' },
   { id: 'frunk', command: 'actuate_frunk', icon: Container, labelKey: 'commands.doors.frunk', labelFallback: 'Frunk', color: 'text-purple-400' },
-  { id: 'trunk', command: 'actuate_trunk', icon: Container, labelKey: 'commands.doors.trunk', labelFallback: 'Trunk', color: 'text-indigo-400' },
+  { id: 'trunk', command: 'actuate_trunk', icon: Container, labelKey: 'commands.doors.trunk', labelFallback: 'Trunk', color: 'text-theme-accent' },
   { id: 'flash', command: 'flash_lights', icon: Flashlight, labelKey: 'palette.cmd.flash', labelFallback: 'Flash', color: 'text-yellow-400' },
   { id: 'honk', command: 'honk_horn', icon: Volume2, labelKey: 'glance.action.horn', labelFallback: 'Honk', color: 'text-amber-400' },
 ];
@@ -81,7 +81,7 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.quickActions.title', 'Quick actions')}
-      icon={isCompact ? undefined : <Zap className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={isCompact ? undefined : <Zap className="h-3.5 w-3.5 text-theme-accent" />}
       loading={showLoading}
       dataState={{ ...state, status: state.status === 'initial' && !showLoading ? 'unavailable' : state.status }}
       updatedAt={dataUpdatedAt}
@@ -109,7 +109,7 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
                 size="sm"
                 wrapLabel={false}
                 icon={isRunning
-                  ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-neon-cyan" />
+                  ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-theme-accent" />
                   : <Icon aria-hidden="true" className={`h-4 w-4 ${cmd.color}`} />}
                 disabled={!!activeCommand || !operationalMode.canWrite}
                 title={

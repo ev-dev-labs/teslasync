@@ -16,6 +16,7 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
    */
   size?: 'sm' | 'md' | 'lg' | 'full' | 'fullscreen';
   children: ReactNode;
+  aboveNotifications?: boolean;
   /** Persistent actions outside the scrolling dialog body. */
   footer?: ReactNode;
   /**
@@ -54,7 +55,7 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
  * Drawer, and Lightbox cannot drift apart.
  */
 export const Modal = forwardRef<HTMLDivElement, ModalProps>(
-  ({ open, onClose, title, size = 'md', className, children, footer, ariaLabel, getReturnFocusTarget, ...props }, ref) => {
+  ({ open, onClose, title, size = 'md', aboveNotifications = false, className, children, footer, ariaLabel, getReturnFocusTarget, ...props }, ref) => {
     const { t } = useTranslation();
     const fullscreen = size === 'fullscreen';
     const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -95,7 +96,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
     const overlay = (
       // This is the shared <Modal> source of truth. All other interactive
       // dialogs MUST use this component instead of hand-rolling overlays.
-      <div className="fixed inset-0 z-overlay overflow-y-auto">
+      <div className={cn('fixed inset-0 overflow-y-auto', aboveNotifications ? 'z-[120]' : 'z-overlay')}>
         <div
           // Forced-colors mode suppresses
           // box-shadow + background-image, so a glass backdrop with a

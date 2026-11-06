@@ -21,7 +21,7 @@ export function ChargeAdvisorFrequencySupport({ analysis, state }: ChargeAdvisor
         'chargeAdvisor.support.subtitle',
         'A hard evidence gate prevents actionable guidance from sparse history.',
       )}
-      icon={<ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<ShieldCheck className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
       state={state}
       dependency="drive"
       dataTestId="charge-advisor-support"
@@ -43,7 +43,7 @@ export function ChargeAdvisorFrequencySupport({ analysis, state }: ChargeAdvisor
         </div>
         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
           <Text variant="caption">{t('chargeAdvisor.support.score', 'Support score')}</Text>
-          <Text className="mt-1 text-xl font-semibold text-cyan-300">{fmtPercent(support.score * 100)}</Text>
+          <Text className="mt-1 text-xl font-semibold text-theme-accent">{fmtPercent(support.score * 100)}</Text>
           <Badge className="mt-2" variant={support.band === 'strong' ? 'success' : support.band === 'moderate' ? 'info' : 'warning'}>
             {t(
               `chargeAdvisor.support.band.${support.band}`,

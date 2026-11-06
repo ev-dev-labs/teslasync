@@ -41,8 +41,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
 
   return (
     <GlassPanel hover glow="cyan" className="p-0 overflow-hidden transition-all duration-normal group">
-      {/* Gradient accent strip */}
-      <div aria-hidden="true" className="h-1 bg-gradient-to-r from-cyan-400 via-purple-400 to-green-400 opacity-40 group-hover:opacity-80 transition-opacity" />
+      <div aria-hidden="true" className="h-1 bg-[var(--theme-primary)]" />
 
       <div className="p-5">
         <div className="flex items-start gap-5">
@@ -65,7 +64,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
             <div className="flex items-center gap-3 mb-1.5">
               <Link
                 to={`/vehicles/${vehicle.id}`}
-                className="text-base font-semibold text-[var(--text-primary)] hover:text-cyan-400 transition-colors truncate"
+                className="text-base font-semibold text-[var(--text-primary)] hover:text-theme-accent transition-colors truncate"
               >
                 {vehicleLabel}
               </Link>
@@ -139,7 +138,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
                     <Shield
                       role="img"
                       aria-label={t('card.sentryOn', 'Sentry mode on')}
-                      className="h-3.5 w-3.5 text-cyan-400"
+                      className="h-3.5 w-3.5 text-theme-accent"
                     />
                   )}
                 </div>
@@ -162,7 +161,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
           <div className="flex flex-col items-center gap-1 shrink-0">
             <Link
               to={`/vehicles/${vehicle.id}`}
-              className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-cyan-400/10 hover:text-cyan-400 transition-all"
+              className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-theme-accent/10 hover:text-theme-accent transition-all"
               title={t('card.viewDetails', 'View details')}
               aria-label={t('card.viewDetailsFor', 'View details for {{name}}', { name: vehicleLabel })}
             >

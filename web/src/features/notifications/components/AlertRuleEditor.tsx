@@ -43,7 +43,7 @@ export function AlertRuleEditor(props: AlertRuleEditorProps) {
       <div className="space-y-4">
         <GlassPanel className="p-4 sm:p-5" data-tour="alert-studio-builder">
           <div className="mb-4 flex items-center gap-2">
-            <Icons.pencil className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icons.pencil className="h-4 w-4 text-status-info" aria-hidden="true" />
             <PanelTitle>{rule
               ? t('notifications.alertStudio.editor.editTitle', 'Edit rule')
               : t('notifications.alertStudio.editor.newTitle', 'New rule')}</PanelTitle>

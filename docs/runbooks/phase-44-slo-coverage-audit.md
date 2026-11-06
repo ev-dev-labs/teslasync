@@ -16,12 +16,16 @@ go run ./cmd/slo-coverage-audit -report docs/runbooks/phase-44-slo-coverage-audi
   - `/api/v1/activity`
   - `/api/v1/admin/observability/data-quality`
   - `/api/v1/ai/alerts/packs/draft`
+  - `/api/v1/ai/dashboard/widgets/draft`
+  - `/api/v1/ai/usage/spend-insights`
   - `/api/v1/analytics/battery-health`
   - `/api/v1/analytics/fsd`
   - `/api/v1/benchmarks/privacy`
   - `/api/v1/benchmarks/privacy/consent`
   - `/api/v1/benchmarks/releases`
+  - `/api/v1/drives/{driveID}/road-anomalies`
   - `/api/v1/fleet-ops/utilization-forecast`
+  - `/api/v1/notifications/report`
   - `/api/v1/service-intelligence/vehicles/{vehicleID}`
   - `/api/v1/signals/{vehicleID}/transport-agreement`
   - `/api/v1/system/api-usage`
@@ -32,13 +36,14 @@ go run ./cmd/slo-coverage-audit -report docs/runbooks/phase-44-slo-coverage-audi
 
 ## Findings
 
-All 269 user-facing routes are covered.
+All 274 user-facing routes are covered.
 
 ## Per-route coverage table
 
 | Route | Source |
 |---|---|
 | `/.well-known/appspecific/com.tesla.3p.public-key.pem` | transitive (api_availability) |
+| `/.well-known/assetlinks.json` | transitive (api_availability) |
 | `/acceleration-distribution` | transitive (api_availability) |
 | `/account` | transitive (api_availability) |
 | `/action-center` | transitive (api_availability) |
@@ -96,6 +101,7 @@ All 269 user-facing routes are covered.
 | `/cases` | transitive (api_availability) |
 | `/cases/stats` | transitive (api_availability) |
 | `/cases/{id}` | transitive (api_availability) |
+| `/cases/{id}/correction-preview` | transitive (api_availability) |
 | `/certificate` | transitive (api_availability) |
 | `/charge-advice` | transitive (api_availability) |
 | `/charge-points` | transitive (api_availability) |
@@ -144,6 +150,7 @@ All 269 user-facing routes are covered.
 | `/exclusive` | transitive (api_availability) |
 | `/export` | transitive (api_availability) |
 | `/feature-config` | transitive (api_availability) |
+| `/first-charging-session` | transitive (api_availability) |
 | `/fleet-api-info` | transitive (api_availability) |
 | `/fleet-status` | transitive (api_availability) |
 | `/fleet-telemetry-config` | transitive (api_availability) |
@@ -215,6 +222,8 @@ All 269 user-facing routes are covered.
 | `/register-partner` | transitive (api_availability) |
 | `/release-notes` | transitive (api_availability) |
 | `/releases` | transitive (api_availability) |
+| `/report` | transitive (api_availability) |
+| `/road-anomalies` | transitive (api_availability) |
 | `/rul` | transitive (api_availability) |
 | `/rul/{component}` | transitive (api_availability) |
 | `/rules` | transitive (api_availability) |

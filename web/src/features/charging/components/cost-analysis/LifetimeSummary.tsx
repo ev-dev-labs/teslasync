@@ -36,7 +36,7 @@ export function LifetimeSummary({
   return (
     <CostSection
       title={t('costAnalysis.lifetime.title', 'Lifetime Summary')}
-      icon={<TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<TrendingUp className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
       glow="cyan"
       isLoading={isLoading}
       error={error}

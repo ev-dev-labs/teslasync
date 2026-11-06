@@ -86,7 +86,7 @@ export function ImpersonationPolicyPanel() {
   return (
     <GlassPanel className="p-4 sm:p-5" data-testid="impersonation-policy-panel">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <ScrollText className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <ScrollText className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('impersonation.policy.title', 'How impersonation works')}
       </PanelTitle>
 
@@ -110,7 +110,7 @@ export function ImpersonationPolicyPanel() {
               className="flex gap-3 rounded-lg bg-white/[0.02] p-3 ring-1 ring-white/[0.04]"
             >
               <span
-                className="mt-0.5 shrink-0 text-cyan-300 [&>svg]:h-4 [&>svg]:w-4"
+                className="mt-0.5 shrink-0 text-theme-accent [&>svg]:h-4 [&>svg]:w-4"
                 aria-hidden="true"
               >
                 {item.icon}

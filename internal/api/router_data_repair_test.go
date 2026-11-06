@@ -36,6 +36,12 @@ func (f *dataRepairRouteFake) GetCaseStats(w http.ResponseWriter, _ *http.Reques
 func (f *dataRepairRouteFake) GetCase(w http.ResponseWriter, _ *http.Request) {
 	f.respond("get_case", w)
 }
+func (f *dataRepairRouteFake) PreviewCaseCorrection(w http.ResponseWriter, _ *http.Request) {
+	f.respond("preview_case_correction", w)
+}
+func (f *dataRepairRouteFake) ApplyCaseCorrection(w http.ResponseWriter, _ *http.Request) {
+	f.respond("apply_case_correction", w)
+}
 func (f *dataRepairRouteFake) ListQuarantines(w http.ResponseWriter, _ *http.Request) {
 	f.respond("list_quarantines", w)
 }
@@ -113,6 +119,8 @@ func TestDataRepairRoutes(t *testing.T) {
 		{"case list", http.MethodGet, "/api/v1/data-repair/cases", "list_cases"},
 		{"case stats", http.MethodGet, "/api/v1/data-repair/cases/stats", "case_stats"},
 		{"case detail", http.MethodGet, "/api/v1/data-repair/cases/17", "get_case"},
+		{"case correction preview", http.MethodPost, "/api/v1/data-repair/cases/17/correction-preview", "preview_case_correction"},
+		{"case correction apply", http.MethodPost, "/api/v1/data-repair/cases/17/correction", "apply_case_correction"},
 		{"quarantine ledger", http.MethodGet, "/api/v1/data-repair/quarantine", "list_quarantines"},
 		{"case transition", http.MethodPost, "/api/v1/data-repair/cases/17/transition", "transition_case"},
 		{"case assignment", http.MethodPut, "/api/v1/data-repair/cases/17/assignment", "assign_case"},
@@ -174,6 +182,7 @@ func TestDataRepairRoutes_ReadsAreUnguardedAndWritesAreSudoGated(t *testing.T) {
 		{http.MethodGet, "/api/v1/data-repair/cases/stats", "case_stats"},
 		{http.MethodGet, "/api/v1/data-repair/cases/17", "get_case"},
 		{http.MethodGet, "/api/v1/data-repair/quarantine", "list_quarantines"},
+		{http.MethodPost, "/api/v1/data-repair/cases/17/correction-preview", "preview_case_correction"},
 		{http.MethodPost, "/api/v1/data-repair/charging/3/preview", "preview_charging"},
 		{http.MethodPost, "/api/v1/data-repair/drive/42/preview", "preview_drive"},
 	}
@@ -200,6 +209,7 @@ func TestDataRepairRoutes_ReadsAreUnguardedAndWritesAreSudoGated(t *testing.T) {
 		{http.MethodPost, "/api/v1/data-repair/charging/3/close"},
 		{http.MethodDelete, "/api/v1/data-repair/charging/3"},
 		{http.MethodPost, "/api/v1/data-repair/cases/17/transition"},
+		{http.MethodPost, "/api/v1/data-repair/cases/17/correction"},
 		{http.MethodPut, "/api/v1/data-repair/cases/17/assignment"},
 		{http.MethodPost, "/api/v1/data-repair/cases/17/comments"},
 		{http.MethodPost, "/api/v1/data-repair/cases/17/quarantine"},

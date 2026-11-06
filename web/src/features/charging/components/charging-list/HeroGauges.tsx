@@ -75,7 +75,7 @@ export function HeroGauges({ stats }: HeroGaugesProps) {
           <MetricTile
             value={count}
             label={t('charging.gauges.sessions', 'Sessions')}
-            accentClass="text-cyan-300"
+            accentClass="text-theme-accent"
           />
           <MetricTile
             value={totalEnergy}

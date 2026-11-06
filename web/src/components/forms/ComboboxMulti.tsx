@@ -400,7 +400,7 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
 
   const chipBase = cn(
     'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
-    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    'bg-[var(--theme-primary)] text-[var(--theme-on-primary)]',
     'forced-colors:border forced-colors:border-[CanvasText]',
     chipClassName,
   );

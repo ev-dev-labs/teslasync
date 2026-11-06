@@ -120,7 +120,7 @@ export function SubjectsTable({
     <GlassPanel className="min-w-0 p-4 sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Users className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('impersonation.users.tableTitle', 'Active subjects')}
         </PanelTitle>
         {showSubjectList && (

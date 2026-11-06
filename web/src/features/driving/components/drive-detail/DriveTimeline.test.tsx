@@ -165,9 +165,8 @@ describe('DriveTimeline', () => {
     expect(icons.length).toBe(2);
     icons.forEach((svg) => expect(svg.getAttribute('aria-hidden')).toBe('true'));
 
-    // The gradient bar is purely decorative — its wrapper is aria-hidden.
-    const gradient = container.querySelector('.bg-gradient-to-r');
-    expect(gradient).not.toBeNull();
-    expect(gradient?.parentElement?.getAttribute('aria-hidden')).toBe('true');
+    const progressTrack = screen.getByRole('group', { name: 'Drive timeline' }).nextElementSibling;
+    expect(progressTrack).toHaveAttribute('aria-hidden', 'true');
+    expect(progressTrack?.firstElementChild).not.toBeNull();
   });
 });

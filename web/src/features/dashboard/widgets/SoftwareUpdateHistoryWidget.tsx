@@ -94,7 +94,7 @@ function CompactView({ latest, t }: { latest: SoftwareUpdate; t: TranslateFn }) 
   return (
     <div className="flex items-center justify-between gap-2 min-h-[44px]">
       <div className="flex items-center gap-2 min-w-0">
-        <Download className="h-4 w-4 flex-shrink-0 text-neon-cyan" aria-hidden="true" />
+        <Download className="h-4 w-4 flex-shrink-0 text-theme-accent" aria-hidden="true" />
         <span className="text-sm text-[var(--text-primary)] truncate">{latest.version ?? '—'}</span>
       </div>
       <Badge variant={meta.variant}>
@@ -170,7 +170,7 @@ export default function SoftwareUpdateHistoryWidget({ vehicleId, size }: WidgetP
   return (
     <WidgetShell
       title={t('widget.softwareUpdateHistory', 'Update history')}
-      icon={<Download className="h-3.5 w-3.5 text-neon-cyan" aria-hidden="true" />}
+      icon={<Download className="h-3.5 w-3.5 text-theme-accent" aria-hidden="true" />}
       loading={isLoading}
       dataState={dataState}
       updatedAt={vidStr ? dataUpdatedAt : vehiclesQuery.dataUpdatedAt}

@@ -82,7 +82,7 @@ export function SignalSnapshotPanel({ rows, isLoading, error, onRetry }: SignalS
     <GlassPanel className="p-4 sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <ListTree className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <ListTree className="h-4 w-4 text-status-info" aria-hidden="true" />
           {t('powershare.snapshot.title', 'Signal Snapshot')}
         </PanelTitle>
         <Caption>{t('powershare.snapshot.subtitle', 'Latest raw Powershare telemetry')}</Caption>

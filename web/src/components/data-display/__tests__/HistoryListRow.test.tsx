@@ -180,6 +180,6 @@ describe('HistoryListRow', () => {
         testId="hlr"
       />,
     );
-    expect(screen.getByTestId('hlr-panel').className).toMatch(/ring-cyan-400/);
+    expect(screen.getByTestId('hlr-panel')).toHaveClass('ring-[var(--theme-primary)]');
   });
 });

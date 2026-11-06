@@ -108,9 +108,9 @@ export function RecentActivity({
       <GlassPanel className="p-5 lg:col-span-1 h-full">
         <div className="flex items-center justify-between mb-4">
           <h3 className="section-title flex items-center gap-2">
-            <Activity aria-hidden="true" className="h-4 w-4 text-cyan-300" /> {t('activity.title', 'Recent activity')}
+            <Activity aria-hidden="true" className="h-4 w-4 text-status-info" /> {t('activity.title', 'Recent activity')}
           </h3>
-          <Link to="/drives" className="text-2xs text-[var(--text-muted)] hover:text-cyan-300 transition-colors">
+          <Link to="/drives" className="text-2xs text-[var(--text-muted)] hover:text-theme-accent transition-colors">
             {t("activity.browseDrives", 'View all')}
           </Link>
         </div>

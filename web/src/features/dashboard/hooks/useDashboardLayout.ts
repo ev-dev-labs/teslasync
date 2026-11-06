@@ -11,6 +11,11 @@ import type {
   DropPlacement,
 } from '../widgets/types';
 import { WIDGET_REGISTRY, getWidgetDef } from '../widgets/registry';
+import {
+  GRID_BREAKPOINTS, GRID_COLS,
+  normalizeDashboard, orderedLayouts, sizeClassForColumns, widgetsInLayoutOrder, widgetSizeClass,
+} from '../lib/orderedLayout';
+export { GRID_BREAKPOINTS, GRID_COLS, ROW_HEIGHT, GRID_MARGIN } from '../lib/orderedLayout';
 import { useUndoRedo } from './useUndoRedo';
 import {
   useDashboardLayouts,
@@ -32,10 +37,6 @@ const LEGACY_KEY = 'teslasync-dashboard-layout';
 const WIDGET_REGISTRY_IDS = new Set(WIDGET_REGISTRY.map((w) => w.id));
 
 /* ─── Breakpoint constants ─── */
-export const GRID_BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 480 } as const;
-export const GRID_COLS = { lg: 4, md: 3, sm: 2, xs: 1 } as const;
-export const ROW_HEIGHT = 80;
-export const GRID_MARGIN: [number, number] = [16, 16];
 
 export type GridBreakpoint = keyof typeof GRID_COLS;
 
@@ -274,18 +275,16 @@ function makePreset(
     widgetId: spec.widgetId,
     config: spec.config,
   }));
-  return {
+  return normalizeDashboard({
     id,
     name,
     widgets,
-    // Compact the row-flow: pure flow leaves floaters (e.g. an item at y2
-    // with empty rows above it) that read as random blank holes. Compaction
-    // top-aligns every column; row-flow order is preserved.
-    layouts: compactLayouts(buildDefaultLayouts(widgets)),
+    layoutVersion: 1,
+    layouts: orderedLayouts(widgets),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     isDefault,
-  };
+  });
 }
 
 const DEFAULT_DASHBOARD = makePreset(
@@ -484,22 +483,15 @@ function loadDashboards(): SavedDashboard[] {
       // Reconcile widgets against current registry. Compute the valid-widget
       // set once (DRY) and guard against a corrupt entry whose `widgets` is
       // missing — one bad dashboard must not nuke the entire saved list.
-      return parsed.map((d) => {
-        const validWidgets = (d.widgets ?? []).filter((w) =>
-          WIDGET_REGISTRY.some((def) => def.id === w.widgetId),
-        );
-        return {
-          ...d,
-          widgets: validWidgets,
-          layouts: reconcileLayouts(d.layouts ?? {}, validWidgets),
-        };
-      });
+      const normalized = parsed.map(normalizeDashboard);
+      localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(normalized));
+      return normalized;
     }
     // Try legacy migration
     const legacy = localStorage.getItem(LEGACY_KEY);
     if (legacy) {
       const parsed = JSON.parse(legacy) as LegacyDashboardLayout;
-      const migrated = migrateLegacy(parsed);
+      const migrated = normalizeDashboard(migrateLegacy(parsed));
       const dashboards = [migrated];
       localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(dashboards));
       localStorage.removeItem(LEGACY_KEY);
@@ -515,7 +507,7 @@ function loadDashboards(): SavedDashboard[] {
   // irreversibly stretching every widget on every visit until stamped.
   // (This was the reload-stretching bug: h2→h5, h4→h9, y scattered.)
   stampRowHeightVersion();
-  return [{ ...DEFAULT_DASHBOARD }];
+  return [normalizeDashboard(DEFAULT_DASHBOARD)];
 }
 
 function loadActiveId(): string {
@@ -610,16 +602,7 @@ export function useDashboardLayout() {
     const restoredActiveId = backendLayouts.active_id || 'default';
 
     // Reconcile restored dashboards against current widget registry
-    const reconciled = restored.map((d) => {
-      const validWidgets = (d.widgets ?? []).filter((w) =>
-        WIDGET_REGISTRY.some((def) => def.id === w.widgetId),
-      );
-      return {
-        ...d,
-        widgets: validWidgets,
-        layouts: reconcileLayouts(d.layouts ?? {}, validWidgets),
-      };
-    });
+    const reconciled = restored.map(normalizeDashboard);
 
     if (reconciled.length === 0) return;
 
@@ -630,6 +613,9 @@ export function useDashboardLayout() {
       : reconciled[0].id;
     setActiveId(finalActiveId);
     localStorage.setItem(ACTIVE_KEY, finalActiveId);
+    if (restored.some(dashboard => dashboard.layoutVersion !== 1)) {
+      syncToBackend(reconciled, finalActiveId);
+    }
   }, [backendLayouts, hydratedFromBackend, dashboards, activeId, syncToBackend]);
 
   /* ─── Cross-tab sync ─── */
@@ -641,7 +627,7 @@ export function useDashboardLayout() {
       if (m.type !== 'dashboard.layout') return;
       try {
         const raw = localStorage.getItem(DASHBOARDS_KEY);
-        if (raw) setDashboards(JSON.parse(raw) as SavedDashboard[]);
+        if (raw) setDashboards((JSON.parse(raw) as SavedDashboard[]).map(normalizeDashboard));
         const active = localStorage.getItem(ACTIVE_KEY);
         if (active) setActiveId(active);
       } catch {
@@ -673,6 +659,7 @@ export function useDashboardLayout() {
 
   /* ─── Persistence ─── */
   const persist = useCallback((dbs: SavedDashboard[], active?: string) => {
+    dbs = dbs.map(normalizeDashboard);
     setDashboards(dbs);
     localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(dbs));
     const resolvedActive = active !== undefined ? active : activeId;
@@ -690,7 +677,7 @@ export function useDashboardLayout() {
     (updater: (d: SavedDashboard) => SavedDashboard) => {
       setDashboards((prev) => {
         const updated = prev.map((d) =>
-          d.id === activeId ? updater({ ...d, updatedAt: new Date().toISOString() }) : d,
+          d.id === activeId ? normalizeDashboard(updater({ ...d, updatedAt: new Date().toISOString() })) : d,
         );
         localStorage.setItem(DASHBOARDS_KEY, JSON.stringify(updated));
         syncToBackend(updated, activeId);
@@ -703,34 +690,23 @@ export function useDashboardLayout() {
 
   /* ─── Layout actions ─── */
   const updateLayouts = useCallback(
-    (layouts: RGLLayouts, sourceBreakpoint?: keyof typeof GRID_COLS) => {
+    (layouts: RGLLayouts, sourceBreakpoint?: keyof typeof GRID_COLS, orderedWidgets?: WidgetInstance[]) => {
       const current = activeDashRef.current;
-      const next = reconcileLayouts(layouts, current.widgets);
-      if (sourceBreakpoint) {
-        const previous = new Map(
-          (current.layouts[sourceBreakpoint] ?? []).map((item) => [item.i, item]),
-        );
-        for (const item of next[sourceBreakpoint]) {
-          const before = previous.get(item.i);
-          if (!before || (before.w === item.w && before.h === item.h)) continue;
-          for (const [bp, cols] of Object.entries(GRID_COLS)) {
-            if (bp === sourceBreakpoint) continue;
-            next[bp] = next[bp].map((other) => other.i === item.i
-              ? {
-                  ...other,
-                  w: before.w === item.w
-                    ? other.w
-                    : Math.max(1, Math.round(item.w * cols / GRID_COLS[sourceBreakpoint])),
-                  h: item.h,
-                  userSized: item.userSized,
-                }
-              : other);
-          }
-        }
-      }
-      const canonical = sourceBreakpoint ? reconcileLayouts(next, current.widgets) : next;
-      pushSnapshot({ widgets: activeDashRef.current.widgets, layouts: canonical });
-      updateActive((d) => ({ ...d, layouts: canonical }));
+      const bp = sourceBreakpoint ?? 'lg';
+      const changed = layouts[bp] ?? [];
+      const widgets = orderedWidgets ?? widgetsInLayoutOrder(current.widgets, changed).map(widget => {
+        const before = current.layouts[bp]?.find(item => item.i === widget.id);
+        const after = changed.find(item => item.i === widget.id);
+        return {
+          ...widget,
+          sizeClass: after && before && after.w !== before.w
+            ? sizeClassForColumns(after.w) : widgetSizeClass(widget),
+          ...(after?.userSized && before && after.h !== before.h ? { heightRows: after.h } : {}),
+        };
+      });
+      const canonical = orderedLayouts(widgets);
+      pushSnapshot({ widgets, layouts: canonical });
+      updateActive((d) => ({ ...d, widgets, layouts: canonical }));
     },
     [updateActive, pushSnapshot],
   );
@@ -795,7 +771,7 @@ export function useDashboardLayout() {
       }
       const def = getWidgetDef(widgetId);
       const newWidget: WidgetInstance = { id: generateId(), widgetId };
-      const widgets = [...current.widgets, newWidget];
+      let widgets = [...current.widgets, newWidget];
       const layouts = reconcileLayouts(current.layouts, widgets);
       const cols = GRID_COLS[sourceBreakpoint];
       const minW = Math.min(def?.minSize.cols ?? 1, cols);
@@ -821,6 +797,8 @@ export function useDashboardLayout() {
       layouts[sourceBreakpoint] = positioned.map((item) => item.i === newWidget.id
         ? { ...item, static: false }
         : { ...item, userSized: manualSizes.get(item.i) });
+      widgets = widgetsInLayoutOrder(widgets, layouts[sourceBreakpoint]).map(widget =>
+        widget.id === newWidget.id ? { ...widget, sizeClass: sizeClassForColumns(w) } : widget);
       pushSnapshot({ widgets, layouts });
       updateActive((d) => ({ ...d, widgets, layouts }));
     },
@@ -1130,15 +1108,15 @@ export function useDashboardLayout() {
       const widgets = (parsed.widgets ?? []).filter((w) =>
         WIDGET_REGISTRY.some((def) => def.id === w.widgetId),
       );
-      const newDash: SavedDashboard = {
+      const newDash: SavedDashboard = normalizeDashboard({
         ...parsed,
         id,
         widgets,
-        layouts: reconcileLayouts(parsed.layouts, widgets),
+        layouts: parsed.layouts,
         isDefault: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      };
+      });
       persist([...dashboards, newDash], id);
       resetSnapshot({ widgets: newDash.widgets, layouts: newDash.layouts });
     },
@@ -1148,11 +1126,10 @@ export function useDashboardLayout() {
   /** Import a pre-validated SavedDashboard directly (used by ImportPreviewModal) */
   const importDashboardFromData = useCallback(
     (dashboard: SavedDashboard) => {
-      const finalDash: SavedDashboard = {
+      const finalDash: SavedDashboard = normalizeDashboard({
         ...dashboard,
-        layouts: reconcileLayouts(dashboard.layouts, dashboard.widgets),
         isDefault: false,
-      };
+      });
       persist([...dashboardsRef.current, finalDash], finalDash.id);
       resetSnapshot({ widgets: finalDash.widgets, layouts: finalDash.layouts });
     },

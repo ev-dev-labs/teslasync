@@ -1,14 +1,13 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import { Route, ArrowUpRight } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { Caption, Text } from '@/components/ui';
 import { isFiniteNumber } from '@/lib/numberFormat';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { useDashboardDriveHistory } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';
-import { request } from '@/api/client';
 import { formatDurationMinutes } from '@/lib/dateConvert';
 import { convertDistanceFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
@@ -18,7 +17,6 @@ import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
-import type { Drive } from '../types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDateLabels } from '@/hooks/useDateLabels';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -39,7 +37,7 @@ export function batteryUsedPct(
   return used > 0 ? used : null;
 }
 
-export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps) {
+export default function RecentDrivesListWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
@@ -52,11 +50,8 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
   const isWide = size.cols >= 3;
   const driveLimit = isWide ? 10 : isTall ? 7 : 5;
 
-  const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
-    queryKey: ['drives', id, `recent-list-${driveLimit}`],
-    queryFn: () => request<Drive[]>(`/drives?vehicle_id=${id}&limit=${driveLimit}`),
-    enabled: id > 0,
-  });
+  const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } =
+    useDashboardDriveHistory(id, { kind: 'recent-list', limit: driveLimit, range: config?.timeRange });
 
   const items = useMemo(() => safeArray(drives), [drives]);
   const trust = useDataState({
@@ -66,7 +61,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
   return (
     <WidgetShell
       title={t('widget.recentDrivesList', 'Recent drives')}
-      icon={<Route className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />}
+      icon={<Route className="h-3.5 w-3.5 text-theme-accent" aria-hidden="true" />}
       loading={isLoading}
       dataState={trust.hasData ? trust : undefined}
       error={trust.fatalError?.message ?? null}

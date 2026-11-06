@@ -43,6 +43,28 @@ function calendar(drives: readonly Drive[], range: DriveCalendarWindow = ROLLING
 }
 
 describe('buildDriveCalendar', () => {
+  it('buckets and clips civil days in the selected timezone across DST', () => {
+    const cal = buildDriveCalendar([
+      driveOn(new Date('2026-03-08T07:30:00Z'), 5000),
+      driveOn(new Date('2026-03-08T09:30:00Z'), 6000),
+      driveOn(new Date('2026-03-08T10:30:00Z'), 7000),
+    ], Date.parse('2026-03-09T01:00:00Z'), {
+      start: '2026-03-01', end: '2026-03-31',
+    }, 'America/Los_Angeles');
+    expect(cal.days.at(-1)?.date).toBe('2026-03-08');
+    expect(cal.days.find(day => day.date === '2026-03-07')).toMatchObject({ drives: 1, distanceM: 5000 });
+    expect(cal.days.find(day => day.date === '2026-03-08')).toMatchObject({ drives: 2, distanceM: 13000 });
+    expect(cal.days.find(day => day.date === '2026-03-01')?.availability).toBe('before-first-drive');
+  });
+
+  it('distinguishes padding and pre-data days from quiet days after the first returned drive', () => {
+    const cal = calendar([driveOn(new Date(2026, 6, 21, 9))], { start: '2026-07-20', end: '2026-07-23' });
+    expect(cal.days.map(day => day.availability)).toEqual([
+      'outside-range', 'before-first-drive', 'observed', 'observed', 'observed',
+    ]);
+    expect(cal.days.at(-1)?.level).toBe(0);
+  });
+
   it('starts the selected window grid on a Sunday and ends at the selected day', () => {
     const cal = calendar([]);
     expect(cal.days[0]!.day).toBe(0);
@@ -61,7 +83,7 @@ describe('buildDriveCalendar', () => {
     expect(cal.activeDays).toBe(1);
   });
 
-  it('assigns intensity levels 1–4 with the p95 cap', () => {
+  it('assigns intensity levels 1–4 by active-day rank without flattening ordinary drives', () => {
     const drives = [
       driveOn(new Date(2026, 6, 1, 9), 10_000),
       driveOn(new Date(2026, 6, 2, 9), 10_000),
@@ -71,7 +93,7 @@ describe('buildDriveCalendar', () => {
     const cal = calendar(drives);
     const normal = cal.days.find((x) => x.date === '2026-07-01')!;
     const epic = cal.days.find((x) => x.date === '2026-07-04')!;
-    expect(normal.level).toBeGreaterThanOrEqual(1);
+    expect(normal.level).toBe(2);
     expect(epic.level).toBe(4);
     expect(cal.busiestDay!.date).toBe('2026-07-04');
   });
@@ -159,7 +181,7 @@ describe('buildDriveCalendar', () => {
       driveOn(new Date(2026, 6, 20, 9), 10_000),
     ]);
 
-    expect(cal.days.find((day) => day.date === '2026-07-20')?.level).toBe(4);
+    expect(cal.days.find((day) => day.date === '2026-07-20')?.level).toBe(2);
   });
 
   it('aggregates chronological monthly distance, drives, and active days', () => {

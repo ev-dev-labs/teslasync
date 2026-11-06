@@ -15,10 +15,11 @@
  * ResizeObserver shim, mirroring DashboardGrid.mobile.test.tsx.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, cleanup, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, cleanup, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
+import { VisuallyHidden } from '@/components/a11y';
 import {
   __resetAnnouncerForTests,
   subscribeAnnouncer,
@@ -27,14 +28,20 @@ import {
 import { DashboardGrid } from '../DashboardGrid';
 import { getWidgetDef } from '../../widgets/registry';
 import type { SavedDashboard, RGLLayouts, WidgetInstance } from '../../widgets/types';
+import { mergeDashboardSettings } from '../../widgets/types';
 
 // Header controls now mount with the shared shell. Keep a real shell and inert
 // body so chrome assertions exercise that integration without data requests.
 vi.mock('../../widgets/registry', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../widgets/registry')>();
   const { WidgetShell } = await import('../../widgets/WidgetShell');
+  const { WidgetHeaderContext } = await import('../../widgets/WidgetHeaderContext');
+  const { useContext } = await import('react');
   const definitions = new Map(actual.WIDGET_REGISTRY.map(def => [def.id, {
-    ...def, component: () => <WidgetShell title={def.name}><div>Widget content</div></WidgetShell>,
+    ...def, component: function MockWidget() {
+      const header = useContext(WidgetHeaderContext);
+      return <WidgetShell title={def.name}><div>Widget content</div><span data-testid="refresh-cadence">{header.refreshIntervalSeconds ?? 'default'}</span><span data-testid="refresh-paused">{String(Boolean(header.pauseAutoRefresh))}</span></WidgetShell>;
+    },
   }]));
   return {
     ...actual,
@@ -73,6 +80,7 @@ function makeDashboard(
 interface RenderOpts {
   dashboard: SavedDashboard;
   editMode?: boolean;
+  pauseAutoRefresh?: boolean;
   onLayoutChange?: (layouts: RGLLayouts) => void;
   onRemoveWidget?: (id: string) => void;
   onOpenSettings?: (id: string) => void;
@@ -86,6 +94,7 @@ function renderGrid(opts: RenderOpts) {
         <DashboardGrid
           dashboard={opts.dashboard}
           editMode={opts.editMode ?? false}
+          pauseAutoRefresh={opts.pauseAutoRefresh}
           onLayoutChange={opts.onLayoutChange ?? (() => {})}
           onRemoveWidget={opts.onRemoveWidget ?? (() => {})}
           onOpenSettings={opts.onOpenSettings ?? (() => {})}
@@ -146,6 +155,44 @@ afterEach(() => {
 });
 
 describe('DashboardGrid — render paths', () => {
+  it('uses widget refresh overrides before the dashboard interval', () => {
+    setViewport(1440);
+    const dashboard = makeDashboard([
+      { id: 'wid-1', widgetId: W1_ID, config: { refreshRate: 5 } },
+      { id: 'wid-2', widgetId: W2_ID },
+    ]);
+    dashboard.settings = mergeDashboardSettings({ refreshInterval: 30 });
+    renderGrid({ dashboard });
+
+    expect(screen.getAllByTestId('refresh-cadence').map((element) => element.textContent)).toEqual(['5', '30']);
+  });
+
+  it('propagates a pause to the widget refresh context', () => {
+    setViewport(1440);
+    renderGrid({
+      dashboard: makeDashboard([{ id: 'wid-1', widgetId: W1_ID }]),
+      pauseAutoRefresh: true,
+    });
+    expect(screen.getByTestId('refresh-paused')).toHaveTextContent('true');
+  });
+
+  it('keeps hidden titles accessible in the grid and fullscreen overlay', () => {
+    const { container, unmount } = render(<VisuallyHidden>Reference</VisuallyHidden>);
+    const hiddenClass = container.firstElementChild?.getAttribute('class') ?? '';
+    expect(hiddenClass).not.toBe('');
+    unmount();
+    setViewport(1440);
+    renderGrid({ dashboard: makeDashboard([
+      { id: 'wid-1', widgetId: W1_ID, config: { showTitle: false } },
+    ]) });
+
+    expect(screen.getByRole('heading', { name: W1_NAME })).toHaveClass(hiddenClass);
+    fireEvent.click(screen.getByRole('button', { name: `Expand ${W1_NAME}` }));
+    const dialog = screen.getByRole('dialog', { name: W1_NAME });
+    expect(within(dialog).getByRole('heading', { level: 3, name: W1_NAME })).toHaveClass(hiddenClass);
+    expect(within(dialog).getByTestId('refresh-cadence')).toHaveTextContent('default');
+  });
+
   it('keeps a native, nonzero-height drop grid for an empty dashboard in edit mode', async () => {
     const { container } = renderGrid({ dashboard: makeDashboard([]), editMode: true });
     await waitFor(() => expect(container.querySelector('.react-grid-layout')).toHaveClass('min-h-72'));
@@ -249,16 +296,14 @@ describe('DashboardGrid — edit-mode chrome', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Move down' }));
-    const movedLayouts = onLayoutChange.mock.lastCall?.[0] as RGLLayouts;
-    const first = movedLayouts.lg.find((item) => item.i === 'wid-1');
-    const second = movedLayouts.lg.find((item) => item.i === 'wid-2');
-    expect(first?.y).toBeGreaterThan(second?.y ?? Number.MAX_SAFE_INTEGER);
+    const movedWidgets = onLayoutChange.mock.lastCall?.[2] as WidgetInstance[];
+    expect(movedWidgets.map(widget => widget.id)).toEqual(['wid-2', 'wid-1']);
     expect(announcementListener.mock.lastCall?.[0]).toContain(`${W1_NAME} moved down`);
 
     fireEvent.click(screen.getByRole('button', { name: `Arrange ${W1_NAME}` }));
     fireEvent.click(screen.getByRole('button', { name: 'Taller' }));
     const resizedLayouts = onLayoutChange.mock.lastCall?.[0] as RGLLayouts;
-    expect(resizedLayouts.lg.find((item) => item.i === 'wid-1')?.h).toBe(4);
+    expect(resizedLayouts.lg.find((item) => item.i === 'wid-1')?.h).toBe(7);
     expect(announcementListener.mock.lastCall?.[0]).toContain(`${W1_NAME} made taller`);
   });
 });

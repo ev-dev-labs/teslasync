@@ -739,7 +739,7 @@ groups:
           description: "Error budget for SLO \"data_repair_write_availability\" (objective 99.5%, owner platform) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
           runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
       - alert: SLODataRepairWriteAvailabilitySlowBurn
-        expr: "(1 - slo:data_repair_write_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        expr: "(1 - slo:data_repair_write_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine|correction))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine|correction))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine|correction))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine|correction))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
         for: 15m
         labels:
           severity: ticket
@@ -751,6 +751,36 @@ groups:
         annotations:
           summary: "SLO data_repair_write_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
           description: "Error budget for SLO \"data_repair_write_availability\" (objective 99.5%, owner platform) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_data_repair_preview_availability_burn
+    rules:
+      - alert: SLODataRepairPreviewAvailabilityFastBurn
+        expr: "(1 - slo:data_repair_preview_availability:ratio_rate1h) > 0.072000 and (1 - slo:data_repair_preview_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "data_repair_preview_availability"
+          owner: "platform"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO data_repair_preview_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"data_repair_preview_availability\" (objective 99.5%, owner platform) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLODataRepairPreviewAvailabilitySlowBurn
+        expr: "(1 - slo:data_repair_preview_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}/preview|cases/\\\\{id\\\\}/correction-preview)\",method=\"POST\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}/preview|cases/\\\\{id\\\\}/correction-preview)\",method=\"POST\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}/preview|cases/\\\\{id\\\\}/correction-preview)\",method=\"POST\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}/preview|cases/\\\\{id\\\\}/correction-preview)\",method=\"POST\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "data_repair_preview_availability"
+          owner: "platform"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO data_repair_preview_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"data_repair_preview_availability\" (objective 99.5%, owner platform) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
           runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
   - name: slo_action_center_write_availability_burn
     rules:

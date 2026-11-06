@@ -38,7 +38,7 @@ export function ScoreCategoriesSection({ model, scoreState }: ScoreCategoriesSec
           value={smoothnessReading}
           max={30}
           color={CATEGORY_COLORS.smoothness}
-          icon={<Icons.efficiency className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+          icon={<Icons.efficiency className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
           metricLabel={t('driveScore.powerRange', 'Power range')}
           metricValue={hasDrives ? formatPower(avgPowerW) : '—'}
           sourceFallback={scoreState(260, noDrivesMsg)}

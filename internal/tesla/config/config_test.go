@@ -122,6 +122,7 @@ func TestSubscriptionIncludesNewStreamingFields(t *testing.T) {
 	for _, field := range []string{
 		"AccessoryRail", "PowerTransferStatus", "AutomaticEmergencyBrakingState",
 		"RollingResistanceCoefficient", "LifetimeDcChargeEnergyKwh", "SemiVehicleMassKg",
+		"SelfDrivingSoftwareVersion", "SemiTrailerLatched",
 	} {
 		if entry, ok := subscription.Config.Fields[field]; !ok || entry.IntervalSeconds <= 0 {
 			t.Errorf("subscription missing active field %s", field)

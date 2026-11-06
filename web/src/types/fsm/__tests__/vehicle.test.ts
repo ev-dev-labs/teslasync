@@ -71,7 +71,7 @@ describe('VEHICLE_STATE_ENTRIES', () => {
     // Both are the "success" variant; driving must visually diverge (blue tint).
     expect(VEHICLE_STATE_ENTRIES.online.variant).toBe('success')
     expect(VEHICLE_STATE_ENTRIES.driving.variant).toBe('success')
-    expect(VEHICLE_STATE_ENTRIES.driving.overrides?.badgeDot).toBe('bg-blue-500')
+    expect(VEHICLE_STATE_ENTRIES.driving.overrides?.badgeDot).toBe('bg-status-info')
   })
 
   it('routes offline text through the theme muted var (not a hardcoded gray)', () => {

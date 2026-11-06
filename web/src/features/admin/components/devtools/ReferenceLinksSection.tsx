@@ -55,7 +55,7 @@ export function ReferenceLinksSection() {
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-start gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+              className="flex items-start gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent"
             >
               <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', ICON_COLOR_MAP.cyan)}>
                 <Icon className="h-4 w-4" aria-hidden="true" />

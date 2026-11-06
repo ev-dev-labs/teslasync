@@ -31,7 +31,7 @@ for (const [width, range, compact] of [
     expect(weekday).not.toBeNull();
     expect(bounds).not.toBeNull();
     if (compact) {
-      const dayCells = activity.getByRole('img', { name: /Daily driving heatmap/ }).locator('[title]');
+      const dayCells = activity.getByRole('group', { name: /Daily driving heatmap/ }).locator('[title]');
       expect(await dayCells.count()).toBeGreaterThan(0);
       expect(await dayCells.evaluateAll(cells => cells.some(cell => /[1-9]\d* drives/.test(cell.getAttribute('title') ?? ''))))
         .toBe(true);

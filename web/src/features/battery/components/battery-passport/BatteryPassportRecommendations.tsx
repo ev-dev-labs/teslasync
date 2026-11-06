@@ -27,7 +27,7 @@ export function BatteryPassportRecommendations({
           )} description={t(
             'batteryPassport.recommendations.subtitle',
             'Verbatim outputs from deterministic server rules, retained as certificate evidence rather than presented as prescriptions.',
-          )} actions={<ClipboardList className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          )} actions={<ClipboardList className="h-4 w-4 text-theme-accent" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <AlertBanner
             className="mb-4"
@@ -49,7 +49,7 @@ export function BatteryPassportRecommendations({
                   className="flex items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
                   <FileOutput
-                    className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300"
+                    className="mt-0.5 h-4 w-4 shrink-0 text-theme-accent"
                     aria-hidden="true"
                   />
                   <div>

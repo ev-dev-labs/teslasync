@@ -67,18 +67,18 @@ export function UpdatePrompt({ state: update }: UpdatePromptProps) {
         className={`!p-4 flex items-start gap-3 shadow-lg max-w-full ${
           required
             ? 'border border-amber-400/40 shadow-amber-400/10'
-            : 'border border-neon-cyan/30 shadow-neon-cyan/10'
+            : 'border border-theme-accent/30 shadow-theme-accent/10'
         }`}
       >
         <div
           className={`rounded-lg p-2 shrink-0 ${
-            required ? 'bg-amber-400/10' : 'bg-neon-cyan/10'
+            required ? 'bg-amber-400/10' : 'bg-theme-accent/10'
           }`}
         >
           {required ? (
             <AlertTriangle className="h-5 w-5 text-amber-300" aria-hidden="true" />
           ) : (
-            <RefreshCw className="h-5 w-5 text-cyan-300" aria-hidden="true" />
+            <RefreshCw className="h-5 w-5 text-theme-accent" aria-hidden="true" />
           )}
         </div>
 

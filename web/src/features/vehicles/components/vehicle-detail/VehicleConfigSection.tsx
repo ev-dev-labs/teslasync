@@ -44,7 +44,7 @@ export function VehicleConfigSection({ vehicleConfig, softwareVersion }: Vehicle
   return (
     <GlassPanel className="p-6">
       <PanelTitle className="mb-4 flex items-center gap-2">
-        <Settings className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Settings className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('vehicles.detail.vehicleConfig', 'Vehicle configuration')}
       </PanelTitle>
       {configItems.length > 0 ? (

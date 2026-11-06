@@ -64,7 +64,7 @@ export function FrontendErrorsCard() {
             >
               <div className="flex min-w-0 items-center gap-2">
                 <Badge variant="neutral" size="sm">{entry.name || '—'}</Badge>
-                <span className="truncate font-mono text-xs text-cyan-300">
+                <span className="truncate font-mono text-xs text-theme-accent">
                   {entry.route || '—'}
                 </span>
               </div>

@@ -168,22 +168,23 @@ test('CI shares one hermetic build and gives each browser shard one managed prev
   }> };
   const build = workflow.jobs['browser-build'];
   const visualShards = workflow.jobs['visual-tests'].strategy?.matrix?.shard ?? [];
-  expect(visualShards).toEqual(Array.from({ length: 64 }, (_, index) => index + 1));
+  expect(visualShards).toEqual(Array.from({ length: 32 }, (_, index) => index + 1));
   const visualSteps = workflow.jobs['visual-tests'].steps;
   const comparison = visualSteps.find(step => step.run?.startsWith('npm run e2e:visual '));
   expect(comparison).toBeDefined();
   expect(comparison?.if).toBeUndefined();
   expect(visualSteps.some(step => step.run?.includes('e2e:update-visual'))).toBe(false);
   const chromiumRows = workflow.jobs['chromium-tests'].strategy?.matrix?.include ?? [];
-  for (const [suite, count] of [['quality', 64], ['a11y', 13], ['performance', 1]] as const) {
+  for (const [suite, count] of [['quality', 32], ['a11y', 13], ['performance', 1]] as const) {
     expect(chromiumRows.filter(row => row.suite === suite).map(row => row.shard))
       .toEqual(Array.from({ length: count }, (_, index) => `${index + 1}/${count}`));
   }
   expect(workflow.jobs['cross-browser-tests'].strategy?.matrix)
-    .toEqual({ browser: ['firefox', 'webkit'], shard: [1, 2, 3] });
+    .toEqual({ browser: ['firefox', 'webkit', 'edge'], shard: [1, 2, 3] });
   const engines = workflow.jobs['cross-browser'];
   expect(engines.if).toBe('always()');
   expect(engines.needs).toEqual(['contract', 'browser-build', 'cross-browser-tests']);
+  expect(engines.strategy?.matrix?.browser).toEqual(['firefox', 'webkit', 'edge']);
   expect(engines.steps.find(step => step.run?.includes('all(job["result"] == "success"'))).toBeDefined();
   const buildSteps = Object.values(workflow.jobs).flatMap(job =>
     job.steps.filter(step => step.run?.includes('npm run e2e:build')));

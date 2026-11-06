@@ -150,7 +150,7 @@ export function RhythmInsightsPanel({
               )}
             >
               <div className="flex items-center gap-2">
-                <Icon className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+                <Icon className="h-4 w-4 shrink-0 text-theme-accent" aria-hidden="true" />
                 <Text variant="label">{label}</Text>
               </div>
               <MetricValue className="mt-2 text-xl">{value}</MetricValue>

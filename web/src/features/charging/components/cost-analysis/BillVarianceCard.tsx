@@ -47,7 +47,7 @@ export function BillVarianceCard({ vehicleId }: BillVarianceCardProps) {
   return (
     <CostSection
       title={t('costAnalysis.billVariance.title', 'Bill Truth: Measured vs Invoiced')}
-      icon={<ReceiptText className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<ReceiptText className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
       glow="cyan"
       isLoading={isLoading}
       error={error}

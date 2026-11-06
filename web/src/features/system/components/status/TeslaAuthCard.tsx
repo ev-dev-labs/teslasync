@@ -91,7 +91,7 @@ export function TeslaAuthCard({ authenticated, expiresAt, now }: TeslaAuthCardPr
         <div className="min-w-0 max-w-full">
           <Link
             to="/tesla-account"
-            className={cn('inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-1.5 text-cyan-300 ring-1 ring-cyan-400/30 hover:bg-cyan-500/20', typography.size.xs, typography.weight.medium)}
+            className={cn('inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-md bg-theme-accent/15 px-3 py-1.5 text-theme-accent ring-1 ring-theme-accent/30 hover:bg-theme-accent/20', typography.size.xs, typography.weight.medium)}
           >
             {sev === 'expired' || sev === 'disconnected'
               ? t('systemStatus.reauthenticate', 'Re-authenticate')

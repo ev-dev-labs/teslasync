@@ -43,7 +43,7 @@ interface EndpointSidebarProps {
 
 const METHOD_COLORS: Record<string, string> = {
   GET: 'bg-green-500/20 text-green-400',
-  POST: 'bg-blue-500/20 text-blue-400',
+  POST: 'bg-status-info/20 text-status-info',
   PUT: 'bg-amber-500/20 text-amber-400',
   DELETE: 'bg-red-500/20 text-red-400',
   PATCH: 'bg-purple-500/20 text-purple-400',
@@ -124,7 +124,7 @@ function TagGroup({
                   className={cn(
                     '!h-auto !w-full !justify-start !rounded-none !px-3 !py-1.5 text-left text-xs',
                     'hover:!bg-white/[0.05]',
-                    isSelected && '!bg-white/[0.07] border-l-2 border-cyan-400',
+                    isSelected && '!bg-white/[0.07] border-l-2 border-theme-accent',
                   )}
                   title={ep.summary}
                 >

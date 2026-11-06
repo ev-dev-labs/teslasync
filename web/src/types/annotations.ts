@@ -1,3 +1,5 @@
+import { DATA_VISUAL_COLORS } from '@/lib/colors';
+
 export interface DataAnnotation {
   id: string;
   /** ISO timestamp of the annotated point */
@@ -95,7 +97,7 @@ export function toDataAnnotation(row: ChartAnnotationRow): DataAnnotation {
 }
 
 export const ANNOTATION_COLORS: Record<AnnotationCategory, string> = {
-  milestone: '#3b82f6',
+  milestone: DATA_VISUAL_COLORS.blue,
   maintenance: '#f59e0b',
   trip: '#22c55e',
   issue: '#ef4444',

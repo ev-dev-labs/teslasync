@@ -11,6 +11,38 @@ func sp(s string) *string   { return &s }
 func fp(f float64) *float64 { return &f }
 func bp(b bool) *bool       { return &b }
 
+func TestMediaTemplateMissingValuesUseCompleteSentence(t *testing.T) {
+	for _, tc := range []struct {
+		signal, template, value, full string
+	}{
+		{"MediaNowPlayingStation", "{{VehicleName}}: the station changed to {{MediaNowPlayingStation}}.", "Jazz FM", "Falcon: the station changed to Jazz FM."},
+		{"MediaNowPlayingArtist", "{{VehicleName}} is handing the aux cord to {{MediaNowPlayingArtist}}. A new artist is playing.", "Muse", "Falcon is handing the aux cord to Muse. A new artist is playing."},
+		{"MediaNowPlayingTitle", "{{VehicleName}} is now playing {{Value}}.", "Starlight", "Falcon is now playing Starlight."},
+	} {
+		t.Run(tc.signal, func(t *testing.T) {
+			rule := &alertmodel.AlertRule{Name: "Media changed", Kind: "signal", SignalName: tc.signal, Op: "changed", MsgTemplate: sp(tc.template)}
+			if got := RenderBody(rule, BuildContext(rule, "Falcon", map[string]any{tc.signal: tc.value}, nil)); got != tc.full {
+				t.Fatalf("full value: got %q want %q", got, tc.full)
+			}
+			for _, signals := range []map[string]any{{}, {tc.signal: ""}, {tc.signal: "  "}, {tc.signal: nil}} {
+				got := RenderBody(rule, BuildContext(rule, "Falcon", signals, nil))
+				if !strings.Contains(got, "unavailable") || strings.Contains(got, "{{") || strings.Contains(got, "to .") || strings.Contains(got, "playing .") {
+					t.Errorf("missing value must yield a complete fallback sentence, got %q", got)
+				}
+			}
+		})
+	}
+}
+
+func TestChangedTurnSignalTitleDoesNotClaimOn(t *testing.T) {
+	rule := &alertmodel.AlertRule{Name: "Turn Signal On", Kind: "signal", SignalName: "LightsTurnSignal", Op: "changed"}
+	for _, value := range []string{"Left", "Right", "Off", "Both"} {
+		if got := RenderTitle(rule, BuildContext(rule, "Falcon", map[string]any{"LightsTurnSignal": value}, nil)); got != "Falcon — Turn signal changed" {
+			t.Errorf("%s: %q", value, got)
+		}
+	}
+}
+
 // TestRenderTitle verifies the canonical title contract: never empty,
 // vehicle prefix when known, "Alert" floor when both vehicle and rule
 // name are missing. The IncludeTitle toggle is INTENTIONALLY not

@@ -32,6 +32,13 @@ describe('measured charge instruments', () => {
     expect(container.querySelector('.widget-activity-active')).toBeNull();
   });
 
+  it('retains the target marker and accessible value when its text is shown by the widget summary', () => {
+    render(<ChargeMeter value={22} label="Battery" marker={85} markerLabel="Charge limit 85%" showMarkerValue={false} />);
+    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuetext', '22%, Charge limit 85%');
+    expect(screen.getByTestId('gauge-marker')).toHaveStyle({ left: '85%' });
+    expect(screen.queryByText('85%')).not.toBeInTheDocument();
+  });
+
   it('draws the partial measured cell rather than rounding up and animating empty cells', () => {
     const { container } = render(<ChargeBatteryPack level={72} active />);
     const cells = container.querySelectorAll('clipPath rect');

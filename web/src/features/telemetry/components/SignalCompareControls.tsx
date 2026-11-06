@@ -112,7 +112,7 @@ export function SignalCompareControls({
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <Label className="mb-1.5 flex flex-wrap items-center gap-1 text-cyan-300">
+            <Label className="mb-1.5 flex flex-wrap items-center gap-1 text-theme-accent">
               {t('signalDiff.windowA', 'Window A')}
               <HelpTooltip
                 i18nKey="help.signal.snapshot"

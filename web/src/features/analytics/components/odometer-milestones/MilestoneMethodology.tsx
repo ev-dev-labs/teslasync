@@ -116,7 +116,7 @@ export function MilestoneMethodology({
               'mt-4 flex gap-2 rounded-xl border p-3',
               accounting.capReached
                 ? 'border-amber-400/20 bg-amber-400/5'
-                : 'border-cyan-400/15 bg-cyan-400/5',
+                : 'border-theme-accent/15 bg-theme-accent/5',
             )}
           >
             <Database
@@ -124,7 +124,7 @@ export function MilestoneMethodology({
                 'mt-0.5 h-4 w-4 shrink-0',
                 accounting.capReached
                   ? 'text-amber-300'
-                  : 'text-cyan-300',
+                  : 'text-theme-accent',
               )}
               aria-hidden="true"
             />

@@ -31,7 +31,7 @@ const KIND_COLOR: Record<string, string> = {
 
 export function AlertDetailTimeline({ events, className }: AlertDetailTimelineProps) {
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat();
+  const { formatDateTime } = useDateFormat('user');
 
   const items = useMemo(() => {
     if (!events?.length) return [];

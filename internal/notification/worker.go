@@ -189,12 +189,15 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 		latencyMs := int(time.Since(startTime).Milliseconds())
 
 		if req.ChannelID > 0 {
+			sentAt := time.Now().UTC()
 			logEntry := &notificationmodel.NotificationLog{
 				ChannelID: req.ChannelID,
 				Title:     req.Title,
 				Message:   req.Message,
 				Status:    "sent",
 				Severity:  req.Severity,
+				SentAt:    &sentAt,
+				LatencyMs: &latencyMs,
 			}
 			applyRequestMetadata(logEntry, req)
 			if req.AlertID > 0 {
@@ -239,6 +242,7 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 			Status:    "failed",
 			Error:     errStr,
 			Severity:  req.Severity,
+			LatencyMs: &latencyMs,
 		}
 		applyRequestMetadata(logEntry, req)
 		if req.AlertID > 0 {
@@ -306,6 +310,9 @@ func (w *Worker) persistDeferred(ctx context.Context, req *Request, win *models.
 }
 
 func applyRequestMetadata(entry *notificationmodel.NotificationLog, req *Request) {
+	if req.VehicleID > 0 {
+		entry.VehicleID = &req.VehicleID
+	}
 	if req.TriggerID != "" {
 		entry.TriggerID = &req.TriggerID
 	}
@@ -379,6 +386,9 @@ func (w *Worker) ReplayDeferred(ctx context.Context) (replayed, failed int, err 
 		}
 		if row.AlertID != nil {
 			req.AlertID = *row.AlertID
+		}
+		if row.VehicleID != nil {
+			req.VehicleID = *row.VehicleID
 		}
 		started := time.Now()
 		if sendErr := Send(req); sendErr != nil {

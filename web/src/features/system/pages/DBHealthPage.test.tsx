@@ -221,6 +221,23 @@ afterEach(() => {
 });
 
 describe('DBHealthPage — row chart context and count preferences', () => {
+  it('renders measured numeric bytes and labels catalog row estimates throughout the page', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats({ databaseSize: 360 * MB, rowCountsEstimated: true }) }));
+    renderPage();
+    expect(metricValue('Total DB size')).toBe('360.00 MB');
+    expect(metricValue('Estimated total rows')).toBe('905,100');
+    expect(screen.getByRole('figure', { name: 'Estimated rows' })).toBeInTheDocument();
+    expect(within(tablesGrid()).getByText('Estimated rows')).toBeInTheDocument();
+    expect(screen.getByText(/Row counts are estimates from database statistics/)).toBeInTheDocument();
+  });
+
+  it('keeps unavailable database size unknown rather than showing zero bytes', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats({ databaseSize: null }) }));
+    renderPage();
+    assertOperationalMetricUnavailable(screen.getByTestId('db-health-summary-0'), 'Total DB size');
+    expect(screen.queryByText('0.00 B')).not.toBeInTheDocument();
+  });
+
   it('discloses the top fifteen returned tables by rows while keeping all sixteen details and independent sorting', () => {
     const tables = Array.from({ length: 16 }, (_, index): TableInfo => ({
       ...TABLES[0],
@@ -234,7 +251,7 @@ describe('DBHealthPage — row chart context and count preferences', () => {
     const scope = 'Showing 15 of 16 returned tables by row count. The complete table list is below.';
     expect(screen.getAllByText(scope).length).toBeGreaterThan(0);
     expect(screen.getByRole('figure', { name: 'Rows' }))
-      .toHaveAccessibleDescription(new RegExp(scope.replace(/\./g, '\\.')));
+      .toHaveAccessibleDescription(new RegExp(scope.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     const chartTable = screen.getAllByRole('table').find((table) => table !== tablesGrid())!;
     const rankedNames = within(chartTable).getAllByRole('row').slice(1)
       .map((row) => within(row).getAllByRole('cell')[0].textContent);
@@ -257,7 +274,7 @@ describe('DBHealthPage — row chart context and count preferences', () => {
     renderPage();
     const scope = 'Showing 3 of 3 returned tables by row count. The complete table list is below.';
     expect(screen.getByRole('figure', { name: 'Rows' }))
-      .toHaveAccessibleDescription(new RegExp(scope.replace(/\./g, '\\.')));
+      .toHaveAccessibleDescription(new RegExp(scope.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     expect(screen.getAllByText(scope).length).toBeGreaterThan(0);
     expect(within(tablesGrid()).getAllByRole('row')).toHaveLength(4);
   });

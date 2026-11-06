@@ -454,6 +454,41 @@ describe('date-range analytics hooks', () => {
     await tick();
     expect(mockedRequest).not.toHaveBeenCalled();
   });
+
+  const useRollingSpeedProfile = () => useSpeedProfile('5', '2020-01-01', '2020-02-01', '7d');
+  const useRollingRegen = () => useRegenEfficiency('5', undefined, undefined, 'UTC', '7d');
+  const useRollingRoutes = () => useRouteEfficiency('5', undefined, undefined, '7d');
+  const widgetCases = [
+    ['speed profile', useRollingSpeedProfile, '/analytics/speed-profile', ['speed-profile', '5', 'widget-range', '7d']],
+    ['regen', useRollingRegen, '/analytics/regen', ['regen-efficiency', '5', 'widget-range', '7d', 'UTC']],
+    ['route efficiency', useRollingRoutes, '/analytics/route-efficiency', ['route-efficiency', '5', 'widget-range', '7d']],
+  ] as const;
+
+  it.each(widgetCases)('refreshes the %s widget range without sharing unbounded cache entries', async (_name, hook, path, key) => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-03-10T12:00:00.000Z'));
+    try {
+      mockedRequest.mockResolvedValue({});
+      const { Wrapper, qc } = makeWrapper();
+      const { result } = renderHook(hook, { wrapper: Wrapper });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      const first = new URL(callArgs()[0], 'http://fixture.test');
+      expect(first.pathname).toBe(path);
+      expect(first.searchParams.get('vehicle_id')).toBe('5');
+      expect(first.searchParams.get('start')).toBe('2026-03-03T12:00:00.000Z');
+      expect(first.searchParams.get('end')).toBe('2026-03-10T12:00:00.000Z');
+      expect(callArgs()[1].signal).toBeInstanceOf(AbortSignal);
+      expect(qc.getQueryData(key)).toEqual({});
+
+      vi.setSystemTime(new Date('2026-03-11T12:00:00.000Z'));
+      await act(async () => { await result.current.refetch(); });
+      const refreshed = new URL(callArgs(1)[0], 'http://fixture.test');
+      expect(refreshed.searchParams.get('start')).toBe('2026-03-04T12:00:00.000Z');
+      expect(refreshed.searchParams.get('end')).toBe('2026-03-11T12:00:00.000Z');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

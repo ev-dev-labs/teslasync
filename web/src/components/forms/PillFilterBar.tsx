@@ -16,7 +16,7 @@ export interface PillItem {
   icon?: ReactNode;
   /** Optional count rendered as a muted suffix, e.g. `(12)`. */
   count?: number;
-  /** Optional accent colour for the active underline in the `tabs` variant. */
+  /** @deprecated Selection follows the user's accent. */
   accent?: 'cyan' | 'green' | 'amber' | 'red' | 'purple' | 'blue';
   /** Disabled pills are skipped during arrow navigation. */
   disabled?: boolean;
@@ -47,15 +47,6 @@ export interface PillFilterBarProps {
   /** Test hook for the outer container. */
   testId?: string;
 }
-
-const ACCENT_TAB: Record<NonNullable<PillItem['accent']>, string> = {
-  cyan:   'border-cyan-400 text-cyan-300',
-  green:  'border-emerald-400 text-emerald-300',
-  amber:  'border-amber-400 text-amber-300',
-  red:    'border-rose-400 text-rose-300',
-  purple: 'border-purple-400 text-purple-300',
-  blue:   'border-indigo-400 text-indigo-300',
-};
 
 /**
  * `PillFilterBar` — accessible single-select filter row used for trend
@@ -134,16 +125,15 @@ export function PillFilterBar({
     >
       {items.map((item) => {
         const selected = activeKey === item.key;
-        const accent = item.accent ?? 'cyan';
 
         const baseClass =
           variant === 'pills'
             ? 'shrink-0 gap-1.5 whitespace-nowrap rounded-shape-sm px-3 text-xs'
             : cn(
                 'inline-flex items-center gap-1.5 shrink-0 px-3 py-2 text-sm font-medium border-b-2 transition-colors',
-                'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
                 selected
-                  ? ACCENT_TAB[accent]
+                  ? 'border-[var(--theme-primary)] text-[var(--theme-primary)]'
                   : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
                 item.disabled && 'cursor-not-allowed opacity-40',
               );

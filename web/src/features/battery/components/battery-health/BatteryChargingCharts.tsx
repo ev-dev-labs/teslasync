@@ -179,7 +179,7 @@ export default function BatteryChargingCharts({
                   <HabitStat
                     value={analysis.ac_session_count}
                     label={t('battery.habit.home', 'Home Charges')}
-                    accent="text-cyan-300"
+                    accent="text-theme-accent"
                   />
                 </div>
               </div>

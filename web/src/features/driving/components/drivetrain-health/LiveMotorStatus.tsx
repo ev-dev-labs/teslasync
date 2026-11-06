@@ -81,7 +81,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance, loading = fa
     <FadeIn delay={0.22}>
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-4 flex items-center gap-2">
-          <Cog className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Cog className="h-4 w-4 text-status-info" aria-hidden="true" />
           {t('drivetrain.liveMotor', 'Live Motor Status')}
         </PanelTitle>
         {loading && !hasData ? (
@@ -116,7 +116,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance, loading = fa
             </Grid>
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               <InlineMetric
-                icon={<Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+                icon={<Activity className="h-4 w-4 text-status-info" aria-hidden="true" />}
                 label={t('drivetrain.rpmFront', 'Front Motor RPM')}
                 value={intMetric(motorLatest.motor_rpm_front, 'RPM')}
               />
@@ -126,7 +126,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance, loading = fa
                 value={intMetric(motorLatest.motor_rpm_rear, 'RPM')}
               />
               <InlineMetric
-                icon={<Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+                icon={<Zap className="h-4 w-4 text-status-info" aria-hidden="true" />}
                 label={t('drivetrain.torqueFront', 'Front Torque')}
                 value={numberMetric(motorLatest.torque_nm_front, 'Nm')}
               />

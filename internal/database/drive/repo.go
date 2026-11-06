@@ -8,6 +8,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/jackc/pgx/v5"
@@ -272,20 +273,19 @@ func (r *DriveRepo) resolveCurrentGeofenceNames(ctx context.Context, drives []*d
 		idList = append(idList, id)
 	}
 
-	rows, err := r.db.Pool.Query(ctx, `SELECT id, name FROM geofences WHERE id = ANY($1)`, idList)
+	rows, err := r.db.Pool.Query(ctx, `SELECT id, name, polygon_wkt FROM geofences WHERE id = ANY($1)`, idList)
 	if err != nil {
 		return fmt.Errorf("drives resolve_geofence_names query: %w", err)
 	}
 	defer rows.Close()
 
-	names := make(map[int64]string, len(idList))
+	places := make(map[int64]*systemmodel.Geofence, len(idList))
 	for rows.Next() {
-		var id int64
-		var name string
-		if err := rows.Scan(&id, &name); err != nil {
+		var place systemmodel.Geofence
+		if err := rows.Scan(&place.ID, &place.Name, &place.PolygonWKT); err != nil {
 			return fmt.Errorf("drives resolve_geofence_names scan: %w", err)
 		}
-		names[id] = name
+		places[place.ID] = &place
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("drives resolve_geofence_names iter: %w", err)
@@ -296,17 +296,38 @@ func (r *DriveRepo) resolveCurrentGeofenceNames(ctx context.Context, drives []*d
 			continue
 		}
 		if d.StartGeofenceID != nil {
-			if name, ok := names[*d.StartGeofenceID]; ok {
-				d.StartAddress = &name
+			if place := places[*d.StartGeofenceID]; geofenceMatchesEndpoint(place, d.StartLat, d.StartLon) {
+				d.StartAddress = &place.Name
+			} else {
+				d.StartGeofenceID = nil
 			}
 		}
 		if d.EndGeofenceID != nil {
-			if name, ok := names[*d.EndGeofenceID]; ok {
-				d.EndAddress = &name
+			if place := places[*d.EndGeofenceID]; geofenceMatchesEndpoint(place, d.EndLat, d.EndLon) {
+				d.EndAddress = &place.Name
+			} else {
+				d.EndGeofenceID = nil
 			}
 		}
 	}
 	return nil
+}
+
+func geofenceMatchesEndpoint(place *systemmodel.Geofence, lat, lon *float64) bool {
+	if place == nil {
+		return false
+	}
+	// Older imports have no coordinates; retain their explicit attachment.
+	if lat == nil || lon == nil {
+		return true
+	}
+	if math.IsNaN(*lat) || math.IsNaN(*lon) || math.Abs(*lat) > 90 || math.Abs(*lon) > 180 {
+		return false
+	}
+	centerLat, centerLon := place.Centroid()
+	radius := place.Radius()
+	// Match the existing geofence repository's centroid/radius policy.
+	return radius > 0 && drivemodel.HaversineMeters(*lat, *lon, centerLat, centerLon) <= radius
 }
 
 // GetStale returns drives that have no end timestamp and started before the

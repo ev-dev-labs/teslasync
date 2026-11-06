@@ -455,7 +455,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(
      * disappears. */
     const fieldClass = cn(
       'flex w-full flex-wrap items-center gap-1.5 rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] px-2 py-1.5 text-sm transition-colors',
-      'focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-1 focus-within:ring-offset-[var(--bg)]',
+      'focus-within:ring-2 focus-within:ring-theme-accent focus-within:ring-offset-1 focus-within:ring-offset-[var(--bg)]',
       'forced-colors:border-[CanvasText]',
       disabled && 'cursor-not-allowed opacity-50',
       error && 'border-red-500',
@@ -501,7 +501,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(
                 }}
                 className={cn(
                   'touch-target-overlay inline-flex h-4 w-4 items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)]',
-                  'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500',
+                  'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-theme-accent',
                   'disabled:cursor-not-allowed disabled:opacity-50',
                 )}
                 aria-label={t('tagInput.removeTag', 'Remove {{tag}}', { tag })}

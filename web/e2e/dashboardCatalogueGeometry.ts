@@ -10,6 +10,21 @@ export function catalogueVerticalGap(a: { y: number; height: number }, b: { y: n
   return Math.max(a.y - b.y - b.height, b.y - a.y - a.height);
 }
 
+export async function catalogueRenderedColumns(panel: Locator): Promise<number> {
+  const { columns, span } = await panel.evaluate(element => {
+    const canvas = element.closest<HTMLElement>('[data-grid-columns]');
+    const widget = element.closest<HTMLElement>('[data-widget-id]');
+    if (!canvas || !widget) throw new Error('Missing responsive widget grid');
+    const columns = Number(canvas.dataset.gridColumns);
+    const columnPitch = (canvas.getBoundingClientRect().width + 16) / columns;
+    return { columns, span: (widget.getBoundingClientRect().width + 16) / columnPitch };
+  });
+  expect(span, 'Widget spans whole responsive columns').toBeCloseTo(Math.round(span), 2);
+  expect(span).toBeGreaterThanOrEqual(1);
+  expect(Math.round(span)).toBeLessThanOrEqual(columns);
+  return Math.round(span);
+}
+
 export async function installCataloguePhotoSource(page: Page, svgFallback: boolean) {
   const path = process.env.E2E_CATALOGUE_PHOTO
     ?? resolve(process.cwd(), 'e2e', 'fixtures', 'dashboard-catalogue-model-y-white.png');

@@ -178,7 +178,7 @@ export function TimeOfUseAnalysis({
               <InsightCard
                 label={t('costAnalysis.tou.busiestHour', 'Busiest Hour')}
                 value={touInsights.busiest.label}
-                valueClass="text-cyan-300"
+                valueClass="text-theme-accent"
                 sub={`${fmtInt(touInsights.busiest.sessions)} ${t('costAnalysis.tou.sessions', 'sessions')}`}
               />
               <InsightCard

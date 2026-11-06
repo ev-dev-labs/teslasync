@@ -1,13 +1,17 @@
-export type ChargerKind = 'supercharger' | 'dcFast' | 'acHome' | 'unknown';
+import { getChargerCategory } from './chargingAggregation';
 
-export function classifyChargingSource(chargerType: string | null | undefined): ChargerKind {
-  switch (chargerType?.trim().toLowerCase()) {
+export type ChargerKind = 'supercharger' | 'dcFast' | 'acHome' | 'ac' | 'unknown';
+
+export function classifyChargingSource(charger: Parameters<typeof getChargerCategory>[0]): ChargerKind {
+  switch (getChargerCategory(charger)) {
     case 'supercharger':
       return 'supercharger';
     case 'dc':
       return 'dcFast';
-    case 'ac':
+    case 'home':
       return 'acHome';
+    case 'ac':
+      return 'ac';
     default:
       return 'unknown';
   }

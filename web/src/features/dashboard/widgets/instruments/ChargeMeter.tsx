@@ -12,11 +12,13 @@ interface ChargeMeterProps {
   active?: boolean;
   color?: string;
   preserveOutOfScaleMarker?: boolean;
+  showMarkerValue?: boolean;
 }
 
 export function ChargeMeter({
   value, label, marker, markerLabel, markerTestId = 'gauge-marker', active = false, color,
   preserveOutOfScaleMarker = false,
+  showMarkerValue = true,
 }: ChargeMeterProps) {
   const id = useId();
   const hasReading = value != null && Number.isFinite(value);
@@ -37,7 +39,7 @@ export function ChargeMeter({
       aria-valuetext={inScale ? `${fmtNumber(value, 0)}%${hasMarker && markerLabel ? `, ${markerLabel}` : ''}` : undefined}
       className={cn('w-full min-w-0', charging && 'widget-activity-active')}
     >
-      {hasMarker && (
+      {hasMarker && showMarkerValue && (
         <div className="relative h-5" aria-hidden="true">
           <span
             className={cn(

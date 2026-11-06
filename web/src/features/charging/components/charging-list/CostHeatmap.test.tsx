@@ -17,7 +17,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { chartTokens } from '@/lib/tokens';
+import { HEATMAP_LEVELS, heatmapColor } from '@/lib/heatmap';
 
 import { CostHeatmap, heatFill } from './CostHeatmap';
 import type { OptimizerHeatmapEntry } from '@/types/charging';
@@ -36,12 +36,15 @@ vi.mock('react-i18next', async () => {
   };
 });
 
-/** Strip whitespace so CSS colour serialisation doesn't break equality. */
-const norm = (s: string) => s.replace(/\s+/g, '');
+const norm = (color: string) => {
+  const probe = document.createElement('div');
+  probe.style.backgroundColor = color;
+  return probe.style.backgroundColor.replace(/\s+/g, '');
+};
 
 /** All 168 title-bearing heat cells, in DOM order (day 0 hours 0..23, day 1 …). */
 const heatCells = (container: HTMLElement) =>
-  container.querySelectorAll<HTMLElement>('div[title]');
+  container.querySelectorAll<HTMLElement>('[role="img"] div[title]');
 
 /** Row-major index of the (day, hour) cell among all title-bearing cells. */
 const cellIndex = (day: number, hour: number) => day * 24 + hour;
@@ -61,12 +64,11 @@ const sampleHeatmap: OptimizerHeatmapEntry[] = [
 ];
 
 describe('heatFill — colour scale primitive', () => {
-  it('mixes restrained theme-aware cost series into the neutral surface', () => {
-    expect(heatFill(1, 0.6)).toBe(
-      `color-mix(in srgb, color-mix(in srgb, ${chartTokens.series[1]} 0%, ${chartTokens.series[3]}) 60%, var(--surface-2))`,
-    );
-    expect(heatFill(0, 0.6)).toContain(`${chartTokens.series[1]} 100%`);
-    expect(heatFill(0.5, 0.6)).toContain(`${chartTokens.series[1]} 50%`);
+  it('uses opaque shared levels even when session evidence is sparse', () => {
+    expect(heatFill(1, 0.6)).toBe(heatmapColor(4));
+    expect(heatFill(0, 0.15)).toBe(heatmapColor(1));
+    expect(heatFill(0.5, 0.6)).toBe(heatmapColor(3));
+    expect(heatFill(0.5, 0.15)).toBe(heatFill(0.5, 0.9));
   });
 
   it('clamps out-of-range inputs and neutralises NaN/undefined to a finite 0', () => {
@@ -220,11 +222,10 @@ describe('CostHeatmap — legend', () => {
     expect(screen.getByText('Cheap')).toBeInTheDocument();
     expect(screen.getByText('Expensive')).toBeInTheDocument();
 
-    const swatches = container.querySelectorAll<HTMLElement>('.w-3.h-3');
-    const stops = [0.15, 0.3, 0.5, 0.7, 0.9];
-    expect(swatches).toHaveLength(stops.length);
+    const swatches = container.querySelectorAll<HTMLElement>('[data-heatmap-level]');
+    expect(swatches).toHaveLength(HEATMAP_LEVELS.length);
     swatches.forEach((swatch, i) => {
-      expect(norm(swatch.style.backgroundColor)).toBe(norm(heatFill(stops[i], 0.6)));
+      expect(norm(swatch.style.backgroundColor)).toBe(norm(heatmapColor(HEATMAP_LEVELS[i])));
     });
   });
 });

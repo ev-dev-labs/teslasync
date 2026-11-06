@@ -31,7 +31,7 @@ export function DigitalTwinPanel({
   return (
     <GlassPanel className={className} padding="md">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <Car className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Car className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('admin.security.twin.title', 'Digital twin')}
       </PanelTitle>
       {error ? (

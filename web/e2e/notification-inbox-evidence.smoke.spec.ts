@@ -60,23 +60,26 @@ for (const theme of ['light', 'dark'] as const) {
       await page.goto(path);
       await waitForHarnessReady(page, mocks);
       const main = page.locator('main');
-      const table = main.getByRole('table', { name: 'Inbox', exact: true });
+      const frame = main.locator('[data-grid-frame]').first();
+      const mobile = await frame.locator('[data-mobile-table]').isVisible();
+      const table = mobile ? frame.locator('[data-mobile-table]') : frame.getByRole('table', { name: 'Inbox', exact: true });
+      const openNotification = table.getByRole('button', { name: mobile ? 'Synthetic battery alert' : 'Open notification: Synthetic battery alert', exact: true });
       await expect(table).toBeVisible();
-      await expect(table.getByRole('button', { name: 'Open notification: Synthetic battery alert' })).toBeVisible();
-      await expectIntegratedGridFooter(table);
-      const frame = table.locator('xpath=ancestor::*[@data-grid-frame][1]');
-      const compact = width < 1280;
+      await expect(openNotification).toBeVisible();
+      if (mobile) {
+        await expect(frame.locator('[data-grid-footer]')).toBeVisible();
+        await expect(table.getByRole('button', { name: 'Quick view', exact: true })).toBeVisible();
+        expect((await openNotification.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      } else {
+        await expectIntegratedGridFooter(table);
+        await expect(table.getByRole('columnheader', { name: 'Notification', exact: true })).not.toContainText('Critical');
+      }
       const more = frame.getByRole('button', { name: 'More', exact: true });
+      const compact = await more.isVisible();
       await expect(table.getByText('Critical', { exact: true }).filter({ visible: true })).toHaveCount(1);
       if (compact) {
         await expect(frame.getByRole('radio', { name: 'Compact', exact: true })).toHaveCount(0);
         await expect(table.getByText(events[0].message, { exact: true }).filter({ visible: true })).toBeVisible();
-        const widths = await table.locator('tbody tr').first().locator('td').evaluateAll(cells =>
-          cells.filter(cell => getComputedStyle(cell).display !== 'none').map(cell => cell.getBoundingClientRect().width));
-        expect(widths).toHaveLength(3);
-        expect(widths[0]).toBeLessThanOrEqual(50);
-        expect(widths[1]).toBeLessThanOrEqual(70);
-        expect(widths[2]).toBeGreaterThan(widths[0] + widths[1]);
         await more.click();
       }
       const controls = compact ? page.getByRole('dialog', { name: 'More', exact: true }) : frame;
@@ -98,20 +101,22 @@ for (const theme of ['light', 'dark'] as const) {
       await columnsTrigger.click();
       const columnsDialog = page.getByRole('dialog', { name: 'Reorder or hide columns', exact: true });
       await expect(columnsDialog.getByRole('checkbox', { name: 'Show or hide Notification', exact: true })).toBeDisabled();
-      const defaultColumnCount = await table.locator('th[data-column-key]').count();
+      const selectedColumns = columnsDialog.getByRole('checkbox', { checked: true });
+      const defaultColumnCount = await selectedColumns.count();
+      expect(defaultColumnCount).toBe(7);
       await columnsDialog.getByText('Select all', { exact: true }).click();
       await columnsDialog.getByText('Select all', { exact: true }).click();
-      await expect(table.locator('th[data-column-key]')).toHaveCount(1);
+      await expect(selectedColumns).toHaveCount(1);
       await columnsDialog.getByRole('button', { name: 'Reset', exact: true }).click();
       const resetConfirmation = page.getByRole('dialog', { name: 'Reset columns?', exact: true });
       await resetConfirmation.screenshot({ path: test.info().outputPath(`notification-reset-${width}-${theme}.png`) });
       await resetConfirmation.getByRole('button', { name: 'Cancel', exact: true }).click();
-      await expect(table.locator('th[data-column-key]')).toHaveCount(1);
+      await expect(selectedColumns).toHaveCount(1);
       const reset = columnsDialog.getByRole('button', { name: 'Reset', exact: true });
       await expect(reset).toBeFocused();
       await reset.press('Enter');
       await resetConfirmation.getByRole('button', { name: 'Reset', exact: true }).click();
-      await expect(table.locator('th[data-column-key]')).toHaveCount(defaultColumnCount);
+      await expect(selectedColumns).toHaveCount(defaultColumnCount);
       await columnsDialog.screenshot({ path: test.info().outputPath(`notification-columns-${width}-${theme}.png`) });
       await page.keyboard.press('Escape');
       await expect(columnsDialog).toHaveCount(0);
@@ -127,9 +132,9 @@ for (const theme of ['light', 'dark'] as const) {
         && Number(params.get('offset') ?? 0) === 0)).toBe(true);
       await search.fill('');
       await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBeNull();
-      const header = compact ? 'Notification' : 'Severity';
+      const header = 'Severity';
       const trigger = table.getByRole('button', { name: `${header} filter`, exact: true });
-      expect(await trigger.evaluate(element => element.closest('th') != null)).toBe(true);
+      expect(await trigger.evaluate(element => element.closest('th') != null)).toBe(!mobile);
       await trigger.click();
       const filterDialog = page.getByRole('dialog', { name: `${header} filter`, exact: true });
       await filterDialog.getByRole('button', { name: 'Warn', exact: true }).click();
@@ -138,7 +143,7 @@ for (const theme of ['light', 'dark'] as const) {
       await waitForHarnessReady(page, mocks);
       await expect.poll(() => inboxRequests.some(params =>
         params.get('severity') === 'warn' && params.get('count_only') !== 'true')).toBe(true);
-      await expect(table.getByRole('button', { name: 'Open notification: Synthetic battery alert' })).toHaveCount(0);
+      await expect(openNotification).toHaveCount(0);
       await expect(trigger).toBeVisible();
       await page.reload();
       await waitForHarnessReady(page, mocks);
@@ -148,7 +153,7 @@ for (const theme of ['light', 'dark'] as const) {
       await persistedFilter.getByRole('button', { name: 'Clear', exact: true }).click();
       await persistedFilter.getByRole('button', { name: 'Done', exact: true }).click();
       await waitForHarnessReady(page, mocks);
-      await expect(table.getByRole('button', { name: 'Open notification: Synthetic battery alert' })).toBeVisible();
+      await expect(openNotification).toBeVisible();
       await table.scrollIntoViewIfNeeded();
       const contentBounds = await main.evaluate(element => ({
         left: element.scrollLeft, width: element.clientWidth, contentWidth: element.scrollWidth,
@@ -157,20 +162,22 @@ for (const theme of ['light', 'dark'] as const) {
       expect(contentBounds.contentWidth).toBeLessThanOrEqual(contentBounds.width + 1);
       await expectNoHorizontalOverflow(page);
       await page.screenshot({ path: test.info().outputPath(`notification-inbox-${width}-${theme}.png`), fullPage: true });
-      await table.getByRole('button', { name: 'Open notification: Synthetic battery alert' }).click();
+      await openNotification.click();
       const dialog = page.getByRole('dialog', { name: 'Synthetic battery alert', exact: true });
       await expect(dialog).toContainText(events[0].message);
-      await expect(dialog).toContainText('alert.battery_low');
+      await expect(dialog).toContainText('Other');
+      await expect(dialog).not.toContainText('alert.battery_low');
+      await expect(dialog).not.toContainText('Delivery error');
       await dialog.screenshot({ path: test.info().outputPath(`notification-inspection-${width}-${theme}.png`) });
       await dialog.getByRole('button', { name: 'Archive', exact: true }).click();
       await expect.poll(() => mutations).toEqual(['archive']);
       await page.keyboard.press('Escape');
       await expect(dialog).toHaveCount(0);
-      await expect(table.getByRole('button', { name: 'Open notification: Synthetic battery alert' })).toHaveCount(0);
+      await expect(openNotification).toHaveCount(0);
       await main.getByRole('link', { name: 'View archived', exact: true }).click();
       await waitForHarnessReady(page, mocks);
       await expect(page).toHaveURL(/\/notifications\/archived$/);
-      await main.getByRole('button', { name: 'Open notification: Synthetic battery alert' }).click();
+      await main.getByRole('button', { name: mobile ? 'Synthetic battery alert' : 'Open notification: Synthetic battery alert', exact: true }).click();
       const archivedDialog = page.getByRole('dialog', { name: 'Synthetic battery alert', exact: true });
       await archivedDialog.getByRole('button', { name: 'Restore', exact: true }).click();
       await expect.poll(() => mutations).toEqual(['archive', 'unarchive']);

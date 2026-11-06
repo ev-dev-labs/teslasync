@@ -29,7 +29,7 @@ export function QuickLinksSection() {
   return (
     <GlassPanel className="p-6">
       <PanelTitle className="mb-4 flex items-center gap-2">
-        <ChevronRight className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <ChevronRight className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('vehicles.detail.quickLinks', 'Quick links')}
       </PanelTitle>
       <nav aria-label={t('vehicles.detail.quickLinks', 'Quick links')}>
@@ -42,7 +42,7 @@ export function QuickLinksSection() {
               to={link.to}
               className={cn(
                 'block rounded-xl',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent',
               )}
             >
               <GlassPanel variant="embedded"

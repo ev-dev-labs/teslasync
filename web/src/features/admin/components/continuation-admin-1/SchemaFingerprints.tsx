@@ -14,7 +14,7 @@ export function SchemaFingerprints({ state }: { state: SchemaSectionState }) {
   const { drift, isLoading, error, onRetry } = state;
   return (
     <LayoutCard title={t('admin.schemaDrift.fingerprintTitle', 'Schema fingerprints')}
-      actions={<Fingerprint className="h-4 w-4 text-cyan-300" aria-hidden />}>
+      actions={<Fingerprint className="h-4 w-4 text-theme-accent" aria-hidden />}>
       <Caption>{t('admin.schemaDrift.fingerprintSub', 'SHA-256 of the live schema versus the captured seed')}</Caption>
       {error ? <QueryError error={error} onRetry={onRetry} /> : (
         <SourceContent

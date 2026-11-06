@@ -266,7 +266,7 @@ export function CommandInputDialog({
               size="sm"
               loading={loading}
               disabled={disabled || !isFormValid}
-              className="bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30 border border-neon-cyan/30"
+              className="bg-theme-accent/20 text-theme-accent hover:bg-theme-accent/30 border border-theme-accent/30"
             >
               {t('common.send', 'Send')}
             </Button>

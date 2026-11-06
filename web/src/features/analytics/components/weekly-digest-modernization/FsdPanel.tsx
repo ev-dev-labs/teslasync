@@ -105,7 +105,7 @@ export function FsdPanel({
                     : `${distanceChange >= 0 ? '+' : ''}${formatDistance(distanceChange)}`,
                   distanceChange != null && distanceChange < 0
                     ? <TrendingDown className="h-4 w-4 text-amber-300" aria-hidden="true" />
-                    : <TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />,
+                    : <TrendingUp className="h-4 w-4 text-theme-accent" aria-hidden="true" />,
                 ),
                 presentedMetric(
                   'fsd-share-change',
@@ -115,7 +115,7 @@ export function FsdPanel({
                     : `${shareChange >= 0 ? '+' : ''}${fmtNumber(shareChange)} pts`,
                   shareChange != null && shareChange < 0
                     ? <TrendingDown className="h-4 w-4 text-amber-300" aria-hidden="true" />
-                    : <TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />,
+                    : <TrendingUp className="h-4 w-4 text-theme-accent" aria-hidden="true" />,
                 ),
               ]}
             />

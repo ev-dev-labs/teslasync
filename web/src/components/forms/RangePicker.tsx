@@ -267,9 +267,9 @@ export function RangePicker({
                     onClick={() => handlePreset(p.id)}
                     className={cn(
                       'w-full text-left rounded-md px-3 py-1.5 text-xs whitespace-nowrap',
-                      'hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+                      'hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
                       active
-                        ? 'bg-blue-600 text-[var(--text-on-accent)] hover:bg-blue-600'
+                        ? 'bg-[var(--theme-primary)] text-[var(--theme-on-primary)] hover:bg-[var(--theme-primary)]'
                         : 'text-[var(--text-primary)]',
                     )}
                   >

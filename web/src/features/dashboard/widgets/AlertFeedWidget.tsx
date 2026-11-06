@@ -80,7 +80,7 @@ export default function AlertFeedWidget({ size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.alertFeed', 'Alert feed')}
-      icon={<Bell className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={<Bell className="h-3.5 w-3.5 text-status-info" />}
       loading={isLoading}
       dataState={{ ...state, status: state.status === 'initial' && !isLoading ? 'unavailable' : state.status }}
       updatedAt={dataUpdatedAt}

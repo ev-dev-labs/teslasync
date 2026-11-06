@@ -93,7 +93,7 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.automationHistory', 'Automation history')}
-      icon={<PlayCircle className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={<PlayCircle className="h-3.5 w-3.5 text-theme-accent" />}
       loading={isLoading}
       dataState={{ ...state, status: state.status === 'initial' && !isLoading ? 'unavailable' : state.status }}
       updatedAt={dataUpdatedAt}

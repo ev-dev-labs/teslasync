@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { Accordion, GlassPanel, IconBox, ThemePicker, Toggle, Button, RadioCard, HelpIcon, Heading, Text, HelperText, Label, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui'
+import { Accordion, GlassPanel, IconBox, Toggle, Button, RadioCard, HelpIcon, Heading, Text, HelperText, Label, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui'
+import { ThemePicker } from '@/components/ui/theme'
 import { PrefetchLink } from '@/components/layout'
 import { useToast } from '@/components/feedback/Toast'
 import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'

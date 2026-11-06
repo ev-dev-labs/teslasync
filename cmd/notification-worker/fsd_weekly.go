@@ -155,6 +155,7 @@ func sendFsdWeeklyDigest(
 			"alert_tag": fsddigest.AlertTag(vehicle.ID, weekStart, loc),
 		},
 		Title:     title,
+		VehicleID: vehicle.ID,
 		Message:   fsddigest.Body(snapshot),
 		Severity:  fsddigest.Severity,
 		TriggerID: notification.NewTriggerID(),

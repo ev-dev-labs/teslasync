@@ -51,7 +51,7 @@ export function TableToolbar({ search, density, exports, heading, actions, colum
           <SearchInput {...search} clearLabel={search.clearLabel ?? t('common.clearSearch', 'Clear search')} className={cn('w-full', search.className)} />
           {search.pending && (
             <span role="status" aria-label={t('filter.pending', 'Filtering…')}
-              className="pointer-events-none absolute right-9 top-1/2 h-3 w-3 -translate-y-1/2 animate-spin rounded-full border-2 border-cyan-400/40 border-t-cyan-400" />
+              className="pointer-events-none absolute right-9 top-1/2 h-3 w-3 -translate-y-1/2 animate-spin rounded-full border-2 border-status-info/40 border-t-status-info" />
           )}
         </div>
       );

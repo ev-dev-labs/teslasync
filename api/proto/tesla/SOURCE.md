@@ -16,14 +16,14 @@ rationale.
 |---|---|
 | Upstream repository | `github.com/teslamotors/fleet-telemetry` |
 | Upstream path | `protos/vehicle_data.proto` |
-| Upstream tag | untagged (Semi streaming fields) |
-| Upstream commit | `18800f7738757a741479e71b38ece584d363ef2d` |
-| Upstream commit date | 2026-10-28 |
-| Upstream raw URL | <https://raw.githubusercontent.com/teslamotors/fleet-telemetry/18800f7738757a741479e71b38ece584d363ef2d/protos/vehicle_data.proto> |
-| Upstream tree URL | <https://github.com/teslamotors/fleet-telemetry/blob/18800f7738757a741479e71b38ece584d363ef2d/protos/vehicle_data.proto> |
-| File size | 23,217 bytes |
-| SHA256 | `9283B8E0697E845DC0774A0657D1D976B0CCC18220CC6161C718696A7A7F1344` |
-| Fetched on | 2026-10-29 |
+| Upstream tag | v0.10.0 |
+| Upstream commit | `bb7c8a931e46da3b3eb6d20a67541c8f755f1ee6` |
+| Upstream commit date | 2026-11-03 |
+| Upstream raw URL | <https://raw.githubusercontent.com/teslamotors/fleet-telemetry/bb7c8a931e46da3b3eb6d20a67541c8f755f1ee6/protos/vehicle_data.proto> |
+| Upstream tree URL | <https://github.com/teslamotors/fleet-telemetry/blob/bb7c8a931e46da3b3eb6d20a67541c8f755f1ee6/protos/vehicle_data.proto> |
+| File size | 23,402 bytes |
+| SHA256 | `EFA60A850338949CD4B585F2650B2542EC1FDB50E92D5F1C2C84041F48AA5B24` |
+| Fetched on | 2026-11-05 |
 | Vendored by | upstream proto refresh |
 
 The same checksum is recorded in `CHECKSUM` (one-line hex, uppercase) and the
@@ -53,6 +53,20 @@ The pinned producer in `Dockerfile.fleet-telemetry` includes Tesla's device-clie
 After deploying the API and rebuilt producer, reapply the generated subscription
 to existing vehicles using the normal configuration flow or `cmd/resubscribe`.
 Fields remain unavailable until supported vehicles actually report them.
+
+The 2026-11-03 revision adds `SelfDrivingSoftwareVersion` (278), the
+customer-facing FSD version string, and `SemiTrailerLatched` (279), a boolean
+indicating whether the Semi fifth wheel is latched to a trailer kingpin.
+Both require firmware 2026.44.3 (device client 1.3.1). FSD version is reported
+only when the vehicle has FSD control; it is not the vehicle firmware version.
+An absent trailer signal means unknown, not unlatched. There are no other
+schema changes relative to the preceding pin.
+
+Both fields use generated subscriptions and the existing `signal_log` route,
+live-signal explorer, and history UI. Vehicle details displays FSD software
+version separately from firmware and preserves unknown/false/true trailer
+state. The API exposes optional `self_driving_software_version` and
+`semi_trailer_latched` fields with the usual live/durable provenance.
 
 ## Why we vendor instead of `go get`-ing
 

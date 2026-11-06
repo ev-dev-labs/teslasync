@@ -39,6 +39,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { BatteryHealthAnalytics } from '@/types/energy';
 import BatteryHealthAnalyticsWidget from './BatteryHealthAnalyticsWidget';
+import type { WidgetConfig } from './types';
 
 // jsdom lacks matchMedia; framer-motion's useReducedMotion (reached via
 // <FreshnessDot> → useMotionPreference) reads it during render. Install a
@@ -66,8 +67,8 @@ const { useBatteryHealthAnalyticsMock, useVehiclesMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/api/hooks/useEnergy', () => ({
-  useBatteryHealthAnalytics: (vehicleId: string | null) =>
-    useBatteryHealthAnalyticsMock(vehicleId),
+  useBatteryHealthAnalytics: (vehicleId: string | null, window?: unknown, widgetRange?: string) =>
+    useBatteryHealthAnalyticsMock(vehicleId, window, widgetRange),
 }));
 
 vi.mock('@/api/hooks/useVehicles', () => ({
@@ -170,10 +171,11 @@ function makeQuery(overrides: Partial<QueryState> = {}): QueryState {
 function renderWidget(
   size: { cols: number; rows: number } = { cols: 2, rows: 2 },
   vehicleId?: number,
+  config?: WidgetConfig,
 ) {
   return render(
     <MemoryRouter>
-      <BatteryHealthAnalyticsWidget size={size} vehicleId={vehicleId} />
+      <BatteryHealthAnalyticsWidget size={size} vehicleId={vehicleId} config={config} />
     </MemoryRouter>,
   );
 }
@@ -201,6 +203,11 @@ afterEach(() => {
 });
 
 describe('BatteryHealthAnalyticsWidget — standard layout', () => {
+  it('passes the configured range to the battery analytics query', () => {
+    renderWidget({ cols: 2, rows: 2 }, 42, { timeRange: '24h' });
+    expect(useBatteryHealthAnalyticsMock).toHaveBeenCalledWith('42', undefined, '24h');
+  });
+
   it('renders the titled shell, the SoH hero with Good pill, and all four formatted stats', () => {
     useBatteryHealthAnalyticsMock.mockReturnValue(
       makeQuery({
@@ -389,7 +396,7 @@ describe('BatteryHealthAnalyticsWidget — vehicle resolution', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(useBatteryHealthAnalyticsMock).toHaveBeenCalledWith('42');
+    expect(useBatteryHealthAnalyticsMock).toHaveBeenCalledWith('42', undefined, undefined);
   });
 
   it('prefers an explicit vehicleId prop over the first vehicle', () => {
@@ -397,7 +404,7 @@ describe('BatteryHealthAnalyticsWidget — vehicle resolution', () => {
 
     renderWidget({ cols: 2, rows: 2 }, 7);
 
-    expect(useBatteryHealthAnalyticsMock).toHaveBeenCalledWith('7');
+    expect(useBatteryHealthAnalyticsMock).toHaveBeenCalledWith('7', undefined, undefined);
   });
 
   it('passes null (disabling the query) when no vehicle can be resolved', () => {
@@ -405,7 +412,7 @@ describe('BatteryHealthAnalyticsWidget — vehicle resolution', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(useBatteryHealthAnalyticsMock).toHaveBeenCalledWith(null);
+    expect(useBatteryHealthAnalyticsMock).toHaveBeenCalledWith(null, undefined, undefined);
   });
 });
 

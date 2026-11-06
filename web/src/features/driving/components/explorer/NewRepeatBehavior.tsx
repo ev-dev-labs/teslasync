@@ -130,7 +130,7 @@ export function NewRepeatBehavior({
 
               <div className="flex items-start gap-2 rounded-xl border border-[var(--border-subtle)] p-3">
                 <Sparkles
-                  className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300"
+                  className="mt-0.5 h-4 w-4 shrink-0 text-theme-accent"
                   aria-hidden="true"
                 />
                 <Text as="p" variant="caption">

@@ -213,12 +213,15 @@ describe('CommandPalette independent source trust', () => {
     requestMock.mockImplementation((path: string) => path === '/saved-views'
       ? Promise.reject(new Error('Saved views unavailable')) : Promise.resolve({}))
     mountSources(qc)
-    expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: /Switch to Model Y/ })).toBeInTheDocument()
+    expect(screen.queryByText('No saved views yet')).not.toBeInTheDocument()
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'saved' } })
+    expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument()
     const before = requestMock.mock.calls.filter(([path]) => path === '/saved-views').length
     requestMock.mockImplementation((path: string) => path === '/saved-views' ? Promise.resolve([]) : Promise.resolve({}))
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    await screen.findByText('No saved views yet')
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument())
+    expect(screen.queryByText('No saved views yet')).not.toBeInTheDocument()
     expect(requestMock.mock.calls.filter(([path]) => path === '/saved-views')).toHaveLength(before + 1)
     expect(requestMock.mock.calls.some(([path]) => path === '/vehicles' || path === '/alerts')).toBe(false)
     fireEvent.change(screen.getByRole('combobox'), { target: { value: '/ drives' } })
@@ -376,7 +379,7 @@ describe('CommandPalette result presentation', () => {
     fireEvent.mouseEnter(row)
     expect(row).toHaveAttribute('aria-selected', 'true')
     expect(input).toHaveAttribute('aria-activedescendant', row.id)
-    expect(row).toHaveClass('bg-[var(--surface-2)]')
+    expect(row).toHaveClass('bg-[var(--theme-accent-soft)]', 'border-[var(--theme-primary)]')
     expect(row.querySelector('.rtl\\:rotate-180')).toHaveAttribute('aria-hidden', 'true')
     fireEvent.keyDown(input, { key: 'Enter' })
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/drives/77'))
@@ -1576,6 +1579,7 @@ describe('CommandPalette focus + listbox semantics', () => {
 describe('CommandPalette pinned destinations', () => {
   it('surfaces the sidebar Quick-access pins in their own section', async () => {
     setPinnedNavPaths(['/drives', '/charging'])
+    recordCommandUse('pref.theme.dark')
     const Wrapper = makeWrapper(makeVehicles())
     render(<CommandPalette />, { wrapper: Wrapper })
     openPaletteViaEvent()
@@ -1586,6 +1590,9 @@ describe('CommandPalette pinned destinations', () => {
     })
 
     const pinnedGroup = screen.getByRole('group', { name: 'Pinned' })
+    expect(screen.getAllByRole('group')[0]).toBe(pinnedGroup)
+    expect(pinnedGroup.querySelector('[data-nav-icon="driving"]')).not.toBeNull()
+    expect(pinnedGroup.querySelector('[data-nav-icon="charging"]')).not.toBeNull()
     const rows = Array.from(
       pinnedGroup.querySelectorAll<HTMLElement>('[data-palette-row]'),
     ).map((row) => row.textContent ?? '')
@@ -1635,6 +1642,8 @@ describe('CommandPalette pinned destinations', () => {
     await screen.findByPlaceholderText(/Search pages, commands/i)
 
     expect(screen.queryByRole('group', { name: 'Pinned' })).toBeNull()
+    expect(screen.getByText('Pin a page below to keep it close.')).toBeInTheDocument()
+    expect(screen.queryByText('No saved views yet')).not.toBeInTheDocument()
   })
 
   it('hides pinned rows once the user starts typing a query', async () => {
@@ -1650,6 +1659,26 @@ describe('CommandPalette pinned destinations', () => {
     await waitFor(() => {
       expect(screen.queryByRole('group', { name: 'Pinned' })).toBeNull()
     })
+
+  })
+
+  it('uses the shell pin actions and observes updates while open', () => {
+    setPinnedNavPaths(['/drives'])
+    const onPin = vi.fn((path: string) => { setPinnedNavPaths([path]) })
+    const onUnpin = vi.fn(() => { setPinnedNavPaths([]) })
+    render(<CommandPalette initialOpen onPin={onPin} onUnpin={onUnpin} />, { wrapper: makeWrapper(makeVehicles()) })
+    fireEvent.click(screen.getByRole('button', { name: 'Unpin Drives', exact: true }))
+    expect(onUnpin).toHaveBeenCalledWith('/drives')
+    expect(screen.queryByRole('group', { name: 'Pinned' })).toBeNull()
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: '/ drives' } })
+    fireEvent.mouseEnter(screen.getByRole('option', { name: /^Drives/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Pin Drives to favorites', exact: true }))
+    expect(onPin).toHaveBeenCalledWith('/drives')
+    fireEvent.click(screen.getByRole('button', { name: 'Clear Pages filter' }))
+    expect(screen.getByRole('group', { name: 'Pinned' })).toHaveTextContent('/drives')
+    act(() => { setPinnedNavPaths(['/charging']) })
+    expect(screen.getByRole('group', { name: 'Pinned' })).toHaveTextContent('/charging')
+    expect(screen.getByRole('group', { name: 'Pinned' })).not.toHaveTextContent('/drives')
   })
 })
 

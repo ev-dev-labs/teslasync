@@ -123,7 +123,7 @@ export function SweetSpotEvidence({
               {summary.runnerUp != null ? (
                 <div className="flex items-start gap-2">
                   <CircleGauge
-                    className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300"
+                    className="mt-0.5 h-4 w-4 shrink-0 text-theme-accent"
                     aria-hidden="true"
                   />
                   <Text as="p" variant="bodySm">

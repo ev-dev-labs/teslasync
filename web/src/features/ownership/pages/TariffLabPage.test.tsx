@@ -1000,11 +1000,9 @@ describe('TariffLabPage — restrained page adoption', () => {
         expect(within(detail).getByRole('button', { name: 'Remove' })).toHaveClass('h-9', 'w-9');
         // The detail modal renders both a header dismiss and a footer Close.
         fireEvent.click(within(detail).getAllByRole('button', { name: 'Close' })[0]);
-        // Row actions render in a [data-mobile-row-actions] sibling of the row
-        // itself (both under the row's flex column), not inside the row.
-        const rowContainer = plan.closest('[data-row-key]')?.parentElement?.parentElement?.parentElement;
-        const actions = rowContainer instanceof HTMLElement ? rowContainer.querySelector('[data-mobile-row-actions]') : null;
-        if (!(actions instanceof HTMLElement)) throw new Error('Missing mobile plan actions');
+        const actions = Array.from(library.querySelectorAll<HTMLElement>('[data-mobile-row-actions]'))
+          .find(group => group.parentElement?.contains(plan));
+        if (!actions) throw new Error('Missing mobile plan actions');
         fireEvent.click(within(actions).getByRole('button', { name: 'Remove' }));
         expect(mutate).not.toHaveBeenCalled();
         const confirmation = screen.getByRole('dialog', { name: 'Delete this tariff?' });

@@ -2174,15 +2174,227 @@
       },
       "templates": {
         "allCategory": "All",
+        "available": {
+          "software": {
+            "version": {
+              "changed": {
+                "message": "Available software version: {{SoftwareUpdateVersion}}",
+                "name": "Available software version changed"
+              }
+            }
+          }
+        },
+        "battery": {
+          "at": {
+            "or": {
+              "above": {
+                "80": {
+                  "message": "Battery at {{BatteryLevel}}% (threshold: 80%)",
+                  "name": "Battery at or above 80%"
+                },
+                "90": {
+                  "message": "Battery reached {{BatteryLevel}}%",
+                  "name": "Battery at or above 90%"
+                }
+              }
+            }
+          }
+        },
         "categoryFilter": "Filter templates by category",
+        "charge": {
+          "port": {
+            "latch": {
+              "changed": {
+                "message": "Charge port latch: {{ChargePortLatch}}",
+                "name": "Charge port latch changed"
+              }
+            }
+          }
+        },
+        "charging": {
+          "stopped": {
+            "message": "Charging stopped - {{DetailedChargeState}}",
+            "name": "Charging stopped"
+          }
+        },
+        "door": {
+          "state": {
+            "changed": {
+              "message": "Door state: {{DoorState}}",
+              "name": "Door state changed"
+            }
+          }
+        },
+        "drive": {
+          "gear": {
+            "engaged": {
+              "message": "Gear changed to {{Gear}}",
+              "name": "Drive gear engaged"
+            }
+          }
+        },
+        "driver": {
+          "seatbelt": {
+            "unbuckled": {
+              "message": "Driver seatbelt is unbuckled",
+              "name": "Driver Seatbelt Unbuckled"
+            }
+          }
+        },
+        "front": {
+          "left": {
+            "tire": {
+              "pressure": {
+                "reporting": {
+                  "time": {
+                    "changed": {
+                      "message": "FL last seen {{TpmsLastSeenPressureTimeFl}}",
+                      "name": "Front left tire pressure reporting time changed"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "right": {
+            "tire": {
+              "pressure": {
+                "reporting": {
+                  "time": {
+                    "changed": {
+                      "message": "FR last seen {{TpmsLastSeenPressureTimeFr}}",
+                      "name": "Front right tire pressure reporting time changed"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "gps": {
+          "state": {
+            "changed": {
+              "message": "GPS state: {{GpsState}}",
+              "name": "GPS state changed"
+            }
+          }
+        },
         "header": "Rule templates - {{count}} pre-built rules",
+        "hvac": {
+          "running": {
+            "message": "HVAC is running",
+            "name": "HVAC running"
+          }
+        },
+        "lane": {
+          "departure": {
+            "avoidance": {
+              "changed": {
+                "message": "Lane departure avoidance: {{LaneDepartureAvoidance}}",
+                "name": "Lane departure avoidance changed"
+              }
+            }
+          }
+        },
+        "navigation": {
+          "destination": {
+            "changed": {
+              "message": "Navigation destination: {{DestinationName}}",
+              "name": "Navigation destination changed"
+            }
+          }
+        },
         "noMatches": "No templates match your search",
         "noMatchesTitle": "No templates found",
+        "park": {
+          "gear": {
+            "engaged": {
+              "message": "Gear changed to {{Gear}}",
+              "name": "Park gear engaged"
+            }
+          }
+        },
+        "powershare": {
+          "state": {
+            "changed": {
+              "message": "Powershare state: {{PowershareStatus}}",
+              "name": "Powershare state changed"
+            }
+          }
+        },
+        "rear": {
+          "left": {
+            "tire": {
+              "pressure": {
+                "reporting": {
+                  "time": {
+                    "changed": {
+                      "message": "RL last seen {{TpmsLastSeenPressureTimeRl}}",
+                      "name": "Rear left tire pressure reporting time changed"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "right": {
+            "tire": {
+              "pressure": {
+                "reporting": {
+                  "time": {
+                    "changed": {
+                      "message": "RR last seen {{TpmsLastSeenPressureTimeRr}}",
+                      "name": "Rear right tire pressure reporting time changed"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requested": {
+          "charge": {
+            "current": {
+              "changed": {
+                "message": "Requested {{ChargeCurrentRequest}}A of {{ChargeCurrentRequestMax}}A max",
+                "name": "Requested charge current changed"
+              }
+            }
+          }
+        },
         "searchLabel": "Search templates",
         "searchPlaceholder": "Search templates...",
         "showing": "{{count}} of {{total}} templates",
+        "software": {
+          "update": {
+            "schedule": {
+              "changed": {
+                "message": "Software update schedule: {{SoftwareUpdateScheduledStartTime}}",
+                "name": "Software update schedule changed"
+              }
+            }
+          }
+        },
+        "turn": {
+          "signal": {
+            "changed": {
+              "message": "Turn signal changed to {{LightsTurnSignal}}",
+              "name": "Turn signal changed"
+            }
+          }
+        },
         "use": "Use template",
-        "useTemplate": "Use template {{name}}"
+        "useTemplate": "Use template {{name}}",
+        "vehicle": {
+          "unlocked": {
+            "security": {
+              "alert": {
+                "message": "Vehicle is unlocked",
+                "name": "Vehicle unlocked (security alert)"
+              }
+            }
+          }
+        }
       },
       "test": {
         "defaultMessage": "Test notification from alert studio"
@@ -2441,7 +2653,10 @@
         "restore": "Restore",
         "unknownSelection": "{{count}} selected · {{loaded}} loaded notifications · total unavailable"
       },
+      "channelNumber": "Channel #{{id}}",
       "columns": {
+        "channel": "Channel",
+        "delivery": "Delivery",
         "inspect": "Inspect",
         "message": "Message",
         "read": "Read",
@@ -2504,7 +2719,6 @@
         "source": "Source",
         "vehicle": "Vehicle"
       },
-      "legacyDelivery": "Legacy channel delivery (original source not recorded)",
       "loadedCount": "{{count}} loaded · total unavailable",
       "loadedPageMembership": "{{count}} notifications in loaded threads on this page",
       "row": {
@@ -2522,10 +2736,7 @@
         "deleteConfirmTitle": "Delete this notification?"
       },
       "source": {
-        "legacyDelivery": "Legacy channel delivery",
-        "legacyHint": "Original source was not recorded for this older channel delivery.",
-        "ruleId": "Rule #{{id}}",
-        "unknown": "Unknown source"
+        "ruleId": "Rule #{{id}}"
       },
       "subtitle": "All system, alert, automation, and scheduled notifications in one place.",
       "summary": {
@@ -2649,8 +2860,11 @@
       "uncorrelated": "Deliveries without a linked trigger",
       "values": {
         "alert": "Alert rules",
+        "alertRule": "Alert rule",
         "automation": "Automation",
         "other": "Other",
+        "placeEnter": "Place arrival",
+        "placeExit": "Place departure",
         "schedule": "Schedules",
         "system": "System",
         "test": "Tests",
@@ -2697,11 +2911,9 @@
       "cachedAuditWarning": "The latest refresh failed. Showing the most recent cached audit trail.",
       "drawerEyebrow": "Alert evidence",
       "drawerTitle": "Alert details",
-      "fleetWide": "Fleet-wide",
       "investigateSignal": "Investigate signal",
       "lifecycleAcknowledged": "Acknowledged",
       "lifecycleOpen": "Open",
-      "noSignal": "No signal metadata",
       "owner": "Owner",
       "recommendedResponse": "Recommended response",
       "relatedSignal": "Related signal",

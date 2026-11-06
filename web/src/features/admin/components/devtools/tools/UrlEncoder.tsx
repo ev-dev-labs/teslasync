@@ -87,7 +87,7 @@ export function UrlEncoderTool() {
               <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.urlOutputLabel', 'Output label')}</span>
               <CopyButton text={result.output} />
             </div>
-            <pre className="mt-1 whitespace-pre-wrap break-all text-sm font-mono text-cyan-300">{result.output}</pre>
+            <pre className="mt-1 whitespace-pre-wrap break-all text-sm font-mono text-theme-accent">{result.output}</pre>
           </div>
         )}
       </div>

@@ -53,6 +53,10 @@
         }
       },
       "case": {
+        "correction": {
+          "success": "Correction applied",
+          "error": "Failed to apply correction"
+        },
         "transition": {
           "success": "Repair case updated",
           "error": "Failed to update repair case"

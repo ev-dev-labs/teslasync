@@ -89,7 +89,7 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
       {/* Battery bar chart */}
       <GlassPanel className="p-6">
         <PanelTitle className="mb-4 flex items-center gap-2">
-          <Battery className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Battery className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('vehicles.detail.batteryOverview', 'Battery overview')}
         </PanelTitle>
         <div className="flex items-center gap-4 mb-4">
@@ -142,7 +142,7 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
       {/* Recent drives distance trend chart */}
       <GlassPanel className="p-6">
         <PanelTitle className="mb-4 flex items-center gap-2">
-          <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Route className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('vehicles.detail.driveTrend', 'Drive distance trend')}
         </PanelTitle>
         {driveChartData.length > 0 ? (

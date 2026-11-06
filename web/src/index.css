@@ -33,15 +33,20 @@
   --neon-blue: var(--semantic-info);
   --neon-purple: var(--semantic-purple);
   --semantic-info: #91b4d2;
+  --semantic-activity: #8dc5c5;
+  --semantic-update: #adaee0;
   --semantic-success: #91b9a5;
   --semantic-warning: #cfb481;
   --semantic-danger: #d6a0a5;
   --semantic-purple: #b5a8c9;
   --semantic-info-rgb: 145 180 210;
+  --semantic-activity-rgb: 141 197 197;
+  --semantic-update-rgb: 173 174 224;
   --semantic-success-rgb: 145 185 165;
   --semantic-warning-rgb: 207 180 129;
   --semantic-danger-rgb: 214 160 165;
   --semantic-purple-rgb: 181 168 201;
+  --widget-semantic-info: light-dark(#2463b1, #7cbbff);
   --semantic-tint: 8%;
   --semantic-border: 24%;
   --semantic-info-bg: color-mix(in srgb, var(--semantic-info) var(--semantic-tint), var(--surface-1));
@@ -93,13 +98,14 @@
      the user's selected hex, unadjusted. */
   --theme-primary: #3b82f6;
   --theme-primary-rgb: 59, 130, 246;
-  --theme-accent: #06b6d4;
-  --theme-accent-rgb: 6, 182, 212;
+  --theme-accent: var(--theme-primary);
+  --theme-accent-rgb: var(--theme-primary-rgb);
+  --theme-accent-soft: color-mix(in srgb, var(--theme-primary) 12%, transparent);
   /* Contrasting foreground for solid accent fills (primary buttons, FAB…).
      Recomputed per-accent in ThemeProvider.applyThemeCSS; these are the
      accessible first-paint defaults for the signal-blue palette. */
-  --theme-on-primary: #0b0d12;
-  --theme-on-accent: #0b0d12;
+  --theme-on-primary: #000000;
+  --theme-on-accent: var(--theme-on-primary);
   /*
    * Density tokens (Phase 40 / Prompt 44).
    *
@@ -226,7 +232,7 @@
    * mistaken for a divider. */
   --skeleton-bg: var(--border-default);
 
-  /* Neutral focus hue stays distinguishable independently of saved accents. */
+  /* Focus follows the selected accent without modifying it. */
   --focus-ring: var(--theme-primary);
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
@@ -411,7 +417,7 @@ select option:checked {
     box-shadow: var(--elevation-1);
   }
   .neon-button:hover {
-    filter: brightness(1.06);
+    box-shadow: var(--elevation-2);
   }
 
   .neon-button-red {
@@ -643,11 +649,15 @@ html[data-status-bar='off'] {
 
 :root.light-mode {
   --semantic-info: #385e7e;
+  --semantic-activity: #24686d;
+  --semantic-update: #545394;
   --semantic-success: #38614f;
   --semantic-warning: #745829;
   --semantic-danger: #83464e;
   --semantic-purple: #625077;
   --semantic-info-rgb: 56 94 126;
+  --semantic-activity-rgb: 36 104 109;
+  --semantic-update-rgb: 84 83 148;
   --semantic-success-rgb: 56 97 79;
   --semantic-warning-rgb: 116 88 41;
   --semantic-danger-rgb: 131 70 78;
@@ -704,13 +714,11 @@ html[data-status-bar='off'] {
 }
 
 /* Neon accent colors — darken for white-background readability */
-:root.light-mode .text-neon-cyan { color: var(--semantic-info) !important; }
 :root.light-mode .text-neon-green { color: var(--semantic-success) !important; }
 :root.light-mode .text-neon-purple { color: var(--semantic-purple) !important; }
 :root.light-mode .text-neon-red { color: var(--semantic-danger) !important; }
 :root.light-mode .text-tesla-red { color: #dc2626 !important; }
 :root.light-mode .text-neon-amber { color: var(--semantic-warning) !important; }
-:root.light-mode .text-neon-blue { color: var(--semantic-info) !important; }
 
 /*
  * Semantic accent text is intentionally pale in dark mode. In light mode,
@@ -718,17 +726,6 @@ html[data-status-bar='off'] {
  * Variant-prefixed dark:* classes are separate selectors, so these rules only
  * affect unscoped light-mode utilities.
  */
-:root.light-mode .text-cyan-100,
-:root.light-mode .text-cyan-200,
-:root.light-mode .text-cyan-300,
-:root.light-mode .text-cyan-400,
-:root.light-mode .text-cyan-500,
-:root.light-mode .text-cyan-600,
-:root.light-mode .text-cyan-200\/90,
-:root.light-mode .text-cyan-300\/70,
-:root.light-mode .text-cyan-300\/80,
-:root.light-mode .text-cyan-300\/90 { color: #155e75 !important; }
-
 :root.light-mode .text-emerald-100,
 :root.light-mode .text-emerald-200,
 :root.light-mode .text-emerald-300,
@@ -771,28 +768,6 @@ html[data-status-bar='off'] {
 :root.light-mode .text-red-300\/80,
 :root.light-mode .text-red-400\/50,
 :root.light-mode .text-red-400\/60 { color: #991b1b !important; }
-
-:root.light-mode .text-blue-100,
-:root.light-mode .text-blue-200,
-:root.light-mode .text-blue-300,
-:root.light-mode .text-blue-400,
-:root.light-mode .text-blue-500,
-:root.light-mode .text-blue-600 { color: #1e40af !important; }
-
-:root.light-mode .text-sky-100,
-:root.light-mode .text-sky-200,
-:root.light-mode .text-sky-300,
-:root.light-mode .text-sky-400,
-:root.light-mode .text-sky-500,
-:root.light-mode .text-sky-600,
-:root.light-mode .text-sky-400\/60 { color: #075985 !important; }
-
-:root.light-mode .text-indigo-100,
-:root.light-mode .text-indigo-200,
-:root.light-mode .text-indigo-300,
-:root.light-mode .text-indigo-400,
-:root.light-mode .text-indigo-500,
-:root.light-mode .text-indigo-600 { color: #3730a3 !important; }
 
 :root.light-mode .text-purple-100,
 :root.light-mode .text-purple-200,
@@ -845,13 +820,6 @@ html[data-status-bar='off'] {
 :root.light-mode .text-orange-500,
 :root.light-mode .text-orange-600 { color: #9a3412 !important; }
 
-:root.light-mode .text-teal-100,
-:root.light-mode .text-teal-200,
-:root.light-mode .text-teal-300,
-:root.light-mode .text-teal-400,
-:root.light-mode .text-teal-500,
-:root.light-mode .text-teal-600 { color: #115e59 !important; }
-
 :root.light-mode .text-lime-100,
 :root.light-mode .text-lime-200,
 :root.light-mode .text-lime-300,
@@ -860,12 +828,8 @@ html[data-status-bar='off'] {
 :root.light-mode .text-lime-600 { color: #3f6212 !important; }
 
 /* Keep accent links readable while hovered in light mode. */
-:root.light-mode .hover\:text-cyan-200:hover,
-:root.light-mode .hover\:text-cyan-300:hover,
-:root.light-mode .hover\:text-cyan-400:hover { color: #155e75 !important; }
 :root.light-mode .hover\:text-amber-200:hover,
 :root.light-mode .hover\:text-amber-300:hover { color: #92400e !important; }
-:root.light-mode .hover\:text-blue-300:hover { color: #1e40af !important; }
 :root.light-mode .hover\:text-emerald-300:hover { color: #065f46 !important; }
 :root.light-mode .hover\:text-purple-300:hover { color: #6b21a8 !important; }
 :root.light-mode .hover\:text-red-300:hover,
@@ -874,8 +838,6 @@ html[data-status-bar='off'] {
 :root.light-mode .hover\:text-rose-200:hover,
 :root.light-mode .hover\:text-rose-300:hover { color: #9f1239 !important; }
 
-:root.light-mode .bg-neon-cyan\/5,
-:root.light-mode .bg-neon-cyan\/10 { background-color: var(--semantic-info-bg) !important; }
 :root.light-mode .bg-neon-green\/5,
 :root.light-mode .bg-neon-green\/10 { background-color: var(--semantic-success-bg) !important; }
 :root.light-mode .bg-neon-purple\/5,
@@ -886,18 +848,12 @@ html[data-status-bar='off'] {
 :root.light-mode .bg-tesla-red\/10 { background-color: rgba(220, 38, 38, 0.1) !important; }
 :root.light-mode .bg-neon-amber\/5,
 :root.light-mode .bg-neon-amber\/10 { background-color: var(--semantic-warning-bg) !important; }
-:root.light-mode .bg-neon-blue\/5,
-:root.light-mode .bg-neon-blue\/10 { background-color: var(--semantic-info-bg) !important; }
-
-:root.light-mode .bg-neon-cyan\/20 { background-color: var(--semantic-info-bg) !important; }
 :root.light-mode .bg-neon-green\/20 { background-color: var(--semantic-success-bg) !important; }
 :root.light-mode .bg-neon-purple\/20 { background-color: var(--semantic-purple-bg) !important; }
 :root.light-mode .bg-neon-red\/20 { background-color: var(--semantic-danger-bg) !important; }
 :root.light-mode .bg-tesla-red\/20 { background-color: rgba(220, 38, 38, 0.15) !important; }
 :root.light-mode .bg-neon-amber\/20 { background-color: var(--semantic-warning-bg) !important; }
 
-:root.light-mode .border-neon-cyan\/20,
-:root.light-mode .border-neon-cyan\/30 { border-color: var(--semantic-info-border) !important; }
 :root.light-mode .border-neon-green\/20,
 :root.light-mode .border-neon-green\/30 { border-color: var(--semantic-success-border) !important; }
 :root.light-mode .border-neon-purple\/20,
@@ -907,13 +863,8 @@ html[data-status-bar='off'] {
 :root.light-mode .border-neon-amber\/20,
 :root.light-mode .border-neon-amber\/30 { border-color: var(--semantic-warning-border) !important; }
 
-:root.light-mode .ring-neon-cyan\/20,
-:root.light-mode .ring-neon-cyan\/40 { --tw-ring-color: var(--semantic-info-border) !important; }
 :root.light-mode .ring-neon-green\/20 { --tw-ring-color: var(--semantic-success-border) !important; }
 :root.light-mode .ring-neon-purple\/20 { --tw-ring-color: var(--semantic-purple-border) !important; }
-
-:root.light-mode .shadow-neon-cyan\/10,
-:root.light-mode .shadow-neon-cyan\/20 { --tw-shadow-color: transparent !important; }
 
 /* Override gray text shades for light mode readability */
 :root.light-mode .text-gray-300 {
@@ -1779,6 +1730,8 @@ html[data-status-bar='off'] {
     --theme-on-primary: HighlightText !important;
     --theme-on-accent: HighlightText !important;
     --semantic-info: CanvasText !important;
+    --semantic-activity: CanvasText !important;
+    --semantic-update: CanvasText !important;
     --semantic-success: CanvasText !important;
     --semantic-warning: CanvasText !important;
     --semantic-danger: CanvasText !important;

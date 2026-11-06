@@ -160,10 +160,10 @@ describe('AlertDetailDrawer', () => {
   });
 
   it.each([
-    ['utc', 'UTC', '2026-05-02'],
+    ['utc', 'America/Los_Angeles', '2026-05-01'],
     ['user', 'America/Los_Angeles', '2026-05-01'],
-    ['vehicle', 'Asia/Tokyo', '2026-05-02'],
-  ] as const)('uses the saved %s display zone for trigger, audit, and related-context day', (mode, tz, day) => {
+    ['vehicle', 'America/Los_Angeles', '2026-05-01'],
+  ] as const)('uses the user zone for trigger, audit and context even with workspace mode %s', (mode, tz, day) => {
     vi.mocked(useSettings).mockReturnValue({
       settings: { tz_display_default: mode },
       locale: 'de-DE',
@@ -181,7 +181,7 @@ describe('AlertDetailDrawer', () => {
     expect(screen.getByRole('list', { name: 'Timeline' })).toHaveTextContent(
       formatDateTime(CREATED_AT, { locale: 'de-DE', tz }),
     );
-    expect(vi.mocked(useTimezone)).toHaveBeenCalledWith(mode);
+    expect(vi.mocked(useTimezone)).toHaveBeenCalledWith('user');
     for (const [name, path] of [
       ['Drive history', '/drives'],
       ['Charging sessions', '/charging'],

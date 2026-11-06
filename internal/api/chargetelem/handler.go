@@ -32,7 +32,8 @@ type ChargingTelemetryHandler struct {
 // response is written.
 var chargingTelemetryMappings = []signal.FieldMapping{
 	{Signal: "ChargerVoltage", Field: "charger_voltage"},
-	{Signal: "ChargerActualCurrent", Field: "charger_actual_current"},
+	{Signal: "ChargeAmps", Field: "charger_actual_current"},
+	{Signal: "ChargeLimitSoc", Field: "charge_limit_soc_pct"},
 	{Signal: "ChargeRateMilePerHour", Field: "range_added_meters_per_hour"},
 	{Signal: "PackVoltage", Field: "pack_voltage"},
 	{Signal: "PackCurrent", Field: "pack_current"},

@@ -118,11 +118,11 @@ export default function InstallPrompt() {
             data-install-capability={capability}
             className="flex w-full items-start gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] px-3 py-3 text-[var(--text-primary)] shadow-xl backdrop-blur-xl sm:px-4"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#00f0ff] to-[#10b981]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--theme-primary)]">
               {showIosGuide ? (
-                <Share className="h-5 w-5 text-[var(--text-inverse)]" aria-hidden="true" />
+                <Share className="h-5 w-5 text-[var(--theme-on-primary)]" aria-hidden="true" />
               ) : (
-                <Download className="h-5 w-5 text-[var(--text-inverse)]" aria-hidden="true" />
+                <Download className="h-5 w-5 text-[var(--theme-on-primary)]" aria-hidden="true" />
               )}
             </div>
 
@@ -147,14 +147,14 @@ export default function InstallPrompt() {
                   </p>
                   <ol className="mt-1.5 space-y-1 text-xs leading-tight text-[var(--text-secondary)]">
                     <li className="flex items-center gap-1.5">
-                      <Share className="h-3.5 w-3.5 shrink-0 text-cyan-300" aria-hidden="true" />
+                      <Share className="h-3.5 w-3.5 shrink-0 text-theme-accent" aria-hidden="true" />
                       <span>
                         {t('installPrompt.ios.step1', 'Tap the Share button in Safari.')}
                       </span>
                     </li>
                     <li className="flex items-center gap-1.5">
                       <SquarePlus
-                        className="h-3.5 w-3.5 shrink-0 text-cyan-300"
+                        className="h-3.5 w-3.5 shrink-0 text-theme-accent"
                         aria-hidden="true"
                       />
                       <span>
@@ -163,7 +163,7 @@ export default function InstallPrompt() {
                     </li>
                     <li className="flex items-center gap-1.5">
                       <Download
-                        className="h-3.5 w-3.5 shrink-0 text-cyan-300"
+                        className="h-3.5 w-3.5 shrink-0 text-theme-accent"
                         aria-hidden="true"
                       />
                       <span>{t('installPrompt.ios.step3', 'Confirm with Add.')}</span>
@@ -183,7 +183,7 @@ export default function InstallPrompt() {
                 onClick={handleInstall}
                 size="sm"
                 data-testid="install-prompt-install"
-                className="h-8 shrink-0 rounded-lg bg-gradient-to-br from-[#00f0ff] to-[#10b981] px-3 text-xs font-semibold text-[var(--text-inverse)] hover:opacity-90"
+                className="h-8 shrink-0 rounded-lg px-3 text-xs font-semibold"
               >
                 {t('installPrompt.install', 'Install')}
               </Button>

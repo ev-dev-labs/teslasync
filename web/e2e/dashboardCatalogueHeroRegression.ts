@@ -24,9 +24,19 @@ export async function assertCatalogueHeroMigration(
         const item: unknown = dashboard.layouts.md.find((value: unknown) =>
           record(value) && value.i === 'review-vehicle-hero');
         if (!record(item)) throw new Error('Missing persisted desktop VehicleHero item');
+        const widget: unknown = Array.isArray(dashboard.widgets)
+          ? dashboard.widgets.find((value: unknown) => record(value) && value.id === 'review-vehicle-hero')
+          : null;
+        if (!record(widget)) throw new Error('Missing canonical VehicleHero settings');
+        const content = element.querySelector('.dashboard-widget');
+        if (!content) throw new Error('Missing intrinsic VehicleHero content');
         const bounds = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
         return {
           activeId, stamp: localStorage.getItem('teslasync-row-height-version'),
+          layoutVersion: dashboard.layoutVersion, widget,
+          contentHeight: content.getBoundingClientRect().height + parseFloat(style.borderTopWidth)
+            + parseFloat(style.borderBottomWidth) + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom),
           item, height: bounds.height, width: bounds.width,
           top: bounds.top, bottom: bounds.bottom, left: bounds.left, right: bounds.right,
           mainScrollTop: element.closest('main')?.scrollTop, windowScrollY: window.scrollY,
@@ -36,16 +46,18 @@ export async function assertCatalogueHeroMigration(
       history.push({ elapsedMs: Date.now() - startedAt, ...current });
       const signature = JSON.stringify(current);
       const ready = current.activeId === 'review-vehicle' && current.stamp === '2'
-        && current.item.h === 6 && current.item.w === 2 && current.height === 560 && current.computedHeight === '560px';
+        && current.layoutVersion === 1 && current.widget.sizeClass === 'medium'
+        && current.widget.heightRows == null && current.item.w === 2
+        && current.height > 72 && Math.abs(current.height - current.contentHeight) < 1;
       stableSamples = ready ? signature === previous ? stableSamples + 1 : 1 : 0;
       previous = signature;
       return stableSamples;
-    }, { message: 'Unstamped VehicleHero must migrate and stabilize at six rows / 560px' })
+    }, { message: 'Unstamped VehicleHero must retain its size class and stabilize at intrinsic content height' })
       .toBeGreaterThanOrEqual(4);
   } finally {
     await writeFile(info.outputPath('vehicle-hero-migration-history.json'), JSON.stringify({
       test: info.title, seed: 'Existing unversioned catalogue seed; no stamp or layout rewrite',
-      expectedRows: 6, expectedHeight: 560, history,
+      expectedSizeClass: 'medium', expectedHeight: 'intrinsic content, not legacy grid rows', history,
     }, null, 2));
   }
 
@@ -110,7 +122,7 @@ export async function assertCatalogueHeroMigration(
     };
   }, identityName);
   const before = await geometry();
-  expect(before.panel.height).toBe(560);
+  expect(before.panel.height).toBeGreaterThan(72);
   const columnWidth = (before.grid.width - (GRID_COLS.md - 1) * GRID_MARGIN[0]) / GRID_COLS.md;
   expect(before.panel.width, 'Both motion modes retain the seeded two-column native desktop allocation')
     .toBe(Math.round(2 * columnWidth + GRID_MARGIN[0]));

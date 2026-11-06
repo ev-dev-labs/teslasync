@@ -69,7 +69,7 @@ describe('MethodBadge', () => {
 
   it.each([
     ['GET', 'text-green-400'],
-    ['POST', 'text-blue-400'],
+    ['POST', 'text-status-info'],
     ['PUT', 'text-amber-400'],
     ['DELETE', 'text-red-400'],
     ['PATCH', 'text-purple-400'],
@@ -217,11 +217,11 @@ describe('EndpointSidebar', () => {
       />,
     );
     expect(screen.getByText('/charging').closest('button')?.className).toContain(
-      'border-cyan-400',
+      'border-theme-accent',
     );
     expect(
       screen.getByText('/vehicles').closest('button')?.className,
-    ).not.toContain('border-cyan-400');
+    ).not.toContain('border-theme-accent');
   });
 
   it('collapses all groups by default when there are more than five tags', () => {

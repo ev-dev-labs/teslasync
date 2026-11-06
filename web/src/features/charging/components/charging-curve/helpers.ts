@@ -6,18 +6,15 @@ import { getChargerCategory } from '@/lib/chargingAggregation';
 import type { CurvePoint } from './types';
 
 export function isDcSession(s: ChargingSession): boolean {
-  const explicitAC = !!s.charger_type && getChargerCategory(s.charger_type) === 'home';
-  return !explicitAC && !!(s.charger_type || (s.peak_power_w && s.peak_power_w > 20_000));
+  const category = getChargerCategory(s);
+  return category === 'supercharger' || category === 'dc';
 }
 
-export type ChargerCategoryId = 'Home / AC' | 'Supercharger' | 'DC Fast';
+export type ChargerCategoryId = 'Home / AC' | 'AC' | 'Supercharger' | 'DC Fast' | 'Unknown';
 
 /** Keep the original grouping and color keys independent of the display language. */
 export function getChargerCategoryId(s: ChargingSession): ChargerCategoryId {
-  if (!isDcSession(s)) return 'Home / AC';
-  if (s.charger_type === 'Tesla' || (s.charger_type ?? '').toLowerCase().includes('tesla'))
-    return 'Supercharger';
-  return 'DC Fast';
+  return ({ home: 'Home / AC', ac: 'AC', supercharger: 'Supercharger', dc: 'DC Fast', unknown: 'Unknown' } as const)[getChargerCategory(s)];
 }
 
 export function getChargerCategoryLabel(category: ChargerCategoryId, t: TFunction = i18n.t): string {
@@ -25,6 +22,8 @@ export function getChargerCategoryLabel(category: ChargerCategoryId, t: TFunctio
     case 'Home / AC': return t('charging.curve.chargerLabels.homeAc', { defaultValue: 'Home / AC' }) || 'Home / AC';
     case 'Supercharger': return t('charging.curve.chargerLabels.supercharger', { defaultValue: 'Supercharger' }) || 'Supercharger';
     case 'DC Fast': return t('charging.curve.chargerLabels.dcFast', { defaultValue: 'DC Fast' }) || 'DC Fast';
+    case 'AC': return t('charging.chargerTypes.ac', { defaultValue: 'AC' });
+    case 'Unknown': return t('charging.chargerTypes.unknown', { defaultValue: 'Unknown' });
   }
 }
 
@@ -38,16 +37,10 @@ export function getChargerClassification(s: ChargingSession): {
   label: string;
   provenance: 'reported' | 'inferred' | 'unknown';
 } {
-  let provenance: 'reported' | 'inferred' | 'unknown' = 'unknown';
-  if (s.charger_type) {
-    if (getChargerCategory(s.charger_type) !== 'unknown'
-      || s.charger_type.toLowerCase().includes('tesla')) {
-      provenance = 'reported';
-    }
-  } else if (s.peak_power_w != null && Number.isFinite(s.peak_power_w)
-    && s.peak_power_w > 0) {
-    provenance = 'inferred';
-  }
+  const category = getChargerCategory(s);
+  const reported = getChargerCategory(s.charger_type);
+  const provenance = category === 'unknown' ? 'unknown'
+    : category === reported || (category === 'home' && reported === 'ac') ? 'reported' : 'inferred';
   return { isDc: isDcSession(s), label: getChargerLabel(s), provenance };
 }
 

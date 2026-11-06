@@ -111,7 +111,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
   if (!snapshot) {
     return (
       <WidgetShell
-        icon={<Navigation2 className="h-3.5 w-3.5 text-cyan-400" />}
+        icon={<Navigation2 className="h-3.5 w-3.5 text-theme-accent" />}
         {...shellProps}
       >
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -126,7 +126,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
   if (!isNavigating) {
     return (
       <WidgetShell
-        icon={<Navigation2 className="h-3.5 w-3.5 text-cyan-400" />}
+        icon={<Navigation2 className="h-3.5 w-3.5 text-theme-accent" />}
         {...shellProps}
       >
         <EmptyState
@@ -147,7 +147,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      icon={<Navigation2 className="h-3.5 w-3.5 text-cyan-400" />}
+      icon={<Navigation2 className="h-3.5 w-3.5 text-theme-accent" />}
       {...shellProps}
     >
       <div className="flex h-full min-h-0 flex-col justify-center gap-3 px-1">

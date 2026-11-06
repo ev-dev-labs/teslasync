@@ -238,7 +238,7 @@ jobs:
               CHAOS_EXPECT_FLEET_BATTERY_LEVEL=73 \
               CHAOS_SCENARIOS=redis_latency_500ms_60s,redis_blackhole_20s \
                 timeout --signal=TERM 30m go run ./cmd/chaos-runner | tee k6-output.txt
-              exit ${PIPESTATUS[0]}
+              exit "${PIPESTATUS[0]}"
               ;;
             *) echo "::error::unknown profile"; exit 1 ;;
           esac

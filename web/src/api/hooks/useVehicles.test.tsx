@@ -335,8 +335,12 @@ describe('useVehicleState', () => {
       vehicle: { id: 3, state: 'online', is_locked: false, software_version: '2024.44.1' },
       position: { latitude: 12.5, longitude: -7.1, speed: 0, battery_level: 80, ideal_range: 500 },
       is_charging: false,
+      charge_limit_soc_pct: 85,
+      charge_amps_a: 0,
+      verified_fields: ['charge_limit_soc_pct', 'charge_amps_a'],
       live: false,
     });
+
     const { result } = renderH(() => useVehicleState(3));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     const s = result.current.data?.state;
@@ -347,6 +351,32 @@ describe('useVehicleState', () => {
     expect(s?.is_locked).toBe(false);
     expect(s?.rated_range).toBeNull();
     expect(s?.ideal_range).toBe(500);
+    expect(s?.charge_limit_soc_pct).toBe(85);
+    expect(s?.charge_amps_a).toBe(0);
+    expect(result.current.data?.verifiedFields).toEqual(['charge_limit_soc_pct', 'charge_amps_a']);
+  });
+
+  it('preserves FSD version and an explicit unlatched trailer with their provenance', async () => {
+    requestMock.mockResolvedValueOnce({
+      state: {
+        vehicle_id: 3,
+        software_version: '2026.44.3',
+        self_driving_software_version: 'v14.3 Lite',
+        semi_trailer_latched: false,
+      },
+      verified_fields: ['self_driving_software_version', 'semi_trailer_latched'],
+      live: true,
+    });
+    const { result } = renderH(() => useVehicleState(3));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.state).toMatchObject({
+      software_version: '2026.44.3',
+      self_driving_software_version: 'v14.3 Lite',
+      semi_trailer_latched: false,
+    });
+    expect(result.current.data?.verifiedFields).toEqual([
+      'self_driving_software_version', 'semi_trailer_latched',
+    ]);
   });
 
   it('preserves unknown measurements and flags when the pair is sparse', async () => {
@@ -362,6 +392,7 @@ describe('useVehicleState', () => {
       'latitude', 'longitude', 'power', 'battery_level', 'rated_range',
       'ideal_range', 'odometer', 'inside_temp', 'outside_temp', 'is_climate_on',
       'is_charging', 'charger_power', 'charge_rate', 'time_to_full_charge', 'sentry_mode',
+      'charge_limit_soc_pct', 'charge_amps_a',
     ] as const) {
       expect(s?.[field], field).toBeNull();
     }

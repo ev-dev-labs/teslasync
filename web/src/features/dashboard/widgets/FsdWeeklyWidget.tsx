@@ -73,7 +73,7 @@ export default function FsdWeeklyWidget({ vehicleId, size }: WidgetProps) {
     <WidgetShell
       dataState={id > 0 && (data || isLoading || isError) ? dataState : undefined}
       title={t('widget.fsdWeekly.title', 'FSD this week')}
-      icon={isCompact ? undefined : <Gauge className="h-3.5 w-3.5 text-cyan-400" />}
+      icon={isCompact ? undefined : <Gauge className="h-3.5 w-3.5 text-theme-accent" />}
       loading={isLoading}
       error={error && !data ? String(error) : null}
       updatedAt={dataUpdatedAt}
@@ -108,10 +108,10 @@ export default function FsdWeeklyWidget({ vehicleId, size }: WidgetProps) {
           {data && !isCompact && <WidgetStatGrid stats={stats} cols={2} maxPerRow={2} />}
           {!isCompact && (
             <div className="mt-auto flex flex-wrap gap-3 text-xs font-medium">
-              <Link to="/fsd" className="text-cyan-300 hover:text-cyan-200">
+              <Link to="/fsd" className="text-theme-accent hover:text-theme-accent">
                 {t('widget.fsdWeekly.openFsd', 'FSD insights')}
               </Link>
-              <Link to="/weekly-digest" className="text-cyan-300 hover:text-cyan-200">
+              <Link to="/weekly-digest" className="text-theme-accent hover:text-theme-accent">
                 {t('widget.fsdWeekly.openDigest', 'Weekly digest')}
               </Link>
             </div>

@@ -223,8 +223,8 @@ describe('SessionDetailPanel — charger label branches', () => {
     expect(rowValue('Charger Type')).toBe('DC Fast');
   });
 
-  it('labels a low-power untyped session as Home / AC', () => {
-    renderPanel(makeSession({ charger_type: null, peak_power_w: 7_000 }));
+  it('labels an AC session at a saved home as Home / AC', () => {
+    renderPanel(makeSession({ charger_type: 'AC', is_home: true, peak_power_w: 7_000 }));
     expect(rowValue('Charger Type')).toBe('Home / AC');
   });
 });

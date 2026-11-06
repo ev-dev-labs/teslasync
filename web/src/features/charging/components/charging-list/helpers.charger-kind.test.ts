@@ -48,7 +48,7 @@ describe('charging insight charger classification', () => {
     );
     const overview = computeStats(sessions);
     const breakdown = computeAcDcBreakdown(sessions);
-    expect(breakdown.ac.count).toBe(overview.homeCount);
+    expect(breakdown.ac.count).toBe(overview.homeCount + (overview.acCount ?? 0));
     expect(breakdown.dc.count).toBe(overview.scCount + overview.dcCount);
     expect(breakdown.ac.count).toBe(21);
     expect(breakdown.dc.count).toBe(10);
@@ -62,7 +62,8 @@ describe('charging insight charger classification', () => {
       session(1, null, 11_000),
       session(2, null, 150_000),
     ]);
-    expect(breakdown.ac.count).toBe(1);
+    expect(breakdown.ac.count).toBe(0);
+    expect(breakdown.unknown?.count).toBe(1);
     expect(breakdown.dc.count).toBe(1);
   });
 

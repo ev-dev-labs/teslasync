@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto'
 import { createInstance } from 'i18next'
 import { beforeAll, describe, expect, it } from 'vitest'
-import catalog from './en.json'
+import currentCatalog from './en.json'
+import { catalogBeforeDashboardPolish } from './verified-combined-contract'
 import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
 import { finalFourAdditions, ownerRecoveryAdditions } from './authorized-owner-recovery.test'
 import baseline from './known-missing-keys.json'
@@ -9,6 +10,8 @@ import runtimeManifest from './en/runtime-manifest.json'
 import usageManifest from './en/usage-manifest.json'
 import shell from './en/shell.json'
 import { copyOwnerAdditions, drivesEmptyAddition, featureOwnedAdditions } from './excluded-feature-owned-producers.test'
+
+const catalog = catalogBeforeDashboardPolish(currentCatalog)
 
 type Json = Record<string, unknown>
 

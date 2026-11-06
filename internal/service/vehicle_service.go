@@ -310,6 +310,14 @@ func (s *VehicleService) buildStateFromSignalStoreWithProvenance(
 	}
 
 	// Charging state
+	if value, ok := signal.Float64Value(all["ChargeLimitSoc"]); ok && value >= 0 && value <= 100 {
+		state.ChargeLimitSocPct = &value
+		mark("charge_limit_soc_pct", all["ChargeLimitSoc"])
+	}
+	if value, ok := signal.Float64Value(all["ChargeAmps"]); ok && value >= 0 && !math.IsInf(value, 0) {
+		state.ChargeAmpsA = &value
+		mark("charge_amps_a", all["ChargeAmps"])
+	}
 	if v := all["DetailedChargeState"]; v != nil {
 		if cs, ok := v.Raw.(string); ok {
 			state.IsCharging = enums.IsCharging(cs)
@@ -392,6 +400,18 @@ func (s *VehicleService) buildStateFromSignalStoreWithProvenance(
 		}
 	}
 
+	if v := all["SelfDrivingSoftwareVersion"]; v != nil {
+		if value, ok := v.Raw.(string); ok && value != "" {
+			state.SelfDrivingSoftwareVersion = &value
+			mark("self_driving_software_version", v)
+		}
+	}
+	if v := all["SemiTrailerLatched"]; v != nil {
+		if value, ok := v.Raw.(bool); ok {
+			state.SemiTrailerLatched = &value
+			mark("semi_trailer_latched", v)
+		}
+	}
 	if v := all["AccessoryRail"]; v != nil {
 		if value, ok := v.Raw.(bool); ok {
 			state.AccessoryRail = &value
@@ -474,6 +494,26 @@ func fillStateFromSnapshot(
 	selected map[string]bool,
 	verified map[string]bool,
 ) {
+	if state.ChargeLimitSocPct == nil {
+		if value, ok := snapFloat(snap, "ChargeLimitSoc"); ok && value >= 0 && value <= 100 {
+			state.ChargeLimitSocPct = &value
+		}
+	}
+	if state.ChargeAmpsA == nil {
+		if value, ok := snapFloat(snap, "ChargeAmps"); ok && value >= 0 && !math.IsInf(value, 0) {
+			state.ChargeAmpsA = &value
+		}
+	}
+	if state.SelfDrivingSoftwareVersion == nil {
+		if value, ok := snapString(snap, "SelfDrivingSoftwareVersion"); ok && value != "" {
+			state.SelfDrivingSoftwareVersion = &value
+		}
+	}
+	if state.SemiTrailerLatched == nil {
+		if value, ok := snap["SemiTrailerLatched"].(bool); ok {
+			state.SemiTrailerLatched = &value
+		}
+	}
 	if state.AccessoryRail == nil {
 		if value, ok := snapBool(snap, "AccessoryRail"); ok {
 			state.AccessoryRail = &value

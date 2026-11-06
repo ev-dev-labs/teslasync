@@ -148,7 +148,7 @@ export function ElevationProfile({
           {cursorDistance != null && (
             <ReferenceLine
               x={cursorDistance}
-              stroke="var(--theme-primary, #3b82f6)"
+              stroke="var(--theme-primary)"
               strokeWidth={2}
               strokeDasharray="4 2"
             />

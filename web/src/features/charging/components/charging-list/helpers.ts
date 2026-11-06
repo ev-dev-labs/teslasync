@@ -9,7 +9,7 @@ import type { TFunction } from 'i18next';
 // ── Types ──────────────────────────────────────────────────────────────
 
 export type SortKey = 'date' | 'energy' | 'cost' | 'duration' | 'power';
-export type ChargerFilter = 'all' | 'supercharger' | 'dc' | 'home';
+export type ChargerFilter = 'all' | 'supercharger' | 'dc' | 'home' | 'ac' | 'unknown';
 
 export interface ChargingStats {
   totalEnergy: number;
@@ -20,6 +20,8 @@ export interface ChargingStats {
   homeCount: number;
   scCount: number;
   dcCount: number;
+  acCount?: number;
+  unknownCount?: number;
   count: number;
 }
 
@@ -36,6 +38,7 @@ export interface AcDcBucket {
 export interface AcDcBreakdown {
   ac: AcDcBucket;
   dc: AcDcBucket;
+  unknown?: AcDcBucket;
   total: { energy: number; cost: number | null; freeEnergy: number; freeCount: number };
 }
 
@@ -101,10 +104,12 @@ export function computeStats(sessions: ChargingSession[]): ChargingStats | null 
     'kW',
   );
   const avgCostPerKwh = totalEnergy > 0 ? totalCost / totalEnergy : 0;
-  const homeCount = sessions.filter((s) => getChargerCategory(s.charger_type) === 'home').length;
-  const scCount = sessions.filter((s) => getChargerCategory(s.charger_type) === 'supercharger').length;
-  const dcCount = sessions.filter((s) => getChargerCategory(s.charger_type) === 'dc').length;
-  return { totalEnergy, totalCost, totalDuration, avgPower, avgCostPerKwh, homeCount, scCount, dcCount, count: sessions.length };
+  const homeCount = sessions.filter((s) => getChargerCategory(s) === 'home').length;
+  const scCount = sessions.filter((s) => getChargerCategory(s) === 'supercharger').length;
+  const dcCount = sessions.filter((s) => getChargerCategory(s) === 'dc').length;
+  const acCount = sessions.filter((s) => getChargerCategory(s) === 'ac').length;
+  const unknownCount = sessions.filter((s) => getChargerCategory(s) === 'unknown').length;
+  return { totalEnergy, totalCost, totalDuration, avgPower, avgCostPerKwh, homeCount, scCount, dcCount, acCount, unknownCount, count: sessions.length };
 }
 
 export function computeChargerBreakdown(stats: ChargingStats, t: TFunction): ChargerBreakdownEntry[] {
@@ -112,6 +117,8 @@ export function computeChargerBreakdown(stats: ChargingStats, t: TFunction): Cha
     { name: t('charging.chargerTypes.supercharger', 'Supercharger'), value: stats.scCount, fill: CHARGER_COLORS.supercharger },
     { name: t('charging.chargerTypes.dc', 'DC Fast'), value: stats.dcCount, fill: CHARGER_COLORS.dc },
     { name: t('charging.chargerTypes.home', 'Home / AC'), value: stats.homeCount, fill: CHARGER_COLORS.home },
+    { name: t('charging.chargerTypes.ac', 'AC'), value: stats.acCount ?? 0, fill: CHARGER_COLORS.home },
+    { name: t('charging.chargerTypes.unknown', 'Unknown'), value: stats.unknownCount ?? 0, fill: CHARGER_COLORS.unknown },
   ].filter((d) => d.value > 0);
 }
 
@@ -132,7 +139,7 @@ export function computeCostByType(
 ): CostByTypeEntry[] {
   const groups: Record<string, { energy: number; cost: number; count: number }> = {};
   sessions.forEach((s) => {
-    const cat = chargerLabels[getChargerCategory(s.charger_type)];
+    const cat = chargerLabels[getChargerCategory(s)] ?? chargerLabels.unknown;
     if (!groups[cat]) groups[cat] = { energy: 0, cost: 0, count: 0 };
     groups[cat].energy += s.total_energy_added_wh ?? 0;
     groups[cat].cost += s.cost_decimal ?? 0;
@@ -165,10 +172,11 @@ export function computeStartLevelDist(sessions: ChargingSession[]): StartLevelBu
 export function computeAcDcBreakdown(sessions: ChargingSession[]): AcDcBreakdown {
   const ac: AcDcBucket = { energy: 0, energyUsed: 0, cost: 0, count: 0, totalDuration: 0, freeCount: 0, freeEnergy: 0 };
   const dc: AcDcBucket = { energy: 0, energyUsed: 0, cost: 0, count: 0, totalDuration: 0, freeCount: 0, freeEnergy: 0 };
+  const unknown: AcDcBucket = { energy: 0, energyUsed: 0, cost: 0, count: 0, totalDuration: 0, freeCount: 0, freeEnergy: 0 };
   sessions.forEach((s) => {
-    const explicitAC = !!s.charger_type && getChargerCategory(s.charger_type) === 'home';
-    const isDC = !explicitAC && !!(s.charger_type || (s.peak_power_w && s.peak_power_w > 22_000));
-    const bucket = isDC ? dc : ac;
+    const category = getChargerCategory(s);
+    const bucket = category === 'unknown' ? unknown
+      : category === 'dc' || category === 'supercharger' ? dc : ac;
     const energyKwh = convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh');
     bucket.energy += energyKwh;
     bucket.energyUsed += energyKwh;
@@ -184,11 +192,12 @@ export function computeAcDcBreakdown(sessions: ChargingSession[]): AcDcBreakdown
   return {
     ac,
     dc,
+    unknown,
     total: {
-      energy: ac.energy + dc.energy,
-      cost: ac.cost != null && dc.cost != null ? ac.cost + dc.cost : null,
-      freeEnergy: ac.freeEnergy + dc.freeEnergy,
-      freeCount: ac.freeCount + dc.freeCount,
+      energy: ac.energy + dc.energy + unknown.energy,
+      cost: ac.cost != null && dc.cost != null && unknown.cost != null ? ac.cost + dc.cost + unknown.cost : null,
+      freeEnergy: ac.freeEnergy + dc.freeEnergy + unknown.freeEnergy,
+      freeCount: ac.freeCount + dc.freeCount + unknown.freeCount,
     },
   };
 }
@@ -298,7 +307,7 @@ export function filterAndSortSessions(
 ): ChargingSession[] {
   let filtered: ChargingSession[] = sessions;
   if (chargerFilter !== 'all') {
-    filtered = filtered.filter((s) => getChargerCategory(s.charger_type) === chargerFilter);
+    filtered = filtered.filter((s) => getChargerCategory(s) === chargerFilter);
   }
   const q = searchQuery.trim().toLowerCase();
   if (q) {

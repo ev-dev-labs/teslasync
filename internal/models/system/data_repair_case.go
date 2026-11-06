@@ -230,6 +230,7 @@ func RepairCaseFingerprintWithRelated(
 type RepairCaseListFilter struct {
 	VehicleID  *int64                `json:"-"`
 	Status     *RepairCaseStatus     `json:"-"`
+	ActiveOnly bool                  `json:"-"`
 	Kind       *RepairCaseKind       `json:"-"`
 	Confidence *RepairCaseConfidence `json:"-"`
 	AssignedTo *string               `json:"-"`

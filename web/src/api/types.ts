@@ -180,6 +180,9 @@ export interface ChargingSession {
   charger_type: string | null
   cable_type: string | null
   live?: boolean
+  current_power_w?: number | null
+  is_home?: boolean
+  cost_source?: 'manual' | 'tesla_actual' | 'geofence_tariff' | 'default_estimate' | 'unknown' | null
   start_ts?: string
   end_ts?: string | null
   startedAt: string
@@ -634,12 +637,17 @@ export interface VehicleState {
   outside_temp: number
   is_climate_on: boolean
   is_charging: boolean
+  charge_limit_soc_pct?: number | null
+  /** Actual charging current from ChargeAmps, in amperes. */
+  charge_amps_a?: number | null
   charger_power: number
   charge_rate: number
   time_to_full_charge: number
   is_locked: boolean
   sentry_mode: boolean
   software_version: string
+  self_driving_software_version?: string | null
+  semi_trailer_latched?: boolean | null
   accessory_rail?: boolean | null
   power_transfer_status?: string | null
   automatic_emergency_braking_state?: string | null
@@ -1133,6 +1141,7 @@ export interface WebhookSignaturePreviewResult {
 }
 
 export interface NotificationLog {
+  vehicle_id?: number | null
   id: number
   channel_id: number | null
   alert_id: number | null
@@ -1181,7 +1190,7 @@ export interface NotificationReport {
 // `count == unread_count`. The frontend should render the count chip
 // without implying it's a global tally.
 //
-// `vehicle_ids` is `array_remove(array_agg(DISTINCT alert_rules.vehicle_id), NULL)`
+// `vehicle_ids` contains distinct captured notification_logs.vehicle_id values.
 // so it can be empty when every member belonged to a vehicle-less rule.
 //
 // Members are NOT inlined — clients fetch them on expand via
@@ -2217,6 +2226,7 @@ export interface RouteDetailData {
 // ChargingTelemetry matches the JSON response shape from /charging-telemetry
 // and /charging-telemetry/latest. Backed by signal_log.
 export interface ChargingTelemetry {
+  charge_limit_soc_pct?: number | null
   vehicle_id: number
   ts: string
   session_id: number | null

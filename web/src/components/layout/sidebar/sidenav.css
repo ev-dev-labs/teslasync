@@ -4,8 +4,8 @@
 .sidenav-context-column { width: 272px; }
 .sidenav-rail { display: flex; flex-direction: column; width: 76px; min-height: 0; height: 100%; border-inline-end: 1px solid var(--border-default); background: var(--nav-rail-bg); }
 .sidenav-brand { height: 60px; flex: none; display: grid; place-items: center; color: var(--theme-accent); }
-.sidenav-scroll-wrap { position: relative; flex: 1; min-height: 0; }
-.sidenav-rail-scroll { height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; padding: 0 4px 18px; }
+.sidenav-scroll-wrap { position: relative; isolation: isolate; flex: 1; min-height: 0; }
+.sidenav-rail-scroll { position: relative; z-index: 0; height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-padding-block: 48px; padding: 0 4px 18px; }
 .sidenav-rail-scroll::-webkit-scrollbar { display: none; }
 .sidenav-rail-item { position: relative; display: flex; flex-direction: column; gap: 2px; justify-content: center; width: 100%; height: 60px; min-height: 60px; padding: 3px 0; border: 0; border-radius: 8px; color: var(--text-secondary); }
 .sidenav-rail-item.is-selected { background: color-mix(in srgb, var(--theme-accent) 12%, var(--nav-rail-bg)); color: var(--text-primary); }
@@ -14,14 +14,14 @@
 .is-selected .sidenav-icon { background: var(--theme-accent); color: var(--theme-on-accent); }
 .sidenav-short-label { display: block; max-width: 68px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 14px; font-weight: 500; }
 .sidenav-rail-item:focus-visible, .sidenav-phone-tab:focus-visible, .sidenav-utility:focus-visible { outline: 2px solid var(--theme-accent); outline-offset: -2px; }
-.sidenav-fade { position: absolute; inset-inline: 0; height: 24px; pointer-events: none; opacity: 0; }
+.sidenav-fade { position: absolute; z-index: 1; inset-inline: 0; height: 48px; pointer-events: none; opacity: 0; }
 .sidenav-fade[data-visible='true'] { opacity: 1; }
-.sidenav-fade-top { top: 0; background: linear-gradient(var(--nav-rail-bg), transparent); }
-.sidenav-fade-bottom { bottom: 0; background: linear-gradient(transparent, var(--nav-rail-bg)); }
+.sidenav-fade-top { top: 0; background: linear-gradient(var(--nav-rail-bg) 15%, transparent); }
+.sidenav-fade-bottom { bottom: 0; background: linear-gradient(transparent, var(--nav-rail-bg) 85%); }
 .sidenav-utilities { flex: none; display: flex; flex-direction: column; align-items: center; padding: 6px 0; border-top: 1px solid var(--border-default); }
 .sidenav-utility { position: relative; display: grid; place-items: center; width: 48px; height: 44px; border-radius: 8px; color: var(--text-secondary); }
 .sidenav-utility:hover { background: var(--surface-2); }
-.sidenav-alert-count { position: absolute; top: 0; inset-inline-end: 0; font-size: 10px; padding: 0 4px; border-radius: 8px; background: var(--theme-accent); color: var(--theme-on-accent); }
+.sidenav-alert-count { position: absolute; top: 0; inset-inline-end: 0; font-size: 10px; padding: 0 4px; border-radius: 8px; background: var(--semantic-info); color: var(--surface-1); }
 .sidenav-account { position: relative; }
 .sidenav-account summary { list-style: none; cursor: pointer; }
 .sidenav-account-menu { position: absolute; inset-inline-start: 52px; bottom: 0; width: 220px; padding: 8px; z-index: 70; background: var(--surface-1); border: 1px solid var(--border-default); border-radius: 12px; }

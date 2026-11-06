@@ -10,7 +10,7 @@ import { formatDurationMinutes } from '@/lib/dateConvert';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { batteryColor, COLOR } from '@/lib/colors';
 
-import { sessionAveragePowerW, batteryFriendlyScore, durationMinutes, getChargerCategory, type ChargingAnomaly } from '@/lib/chargingAggregation';
+import { sessionDisplayPowerW, isEstimatedChargingCost, batteryFriendlyScore, durationMinutes, getChargerCategory, type ChargingAnomaly } from '@/lib/chargingAggregation';
 import { Icons } from '@/lib/icons';
 import type { ChargingSession } from '@/api/types';
 import { distanceAddedM } from './charging-curve/helpers';
@@ -54,6 +54,8 @@ export function ChargingEvidenceTable({
   const columns = useMemo<Column<ChargingSession>[]>(() => {
     const chargerLabels: Record<string, string> = {
       home: t('charging.chargerTypes.home', 'Home / AC'),
+      ac: t('charging.chargerTypes.ac', 'AC'),
+      unknown: t('charging.chargerTypes.unknown', 'Unknown'),
       supercharger: t('charging.chargerTypes.supercharger', 'Supercharger'),
       dc: t('charging.chargerTypes.dc', 'DC fast'),
     };
@@ -77,10 +79,10 @@ export function ChargingEvidenceTable({
         defaultWidth: 185, minWidth: 155,
         render: (s) => (
           <div className="flex min-w-0 items-center gap-2">
-            <Link to={`/charging/${s.id}`} className="rounded font-medium text-[var(--text-primary)] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400">
+            <Link to={`/charging/${s.id}`} className="rounded font-medium text-[var(--text-primary)] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-theme-accent">
               {formatDateTime(s.started_at, { tz: timezone })}
             </Link>
-            {s.live && <Badge variant="info" size="sm">{t('charging.preview.active', 'Active')}</Badge>}
+            {s.live && <Badge variant="info" size="sm">{t('charging.sessionCharging', 'Charging')}</Badge>}
             {anomalies.has(s.id) && (
               <Tooltip content={anomalies.get(s.id)?.message}>
                 <Icons.warning className="h-4 w-4 shrink-0 text-amber-300" role="img" aria-label={anomalies.get(s.id)?.message} />
@@ -98,8 +100,8 @@ export function ChargingEvidenceTable({
         key: 'charger', header: t('charging.preview.charger', 'Charger'),
         defaultWidth: 135, minWidth: 100,
         render: (s) => {
-          const category = getChargerCategory(s.charger_type);
-          const label = chargerLabels[category] ?? s.charger_type ?? t('charging.chargerTypes.unknown', 'Charger');
+          const category = getChargerCategory(s);
+          const label = chargerLabels[category];
           return <Badge variant={category === 'supercharger' ? 'danger' : category === 'dc' ? 'warning' : 'neutral'} size="sm">{label}</Badge>;
         },
       },
@@ -114,9 +116,13 @@ export function ChargingEvidenceTable({
         render: (s) => formatEnergy(s.total_energy_added_wh),
       },
       {
-        key: 'power', header: t('charging.grid.averagePower', 'Average power'), sortable: true,
+        key: 'power', header: t('charging.sessionPower', 'Power'), sortable: true,
         defaultWidth: 130, minWidth: 100, align: 'right',
-        render: (s) => formatPower(sessionAveragePowerW(s)),
+        render: (s) => sessionDisplayPowerW(s) == null ? '\u2014' : (
+          <Tooltip content={s.live ? t('charging.currentPower', 'Current power') : t('charging.grid.averagePower', 'Average power')}>
+            <span>{formatPower(sessionDisplayPowerW(s))}</span>
+          </Tooltip>
+        ),
       },
       {
         key: 'peakPower', header: t('charging.preview.peakPower', 'Peak power'),
@@ -141,7 +147,9 @@ export function ChargingEvidenceTable({
       {
         key: 'cost', header: t('charging.totalCost', 'Cost'), sortable: true,
         defaultWidth: 100, minWidth: 80, align: 'right', groupStart: true,
-        render: (s) => s.cost_decimal == null ? '—' : s.cost_decimal === 0
+        render: (s) => s.cost_decimal == null ? '—' : isEstimatedChargingCost(s)
+          ? t('charging.estimatedCostValue', '{{cost}} (estimated)', { cost: formatCurrency(s.cost_decimal) })
+          : s.cost_decimal === 0
           ? <Badge variant="success" size="sm">{t('charging.free', 'Free')}</Badge>
           : formatCurrency(s.cost_decimal),
       },

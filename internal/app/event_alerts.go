@@ -127,7 +127,7 @@ func (o *eventAlertObserver) fire(ctx context.Context, kind, subject string, veh
 		o.deliver(ctx, componentTransitionEvent{
 			Component: component, EventType: eventType, Severity: rule.Severity,
 			Title: alertmsg.RenderTitle(rule, renderCtx), Message: alertmsg.RenderBody(rule, renderCtx),
-			AlertID: rule.ID, ChannelIDs: rule.ChannelIDs, SuppressTransportTitle: !rule.IncludeTitle,
+			AlertID: rule.ID, VehicleID: vehicleID, ChannelIDs: rule.ChannelIDs, SuppressTransportTitle: !rule.IncludeTitle,
 		})
 	}
 }

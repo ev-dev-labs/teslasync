@@ -61,7 +61,7 @@ import { ChargingOverviewStats } from '../components/stat-modernization';
 import {
   computeChargingPeriodStats, priorPeriod, detectChargingAnomalies,
   detectNotableSessions, dailyChargingTrend, getChargerCategory,
-  durationMinutes, avgPowerW, sessionAveragePowerW, blendedRecordedCostPerKwh, localDayKey,
+  durationMinutes, avgPowerW, sessionAveragePowerW, blendedRecordedCostPerKwh, localDayKey, isEstimatedChargingCost,
   type ChargingTrendMetric, type ChargingPeriodStats, type ChargingAnomaly,
 } from '@/lib/chargingAggregation';
 import {
@@ -221,15 +221,15 @@ export default function ChargingListPage() {
   }, [anomalies]);
   const notable = useMemo(() => detectNotableSessions(dateFilteredSessions), [dateFilteredSessions]);
   const homeSessions = useMemo(
-    () => dateFilteredSessions.filter((s) => getChargerCategory(s.charger_type) === 'home'),
+    () => dateFilteredSessions.filter((s) => getChargerCategory(s) === 'home'),
     [dateFilteredSessions],
   );
   const scSessions = useMemo(
-    () => dateFilteredSessions.filter((s) => getChargerCategory(s.charger_type) === 'supercharger'),
+    () => dateFilteredSessions.filter((s) => getChargerCategory(s) === 'supercharger'),
     [dateFilteredSessions],
   );
   const dcSessions = useMemo(
-    () => dateFilteredSessions.filter((s) => getChargerCategory(s.charger_type) === 'dc'),
+    () => dateFilteredSessions.filter((s) => getChargerCategory(s) === 'dc'),
     [dateFilteredSessions],
   );
   const freeSessions = useMemo(
@@ -275,7 +275,7 @@ export default function ChargingListPage() {
           // charger:home | charger:supercharger | charger:dc
           charger: (sess, token) => {
             const want = token.value.trim().toLowerCase();
-            const got = getChargerCategory(sess.charger_type);
+            const got = getChargerCategory(sess);
             if (want === 'sc') return got === 'supercharger';
             return got === want;
           },
@@ -1506,7 +1506,9 @@ export default function ChargingListPage() {
                     key: 'cost',
                     label: t('charging.totalCost', 'Cost'),
                     value: previewSession.cost_decimal != null
-                      ? formatCurrency(previewSession.cost_decimal)
+                      ? isEstimatedChargingCost(previewSession)
+                        ? t('charging.estimatedCostValue', '{{cost}} (estimated)', { cost: formatCurrency(previewSession.cost_decimal) })
+                        : formatCurrency(previewSession.cost_decimal)
                       : '—',
                   },
                   {

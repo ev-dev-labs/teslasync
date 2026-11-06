@@ -40,14 +40,14 @@ const statusConfig: Record<string, { icon: typeof CheckCircle; color: string }> 
   partial: { icon: CheckCircle, color: 'text-amber-300' },
   failed: { icon: XCircle, color: 'text-rose-300' },
   skipped: { icon: SkipForward, color: 'text-[var(--text-muted)]' },
-  test: { icon: Zap, color: 'text-cyan-300' },
+  test: { icon: Zap, color: 'text-status-info' },
   undo: { icon: Clock, color: 'text-purple-300' },
-  running: { icon: Activity, color: 'text-indigo-300' },
+  running: { icon: Activity, color: 'text-status-update' },
   cancelled: { icon: XCircle, color: 'text-[var(--text-muted)]' },
 };
 
 const liveTypeMap: Record<string, { icon: typeof CheckCircle; color: string }> = {
-  'automation.triggered': { icon: Zap, color: 'text-cyan-300' },
+  'automation.triggered': { icon: Zap, color: 'text-status-info' },
   'automation.succeeded': { icon: CheckCircle, color: 'text-emerald-300' },
   'automation.failed': { icon: XCircle, color: 'text-rose-300' },
   'automation.skipped': { icon: SkipForward, color: 'text-[var(--text-muted)]' },

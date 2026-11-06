@@ -93,6 +93,7 @@ type componentTransitionEvent struct {
 	Title                  string
 	Message                string
 	AlertID                int64
+	VehicleID              int64
 	ChannelIDs             []int64
 	SuppressTransportTitle bool
 }
@@ -377,7 +378,7 @@ func dispatchComponentNotification(
 	triggerID := notification.NewTriggerID()
 	if _, err := notification.RecordTrigger(ctx, channels, &notification.Request{
 		Title: evt.Title, Message: evt.Message, Severity: evt.Severity,
-		TriggerID: triggerID, EventType: evt.EventType, AlertID: evt.AlertID,
+		TriggerID: triggerID, EventType: evt.EventType, AlertID: evt.AlertID, VehicleID: evt.VehicleID,
 	}); err != nil {
 		log.Error().Err(err).Str("trace_id", oteltrace.SpanFromContext(ctx).SpanContext().TraceID().String()).
 			Str("event_type", evt.EventType).Msg("component health notification: event persistence failed")
@@ -413,6 +414,7 @@ func dispatchComponentNotification(
 			EventType:              evt.EventType,
 			SuppressTransportTitle: evt.SuppressTransportTitle,
 			AlertID:                evt.AlertID,
+			VehicleID:              evt.VehicleID,
 		}
 
 		started := time.Now()
@@ -436,6 +438,7 @@ func dispatchComponentNotification(
 				TriggerID: &triggerID,
 				EventType: &evt.EventType,
 				AlertID:   eventAlertID(evt.AlertID),
+				VehicleID: eventAlertID(evt.VehicleID),
 			}); logErr != nil {
 				log.Warn().Err(logErr).Int64("channel_id", ch.ID).Msg("component health notification: failed to persist failure log")
 			}
@@ -458,6 +461,7 @@ func dispatchComponentNotification(
 				TriggerID: &triggerID,
 				EventType: &evt.EventType,
 				AlertID:   eventAlertID(evt.AlertID),
+				VehicleID: eventAlertID(evt.VehicleID),
 			}); logErr != nil {
 				log.Warn().Err(logErr).Int64("channel_id", ch.ID).Msg("component health notification: failed to persist success log")
 			}

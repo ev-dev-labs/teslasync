@@ -29,12 +29,12 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
         <GlassPanel className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="section-title flex items-center gap-2">
-              <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />{' '}
+              <Route className="h-4 w-4 text-status-info" aria-hidden="true" />{' '}
               {t('common.recentDrives', 'Recent drives')}
             </h3>
             <Link
               to="/drives"
-              className="text-xs text-[var(--text-muted)] hover:text-cyan-300 transition-colors flex items-center gap-1"
+              className="text-xs text-[var(--text-muted)] hover:text-theme-accent transition-colors flex items-center gap-1"
             >
               {t('common.viewAll', 'View all')} <ChevronRight className="h-3 w-3" aria-hidden="true" />
             </Link>
@@ -51,7 +51,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                     <Route className="h-3.5 w-3.5" aria-hidden="true" />
                   </IconBox>
                   <div className="flex-1 text-sm">
-                    <p className="text-[var(--text-primary)] font-medium group-hover:text-cyan-300 transition-colors">
+                    <p className="text-[var(--text-primary)] font-medium group-hover:text-theme-accent transition-colors">
                       <AnimatedNumber
                         value={convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance)}
                         decimals={displayPrecision}

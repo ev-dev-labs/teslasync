@@ -32,7 +32,7 @@ export function BatteryPassportUsageProfile({
           )} description={t(
             'batteryPassport.usage.subtitle',
             'Neutral descriptions of server rollups used by the certificate; no causal attribution or charging prescription.',
-          )} actions={<Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          )} actions={<Activity className="h-4 w-4 text-theme-accent" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <MetricGrid>
             <MetricCard

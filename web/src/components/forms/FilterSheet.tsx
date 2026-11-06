@@ -103,7 +103,7 @@ export function FilterSheet({
             aria-hidden="true"
             className={cn(
               'ml-0.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1',
-              'bg-cyan-500/20 text-2xs font-semibold tabular-nums text-cyan-300',
+              'bg-theme-accent/20 text-2xs font-semibold tabular-nums text-theme-accent',
             )}
           >
             {activeCount}

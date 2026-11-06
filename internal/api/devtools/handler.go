@@ -23,6 +23,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	observabilitydb "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -57,6 +58,9 @@ type DevToolsHandler struct {
 	vehicleRepo  *vehicledb.VehicleRepo
 	redisCache   *signal.RedisSignalCache
 	signalStore  *signal.Store
+	dbStatsRepo  interface {
+		Stats(context.Context) (*observabilitydb.DatabaseStats, error)
+	}
 }
 
 // DevToolsOption is a functional option for configuring DevToolsHandler.
@@ -64,7 +68,13 @@ type DevToolsOption func(*DevToolsHandler)
 
 // WithDB adds a database client to the handler.
 func WithDB(db *database.DB) DevToolsOption {
-	return func(h *DevToolsHandler) { h.db = db }
+	return func(h *DevToolsHandler) {
+		h.db = db
+		h.dbStatsRepo = nil
+		if repo := observabilitydb.NewDatabaseStatsRepo(db); repo != nil {
+			h.dbStatsRepo = repo
+		}
+	}
 }
 
 // WithMQTTClient adds an MQTT client to the handler.

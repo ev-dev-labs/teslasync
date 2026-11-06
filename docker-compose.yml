@@ -294,6 +294,8 @@ services:
       - TESLASYNC_VAPID_PRIVATE_KEY=${TESLASYNC_VAPID_PRIVATE_KEY:-}
       - TESLASYNC_VAPID_SUBJECT=${TESLASYNC_VAPID_SUBJECT:-}
     depends_on:
+      teslasync-api:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       mosquitto:
@@ -491,6 +493,8 @@ services:
       - PYROSCOPE_SERVER_ADDRESS=${PYROSCOPE_SERVER_ADDRESS:-http://pyroscope:4040}
       - PYROSCOPE_UPLOAD_RATE=${PYROSCOPE_UPLOAD_RATE:-15s}
     depends_on:
+      teslasync-api:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       mosquitto:
@@ -550,6 +554,8 @@ services:
     volumes:
       - ${COMMAND_PROXY_TRUST_DIR:-./certs/command-proxy-trust}:/etc/teslasync/command-proxy:ro
     depends_on:
+      teslasync-api:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       mosquitto:

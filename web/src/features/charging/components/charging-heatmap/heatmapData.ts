@@ -1,5 +1,6 @@
 import type { ChargingSession } from '@/api/types';
-import { chartTokens } from '@/lib/tokens';
+import { zonedDateParts } from '@/lib/dateFormat';
+import { createHeatmapScale, HEATMAP_LEVELS, heatmapColor } from '@/lib/heatmap';
 
 /**
  * Pure aggregation helpers for the Charging Patterns page. Kept free of React
@@ -21,7 +22,7 @@ export interface HeatCell {
 export interface HeatmapModel {
   /** 7 rows (Sun..Sat) × 24 cols (0..23). */
   grid: HeatCell[][];
-  /** Highest single-slot session count (drives the color scale). */
+  /** Highest single-slot session count. */
   maxCount: number;
   /** Weekday index (0..6) of the busiest slot. */
   favDay: number;
@@ -36,7 +37,7 @@ function emptyGrid(): HeatCell[][] {
 }
 
 /** Build a 7×24 weekday/hour charging-density grid from raw sessions. */
-export function buildGrid(sessions: ChargingSession[]): HeatmapModel {
+export function buildGrid(sessions: ChargingSession[], timezone?: string): HeatmapModel {
   const grid = emptyGrid();
   let maxCount = 0;
   let favDay = 0;
@@ -45,8 +46,10 @@ export function buildGrid(sessions: ChargingSession[]): HeatmapModel {
   for (const s of sessions ?? []) {
     const d = new Date(s.started_at);
     if (Number.isNaN(d.getTime())) continue;
-    const day = d.getDay();
-    const hour = d.getHours();
+    const parts = timezone ? zonedDateParts(d, timezone) : null;
+    if (timezone && !parts) continue;
+    const day = parts?.weekday ?? d.getDay();
+    const hour = parts?.hour ?? d.getHours();
     const cell = grid[day][hour];
     cell.count += 1;
     cell.totalEnergyWh += s.total_energy_added_wh ?? 0;
@@ -61,24 +64,14 @@ export function buildGrid(sessions: ChargingSession[]): HeatmapModel {
 }
 
 /** Legend swatches (low → high), aligned with the {@link heatColor} scale. */
-export const HEAT_LEGEND: readonly string[] = [4, 15, 40, 55, 75].map(
-  (strength) => `color-mix(in srgb, ${chartTokens.series[0]} ${strength}%, transparent)`,
-);
+export const HEAT_LEGEND: readonly string[] = HEATMAP_LEVELS.map(heatmapColor);
 
 /** Data-driven density fill; unknown inputs stay distinct from measured zero. */
 export function heatColor(
   count: number | null | undefined,
-  max: number | null | undefined,
+  activeCounts: readonly number[],
 ): string {
-  if (count == null || max == null || !Number.isFinite(count) || !Number.isFinite(max)) {
-    return 'var(--surface-2)';
-  }
-  if (count === 0 || max === 0) return HEAT_LEGEND[0];
-  const ratio = count / max;
-  if (ratio < 0.25) return HEAT_LEGEND[1];
-  if (ratio < 0.5) return HEAT_LEGEND[2];
-  if (ratio < 0.75) return HEAT_LEGEND[3];
-  return HEAT_LEGEND[4];
+  return heatmapColor(createHeatmapScale(activeCounts)(count));
 }
 
 /** A named charging location with its session count. */

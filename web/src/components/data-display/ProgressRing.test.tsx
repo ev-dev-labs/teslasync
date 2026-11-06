@@ -78,7 +78,7 @@ describe('ProgressRing — structure', () => {
     expect(arc).not.toBeNull();
     expect(track).not.toBeNull();
     // The arc carries the progress colour; the track is the neutral rail.
-    expect(arc?.getAttribute('stroke')).toBe('var(--semantic-info)');
+    expect(arc?.getAttribute('stroke')).toBe('var(--theme-primary)');
     expect(track?.getAttribute('stroke')).toBe('currentColor');
   });
 

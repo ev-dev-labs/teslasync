@@ -27,10 +27,7 @@ const EMPTY_LABEL = '—';
 // Adapt existing FSM hue classes, not state identities or domain thresholds.
 const restrainedDot = [
   '[&.bg-green-400]:bg-[var(--semantic-success)]',
-  '[&.bg-blue-500]:bg-[var(--semantic-info)]',
   '[&.bg-yellow-400]:bg-[var(--semantic-warning)]',
-  '[&.bg-cyan-500]:bg-[var(--semantic-info)]',
-  '[&.bg-indigo-500]:bg-[var(--semantic-info)]',
   '[&.bg-purple-500]:bg-[var(--semantic-purple)]',
   '[&.bg-red-400]:bg-[var(--semantic-danger)]',
   '[&.bg-gray-400]:bg-[var(--text-secondary)]',

@@ -680,7 +680,7 @@ describe('ChargingDetailPage — populated DC session', () => {
 
     expect(cardValue(kpiRegion(), 'Per kWh')).toBe('0.49 CAD/kWh');
     expect(within(kpiRegion()).queryByText('from settings')).toBeNull();
-    expect(cardValue(kpiRegion(), 'Est. Cost')).toBe('$6.00');
+    expect(cardValue(kpiRegion(), 'Est. Cost')).toBe('$6.00 (estimated)');
     fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
     const details = screen.getByRole('dialog', { name: 'Key metrics details' });
     expect(within(details).getByText('at $0.12/kWh')).toBeInTheDocument();
@@ -741,7 +741,7 @@ describe('ChargingDetailPage — populated DC session', () => {
   it('renders session info and both timestamp slots', () => {
     renderPage();
 
-    expect(kvValue('Charger Type')).toBe('DC');
+    expect(kvValue('Charger Type')).toBe('DC Fast');
     expect(kvValue('Vehicle')).toBe('My Model 3');
     expect(screen.getByText('Started')).toBeInTheDocument();
     // A completed session has a real Ended timestamp, not the placeholder.
@@ -844,7 +844,7 @@ describe('ChargingDetailPage — AC session without telemetry', () => {
     // No telemetry → the charge curve is synthesized and tagged estimated.
     expect(screen.getByText('(estimated)')).toBeInTheDocument();
     // cost_decimal null but energy present → Est. Cost via formatEnergyCost.
-    expect(cardValue(kpi, 'Est. Cost')).toBe('$6.00'); // 50 kWh × $0.12
+    expect(cardValue(kpi, 'Est. Cost')).toBe('$6.00 (estimated)'); // 50 kWh × $0.12
     fireEvent.click(within(kpi).getByRole('button', { name: 'Review details' }));
     const details = screen.getByRole('dialog', { name: 'Key metrics details' });
     expect(within(details).getByText('at $0.12/kWh')).toBeInTheDocument();
@@ -1268,7 +1268,7 @@ describe('ChargingDetailPage — share dialog wiring', () => {
     });
 
     it('keeps the explicit AC classification and the complete inferred model separate from measured telemetry', () => {
-      mockSession.mockReturnValue(makeQuery({ data: makeSession({ charger_type: 'AC', peak_power_w: 11_000 }) }));
+      mockSession.mockReturnValue(makeQuery({ data: makeSession({ charger_type: 'AC', peak_power_w: 11_000, avg_power_w: 7000 }) }));
       mockTelemetry.mockReturnValue(makeQuery({ data: [] }));
       renderPage();
 

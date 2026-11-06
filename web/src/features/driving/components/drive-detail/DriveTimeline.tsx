@@ -68,7 +68,7 @@ export function DriveTimeline({ drive }: DriveTimelineProps) {
           aria-hidden="true"
           className="h-3 rounded-full overflow-hidden bg-[var(--surface-2)]"
         >
-          <div className="h-full w-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-400" />
+          <div className="h-full w-full rounded-full bg-[var(--theme-primary)]" />
         </div>
       </GlassPanel>
     </FadeIn>

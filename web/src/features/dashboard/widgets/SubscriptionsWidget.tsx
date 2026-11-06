@@ -223,7 +223,7 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
         <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
           {parsed.length > 0 ? (
             <>
-              <CreditCard className="h-4 w-4 text-sky-400" />
+              <CreditCard className="h-4 w-4 text-theme-accent" />
               <WidgetBigNumber
                 value={fmtInt(activeCount)}
                 label={t('widget.subscriptions.activeCount', 'active')}
@@ -255,7 +255,7 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
   // ── Standard layout (2×4): full subscription list ──
   return (
     <WidgetShell
-      icon={<CreditCard className="h-3.5 w-3.5 text-sky-400" />}
+      icon={<CreditCard className="h-3.5 w-3.5 text-theme-accent" />}
       {...shellProps}
       footer={parsed.length > 0 ? (
         <div className="flex min-w-0 items-center justify-between gap-2">

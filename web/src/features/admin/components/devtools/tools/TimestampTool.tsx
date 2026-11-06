@@ -47,7 +47,7 @@ function parseIso(raw: string): Date | null {
 function ConversionRow({ label, value }: { label: string; value: string }) {
   return (
     <p className="text-xs text-[var(--text-secondary)]">
-      {label}: <span className="font-mono text-cyan-300">{value}</span>
+      {label}: <span className="font-mono text-theme-accent">{value}</span>
     </p>
   )
 }

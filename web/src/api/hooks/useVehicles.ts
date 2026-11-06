@@ -130,6 +130,8 @@ export interface RawStateResponse {
   vehicle?: RawStateVehicle | null
   position?: RawStatePosition | null
   is_charging?: boolean
+  charge_limit_soc_pct?: number | null
+  charge_amps_a?: number | null
   charger_power?: number
   charge_rate?: number
   time_to_full_charge?: number
@@ -166,12 +168,16 @@ const VEHICLE_STATE_FIELDS = new Set<VerifiedVehicleStateField>([
   'outside_temp',
   'is_climate_on',
   'is_charging',
+  'charge_limit_soc_pct',
+  'charge_amps_a',
   'charger_power',
   'charge_rate',
   'time_to_full_charge',
   'is_locked',
   'sentry_mode',
   'software_version',
+  'self_driving_software_version',
+  'semi_trailer_latched',
   'accessory_rail',
   'power_transfer_status',
   'automatic_emergency_braking_state',
@@ -264,6 +270,8 @@ function mapVehicleStateResponse(
     outside_temp: p?.outside_temp ?? null,
     is_climate_on: p?.is_climate_on ?? null,
     is_charging: res.is_charging ?? null,
+    charge_limit_soc_pct: res.charge_limit_soc_pct ?? null,
+    charge_amps_a: res.charge_amps_a ?? null,
     charger_power: res.charger_power ?? null,
     charge_rate: res.charge_rate ?? null,
     time_to_full_charge: res.time_to_full_charge ?? null,

@@ -92,6 +92,9 @@ export default function DBHealthPage() {
   };
 
   const tables: TableInfo[] = dbStats?.tables ?? [];
+  const rowsLabel = dbStats?.rowCountsEstimated
+    ? t('dbHealth.estimatedRows', 'Estimated rows')
+    : t('dbHealth.rows', 'Rows');
 
   const sortedTables = useMemo(() => {
     const sorted = [...tables];
@@ -184,7 +187,7 @@ export default function DBHealthPage() {
         filterValueLabel: (_value, tbl) => tbl.rowCount == null ? '—' : fmtInt(tbl.rowCount),
         align: 'right',
         groupStart: true,
-        header: t('dbHealth.table.rows', 'Rows'),
+        header: rowsLabel,
         render: (tbl: TableInfo) => (
           <Text mono color="secondary">{tbl.rowCount != null ? fmtInt(tbl.rowCount) : '—'}</Text>
         ),
@@ -224,7 +227,7 @@ export default function DBHealthPage() {
         className: 'text-right',
       },
     ],
-    [t, fmtInt, tableSizeLabel],
+    [t, fmtInt, tableSizeLabel, rowsLabel],
   );
 
   const mobilePresentation: MobileDataTablePresentation<TableInfo> = useMemo(() => ({
@@ -284,6 +287,11 @@ export default function DBHealthPage() {
           statsLoading={statsLoading} migrationLoading={migrationLoading} poolLoading={poolLoading}
           sizeBytes={dbSizeBytes} totalRows={totalRows} largeTables={largeTables}
           migrationVersion={migrationVersion} migrationDirty={migrationDirty} poolUsage={poolUsage} />
+        {dbStats?.rowCountsEstimated && (
+          <Caption className="mt-2 block">
+            {t('dbHealth.rowEstimatesNote', 'Row counts are estimates from database statistics, including hypertable chunks. They may lag recent writes; size values are measured bytes.')}
+          </Caption>
+        )}
       </FadeIn>
 
       {/* 2 — Primary bento: table row-count chart + migration status */}
@@ -299,20 +307,20 @@ export default function DBHealthPage() {
             {statsError ? (
               <GlassPanel className="p-4 sm:p-5">
                 <PanelTitle className="mb-3">
-                  {t('dbHealth.rows', 'Rows')}
+                  {rowsLabel}
                 </PanelTitle>
                 <QueryError error={statsError} onRetry={() => refetchStats()} />
               </GlassPanel>
             ) : (
               <ChartContainer
-                title={t('dbHealth.rows', 'Rows')}
+                title={rowsLabel}
                 subtitle={rowChartScope}
-                ariaLabel={t('dbHealth.rows', 'Rows')}
+                ariaLabel={rowsLabel}
                 ariaDescription={rowChartScope}
                 data={chartData.map((r) => ({ name: r.name, rows: r.rows }))}
                 dataColumns={[
                   { key: 'name', label: t('dbHealth.col.table', 'Table') },
-                  { key: 'rows', label: t('dbHealth.col.rows', 'Rows'), kind: 'count' },
+                  { key: 'rows', label: rowsLabel, kind: 'count' },
                 ]}
                 loading={statsLoading}
                 empty={!statsLoading && chartData.length === 0}
@@ -335,7 +343,7 @@ export default function DBHealthPage() {
                     <Tooltip content={<ChartTooltip />} />
                     <Bar
                       dataKey="rows"
-                      name={t('dbHealth.rows', 'Rows')}
+                      name={rowsLabel}
                       fill={CHART_COLORS[0]}
                       radius={[0, 4, 4, 0]}
                       barSize={16}

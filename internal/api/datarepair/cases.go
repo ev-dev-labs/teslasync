@@ -3,6 +3,8 @@ package datarepair
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -75,6 +77,34 @@ type repairCaseDetailResponse struct {
 	Comments   []systemmodel.RepairCaseComment `json:"comments"`
 	Quarantine *systemmodel.RepairQuarantine   `json:"quarantine"`
 }
+
+type caseCorrectionRequest struct {
+	ExpectedUpdatedAt  *string                     `json:"expected_updated_at"`
+	ExpectedSourceHash *string                     `json:"expected_source_hash,omitempty"`
+	Field              string                      `json:"field"`
+	Mode               datarepairdb.CorrectionMode `json:"mode"`
+	Value              *float64                    `json:"value"`
+	Target             string                      `json:"target,omitempty"`
+	EndedAt            string                      `json:"ended_at,omitempty"`
+}
+
+type caseCorrectionPreview struct {
+	CaseID        int64                           `json:"case_id"`
+	CaseUpdatedAt time.Time                       `json:"case_updated_at"`
+	Kind          systemmodel.RepairCaseKind      `json:"kind"`
+	SessionID     int64                           `json:"session_id"`
+	StartedAt     time.Time                       `json:"started_at"`
+	EndedAt       *time.Time                      `json:"ended_at"`
+	SourceHash    string                          `json:"source_hash"`
+	Changes       []datarepairdb.CorrectionChange `json:"changes"`
+	Other         *datarepairdb.CorrectionWindow  `json:"other,omitempty"`
+}
+
+var (
+	errCorrectionConflict = errors.New("data-repair case or source changed")
+	errCorrectionNotFound = errors.New("data-repair case not found")
+	errCorrectionInvalid  = errors.New("invalid correction")
+)
 
 type transitionCaseRequest struct {
 	Status            *systemmodel.RepairCaseStatus `json:"status"`
@@ -166,11 +196,15 @@ func parseCaseListFilter(r *http.Request) (systemmodel.RepairCaseListFilter, int
 		filter.VehicleID = &vehicleID
 	}
 	if query.Has("status") {
-		status := systemmodel.RepairCaseStatus(query.Get("status"))
-		if !status.IsValid() {
-			return filter, 0, errors.New("status is invalid")
+		if query.Get("status") == "active" {
+			filter.ActiveOnly = true
+		} else {
+			status := systemmodel.RepairCaseStatus(query.Get("status"))
+			if !status.IsValid() {
+				return filter, 0, errors.New("status is invalid")
+			}
+			filter.Status = &status
 		}
-		filter.Status = &status
 	}
 	if query.Has("kind") {
 		kind := systemmodel.RepairCaseKind(query.Get("kind"))
@@ -484,6 +518,282 @@ func (h *DataRepairHandler) GetCase(w http.ResponseWriter, r *http.Request) {
 		Comments:   comments,
 		Quarantine: quarantine,
 	})
+}
+
+func validateCaseCorrection(req caseCorrectionRequest, applying bool) (time.Time, error) {
+	if req.ExpectedUpdatedAt == nil || strings.TrimSpace(*req.ExpectedUpdatedAt) == "" {
+		return time.Time{}, errors.New("expected_updated_at is required")
+	}
+	expected, err := time.Parse(time.RFC3339, strings.TrimSpace(*req.ExpectedUpdatedAt))
+	if err != nil {
+		return time.Time{}, errors.New("expected_updated_at must be an RFC3339 timestamp")
+	}
+	if applying {
+		if req.ExpectedSourceHash == nil || len(*req.ExpectedSourceHash) != sha256.Size*2 {
+			return time.Time{}, errors.New("the reviewed source hash is required")
+		}
+		if _, err := hex.DecodeString(*req.ExpectedSourceHash); err != nil {
+			return time.Time{}, errors.New("the reviewed source hash is invalid")
+		}
+	}
+	return expected.UTC(), nil
+}
+
+func (h *DataRepairHandler) prepareCaseCorrection(
+	ctx context.Context,
+	tx database.DBTX,
+	repairCase *systemmodel.RepairCase,
+	expected time.Time,
+	req caseCorrectionRequest,
+	lock bool,
+) (caseCorrectionPreview, datarepairdb.CorrectionPlan, error) {
+	var preview caseCorrectionPreview
+	var plan datarepairdb.CorrectionPlan
+	if repairCase == nil {
+		return preview, plan, errCorrectionNotFound
+	}
+	if repairCase.Status != systemmodel.RepairCaseStatusOpen &&
+		repairCase.Status != systemmodel.RepairCaseStatusInReview {
+		return preview, plan, fmt.Errorf("%w: finding is no longer open", errCorrectionConflict)
+	}
+	if !repairCase.UpdatedAt.Equal(expected) {
+		return preview, plan, fmt.Errorf("%w: case was updated", errCorrectionConflict)
+	}
+	source, err := h.correctionRepo.GetSource(
+		ctx, tx, datarepairdb.AnomalyKind(repairCase.Kind), repairCase.SessionID, lock,
+	)
+	if err != nil {
+		return preview, plan, fmt.Errorf("load correction source: %w", err)
+	}
+	if source == nil || source.ID != repairCase.SessionID ||
+		source.VehicleID != repairCase.VehicleID ||
+		!source.StartedAt.Equal(repairCase.EvidenceStartedAt) ||
+		!sameOptionalTime(source.EndedAt, repairCase.EvidenceStoredEndedAt) {
+		return preview, plan, fmt.Errorf("%w: session no longer matches the case evidence", errCorrectionConflict)
+	}
+	choice := datarepairdb.CorrectionChoice{Field: req.Field, Mode: req.Mode, Value: req.Value}
+	var related *datarepairdb.CorrectionSource
+	if req.Mode == datarepairdb.CorrectionBoundaryMode {
+		if req.Field != "ended_at" || req.Value != nil || req.EndedAt == "" {
+			return preview, plan, fmt.Errorf("%w: an explicit end time and session are required", errCorrectionInvalid)
+		}
+		endedAt, parseErr := time.Parse(time.RFC3339, req.EndedAt)
+		if parseErr != nil {
+			return preview, plan, fmt.Errorf("%w: ended_at must be an RFC3339 timestamp", errCorrectionInvalid)
+		}
+		if repairCase.RelatedSessionID != nil {
+			relatedKind := datarepairdb.AnomalyKind(repairCase.Kind)
+			if repairCase.Rule == datarepairdb.RuleCrossKindOverlap {
+				relatedKind = datarepairdb.AnomalyKindCharging
+			}
+			related, err = h.correctionRepo.GetSource(ctx, tx, relatedKind, *repairCase.RelatedSessionID, lock)
+			if err != nil {
+				return preview, plan, fmt.Errorf("load related correction source: %w", err)
+			}
+			if related == nil || related.ID != *repairCase.RelatedSessionID ||
+				(related.Kind == source.Kind && related.ID == source.ID) {
+				return preview, plan, fmt.Errorf("%w: related session changed", errCorrectionConflict)
+			}
+		}
+		plan, err = datarepairdb.PlanBoundaryCorrection(
+			*source, related, repairCase.Rule, req.Target, endedAt.UTC(), h.now().Add(futureSkewTolerance),
+		)
+	} else {
+		if req.Target != "" || req.EndedAt != "" {
+			return preview, plan, fmt.Errorf("%w: unexpected boundary fields", errCorrectionInvalid)
+		}
+		plan, err = datarepairdb.PlanCorrection(*source, repairCase.Rule, choice)
+	}
+	if err != nil {
+		if errors.Is(err, datarepairdb.ErrCorrectionStale) {
+			return preview, plan, err
+		}
+		return preview, plan, fmt.Errorf("%w: %v", errCorrectionInvalid, err)
+	}
+	selected := source
+	if plan.Boundary != nil {
+		if req.Target == "related" {
+			selected = related
+		}
+		overlap, overlapErr := h.correctionRepo.HasBoundaryOverlap(ctx, tx, *selected, plan.Boundary.ProposedEndedAt)
+		if overlapErr != nil {
+			return preview, plan, fmt.Errorf("check correction boundary: %w", overlapErr)
+		}
+		if overlap {
+			if lock {
+				return preview, plan, fmt.Errorf("%w: proposed boundary overlaps another session", errCorrectionConflict)
+			}
+			return preview, plan, fmt.Errorf("%w: the proposed boundary overlaps another session", errCorrectionInvalid)
+		}
+	}
+	digestInput := struct {
+		CaseID        int64                          `json:"case_id"`
+		CaseUpdatedAt time.Time                      `json:"case_updated_at"`
+		Rule          string                         `json:"rule"`
+		Source        *datarepairdb.CorrectionSource `json:"source"`
+		Related       *datarepairdb.CorrectionSource `json:"related"`
+		Choice        datarepairdb.CorrectionChoice  `json:"choice"`
+		Target        string                         `json:"target"`
+		EndedAt       string                         `json:"ended_at"`
+	}{repairCase.ID, repairCase.UpdatedAt, repairCase.Rule, source, related, choice, req.Target, req.EndedAt}
+	encoded, err := json.Marshal(digestInput)
+	if err != nil {
+		return preview, plan, fmt.Errorf("encode correction snapshot: %w", err)
+	}
+	digest := sha256.Sum256(encoded)
+	hash := hex.EncodeToString(digest[:])
+	if lock && (req.ExpectedSourceHash == nil || *req.ExpectedSourceHash != hash) {
+		return preview, plan, fmt.Errorf("%w: source or reviewed change was modified", errCorrectionConflict)
+	}
+	return caseCorrectionPreview{
+		CaseID: repairCase.ID, CaseUpdatedAt: repairCase.UpdatedAt,
+		Kind: systemmodel.RepairCaseKind(selected.Kind), SessionID: selected.ID,
+		StartedAt: selected.StartedAt, EndedAt: selected.EndedAt,
+		SourceHash: hash, Changes: plan.Changes, Other: plan.Other,
+	}, plan, nil
+}
+
+func writeCorrectionError(w http.ResponseWriter, r *http.Request, caseID int64, err error) {
+	switch {
+	case errors.Is(err, errCorrectionNotFound):
+		writeCaseNotFound(w, r)
+	case errors.Is(err, errCorrectionInvalid):
+		writeCaseValidationError(w, r, err)
+	case errors.Is(err, errCorrectionConflict),
+		errors.Is(err, datarepairdb.ErrCorrectionStale),
+		errors.Is(err, datarepairdb.ErrConcurrentModification),
+		errors.Is(err, errRepairTargetChanged):
+		writeApplyCaseConflict(w, r, "The case, session or reviewed change is no longer current. Refresh and review it again.")
+	case errors.Is(err, datarepairdb.ErrNoDatabase):
+		recordHandlerError(r.Context(), err)
+		httpx.WriteError(w, http.StatusServiceUnavailable, "data-repair correction is unavailable")
+	default:
+		writeCaseOperationError(w, r, "case_correction", caseID, err)
+	}
+}
+
+// PreviewCaseCorrection calculates the exact change without writing data.
+func (h *DataRepairHandler) PreviewCaseCorrection(w http.ResponseWriter, r *http.Request) {
+	r, span := startHandlerSpan(r, "preview_case_correction")
+	defer span.End()
+	caseID, err := parseCaseID(r)
+	if err != nil {
+		writeCaseValidationError(w, r, err)
+		return
+	}
+	if !h.caseRepositoryReady(w, r) {
+		return
+	}
+	if h.correctionRepo == nil {
+		writeCaseOperationError(w, r, "preview_correction", caseID, errors.New("correction source is unavailable"))
+		return
+	}
+	var req caseCorrectionRequest
+	if err = decodeCaseRequest(w, r, &req); err != nil {
+		writeCaseValidationError(w, r, err)
+		return
+	}
+	expected, err := validateCaseCorrection(req, false)
+	if err != nil {
+		writeCaseValidationError(w, r, err)
+		return
+	}
+	repairCase, err := h.caseRepo.GetCase(r.Context(), caseID)
+	if err != nil {
+		writeCaseOperationError(w, r, "preview_correction_case", caseID, err)
+		return
+	}
+	preview, _, err := h.prepareCaseCorrection(r.Context(), nil, repairCase, expected, req, false)
+	if err != nil {
+		writeCorrectionError(w, r, caseID, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, preview)
+}
+
+// ApplyCaseCorrection locks and revalidates the case and source, then commits
+// the selected fields, audit records, and case outcome in one transaction.
+func (h *DataRepairHandler) ApplyCaseCorrection(w http.ResponseWriter, r *http.Request) {
+	r, span := startHandlerSpan(r, "apply_case_correction")
+	defer span.End()
+	caseID, err := parseCaseID(r)
+	if err != nil {
+		writeCaseValidationError(w, r, err)
+		return
+	}
+	if !h.caseRepositoryReady(w, r) {
+		return
+	}
+	if h.correctionRepo == nil {
+		writeCaseOperationError(w, r, "apply_correction", caseID, errors.New("correction source is unavailable"))
+		return
+	}
+	var req caseCorrectionRequest
+	if err = decodeCaseRequest(w, r, &req); err != nil {
+		writeCaseValidationError(w, r, err)
+		return
+	}
+	expected, err := validateCaseCorrection(req, true)
+	if err != nil {
+		writeCaseValidationError(w, r, err)
+		return
+	}
+
+	var result caseCorrectionPreview
+	err = h.withTransaction(r.Context(), func(tx database.DBTX) error {
+		repairCase, loadErr := h.caseRepo.GetCaseForUpdate(r.Context(), tx, caseID)
+		if loadErr != nil {
+			return fmt.Errorf("lock correction case: %w", loadErr)
+		}
+		preview, plan, planErr := h.prepareCaseCorrection(r.Context(), tx, repairCase, expected, req, true)
+		if planErr != nil {
+			return planErr
+		}
+		var updated bool
+		var updateErr error
+		action, entity := AuditActionUpdateDrive, auditEntityDrive
+		if plan.Boundary != nil && plan.Boundary.Kind == datarepairdb.AnomalyKindDrive {
+			updated, updateErr = h.driveRepo.UpdateRepairBoundaryIfUnchangedWithTx(
+				r.Context(), tx, plan.Boundary.ID, plan.Boundary.EndedAt,
+				plan.Boundary.ProposedEndedAt, plan.Boundary.DurationS,
+			)
+		} else if plan.Boundary != nil {
+			action, entity = AuditActionUpdateCharging, auditEntityChargingSession
+			updated, updateErr = h.chargingRepo.UpdateRepairBoundaryIfUnchangedWithTx(
+				r.Context(), tx, plan.Boundary.ID, plan.Boundary.EndedAt, plan.Boundary.ProposedEndedAt,
+			)
+		} else if repairCase.Kind == systemmodel.RepairCaseKindDrive {
+			updated, updateErr = h.driveRepo.PartialUpdateForRepairWithTx(r.Context(), tx, repairCase.SessionID, plan.Fields)
+		} else {
+			action, entity = AuditActionUpdateCharging, auditEntityChargingSession
+			updated, updateErr = h.chargingRepo.PartialUpdateForRepairWithTx(r.Context(), tx, repairCase.SessionID, plan.Fields)
+		}
+		if updateErr != nil {
+			return fmt.Errorf("apply correction fields: %w", updateErr)
+		}
+		if !updated {
+			return errRepairTargetChanged
+		}
+		changes, marshalErr := json.Marshal(plan.Changes)
+		if marshalErr != nil {
+			return fmt.Errorf("encode correction audit: %w", marshalErr)
+		}
+		detail := fmt.Sprintf("case_id=%d rule=%s changes=%s", caseID, repairCase.Rule, changes)
+		if auditErr := h.writeAudit(r, tx, action, entity, preview.SessionID, detail); auditErr != nil {
+			return fmt.Errorf("audit source correction: %w", auditErr)
+		}
+		target := &applyCaseTarget{repairCase: repairCase, transition: true}
+		if applyErr := h.applyCaseOutcome(r, tx, target, repairCase.Rule, true); applyErr != nil {
+			return applyErr
+		}
+		result = preview
+		return nil
+	})
+	if err != nil {
+		writeCorrectionError(w, r, caseID, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, result)
 }
 
 func caseTransitionAuditDetail(from, to systemmodel.RepairCaseStatus, reasonProvided, bulk bool) string {

@@ -79,7 +79,7 @@ jobs:
       # ── Linters ───────────────────────────────────────────────
       - name: Install golangci-lint
         run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b "$(go env GOPATH)/bin"
 
       # ── Environment summary ───────────────────────────────────
       - name: Environment summary
@@ -95,5 +95,5 @@ jobs:
           which typescript-language-server
           echo "=== Project ==="
           echo "Go modules: $(go list ./... | wc -l) packages"
-          echo "Frontend deps: $(ls web/node_modules | wc -l) packages"
-          echo "Migrations: $(ls migrations/*.up.sql | wc -l) migrations"
+          echo "Frontend deps: $(find web/node_modules -mindepth 1 -maxdepth 1 ! -name '.*' -printf '.' | wc -c) packages"
+          echo "Migrations: $(find migrations -mindepth 1 -maxdepth 1 -name '*.up.sql' -printf '.' | wc -c) migrations"

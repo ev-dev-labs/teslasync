@@ -122,7 +122,7 @@ export const TYPE_BADGE_COLOR: Record<string, NonNullable<BadgeProps['variant']>
 // Body cells in a 100s-of-rows table — readability wins over saturation.
 // Use toned-down 300-shades; light-mode CSS overrides invert them on white.
 export const TYPE_VALUE_COLOR: Record<string, string> = {
-  num: 'text-cyan-300', str: 'text-emerald-300', bool: 'text-amber-300', null: 'text-[var(--text-muted)]',
+  num: 'text-status-info', str: 'text-emerald-300', bool: 'text-amber-300', null: 'text-[var(--text-muted)]',
 }
 
 export const PAGE_SIZES = [25, 50, 100]
@@ -189,7 +189,7 @@ export function SignalMultiSelect({ vehicleId, selected, onChange, maxSignals }:
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {selected.map(sig => (
-            <span key={sig} className="inline-flex items-center gap-1 rounded-lg bg-neon-cyan/10 border border-neon-cyan/25 px-2 py-0.5 text-xs font-mono text-neon-cyan">
+            <span key={sig} className="inline-flex items-center gap-1 rounded-lg bg-theme-accent/10 border border-theme-accent/25 px-2 py-0.5 text-xs font-mono text-theme-accent">
               {sig}
               <button
                 type="button"
@@ -289,7 +289,7 @@ export function DateTimeRangeControls({ fromStr, toStr, onFromChange, onToChange
   const fromId = useId()
   const toId = useId()
   const activePresetHours = matchTimeRangePreset(fromStr, toStr)
-  const inputClass = "w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-mono text-[var(--text-primary)] outline-none focus:border-neon-cyan/40"
+  const inputClass = "w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-mono text-[var(--text-primary)] outline-none focus:border-theme-accent"
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
@@ -315,8 +315,8 @@ export function DateTimeRangeControls({ fromStr, toStr, onFromChange, onToChange
                 className={cn(
                   "rounded-lg border px-3 py-2 text-xs transition-colors",
                   active
-                    ? "border-neon-cyan/40 bg-neon-cyan/10 text-[var(--text-primary)]"
-                    : "border-white/[0.08] bg-white/[0.03] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-neon-cyan/30",
+                    ? "border-theme-accent/40 bg-theme-accent/10 text-[var(--text-primary)]"
+                    : "border-white/[0.08] bg-white/[0.03] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-theme-accent/30",
                 )}
               >
                 {tp.label}
@@ -354,7 +354,7 @@ export function QueryControls({ perPage, onPerPageChange, onQuery, disabled, loa
           aria-label={rowsLabel}
           value={perPage}
           onChange={e => onPerPageChange(Number(e.target.value))}
-          className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/40"
+          className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-[var(--text-primary)] outline-none focus:border-theme-accent"
         >
           {PAGE_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>

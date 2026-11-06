@@ -60,6 +60,7 @@ vi.mock('@/api/client', async () => {
 
 import { request } from '@/api/client'
 import { ThemeProvider, useTheme, modeCategoryOrder } from './ThemeProvider'
+import { ThemePicker } from './ThemePicker'
 import { themeCategories } from './themePresets'
 
 // test-setup.ts softens useTheme for bare renders; this file owns the real guard.
@@ -105,7 +106,10 @@ function mockFetchRejecting() {
 
 function mockFetchPending() {
   mockedRequest.mockReset()
-  mockedRequest.mockReturnValueOnce(new Promise(() => {}))
+  mockedRequest.mockResolvedValue({})
+  let resolve: ((settings: null) => void) | undefined
+  mockedRequest.mockReturnValueOnce(new Promise((done) => { resolve = done }))
+  return () => resolve?.(null)
 }
 
 /** Drain microtasks/macrotasks so the mount request chain (and its state
@@ -233,12 +237,12 @@ describe('initial state resolution', () => {
       for (const modeId of ['dark', 'light', 'oled']) {
         act(() => result.current.setMode(modeId))
         expect(result.current.theme.primary).toBe('#00ff41')
-        expect(result.current.theme.accent).toBe('#ff00ff')
+        expect(result.current.theme.accent).toBe('#00ff41')
         expect(localStorage.getItem('teslasync-custom-primary')).toBe('#00ff41')
         expect(localStorage.getItem('teslasync-custom-accent')).toBe('#ff00ff')
         const css = document.documentElement.style
         expect(css.getPropertyValue('--theme-primary')).toBe('#00ff41')
-        expect(css.getPropertyValue('--theme-accent')).toBe('#ff00ff')
+        expect(css.getPropertyValue('--theme-accent')).toBe('#00ff41')
         expect(css.getPropertyValue('--text-primary')).not.toBe('#ffffff')
         for (const fill of ['primary', 'accent']) {
           expect(contrastRatio(css.getPropertyValue(`--theme-on-${fill}`), css.getPropertyValue(`--theme-${fill}`))).toBeGreaterThanOrEqual(4.5)
@@ -298,6 +302,130 @@ describe('initial state resolution', () => {
 })
 
 describe('applyThemeCSS side effects', () => {
+  it('uses the selected swatch as the only rendered accent for every preset and mode', async () => {
+    const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider })
+    await flush()
+    for (const mode of ['dark', 'light']) {
+      act(() => result.current.setMode(mode))
+      for (const preset of Object.values(result.current.themes).filter((entry) => entry.id !== 'custom')) {
+        act(() => result.current.setTheme(preset.id))
+        const selected = preset.primary
+        const css = document.documentElement.style
+        expect(result.current.theme.accent).toBe(selected)
+        expect(css.getPropertyValue('--theme-primary')).toBe(selected)
+        expect(css.getPropertyValue('--theme-accent')).toBe(selected)
+        expect(css.getPropertyValue('--theme-accent-rgb')).toBe(css.getPropertyValue('--theme-primary-rgb'))
+        expect(css.getPropertyValue('--theme-on-accent')).toBe(css.getPropertyValue('--theme-on-primary'))
+        expect(['#000000', '#ffffff']).toContain(css.getPropertyValue('--theme-on-primary'))
+        expect(contrastRatio(css.getPropertyValue('--theme-on-primary'), selected)).toBeGreaterThanOrEqual(4.5)
+      }
+    }
+  })
+
+  it('retains the saved legacy custom color without painting it and keeps mid-tone text readable', async () => {
+    localStorage.setItem('teslasync-theme', 'custom')
+    localStorage.setItem('teslasync-custom-primary', '#777777')
+    localStorage.setItem('teslasync-custom-accent', '#abcdef')
+    const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider })
+    await flush()
+    for (const mode of ['dark', 'light']) {
+      act(() => result.current.setMode(mode))
+      const css = document.documentElement.style
+      expect(css.getPropertyValue('--theme-primary')).toBe('#777777')
+      expect(css.getPropertyValue('--theme-accent')).toBe('#777777')
+      expect(contrastRatio(css.getPropertyValue('--theme-on-primary'), '#777777')).toBeGreaterThanOrEqual(4.5)
+      expect(localStorage.getItem('teslasync-custom-accent')).toBe('#abcdef')
+    }
+  })
+
+  it('updates the visible custom accent without overwriting the legacy saved value', async () => {
+    localStorage.setItem('teslasync-custom-primary', '#123456')
+    localStorage.setItem('teslasync-custom-accent', '#abcdef')
+    const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider })
+    await flush()
+    act(() => result.current.setCustomColors('#fedcba'))
+    expect(result.current.theme.primary).toBe('#fedcba')
+    expect(result.current.theme.accent).toBe('#fedcba')
+    expect(localStorage.getItem('teslasync-custom-primary')).toBe('#fedcba')
+    expect(localStorage.getItem('teslasync-custom-accent')).toBe('#abcdef')
+    expect(busMock.broadcast).toHaveBeenCalledWith({
+      type: 'theme.customColors', primary: '#fedcba', accent: '#abcdef',
+    })
+    await waitFor(() => {
+      const put = mockedRequest.mock.calls.find((call) => (call[1] as RequestInit | undefined)?.method === 'PUT')
+      expect(put).toBeDefined()
+      expect(JSON.parse((put![1] as RequestInit).body as string)).toMatchObject({
+        custom_primary: '#fedcba', custom_accent: '#abcdef',
+      })
+    })
+  })
+
+  it('persists rapid custom color changes in selection order', async () => {
+    const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider })
+    await flush()
+    let persisted = '#00b4d8'
+    let finishFirst: (() => void) | undefined
+    mockedRequest.mockImplementation((_url: string, options?: RequestInit) => {
+      if (options?.method !== 'PUT') return Promise.resolve({ custom_primary: persisted })
+      const { custom_primary: color } = JSON.parse(String(options.body)) as { custom_primary: string }
+      if (color === '#111111') {
+        return new Promise<void>((resolve) => {
+          finishFirst = () => { persisted = color; resolve() }
+        })
+      }
+      persisted = color
+      return Promise.resolve({})
+    })
+
+    act(() => result.current.setCustomColors('#111111'))
+    await waitFor(() => expect(finishFirst).toBeDefined())
+    act(() => result.current.setCustomColors('#222222'))
+    await flush()
+    await act(async () => { finishFirst?.() })
+    await waitFor(() => expect(persisted).toBe('#222222'))
+    expect(result.current.theme.primary).toBe('#222222')
+  })
+
+  it('persists combined color and mode changes made in the same event', async () => {
+    const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider })
+    await flush()
+    let saved: Record<string, unknown> = {}
+    mockedRequest.mockImplementation((_url: string, options?: RequestInit) => {
+      if (options?.method === 'PUT') saved = JSON.parse(String(options.body)) as Record<string, unknown>
+      return Promise.resolve(saved)
+    })
+    act(() => {
+      result.current.setCustomColors('#123456')
+      result.current.setMode('light')
+    })
+    await waitFor(() => expect(saved).toMatchObject({
+      theme: 'custom',
+      mode: 'light',
+      custom_primary: '#123456',
+    }))
+  })
+
+  it('reports a failed save and clears the error after a later successful save', async () => {
+    const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider })
+    await flush()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    let rejectNextPut = true
+    mockedRequest.mockImplementation((_url: string, options?: RequestInit) => {
+      if (options?.method === 'PUT' && rejectNextPut) {
+        rejectNextPut = false
+        return Promise.reject(new Error('network down'))
+      }
+      return Promise.resolve({})
+    })
+
+    act(() => result.current.setCustomColors('#111111'))
+    await waitFor(() => expect(result.current.persistenceError).toBe(true))
+    expect(consoleError).toHaveBeenCalledWith('Unable to save theme preferences:', expect.any(Error))
+    act(() => result.current.setCustomColors('#222222'))
+    await waitFor(() => expect(result.current.persistenceError).toBe(false))
+    consoleError.mockRestore()
+  })
+
   it('switches to the light palette + light-mode class and away from dark', async () => {
     await renderSettled()
     fireEvent.click(screen.getByText('set-light'))
@@ -318,6 +446,14 @@ describe('applyThemeCSS side effects', () => {
 })
 
 describe('backend settings load', () => {
+  it('restores a saved custom primary even when the legacy accent is absent', async () => {
+    mockFetch({ theme: 'custom', custom_primary: '#123456' })
+    await renderSettled()
+    expect(screen.getByTestId('themeId')).toHaveTextContent('custom')
+    expect(screen.getByTestId('theme-primary')).toHaveTextContent('#123456')
+    expect(document.documentElement.style.getPropertyValue('--theme-accent')).toBe('#123456')
+  })
+
   it('adopts theme, mode, and custom colours returned by the backend', async () => {
     mockFetch({
       theme: 'royal-purple',
@@ -408,7 +544,7 @@ describe('setTheme / setMode / setCustomColors', () => {
 
     expect(screen.getByTestId('themeId')).toHaveTextContent('custom')
     expect(screen.getByTestId('theme-primary')).toHaveTextContent('#123456')
-    expect(screen.getByTestId('theme-accent')).toHaveTextContent('#abcdef')
+    expect(screen.getByTestId('theme-accent')).toHaveTextContent('#123456')
     expect(localStorage.getItem('teslasync-custom-primary')).toBe('#123456')
     expect(localStorage.getItem('teslasync-custom-accent')).toBe('#abcdef')
     // hexToRGB('#123456') → "18, 52, 86" reaches the CSS custom property.
@@ -427,7 +563,7 @@ describe('setTheme / setMode / setCustomColors', () => {
   })
 
   it('suppresses the backend write until the initial settings load resolves', async () => {
-    mockFetchPending() // `initialized` never flips
+    const resolveInitialLoad = mockFetchPending()
     await renderSettled()
     fireEvent.click(screen.getByText('set-red'))
 
@@ -442,6 +578,41 @@ describe('setTheme / setMode / setCustomColors', () => {
     expect(
       mockedRequest.mock.calls.some((call) => (call[1] as RequestInit | undefined)?.method === 'PUT'),
     ).toBe(false)
+    await act(async () => resolveInitialLoad())
+  })
+
+  it('keeps and saves a selection made while initial settings are loading', async () => {
+    let finishInitialLoad: ((value: Record<string, unknown>) => void) | undefined
+    mockedRequest.mockReset()
+    mockedRequest.mockResolvedValue({})
+    mockedRequest.mockReturnValueOnce(new Promise((resolve) => { finishInitialLoad = resolve }))
+    const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider })
+    act(() => result.current.setCustomColors('#123456'))
+    expect(mockedRequest.mock.calls.some((call) => (call[1] as RequestInit | undefined)?.method === 'PUT')).toBe(false)
+
+    await act(async () => {
+      finishInitialLoad?.({
+        theme: 'tesla-red',
+        mode: 'light',
+        custom_primary: '#010101',
+        custom_accent: '#abcdef',
+      })
+    })
+    await waitFor(() => {
+      expect(result.current.themeId).toBe('custom')
+      expect(result.current.modeId).toBe('light')
+      expect(result.current.theme.primary).toBe('#123456')
+    })
+    await waitFor(() => {
+      const put = mockedRequest.mock.calls.find((call) => (call[1] as RequestInit | undefined)?.method === 'PUT')
+      expect(put).toBeDefined()
+      expect(JSON.parse((put![1] as RequestInit).body as string)).toMatchObject({
+        theme: 'custom',
+        mode: 'light',
+        custom_primary: '#123456',
+        custom_accent: '#abcdef',
+      })
+    })
   })
 })
 
@@ -526,10 +697,47 @@ describe('cross-tab sync', () => {
 describe('exposed registries', () => {
   it('provides the full theme + mode maps through context', async () => {
     await renderSettled()
-    // 5 colour presets + the synthesised `custom` entry.
-    expect(screen.getByTestId('themes-count')).toHaveTextContent('6')
+    // 20 colour presets + the synthesised `custom` entry.
+    expect(screen.getByTestId('themes-count')).toHaveTextContent('21')
     // The 130+ generated preset modes merge with the core built-ins.
     expect(Number(screen.getByTestId('modes-count').textContent)).toBeGreaterThan(100)
+  })
+
+  it('offers the expanded presets in the real picker while preserving the custom color', async () => {
+    localStorage.setItem('teslasync-custom-primary', '#123456')
+    render(<ThemeProvider><ThemePicker showMode={false} /></ThemeProvider>)
+    await flush()
+
+    expect(screen.getAllByRole('button')).toHaveLength(21)
+    fireEvent.click(screen.getByRole('button', { name: 'Ocean Teal' }))
+    expect(screen.getByRole('button', { name: 'Ocean Teal', pressed: true })).toBeInTheDocument()
+    expect(document.documentElement.style.getPropertyValue('--theme-primary')).toBe('#14b8a6')
+    expect(localStorage.getItem('teslasync-theme')).toBe('ocean-teal')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Custom' }))
+    expect(screen.getByLabelText('Accent')).toHaveValue('#123456')
+    expect(document.documentElement.style.getPropertyValue('--theme-primary')).toBe('#123456')
+    fireEvent.click(screen.getByRole('button', { name: 'Ocean Teal' }))
+    expect(localStorage.getItem('teslasync-custom-primary')).toBe('#123456')
+    await waitFor(() => {
+      const puts = mockedRequest.mock.calls.filter((call) => (call[1] as RequestInit | undefined)?.method === 'PUT')
+      expect(puts.length).toBeGreaterThan(0)
+      expect(JSON.parse((puts[puts.length - 1][1] as RequestInit).body as string)).toMatchObject({
+        theme: 'ocean-teal',
+        custom_primary: '#123456',
+      })
+    })
+  })
+
+  it('restores a newly added color from the server and applies it in both modes', async () => {
+    mockFetch({ theme: 'ocean-teal', mode: 'light' })
+    const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider })
+    await flush()
+    expect(result.current.themeId).toBe('ocean-teal')
+    expect(localStorage.getItem('teslasync-theme')).toBe('ocean-teal')
+    expect(document.documentElement.style.getPropertyValue('--theme-primary')).toBe('#14b8a6')
+    act(() => result.current.setMode('dark'))
+    expect(document.documentElement.style.getPropertyValue('--theme-primary')).toBe('#14b8a6')
   })
 
   it('modeCategoryOrder puts Core first, then every generated category', () => {

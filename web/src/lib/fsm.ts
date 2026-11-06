@@ -1,5 +1,5 @@
 /** FSM state display configurations for frontend rendering. */
-import { CHART_SEMANTIC } from './colors'
+import { CHART_SEMANTIC, DATA_VISUAL_COLORS } from './colors'
 
 export interface StateConfig {
   label: string;
@@ -21,7 +21,7 @@ export const vehicleStates: Record<string, StateConfig> = {
 // Charging session states
 export const chargingStates: Record<string, StateConfig> = {
   pending: { label: 'Pending', color: '#6b7280', variant: 'neutral' },
-  connecting: { label: 'Connecting', color: '#3b82f6', variant: 'info' },
+  connecting: { label: 'Connecting', color: DATA_VISUAL_COLORS.blue, variant: 'info' },
   charging: { label: 'Charging', color: '#f59e0b', variant: 'warning' },
   completing: { label: 'Completing', color: '#22c55e', variant: 'success' },
   completed: { label: 'Completed', color: '#22c55e', variant: 'success' },
@@ -31,7 +31,7 @@ export const chargingStates: Record<string, StateConfig> = {
 // Charging sub-states
 export const chargingSubStates: Record<string, StateConfig> = {
   'charging.starting': { label: 'Starting', color: '#6b7280', variant: 'neutral' },
-  'charging.ramping': { label: 'Ramping Up', color: '#3b82f6', variant: 'info' },
+  'charging.ramping': { label: 'Ramping Up', color: DATA_VISUAL_COLORS.blue, variant: 'info' },
   'charging.steady': { label: 'Steady', color: '#22c55e', variant: 'success' },
   'charging.tapering': { label: 'Tapering', color: '#f59e0b', variant: 'warning' },
   'charging.complete': { label: 'Complete', color: '#22c55e', variant: 'success' },
@@ -39,7 +39,7 @@ export const chargingSubStates: Record<string, StateConfig> = {
 
 // Trip states
 export const tripStates: Record<string, StateConfig> = {
-  started: { label: 'Started', color: '#3b82f6', variant: 'info' },
+  started: { label: 'Started', color: DATA_VISUAL_COLORS.blue, variant: 'info' },
   in_progress: { label: 'In Progress', color: '#22c55e', variant: 'success' },
   paused: { label: 'Paused', color: '#f59e0b', variant: 'warning' },
   completed: { label: 'Completed', color: '#6b7280', variant: 'neutral' },
@@ -49,9 +49,9 @@ export const tripStates: Record<string, StateConfig> = {
 // Export job states
 export const exportStates: Record<string, StateConfig> = {
   queued: { label: 'Queued', color: '#6b7280', variant: 'neutral' },
-  validating: { label: 'Validating', color: '#3b82f6', variant: 'info' },
+  validating: { label: 'Validating', color: DATA_VISUAL_COLORS.blue, variant: 'info' },
   processing: { label: 'Processing', color: '#f59e0b', variant: 'warning' },
-  uploading: { label: 'Uploading', color: '#3b82f6', variant: 'info' },
+  uploading: { label: 'Uploading', color: DATA_VISUAL_COLORS.blue, variant: 'info' },
   completed: { label: 'Completed', color: '#22c55e', variant: 'success' },
   failed: { label: 'Failed', color: '#ef4444', variant: 'danger' },
 };
@@ -59,7 +59,7 @@ export const exportStates: Record<string, StateConfig> = {
 // Notification states
 export const notificationStates: Record<string, StateConfig> = {
   pending: { label: 'Pending', color: '#6b7280', variant: 'neutral' },
-  sending: { label: 'Sending', color: '#3b82f6', variant: 'info' },
+  sending: { label: 'Sending', color: DATA_VISUAL_COLORS.blue, variant: 'info' },
   sent: { label: 'Sent', color: '#22c55e', variant: 'success' },
   failed: { label: 'Failed', color: '#ef4444', variant: 'danger' },
   retrying: { label: 'Retrying', color: '#f59e0b', variant: 'warning' },

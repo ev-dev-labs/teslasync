@@ -101,7 +101,7 @@ export function UpcomingRoadmap({
           </ul>
           <div className="mt-3 flex gap-2 rounded-lg bg-white/[0.025] p-3">
             <CalendarClock
-              className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300"
+              className="mt-0.5 h-4 w-4 shrink-0 text-theme-accent"
               aria-hidden="true"
             />
             <Text variant="caption">

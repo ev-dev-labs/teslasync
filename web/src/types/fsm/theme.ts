@@ -24,10 +24,10 @@ export const VARIANT_THEME: Record<BadgeVariant, StateStyle> = {
     dot:      'bg-red-400',
   },
   info: {
-    badgeDot: 'bg-blue-400',
-    bg:       'bg-blue-500/10',
-    text:     'text-blue-400',
-    dot:      'bg-blue-400',
+    badgeDot: 'bg-status-info',
+    bg:       'bg-status-info/10',
+    text:     'text-status-info',
+    dot:      'bg-status-info',
   },
   neutral: {
     badgeDot: 'bg-gray-400',

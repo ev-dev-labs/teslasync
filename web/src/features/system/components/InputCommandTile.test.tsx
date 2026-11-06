@@ -266,7 +266,7 @@ describe('InputCommandTile', () => {
 
     // A malformed config with an out-of-union variant must not blank the accent.
     renderTile({ def: makeDef({ variant: 'wat' as unknown as CommandDef['variant'] }) });
-    expect(tile().className).toContain('hover:border-neon-cyan/30');
+    expect(tile().className).toContain('hover:border-theme-accent/30');
   });
 
   it('omits the sublabel when the command has none', () => {

@@ -14,7 +14,7 @@ export type ScoreGrade = 'A+' | 'A' | 'B' | 'C' | 'D' | 'F' | '—';
 export interface ScoreGradeInfo {
   /** Display label. `—` when input is null / NaN. */
   label: ScoreGrade;
-  /** Hex colour for the badge text. */
+  /** CSS colour for the badge text. */
   color: string;
   /**
    * Numeric weight for averaging across many items. `null` for the "no
@@ -27,7 +27,7 @@ export interface ScoreGradeInfo {
 const GRADE_PALETTE: Record<ScoreGrade, { color: string; numeric: number | null }> = {
   'A+': { color: '#10b981', numeric: 4.5 },
   A:    { color: '#10b981', numeric: 4.0 },
-  B:    { color: '#00f0ff', numeric: 3.0 },
+  B:    { color: 'var(--semantic-info)', numeric: 3.0 },
   C:    { color: '#f59e0b', numeric: 2.0 },
   D:    { color: '#ef4444', numeric: 1.0 },
   F:    { color: '#b91c1c', numeric: 0.5 },

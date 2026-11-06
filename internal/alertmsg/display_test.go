@@ -47,7 +47,7 @@ func TestDisplayPreferences(t *testing.T) {
 			systemmodel.Settings{DecimalPrecision: 2}},
 		{"raw numeric text", "Odometer", "{{Value}}", "001234.50", "001234.50",
 			systemmodel.Settings{DecimalPrecision: 2}},
-		{"empty text", "Gear", "v={{Value}}", "v=", "",
+		{"empty text", "Gear", "v={{Value}}", "Falcon — Rule: notification details are unavailable.", "",
 			systemmodel.Settings{DecimalPrecision: 2}},
 		{"null measurement", "Soc", "{{Value}}%", "—%", nil,
 			systemmodel.Settings{DecimalPrecision: 2}},

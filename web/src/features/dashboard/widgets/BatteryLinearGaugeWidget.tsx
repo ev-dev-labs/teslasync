@@ -12,6 +12,7 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import { batteryColor } from './BatteryGaugeWidget';
 import { ChargeBatteryPack, ChargeMeter, useVerifiedChargeActivity } from './instruments/ChargeInstruments';
+import { ChargeStatusSummary } from './instruments/ChargeStatusSummary';
 import type { WidgetProps } from './types';
 
 export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProps) {
@@ -33,10 +34,7 @@ export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProp
   const ratedRange = knownNumber(state?.rated_range);
   const rangeText =
     ratedRange != null ? `${fmtNumber(convertDistanceFromSI(ratedRange, distanceUnit), 0)} ${distanceUnit}` : null;
-  // charge_limit_soc may be present on extended state payloads. Validate it is
-  // a finite number before use so a malformed field never leaks a NaN into the
-  // gauge overlay or the stat row.
-  const chargeLimitRaw = (state as Record<string, unknown> | undefined)?.charge_limit_soc;
+  const chargeLimitRaw = state?.charge_limit_soc_pct;
   const chargeLimitSoc =
     typeof chargeLimitRaw === 'number' && Number.isFinite(chargeLimitRaw) && chargeLimitRaw >= 0 && chargeLimitRaw <= 100 ? chargeLimitRaw : undefined;
   const denseShort = size.rows <= 2 && (chargeLimitSoc != null || state?.is_charging === true);
@@ -57,9 +55,10 @@ export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProp
       isError={isError}
       onRefresh={handleRefresh}
     >
+      {state && <ChargeStatusSummary charging={state.is_charging} active={active} limit={chargeLimitSoc} />}
       <div className="flex min-w-0 flex-col gap-2">
         {batteryLevel != null ? (
-          <div className={`flex w-full min-w-0 flex-col ${size.rows <= 2 ? 'gap-2' : 'gap-3'}`}>
+          <div className={`flex w-full min-w-0 flex-col ${size.rows <= 2 ? 'gap-1' : 'gap-3'}`}>
             <div className="flex min-w-0 items-center justify-between gap-3">
               <WidgetBigNumber value={batteryLevel} unit="%" decimals={0} animated={false} />
               <ChargeBatteryPack level={batteryLevel} active={active} className={isCompact || denseShort ? 'w-20' : 'w-28'} />
@@ -69,22 +68,16 @@ export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProp
               label={t('widget.batteryLevel', 'Battery')}
               color={batteryColor(batteryLevel)}
               marker={chargeLimitSoc}
+              showMarkerValue={false}
               markerLabel={chargeLimitSoc != null ? `${t('widget.chargeLimit', 'Limit')} ${chargeLimitSoc}%` : undefined}
               preserveOutOfScaleMarker
               active={active}
             />
-            {!isCompact && (rangeText != null || state?.is_charging) && (
+            {!isCompact && rangeText != null && (
               <div className={denseShort ? 'flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center' : 'flex min-w-0 flex-col items-center gap-1 text-center'}>
                 {rangeText != null && (
                   <p className="text-xs leading-snug text-[var(--text-muted)]">
                     {t('widget.batteryGauge.range', '{{range}} range', { range: rangeText })}
-                  </p>
-                )}
-                {state?.is_charging && (
-                  <p className="text-xs leading-snug text-[var(--text-muted)]">
-                    {chargeLimitSoc != null
-                      ? `${t('widget.charging', 'Charging')} · ${t('widget.chargeLimit', 'Limit')} ${chargeLimitSoc}%`
-                      : t('widget.charging', 'Charging')}
                   </p>
                 )}
               </div>

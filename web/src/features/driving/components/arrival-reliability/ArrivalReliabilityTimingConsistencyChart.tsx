@@ -19,6 +19,7 @@ import {
 
 import type { ArrivalReliabilityResult } from '../../lib/arrivalReliability';
 import { ArrivalReliabilitySectionBody } from './ArrivalReliabilitySectionBody';
+import { ArrivalReliabilityRouteTick } from './ArrivalReliabilityRouteTick';
 import type { ArrivalReliabilityQueryState } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -75,7 +76,8 @@ export function ArrivalReliabilityTimingConsistencyChart({
           'arrivalReliability.consistencyChart.description',
           'The table includes route sample counts and the separate route support index.',
         )}
-        height={360}
+        height={Math.max(240, rows.length * 48 + 48)}
+        mobileHeight={Math.max(240, rows.length * 48 + 48)}
         chartKey="arrival-timing-consistency"
         exportable={ready}
         exportFilename="arrival-timing-consistency"
@@ -126,26 +128,31 @@ export function ArrivalReliabilityTimingConsistencyChart({
             skeletonHeight={320}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={rows}>
+              <ComposedChart data={rows} layout="vertical" margin={{ left: 8, right: 12 }}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="var(--glass-border)"
                   strokeOpacity={0.4}
                 />
                 <XAxis
-                  dataKey="route"
-                  tick={axisTick}
-                  tickLine={false}
-                  axisLine={false}
-                  interval={0}
-                />
-                <YAxis
+                  type="number"
                   domain={[0, 100]}
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
                 />
+                <YAxis
+                  type="category"
+                  dataKey="route"
+                  width={160}
+                  tick={<ArrivalReliabilityRouteTick />}
+                  tickLine={false}
+                  axisLine={false}
+                  interval={0}
+                />
                 <Tooltip
+                  position={{ x: 0 }}
+                  wrapperStyle={{ maxWidth: '100%' }}
                   content={
                     <ChartTooltip
                       valueFormatter={(value) =>
@@ -159,7 +166,7 @@ export function ArrivalReliabilityTimingConsistencyChart({
                   dataKey="consistency"
                   name={consistencyName}
                   fill={CHART_COLORS[0]}
-                  radius={[3, 3, 0, 0]}
+                  radius={[0, 3, 3, 0]}
                   hide={hiddenSeries?.isHidden('consistency') ?? false}
                 />
                 <Line

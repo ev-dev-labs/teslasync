@@ -124,7 +124,7 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
     <WidgetShell
       dataState={dataState.hasData || isLoading || source.isPending || dataState.fatalError || dataState.isRefreshBlocked ? dataState : undefined}
       title={t('widget.weeklyDigest.title', 'This week')}
-      icon={isCompact ? undefined : <CalendarDays className="h-3.5 w-3.5 text-cyan-400" />}
+      icon={isCompact ? undefined : <CalendarDays className="h-3.5 w-3.5 text-theme-accent" />}
       loading={isLoading}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}

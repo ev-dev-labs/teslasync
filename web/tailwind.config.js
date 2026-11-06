@@ -79,6 +79,10 @@ export default {
         '3xl': '1920px',
       },
       colors: {
+        'theme-accent': 'rgba(var(--theme-primary-rgb), <alpha-value>)',
+        'status-info': 'rgb(var(--semantic-info-rgb) / <alpha-value>)',
+        'status-activity': 'rgb(var(--semantic-activity-rgb) / <alpha-value>)',
+        'status-update': 'rgb(var(--semantic-update-rgb) / <alpha-value>)',
         tesla: {
           red: '#e31937',
           blue: '#3e6ae1',

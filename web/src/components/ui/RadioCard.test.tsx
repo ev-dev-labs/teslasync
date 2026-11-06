@@ -12,9 +12,8 @@
  *   4. `disabled` fully blocks selection.
  *   5. `label`, `description`, and `icon` render (and the two optional
  *      slots are omitted when not supplied — no empty/blank nodes).
- *   6. The `accent` prop maps onto restrained checked-indicator roles, and an
- *      out-of-contract accent degrades to the cyan default instead of
- *      crashing the card.
+ *   6. The checked indicator follows the user-selected accent, including
+ *      when a legacy or out-of-contract accent prop is supplied.
  *   7. Forwarded refs land on the `<input>`, and arbitrary input
  *      attributes (name, aria-label, data-*) pass through.
  */
@@ -129,26 +128,24 @@ describe('RadioCard', () => {
     const card = screen.getByRole('radio').nextElementSibling as HTMLElement;
     expect(card.className).toContain('border-[var(--control-border-hover)]');
     expect(card.className).toContain('bg-[var(--control-bg)]');
-    expect(card.firstElementChild).toHaveClass('text-[var(--semantic-success)]');
-    expect(card.firstElementChild?.firstElementChild).toHaveClass('bg-[var(--semantic-success)]');
+    expect(card.firstElementChild).toHaveClass('text-[var(--theme-primary)]');
+    expect(card.firstElementChild?.firstElementChild).toHaveClass('bg-[var(--theme-primary)]');
 
     rerender(
       <RadioCard label="Local" value="local" accent="green" checked={false} onChange={() => {}} />,
     );
-    expect(card.firstElementChild).not.toHaveClass('text-[var(--semantic-success)]');
+    expect(card.firstElementChild).not.toHaveClass('text-[var(--theme-primary)]');
     expect(card.firstElementChild?.firstElementChild).toHaveClass('bg-transparent');
     expect(card.className).toContain('border-[var(--control-border)]');
   });
 
-  it('defaults the accent to cyan when none is supplied', () => {
+  it('uses the selected theme when no accent is supplied', () => {
     render(<RadioCard label="Default" value="d" checked onChange={() => {}} />);
     const card = screen.getByRole('radio').nextElementSibling as HTMLElement;
-    expect(card.firstElementChild).toHaveClass('text-[var(--semantic-info)]');
+    expect(card.firstElementChild).toHaveClass('text-[var(--theme-primary)]');
   });
 
-  it('degrades an out-of-contract accent to the cyan default without crashing', () => {
-    // A shared primitive must not hard-crash on a bad (untyped-caller)
-    // accent — the source falls back to the cyan token map.
+  it('keeps the selected theme for an out-of-contract legacy accent without crashing', () => {
     const props: RadioCardProps = { label: 'Bad', value: 'b', accent: 'cyan', checked: true, onChange: () => {} };
     Reflect.set(props, 'accent', 'lime');
     expect(() =>
@@ -157,7 +154,7 @@ describe('RadioCard', () => {
       ),
     ).not.toThrow();
     const card = screen.getByRole('radio').nextElementSibling as HTMLElement;
-    expect(card.firstElementChild).toHaveClass('text-[var(--semantic-info)]');
+    expect(card.firstElementChild).toHaveClass('text-[var(--theme-primary)]');
   });
 
   it('forwards refs to the underlying input', () => {

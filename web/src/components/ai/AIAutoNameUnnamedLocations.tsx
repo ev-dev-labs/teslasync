@@ -181,13 +181,13 @@ function InnerSection({
       )}
       {draft && (
         <div
-          className="rounded-md border border-cyan-300/30 bg-cyan-300/5 p-3 text-sm"
+          className="rounded-md border border-theme-accent/30 bg-theme-accent/5 p-3 text-sm"
           data-testid="ai-feature-auto-name-unnamed-locations-draft"
           aria-live="polite"
         >
           <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1 space-y-1 break-words">
-              <div className="text-xs tracking-wide text-cyan-300">
+              <div className="text-xs tracking-wide text-theme-accent">
                 {t('locations.aiAutoName.proposalLabel', 'Proposed name')}
               </div>
               <div className="font-medium text-[var(--text-primary)]">

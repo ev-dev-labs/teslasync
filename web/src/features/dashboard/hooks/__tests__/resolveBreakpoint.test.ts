@@ -14,7 +14,8 @@ describe('resolveBreakpointFromWidth', () => {
     expect(resolveBreakpointFromWidth(2000)).toBe('lg');
     expect(resolveBreakpointFromWidth(1100)).toBe('md');
     expect(resolveBreakpointFromWidth(900)).toBe('sm');
-    expect(resolveBreakpointFromWidth(700)).toBe('xs');
+    expect(resolveBreakpointFromWidth(700)).toBe('sm');
+    expect(resolveBreakpointFromWidth(500)).toBe('xs');
     expect(resolveBreakpointFromWidth(320)).toBe('xs');
   });
 
@@ -27,9 +28,9 @@ describe('resolveBreakpointFromWidth', () => {
     expect(resolveBreakpointFromWidth(996)).toBe('sm');
     expect(resolveBreakpointFromWidth(997)).toBe('md');
 
-    expect(GRID_BREAKPOINTS.sm).toBe(768);
-    expect(resolveBreakpointFromWidth(768)).toBe('xs');
-    expect(resolveBreakpointFromWidth(769)).toBe('sm');
+    expect(GRID_BREAKPOINTS.sm).toBe(600);
+    expect(resolveBreakpointFromWidth(600)).toBe('xs');
+    expect(resolveBreakpointFromWidth(601)).toBe('sm');
   });
 
   it('falls back to xs for degenerate widths', () => {

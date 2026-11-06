@@ -66,7 +66,7 @@ describe('DRIVE_SESSION_STATE_ENTRIES', () => {
       for (const k of Object.keys(ov ?? {})) expect(STYLE_KEYS, `${key}.${k}`).toContain(k)
     }
     expect(DRIVE_SESSION_STATE_ENTRIES.ending.overrides?.dot).toBe('bg-orange-400')
-    expect(DRIVE_SESSION_STATE_ENTRIES.completed.overrides?.text).toBe('text-indigo-400')
+    expect(DRIVE_SESSION_STATE_ENTRIES.completed.overrides?.text).toBe('text-status-update')
     expect(DRIVE_SESSION_STATE_ENTRIES.recovered.overrides?.bg).toBe('bg-purple-500/10')
   })
 })

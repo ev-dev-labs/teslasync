@@ -23,8 +23,8 @@
  *      per bucket, each carrying its capitalised label, fmtInt count badge,
  *      severity-mapped icon colour and Badge variant; plus the pie region.
  *   7. Fallback mapping — an unknown severity coalesces to the Info icon,
- *      the default `text-sky-300` colour and the `info` Badge variant
- *      (the `?? 'text-sky-300'` / `?? 'info'` guards).
+ *      the default informational colour and the `info` Badge variant
+ *      (the `?? 'text-status-info'` / `?? 'info'` guards).
  *   8. Pie hardening — the pie only renders (as a labelled role="img"
  *      region) when `alertPieData` is non-empty; an empty breakdown shows a
  *      placeholder instead of a blank panel (the `pieData.length > 0` guard).
@@ -294,7 +294,7 @@ describe('AlertsSection — populated breakdown', () => {
       'text-amber-300',
     );
     expect(severityRow('info').querySelector('svg')?.getAttribute('class')).toContain(
-      'text-sky-300',
+      'text-status-info',
     );
 
     expect(within(severityRow('critical')).getByText('3')).toHaveClass(
@@ -318,8 +318,8 @@ describe('AlertsSection — populated breakdown', () => {
     });
 
     const row = severityRow('mystery');
-    // `SEVERITY_ICON_CLASS[severity] ?? 'text-sky-300'`
-    expect(row.querySelector('svg')?.getAttribute('class')).toContain('text-sky-300');
+    // `SEVERITY_ICON_CLASS[severity] ?? 'text-status-info'`
+    expect(row.querySelector('svg')?.getAttribute('class')).toContain('text-status-info');
     expect(row.querySelector('svg')).toHaveClass('lucide-info');
     expect(row.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     // `SEVERITY_BADGE[severity] ?? 'info'`

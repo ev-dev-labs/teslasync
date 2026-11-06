@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { notificationSeverityLabel } from '@/lib/notificationEventType';
 import { useNavigate } from 'react-router-dom';
 import type { Alert, AlertDetail } from '@/api/types';
 import { EntityPreviewDrawer } from '@/components/data-display';
@@ -69,7 +70,7 @@ export function AlertDetailDrawer({
 }: AlertDetailDrawerProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { formatDateTime, tz } = useDateFormat();
+  const { formatDateTime, tz } = useDateFormat('user');
   const matchingDetail = detail?.id === alert?.id ? detail : undefined;
   const detailState = useDataState({ data: matchingDetail, error, isLoading, refetch: onRetry });
   const activeAlert = detailState.data ?? alert;
@@ -94,7 +95,7 @@ export function AlertDetailDrawer({
     vehicleName?.trim() ||
     (activeAlert && activeAlert.vehicle_id > 0
       ? t('operations.alerts.vehicleNumber', 'Vehicle #{{id}}', { id: activeAlert.vehicle_id })
-      : t('operations.alerts.fleetWide', 'Fleet-wide'));
+      : '');
 
   const handleInvestigate = () => {
     if (!activeAlert) return;
@@ -125,7 +126,7 @@ export function AlertDetailDrawer({
         {
           key: 'severity',
           label: t('operations.alerts.severity', 'Severity'),
-          value: activeAlert?.severity || t('common.unknown', 'Unknown'),
+          value: notificationSeverityLabel(activeAlert?.severity, t),
         },
         {
           key: 'vehicle',
@@ -135,8 +136,7 @@ export function AlertDetailDrawer({
         {
           key: 'signal',
           label: t('operations.alerts.relatedSignal', 'Related signal'),
-          value: activeAlert?.rule_signal ?? t('operations.alerts.noSignal', 'No signal metadata'),
-          detail: activeAlert?.type?.replace(/_/g, ' '),
+          value: activeAlert?.rule_signal ?? '',
         },
         {
           key: 'triggered',
@@ -159,7 +159,7 @@ export function AlertDetailDrawer({
           label: t('operations.alerts.resolutionState', 'Resolution state'),
           value: lifecycleLabel,
         },
-      ]}
+      ].filter(field => field.value !== '')}
       primaryAction={
         activeAlert && canWriteLifecycle
           ? {

@@ -394,8 +394,8 @@ describe('statusDotColor', () => {
   })
 
   it('applies per-state overrides rather than the bare variant colour', () => {
-    // driving is a "success" variant but overrides its dot to blue.
-    expect(statusDotColor('driving')).toBe('bg-blue-500')
+    // driving is a "success" variant but overrides its dot to the info status color.
+    expect(statusDotColor('driving')).toBe('bg-status-info')
     expect(statusDotColor('charging')).toBe('bg-yellow-400')
     // online has no override, so it inherits the success theme dot.
     expect(statusDotColor('online')).toBe('bg-green-400')

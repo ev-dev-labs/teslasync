@@ -98,7 +98,7 @@ export default function LivePowerFlowWidget(_props: WidgetProps) {
         label: t('widget.livePowerFlow.grid', 'Grid'),
         value: Math.abs(gridKw ?? 0),
         formattedValue: '',
-        icon: <Zap className="h-3 w-3 text-blue-400" />,
+        icon: <Zap className="h-3 w-3 text-theme-accent" />,
         position: 'left' as const,
       },
       {
@@ -175,7 +175,7 @@ export default function LivePowerFlowWidget(_props: WidgetProps) {
         to: 'site',
         value: gridKw,
         active: true,
-        color: 'text-blue-400',
+        color: 'text-status-info',
         label: formatPower(Math.abs(gridW ?? 0)),
       });
     }

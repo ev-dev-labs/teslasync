@@ -1,11 +1,14 @@
 import { useEffect, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eye, AlertTriangle, Mail, MailOpen } from 'lucide-react';
+import { Eye, Mail, MailOpen } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { DateTime, SeverityBadge } from '@/components/data-display';
 import { Badge, Button, DataTable, Select, useTableExpansion, type Column, type ContextMenuItem, type PaginationProps } from '@/components/ui';
 import type { AlertRule, NotificationLog, Vehicle } from '@/api/types';
 import type { NotificationFilters } from '@/api/hooks/useNotifications';
-import { notificationEventTypeFallback } from '@/lib/notificationEventType';
+import { notificationEventTypeLabel } from '@/lib/notificationEventType';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { NotificationInboxDetails } from './NotificationInboxDetails';
 import { NotificationInboxSummary } from './NotificationInboxSummary';
@@ -47,29 +50,8 @@ export function NotificationInboxTable({
   onFiltersChange,
 }: NotificationInboxTableProps) {
   const { t } = useTranslation();
-  // Only known product values are translation keys; future server values retain their readable fallback.
-  const eventLabels: Record<string, string> = {
-    "digest.fsd.weekly": t("notifications.report.values.digest.fsd.weekly", "Weekly FSD digest"),
-    "system.telemetry.outage": t("notifications.report.values.system.telemetry.outage", "System telemetry outage"),
-    "system.telemetry.recovery": t("notifications.report.values.system.telemetry.recovery", "System telemetry recovery"),
-    "system.mqtt.outage": t("notifications.report.values.system.mqtt.outage", "System MQTT outage"),
-    "system.mqtt.recovery": t("notifications.report.values.system.mqtt.recovery", "System MQTT recovery"),
-    "system.database.outage": t("notifications.report.values.system.database.outage", "System database outage"),
-    "system.redis.outage": t("notifications.report.values.system.redis.outage", "System Redis outage"),
-    "system.redis.recovery": t("notifications.report.values.system.redis.recovery", "System Redis recovery"),
-    "system.tesla_api.outage": t("notifications.report.values.system.tesla_api.outage", "System Tesla API outage"),
-    "system.tesla_api.recovery": t("notifications.report.values.system.tesla_api.recovery", "System Tesla API recovery"),
-    "system.worker.outage": t("notifications.report.values.system.worker.outage", "System worker outage"),
-    "system.worker.recovery": t("notifications.report.values.system.worker.recovery", "System worker recovery"),
-    "system.database.recovery": t("notifications.report.values.system.database.recovery", "Database recovery"),
-    "system": t("notifications.report.values.system", "System"),
-    "alert": t("notifications.report.values.alert", "Alert rules"),
-    "automation": t("notifications.report.values.automation", "Automation"),
-    "schedule": t("notifications.report.values.schedule", "Schedules"),
-    "test": t("notifications.report.values.test", "Tests"),
-    "other": t("notifications.report.values.other", "Other"),
-    "unknown": t("notifications.report.values.unknown", "Unattributed"),
-  };
+  const { fmtInt } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat('user');
   const severityLabels: Record<string, string> = {
     "info": t("notifications.inbox.filter.severity.info", "Info"),
     "warn": t("notifications.inbox.filter.severity.warn", "Warn"),
@@ -85,7 +67,7 @@ export function NotificationInboxTable({
   useEffect(() => { clear(); }, [archived, rowIds, clear]);
   const sourceFor = (log: NotificationLog) => {
     const rule = log.alert_id != null ? ruleMap[log.alert_id] : undefined;
-    const vehicle = rule?.vehicle_id != null ? vehicleMap[rule.vehicle_id] : undefined;
+    const vehicle = log.vehicle_id != null ? vehicleMap[log.vehicle_id] : undefined;
     return { rule, vehicle };
   };
   const columns = useMemo<Column<NotificationLog>[]>(() => [
@@ -94,12 +76,7 @@ export function NotificationInboxTable({
       header: t('notifications.inbox.columns.received', 'Received'),
       defaultWidth: 190,
       minWidth: 160,
-      render: log => (
-        <div className="space-y-1">
-          {log.created_at && Number.isFinite(Date.parse(log.created_at)) ? <DateTime value={log.created_at} in="user" className="whitespace-nowrap tabular-nums" /> : '—'}
-          {log.scheduled_at && <span className="block text-xs text-[var(--text-muted)]">{t('notifications.inbox.detail.scheduled', 'Scheduled')}</span>}
-        </div>
-      ),
+      render: log => log.created_at && Number.isFinite(Date.parse(log.created_at)) ? <DateTime value={log.created_at} in="user" className="whitespace-nowrap tabular-nums" /> : null,
     },
     {
       key: 'title',
@@ -116,8 +93,7 @@ export function NotificationInboxTable({
       }),
       filter: <NotificationFilterBar section={isMobile ? 'all' : 'search'} includeReadState={isMobile}
         filters={filters} onChange={onFiltersChange} vehicles={vehicles} rules={rules} />,
-      render: log => <NotificationInboxSummary log={log} onActivate={onActivate}
-        eventLabel={log.event_type ? eventLabels[log.event_type] ?? notificationEventTypeFallback(log.event_type) : '—'} />,
+      render: log => <NotificationInboxSummary log={log} onActivate={onActivate} />,
     },
     {
       key: 'message',
@@ -132,7 +108,7 @@ export function NotificationInboxTable({
           onClick={() => onActivate(log)}
           aria-label={t('notifications.inbox.row.readMessage', 'Read full message: {{title}}', { title: log.title || '—' })}
         >
-          <span className="line-clamp-2 break-words text-[var(--text-secondary)]" title={log.message}>{log.message || '—'}</span>
+          <span className="whitespace-pre-wrap break-words text-[var(--text-secondary)]">{log.message}</span>
         </Button>
       ),
     },
@@ -141,36 +117,31 @@ export function NotificationInboxTable({
       header: t('notifications.inbox.columns.type', 'Type'),
       defaultVisible: false,
       defaultWidth: 200,
-      render: log => <span title={log.event_type}>{log.event_type ? eventLabels[log.event_type] ?? notificationEventTypeFallback(log.event_type) : '—'}</span>,
+      render: log => notificationEventTypeLabel(log.event_type, t),
     },
     {
-      key: 'source',
-      header: t('notifications.inbox.columns.source', 'Source'),
-      defaultWidth: 200,
+      key: 'vehicle',
+      header: t('notifications.inbox.filter.vehicle', 'Vehicle'),
+      defaultWidth: 160,
       minWidth: 140,
       filterActive: Boolean(filters.vehicle_id?.length || filters.rule_id?.length || filters.source),
       onFilterClear: () => onFiltersChange({ ...filters, vehicle_id: undefined, rule_id: undefined, source: undefined }),
       filter: <NotificationFilterBar section="source" filters={filters} onChange={onFiltersChange} vehicles={vehicles} rules={rules} />,
-      render: log => {
-        const rule = log.alert_id != null ? ruleMap[log.alert_id] : undefined;
-        const vehicle = rule?.vehicle_id != null ? vehicleMap[rule.vehicle_id] : undefined;
-        const label = rule?.name
-          ?? (log.alert_id != null
-            ? t('notifications.inbox.source.ruleId', 'Rule #{{id}}', { id: log.alert_id })
-            : log.event_type
-              ? eventLabels[log.event_type.split('.')[0]] ?? notificationEventTypeFallback(log.event_type.split('.')[0])
-              : log.channel_id != null && log.channel_id > 0
-                ? t('notifications.inbox.source.legacyDelivery', 'Legacy channel delivery')
-                : t('notifications.inbox.source.unknown', 'Unknown source'));
-        return (
-          <div className="min-w-0 space-y-1">
-            <span className="block truncate font-medium text-[var(--text-primary)]" title={label}>{label}</span>
-            <span className="block truncate text-xs text-[var(--text-muted)]" title={log.channel_id != null && log.channel_id > 0 && !log.event_type ? t('notifications.inbox.source.legacyHint', 'Original source was not recorded for this older channel delivery.') : undefined}>
-              {vehicle?.display_name || (rule?.vehicle_id != null ? `#${rule.vehicle_id}` : '—')}
-            </span>
-          </div>
-        );
-      },
+      render: log => log.vehicle_id != null ? vehicleMap[log.vehicle_id]?.display_name || `#${log.vehicle_id}` : null,
+    },
+    {
+      key: 'rule',
+      header: t('notifications.inbox.filter.rule', 'Rule'),
+      defaultVisible: false,
+      defaultWidth: 220,
+      render: log => log.alert_id != null ? <Link to={`/notifications/rules?rule=${log.alert_id}`} className="underline underline-offset-2">{ruleMap[log.alert_id]?.name || t('notifications.inbox.source.ruleId', 'Rule #{{id}}', { id: log.alert_id })}</Link> : null,
+    },
+    {
+      key: 'channel',
+      header: t('notifications.inbox.columns.channel', 'Channel'),
+      defaultVisible: false,
+      defaultWidth: 160,
+      render: log => log.channel_id != null && log.channel_id > 0 ? t('notifications.inbox.channelNumber', 'Channel #{{id}}', { id: log.channel_id }) : null,
     },
     {
       key: 'severity',
@@ -186,25 +157,21 @@ export function NotificationInboxTable({
     },
     {
       key: 'status',
+      defaultVisible: false,
       header: t('notifications.inbox.columns.status', 'Status'),
       visibleOnMobile: true,
       defaultWidth: 160,
       minWidth: 130,
-      render: log => (
-        <div className="space-y-1">
-          <Badge size="sm" variant={log.status === 'failed' ? 'danger' : log.status === 'sent' ? 'success' : 'neutral'}>
-            <NotificationInboxDelivery status={log.status} />
-          </Badge>
-          {log.error && <span className="flex items-center gap-1 text-xs text-red-700 dark:text-red-300" title={log.error}>
-            <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden="true" />
-            {t('notifications.inbox.detail.error', 'Delivery error')}
-          </span>}
-          <span className="flex items-center gap-1 text-xs text-[var(--text-muted)] md:hidden">
-            {log.read_at ? <MailOpen className="h-3 w-3" aria-hidden="true" /> : <Mail className="h-3 w-3" aria-hidden="true" />}
-            {log.read_at ? t('notifications.inbox.columns.read', 'Read') : t('notifications.inbox.columns.unread', 'Unread')}
-          </span>
-        </div>
-      ),
+      render: log => <Badge size="sm" variant={log.status === 'failed' ? 'danger' : log.status === 'sent' ? 'success' : 'neutral'}>
+        <NotificationInboxDelivery status={log.status} />
+      </Badge>,
+    },
+    {
+      key: 'delivery',
+      header: t('notifications.inbox.columns.delivery', 'Delivery'),
+      defaultVisible: false,
+      defaultWidth: 190,
+      render: log => log.sent_at ? <DateTime value={log.sent_at} in="user" /> : log.latency_ms != null ? t('notifications.inbox.detail.milliseconds', '{{value}} ms', { value: fmtInt(log.latency_ms) }) : null,
     },
     {
       key: 'read',
@@ -236,10 +203,10 @@ export function NotificationInboxTable({
         {t('notifications.inbox.columns.inspect', 'Inspect')}
       </Button>,
     },
-  ], [onActivate, ruleMap, vehicleMap, t, readState, filters, onFiltersChange, vehicles, rules, isMobile]);
+  ], [onActivate, ruleMap, vehicleMap, t, readState, filters, onFiltersChange, vehicles, rules, isMobile, fmtInt]);
 
   return (
-    <div className="min-w-0 w-full max-w-full">
+    <div className="min-w-0 w-full max-w-full @container">
     <DataTable
       tableId={archived ? 'notifications:archive' : 'notifications:inbox'}
       caption={archived ? t('notifications.tab.archived', 'Archived') : t('notifications.inbox.title', 'Inbox')}
@@ -257,8 +224,30 @@ export function NotificationInboxTable({
       onSelectionChange={keys => onSelectionChange(keys.filter((key): key is number => typeof key === 'number'))}
       showSelectionSummary={false}
       rowContextMenu={onContextMenu}
-      mobileColumns={['title']}
-      mobileBreakpoint="xl"
+      mobilePresentation={{
+        roles: { title: 'title', message: 'primary', received: 'meta', vehicle: 'meta', severity: 'badge', read: 'meta', inspect: 'hidden' },
+        canShowField: (key, log) => {
+          if (key === 'inspect') return false;
+          if (key === 'vehicle') return log.vehicle_id != null;
+          if (key === 'rule') return log.alert_id != null;
+          if (key === 'channel') return log.channel_id != null && log.channel_id > 0;
+          if (key === 'delivery') return Boolean(log.sent_at) || log.latency_ms != null;
+          if (key === 'type') return Boolean(log.event_type);
+          if (key === 'severity') return Boolean(log.severity);
+          if (key === 'message') return Boolean(log.message);
+          return true;
+        },
+        displayValue: (log, key) => {
+          if (key === 'title') return log.title;
+          if (key === 'message') return log.message;
+          if (key === 'received') return formatDateTime(log.created_at);
+          if (key === 'vehicle') return log.vehicle_id != null ? vehicleMap[log.vehicle_id]?.display_name || `#${log.vehicle_id}` : null;
+          if (key === 'severity') return severityLabels[log.severity === 'warning' ? 'warn' : log.severity ?? ''] ?? log.severity;
+          if (key === 'read') return log.read_at ? t('notifications.inbox.columns.read', 'Read') : t('notifications.inbox.columns.unread', 'Unread');
+          return null;
+        },
+        onOpenRow: onActivate,
+      }}
       className="min-w-0 w-full max-w-full max-xl:[&_th[data-column-key]]:!w-auto max-xl:[&_th[data-column-key]]:!min-w-0"
       density="compact"
       columnVisibility

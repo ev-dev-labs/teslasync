@@ -138,7 +138,7 @@ function stateData(over: Partial<VehicleState> = {}) {
 
 /** A state object with an extra (untyped) `charge_limit_soc` field attached. */
 function stateWithLimit(limit: unknown, over: Partial<VehicleState> = {}) {
-  return { state: { ...makeState(over), charge_limit_soc: limit } as unknown as VehicleState, live: true };
+  return { state: { ...makeState(over), charge_limit_soc_pct: limit } as unknown as VehicleState, live: true };
 }
 
 // A charging state with clean, deterministic display values:
@@ -344,7 +344,7 @@ describe('ChargeStatusWidget — null-safety hardening', () => {
       }),
     );
     const { container } = renderWidget();
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(container.querySelector('.widget-big-number')).toHaveTextContent('—');
     expect(container.textContent).toContain('7.0');
     expect(screen.queryByRole('meter')).toBeNull();
   });

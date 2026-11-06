@@ -498,6 +498,8 @@ func newCaseRouter(handler *DataRepairHandler) chi.Router {
 	router.Get("/data-repair/cases/stats", handler.GetCaseStats)
 	router.Get("/data-repair/cases/{id}", handler.GetCase)
 	router.Post("/data-repair/cases/{id}/transition", handler.TransitionCase)
+	router.Post("/data-repair/cases/{id}/correction-preview", handler.PreviewCaseCorrection)
+	router.Post("/data-repair/cases/{id}/correction", handler.ApplyCaseCorrection)
 	router.Put("/data-repair/cases/{id}/assignment", handler.AssignCase)
 	router.Post("/data-repair/cases/{id}/comments", handler.AddCaseComment)
 	router.Post("/data-repair/cases/{id}/quarantine", handler.QuarantineCase)
@@ -555,6 +557,13 @@ func TestParseCaseListFilter(t *testing.T) {
 		}
 		if requested != defaultCaseListLimit || filter.Limit != defaultCaseListLimit+1 {
 			t.Fatalf("limits = requested %d/repo %d", requested, filter.Limit)
+		}
+	})
+
+	t.Run("active includes open and in-review cases", func(t *testing.T) {
+		filter, _, err := parseCaseListFilter(httptest.NewRequest(http.MethodGet, "/?status=active", nil))
+		if err != nil || !filter.ActiveOnly || filter.Status != nil {
+			t.Fatalf("active filter = %+v, error = %v", filter, err)
 		}
 	})
 

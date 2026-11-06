@@ -6,6 +6,7 @@ import {
   Select as UiSelect,
   Toggle,
   Button as UiButton,
+  HelperText,
   Text,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -205,6 +206,9 @@ export function DashboardSettingsModal({
             }
             options={refreshOptions}
           />
+          <HelperText className="mt-2">
+            {t('dashSettings.refreshHelp', 'Adds periodic refreshes unless a widget has its own interval. Live updates and existing polling may arrive more often.')}
+          </HelperText>
         </div>
 
         {/* Display options */}

@@ -165,6 +165,15 @@ describe('PillFilterBar', () => {
     expect(list.className).toMatch(/border-b/);
   });
 
+  it('uses the selected theme for tab underlines even when an item specifies a legacy accent', () => {
+    render(
+      <PillFilterBar items={items()} activeKey="anomalies" onChange={() => {}} ariaLabel="x" variant="tabs" />,
+    );
+    expect(screen.getByRole('tab', { selected: true })).toHaveClass(
+      'border-[var(--theme-primary)]', 'text-[var(--theme-primary)]',
+    );
+  });
+
   it('opts into a labelled group of native pressed filter buttons without tab semantics', () => {
     render(
       <PillFilterBar
@@ -279,7 +288,7 @@ describe('PillFilterBar', () => {
       expect(screen.getByRole('button', { name: /all/i })).toHaveClass('border-[var(--control-border)]');
     } else {
       expect(group).toHaveClass('border-b');
-      expect(selected).toHaveClass('border-amber-400', 'text-amber-300');
+      expect(selected).toHaveClass('border-[var(--theme-primary)]', 'text-[var(--theme-primary)]');
     }
   });
 

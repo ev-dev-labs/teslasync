@@ -18,10 +18,10 @@ vi.mock('@/hooks/useMotionPreference', () => ({ useMotionPreference: () => ({ re
 const raw: SidebarSectionInput[] = inventory.map(section => ({ ...section, items: section.items.map(item => ({ ...item, icon: Icons.home })) }))
 const collections = collectionGroups(raw)
 const sections = collectionSidebarSections(raw, collections)
-function Harness({ route = 'Home', path = '/', recent = [], initialPins = [] }: { route?: string; path?: string; recent?: SidebarSectionInput['items']; initialPins?: SidebarSectionInput['items'] }) {
+function Harness({ route = 'Home', path = '/', initialPins = [] }: { route?: string; path?: string; initialPins?: SidebarSectionInput['items'] }) {
   const [pins, setPins] = useState(initialPins)
   const [open, setOpen] = useState(() => localStorage.getItem('teslasync-deck-panel-open') !== '0')
-  return <MemoryRouter initialEntries={[path]}><CommandDeck sections={sections} collections={collections} pinnedItems={pins} recentItems={recent}
+  return <MemoryRouter initialEntries={[path]}><CommandDeck sections={sections} collections={collections} pinnedItems={pins}
     pathname={path} activeSectionTitle={route} navLabel={item => item.label} navSectionTitle={section => section.title}
     onPin={to => { const item = raw.flatMap(section => section.items).find(item => item.to === to); if (item) setPins(previous => [...previous, item]) }} onUnpin={to => setPins(previous => previous.filter(item => item.to !== to))} panelOpen={open} onPanelOpenChange={value => { setOpen(value); localStorage.setItem('teslasync-deck-panel-open', value ? '1' : '0') }} /></MemoryRouter>
 }
@@ -30,22 +30,53 @@ beforeEach(() => { localStorage.clear(); Object.defineProperty(window, 'innerWid
 afterEach(cleanup)
 describe('responsive sidenav and reload contract', () => {
   it('renders every existing primary in data order', () => { render(<Harness />); expect(rail().getAllByRole('button').map(button => button.getAttribute('aria-label'))).toEqual(sections.map(section => section.title)) })
-  it('restores a browsed section before first paint', () => { localStorage.setItem('teslasync-deck-view', JSON.stringify({kind:'section',title:'Battery'})); render(<Harness route="Driving" path="/drives" />); expect(rail().getByRole('button',{name:'Battery'})).toHaveAttribute('aria-current','true'); expect(screen.getByRole('searchbox')).toHaveAttribute('placeholder','Filter Battery…') })
+  it('follows the loaded route while allowing explicit browsing only for the current visit', () => {
+    localStorage.setItem('teslasync-deck-view', JSON.stringify({ kind: 'section', title: 'Battery' }))
+    const first = render(<Harness route="Driving" path="/drives" />)
+    expect(rail().getByRole('button', { name: 'Driving' })).toHaveAttribute('aria-current', 'true')
+    expect(rail().getByRole('button', { name: 'Battery' })).not.toHaveAttribute('aria-current')
+    expect(screen.getByRole('searchbox')).toHaveAttribute('placeholder', 'Filter Driving…')
+    fireEvent.click(rail().getByRole('button', { name: 'Battery' }))
+    expect(rail().getByRole('button', { name: 'Battery' })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('searchbox')).toHaveAttribute('placeholder', 'Filter Battery…')
+    first.unmount()
+    render(<Harness route="Driving" path="/drives" />)
+    expect(rail().getByRole('button', { name: 'Driving' })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('searchbox')).toHaveAttribute('placeholder', 'Filter Driving…')
+  })
   it('falls back to the route without saved selection', () => { render(<Harness route="Driving" path="/drives" />); expect(rail().getByRole('button',{name:'Driving'})).toHaveAttribute('aria-current','true') })
   it('falls back to the route for a removed stored section', () => { localStorage.setItem('teslasync-deck-view',JSON.stringify({kind:'section',title:'Removed'})); render(<Harness route="Charging" path="/charging" />); expect(rail().getByRole('button',{name:'Charging'})).toHaveAttribute('aria-current','true') })
-  it('restores closed panel state and keeps the saved rail selection', () => { localStorage.setItem('teslasync-deck-panel-open','0'); localStorage.setItem('teslasync-deck-view',JSON.stringify({kind:'section',title:'Battery'})); render(<Harness />); expect(screen.queryByTestId('command-deck-secondary')).toBeNull(); expect(rail().getByRole('button',{name:'Battery'})).toHaveAttribute('aria-current','true'); fireEvent.click(rail().getByRole('button',{name:'Battery'})); expect(screen.getByTestId('command-deck-secondary')).toBeInTheDocument() })
+  it('restores closed panel state with the route selected and still permits explicit browsing', () => {
+    localStorage.setItem('teslasync-deck-panel-open', '0')
+    localStorage.setItem('teslasync-deck-view', JSON.stringify({ kind: 'section', title: 'Battery' }))
+    render(<Harness />)
+    expect(screen.queryByTestId('command-deck-secondary')).toBeNull()
+    expect(rail().getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'true')
+    expect(rail().getByRole('button', { name: 'Battery' })).not.toHaveAttribute('aria-current')
+    fireEvent.click(rail().getByRole('button', { name: 'Battery' }))
+    expect(screen.getByTestId('command-deck-secondary')).toBeInTheDocument()
+    expect(rail().getByRole('button', { name: 'Battery' })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('searchbox')).toHaveAttribute('placeholder', 'Filter Battery…')
+  })
   it('selects a panel without navigating and toggles it closed', () => { render(<Harness />); fireEvent.click(rail().getByRole('button',{name:'Battery'})); expect(screen.getByRole('searchbox')).toHaveAttribute('placeholder','Filter Battery…'); expect(JSON.parse(localStorage.getItem('teslasync-deck-view')!)).toEqual({kind:'section',title:'Battery'}); fireEvent.click(rail().getByRole('button',{name:'Battery'})); expect(screen.queryByTestId('command-deck-secondary')).toBeNull() })
   it('preserves group collapse through unmount/reload', () => { const first=render(<Harness route="Battery" path="/battery" />); const group=screen.getByRole('button',{name:'Battery insights'}); fireEvent.click(group); expect(group).toHaveAttribute('aria-expanded','false'); first.unmount(); render(<Harness route="Battery" path="/battery" />); expect(screen.getByRole('button',{name:'Battery insights'})).toHaveAttribute('aria-expanded','false') })
   it('filters and clears the query when switching sections', () => { render(<Harness route="Battery" />); fireEvent.change(screen.getByRole('searchbox'),{target:{value:'cells'}}); const matchingGroup=screen.getByRole('button',{name:'Battery insights'}); expect(matchingGroup).toHaveAttribute('aria-expanded','true'); fireEvent.click(matchingGroup); expect(matchingGroup).toHaveAttribute('aria-expanded','false'); fireEvent.change(screen.getByRole('searchbox'),{target:{value:''}}); expect(screen.getByRole('button',{name:'Battery insights'})).toHaveAttribute('aria-expanded','true'); fireEvent.change(screen.getByRole('searchbox'),{target:{value:'impossiblequery'}}); expect(screen.getByRole('status')).toHaveTextContent('No pages match "impossiblequery".'); fireEvent.click(rail().getByRole('button',{name:'Driving'})); expect(screen.getByRole('searchbox')).toHaveValue('') })
   it('supports arrows, Home and End with roving focus', () => { render(<Harness />); const buttons=rail().getAllByRole('button'); buttons[0].focus(); fireEvent.keyDown(buttons[0],{key:'ArrowDown'}); expect(buttons[1]).toHaveFocus(); fireEvent.keyDown(buttons[1],{key:'End'}); expect(buttons.at(-1)).toHaveFocus(); fireEvent.keyDown(buttons.at(-1)!,{key:'Home'}); expect(buttons[0]).toHaveFocus(); expect(buttons[0]).toHaveAttribute('tabindex','0') })
-  it('hides Recent when empty and scopes it to the selected section', () => { const first=render(<Harness route="Battery" />); expect(screen.queryByText('Recent')).toBeNull(); first.unmount(); render(<Harness route="Battery" recent={[raw.find(section=>section.title==='Battery')!.items[0]]} />); expect(screen.getByText('Recent')).toBeInTheDocument() })
+  it.each(sections.map(section => section.title))('removes Recent from %s without clearing recent-page data', title => {
+    localStorage.setItem('teslasync-recent-nav-paths', JSON.stringify(['/battery', '/vehicles']))
+    localStorage.setItem('teslasync-sidenav-collapsed-groups-v2', JSON.stringify({ 'section:Battery:recent': true, 'section:Vehicles:recent': false, 'section:Battery:pinned': true }))
+    render(<Harness route={title} />)
+    expect(screen.queryByRole('button', { name: 'Recent' })).toBeNull()
+    expect(JSON.parse(localStorage.getItem('teslasync-sidenav-collapsed-groups-v2')!)).toEqual({ 'section:Battery:pinned': true })
+    expect(JSON.parse(localStorage.getItem('teslasync-recent-nav-paths')!)).toEqual(['/battery', '/vehicles'])
+  })
   it('highlights the current page after restoring its panel', () => { render(<Harness route="Battery" path="/battery" />); expect(screen.getByTestId('command-deck-secondary').querySelector('a[href="/battery"][aria-current="page"]')).not.toBeNull() })
   it('updates selection when the route changes', () => { const result=render(<Harness />); result.rerender(<Harness route="Driving" path="/drives" />); expect(rail().getByRole('button',{name:'Driving'})).toHaveAttribute('aria-current','true'); vi.mocked(HTMLElement.prototype.scrollIntoView).mockClear(); result.rerender(<Harness route="Driving" path="/drive-score" />); expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled() })
   it('shows five phone tabs, More grid and a trapped section sheet; Escape closes', () => { Object.defineProperty(window,'innerWidth',{value:375}); render(<Harness route="Battery" path="/battery" />); const tabs=within(screen.getByRole('navigation',{name:'Quick navigation'})); expect(tabs.getAllByRole('button')).toHaveLength(5); expect(tabs.getByRole('button',{name:'More'})).toHaveAttribute('aria-current','true'); expect(screen.queryByRole('dialog')).toBeNull(); fireEvent.click(tabs.getByRole('button',{name:'More'})); let dialog=screen.getByRole('dialog'); expect(within(dialog).getByRole('button',{name:'Battery'})).toBeInTheDocument(); fireEvent.click(within(dialog).getByRole('button',{name:'Battery'})); dialog=screen.getByRole('dialog'); expect(within(dialog).getByRole('searchbox')).toBeInTheDocument(); const focusable=Array.from(dialog.querySelectorAll<HTMLElement>('button,input,a[href]')).filter(element=>!element.closest('[hidden]')); focusable.at(-1)!.focus(); expect(fireEvent.keyDown(document.activeElement!,{key:'Tab'})).toBe(false); expect(focusable[0]).toHaveFocus(); expect(fireEvent.keyDown(focusable[0],{key:'Tab',shiftKey:true})).toBe(false); expect(focusable.at(-1)).toHaveFocus(); fireEvent.keyDown(document.activeElement!,{key:'Escape'}); expect(screen.queryByRole('dialog')).toBeNull() })
   it('opens a section sheet from a phone tab', () => { Object.defineProperty(window,'innerWidth',{value:375}); render(<Harness />); fireEvent.click(screen.getByRole('button',{name:'Vehicles'})); expect(screen.getByRole('dialog')).toHaveAttribute('aria-label','Vehicles') })
   it('keeps Suggested, Saved and All pages in Home with their destinations and counts', () => { render(<Harness initialPins={[raw.find(section => section.title === 'Battery')!.items[0]]} />); const panel=screen.getByTestId('command-deck-secondary'); expect(within(panel).getByRole('link',{name:/All pages/})).toHaveAttribute('href','/explore'); fireEvent.click(within(panel).getByText('Saved',{exact:true})); expect(panel.querySelector('a[href="/battery"]')).not.toBeNull(); fireEvent.click(within(panel).getByRole('button',{name:'Unpin Battery health'})); expect(within(panel).getByText('Pin pages from any row and they will live here.')).toBeInTheDocument() })
   it('keeps a pinned page reachable in its canonical group after unpinning quick access', () => { render(<Harness route="Battery" initialPins={[raw.find(section=>section.title==='Battery')!.items[0]]} />); const panel=screen.getByTestId('command-deck-secondary'); fireEvent.click(within(panel).getAllByRole('button',{name:'Unpin Battery health'})[0]); expect(within(panel).queryByRole('link',{name:'Quick access: Battery health'})).toBeNull(); expect(panel.querySelector('a[href="/battery"]')).not.toBeNull() })
-  it('does not show another section in Recent and tolerates invalid saved group state', () => { localStorage.setItem('teslasync-sidenav-collapsed-groups-v2','null'); render(<Harness route="Battery" recent={[raw.find(section=>section.title==='Vehicles')!.items[0]]} />); expect(screen.queryByText('Recent')).toBeNull(); expect(screen.getByRole('button',{name:'Battery insights'})).toHaveAttribute('aria-expanded','true') })
+  it('tolerates invalid saved group state', () => { localStorage.setItem('teslasync-sidenav-collapsed-groups-v2','null'); render(<Harness route="Battery" />); expect(screen.queryByText('Recent')).toBeNull(); expect(screen.getByRole('button',{name:'Battery insights'})).toHaveAttribute('aria-expanded','true') })
   it('tablet panel overlays without adding a docked column and closes on Escape', () => { Object.defineProperty(window,'innerWidth',{value:768}); render(<Harness />); expect(screen.queryByTestId('command-deck-secondary')).toBeNull(); expect(screen.getByRole('dialog')).toBeInTheDocument(); const battery=rail().getByRole('button',{name:'Battery'}); battery.focus(); fireEvent.click(battery); fireEvent.keyDown(battery,{key:'Escape'}); expect(screen.queryByRole('dialog')).toBeNull() })
 })
 describe('frozen old-nav reachability', () => {

@@ -109,7 +109,7 @@ export function DriveDnaGenomePanel({
     >
       <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
         <PanelTitle className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Sparkles className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('driveDna.genome.title', 'Genome identity')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mt-1">
@@ -125,7 +125,7 @@ export function DriveDnaGenomePanel({
           returnedRows={model.sample.returnedRows}
           className="mt-4"
         >
-          <div className="flex items-center gap-2 font-mono text-xl tabular-nums text-cyan-300">
+          <div className="flex items-center gap-2 font-mono text-xl tabular-nums text-theme-accent">
             <Sparkles className="h-4 w-4" aria-hidden="true" />
             <Text as="span" mono weight="bold">
               {model.genome.signature}

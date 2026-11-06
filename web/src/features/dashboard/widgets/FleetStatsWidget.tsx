@@ -16,11 +16,11 @@ const KM_PER_MILE = 1.609344;
 /** SI prefix: 1 km = 1000 m. Used to rebuild metres from the derived-SI km field. */
 const METERS_PER_KM = 1000;
 
-export default function FleetStatsWidget(_props: WidgetProps) {
+export default function FleetStatsWidget({ config }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const vehiclesQuery = useVehicles();
-  const analyticsQuery = useFleetAnalytics(30);
+  const analyticsQuery = useFleetAnalytics(config?.timeRange ? { widgetRange: config.timeRange } : 30);
   const { data: vehicles } = vehiclesQuery;
   const { data: analytics } = analyticsQuery;
   const { unitPrefs } = useUnits();
@@ -59,14 +59,18 @@ export default function FleetStatsWidget(_props: WidgetProps) {
       value: vehicleCount == null ? null : fmtInt(vehicleCount),
     },
     {
-      label: t('fleet.distance', 'Distance (30d)'),
+      label: config?.timeRange
+        ? t('widget.fleetStatsBar.distanceRange', 'Distance (selected range)')
+        : t('fleet.distance', 'Distance (30d)'),
       value: isFiniteNumber(analytics?.total_distance_km)
         ? fmtNumber(toDistanceDisplay(analytics.total_distance_km), 0)
         : null,
       unit: distanceUnit,
     },
     {
-      label: t('fleet.energy', 'Energy (30d)'),
+      label: config?.timeRange
+        ? t('widget.fleetStatsBar.energyRange', 'Energy (selected range)')
+        : t('fleet.energy', 'Energy (30d)'),
       value: isFiniteNumber(analytics?.total_energy_kwh)
         ? fmtNumber(analytics.total_energy_kwh, 1)
         : null,

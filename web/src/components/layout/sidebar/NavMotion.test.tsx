@@ -19,7 +19,7 @@ const collections = collectionGroups(navSections)
 const sections = collectionSidebarSections(navSections, collections)
 function Deck({ route = 'Home', path = '/' }: { route?: string; path?: string }) {
   const [open, setOpen] = useState(true)
-  return <MemoryRouter><CommandDeck sections={sections} collections={collections} pinnedItems={[]} recentItems={[]}
+  return <MemoryRouter><CommandDeck sections={sections} collections={collections} pinnedItems={[]}
     pathname={path} activeSectionTitle={route} navLabel={item => item.label} navSectionTitle={section => section.title}
     onPin={() => undefined} onUnpin={() => undefined} panelOpen={open} onPanelOpenChange={setOpen} alertCount={7} /></MemoryRouter>
 }
@@ -62,16 +62,18 @@ describe('selection-only nav icon motion', () => {
     await user.keyboard('{ArrowDown}')
     expect(document.querySelector('.is-animating')).toBeNull()
   })
-  it('does not animate on initial render, restored selection, remount, or programmatic route change', () => {
+  it('does not animate on route-first load, remount, or programmatic route change', () => {
     localStorage.setItem('teslasync-deck-view', JSON.stringify({ kind: 'section', title: 'Battery' }))
     const view = render(<Deck route="Driving" path="/drives" />)
-    expect(rail().getByRole('button', { name: 'Battery', exact: true })).toHaveAttribute('aria-current', 'true')
+    expect(rail().getByRole('button', { name: 'Driving', exact: true })).toHaveAttribute('aria-current', 'true')
+    expect(rail().getByRole('button', { name: 'Battery', exact: true })).not.toHaveAttribute('aria-current')
     expect(document.querySelector('.is-animating')).toBeNull()
     view.rerender(<Deck route="Charging" path="/charging" />)
     expect(rail().getByRole('button', { name: 'Charging', exact: true })).toHaveAttribute('aria-current', 'true')
     expect(document.querySelector('.is-animating')).toBeNull()
     view.unmount()
     render(<Deck route="Charging" path="/charging" />)
+    expect(rail().getByRole('button', { name: 'Charging', exact: true })).toHaveAttribute('aria-current', 'true')
     expect(document.querySelector('.is-animating')).toBeNull()
   })
   it.each(['Alerts', 'Display', 'Account'])('%s footer keeps its accessible control and has an animated variant', name => {

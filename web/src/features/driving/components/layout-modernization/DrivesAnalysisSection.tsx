@@ -41,7 +41,7 @@ export function DrivesAnalysisSection({
           content: isLoading ? (
             <GlassPanel className="p-4 sm:p-5">
               <PanelTitle className="mb-3 flex items-center gap-2">
-                <Icons.activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                <Icons.activity className="h-4 w-4 text-theme-accent" aria-hidden="true" />
                 {t('drives.overTime.title', 'Drives over time')}
               </PanelTitle>
               <Skeleton className="h-56 sm:h-64" />
@@ -66,7 +66,7 @@ export function DrivesAnalysisSection({
           content: (
             <GlassPanel className="space-y-4 p-4 sm:p-5">
               <PanelTitle className="flex items-center gap-2">
-                <Icons.sparkles className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                <Icons.sparkles className="h-4 w-4 text-theme-accent" aria-hidden="true" />
                 {t('drives.highlights', 'Highlights')}
               </PanelTitle>
               {isLoading ? (

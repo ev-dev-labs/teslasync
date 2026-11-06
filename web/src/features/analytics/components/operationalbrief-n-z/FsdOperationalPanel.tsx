@@ -34,13 +34,13 @@ export function FsdOperationalPanel({
       label: t('analytics.weeklyDigest.fsdDistanceChange', 'FSD vs previous week'), missingReason: baselineMissing,
       context: distanceChange != null ? distanceChange < 0
         ? <TrendingDown className="h-4 w-4 text-amber-300" aria-hidden="true" />
-        : <TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" /> : undefined,
+        : <TrendingUp className="h-4 w-4 text-theme-accent" aria-hidden="true" /> : undefined,
       display: { formatter: raw => ({ value: `${raw >= 0 ? '+' : ''}${formatDistance(raw)}`, unit: '' }) } },
     { metricId: 'rate', occurrenceId: 'weekly-fsd-share-change', rawValue: available ? shareChange : null,
       label: t('analytics.weeklyDigest.fsdShareChange', 'Share vs previous week'), missingReason: baselineMissing,
       context: shareChange != null ? shareChange < 0
         ? <TrendingDown className="h-4 w-4 text-amber-300" aria-hidden="true" />
-        : <TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" /> : undefined,
+        : <TrendingUp className="h-4 w-4 text-theme-accent" aria-hidden="true" /> : undefined,
       display: { formatter: raw => ({ value: `${raw >= 0 ? '+' : ''}${fmtNumber(raw)}`, unit: 'pts' }) } },
   ];
   const operationalMetrics = useOperationalMetrics(metrics);

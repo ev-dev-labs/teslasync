@@ -15,7 +15,7 @@ const toneClass: Record<NonNullable<OwnershipStat['tone']>, string> = {
   positive: 'text-emerald-300',
   warning: 'text-amber-300',
   critical: 'text-rose-300',
-  accent: 'text-cyan-300',
+  accent: 'text-theme-accent',
 };
 
 interface StatGridProps {

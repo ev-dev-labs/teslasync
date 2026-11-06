@@ -16,16 +16,15 @@ name: SI Canonical Gate
 #   2. Frontend TS — bans new callers of the @deprecated unit
 #      conversion helpers in web/src/lib/unitConversion.ts.
 #
-# The gate inspects ADDED lines only via `git diff origin/main...HEAD`,
-# so refactors that move existing legacy identifiers between files do
-# NOT trip the gate (the moved + added cancel out at line-count level
-# but ADDED lines do appear in the diff — the allowlist therefore
-# applies to both pre-existing files and the legacy-suffix patterns
-# themselves).
+# The gate inspects added lines from the event's actual change range:
+# PR merge base, push before-SHA, or merge-queue base SHA.
 
 on:
   push:
+    branches: [main]
   pull_request:
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
 
 concurrency:
@@ -46,20 +45,36 @@ jobs:
           # base. depth: 0 is wasteful but reliable on shallow clones.
           fetch-depth: 0
 
-      - name: Compute diff against PR base
+      - name: Compute changes for this event
         id: diff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          MERGE_GROUP_BASE: ${{ github.event.merge_group.base_sha }}
         run: |
           set -euo pipefail
-          BASE="${GITHUB_BASE_REF:-main}"
-          git fetch --no-tags --depth=200 origin "+refs/heads/${BASE}:refs/remotes/origin/${BASE}"
-          # Use the merge-base so file moves and rebases don't false-positive.
-          MERGE_BASE=$(git merge-base "origin/${BASE}" HEAD)
-          echo "merge_base=${MERGE_BASE}" >>"$GITHUB_OUTPUT"
-          git diff --unified=0 "${MERGE_BASE}...HEAD" -- \
-            'internal/**/*.go' 'cmd/**/*.go' \
-            'web/src/**/*.ts' 'web/src/**/*.tsx' \
-            'migrations/**/*.sql' \
-            > /tmp/si.diff || true
+          PATHS=(
+            'internal/**/*.go' 'cmd/**/*.go'
+            'web/src/**/*.ts' 'web/src/**/*.tsx'
+            'migrations/**/*.sql'
+          )
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            if [[ "$PUSH_BEFORE" =~ ^0+$ ]]; then
+              git diff --root --unified=0 HEAD -- "${PATHS[@]}" > /tmp/si.diff
+            else
+              git cat-file -e "${PUSH_BEFORE}^{commit}"
+              git diff --unified=0 "$PUSH_BEFORE" HEAD -- "${PATHS[@]}" > /tmp/si.diff
+            fi
+          elif [[ "$EVENT_NAME" == "merge_group" ]]; then
+            git cat-file -e "${MERGE_GROUP_BASE}^{commit}"
+            git diff --unified=0 "$MERGE_GROUP_BASE" HEAD -- "${PATHS[@]}" > /tmp/si.diff
+          else
+            BASE="${BASE_REF:-main}"
+            git fetch --no-tags origin "+refs/heads/${BASE}:refs/remotes/origin/${BASE}"
+            MERGE_BASE=$(git merge-base "origin/${BASE}" HEAD)
+            git diff --unified=0 "${MERGE_BASE}...HEAD" -- "${PATHS[@]}" > /tmp/si.diff
+          fi
           wc -l /tmp/si.diff
 
       - name: Test canonical gate field boundaries

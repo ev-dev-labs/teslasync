@@ -206,10 +206,10 @@ it.each([
   expect(screen.getByText(label, { exact: true })).toBeInTheDocument();
 });
 
-function renderWidget(size: WidgetSize = FULL, vehicleId?: number) {
+function renderWidget(size: WidgetSize = FULL, vehicleId?: number, timeRange?: string) {
   const view = render(
     <MemoryRouter>
-      <ChargeCostTrackerWidget size={size} vehicleId={vehicleId} />
+      <ChargeCostTrackerWidget size={size} vehicleId={vehicleId} config={timeRange ? { timeRange } : undefined} />
     </MemoryRouter>,
   );
   expect(view.container.querySelector('h3')).toHaveAccessibleName('Charge cost tracker');
@@ -217,8 +217,8 @@ function renderWidget(size: WidgetSize = FULL, vehicleId?: number) {
 }
 
 /** Pull the queryFn passed to the (mocked) useQuery on the most recent render. */
-function lastQueryFn(): () => unknown {
-  const opts = useQueryMock.mock.calls[useQueryMock.mock.calls.length - 1]?.[0] as { queryFn: () => unknown };
+function lastQueryFn(): (context: { signal: AbortSignal }) => unknown {
+  const opts = useQueryMock.mock.calls[useQueryMock.mock.calls.length - 1]?.[0] as { queryFn: (context: { signal: AbortSignal }) => unknown };
   return opts.queryFn;
 }
 
@@ -450,11 +450,24 @@ describe('ChargeCostTrackerWidget — full layout', () => {
 // ── Request contract ──────────────────────────────────────────────────────────
 
 describe('ChargeCostTrackerWidget — request contract', () => {
-  it('builds the charging request with snake_case params and no /api/v1 prefix', () => {
+  it('uses the full selected range and labels its cost without claiming a 30-day window', async () => {
+    setQuery({ data: [makeSession()] });
+    renderWidget(FULL, 7, '90d');
+    expect(screen.getByText('Cost for selected range')).toBeInTheDocument();
+    expect(screen.queryByText('30-day cost')).toBeNull();
+    await lastQueryFn()({ signal: new AbortController().signal });
+    const url = new URL(String(requestMock.mock.calls[0][0]), 'http://fixture.test');
+    expect(url.searchParams.get('limit')).toBe('1000');
+    expect(url.searchParams.get('offset')).toBe('0');
+    expect(Date.parse(url.searchParams.get('end')!) - Date.parse(url.searchParams.get('start')!))
+      .toBe(90 * 24 * 60 * 60 * 1000);
+  });
+
+  it('builds the charging request with snake_case params and no /api/v1 prefix', async () => {
     setQuery({ data: [] });
     renderWidget(FULL, 7);
 
-    lastQueryFn()();
+    await lastQueryFn()({ signal: new AbortController().signal });
     const url = requestMock.mock.calls[requestMock.mock.calls.length - 1]?.[0] as string;
 
     expect(url).toContain('/charging?vehicle_id=7&limit=100&start=');
@@ -462,12 +475,12 @@ describe('ChargeCostTrackerWidget — request contract', () => {
     expect(url).not.toMatch(/vehicleId=/);
   });
 
-  it('falls back to the first vehicle id when no vehicleId prop is provided', () => {
+  it('falls back to the first vehicle id when no vehicleId prop is provided', async () => {
     vehiclesMock.mockReturnValue({ data: [{ id: 42, display_name: 'Other' }] });
     setQuery({ data: [] });
     renderWidget(FULL, undefined);
 
-    lastQueryFn()();
+    await lastQueryFn()({ signal: new AbortController().signal });
     const url = requestMock.mock.calls[requestMock.mock.calls.length - 1]?.[0] as string;
     expect(url).toContain('vehicle_id=42');
   });

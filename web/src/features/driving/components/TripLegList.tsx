@@ -117,10 +117,10 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
 
               {/* Charging stop after this leg */}
               {stop && (
-                <div className="ml-3 mt-2 mb-1 flex items-start gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 p-3">
-                  <Zap aria-hidden="true" className="h-4 w-4 shrink-0 text-blue-400 mt-0.5" />
+                <div className="ml-3 mt-2 mb-1 flex items-start gap-2 rounded-lg border border-theme-accent/20 bg-theme-accent/5 p-3">
+                  <Zap aria-hidden="true" className="h-4 w-4 shrink-0 text-theme-accent mt-0.5" />
                   <div className="text-sm">
-                    <Text as="p" weight="medium" className="text-blue-300">{stop.name?.trim() || t('tripPlanner.legs.chargeStop', 'Charging stop')}</Text>
+                    <Text as="p" weight="medium" className="text-theme-accent">{stop.name?.trim() || t('tripPlanner.legs.chargeStop', 'Charging stop')}</Text>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[var(--text-secondary)]">
                       <span className="flex items-center gap-1">
                         <Clock aria-hidden="true" className="h-3 w-3" />

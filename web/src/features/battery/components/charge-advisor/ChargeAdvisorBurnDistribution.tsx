@@ -28,7 +28,7 @@ export function ChargeAdvisorBurnDistribution({ analysis, state }: ChargeAdvisor
         'chargeAdvisor.distribution.subtitle',
         'Robust summaries of summed active local-day drive-associated SoC drops.',
       )}
-      icon={<BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<BarChart3 className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
       state={state}
       dependency="drive"
       dataTestId="charge-advisor-distribution"
@@ -37,7 +37,7 @@ export function ChargeAdvisorBurnDistribution({ analysis, state }: ChargeAdvisor
         {metrics.map(([label, value]) => (
           <div key={label} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
             <Text variant="caption">{label}</Text>
-            <Text className="mt-1 text-lg font-semibold text-cyan-300">
+            <Text className="mt-1 text-lg font-semibold text-theme-accent">
               {value == null ? '—' : fmtPercent(value)}
             </Text>
           </div>

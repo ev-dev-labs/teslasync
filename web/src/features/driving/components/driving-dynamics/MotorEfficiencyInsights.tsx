@@ -49,7 +49,7 @@ export default function MotorEfficiencyInsights({
         {/* Torque Distribution */}
         <GlassPanel className="h-full p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <Zap className="h-4 w-4 text-indigo-300" aria-hidden="true" />
+            <Zap className="h-4 w-4 text-theme-accent" aria-hidden="true" />
             {t('dynamics.torqueDistribution', 'Torque Distribution')}
           </PanelTitle>
           {motorStats?.avgTorque != null ? (
@@ -65,7 +65,7 @@ export default function MotorEfficiencyInsights({
         {/* Throttle Behavior */}
         <GlassPanel className="h-full p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Gauge className="h-4 w-4 text-theme-accent" aria-hidden="true" />
             {t('dynamics.evidence.powerDemand', 'Power demand')}
           </PanelTitle>
           {motorStats?.avgPower != null ? (

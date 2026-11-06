@@ -23,7 +23,7 @@ export function ChargeAdvisorScenarioDirectory({ analysis, state }: ChargeAdviso
         'chargeAdvisor.directory.subtitle',
         'Each row keeps the local date, daily use assumption, and clamped end SoC visible.',
       )}
-      icon={<CalendarDays className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<CalendarDays className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
       state={state}
       dependency="drive"
       dataTestId="charge-advisor-directory"
@@ -61,7 +61,7 @@ export function ChargeAdvisorScenarioDirectory({ analysis, state }: ChargeAdviso
                 </div>
                 <div>
                   <Text variant="caption">{t('chargeAdvisor.directory.meanEnd', 'Mean end SoC')}</Text>
-                  <Text className="font-semibold text-cyan-300">{fmtPercent(day.meanEndSocPct)}</Text>
+                  <Text className="font-semibold text-theme-accent">{fmtPercent(day.meanEndSocPct)}</Text>
                 </div>
                 <div>
                   <Text variant="caption">{t('chargeAdvisor.directory.p75End', 'Calendar-day p75 end SoC')}</Text>

@@ -41,6 +41,7 @@ vi.mock('react-grid-layout', () => ({
   },
   useContainerWidth: () => ({ containerRef: { current: null }, width: 1400 }),
   verticalCompactor: { compact: (layout: RGLLayout[]) => layout },
+  noCompactor: { compact: (layout: RGLLayout[]) => layout },
 }));
 
 function makeDashboard(): SavedDashboard {
@@ -111,13 +112,11 @@ describe('DashboardGrid — RGL contract', () => {
     expect(captured?.onLayoutChange).toBeUndefined();
   });
 
-  it('persists drag results from callback args without touching other breakpoints', () => {
+  it('persists callback order without replacing canonical sizes with measured presentation sizes', () => {
     const onLayoutChange = vi.fn();
     renderGrid(onLayoutChange);
-    const moved: RGLLayout[] = [
-      { i: 'wid-1', x: 1, y: 0, w: 1, h: 2 },
-      { i: 'wid-2', x: 0, y: 0, w: 1, h: 2 },
-    ];
+    const original = structuredClone(captured?.layouts) as RGLLayouts;
+    const moved = original.lg.map(item => ({ ...item, y: item.i === 'wid-1' ? 3 : 0 }));
 
     act(() => {
       captured?.onDragStop?.(moved, null, { i: 'wid-1' });
@@ -126,22 +125,15 @@ describe('DashboardGrid — RGL contract', () => {
     expect(onLayoutChange).toHaveBeenCalledTimes(1);
     const [saved, bp] = onLayoutChange.mock.calls[0] as [RGLLayouts, string];
     expect(bp).toBe('lg'); // width 1400 → lg
-    expect(saved.lg).toEqual(moved);
-    // The md slot keeps its own arrangement (a wholesale echo adoption here
-    // is what used to collapse untouched breakpoints into x=0 stacks).
-    expect(saved.md).toEqual([
-      { i: 'wid-1', x: 0, y: 0, w: 1, h: 2 },
-      { i: 'wid-2', x: 1, y: 0, w: 1, h: 2 },
-    ]);
+    expect(saved.lg.find(item => item.i === 'wid-1')).toMatchObject({ y: 3, w: 1, h: 2 });
+    expect(saved.lg.find(item => item.i === 'wid-2')).toMatchObject({ y: 0, w: 2, h: 2 });
+    expect(saved.md).toEqual(original.md);
   });
 
   it('drops no-op gestures before writing (no undo entry, no toast)', () => {
     const onLayoutChange = vi.fn();
     renderGrid(onLayoutChange);
-    const unchanged: RGLLayout[] = [
-      { i: 'wid-1', x: 0, y: 0, w: 1, h: 2 },
-      { i: 'wid-2', x: 2, y: 0, w: 2, h: 2 },
-    ];
+    const unchanged = (captured?.layouts as RGLLayouts).lg;
 
     act(() => {
       captured?.onResizeStop?.(unchanged, null, { i: 'wid-1' });

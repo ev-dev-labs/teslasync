@@ -60,7 +60,7 @@ export function ChargeAdvisorChargingProfile({
         'chargeAdvisor.charging.subtitle',
         'Completed charging sessions are summarized separately from drive-associated use; nonpositive SoC gains are accounted for but excluded from these aggregates.',
       )}
-      icon={<BatteryCharging className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<BatteryCharging className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
       state={state}
       dependency="charging"
       dataTestId="charge-advisor-charging-profile"
@@ -69,7 +69,7 @@ export function ChargeAdvisorChargingProfile({
         {items.map((item) => (
           <div key={item.label} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
             <Text variant="caption">{item.label}</Text>
-            <Text className="mt-1 text-xl font-semibold text-cyan-300">{item.value}</Text>
+            <Text className="mt-1 text-xl font-semibold text-theme-accent">{item.value}</Text>
             <Text variant="caption">{item.detail}</Text>
           </div>
         ))}

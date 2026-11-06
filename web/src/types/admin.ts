@@ -235,7 +235,8 @@ export interface TableInfo {
 export interface DBStats {
   tables: TableInfo[];
   tableCount: number;
-  databaseSize: string;
+  databaseSize: number | string | null;
+  rowCountsEstimated?: boolean;
 }
 
 export interface MigrationInfo {

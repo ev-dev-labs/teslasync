@@ -460,6 +460,20 @@ export function useSignalGaps(vehicleId: number) {
   });
 }
 
+export function useChargingScheduleSignals(vehicleId: number) {
+  return useQuery({
+    queryKey: ['signals', vehicleId, 'live-schedule'],
+    queryFn: async ({ signal }) => {
+      const res = await request<{
+        signals?: Record<string, { value: unknown; timestamp: string }>;
+      }>(`/signals/${vehicleId}/live`, { signal });
+      return res.signals ?? {};
+    },
+    enabled: Number.isSafeInteger(vehicleId) && vehicleId > 0,
+    staleTime: 30_000,
+  });
+}
+
 export function useMQTTStatus() {
   return useQuery({
     queryKey: telemetryKeys.mqttStatus,

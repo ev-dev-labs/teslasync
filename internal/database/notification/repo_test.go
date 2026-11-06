@@ -192,7 +192,7 @@ func TestBuildNotificationLogWhere_RuleJoinFlagSetByVehicleOrSeverity(t *testing
 	}
 }
 
-func TestBuildNotificationLogWhere_UsesCanonicalVehicleScope(t *testing.T) {
+func TestBuildNotificationLogWhere_UsesCapturedVehicle(t *testing.T) {
 	w := buildNotificationLogWhere(NotificationLogFilters{
 		VehicleIDs: []int64{7, 9},
 	})
@@ -200,15 +200,8 @@ func TestBuildNotificationLogWhere_UsesCanonicalVehicleScope(t *testing.T) {
 		t.Fatalf("vehicle clauses = %v, want one clause", w.clauses)
 	}
 	clause := w.clauses[0]
-	for _, expected := range []string{
-		"nl.alert_id IS NULL",
-		"ar.all_vehicles",
-		"alert_rule_vehicles",
-		"arv.vehicle_id = ANY($1)",
-	} {
-		if !strings.Contains(clause, expected) {
-			t.Fatalf("vehicle clause = %q, missing %q", clause, expected)
-		}
+	if clause != "nl.vehicle_id = ANY($1)" {
+		t.Fatalf("vehicle clause must filter the event, not current rule scope: %q", clause)
 	}
 	if strings.Contains(clause, "ar.vehicle_id") {
 		t.Fatalf("vehicle clause still uses deprecated alert_rules.vehicle_id: %q", clause)

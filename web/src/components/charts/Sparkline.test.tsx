@@ -124,9 +124,9 @@ describe('Sparkline — styling props', () => {
   it('uses the default cyan accent when no colour is supplied', () => {
     const { container } = render(<Sparkline data={[1, 2]} />)
     const line = container.querySelectorAll('polyline')[0]
-    expect(line?.getAttribute('stroke')).toBe('var(--theme-primary, #3b82f6)')
+    expect(line?.getAttribute('stroke')).toBe('var(--theme-primary)')
     const stops = container.querySelectorAll('stop')
-    expect(stops[0]?.getAttribute('stop-color')).toBe('var(--theme-primary, #3b82f6)')
+    expect(stops[0]?.getAttribute('stop-color')).toBe('var(--theme-primary)')
   })
 })
 

@@ -209,7 +209,7 @@ function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: numbe
 /** Options object the widget passed to the mocked `useQuery` on last render. */
 interface CapturedQuery {
   queryKey: unknown[];
-  queryFn: () => Promise<unknown>;
+  queryFn: (context: { signal: AbortSignal }) => Promise<unknown>;
   enabled: boolean;
   staleTime: number;
 }
@@ -376,13 +376,14 @@ describe('ChargingScheduleWidget — vehicle resolution', () => {
     useVehiclesMock.mockReturnValue({ data: [{ id: 5 }] });
     renderWidget();
     const { queryFn } = lastQueryOptions();
+    const signal = new AbortController().signal;
 
     requestMock.mockResolvedValueOnce({ signals: { ChargeLimitSoc: sig(90) } });
-    await expect(queryFn()).resolves.toEqual({ ChargeLimitSoc: sig(90) });
-    expect(requestMock).toHaveBeenCalledWith('/signals/5/live');
+    await expect(queryFn({ signal })).resolves.toEqual({ ChargeLimitSoc: sig(90) });
+    expect(requestMock).toHaveBeenCalledWith('/signals/5/live', { signal });
 
     requestMock.mockResolvedValueOnce({});
-    await expect(queryFn()).resolves.toEqual({});
+    await expect(queryFn({ signal })).resolves.toEqual({});
   });
 });
 

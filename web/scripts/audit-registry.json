@@ -27,6 +27,7 @@
     "web/vite.config.ts": "verify-english-catalog-split buildStart plugin — runs on every `vite build` and `vite dev`, i.e. on every CI job that builds the SPA."
   },
   "audits": [
+    { "script": "audit-accent-colors.mjs", "npmScript": "audit:accent-colors", "status": "active", "enforcement": "zero-violations", "asserts": "Interactive accent colors use shared theme tokens; fixed color utilities and literal accent-like paints outside token modules fail." },
     { "script": "audit-empty-state-cta.mjs", "npmScript": "audit:empty-state", "status": "active", "enforcement": "zero-violations", "asserts": "Every EmptyState carries an actionable CTA." },
     { "script": "audit-nested-surfaces.mjs", "wiredBy": "src/__tests__/nestedSurfaces.contract.test.ts", "status": "active", "enforcement": "zero-violations", "asserts": "No standalone brief or bordered card renders inside another surface, and no outer heading duplicates an inner card title." },
     { "script": "audit-tooltip-text-color.mjs", "npmScript": "audit:tooltip-text", "status": "active", "enforcement": "zero-violations", "asserts": "Recharts tooltip content uses readable token colours." },

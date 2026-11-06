@@ -43,7 +43,7 @@ export function VampireSplitPanel({ vehicleId }: { vehicleId: string | undefined
   return (
     <GlassPanel className="space-y-4 p-4 sm:p-5" data-testid="vampire-split">
       <PanelTitle className="flex items-center gap-2">
-        <Moon className="h-4 w-4 text-indigo-300" aria-hidden="true" />
+        <Moon className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('vampireDrain.split.title', 'Complete-plugged vs unplugged drain')}
       </PanelTitle>
       {state.status === 'initial' ? (

@@ -70,12 +70,12 @@ function useSvgPalette() {
       stroke: isLight ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.08)',
     },
     glass: {
-      fill: isLight ? 'rgba(0,120,200,0.15)' : 'rgba(15,23,42,0.9)',
-      stroke: isLight ? 'rgba(0,120,200,0.25)' : 'rgba(255,255,255,0.12)',
+      fill: isLight ? 'rgb(var(--semantic-info-rgb) / 0.15)' : 'rgba(15,23,42,0.9)',
+      stroke: isLight ? 'rgb(var(--semantic-info-rgb) / 0.25)' : 'rgba(255,255,255,0.12)',
     },
     wind: {
-      fill: isLight ? 'rgba(0,120,200,0.12)' : 'rgba(15,23,42,0.85)',
-      stroke: isLight ? 'rgba(0,120,200,0.2)' : 'rgba(255,255,255,0.1)',
+      fill: isLight ? 'rgb(var(--semantic-info-rgb) / 0.12)' : 'rgba(15,23,42,0.85)',
+      stroke: isLight ? 'rgb(var(--semantic-info-rgb) / 0.2)' : 'rgba(255,255,255,0.1)',
     },
     wheel: {
       outer: isLight ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.6)',
@@ -100,14 +100,14 @@ function useSvgPalette() {
     turnSignalOn: '#fbbf24',
     headlightOff: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)',
     falconWing: {
-      main: isLight ? 'rgba(0,120,200,0.15)' : 'rgba(0,240,255,0.08)',
-      tip: isLight ? 'rgba(0,120,200,0.1)' : 'rgba(0,240,255,0.06)',
+      main: isLight ? 'rgb(var(--semantic-activity-rgb) / 0.15)' : 'rgb(var(--semantic-activity-rgb) / 0.08)',
+      tip: isLight ? 'rgb(var(--semantic-activity-rgb) / 0.1)' : 'rgb(var(--semantic-activity-rgb) / 0.06)',
     },
-    speedLine: isLight ? 'rgba(0,120,200,0.3)' : 'rgba(0,240,255,0.3)',
+    speedLine: 'rgb(var(--semantic-activity-rgb) / 0.3)',
     lock: {
       bg: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.4)',
     },
-    climate: isLight ? 'rgba(0,120,200,0.4)' : 'rgba(0,240,255,0.4)',
+    climate: 'rgb(var(--semantic-activity-rgb) / 0.4)',
     sentry: {
       ring1: isLight ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.15)',
       ring2: isLight ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.08)',
@@ -120,8 +120,8 @@ function useSvgPalette() {
         ? 'radial-gradient(circle, rgba(16,185,129,0.2) 0%, transparent 70%)'
         : 'radial-gradient(circle, rgba(16,185,129,0.4) 0%, transparent 70%)',
       driving: isLight
-        ? 'radial-gradient(circle, rgba(0,120,200,0.15) 0%, transparent 70%)'
-        : 'radial-gradient(circle, rgba(0,240,255,0.3) 0%, transparent 70%)',
+        ? 'radial-gradient(circle, rgb(var(--semantic-activity-rgb) / 0.15) 0%, transparent 70%)'
+        : 'radial-gradient(circle, rgb(var(--semantic-activity-rgb) / 0.3) 0%, transparent 70%)',
       idle: isLight
         ? 'radial-gradient(circle, rgba(0,0,0,0.03) 0%, transparent 70%)'
         : 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)',
@@ -608,7 +608,7 @@ export function TeslaCarViz({
           label={isLocked == null ? '—' : isLocked ? t('vehicleVisualization.status.locked', 'Locked') : t('vehicleVisualization.status.unlocked', 'Unlocked')}
           palette={palette}
         />
-        {isClimateOn && <StatusDot active color="#00f0ff" label={t('vehicleVisualization.status.climate', 'Climate')} palette={palette} />}
+        {isClimateOn && <StatusDot active color="var(--semantic-info)" label={t('vehicleVisualization.status.climate', 'Climate')} palette={palette} />}
         {sentryMode && <StatusDot active color="#ef4444" label={t('vehicleVisualization.status.sentry', 'Sentry')} palette={palette} />}
       </div>
     </div>

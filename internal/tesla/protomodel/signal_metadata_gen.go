@@ -288,6 +288,8 @@ const (
 	Field_RollingResistanceCoefficient              Field = 275
 	Field_LifetimeDcChargeEnergyKwh                 Field = 276
 	Field_SemiVehicleMassKg                         Field = 277
+	Field_SelfDrivingSoftwareVersion                Field = 278
+	Field_SemiTrailerLatched                        Field = 279
 )
 
 // Name returns the protobuf field name for this Field. Returns the empty
@@ -850,6 +852,10 @@ func (f Field) Name() string {
 		return "LifetimeDcChargeEnergyKwh"
 	case Field_SemiVehicleMassKg:
 		return "SemiVehicleMassKg"
+	case Field_SelfDrivingSoftwareVersion:
+		return "SelfDrivingSoftwareVersion"
+	case Field_SemiTrailerLatched:
+		return "SemiTrailerLatched"
 	}
 	return ""
 }
@@ -1424,6 +1430,10 @@ func ParseField(s string) (Field, error) {
 		return Field_LifetimeDcChargeEnergyKwh, nil
 	case "SemiVehicleMassKg":
 		return Field_SemiVehicleMassKg, nil
+	case "SelfDrivingSoftwareVersion":
+		return Field_SelfDrivingSoftwareVersion, nil
+	case "SemiTrailerLatched":
+		return Field_SemiTrailerLatched, nil
 	}
 	return Field(0), fmt.Errorf("protomodel: unknown Field name %q", s)
 }
@@ -1713,6 +1723,8 @@ var Signals = []SignalMeta{
 	{Field: "RollingResistanceCoefficient", ProtoEnumNum: 275, Category: "driving", ValueKind: ValueKindDouble, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
 	{Field: "LifetimeDcChargeEnergyKwh", ProtoEnumNum: 276, Category: "charging", ValueKind: ValueKindDouble, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
 	{Field: "SemiVehicleMassKg", ProtoEnumNum: 277, Category: "driving", ValueKind: ValueKindDouble, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "SelfDrivingSoftwareVersion", ProtoEnumNum: 278, Category: "config", ValueKind: ValueKindString, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "SemiTrailerLatched", ProtoEnumNum: 279, Category: "vehicle_state", ValueKind: ValueKindBool, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
 }
 
 // SignalsByName indexes Signals by canonical proto field name. The pointer

@@ -94,76 +94,46 @@ jobs:
   chromium-tests:
     name: Chromium ${{ matrix.name }}
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
     needs: browser-build
     strategy:
       fail-fast: false
       matrix:
         include:
           # Keep every partition required; the aggregate checks the entire matrix.
-          - {name: responsive-1, suite: quality, shard: '1/64'}
-          - {name: responsive-2, suite: quality, shard: '2/64'}
-          - {name: responsive-3, suite: quality, shard: '3/64'}
-          - {name: responsive-4, suite: quality, shard: '4/64'}
-          - {name: responsive-5, suite: quality, shard: '5/64'}
-          - {name: responsive-6, suite: quality, shard: '6/64'}
-          - {name: responsive-7, suite: quality, shard: '7/64'}
-          - {name: responsive-8, suite: quality, shard: '8/64'}
-          - {name: responsive-9, suite: quality, shard: '9/64'}
-          - {name: responsive-10, suite: quality, shard: '10/64'}
-          - {name: responsive-11, suite: quality, shard: '11/64'}
-          - {name: responsive-12, suite: quality, shard: '12/64'}
-          - {name: responsive-13, suite: quality, shard: '13/64'}
-          - {name: responsive-14, suite: quality, shard: '14/64'}
-          - {name: responsive-15, suite: quality, shard: '15/64'}
-          - {name: responsive-16, suite: quality, shard: '16/64'}
-          - {name: responsive-17, suite: quality, shard: '17/64'}
-          - {name: responsive-18, suite: quality, shard: '18/64'}
-          - {name: responsive-19, suite: quality, shard: '19/64'}
-          - {name: responsive-20, suite: quality, shard: '20/64'}
-          - {name: responsive-21, suite: quality, shard: '21/64'}
-          - {name: responsive-22, suite: quality, shard: '22/64'}
-          - {name: responsive-23, suite: quality, shard: '23/64'}
-          - {name: responsive-24, suite: quality, shard: '24/64'}
-          - {name: responsive-25, suite: quality, shard: '25/64'}
-          - {name: responsive-26, suite: quality, shard: '26/64'}
-          - {name: responsive-27, suite: quality, shard: '27/64'}
-          - {name: responsive-28, suite: quality, shard: '28/64'}
-          - {name: responsive-29, suite: quality, shard: '29/64'}
-          - {name: responsive-30, suite: quality, shard: '30/64'}
-          - {name: responsive-31, suite: quality, shard: '31/64'}
-          - {name: responsive-32, suite: quality, shard: '32/64'}
-          - {name: responsive-33, suite: quality, shard: '33/64'}
-          - {name: responsive-34, suite: quality, shard: '34/64'}
-          - {name: responsive-35, suite: quality, shard: '35/64'}
-          - {name: responsive-36, suite: quality, shard: '36/64'}
-          - {name: responsive-37, suite: quality, shard: '37/64'}
-          - {name: responsive-38, suite: quality, shard: '38/64'}
-          - {name: responsive-39, suite: quality, shard: '39/64'}
-          - {name: responsive-40, suite: quality, shard: '40/64'}
-          - {name: responsive-41, suite: quality, shard: '41/64'}
-          - {name: responsive-42, suite: quality, shard: '42/64'}
-          - {name: responsive-43, suite: quality, shard: '43/64'}
-          - {name: responsive-44, suite: quality, shard: '44/64'}
-          - {name: responsive-45, suite: quality, shard: '45/64'}
-          - {name: responsive-46, suite: quality, shard: '46/64'}
-          - {name: responsive-47, suite: quality, shard: '47/64'}
-          - {name: responsive-48, suite: quality, shard: '48/64'}
-          - {name: responsive-49, suite: quality, shard: '49/64'}
-          - {name: responsive-50, suite: quality, shard: '50/64'}
-          - {name: responsive-51, suite: quality, shard: '51/64'}
-          - {name: responsive-52, suite: quality, shard: '52/64'}
-          - {name: responsive-53, suite: quality, shard: '53/64'}
-          - {name: responsive-54, suite: quality, shard: '54/64'}
-          - {name: responsive-55, suite: quality, shard: '55/64'}
-          - {name: responsive-56, suite: quality, shard: '56/64'}
-          - {name: responsive-57, suite: quality, shard: '57/64'}
-          - {name: responsive-58, suite: quality, shard: '58/64'}
-          - {name: responsive-59, suite: quality, shard: '59/64'}
-          - {name: responsive-60, suite: quality, shard: '60/64'}
-          - {name: responsive-61, suite: quality, shard: '61/64'}
-          - {name: responsive-62, suite: quality, shard: '62/64'}
-          - {name: responsive-63, suite: quality, shard: '63/64'}
-          - {name: responsive-64, suite: quality, shard: '64/64'}
+          - {name: responsive-1, suite: quality, shard: '1/32'}
+          - {name: responsive-2, suite: quality, shard: '2/32'}
+          - {name: responsive-3, suite: quality, shard: '3/32'}
+          - {name: responsive-4, suite: quality, shard: '4/32'}
+          - {name: responsive-5, suite: quality, shard: '5/32'}
+          - {name: responsive-6, suite: quality, shard: '6/32'}
+          - {name: responsive-7, suite: quality, shard: '7/32'}
+          - {name: responsive-8, suite: quality, shard: '8/32'}
+          - {name: responsive-9, suite: quality, shard: '9/32'}
+          - {name: responsive-10, suite: quality, shard: '10/32'}
+          - {name: responsive-11, suite: quality, shard: '11/32'}
+          - {name: responsive-12, suite: quality, shard: '12/32'}
+          - {name: responsive-13, suite: quality, shard: '13/32'}
+          - {name: responsive-14, suite: quality, shard: '14/32'}
+          - {name: responsive-15, suite: quality, shard: '15/32'}
+          - {name: responsive-16, suite: quality, shard: '16/32'}
+          - {name: responsive-17, suite: quality, shard: '17/32'}
+          - {name: responsive-18, suite: quality, shard: '18/32'}
+          - {name: responsive-19, suite: quality, shard: '19/32'}
+          - {name: responsive-20, suite: quality, shard: '20/32'}
+          - {name: responsive-21, suite: quality, shard: '21/32'}
+          - {name: responsive-22, suite: quality, shard: '22/32'}
+          - {name: responsive-23, suite: quality, shard: '23/32'}
+          - {name: responsive-24, suite: quality, shard: '24/32'}
+          - {name: responsive-25, suite: quality, shard: '25/32'}
+          - {name: responsive-26, suite: quality, shard: '26/32'}
+          - {name: responsive-27, suite: quality, shard: '27/32'}
+          - {name: responsive-28, suite: quality, shard: '28/32'}
+          - {name: responsive-29, suite: quality, shard: '29/32'}
+          - {name: responsive-30, suite: quality, shard: '30/32'}
+          - {name: responsive-31, suite: quality, shard: '31/32'}
+          - {name: responsive-32, suite: quality, shard: '32/32'}
           # Thirteen independent audits; don't create 51 empty runners.
           - {name: accessibility, suite: a11y, shard: '1/13'}
           - {name: accessibility-2, suite: a11y, shard: '2/13'}
@@ -188,7 +158,6 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci --legacy-peer-deps
-      - run: npx playwright install --with-deps chromium
       - uses: actions/download-artifact@v8
         with:
           name: e2e-app
@@ -229,11 +198,13 @@ jobs:
   cross-browser-tests:
     name: ${{ matrix.browser }} critical smoke (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
     needs: browser-build
     strategy:
       fail-fast: false
       matrix:
-        browser: [firefox, webkit]
+        browser: [firefox, webkit, edge]
         shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v7
@@ -243,7 +214,9 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci --legacy-peer-deps
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Install Microsoft Edge
+        if: matrix.browser == 'edge'
+        run: npx playwright install msedge
       - uses: actions/download-artifact@v8
         with:
           name: e2e-app
@@ -252,6 +225,8 @@ jobs:
         env:
           E2E_MOCKS: '1'
           E2E_REUSE_BUILD: '1'
+          # GitHub's container HOME belongs to pwuser, but the job runs as root.
+          HOME: /root
         run: npm run e2e -- --project=${{ matrix.browser }}-smoke --shard=${{ matrix.shard }}/3
       - name: Upload engine failure evidence
         if: always()
@@ -265,7 +240,7 @@ jobs:
             web/playwright-report/
 
   cross-browser:
-    # Preserve existing engine check names; neither can pass with a missing shard.
+    # Preserve existing engine check names; none can pass with a missing shard.
     name: ${{ matrix.browser }} critical smoke
     if: always()
     needs: [contract, browser-build, cross-browser-tests]
@@ -273,7 +248,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [firefox, webkit]
+        browser: [firefox, webkit, edge]
     defaults:
       run:
         working-directory: .
@@ -285,7 +260,7 @@ jobs:
           python3 -c 'import json, os; results = json.loads(os.environ["RESULTS"]); print(results); assert all(job["result"] == "success" for job in results.values()), "A required engine job failed, was cancelled, or was skipped"'
 
   visual-tests:
-    name: Windows visual snapshots (${{ matrix.shard }}/64)
+    name: Windows visual snapshots (${{ matrix.shard }}/32)
     runs-on: windows-latest
     needs: browser-build
     strategy:
@@ -293,9 +268,7 @@ jobs:
       matrix:
         shard: [
           1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-          17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
-          33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
-          49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64
+          17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
         ]
     steps:
       - uses: actions/checkout@v7
@@ -314,7 +287,7 @@ jobs:
         env:
           E2E_MOCKS: '1'
           E2E_REUSE_BUILD: '1'
-        run: npm run e2e:visual -- --shard=${{ matrix.shard }}/64 --workers=2
+        run: npm run e2e:visual -- --shard=${{ matrix.shard }}/32 --workers=2
       - name: Upload visual diffs
         if: always()
         uses: actions/upload-artifact@v7.0.1
@@ -345,6 +318,8 @@ jobs:
     name: Optional authenticated production smoke
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.production_base_url != '' }}
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
     needs: contract
     steps:
       - uses: actions/checkout@v7
@@ -354,7 +329,6 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci --legacy-peer-deps
-      - run: npx playwright install --with-deps chromium
       - name: Materialize ephemeral storage state
         env:
           STORAGE_STATE_B64: ${{ secrets.E2E_STORAGE_STATE_B64 }}

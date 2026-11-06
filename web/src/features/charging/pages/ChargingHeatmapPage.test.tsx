@@ -276,7 +276,7 @@ describe('ChargingHeatmapPage — KPI band branches', () => {
       });
       const grid = screen.getByRole('img', { name: 'Charging sessions by weekday and hour of day' });
       expect(grid.querySelectorAll('[title]')).toHaveLength(168);
-      expect(grid.parentElement?.parentElement?.querySelectorAll('span[aria-hidden="true"]')).toHaveLength(5);
+      expect(grid.parentElement?.parentElement?.querySelectorAll('[aria-hidden="true"] [data-heatmap-level]')).toHaveLength(5);
       const figure = screen.getByRole('figure', { name: 'Weekly Charging Heatmap' });
       expect(within(figure).getAllByRole('row')).toHaveLength(169);
       const card = figure.closest<HTMLElement>('[data-card]')!;

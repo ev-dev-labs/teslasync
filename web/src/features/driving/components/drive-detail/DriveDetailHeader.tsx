@@ -37,7 +37,7 @@ export function DriveDetailHeader({ drive, driveId, vehicleName, onShare }: Driv
             tabIndex={-1}
             data-route-focus-target="true"
           >
-            <Route className="h-6 w-6 shrink-0 text-cyan-400" aria-hidden="true" />
+            <Route className="h-6 w-6 shrink-0 text-theme-accent" aria-hidden="true" />
             {hasRoute
               ? <>{drive.startAddress} → {drive.endAddress}</>
               : t('driveDetail.title', 'Drive Details')}

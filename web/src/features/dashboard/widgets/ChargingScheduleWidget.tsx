@@ -1,12 +1,11 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import { Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { SourceContent } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
-import { request } from '@/api/client';
+import { useChargingScheduleSignals } from '@/api/hooks/useTelemetry';
 import { combineDataStates, deriveDataState, knownNumber } from '@/api/dataState';
 import type { StatMetric } from '@/components/data-display';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -87,17 +86,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
   const stateQuery = useVehicleState(id);
   const { data: stateData, isLoading: stateLoading } = stateQuery;
 
-  const signalsQuery = useQuery({
-    queryKey: ['signals', id, 'live-schedule'],
-    queryFn: async () => {
-      const res = await request<{
-        signals?: Record<string, { value: unknown; timestamp: string }>;
-      }>(`/signals/${id}/live`);
-      return res.signals ?? {};
-    },
-    enabled: id > 0,
-    staleTime: 30_000,
-  });
+  const signalsQuery = useChargingScheduleSignals(id);
   const { data: liveSignals, isLoading: signalsLoading, isFetching: signalsFetching, isStale: signalsStale, isError: signalsError, dataUpdatedAt: signalsUpdatedAt, refetch: refetchSignals } = signalsQuery;
 
   const schedule = useMemo(
@@ -220,7 +209,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
   return (
     <WidgetShell
       title={t('widget.chargingSchedule.title', 'Charging schedule')}
-      icon={<Calendar className="h-3.5 w-3.5 text-cyan-400" aria-hidden="true" />}
+      icon={<Calendar className="h-3.5 w-3.5 text-theme-accent" aria-hidden="true" />}
       loading={isLoading}
       error={blockingError}
       dataState={dataState}

@@ -258,7 +258,7 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
     <WidgetShell
       dataState={state.hasData || isLoading || state.fatalError ? state : undefined}
       title={t('widget.stateTimeline.title', 'State timeline')}
-      icon={isCompact ? undefined : <Clock className="h-3.5 w-3.5 text-cyan-400" />}
+      icon={isCompact ? undefined : <Clock className="h-3.5 w-3.5 text-status-info" />}
       loading={isLoading}
       updatedAt={updatedAt}
       isFetching={isFetching}

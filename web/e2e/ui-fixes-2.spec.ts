@@ -84,7 +84,9 @@ for (const theme of ['light', 'dark'] as const) for (const width of [375, 768, 1
           await route.fulfill({ json: { case: current, comments: [{ id: 1, case_id: 301, actor: 'Evidence reviewer', body: 'Review both the stored duration and the source observations before correcting the session.', created_at: current.created_at }], quarantine: null } }); return
         }
         if (url.pathname.endsWith('/stats')) { await route.fulfill({ json: { open: current.status === 'open' ? 1 : 0, resolved: current.status === 'resolved' ? 1 : 0, total: 1, in_review: 0, quarantined: 0 } }); return }
-        const matches = !url.searchParams.get('status') || url.searchParams.get('status') === current.status
+        const status = url.searchParams.get('status')
+        const matches = !status || status === current.status
+          || (status === 'active' && (current.status === 'open' || current.status === 'in_review'))
         await route.fulfill({ json: { cases: matches ? [current] : [], has_more: false, next_cursor: null } })
       })
       await page.goto('/data-repair')

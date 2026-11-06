@@ -47,7 +47,7 @@ export function LiveTelemetry({
       <div className="flex items-center gap-3 mb-4">
         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--glass-border)] to-transparent" />
         <h3 className="section-title flex items-center gap-2 text-sm tracking-widest text-[var(--text-secondary)]">
-          <Cog className="h-4 w-4 text-cyan-300" /> {t('telemetry.title', 'Live telemetry')}
+          <Cog className="h-4 w-4 text-theme-accent" /> {t('telemetry.title', 'Live telemetry')}
         </h3>
         <div className="h-px flex-1 bg-gradient-to-r from-[var(--glass-border)] via-[var(--glass-border)] to-transparent" />
       </div>
@@ -120,7 +120,7 @@ function ClimatePanel({ data, toTemperatureDisplay, tempUnit }: {
   return (
     <GlassPanel hover glow="cyan" className="p-4">
       <h4 className="text-xs font-semibold tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-        <Thermometer className="h-3.5 w-3.5 text-cyan-300" /> {t('telemetry.climate', 'Climate')}
+        <Thermometer className="h-3.5 w-3.5 text-theme-accent" /> {t('telemetry.climate', 'Climate')}
       </h4>
       {data ? (
         <div className="space-y-2.5">
@@ -141,17 +141,16 @@ function ClimatePanel({ data, toTemperatureDisplay, tempUnit }: {
               aria-valuemax={FAN_SPEED_MAX}
             >
               <div
-                className="h-full rounded-full transition-all duration-slow"
+                className="h-full rounded-full bg-[var(--theme-primary)] transition-all duration-slow"
                 style={{
                   width: `${clampPct((fanSpeed / FAN_SPEED_MAX) * 100)}%`,
-                  background: 'linear-gradient(90deg, #00f0ff, #a855f7)',
                 }}
               />
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {data.defrost_mode && data.defrost_mode !== 'Off' && (
-              <span className="inline-flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">
+              <span className="inline-flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded-full bg-theme-accent/10 text-theme-accent">
                 <Snowflake className="h-2.5 w-2.5" /> {t('telemetry.defrost', 'Defrost')}
               </span>
             )}
@@ -209,7 +208,7 @@ function SecurityPanel({ data }: { data: SecurityData | undefined }) {
         </div>
         <div className="flex items-center justify-between">
           <span className="text-xs text-[var(--text-secondary)]">{t('telemetry.sentry', 'Sentry')}</span>
-          <span className={`text-sm font-bold flex items-center gap-1 ${data.sentry_mode ? 'text-cyan-300' : 'text-[var(--text-muted)]'}`}>
+          <span className={`text-sm font-bold flex items-center gap-1 ${data.sentry_mode ? 'text-status-activity' : 'text-[var(--text-muted)]'}`}>
             🛡️ {data.sentry_mode ? t('telemetry.active', 'Active') : t('telemetry.off', 'Off')}
           </span>
         </div>
@@ -241,7 +240,7 @@ function TirePressurePanel({ data, toPressureDisplay, pressureUnit }: {
     return (
       <GlassPanel hover glow="cyan" className="p-4">
         <h4 className="text-xs font-semibold tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-          <CircleDot className="h-3.5 w-3.5 text-cyan-300" /> {t('telemetry.tirePressure', 'Tire pressure')}
+          <CircleDot className="h-3.5 w-3.5 text-theme-accent" /> {t('telemetry.tirePressure', 'Tire pressure')}
         </h4>
         <SkeletonRows />
       </GlassPanel>
@@ -270,7 +269,7 @@ function TirePressurePanel({ data, toPressureDisplay, pressureUnit }: {
   return (
     <GlassPanel hover glow="cyan" className="p-4">
       <h4 className="text-xs font-semibold tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-        <CircleDot className="h-3.5 w-3.5 text-cyan-300" /> {t('telemetry.tirePressure', 'Tire pressure')}
+        <CircleDot className="h-3.5 w-3.5 text-theme-accent" /> {t('telemetry.tirePressure', 'Tire pressure')}
       </h4>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-2">
@@ -339,10 +338,9 @@ function MediaPanel({ data }: { data: MediaData | undefined }) {
               aria-valuemax={data.audio_volume_max ?? 0}
             >
               <div
-                className="h-full rounded-full transition-all duration-slow"
+                className="h-full rounded-full bg-[var(--theme-primary)] transition-all duration-slow"
                 style={{
                   width: `${volumePct}%`,
-                  background: 'linear-gradient(90deg, #a855f7, #00f0ff)',
                 }}
               />
             </div>
@@ -362,7 +360,7 @@ function NavigationPanel({ data, toDistanceDisplay, distanceUnit }: {
   return (
     <GlassPanel hover glow="cyan" className="p-4">
       <h4 className="text-xs font-semibold tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-        <Navigation2 className="h-3.5 w-3.5 text-cyan-300" /> {t('telemetry.navigation', 'Navigation')}
+        <Navigation2 className="h-3.5 w-3.5 text-theme-accent" /> {t('telemetry.navigation', 'Navigation')}
       </h4>
       {data ? (
         <div className="space-y-2.5">
@@ -384,7 +382,7 @@ function NavigationPanel({ data, toDistanceDisplay, distanceUnit }: {
               </span>
             )}
             {data.located_at_work && (
-              <span className="inline-flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">
+              <span className="inline-flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded-full bg-theme-accent/10 text-theme-accent">
                 🏢 {t('telemetry.work', 'Work')}
               </span>
             )}

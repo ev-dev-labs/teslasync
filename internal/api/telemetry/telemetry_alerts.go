@@ -105,11 +105,23 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 		metrics.AlertRulesEvaluated.Inc()
 		result := e.ruleEngine.Evaluate(rule, vehicleID, signals)
 		if result.Triggered {
-			e.fireAlert(ctx, rule, vehicleID, vin, result.Context, result.Severity)
+			e.fireAlert(ctx, rule, vehicleID, vin, alertMessageSignals(result.Context, accumulatedSignals, signals), result.Severity)
 		}
 	}
 	metrics.ActiveAlertRules.Set(float64(enabledCount))
 	metrics.ObserveDurationWithExemplar(ctx, metrics.AlertRuleEvalDuration, time.Since(evalStart).Seconds())
+}
+
+func alertMessageSignals(evaluated, accumulated, current map[string]any) map[string]any {
+	signals := make(map[string]any, len(accumulated)+len(evaluated))
+	// L1 may know related signals that this rule has never observed. The
+	// triggering batch wins even when it explicitly clears a value.
+	for _, source := range []map[string]any{evaluated, accumulated, current} {
+		for key, value := range source {
+			signals[key] = value
+		}
+	}
+	return signals
 }
 
 // fireAlert broadcasts via SSE and dispatches to notification channels.
@@ -174,7 +186,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *alertmode
 	}
 	triggerID := notification.NewTriggerID()
 	if _, err := notification.RecordTrigger(ctx, e.notifRepo, &notification.Request{
-		Title: title, Message: body, AlertID: rule.ID,
+		Title: title, Message: body, AlertID: rule.ID, VehicleID: vehicleID,
 		Severity: severity, EventType: "alert.rule", TriggerID: triggerID,
 	}); err != nil {
 		log.Error().Err(err).Str("trace_id", oteltrace.SpanFromContext(ctx).SpanContext().TraceID().String()).
@@ -246,7 +258,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *alertmode
 	if !quietSuppressed {
 		suppressTransportTitle := !rule.IncludeTitle
 		safeGo("notification-dispatch", func() {
-			e.dispatchNotifications(title, body, severity, rule, suppressTransportTitle, triggerID)
+			e.dispatchNotifications(title, body, severity, rule, vehicleID, suppressTransportTitle, triggerID)
 		})
 	}
 
@@ -263,7 +275,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *alertmode
 // body-only output when the rule has IncludeTitle=false. Transports
 // that REQUIRE a title (WebPush, email Subject, Pushover) ignore the
 // flag and use the canonical title regardless.
-func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity string, rule *alertmodel.AlertRule, suppressTransportTitle bool, triggerID string) {
+func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity string, rule *alertmodel.AlertRule, vehicleID int64, suppressTransportTitle bool, triggerID string) {
 	ruleID := rule.ID
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -284,6 +296,7 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity
 			Message:                message,
 			ChannelID:              ch.ID,
 			AlertID:                ruleID,
+			VehicleID:              vehicleID,
 			TriggerID:              triggerID,
 			EventType:              "alert.rule",
 			Severity:               severity,
@@ -298,7 +311,7 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity
 			eventType := req.EventType
 			id := ruleID
 			if logErr := e.notifRepo.CreateLog(ctx, &notificationmodel.NotificationLog{
-				ChannelID: ch.ID, AlertID: &id, Title: title, Message: message,
+				ChannelID: ch.ID, AlertID: &id, VehicleID: &vehicleID, Title: title, Message: message,
 				Status: status, Error: errText, Severity: severity,
 				TriggerID: &triggerID, EventType: &eventType,
 			}); logErr != nil {
@@ -333,6 +346,7 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity
 		Title:     title,
 		Message:   message,
 		AlertID:   ruleID,
+		VehicleID: vehicleID,
 		TriggerID: triggerID,
 		EventType: "alert.rule",
 		Severity:  severity,

@@ -6,7 +6,7 @@ export type GridMetricKind = 'battery' | 'efficiency' | 'score';
 
 const bandColors: Record<GridMetricBand, string> = {
   good: 'text-emerald-700 dark:text-emerald-400/80',
-  info: 'text-sky-700 dark:text-sky-400/80',
+  info: 'text-status-info dark:text-status-info/80',
   warning: 'text-amber-700 dark:text-amber-400/80',
   critical: 'text-rose-700 dark:text-rose-400/80',
 };

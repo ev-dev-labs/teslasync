@@ -303,7 +303,7 @@ export function BackgroundWorkersCard({ health, retained = false, loading = fals
       <div className="flex flex-wrap gap-2 pt-2 border-t border-white/[0.06]">
         <Link
           to="/api-logs"
-          className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 py-1.5 text-cyan-300 hover:bg-white/[0.04]', typography.size.xs)}
+          className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 py-1.5 text-theme-accent hover:bg-white/[0.04]', typography.size.xs)}
         >
           <Activity className="h-3.5 w-3.5 shrink-0" aria-hidden />
           {t('systemStatus.workersCopy.apiLogs', 'API logs')}

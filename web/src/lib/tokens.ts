@@ -78,7 +78,7 @@ export const tableTokens = {
    *  sticky thead above selected-row z-10 hover states. */
   stickyHead: 'sticky top-0 z-20 bg-[var(--surface-2)] backdrop-blur-sm',
   /** Visual treatment for selected rows. */
-  rowSelected: '!bg-[var(--control-bg)] [&>td:first-child]:shadow-[inset_3px_0_0_var(--text-secondary)]',
+  rowSelected: '!bg-[var(--control-bg)] [&>td:first-child]:shadow-[inset_3px_0_0_var(--theme-primary)]',
   groupStart: 'border-l border-[var(--border-subtle)]',
   semantic: '[&_thead]:border-b [&_thead]:border-[var(--border-default)] [&_thead]:bg-[var(--surface-2)] [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold [&_th]:normal-case [&_th]:tracking-normal [&_th]:text-[var(--text-secondary)] [&_td]:px-3 [&_td]:py-2 [&_tbody_tr]:align-middle [&_tbody_tr]:border-b [&_tbody_tr]:border-[var(--border-subtle)] [&_tbody_tr:nth-child(even)]:bg-[var(--surface-2)] [&_tbody_tr:hover]:bg-[var(--control-bg-hover)] [&_tbody_tr:focus-within]:bg-[var(--control-bg-hover)]',
   /** Container for the bulk-action toolbar that appears above the table. */
@@ -339,7 +339,7 @@ export type GaugeTone =
 export const gaugeTone: Record<GaugeTone, string> = {
   /** The active theme's primary brand colour — follows warm/light/custom presets. */
   primary: 'var(--theme-primary)',
-  /** The active theme's secondary accent — follows warm/light/custom presets. */
+  /** Alias of the selected primary accent. */
   accent: 'var(--theme-accent)',
   success: 'var(--semantic-success)',
   warning: 'var(--semantic-warning)',

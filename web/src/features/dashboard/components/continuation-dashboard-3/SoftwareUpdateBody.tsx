@@ -41,9 +41,9 @@ export function SoftwareUpdateBody({
       {updateVersion && updateStatus !== 'up-to-date' && (
         <div className="space-y-2">
           <div className="flex min-w-0 flex-wrap items-start gap-1.5">
-            <Download className="h-3 w-3 text-cyan-300 shrink-0" aria-hidden="true" />
+            <Download className="h-3 w-3 text-theme-accent shrink-0" aria-hidden="true" />
             <Caption>{t('widget.updateAvailable', 'Update')}:</Caption>
-            <Text variant="bodySm" className="min-w-0 text-cyan-300 [overflow-wrap:anywhere]">{updateVersion}</Text>
+            <Text variant="bodySm" className="min-w-0 text-theme-accent [overflow-wrap:anywhere]">{updateVersion}</Text>
           </div>
 
           {updateStatus === 'downloading' && downloadPct != null && (

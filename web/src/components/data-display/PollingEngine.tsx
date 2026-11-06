@@ -138,7 +138,7 @@ function VehicleActivity({ vin, status }: { vin: string; status: VehiclePollingS
             </div>
           ))}
           {prediction && (
-            <div className="mt-1 flex items-start gap-1 text-blue-400">
+            <div className="mt-1 flex items-start gap-1 text-status-info">
               <Sparkles size={12} aria-hidden="true" className="mt-0.5 shrink-0" />
               <span>
                 {t('polling.prediction', 'Prediction')}: {prediction.next_state}{' '}
@@ -162,7 +162,7 @@ function SavingsCard({ savings }: { savings: CostSnapshot }) {
   const breakdown = savings.savings_breakdown ?? {}
 
   const segments = [
-    { key: 'fleet_telemetry', value: Number(breakdown.fleet_telemetry) || 0, barClass: 'bg-blue-500', label: t('polling.fleetTelemetry', 'Fleet Telemetry') },
+    { key: 'fleet_telemetry', value: Number(breakdown.fleet_telemetry) || 0, barClass: 'bg-status-info', label: t('polling.fleetTelemetry', 'Fleet Telemetry') },
     { key: 'idle_detection', value: Number(breakdown.idle_detection) || 0, barClass: 'bg-amber-500', label: t('polling.idleDetection', 'Idle Detection') },
     { key: 'prediction', value: Number(breakdown.prediction) || 0, barClass: 'bg-purple-500', label: t('polling.prediction', 'Prediction') },
     { key: 'sleep_detection', value: Number(breakdown.sleep_detection) || 0, barClass: 'bg-gray-500', label: t('polling.sleep', 'Sleep') },

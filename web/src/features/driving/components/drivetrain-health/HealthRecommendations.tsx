@@ -105,7 +105,7 @@ export function HealthRecommendations({ overallHealth }: HealthRecommendationsPr
     <FadeIn delay={0.35}>
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-4 flex items-center gap-2">
-          <Shield className="h-5 w-5 text-cyan-300" aria-hidden="true" />
+          <Shield className="h-5 w-5 text-theme-accent" aria-hidden="true" />
           {t('drivetrain.recommendations', 'Health Recommendations')}
         </PanelTitle>
         <StaggerContainer className="space-y-3">
@@ -136,7 +136,7 @@ export function HealthRecommendations({ overallHealth }: HealthRecommendationsPr
                   ) : tip.priority === 'medium' ? (
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
                   ) : (
-                    <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+                    <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-theme-accent" aria-hidden="true" />
                   )}
                   {srPriority ? <VisuallyHidden>{`${srPriority} `}</VisuallyHidden> : null}
                   <Text as="p" size="sm" color="secondary">{tip.text}</Text>
