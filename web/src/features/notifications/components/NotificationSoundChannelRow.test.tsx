@@ -211,9 +211,10 @@ describe('NotificationSoundChannelRow — accessibility & hardening', () => {
     expect(onToggle).toHaveBeenCalledOnce();
   });
 
-  it('uses mobile touch targets while retaining desktop sizes and focus outlines', () => {
+  it('uses mobile touch targets with the unified desktop switch size and focus outlines', () => {
     setup();
-    expect(getSwitch()).toHaveClass('h-11', 'min-w-11', 'md:h-6', 'md:w-9');
+    expect(getSwitch()).toHaveClass('h-11', 'min-w-11', 'md:h-6', 'md:w-11', 'focus-visible:outline-2');
+    expect(getSwitch().firstElementChild).toHaveClass('h-6', 'w-11');
     expect(getTestButton()).toHaveClass('min-h-11', 'md:min-h-9', 'focus-visible:outline-2');
   });
 
