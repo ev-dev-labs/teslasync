@@ -48,6 +48,12 @@ const copyOwnerSourceSplits = [
   ['web/src/features/vehicles/components/VehicleCard.tsx', 'fleet.batteryLevelAriaLabel', 'fleet.batteryLevel', 'Battery level', 1],
 ] as const
 
+const acceptedModalSourceChanges = [
+  ['  aboveNotifications?: boolean;\n', ''],
+  ["size = 'md', aboveNotifications = false,", "size = 'md',"],
+  ["className={cn('fixed inset-0 overflow-y-auto', aboveNotifications ? 'z-[120]' : 'z-overlay')}", 'className="fixed inset-0 z-overlay overflow-y-auto"'],
+] as const
+
 // Frozen attempt-1 source defaults, count controls and actual producer namespaces.
 // Same-value keys owned by other features are deliberately not aliases.
 export const featureOwnedAdditions = [
@@ -1465,6 +1471,14 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
     }
     let source = Buffer.from(actualSource)
     source = Buffer.from(restoreOwnerRecoverySource(path, source.toString('utf8')))
+    if (path === 'web/src/components/ui/Modal.tsx') {
+      let text = source.toString('utf8')
+      for (const [current, previous] of acceptedModalSourceChanges) {
+        expect(text.split(current), path + ': accepted presentation change').toHaveLength(2)
+        text = text.replace(current, previous)
+      }
+      source = Buffer.from(text)
+    }
     for (const [file, key, oldKey, value, count] of copyOwnerSourceSplits) {
       if (file !== path) continue
       const args = key.endsWith('HelpAria')

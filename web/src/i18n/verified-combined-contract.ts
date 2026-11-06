@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 import { expect } from 'vitest'
 import ts from 'typescript'
 import checkpoints from './verified-combined-checkpoints.json'
+import dataRepairCopyChanges from './verified-data-repair-copy.json'
 import notificationCopyChanges from './verified-notification-copy.json'
 
 // These exact files passed the key/default/interpolation/count audit before generation.
@@ -84,9 +85,8 @@ export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(
   const heatmapHelp = (previous.help as Record<string, Record<string, unknown>>).driveCalendar
   expect(heatmapHelp.body).toBe('Each cell is one day in your selected time zone. Four levels rank active days by distance: darker in light mode, lighter in dark mode. Outlined cells are outside the range or before the first returned drive, not proof of no driving. Continuous coverage is unknown. Streaks count consecutive days with at least one drive.')
   heatmapHelp.body = "Each cell is one day; darker means more distance, scaled against your 95th-percentile day so one road trip doesn't flatten the rest. Streaks count consecutive days with at least one drive."
-  // Pin every reviewed notification addition/change before reconstructing the
-  // predecessor. The historical catalog counts and hashes remain unchanged.
-  for (const change of notificationCopyChanges) {
+  // Pin reviewed copy before reconstructing the historical catalog.
+  for (const change of [...notificationCopyChanges, ...dataRepairCopyChanges]) {
     let parent: Record<string, unknown> = previous
     for (const part of change.path.slice(0, -1)) parent = parent[part] as Record<string, unknown>
     const leaf = change.path[change.path.length - 1]
