@@ -215,36 +215,39 @@ export function ThemePicker({
         <p className="text-xs font-medium uppercase tracking-wider mb-3 text-[var(--text-muted)]">
           {t('theme.accentColor', 'Accent Color')}
         </p>
-        <div className={cn('grid gap-3', themeGridCols)}>
-          {Object.values(allThemes).filter(thm => thm.id !== 'custom').map(thm => (
-            <Button
-              key={thm.id}
-              variant="ghost"
-              aria-pressed={themeId === thm.id}
-              onClick={() => handleTheme(thm.id as ThemeId, thm.name)}
-              className={cn(
-                'group relative rounded-xl border p-4 text-left h-auto transition-all duration-normal justify-start items-start flex-col',
-                themeId === thm.id
-                  ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
-                  : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]',
-                themeId !== thm.id && 'border-[var(--glass-border)]',
-              )}
-            >
-              <div
-                className="h-6 w-6 rounded-full mb-3"
-                style={{
-                  // The swatch is the exact hex the app applies.
-                  background: thm.primary,
-                }}
-              />
-              <p className="text-xs font-medium text-[var(--text-primary)]">{thm.name}</p>
-              {themeId === thm.id && (
-                <div className="absolute top-2.5 right-2.5">
-                  <CheckCircle aria-hidden="true" className="h-4 w-4 text-[var(--theme-primary)]" />
-                </div>
-              )}
-            </Button>
-          ))}
+        <div role="group" aria-label={t('theme.accentColor', 'Accent Color')} className={cn('grid gap-3', themeGridCols)}>
+          {Object.values(allThemes).filter(thm => thm.id !== 'custom').map(thm => {
+            const name = t(`theme.presets.${thm.id}`, thm.name)
+            return (
+              <Button
+                key={thm.id}
+                variant="ghost"
+                aria-pressed={themeId === thm.id}
+                onClick={() => handleTheme(thm.id, name)}
+                className={cn(
+                  'group relative rounded-xl border p-4 text-left h-auto transition-all duration-normal justify-start items-start flex-col',
+                  themeId === thm.id
+                    ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
+                    : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]',
+                  themeId !== thm.id && 'border-[var(--glass-border)]',
+                )}
+              >
+                <div
+                  className="h-6 w-6 rounded-full mb-3"
+                  style={{
+                    // The swatch is the exact hex the app applies.
+                    background: thm.primary,
+                  }}
+                />
+                <p className="text-xs font-medium text-[var(--text-primary)]">{name}</p>
+                {themeId === thm.id && (
+                  <div className="absolute top-2.5 right-2.5">
+                    <CheckCircle aria-hidden="true" className="h-4 w-4 text-[var(--theme-primary)]" />
+                  </div>
+                )}
+              </Button>
+            )
+          })}
 
           {showCustom && (
             <Button

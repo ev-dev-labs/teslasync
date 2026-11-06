@@ -7,6 +7,7 @@
  * route-owned locale bundle.
  *
  * Usage: node scripts/probe-i18n-startup.mjs [--strict] [--dist <dir>]
+ * Set LOCALE_PROBE_EXECUTABLE_PATH to use an installed Chromium-compatible browser.
  * Locale bytes use the selected output, relative to web/ (default: web/dist).
  */
 import { existsSync, readFileSync, statSync } from 'node:fs'
@@ -120,6 +121,13 @@ export function localeByteSummary(requests, distRoot = resolveDistRoot()) {
   })
 }
 
+export function localeBrowserOptions(env = process.env) {
+  return {
+    headless: true,
+    ...(env.LOCALE_PROBE_EXECUTABLE_PATH ? { executablePath: env.LOCALE_PROBE_EXECUTABLE_PATH } : {}),
+  }
+}
+
 async function main() {
   const distRoot = resolveDistRoot()
   if (!existsSync(distRoot) || !statSync(distRoot).isDirectory()) {
@@ -127,7 +135,7 @@ async function main() {
   }
   const { chromium } = await import('@playwright/test')
   const fixtures = await loadApiFixtures()
-  const browser = await chromium.launch({ headless: true })
+  const browser = await chromium.launch(localeBrowserOptions())
   try {
     const notFound = await captureLocaleRequests(browser, '/__locale-shell-probe__', fixtures)
     const dashboard = await captureLocaleRequests(browser, '/', fixtures)

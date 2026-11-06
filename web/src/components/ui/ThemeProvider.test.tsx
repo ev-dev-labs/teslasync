@@ -60,6 +60,7 @@ vi.mock('@/api/client', async () => {
 
 import { request } from '@/api/client'
 import { ThemeProvider, useTheme, modeCategoryOrder } from './ThemeProvider'
+import { ThemePicker } from './ThemePicker'
 import { themeCategories } from './themePresets'
 
 // test-setup.ts softens useTheme for bare renders; this file owns the real guard.
@@ -306,9 +307,9 @@ describe('applyThemeCSS side effects', () => {
     await flush()
     for (const mode of ['dark', 'light']) {
       act(() => result.current.setMode(mode))
-      for (const id of ['neon-cyan', 'tesla-red', 'matrix-green', 'royal-purple', 'solar-amber'] as const) {
-        act(() => result.current.setTheme(id))
-        const selected = result.current.themes[id].primary
+      for (const preset of Object.values(result.current.themes).filter((entry) => entry.id !== 'custom')) {
+        act(() => result.current.setTheme(preset.id))
+        const selected = preset.primary
         const css = document.documentElement.style
         expect(result.current.theme.accent).toBe(selected)
         expect(css.getPropertyValue('--theme-primary')).toBe(selected)
@@ -696,10 +697,47 @@ describe('cross-tab sync', () => {
 describe('exposed registries', () => {
   it('provides the full theme + mode maps through context', async () => {
     await renderSettled()
-    // 5 colour presets + the synthesised `custom` entry.
-    expect(screen.getByTestId('themes-count')).toHaveTextContent('6')
+    // 20 colour presets + the synthesised `custom` entry.
+    expect(screen.getByTestId('themes-count')).toHaveTextContent('21')
     // The 130+ generated preset modes merge with the core built-ins.
     expect(Number(screen.getByTestId('modes-count').textContent)).toBeGreaterThan(100)
+  })
+
+  it('offers the expanded presets in the real picker while preserving the custom color', async () => {
+    localStorage.setItem('teslasync-custom-primary', '#123456')
+    render(<ThemeProvider><ThemePicker showMode={false} /></ThemeProvider>)
+    await flush()
+
+    expect(screen.getAllByRole('button')).toHaveLength(21)
+    fireEvent.click(screen.getByRole('button', { name: 'Ocean Teal' }))
+    expect(screen.getByRole('button', { name: 'Ocean Teal', pressed: true })).toBeInTheDocument()
+    expect(document.documentElement.style.getPropertyValue('--theme-primary')).toBe('#14b8a6')
+    expect(localStorage.getItem('teslasync-theme')).toBe('ocean-teal')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Custom' }))
+    expect(screen.getByLabelText('Accent')).toHaveValue('#123456')
+    expect(document.documentElement.style.getPropertyValue('--theme-primary')).toBe('#123456')
+    fireEvent.click(screen.getByRole('button', { name: 'Ocean Teal' }))
+    expect(localStorage.getItem('teslasync-custom-primary')).toBe('#123456')
+    await waitFor(() => {
+      const puts = mockedRequest.mock.calls.filter((call) => (call[1] as RequestInit | undefined)?.method === 'PUT')
+      expect(puts.length).toBeGreaterThan(0)
+      expect(JSON.parse((puts[puts.length - 1][1] as RequestInit).body as string)).toMatchObject({
+        theme: 'ocean-teal',
+        custom_primary: '#123456',
+      })
+    })
+  })
+
+  it('restores a newly added color from the server and applies it in both modes', async () => {
+    mockFetch({ theme: 'ocean-teal', mode: 'light' })
+    const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider })
+    await flush()
+    expect(result.current.themeId).toBe('ocean-teal')
+    expect(localStorage.getItem('teslasync-theme')).toBe('ocean-teal')
+    expect(document.documentElement.style.getPropertyValue('--theme-primary')).toBe('#14b8a6')
+    act(() => result.current.setMode('dark'))
+    expect(document.documentElement.style.getPropertyValue('--theme-primary')).toBe('#14b8a6')
   })
 
   it('modeCategoryOrder puts Core first, then every generated category', () => {

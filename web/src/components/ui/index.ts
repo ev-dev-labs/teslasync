@@ -54,7 +54,6 @@ export {
   type ContextMenuItem,
   type UseContextMenuReturn,
 } from './ContextMenu';
-export { ThemePicker, type ThemePickerProps } from './ThemePicker';
 export { Textarea } from './Textarea';
 export type { TextareaProps } from './Textarea';
 export { CopyButton, type CopyButtonProps } from './CopyButton';

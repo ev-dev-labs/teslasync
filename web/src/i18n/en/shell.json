@@ -2181,18 +2181,7 @@
     }
   },
   "theme": {
-    "accent": "Accent",
-    "accentColor": "Accent color",
-    "browseModes": "Browse all {{count}} modes",
-    "custom": "Custom",
-    "displayMode": "Display mode",
-    "mode": "Mode",
-    "noModes": "No display modes match your search.",
-    "openPicker": "Open theme picker",
-    "saveFailed": "Could not save your theme to the server. Your current selection is still applied.",
-    "searchModes": "Search display modes…",
-    "showCoreModes": "Show essential modes",
-    "theme": "Theme"
+    "openPicker": "Open theme picker"
   },
   "timeMachine": {
     "banner": {

@@ -5,7 +5,30 @@ import { broadcast, subscribe } from '@/lib/broadcast'
 import { DEFAULT_BRAND_ACCENT, DEFAULT_CUSTOM_PRIMARY, DEFAULT_CUSTOM_ACCENT } from '@/lib/themeDefaults'
 import { themePresets, themeCategories } from './themePresets'
 
-export type ThemeId = 'neon-cyan' | 'tesla-red' | 'matrix-green' | 'royal-purple' | 'solar-amber' | 'custom'
+const accentPresets = {
+  'neon-cyan': DEFAULT_BRAND_ACCENT,
+  'tesla-red': '#e31937',
+  'matrix-green': '#00ff41',
+  'royal-purple': '#a855f7',
+  'solar-amber': '#f59e0b',
+  'sky-blue': '#0ea5e9',
+  'ocean-teal': '#14b8a6',
+  'emerald-green': '#10b981',
+  'forest-green': '#228b22',
+  'lime-green': '#84cc16',
+  'sunny-yellow': '#eab308',
+  'sunset-orange': '#f97316',
+  coral: '#ff7f50',
+  'rose-pink': '#ec4899',
+  magenta: '#d946ef',
+  lavender: '#a78bfa',
+  indigo: '#6366f1',
+  'navy-blue': '#1e3a8a',
+  gold: '#d4a017',
+  'slate-gray': '#64748b',
+} as const
+
+export type ThemeId = keyof typeof accentPresets | 'custom'
 // Core modes are always present; `string` allows the 130+ generated display-mode presets.
 export type ModeId = 'dark' | 'light' | 'oled' | 'midnight' | 'auto' | 'sunset' | 'nord' | (string & {})
 
@@ -140,60 +163,26 @@ function loadCustomColors(): { primary: string; accent: string } {
   return { primary: p, accent: a }
 }
 
-function buildCustomTheme(primary: string): ColorTheme {
-  return {
-    id: 'custom',
-    name: 'Custom',
-    primary,
-    primaryRGB: hexToRGB(primary),
-    accent: primary,
-    accentRGB: hexToRGB(primary),
-  }
+function themeColors(primary: string) {
+  const rgb = hexToRGB(primary)
+  return { primary, primaryRGB: rgb, accent: primary, accentRGB: rgb }
 }
 
+function buildCustomTheme(primary: string): ColorTheme {
+  return { id: 'custom', name: 'Custom', ...themeColors(primary) }
+}
+
+const presetThemes = Object.fromEntries(
+  Object.entries(accentPresets).map(([id, primary]) => {
+    const name = id === 'neon-cyan'
+      ? 'Signal Blue'
+      : id.split('-').map(part => part[0].toUpperCase() + part.slice(1)).join(' ')
+    return [id, { id, name, ...themeColors(primary) }]
+  }),
+) as Record<Exclude<ThemeId, 'custom'>, ColorTheme>
+
 const themes: Record<ThemeId, ColorTheme> = {
-  'neon-cyan': {
-    // Keep the legacy id for persisted settings/API compatibility, but use a
-    // restrained product-blue palette as the default brand treatment.
-    id: 'neon-cyan',
-    name: 'Signal Blue',
-    primary: DEFAULT_BRAND_ACCENT,
-    primaryRGB: '59, 130, 246',
-    accent: DEFAULT_BRAND_ACCENT,
-    accentRGB: '59, 130, 246',
-  },
-  'tesla-red': {
-    id: 'tesla-red',
-    name: 'Tesla Red',
-    primary: '#e31937',
-    primaryRGB: '227, 25, 55',
-    accent: '#e31937',
-    accentRGB: '227, 25, 55',
-  },
-  'matrix-green': {
-    id: 'matrix-green',
-    name: 'Matrix Green',
-    primary: '#00ff41',
-    primaryRGB: '0, 255, 65',
-    accent: '#00ff41',
-    accentRGB: '0, 255, 65',
-  },
-  'royal-purple': {
-    id: 'royal-purple',
-    name: 'Royal Purple',
-    primary: '#a855f7',
-    primaryRGB: '168, 85, 247',
-    accent: '#a855f7',
-    accentRGB: '168, 85, 247',
-  },
-  'solar-amber': {
-    id: 'solar-amber',
-    name: 'Solar Amber',
-    primary: '#f59e0b',
-    primaryRGB: '245, 158, 11',
-    accent: '#f59e0b',
-    accentRGB: '245, 158, 11',
-  },
+  ...presetThemes,
   'custom': buildCustomTheme(loadCustomColors().primary),
 }
 

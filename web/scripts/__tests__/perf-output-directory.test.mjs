@@ -11,7 +11,7 @@ import { gzipSync } from 'node:zlib'
 import { resolveDistRoot as pwaDistRoot } from '../check-pwa-precache.mjs'
 import { resolveDistRoot as shellDistRoot, sourcePath } from '../check-i18n-shell-closure.mjs'
 import { main as runRuntime, resolveDistRoot as runtimeDistRoot } from '../check-i18n-runtime.mjs'
-import { localeByteSummary } from '../probe-i18n-startup.mjs'
+import { localeBrowserOptions, localeByteSummary } from '../probe-i18n-startup.mjs'
 
 const WEB_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const fixtureRoot = join(WEB_ROOT, 'scripts', '__tests__', `.perf-output-directory-fixtures-${process.pid}`)
@@ -25,6 +25,14 @@ const checkers = [
   ['check-i18n-runtime.mjs', runtimeDistRoot],
   ['probe-i18n-startup.mjs', runtimeDistRoot],
 ]
+
+test('locale probe defaults to bundled Chromium and can use an installed compatible browser', () => {
+  assert.deepEqual(localeBrowserOptions({}), { headless: true })
+  assert.deepEqual(localeBrowserOptions({ LOCALE_PROBE_EXECUTABLE_PATH: 'C:\\Browser\\browser.exe' }), {
+    headless: true,
+    executablePath: 'C:\\Browser\\browser.exe',
+  })
+})
 
 function checkCLI(script, args) {
   return spawnSync(process.execPath, [join(WEB_ROOT, 'scripts', script), ...args], {

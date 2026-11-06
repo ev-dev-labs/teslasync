@@ -3349,6 +3349,9 @@
     "tokenExpires": "Token expires"
   },
   "theme": {
+    "accent": "Accent",
+    "accentColor": "Accent color",
+    "browseModes": "Browse all {{count}} modes",
     "chartPalette": {
       "cbSafe": "Color-blind safe",
       "cbSafeHelp": "Okabe-Ito palette — distinguishable for all CVD types.",
@@ -3357,6 +3360,7 @@
       "neon": "Alternate order",
       "neonHelp": "The same calm palette in a violet-led order."
     },
+    "custom": "Custom",
     "density": {
       "comfortable": "Comfortable",
       "comfortableHelp": "Default sizing",
@@ -3371,7 +3375,35 @@
       "spacious": "Spacious",
       "spaciousHelp": "Roomy — easier to read at distance"
     },
+    "displayMode": "Display mode",
+    "mode": "Mode",
     "moreOptions": "More appearance options",
+    "noModes": "No display modes match your search.",
+    "presets": {
+      "coral": "Coral",
+      "emerald-green": "Emerald Green",
+      "forest-green": "Forest Green",
+      "gold": "Gold",
+      "indigo": "Indigo",
+      "lavender": "Lavender",
+      "lime-green": "Lime Green",
+      "magenta": "Magenta",
+      "matrix-green": "Matrix Green",
+      "navy-blue": "Navy Blue",
+      "neon-cyan": "Signal Blue",
+      "ocean-teal": "Ocean Teal",
+      "rose-pink": "Rose Pink",
+      "royal-purple": "Royal Purple",
+      "sky-blue": "Sky Blue",
+      "slate-gray": "Slate Gray",
+      "solar-amber": "Solar Amber",
+      "sunny-yellow": "Sunny Yellow",
+      "sunset-orange": "Sunset Orange",
+      "tesla-red": "Tesla Red"
+    },
+    "saveFailed": "Could not save your theme to the server. Your current selection is still applied.",
+    "searchModes": "Search display modes…",
+    "showCoreModes": "Show essential modes",
     "statusBar": {
       "hiddenToast": "Status bar hidden",
       "iconOnly": "Always icon-only",
@@ -3382,6 +3414,7 @@
       "shownToast": "Status bar shown"
     },
     "subtitle": "Customize colors and display mode",
+    "theme": "Theme",
     "timeFormat": {
       "absolute": "Absolute (Nov 12, 13:42)",
       "absoluteHelp": "Best for trip planning and event correlation",
