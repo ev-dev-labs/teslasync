@@ -64,7 +64,7 @@ export function SlowQueryAnalysis({
         )}
       </div>
       <LayoutCard title={t('admin.slowQueries.cacheTitle', 'Cache efficiency')}
-        actions={<HardDrive className="h-4 w-4 text-cyan-300" aria-hidden />}>
+        actions={<HardDrive className="h-4 w-4 text-theme-accent" aria-hidden />}>
         {loading ? <Skeleton height={260} /> : error ? <QueryError error={error} onRetry={onRetry} /> : subsystemMissing ? (
           <DataStateNotice state="unsupported" />
         ) : cacheLeaders.length === 0 ? (

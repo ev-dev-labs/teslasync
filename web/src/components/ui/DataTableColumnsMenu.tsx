@@ -137,7 +137,7 @@ export function DataTableColumnsMenu({
               type="button"
               onClick={showAll}
               disabled={cols.length === 0}
-              className="text-2xs font-medium text-cyan-300 hover:text-cyan-200 focus-visible:outline-none focus-visible:underline disabled:opacity-40 disabled:cursor-not-allowed"
+              className="text-2xs font-medium text-theme-accent hover:text-theme-accent focus-visible:outline-none focus-visible:underline disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {t('table.columns.showAll', 'Show all')}
             </button>

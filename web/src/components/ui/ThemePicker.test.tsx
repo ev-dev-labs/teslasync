@@ -24,9 +24,10 @@ interface TestThemeContext {
   modeId: ModeId
   theme: ColorTheme
   mode: ModeTheme
+  persistenceError: boolean
   setTheme: (id: ThemeId) => void
   setMode: (id: ModeId) => void
-  setCustomColors: (primary: string, accent: string) => void
+  setCustomColors: (primary: string, accent?: string) => void
   themes: Record<string, ColorTheme>
   modes: Record<string, ModeTheme>
 }
@@ -138,6 +139,7 @@ function makeDefaultContext(): TestThemeContext {
     modeId: 'dark',
     theme: THEMES['neon-cyan'],
     mode: MODES.dark,
+    persistenceError: false,
     setTheme: vi.fn(),
     setMode: vi.fn(),
     setCustomColors: vi.fn(),
@@ -149,19 +151,23 @@ function makeDefaultContext(): TestThemeContext {
 interface HarnessProps {
   initialThemeId?: ThemeId
   initialModeId?: ModeId
+  persistenceError?: boolean
   picker?: ThemePickerProps
 }
 
-function Harness({ initialThemeId = 'neon-cyan', initialModeId = 'dark', picker = {} }: HarnessProps) {
+function Harness({ initialThemeId = 'neon-cyan', initialModeId = 'dark', persistenceError = false, picker = {} }: HarnessProps) {
   const [themeId, setThemeId] = useState<ThemeId>(initialThemeId)
   const [modeId, setModeId] = useState<ModeId>(initialModeId)
-  const [custom, setCustom] = useState({ primary: DEFAULT_PRIMARY, accent: DEFAULT_ACCENT })
+  const [custom, setCustom] = useState(() => ({
+    primary: localStorage.getItem('teslasync-custom-primary') || DEFAULT_PRIMARY,
+    accent: localStorage.getItem('teslasync-custom-accent') || DEFAULT_ACCENT,
+  }))
 
   const spies = useRef<Spies>({
     setTheme: vi.fn((id: ThemeId) => setThemeId(id)),
     setMode: vi.fn((id: ModeId) => setModeId(id)),
-    setCustomColors: vi.fn((primary: string, accent: string) => {
-      setCustom({ primary, accent })
+    setCustomColors: vi.fn((primary: string, accent?: string) => {
+      setCustom(previous => ({ primary, accent: accent ?? previous.accent }))
       setThemeId('custom')
     }),
   }).current
@@ -169,7 +175,7 @@ function Harness({ initialThemeId = 'neon-cyan', initialModeId = 'dark', picker 
 
   const themes: Record<string, ColorTheme> = {
     ...THEMES,
-    custom: { ...THEMES.custom, primary: custom.primary, accent: custom.accent },
+    custom: { ...THEMES.custom, primary: custom.primary, accent: custom.primary },
   }
 
   themeHolder.current = {
@@ -177,6 +183,7 @@ function Harness({ initialThemeId = 'neon-cyan', initialModeId = 'dark', picker 
     modeId,
     theme: themes[themeId] ?? THEMES['neon-cyan'],
     mode: MODES[modeId] ?? MODES.dark,
+    persistenceError,
     setTheme: spies.setTheme,
     setMode: spies.setMode,
     setCustomColors: spies.setCustomColors,
@@ -199,6 +206,12 @@ beforeEach(() => {
 })
 
 describe('ThemePicker — display-mode section', () => {
+  it('shows a save failure without hiding the selection controls', () => {
+    renderPicker({ persistenceError: true })
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not save your theme to the server')
+    expect(screen.getByRole('button', { name: 'Dark' })).toBeInTheDocument()
+  })
+
   it('shows core modes first and offers the full library on demand', () => {
     renderPicker()
     expect(screen.getByText('Display mode')).toBeInTheDocument()
@@ -308,43 +321,52 @@ describe('ThemePicker — accent themes', () => {
 })
 
 describe('ThemePicker — custom colour builder', () => {
+  it('presents one custom accent input, seeded from the selected swatch', () => {
+    localStorage.setItem('teslasync-custom-primary', '#123456')
+    localStorage.setItem('teslasync-custom-accent', '#abcdef')
+    renderPicker({ initialThemeId: 'custom' })
+    const colorInputs = screen.getAllByDisplayValue(/^#[\da-f]{6}$/i)
+    expect(colorInputs).toHaveLength(1)
+    expect(colorInputs[0]).toHaveAccessibleName('Accent')
+    expect(colorInputs[0]).toHaveValue('#123456')
+  })
+
   it('opens the builder after picking Custom and commits the current colours', () => {
     const onChange = vi.fn()
     const { spies } = renderPicker({ picker: { onChange } })
     // Builder is hidden until the custom theme is active.
-    expect(screen.queryByLabelText('Primary')).toBeNull()
+    expect(screen.queryByLabelText('Accent')).toBeNull()
     expect(screen.getByRole('button', { name: 'Custom', pressed: false })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Custom' }))
 
-    expect(spies.setCustomColors).toHaveBeenCalledWith(DEFAULT_PRIMARY, DEFAULT_ACCENT)
+    expect(spies.setCustomColors).toHaveBeenCalledWith(DEFAULT_PRIMARY)
     expect(onChange).toHaveBeenCalledWith('custom')
     expect(toastInfo).toHaveBeenCalledWith('Theme: Custom')
     expect(screen.getByRole('button', { name: 'Custom', pressed: true })).toBeInTheDocument()
-    expect(screen.getByLabelText('Primary')).toBeInTheDocument()
     expect(screen.getByLabelText('Accent')).toBeInTheDocument()
   })
 
-  it('commits new primary colour (new primary + existing accent) as the user edits', () => {
+  it('commits the chosen accent as the user edits', () => {
     const onChange = vi.fn()
     const { spies } = renderPicker({ picker: { onChange }, initialThemeId: 'custom' })
-    const primary = screen.getByLabelText('Primary') as HTMLInputElement
+    const primary = screen.getByLabelText('Accent') as HTMLInputElement
     expect(primary.type).toBe('color')
 
     fireEvent.change(primary, { target: { value: '#123456' } })
 
-    expect(spies.setCustomColors).toHaveBeenLastCalledWith('#123456', DEFAULT_ACCENT)
+    expect(spies.setCustomColors).toHaveBeenLastCalledWith('#123456')
     expect(onChange).toHaveBeenLastCalledWith('custom')
     expect(screen.getByText('#123456')).toBeInTheDocument()
-    expect((screen.getByLabelText('Primary') as HTMLInputElement).value).toBe('#123456')
+    expect((screen.getByLabelText('Accent') as HTMLInputElement).value).toBe('#123456')
   })
 
   it('seeds the builder from persisted custom colours in localStorage', () => {
     localStorage.setItem('teslasync-custom-primary', '#abcabc')
     localStorage.setItem('teslasync-custom-accent', '#fedcba')
     renderPicker({ initialThemeId: 'custom' })
-    expect((screen.getByLabelText('Primary') as HTMLInputElement).value).toBe('#abcabc')
-    expect((screen.getByLabelText('Accent') as HTMLInputElement).value).toBe('#fedcba')
+    expect((screen.getByLabelText('Accent') as HTMLInputElement).value).toBe('#abcabc')
+    expect(localStorage.getItem('teslasync-custom-accent')).toBe('#fedcba')
     expect(screen.getByText('#abcabc')).toBeInTheDocument()
   })
 })
@@ -364,7 +386,7 @@ describe('ThemePicker — prop toggles', () => {
     renderPicker({ picker: { showCustom: false }, initialThemeId: 'custom' })
     expect(screen.queryByRole('button', { name: 'Custom' })).toBeNull()
     // Even with the custom theme active, the builder must not appear.
-    expect(screen.queryByLabelText('Primary')).toBeNull()
+    expect(screen.queryByLabelText('Accent')).toBeNull()
     expect(screen.getByRole('button', { name: 'Neon Cyan' })).toBeInTheDocument()
   })
 
@@ -383,7 +405,6 @@ describe('ThemePicker — accessibility', () => {
     expect(
       screen.getByRole('searchbox', { name: 'Search display modes…' }),
     ).toBeInTheDocument()
-    expect(screen.getByLabelText('Primary')).toBeInTheDocument()
     expect(screen.getByLabelText('Accent')).toBeInTheDocument()
   })
 })
@@ -500,7 +521,7 @@ describe.each([
     expect(spies.setMode).not.toHaveBeenCalled()
   })
 
-  it('retains saved custom hues and both edit arguments while selected chrome stays derived and glow-free', () => {
+  it('retains saved custom colors while the selected accent and chrome follow the single swatch', () => {
     const savedPrimary = '#ff00ee'
     const savedAccent = '#39ff14'
     localStorage.setItem('teslasync-custom-primary', savedPrimary)
@@ -514,29 +535,19 @@ describe.each([
 
     custom.focus()
     fireEvent.click(custom)
-    expect(spies.setCustomColors).toHaveBeenLastCalledWith(savedPrimary, savedAccent)
+    expect(spies.setCustomColors).toHaveBeenLastCalledWith(savedPrimary)
     expect(onChange).toHaveBeenLastCalledWith('custom')
     expect(toastInfo).toHaveBeenLastCalledWith('Theme: Custom')
     expectSelectionChrome(custom, true)
     expectSelectionChrome(screen.getByRole('button', { name: 'Neon Cyan' }), false)
     expectSourceSwatch(custom, savedPrimary)
-    expect(screen.getByLabelText('Primary')).toHaveValue(savedPrimary)
-    expect(screen.getByLabelText('Accent')).toHaveValue(savedAccent)
+    expect(screen.getByLabelText('Accent')).toHaveValue(savedPrimary)
     expect(custom).toHaveFocus()
     expectNoInlineSelectionShadows(container)
 
-    fireEvent.change(screen.getByLabelText('Primary'), { target: { value: '#00ff99' } })
-    expect(spies.setCustomColors).toHaveBeenLastCalledWith('#00ff99', savedAccent)
+    fireEvent.change(screen.getByLabelText('Accent'), { target: { value: '#00ff99' } })
+    expect(spies.setCustomColors).toHaveBeenLastCalledWith('#00ff99')
     expect(onChange).toHaveBeenLastCalledWith('custom')
-    expectSourceSwatch(custom, '#00ff99')
-    expectSelectionChrome(custom, true)
-    expectNoInlineSelectionShadows(container)
-
-    fireEvent.change(screen.getByLabelText('Accent'), { target: { value: '#ff0044' } })
-    expect(spies.setCustomColors).toHaveBeenLastCalledWith('#00ff99', '#ff0044')
-    expect(onChange).toHaveBeenLastCalledWith('custom')
-    expect(screen.getByLabelText('Primary')).toHaveValue('#00ff99')
-    expect(screen.getByLabelText('Accent')).toHaveValue('#ff0044')
     expectSourceSwatch(custom, '#00ff99')
     expectSelectionChrome(custom, true)
     expectNoInlineSelectionShadows(container)
@@ -547,9 +558,9 @@ describe.each([
     expect(toastInfo).toHaveBeenLastCalledWith('Theme: Matrix Green')
     expectSelectionChrome(custom, false)
     expectSourceSwatch(custom, '#00ff99')
-    expect(screen.queryByLabelText('Primary')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Accent')).not.toBeInTheDocument()
     fireEvent.click(custom)
-    expect(spies.setCustomColors).toHaveBeenLastCalledWith('#00ff99', '#ff0044')
+    expect(spies.setCustomColors).toHaveBeenLastCalledWith('#00ff99')
     expect(onChange).toHaveBeenLastCalledWith('custom')
     expect(toastInfo).toHaveBeenLastCalledWith('Theme: Custom')
     expectSelectionChrome(custom, true)

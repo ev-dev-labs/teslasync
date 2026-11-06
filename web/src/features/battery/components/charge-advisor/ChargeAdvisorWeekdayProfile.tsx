@@ -20,7 +20,7 @@ export function ChargeAdvisorWeekdayProfile({ analysis, state }: ChargeAdvisorCo
         'chargeAdvisor.weekday.subtitle',
         'Exact local calendar denominators include zero-driving occurrences.',
       )}
-      icon={<CalendarRange className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<CalendarRange className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
       state={state}
       dependency="drive"
       dataTestId="charge-advisor-weekday"
@@ -35,7 +35,7 @@ export function ChargeAdvisorWeekdayProfile({ analysis, state }: ChargeAdvisorCo
               `chargeAdvisor.day.${profile.weekday}`,
               labels[profile.weekday] ?? 'Day',
             )}</Text>
-            <Text className="mt-1 text-lg font-semibold text-cyan-300">
+            <Text className="mt-1 text-lg font-semibold text-theme-accent">
               {profile.medianPct == null ? '—' : fmtPercent(profile.medianPct)}
             </Text>
             <Text variant="caption">{t('chargeAdvisor.weekday.median', 'Calendar-day median drop')}</Text>

@@ -15,12 +15,12 @@
  * build-time manifest and PNG assets.
  */
 
+import { DEFAULT_ICON_PRIMARY, DEFAULT_ICON_ACCENT } from './themeDefaults'
+
 const VIEWBOX = 200
 const RX_STANDARD = 44
 const BOLT_PATH = 'M112 30L62 108h34L78 170l58-82h-34z'
 const BRAND_BG = '#f5f6f8'
-const DEFAULT_PRIMARY = '#3b82f6'
-const DEFAULT_ACCENT = '#06b6d4'
 
 function bolt(primary: string): string {
   return `<path d="${BOLT_PATH}" fill="${primary}"/>`
@@ -69,8 +69,8 @@ export interface BuildIconOptions {
  * favicon for no reason.
  */
 export function buildAppIconSvg(opts: BuildIconOptions): string {
-  const primary = safeHex(opts.primary, DEFAULT_PRIMARY)
-  const accent = safeHex(opts.accent, DEFAULT_ACCENT)
+  const primary = safeHex(opts.primary, DEFAULT_ICON_PRIMARY)
+  const accent = safeHex(opts.accent, DEFAULT_ICON_ACCENT)
   const mode: AppIconMode = opts.mode ?? 'standard'
 
   // Accent is validated so a corrupt theme cannot leak into SVG, even though

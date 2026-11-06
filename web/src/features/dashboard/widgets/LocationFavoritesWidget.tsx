@@ -156,7 +156,7 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
 
   return (
     <WidgetShell
-      icon={<MapPin className="h-3.5 w-3.5 text-blue-400" />}
+      icon={<MapPin className="h-3.5 w-3.5 text-theme-accent" />}
       {...shellProps}
     >
       {snapshotState.fatalError && <QueryError error={snapshotState.fatalError} onRetry={() => { void snapRefetch(); }} />}

@@ -18,7 +18,7 @@ import { typography } from '@/lib/tokens'
 export type ActionSeverity = 'info' | 'warn' | 'error'
 
 const SEVERITY_CFG: Record<ActionSeverity, { icon: typeof AlertTriangle; text: string; bg: string; ring: string }> = {
-  info:  { icon: Info,           text: 'text-blue-400',  bg: 'bg-blue-500/10',  ring: 'ring-blue-400/20' },
+  info:  { icon: Info,           text: 'text-status-info',   bg: 'bg-status-info/10',   ring: 'ring-status-info/20' },
   warn:  { icon: AlertTriangle,  text: 'text-amber-400', bg: 'bg-amber-500/10', ring: 'ring-amber-400/20' },
   error: { icon: AlertCircle,    text: 'text-red-400',   bg: 'bg-red-500/10',   ring: 'ring-red-400/20' },
 }
@@ -70,7 +70,7 @@ function ActionCTA({ cta, severityText }: { cta: NonNullable<ActionItemProps['ct
     typography.size.xs,
     typography.weight.medium,
     'min-h-[36px] transition-colors hover:bg-[var(--surface-2)]',
-    'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+    'focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent',
     severityText,
   )
 

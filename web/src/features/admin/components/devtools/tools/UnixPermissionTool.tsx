@@ -88,7 +88,7 @@ export function UnixPermissionTool() {
               </li>
               <li className="rounded bg-[var(--surface-overlay)] px-3 py-2 text-center">
                 <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.unixPermGroup', 'Group')}</span>
-                <p className="font-mono text-sm text-cyan-300">{result.group}</p>
+                <p className="font-mono text-sm text-theme-accent">{result.group}</p>
               </li>
               <li className="rounded bg-[var(--surface-overlay)] px-3 py-2 text-center">
                 <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.unixPermOther', 'Other')}</span>

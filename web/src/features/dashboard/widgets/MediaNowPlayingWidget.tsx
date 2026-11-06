@@ -60,7 +60,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.nowPlaying', 'Now playing')}
-      icon={<Music className="h-3.5 w-3.5 text-neon-cyan" aria-hidden="true" />}
+      icon={<Music className="h-3.5 w-3.5 text-theme-accent" aria-hidden="true" />}
       loading={isLoading}
       dataState={{ ...displayState, status: displayState.status === 'initial' && !isLoading && !vehicleQuery.isLoading ? 'unavailable' : displayState.status }}
       updatedAt={dataUpdatedAt}
@@ -73,7 +73,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
         isCompact ? (
           /* ── Compact 1×1 ── */
           <div className="flex flex-col items-center justify-center h-full gap-1 text-center px-1">
-            <Music className="h-5 w-5 text-neon-cyan shrink-0" aria-hidden="true" />
+            <Music className="h-5 w-5 text-theme-accent shrink-0" aria-hidden="true" />
             <p className={`${dashboardTokens.metricLabel} w-full`} title={title}>{title}</p>
             {artist && <p className={`${dashboardTokens.metricLabel} w-full`} title={artist}>{artist}</p>}
           </div>

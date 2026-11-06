@@ -79,7 +79,7 @@ export function TransportAgreementPanel({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <PanelTitle className="flex min-w-0 items-center gap-2 break-words">
-              <GitCompareArrows className="h-4 w-4 shrink-0 text-cyan-600 dark:text-cyan-300" aria-hidden="true" />
+              <GitCompareArrows className="h-4 w-4 shrink-0 text-theme-accent dark:text-theme-accent" aria-hidden="true" />
               {t('signalTransportAgreement.title', 'HTTP / MQTT agreement')}
             </PanelTitle>
             <Text as="p" variant="bodySm" color="muted">

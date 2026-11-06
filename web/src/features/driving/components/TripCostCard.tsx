@@ -21,7 +21,7 @@ export function TripCostCard({ comparison }: TripCostCardProps) {
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <PiggyBank className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <PiggyBank className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('tripPlanner.cost.title', 'Trip Cost vs Gas')}
       </PanelTitle>
 

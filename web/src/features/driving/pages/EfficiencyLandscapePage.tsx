@@ -159,7 +159,7 @@ export default function EfficiencyLandscapePage() {
         <LayoutCard
           title={t('landscape.field.title', 'Consumption Field')}
           actions={<>
-            <Mountain className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Mountain className="h-4 w-4 text-theme-accent" aria-hidden="true" />
             <HelpTooltip
               size="sm"
               i18nKey="help.efficiencyLandscape.body"

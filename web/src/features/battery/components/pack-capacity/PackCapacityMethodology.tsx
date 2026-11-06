@@ -173,7 +173,7 @@ export function PackCapacityMethodology({
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <FlaskConical
-            className="h-4 w-4 text-cyan-300"
+            className="h-4 w-4 text-theme-accent"
             aria-hidden="true"
           />
           {t(
@@ -193,7 +193,7 @@ export function PackCapacityMethodology({
               key={item.key}
               className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
             >
-              <div className="mb-2 flex items-center gap-2 text-cyan-300">
+              <div className="mb-2 flex items-center gap-2 text-theme-accent">
                 {item.icon}
                 <Heading level="sub">{item.title}</Heading>
               </div>

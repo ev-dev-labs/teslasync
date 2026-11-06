@@ -92,7 +92,7 @@ export function RankedCareHabits({
         'batteryCare.actions.description',
         'Ranked by descriptive index deduction, not estimated battery damage',
       )}
-      icon={<ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<ListChecks className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
       emptyIcon={<ListChecks className="h-8 w-8" aria-hidden="true" />}
       emptyMessage={t(
         'batteryCare.actions.empty',

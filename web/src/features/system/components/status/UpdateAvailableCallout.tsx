@@ -24,13 +24,13 @@ export function UpdateAvailableCallout({ current, latest, checkedAt }: UpdateAva
   const { formatDateTime } = useDateFormat()
   return (
     <GlassPanel
-      className="overflow-hidden border border-cyan-400/20 bg-cyan-500/[0.06]"
+      className="overflow-hidden border border-status-info/20 bg-status-info/[0.06]"
       role="status"
       aria-live="polite"
       data-testid="update-available-callout"
     >
       <div className="flex items-start gap-3 p-4">
-        <div className="shrink-0 text-cyan-300">
+        <div className="shrink-0 text-theme-accent">
           <Sparkles className="h-5 w-5" aria-hidden />
         </div>
         <div className="flex-1 min-w-0">
@@ -49,7 +49,7 @@ export function UpdateAvailableCallout({ current, latest, checkedAt }: UpdateAva
             href="https://github.com/ev-dev-labs/teslasync/releases/latest"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-1.5 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/30 hover:bg-cyan-500/20 min-h-[36px]"
+            className="inline-flex items-center gap-1.5 rounded-md bg-theme-accent/15 px-3 py-1.5 text-xs font-medium text-theme-accent ring-1 ring-theme-accent/30 hover:bg-theme-accent/20 min-h-[36px]"
           >
             View notes
             <ExternalLink className="h-3.5 w-3.5" />

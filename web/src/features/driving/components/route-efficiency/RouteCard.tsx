@@ -115,7 +115,7 @@ export function RouteCard({ route, unit }: RouteCardProps) {
           label={t('routeEfficiency.avgLabel', 'Avg')}
           value={avgEff}
           unit={unit.efficiencyUnit}
-          colorClass="text-cyan-300"
+          colorClass="text-theme-accent"
         />
         <RangeStat
           label={t('routeEfficiency.worst', 'Worst')}

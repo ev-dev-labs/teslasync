@@ -6,7 +6,7 @@ export interface RedactionOverlayProps {
 }
 
 const KIND_COLOR: Record<RedactionRegion['kind'], string> = {
-  face: 'border-cyan-400/80 bg-cyan-400/20',
+  face: 'border-theme-accent/80 bg-theme-accent/20',
   plate: 'border-amber-400/80 bg-amber-400/20',
   general: 'border-rose-400/80 bg-rose-400/20',
 };

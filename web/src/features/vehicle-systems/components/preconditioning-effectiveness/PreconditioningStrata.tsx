@@ -57,7 +57,7 @@ export function PreconditioningStrata({
                     <div className="flex items-center gap-2">
                       {row.regime === 'hot'
                         ? <Flame className="h-5 w-5 text-amber-300" aria-hidden="true" />
-                        : <Snowflake className="h-5 w-5 text-cyan-300" aria-hidden="true" />}
+                        : <Snowflake className="h-5 w-5 text-theme-accent" aria-hidden="true" />}
                       <Text as="h3" variant="label">
                         {preconditioningRegimeLabel(t, row.regime)}
                       </Text>

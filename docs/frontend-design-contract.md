@@ -96,7 +96,7 @@ through spacing/type/surfaces, never inaccessible low contrast.
 | `--text-muted` starting value | `#8490a2` | `#64748b` |
 | `--border-subtle/default/strong` | white at 5.5% / 9% / 16% | black at 6% / 12% / 20% |
 | `--surface-overlay` | black at 60% | `#0f172a` at 50% |
-| `--focus-ring` | `#91b4d2` | `#385e7e` |
+| `--focus-ring` | selected accent | selected accent |
 
 Borders above organize surfaces, not sufficient control/focus contrast by
 themselves. Required interactive outlines must reach **3:1** against adjacent
@@ -108,7 +108,9 @@ Disabled is an interaction state, not a substitute for unknown/stale values.
 
 | Semantic role at existing token maps | Dark foreground | Light foreground | Treatment |
 | --- | --- | --- | --- |
-| Brand/info/focus | `#91b4d2` | `#385e7e` | Restrained blue, no cyan bloom |
+| Info status | `#91b4d2` | `#385e7e` | Independent of the selected accent |
+| Activity status | `#8dc5c5` | `#24686d` | Distinct from info and independent of the selected accent |
+| Update/completion status | `#adaee0` | `#545394` | Distinct from info and independent of the selected accent |
 | Success/online/complete | `#91b9a5` | `#38614f` | Only source-confirmed success |
 | Warning/stale | `#cfb481` | `#745829` | Explicit reason/age, not failure |
 | Danger/error/failed | `#d6a0a5` | `#83464e` | Error/destructive meaning only |
@@ -123,12 +125,13 @@ a diffuse shadow; validate its contrast on filled controls and custom themes.
 
 Preserve all saved `ThemeId`/`ModeId`, custom colors, `auto`, density and chart
 preferences without resets/renames. `neon-cyan` remains Signal Blue's persisted
-ID. Matrix Green, OLED and `chart_palette="neon"` retain identity and user choice,
-not permission for fluorescent chrome everywhere. Keep saved raw choices intact;
-existing theme/palette owners must derive restrained, contrast-safe presentation
-roles from them. No decorative pure white, including OLED typography: soften its
-presentation foreground without rewriting saved mode identity. The current direct
-raw-accent rendering needs a bounded foundation followup, not a page-side clamp.
+ID. The chosen preset or custom accent is applied exactly in both modes; do not
+retune it. `--theme-primary` and `--theme-accent` share that value. Soft
+backgrounds may use a tint of it, while solid accent fills and focus rings use
+the unmodified value. Pick black or white on-accent text by contrast; do not
+change the accent to improve contrast against the page. Semantic status and data
+palettes remain independent. OLED typography may be softened without rewriting
+the saved mode identity.
 
 **Necessary exceptions:** computed on-fill foregrounds may use white/black when
 needed for 4.5:1; system colors in forced-colors and black-on-white print remain;
@@ -290,10 +293,19 @@ the domain instruments; this is not permission for decorative page-wide loops.
 | MDC-023 tables | DataTable is the filtering/sorting/selection/pagination/persistence/export pipeline; Table is the semantic matrix primitive. Preserve tableId, source order, columns and matchingLoaded/selectedLoaded/fullResult distinctions. Mobile adapter or contained table scroll preserves every field/action/detail; never infer full results from loaded rows. Standalone/embedded remain existing variants. | `web\src\components\ui\DataTable.tsx`, `Table.tsx`, `MobileDataTableAdapter.types.ts`; `docs\TABLE_GUIDELINES.md` |
 | MDC-024 overlays | Modal/Drawer/Popover/ConfirmDialog/useDialogFocus own focus/restore/Escape/labels and scroll. Preserve Modal fullscreen versus full distinction; viewport-contained body scroll, persistent reachable footer, safe-area/chrome offsets. Mobile sheet presentation must use existing owner, not a new engine. Nonmodal popovers retain their appropriate semantics, not indiscriminate aria-modal. | `web\src\components\ui\Modal.tsx`, `Drawer.tsx`, `Popover.tsx`, `ConfirmDialog.tsx`; `web\src\hooks\useDialogFocus.ts` |
 | MDC-025 statuses | Badge/severityTokens and vehicle StatusBadge/FSM definitions remain authorities. Online/success/complete use success; warning/stale warning; error/failed danger; connecting/queued/processing info; offline/unknown neutral with distinct text/icons; charging keeps actual domain mapping. No global remap of domain thresholds or universal status registry. Color never conveys state alone. | `web\src\components\ui\Badge.tsx`; `web\src\components\data-display\StatusBadge.tsx`; `web\src\lib\tokens.ts` |
+
 | MDC-030 shell | Layout/Sidebar/WorkspaceHeader/CommandDeck/BottomTabBar own navigation, breadcrumbs/search/notifications/account and workspace controls. Preserve active/nested/collapsed/mobile navigation, pins/recents/preferences, routes/aliases, auth/native/report/kiosk behavior and destinations. | `web\src\components\layout\Layout.tsx`, `Sidebar.tsx`, `WorkspaceHeader.tsx`, `BottomTabBar.tsx`, `sidebar\CommandDeck.tsx` |
 | MDC-031 composition | PageContainer/PageHeader/PageActions/Grid/Stack plus existing PageLayout/Section/CardGrid/LayoutCard/ChartCard/SourceContent/AboutPanel/LockedNotice. Analytics fills allocated width, aligned with header and normal shell gutters; constrain prose/forms individually, not the whole page. No new local width engine or duplicate header chrome. | `web\src\components\layout\PageContainer.tsx`; `web\src\components\layout\layout-reference\PageLayout.tsx`, `CardGrid.tsx`, `Section.tsx`; category `web\src\components\layout\index.ts` |
 | MDC-032 scope | Header/mobile View settings and vehicle picker own workspace range/vehicle state. Consume startInstant/endInstantExclusive and selected vehicle/VIN hooks, register real route scope, pass both bounds to server lists AND whole-range aggregates. Preserve rolling/custom/calendar/DST/timezone semantics. No second page picker or scope=local bypass. Fleet/admin routes with intentionally hidden header vehicle selection retain required local selection; independent business dates/year navigation/chart zoom remain independent. | `web\src\lib\workspaceScope.ts`; `web\src\hooks\useRangeState.ts`, `useSelectedVehicle.ts`, `useVehicleVinFilter.ts` |
 | MDC-034 charts/maps | Canonical ChartContainer/ChartCard and category chart/map boundaries. Preserve all series, axes, missing gaps, annotations, zoom/brush, legend IDs/preferences, fullscreen/export and accessible table/text alternatives. Line 2px primary / 1px reference, point 3px when needed, subtle grid, neutral tooltip. Area tint at most 8%; no glow/3D/unnecessary gradients. Never change aggregates, scales or sample away source data for looks. | `web\src\components\charts\ChartContainer.tsx`; `web\src\components\layout\layout-reference\ChartCard.tsx`; `web\src\lib\tokens.ts` chartTokens; `web\src\lib\colors.ts`; `web\src\hooks\useChartPalette.ts` |
+
+Button roles: use **primary** for the main action, with at most one per page
+header or form; use **secondary** or **outline** for other actions, **ghost**
+or `IconButton` for toolbar and header icon actions, and **danger** only for
+destructive actions. Primary fills keep the exact accent on hover and press;
+neutral elevation provides feedback. On Drive history, Compare drives is
+secondary navigation; browsing the history is the page's main purpose. On
+Maintenance, Schedule is the page's primary action.
 
 ### Overlay geometry adoption — MDC-024 / MDC-022
 

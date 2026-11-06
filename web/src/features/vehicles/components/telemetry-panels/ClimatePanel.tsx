@@ -52,7 +52,7 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
   return (
     <GlassPanel className="p-6 h-full">
       <h3 className="section-title flex items-center gap-2 mb-5">
-        <Thermometer aria-hidden="true" className="h-4 w-4 text-cyan-300" /> {t('common.climate', 'Climate')}
+        <Thermometer aria-hidden="true" className="h-4 w-4 text-theme-accent" /> {t('common.climate', 'Climate')}
       </h3>
       {climateData ? (
         <div className="space-y-4">
@@ -120,7 +120,7 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
                     className={cn(
                       'h-3 rounded-sm transition-colors',
                       widthClass,
-                      fan >= level ? 'bg-neon-cyan/70' : 'bg-white/[0.06]',
+                      fan >= level ? 'bg-theme-accent/70' : 'bg-white/[0.06]',
                     )}
                   />
                 ))}
@@ -140,7 +140,7 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border',
                 defrostActive
-                  ? 'border-blue-400/30 bg-blue-400/10 text-blue-400'
+                  ? 'border-theme-accent/30 bg-theme-accent/10 text-theme-accent'
                   : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)]',
               )}
             >

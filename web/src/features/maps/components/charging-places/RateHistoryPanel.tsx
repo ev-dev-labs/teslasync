@@ -190,7 +190,7 @@ export function RateHistoryPanel({
   );
 
   return (
-    <LayoutCard title={t('chargingPlaces.rateHistory.title', 'Rate history')} actions={<History className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+    <LayoutCard title={t('chargingPlaces.rateHistory.title', 'Rate history')} actions={<History className="h-4 w-4 text-theme-accent" aria-hidden="true" />}>
       <Text as="p" size="sm" color="muted" className="mb-3">
         {t(
           'chargingPlaces.rateHistory.previewHelp',

@@ -38,7 +38,7 @@ const STATUS_CONFIG: Record<HeroStatus, {
   degraded:    { icon: AlertTriangle, ring: 'ring-amber-500/40', bg: 'bg-amber-500/15', text: 'text-amber-400', defaultHeadline: 'Degraded performance' },
   unhealthy:   { icon: XCircle,      ring: 'ring-red-500/40',    bg: 'bg-red-500/15',    text: 'text-red-400',    defaultHeadline: 'Service outage' },
   unknown:     { icon: HelpCircle,   ring: 'ring-zinc-500/40',   bg: 'bg-zinc-500/15',   text: 'text-zinc-400',   defaultHeadline: 'Status unknown' },
-  maintenance: { icon: Wrench,       ring: 'ring-blue-500/40',   bg: 'bg-blue-500/15',   text: 'text-blue-400',   defaultHeadline: 'Scheduled maintenance' },
+  maintenance: { icon: Wrench,       ring: 'ring-status-info/40',   bg: 'bg-status-info/15',   text: 'text-status-info',   defaultHeadline: 'Scheduled maintenance' },
 }
 
 export interface StatusHeroProps {

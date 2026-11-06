@@ -33,7 +33,7 @@ const TONE_ICON: Record<TipTone, LucideIcon> = {
 };
 
 const TONE_ICON_CLASS: Record<TipTone, string> = {
-  info: 'text-sky-300',
+  info: 'text-status-info',
   positive: 'text-emerald-300',
   caution: 'text-amber-300',
 };

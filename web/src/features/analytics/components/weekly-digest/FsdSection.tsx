@@ -40,7 +40,7 @@ export function FsdSection({
   return (
     <GlassPanel className="flex h-full flex-col gap-5 p-4 sm:p-5" data-testid="fsd-weekly-section">
       <PanelTitle className="flex items-center gap-2">
-        <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Gauge className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('analytics.weeklyDigest.fsdSection', 'Supervised driving')}
       </PanelTitle>
 
@@ -107,7 +107,7 @@ export function FsdSection({
               icon={
                 distanceChange != null && distanceChange < 0
                   ? <TrendingDown className="h-4 w-4 text-amber-300" />
-                  : <TrendingUp className="h-4 w-4 text-cyan-300" />
+                  : <TrendingUp className="h-4 w-4 text-theme-accent" />
               }
             />
             <MiniStat
@@ -118,7 +118,7 @@ export function FsdSection({
               icon={
                 shareChange != null && shareChange < 0
                   ? <TrendingDown className="h-4 w-4 text-amber-300" />
-                  : <TrendingUp className="h-4 w-4 text-cyan-300" />
+                  : <TrendingUp className="h-4 w-4 text-theme-accent" />
               }
             />
           </div>
@@ -129,7 +129,7 @@ export function FsdSection({
               'These are cumulative counter changes, not exact FSD engagement. Absence is not zero.',
             )}
             {' '}
-            <Link to="/fsd?days=7" className="text-cyan-300 hover:text-cyan-200">
+            <Link to="/fsd?days=7" className="text-theme-accent hover:text-theme-accent">
               {t('analytics.weeklyDigest.fsdOpenInsights', 'Open FSD insights')}
             </Link>
           </Text>

@@ -258,7 +258,7 @@ function StandardView({
                     href={exportDownloadUrl(job.id)}
                     aria-label={t('widget.exportDownload', 'Download')}
                     title={t('widget.exportDownload', 'Download')}
-                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-cyan-300 transition-colors hover:text-[var(--text-primary)]"
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-theme-accent transition-colors hover:text-[var(--text-primary)]"
                   >
                     <span className="inline-flex items-center gap-1">
                       <Download className="h-3.5 w-3.5" aria-hidden="true" />

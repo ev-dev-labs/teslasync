@@ -39,7 +39,7 @@ export function buildTips(t: (key: string, fallback: string) => string): Tip[] {
         'Accelerate gradually — aim for steady pedal pressure.',
       ),
       category: 'smoothness',
-      icon: <Icons.efficiency className="h-4 w-4 text-cyan-300" aria-hidden="true" />,
+      icon: <Icons.efficiency className="h-4 w-4 text-theme-accent" aria-hidden="true" />,
     },
     {
       key: t(
@@ -47,7 +47,7 @@ export function buildTips(t: (key: string, fallback: string) => string): Tip[] {
         'Use regenerative braking instead of the brake pedal when possible.',
       ),
       category: 'smoothness',
-      icon: <Icons.efficiency className="h-4 w-4 text-cyan-300" aria-hidden="true" />,
+      icon: <Icons.efficiency className="h-4 w-4 text-theme-accent" aria-hidden="true" />,
     },
     {
       key: t(
@@ -55,7 +55,7 @@ export function buildTips(t: (key: string, fallback: string) => string): Tip[] {
         'Maintain a larger following distance to avoid sudden braking.',
       ),
       category: 'smoothness',
-      icon: <Icons.efficiency className="h-4 w-4 text-cyan-300" aria-hidden="true" />,
+      icon: <Icons.efficiency className="h-4 w-4 text-theme-accent" aria-hidden="true" />,
     },
     {
       key: t(

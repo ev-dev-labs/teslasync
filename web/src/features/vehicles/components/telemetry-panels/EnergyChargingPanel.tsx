@@ -21,7 +21,7 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
   return (
     <GlassPanel className="p-6 h-full">
       <h3 className="section-title flex items-center gap-2 mb-5">
-        <BatteryCharging className="h-4 w-4 text-cyan-300" aria-hidden="true" />{' '}
+        <BatteryCharging className="h-4 w-4 text-theme-accent" aria-hidden="true" />{' '}
         {t('telemetry.energyCharging', 'Energy & charging')}
       </h3>
       {chargingTelemetry ? (
@@ -78,7 +78,7 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border',
                 chargingTelemetry.charging_state === 'Charging'
-                  ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400'
+                  ? 'border-status-activity/30 bg-status-activity/10 text-status-activity'
                   : chargingTelemetry.charging_state === 'Complete'
                     ? 'border-green-500/30 bg-green-500/10 text-green-400'
                     : 'border-gray-500/30 bg-gray-500/10 text-[var(--text-muted)]',

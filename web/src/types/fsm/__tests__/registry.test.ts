@@ -146,9 +146,9 @@ describe('getStateColor', () => {
 
   it('honours per-state overrides (charge_session.active → cyan)', () => {
     const active = getStateColor('charge_session', 'active')
-    expect(active.bg).toBe('bg-cyan-500/10')
-    expect(active.text).toBe('text-cyan-400')
-    expect(active.dot).toBe('bg-cyan-400')
+    expect(active.bg).toBe('bg-status-activity/10')
+    expect(active.text).toBe('text-status-activity')
+    expect(active.dot).toBe('bg-status-activity')
   })
 
   it('matches the state name case-insensitively', () => {
@@ -187,7 +187,7 @@ describe('getStateDefinition', () => {
     // vehicle.driving stays the success variant but overrides the badge dot.
     const driving = getStateDefinition('vehicle', 'driving')
     expect(driving.variant).toBe('success')
-    expect(driving.badgeDot).toBe('bg-blue-500')
+    expect(driving.badgeDot).toBe('bg-status-info')
     expect(driving.bg).toBe('bg-green-500/10')
   })
 

@@ -25,7 +25,7 @@ interface WorkOrderBoardProps {
 
 const columns: WorkOrderStatus[] = ['open', 'scheduled', 'in_progress', 'completed', 'cancelled'];
 const severityColor: Record<FleetWorkOrder['severity'], string> = {
-  low: 'bg-sky-500',
+  low: 'bg-status-info',
   medium: 'bg-amber-500',
   high: 'bg-orange-500',
   critical: 'bg-rose-500',

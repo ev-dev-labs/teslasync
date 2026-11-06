@@ -10,7 +10,7 @@ interface SoftwareUpdateCompactProps {
 export function SoftwareUpdateCompact({ version, updateStatus }: SoftwareUpdateCompactProps) {
   return (
     <div className="h-full min-w-0 flex flex-col items-center justify-center gap-1.5">
-      <MonitorSmartphone className="h-5 w-5 text-cyan-300" aria-hidden="true" />
+      <MonitorSmartphone className="h-5 w-5 text-theme-accent" aria-hidden="true" />
       <WidgetBigNumber value={version || '—'} align="center" size="secondary" />
       <SoftwareUpdateBadge status={updateStatus} />
     </div>

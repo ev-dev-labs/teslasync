@@ -92,7 +92,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.notificationStats.title', 'Notification stats')}
-      icon={<Bell className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={<Bell className="h-3.5 w-3.5 text-theme-accent" />}
       loading={isLoading}
       dataState={displayState}
       updatedAt={statsUpdatedAt}

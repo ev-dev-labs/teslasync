@@ -43,7 +43,7 @@ export function ThermalLoadPanel({
     <FadeIn delay={0.2}>
       <GlassPanel className="h-full p-4 sm:p-5">
         <PanelTitle className="mb-4 flex items-center gap-2">
-          <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Activity className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('drivetrain.thermalMetrics', 'Thermal Load Indicators')}
         </PanelTitle>
         {loading ? (
@@ -74,7 +74,7 @@ export function ThermalLoadPanel({
                 value={peakPower > 0 ? `${fmtNumber(peakPower)} kW` : '—'}
               />
               <InlineMetric
-                icon={<TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+                icon={<TrendingUp className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
                 label={t('drivetrain.avgPower', 'Avg Power')}
                 value={avgPowerMax > 0 ? `${fmtNumber(avgPowerMax)} kW` : '—'}
               />

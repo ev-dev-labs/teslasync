@@ -127,7 +127,7 @@ export function SpeedSweetSpotMethodology(
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Database className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('sweetSpot.method.title', 'Coverage & methodology')}
         </PanelTitle>
         <Badge variant={summary.historyCapReached ? 'warning' : 'neutral'} dot>
@@ -188,7 +188,7 @@ export function SpeedSweetSpotMethodology(
                 key={method.text}
                 className="flex items-start gap-2 text-[var(--text-secondary)]"
               >
-                <span className="mt-0.5 shrink-0 text-cyan-300">{method.icon}</span>
+                <span className="mt-0.5 shrink-0 text-theme-accent">{method.icon}</span>
                 <Text as="span" variant="bodySm">{method.text}</Text>
               </li>
             ))}

@@ -47,7 +47,7 @@ export default function TripSummaryWidget(_props: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.tripSummary', 'Trip summary')}
-      icon={<Navigation className="h-3.5 w-3.5 text-cyan-300" />}
+      icon={<Navigation className="h-3.5 w-3.5 text-theme-accent" />}
       loading={isLoading}
       dataState={data != null || isLoading || isError || error ? trust : undefined}
       updatedAt={dataUpdatedAt}

@@ -228,7 +228,7 @@ export default function LiveMotorStatus({
   return (
     <GlassPanel className="h-full p-4 sm:p-5 @container">
       <PanelTitle className="mb-4 flex items-center gap-2">
-        <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Gauge className="h-4 w-4 text-status-info" aria-hidden="true" />
         {t('dynamics.liveMotor', "Live motor status")}
       </PanelTitle>
       <StaleRefreshWarning state={state} label={t('dynamics.liveMotor', "Live motor status")} />

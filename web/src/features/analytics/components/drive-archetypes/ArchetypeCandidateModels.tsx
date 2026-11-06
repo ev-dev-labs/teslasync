@@ -146,7 +146,7 @@ export function ArchetypeCandidateModels({
               <tr
                 key={row.k}
                 className={cn(
-                  row.selected === t('archetypes.common.selected', 'Selected') && 'bg-cyan-500/5',
+                  row.selected === t('archetypes.common.selected', 'Selected') && 'bg-theme-accent/5',
                 )}
               >
                 <th scope="row"><Text variant="bodySm">{row.model}</Text></th>

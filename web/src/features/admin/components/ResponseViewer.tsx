@@ -269,7 +269,7 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
               className={cn(
                 'px-1 py-0.5 rounded text-2xs font-bold',
                 h.method === 'GET' ? 'bg-green-500/20 text-green-400' :
-                h.method === 'POST' ? 'bg-blue-500/20 text-blue-400' :
+                h.method === 'POST' ? 'bg-status-info/20 text-status-info' :
                 h.method === 'DELETE' ? 'bg-red-500/20 text-red-400' :
                 'bg-amber-500/20 text-amber-400',
               )}

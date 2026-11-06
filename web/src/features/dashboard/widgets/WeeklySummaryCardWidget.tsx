@@ -104,7 +104,7 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
 
   return (
     <WidgetShell
-      icon={isCompact ? undefined : <CalendarDays className="h-3.5 w-3.5 text-cyan-400" />}
+      icon={isCompact ? undefined : <CalendarDays className="h-3.5 w-3.5 text-theme-accent" />}
       {...shellProps}
     >
       {metrics ? (

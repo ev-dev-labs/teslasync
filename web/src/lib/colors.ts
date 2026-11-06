@@ -254,6 +254,13 @@ export const DATA_VISUAL_COLORS = {
   glassWash: 'rgba(255,255,255,0.04)',
 } as const
 
+/** External provider identities are not application accent colors. */
+export const CHANNEL_BRAND_COLORS = {
+  discord: '#5865F2',
+  telegram: '#0088cc',
+  pushover: '#249DF1',
+} as const
+
 /** Battery health colors */
 export const BATTERY_COLORS = STATUS_COLORS
 

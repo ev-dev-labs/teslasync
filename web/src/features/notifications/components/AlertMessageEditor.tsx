@@ -638,7 +638,7 @@ function PlaceholderAutocomplete({
                 className={cn(
                   'w-full justify-start gap-2 rounded px-2 py-1.5 text-left text-xs font-normal',
                   index === cursor
-                    ? 'bg-cyan-500/15 text-[var(--text-primary)]'
+                    ? 'bg-status-info/15 text-[var(--text-primary)]'
                     : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)]',
                 )}
                 onClick={() => onSelect(item)}
@@ -773,7 +773,7 @@ function PresetGalleryModal({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="flex h-auto w-full flex-col items-start gap-1 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] p-3 text-left font-normal hover:border-cyan-500/40 hover:bg-[var(--surface-2)]"
+                  className="flex h-auto w-full flex-col items-start gap-1 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] p-3 text-left font-normal hover:border-theme-accent/40 hover:bg-[var(--surface-2)]"
                   onClick={() => onApply(preset)}
                 >
                   <Text as="span" variant="bodySm" weight="semibold" className="break-words">

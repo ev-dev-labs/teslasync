@@ -11,7 +11,7 @@ export function DriveDnaMethodologyCards() {
     <div className="mt-5 grid gap-3 md:grid-cols-2">
       <div className="rounded-xl border border-white/[0.05] bg-white/[0.025] p-4">
         <Text as="h4" variant="subhead" className="flex items-center gap-2">
-          <Fingerprint className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Fingerprint className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('driveDna.method.scopeTitle', 'Selection & telemetry scope')}
         </Text>
         <ul className="mt-3 space-y-2 pl-4">
@@ -45,7 +45,7 @@ export function DriveDnaMethodologyCards() {
 
       <div className="rounded-xl border border-white/[0.05] bg-white/[0.025] p-4">
         <Text as="h4" variant="subhead" className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <ShieldCheck className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('driveDna.method.interpretationTitle', 'Interpretation guardrails')}
         </Text>
         <ul className="mt-3 space-y-2 pl-4">

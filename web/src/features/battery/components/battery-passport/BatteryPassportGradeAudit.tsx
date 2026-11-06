@@ -39,7 +39,7 @@ export function BatteryPassportGradeAudit({
           )} description={t(
             'batteryPassport.gradeAudit.subtitle',
             'Transparent frontend reconstruction of the documented server rule; not an independent calibration or hash-bound fact.',
-          )} actions={<Award className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          )} actions={<Award className="h-4 w-4 text-theme-accent" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <div className="mb-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
             <Text as="code" mono variant="bodySm" className="break-words">

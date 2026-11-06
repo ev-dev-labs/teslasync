@@ -115,7 +115,7 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
   return (
     <GlassPanel className="h-full p-4 sm:p-5">
       <PanelTitle className="mb-4 flex items-center gap-2">
-        <Navigation className="h-4 w-4 text-indigo-300" aria-hidden="true" />
+        <Navigation className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('dynamics.autopilot', 'Autopilot & Cruise')}
       </PanelTitle>
       <NestedDrivingBrief variant="embedded" metrics={metrics} title={t('dynamics.brief.cruiseTitle', 'Speed and cruise settings')}

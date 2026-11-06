@@ -185,7 +185,7 @@ describe('LiveSignalsTable — value rendering', () => {
       />,
     );
 
-    expect(screen.getByText('42')).toHaveClass('text-cyan-300');
+    expect(screen.getByText('42')).toHaveClass('text-status-info');
     expect(screen.getByText('true')).toHaveClass('text-purple-300');
     expect(screen.getByText('hello')).toHaveClass('text-amber-300');
   });

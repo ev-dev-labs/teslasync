@@ -8,6 +8,7 @@ import { subscribe } from '../lib/broadcast'
 import { TOPICS } from '../lib/broadcastTopics'
 import { useDataState } from './useDataState'
 import { fmtNumber } from '@/lib/numberFormat'
+import { DEFAULT_CUSTOM_PRIMARY, DEFAULT_CUSTOM_ACCENT } from '@/lib/themeDefaults'
 import {
   formatDistance, formatSpeed, formatEnergy, formatPower,
   type UnitPref,
@@ -38,8 +39,8 @@ const defaults: AppSettings = {
   api_suspended: false,
   theme: 'neon-cyan',
   mode: 'dark',
-  custom_primary: '#00b4d8',
-  custom_accent: '#e63946',
+  custom_primary: DEFAULT_CUSTOM_PRIMARY,
+  custom_accent: DEFAULT_CUSTOM_ACCENT,
   gas_price_per_unit: 0,
   gas_unit: 'gallon',
   gas_efficiency_mpg: 25,

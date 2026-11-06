@@ -22,7 +22,7 @@ describe('VARIANT_THEME', () => {
     expect(VARIANT_THEME.success.badgeDot).toBe('bg-green-400')
     expect(VARIANT_THEME.warning.bg).toBe('bg-amber-500/10')
     expect(VARIANT_THEME.danger.text).toBe('text-red-400')
-    expect(VARIANT_THEME.info.dot).toBe('bg-blue-400')
+    expect(VARIANT_THEME.info.dot).toBe('bg-status-info')
   })
 
   it('routes neutral body text through the theme CSS var, not a hardcoded color', () => {

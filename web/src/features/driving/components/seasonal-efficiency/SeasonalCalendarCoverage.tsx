@@ -17,7 +17,7 @@ export function SeasonalCalendarCoverage({
     <section data-testid="seasonal-calendar-coverage">
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <CalendarRange className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <CalendarRange className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('seasonalEfficiency.calendar.title', 'Vehicle-local calendar coverage')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">

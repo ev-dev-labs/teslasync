@@ -9,6 +9,7 @@
     "moreOptions": "More appearance options",
     "searchModes": "Search display modes…",
     "noModes": "No display modes match your search.",
+    "saveFailed": "Could not save your theme to the server. Your current selection is still applied.",
     "mode": "Mode",
     "accentColor": "Accent color",
     "theme": "Theme",

@@ -32,7 +32,7 @@ export function DriveLedgerCompactPanel({ driveId }: { driveId: string | undefin
   return (
     <GlassPanel className="space-y-3 p-4 sm:p-5" data-testid="drive-ledger-compact">
       <PanelTitle className="flex items-center gap-2">
-        <Scale className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Scale className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('driveDetail.ledger.title', 'Energy ledger')}
       </PanelTitle>
       <StaleRefreshWarning state={state} label={t('driveDetail.ledger.title', 'Energy ledger')} />

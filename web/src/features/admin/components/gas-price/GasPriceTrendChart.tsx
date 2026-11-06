@@ -56,7 +56,7 @@ export function GasPriceTrendChart({ query }: GasPriceTrendChartProps) {
   return (
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <TrendingUp className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('gas.priceTrend', 'Price trend')}
       </PanelTitle>
 

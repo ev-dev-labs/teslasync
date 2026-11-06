@@ -116,7 +116,7 @@ describe('ToggleCommandTile', () => {
     expect(screen.getByTestId('command-toggle-reading')).toHaveTextContent('ON');
     expect(screen.getByTestId('cmd-icon-on')).toBeInTheDocument();
     // Default variant "on" panel colour.
-    expect(el.className).toContain('bg-neon-cyan/5');
+    expect(el.className).toContain('bg-theme-accent/5');
   });
 
   it('executes the ON command with its params when clicked while off (state-driven), without opening a dialog or flipping local state', () => {
@@ -276,7 +276,7 @@ describe('ToggleCommandTile', () => {
 
     const el = tile();
     // Default "on" panel colour — proves onStyles[variant] ?? onStyles.default.
-    expect(el.className).toContain('bg-neon-cyan/5');
+    expect(el.className).toContain('bg-theme-accent/5');
     expect(screen.getByTestId('command-toggle-reading')).toHaveTextContent('ON');
   });
 

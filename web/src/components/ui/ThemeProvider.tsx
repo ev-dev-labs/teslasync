@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, u
 import { request } from '@/api/client'
 import { getBootstrapSettings } from '@/api/settingsBootstrap'
 import { broadcast, subscribe } from '@/lib/broadcast'
+import { DEFAULT_BRAND_ACCENT, DEFAULT_CUSTOM_PRIMARY, DEFAULT_CUSTOM_ACCENT } from '@/lib/themeDefaults'
 import { themePresets, themeCategories } from './themePresets'
 
 export type ThemeId = 'neon-cyan' | 'tesla-red' | 'matrix-green' | 'royal-purple' | 'solar-amber' | 'custom'
@@ -42,7 +43,7 @@ function hexToRGB(hex: string): string {
 }
 
 /**
- * High-contrast foreground (near-black or white) for text/icons sitting on a
+ * High-contrast foreground (black or white) for text/icons sitting on a
  * solid accent fill. Bright accents (neon cyan, matrix green, solar amber) get
  * dark text; dark accents (tesla red, royal purple) get white — so primary
  * buttons stay readable whichever accent the user picks.
@@ -79,12 +80,7 @@ function contrastRatio(foreground: string, background: string): number {
 }
 
 function readableForeground(hex: string): string {
-  const darkForeground = '#0b0d12'
-  if (contrastRatio(darkForeground, hex) >= 4.5) return darkForeground
-  if (contrastRatio('#ffffff', hex) >= 4.5) return '#ffffff'
-  // Mid-tones may meet neither threshold: take the stronger of the two rather
-  // than ever altering the accent itself.
-  return contrastRatio(darkForeground, hex) >= contrastRatio('#ffffff', hex) ? darkForeground : '#ffffff'
+  return contrastRatio('#000000', hex) >= contrastRatio('#ffffff', hex) ? '#000000' : '#ffffff'
 }
 
 function mixHex(from: string, to: string, amount: number): string {
@@ -133,28 +129,25 @@ function presentationMode(mode: ModeTheme): ModeTheme {
   }
 }
 
-const defaultCustomPrimary = '#00b4d8'
-const defaultCustomAccent = '#e63946'
-
 function loadCustomColors(): { primary: string; accent: string } {
   // Module scope runs in Node during Playwright collection (and SSR): fall
   // back to defaults when there is no DOM storage.
   if (typeof localStorage === 'undefined') {
-    return { primary: defaultCustomPrimary, accent: defaultCustomAccent }
+    return { primary: DEFAULT_CUSTOM_PRIMARY, accent: DEFAULT_CUSTOM_ACCENT }
   }
-  const p = localStorage.getItem('teslasync-custom-primary') || defaultCustomPrimary
-  const a = localStorage.getItem('teslasync-custom-accent') || defaultCustomAccent
+  const p = localStorage.getItem('teslasync-custom-primary') || DEFAULT_CUSTOM_PRIMARY
+  const a = localStorage.getItem('teslasync-custom-accent') || DEFAULT_CUSTOM_ACCENT
   return { primary: p, accent: a }
 }
 
-function buildCustomTheme(primary: string, accent: string): ColorTheme {
+function buildCustomTheme(primary: string): ColorTheme {
   return {
     id: 'custom',
     name: 'Custom',
     primary,
     primaryRGB: hexToRGB(primary),
-    accent,
-    accentRGB: hexToRGB(accent),
+    accent: primary,
+    accentRGB: hexToRGB(primary),
   }
 }
 
@@ -164,44 +157,44 @@ const themes: Record<ThemeId, ColorTheme> = {
     // restrained product-blue palette as the default brand treatment.
     id: 'neon-cyan',
     name: 'Signal Blue',
-    primary: '#3b82f6',
+    primary: DEFAULT_BRAND_ACCENT,
     primaryRGB: '59, 130, 246',
-    accent: '#06b6d4',
-    accentRGB: '6, 182, 212',
+    accent: DEFAULT_BRAND_ACCENT,
+    accentRGB: '59, 130, 246',
   },
   'tesla-red': {
     id: 'tesla-red',
     name: 'Tesla Red',
     primary: '#e31937',
     primaryRGB: '227, 25, 55',
-    accent: '#ff4060',
-    accentRGB: '255, 64, 96',
+    accent: '#e31937',
+    accentRGB: '227, 25, 55',
   },
   'matrix-green': {
     id: 'matrix-green',
     name: 'Matrix Green',
     primary: '#00ff41',
     primaryRGB: '0, 255, 65',
-    accent: '#10b981',
-    accentRGB: '16, 185, 129',
+    accent: '#00ff41',
+    accentRGB: '0, 255, 65',
   },
   'royal-purple': {
     id: 'royal-purple',
     name: 'Royal Purple',
     primary: '#a855f7',
     primaryRGB: '168, 85, 247',
-    accent: '#7c3aed',
-    accentRGB: '124, 58, 237',
+    accent: '#a855f7',
+    accentRGB: '168, 85, 247',
   },
   'solar-amber': {
     id: 'solar-amber',
     name: 'Solar Amber',
     primary: '#f59e0b',
     primaryRGB: '245, 158, 11',
-    accent: '#d97706',
-    accentRGB: '217, 119, 6',
+    accent: '#f59e0b',
+    accentRGB: '245, 158, 11',
   },
-  'custom': buildCustomTheme(loadCustomColors().primary, loadCustomColors().accent),
+  'custom': buildCustomTheme(loadCustomColors().primary),
 }
 
 const builtinModes: Record<string, ModeTheme> = {
@@ -321,9 +314,10 @@ interface ThemeContextValue {
   modeId: ModeId
   theme: ColorTheme
   mode: ModeTheme
+  persistenceError: boolean
   setTheme: (id: ThemeId) => void
   setMode: (id: ModeId) => void
-  setCustomColors: (primary: string, accent: string) => void
+  setCustomColors: (primary: string, accent?: string) => void
   themes: typeof themes
   modes: typeof modes
 }
@@ -345,16 +339,15 @@ export function useTheme() {
 function applyThemeCSS(theme: ColorTheme, savedMode: ModeTheme) {
   const mode = presentationMode(savedMode)
   const primary = theme.primary.toLowerCase()
-  const accent = theme.accent.toLowerCase()
   const root = document.documentElement
   root.style.setProperty('--theme-primary', primary)
   root.style.setProperty('--theme-primary-rgb', hexToRGB(primary))
-  root.style.setProperty('--theme-accent', accent)
-  root.style.setProperty('--theme-accent-rgb', hexToRGB(accent))
+  root.style.setProperty('--theme-accent', primary)
+  root.style.setProperty('--theme-accent-rgb', hexToRGB(primary))
   // Contrasting foreground for solid accent fills (primary buttons, FAB, etc.)
   // so text/icons stay legible whichever accent the user picks.
   root.style.setProperty('--theme-on-primary', readableForeground(primary))
-  root.style.setProperty('--theme-on-accent', readableForeground(accent))
+  root.style.setProperty('--theme-on-accent', readableForeground(primary))
   root.style.setProperty('--bg', mode.bg)
   root.style.setProperty('--bg-app', mode.bg)
   root.style.setProperty('--surface-1', mode.surface1)
@@ -401,33 +394,55 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const [customColors, setCustomColorsState] = useState(loadCustomColors)
   const [initialized, setInitialized] = useState(false)
+  const [persistenceError, setPersistenceError] = useState(false)
+  // Event handlers can update multiple preferences before React commits a render.
+  const selection = useRef({ themeId, modeId, customColors })
+  const persistenceErrorRef = useRef(false)
+  const pendingInitialChanges = useRef<{
+    theme?: boolean
+    mode?: boolean
+    customPrimary?: boolean
+    customAccent?: boolean
+  } | null>(null)
+  const pendingSave = useRef<{ theme: ThemeId; mode: ModeId; customPrimary: string; customAccent: string } | null>(null)
+  const saving = useRef(false)
 
   // Load theme from backend settings on first mount.
   useEffect(() => {
     getBootstrapSettings()
       .then(settings => {
         if (!settings) return
-        if (settings.theme && settings.theme in themes) {
+        const pending = pendingInitialChanges.current
+        if (!pending?.theme && settings.theme && settings.theme in themes) {
+          selection.current = { ...selection.current, themeId: settings.theme as ThemeId }
           setThemeId(settings.theme as ThemeId)
           localStorage.setItem('teslasync-theme', settings.theme)
         }
-        if (settings.mode && settings.mode in modes) {
+        if (!pending?.mode && settings.mode && settings.mode in modes) {
+          selection.current = { ...selection.current, modeId: settings.mode as ModeId }
           setModeId(settings.mode as ModeId)
           localStorage.setItem('teslasync-mode', settings.mode)
         }
-        if (settings.custom_primary && settings.custom_accent) {
-          setCustomColorsState({ primary: settings.custom_primary, accent: settings.custom_accent })
-          localStorage.setItem('teslasync-custom-primary', settings.custom_primary)
-          localStorage.setItem('teslasync-custom-accent', settings.custom_accent)
+        const primary = pending?.customPrimary ? undefined : settings.custom_primary
+        const accent = pending?.customAccent ? undefined : settings.custom_accent
+        if (primary || accent) {
+          const nextColors = {
+            primary: primary || selection.current.customColors.primary,
+            accent: accent || selection.current.customColors.accent,
+          }
+          selection.current = { ...selection.current, customColors: nextColors }
+          setCustomColorsState(nextColors)
+          if (primary) localStorage.setItem('teslasync-custom-primary', primary)
+          if (accent) localStorage.setItem('teslasync-custom-accent', accent)
         }
       })
-      .catch(() => {})
+      .catch(error => console.warn('Unable to load theme preferences:', error))
       .finally(() => setInitialized(true))
   }, [])
 
   const currentThemes = useMemo(
-    () => ({ ...themes, custom: buildCustomTheme(customColors.primary, customColors.accent) }),
-    [customColors.primary, customColors.accent],
+    () => ({ ...themes, custom: buildCustomTheme(customColors.primary) }),
+    [customColors.primary],
   )
   const theme = currentThemes[themeId]
 
@@ -448,41 +463,90 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyThemeCSS(theme, mode)
     localStorage.setItem('teslasync-theme', themeId)
     localStorage.setItem('teslasync-mode', modeId)
+    localStorage.setItem('teslasync-theme-primary', theme.primary)
   }, [theme, mode, themeId, modeId])
 
-  // Persist theme changes to backend (fire-and-forget)
   const saveThemeToBackend = useCallback((t: ThemeId, m: ModeId, cp: string, ca: string) => {
     if (!initialized) return
-    request<Record<string, unknown>>('/settings').then(current => {
-      if (!current) return
-      request('/settings', {
-        method: 'PUT',
-        body: JSON.stringify({ ...current, theme: t, mode: m, custom_primary: cp, custom_accent: ca }),
-      }).catch(() => {})
-    }).catch(() => {})
+    pendingSave.current = { theme: t, mode: m, customPrimary: cp, customAccent: ca }
+    if (saving.current) return
+    saving.current = true
+    const drain = async () => {
+      while (pendingSave.current) {
+        const next = pendingSave.current
+        pendingSave.current = null
+        try {
+          const current = await request<Record<string, unknown>>('/settings')
+          if (!current) throw new Error('Empty settings response')
+          await request('/settings', {
+            method: 'PUT',
+            body: JSON.stringify({
+              ...current,
+              theme: next.theme,
+              mode: next.mode,
+              custom_primary: next.customPrimary,
+              custom_accent: next.customAccent,
+            }),
+          })
+          if (persistenceErrorRef.current) {
+            persistenceErrorRef.current = false
+            setPersistenceError(false)
+          }
+        } catch (error) {
+          console.error('Unable to save theme preferences:', error)
+          persistenceErrorRef.current = true
+          setPersistenceError(true)
+        }
+      }
+      saving.current = false
+    }
+    void drain()
   }, [initialized])
 
+  useEffect(() => {
+    if (!initialized || !pendingInitialChanges.current) return
+    pendingInitialChanges.current = null
+    saveThemeToBackend(themeId, modeId, customColors.primary, customColors.accent)
+  }, [initialized, saveThemeToBackend, themeId, modeId, customColors])
+
   const setTheme = useCallback((id: ThemeId) => {
+    if (!initialized) pendingInitialChanges.current = { ...pendingInitialChanges.current, theme: true }
+    const next = { ...selection.current, themeId: id }
+    selection.current = next
     setThemeId(id)
-    saveThemeToBackend(id, modeId, customColors.primary, customColors.accent)
-    broadcast({ type: 'theme.changed', themeId: id, modeId })
-  }, [saveThemeToBackend, modeId, customColors.primary, customColors.accent])
+    saveThemeToBackend(id, next.modeId, next.customColors.primary, next.customColors.accent)
+    broadcast({ type: 'theme.changed', themeId: id, modeId: next.modeId })
+  }, [initialized, saveThemeToBackend])
 
   const setMode = useCallback((id: ModeId) => {
+    if (!initialized) pendingInitialChanges.current = { ...pendingInitialChanges.current, mode: true }
+    const next = { ...selection.current, modeId: id }
+    selection.current = next
     setModeId(id)
-    saveThemeToBackend(themeId, id, customColors.primary, customColors.accent)
-    broadcast({ type: 'theme.changed', themeId, modeId: id })
-  }, [saveThemeToBackend, themeId, customColors.primary, customColors.accent])
+    saveThemeToBackend(next.themeId, id, next.customColors.primary, next.customColors.accent)
+    broadcast({ type: 'theme.changed', themeId: next.themeId, modeId: id })
+  }, [initialized, saveThemeToBackend])
 
-  const setCustomColors = useCallback((primary: string, accent: string) => {
+  const setCustomColors = useCallback((primary: string, accent?: string) => {
+    const resolvedAccent = accent ?? selection.current.customColors.accent
+    if (!initialized) {
+      pendingInitialChanges.current = {
+        ...pendingInitialChanges.current,
+        theme: true,
+        customPrimary: true,
+        customAccent: accent !== undefined || pendingInitialChanges.current?.customAccent,
+      }
+    }
     localStorage.setItem('teslasync-custom-primary', primary)
-    localStorage.setItem('teslasync-custom-accent', accent)
-    setCustomColorsState({ primary, accent })
+    localStorage.setItem('teslasync-custom-accent', resolvedAccent)
+    const next = { ...selection.current, themeId: 'custom' as const, customColors: { primary, accent: resolvedAccent } }
+    selection.current = next
+    setCustomColorsState({ primary, accent: resolvedAccent })
     setThemeId('custom')
-    saveThemeToBackend('custom', modeId, primary, accent)
-    broadcast({ type: 'theme.customColors', primary, accent })
-    broadcast({ type: 'theme.changed', themeId: 'custom', modeId })
-  }, [saveThemeToBackend, modeId])
+    saveThemeToBackend('custom', next.modeId, primary, resolvedAccent)
+    broadcast({ type: 'theme.customColors', primary, accent: resolvedAccent })
+    broadcast({ type: 'theme.changed', themeId: 'custom', modeId: next.modeId })
+  }, [initialized, saveThemeToBackend])
 
   // Cross-tab theme sync: mirror changes from other tabs without rebroadcasting
   // or re-persisting, which would loop and duplicate backend writes.
@@ -493,17 +557,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     return subscribe((m) => {
       if (m.type === 'theme.changed') {
-        if (m.themeId in themesRef.current) setThemeId(m.themeId as ThemeId)
-        if (m.modeId in modesRef.current) setModeId(m.modeId as ModeId)
+        if (m.themeId in themesRef.current) {
+          selection.current = { ...selection.current, themeId: m.themeId as ThemeId }
+          setThemeId(m.themeId as ThemeId)
+        }
+        if (m.modeId in modesRef.current) {
+          selection.current = { ...selection.current, modeId: m.modeId as ModeId }
+          setModeId(m.modeId as ModeId)
+        }
       } else if (m.type === 'theme.customColors') {
+        selection.current = { ...selection.current, customColors: { primary: m.primary, accent: m.accent } }
         setCustomColorsState({ primary: m.primary, accent: m.accent })
       }
     })
   }, [])
 
   const value = useMemo<ThemeContextValue>(
-    () => ({ themeId, modeId, theme, mode, setTheme, setMode, setCustomColors, themes: currentThemes, modes }),
-    [themeId, modeId, theme, mode, setTheme, setMode, setCustomColors, currentThemes],
+    () => ({ themeId, modeId, theme, mode, persistenceError, setTheme, setMode, setCustomColors, themes: currentThemes, modes }),
+    [themeId, modeId, theme, mode, persistenceError, setTheme, setMode, setCustomColors, currentThemes],
   )
 
   return (

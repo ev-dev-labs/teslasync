@@ -127,7 +127,7 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
   return (
     <WidgetShell
       title={t('widget.odometer.title', 'Odometer')}
-      icon={isCompact ? undefined : <Gauge className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={isCompact ? undefined : <Gauge className="h-3.5 w-3.5 text-theme-accent" />}
       loading={isLoading}
       dataState={stateData != null || isLoading || isError || error ? trust : undefined}
       updatedAt={observedAt ?? 0}

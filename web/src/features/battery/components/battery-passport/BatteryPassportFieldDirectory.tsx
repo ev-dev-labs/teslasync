@@ -421,7 +421,7 @@ export function BatteryPassportFieldDirectory({
           )} description={t(
             'batteryPassport.fields.subtitle',
             'Every top-level response field plus nested thermal and trend fields, with source, meaning, and hash relationship.',
-          )} actions={<ListTree className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          )} actions={<ListTree className="h-4 w-4 text-theme-accent" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <DataTable
             tableId="battery:passport-fields"

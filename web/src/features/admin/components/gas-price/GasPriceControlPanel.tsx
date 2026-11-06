@@ -52,7 +52,7 @@ export function GasPriceControlPanel({ query }: GasPriceControlPanelProps) {
   return (
     <GlassPanel role="region" aria-labelledby={titleId} className="flex h-full flex-col p-4 sm:p-5">
       <PanelTitle id={titleId} className="mb-3 flex items-center gap-2">
-        <Settings2 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Settings2 className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('gas.config', 'Configuration')}
       </PanelTitle>
 

@@ -402,7 +402,7 @@ describe('ResponseViewer', () => {
 
   it.each([
     ['GET', 'text-green-400'],
-    ['POST', 'text-blue-400'],
+    ['POST', 'text-status-info'],
     ['DELETE', 'text-red-400'],
     ['PUT', 'text-amber-400'],
   ])('color-codes the %s history method badge', (method, cls) => {

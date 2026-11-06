@@ -20,7 +20,7 @@ export function ServiceEvidencePackPreview({ pack, className }: ServiceEvidenceP
   return (
     <GlassPanel className={className ?? 'p-4 sm:p-5'}>
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <FileJson className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <FileJson className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('serviceEvidencePack.preview.title', 'Pack preview')}
       </PanelTitle>
       {pack == null ? (

@@ -40,7 +40,7 @@ interface SourceMeta {
 const SOURCE_META: readonly SourceMeta[] = [
   { key: 'l1', bar: 'bg-emerald-500', labelKey: 'admin.liveSignals.source.l1', labelFallback: 'Live · L1' },
   { key: 'stale', bar: 'bg-amber-500', labelKey: 'admin.liveSignals.source.stale', labelFallback: 'Stale' },
-  { key: 'l2', bar: 'bg-blue-500', labelKey: 'admin.liveSignals.source.l2', labelFallback: 'Legacy · L2' },
+  { key: 'l2', bar: 'bg-theme-accent', labelKey: 'admin.liveSignals.source.l2', labelFallback: 'Legacy · L2' },
   { key: 'unknown', bar: 'bg-slate-500', labelKey: 'admin.liveSignals.source.unknown', labelFallback: 'Unknown' },
 ];
 
@@ -85,7 +85,7 @@ export function LiveSignalSourceBreakdown({
   return (
     <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <Layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Layers className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('admin.liveSignals.panels.sources', 'Source layers')}
       </PanelTitle>
 

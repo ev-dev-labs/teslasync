@@ -1,5 +1,5 @@
   :is(.dashboard-widget-panel, .dashboard-widget) {
-    --semantic-info: light-dark(#2463b1, #7cbbff);
+    --semantic-info: var(--widget-semantic-info);
     --semantic-success: light-dark(#14664b, #62d5b2);
     --semantic-warning: light-dark(#87551b, #f2bf70);
     --semantic-danger: light-dark(#b33c55, #f294a6);

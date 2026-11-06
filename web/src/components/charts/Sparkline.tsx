@@ -18,7 +18,7 @@ export interface SparklineProps {
 /** Tiny inline SVG line chart for showing trends in a compact space. */
 export function Sparkline({
   data,
-  color = 'var(--theme-primary, #3b82f6)',
+  color = 'var(--theme-primary)',
   height = 30,
   width = 100,
   ariaLabel,

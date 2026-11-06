@@ -177,14 +177,14 @@ export function BatteryPassportMethodology() {
           )} description={t(
             'batteryPassport.method.subtitle',
             'Server rules, frontend diagnostics, source-calendar semantics, persistence behavior, and explicit non-claims.',
-          )} actions={<FileWarning className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          )} actions={<FileWarning className="h-4 w-4 text-theme-accent" aria-hidden="true" />}>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {items.map((item) => (
             <article
               key={item.key}
               className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
             >
-              <div className="mb-2 flex items-center gap-2 text-cyan-300">
+              <div className="mb-2 flex items-center gap-2 text-theme-accent">
                 {item.icon}
                 <Heading level="sub">{item.title}</Heading>
               </div>

@@ -84,7 +84,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.liveSignals', 'Live signals')}
-      icon={<Radio className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={<Radio className="h-3.5 w-3.5 text-theme-accent" />}
       dataState={{
         ...liveState,
         retry: handleRefresh,

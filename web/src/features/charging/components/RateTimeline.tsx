@@ -104,7 +104,7 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
         </span>
         {chargeWindow && (
           <span className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="w-3 h-3 rounded-sm bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
+            <span aria-hidden="true" className="w-3 h-3 rounded-sm bg-theme-accent shadow-[0_0_8px_rgba(var(--theme-primary-rgb),0.5)]" />
             <Text variant="bodySm">{t('chargePlanner.chargeWindow', 'Charge Window')}</Text>
           </span>
         )}
@@ -166,7 +166,7 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
                 className={cn(
                   'w-full rounded-t-sm transition-all duration-normal',
                   inWindow
-                    ? 'bg-cyan-400/70 shadow-[0_0_12px_rgba(34,211,238,0.4)] ring-1 ring-cyan-400/50'
+                    ? 'bg-theme-accent/70 shadow-[0_0_12px_rgba(var(--theme-primary-rgb),0.4)] ring-1 ring-theme-accent/50'
                     : baseColor,
                 )}
                 style={{ height: `${barHeight}%` }}

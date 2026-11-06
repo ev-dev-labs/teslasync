@@ -164,7 +164,7 @@ export default function ContextMenuView({ state }: { state: MenuState }) {
               className={cn(
                 'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
                 'transition-colors',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent',
                 item.disabled
                   ? 'cursor-not-allowed text-[var(--text-muted)] opacity-60'
                   : item.destructive

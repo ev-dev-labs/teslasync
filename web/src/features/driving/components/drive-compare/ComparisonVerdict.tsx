@@ -56,7 +56,7 @@ export function ComparisonVerdict({
   return (
     <GlassPanel
       className={cn(
-        'overflow-hidden bg-gradient-to-br from-cyan-500/[0.08] via-transparent to-purple-500/[0.08] p-5 sm:p-6',
+        'overflow-hidden bg-[var(--theme-accent-soft)] p-5 sm:p-6',
         className,
       )}
       data-testid="drive-compare-verdict"

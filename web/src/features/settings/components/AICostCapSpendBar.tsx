@@ -34,7 +34,7 @@ const FILL_COLOR: Record<SpendLevel, string> = {
 }
 
 const TEXT_CLASS: Record<SpendLevel, string> = {
-  ok: 'text-cyan-300',
+  ok: 'text-status-info',
   warn: 'text-amber-300',
   critical: 'text-rose-300',
 }

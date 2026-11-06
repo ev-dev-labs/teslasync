@@ -149,7 +149,7 @@ describe('SavingsCalculator — comparison cards', () => {
     const gasCost = screen.getByText('$1,200.50');
     expect(gasCost).toHaveClass('text-rose-300');
     const evCost = screen.getByText('$320.75');
-    expect(evCost).toHaveClass('text-cyan-300');
+    expect(evCost).toHaveClass('text-status-info');
     const totalSavings = screen.getByText('$879.75');
     expect(totalSavings).toHaveClass('text-emerald-300');
     const monthlySavings = screen.getByText('$73.31');

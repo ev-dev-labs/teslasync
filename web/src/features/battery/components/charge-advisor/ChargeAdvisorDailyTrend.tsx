@@ -33,7 +33,7 @@ export function ChargeAdvisorDailyTrend({ analysis, state }: ChargeAdvisorCompon
         'chargeAdvisor.trend.subtitle',
         'Multiple drives on one local day are summed; this is not total energy use or a battery-condition assessment.',
       )}
-      icon={<LineChartIcon className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<LineChartIcon className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
       state={state}
       dependency="drive"
       dataTestId="charge-advisor-trend"

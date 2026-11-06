@@ -118,7 +118,7 @@ export function RepairSuggestionCard({
       >
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
-            <KindIcon className="mt-0.5 h-5 w-5 shrink-0 text-cyan-300" aria-hidden="true" />
+            <KindIcon className="mt-0.5 h-5 w-5 shrink-0 text-theme-accent" aria-hidden="true" />
             <div className="min-w-0">
               <Text as="p" variant="bodySm" className="font-semibold text-[var(--text-primary)]">
                 {ruleLabel(t, suggestion.rule)}

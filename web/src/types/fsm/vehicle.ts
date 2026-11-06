@@ -19,10 +19,10 @@ export type VehicleState = (typeof VEHICLE_STATES)[number]
  */
 export const VEHICLE_STATE_ENTRIES: Record<VehicleState, StateEntry> = {
   online:   { variant: 'success' },
-  driving:  { variant: 'success', overrides: { badgeDot: 'bg-blue-500', bg: 'bg-green-500/10', text: 'text-green-400', dot: 'bg-green-400' } },
-  charging: { variant: 'warning', overrides: { badgeDot: 'bg-yellow-400', bg: 'bg-cyan-500/10', text: 'text-cyan-400', dot: 'bg-cyan-400' } },
-  parked:   { variant: 'info',    overrides: { badgeDot: 'bg-cyan-500', bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' } },
-  updating: { variant: 'info',    overrides: { badgeDot: 'bg-indigo-500', bg: 'bg-indigo-500/10', text: 'text-indigo-400', dot: 'bg-indigo-400' } },
+  driving:  { variant: 'success', overrides: { badgeDot: 'bg-status-info', bg: 'bg-green-500/10', text: 'text-green-400', dot: 'bg-green-400' } },
+  charging: { variant: 'warning', overrides: { badgeDot: 'bg-yellow-400', bg: 'bg-status-activity/10', text: 'text-status-activity', dot: 'bg-status-activity' } },
+  parked:   { variant: 'info',    overrides: { badgeDot: 'bg-status-activity', bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' } },
+  updating: { variant: 'info',    overrides: { badgeDot: 'bg-status-update', bg: 'bg-status-update/10', text: 'text-status-update', dot: 'bg-status-update' } },
   asleep:   { variant: 'neutral', overrides: { badgeDot: 'bg-purple-500' } },
   offline:  { variant: 'danger',  overrides: { bg: 'bg-gray-600/10', text: 'text-[var(--text-muted)]', dot: 'bg-gray-500' } },
 }

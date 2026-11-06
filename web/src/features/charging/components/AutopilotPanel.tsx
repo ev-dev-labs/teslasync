@@ -136,7 +136,7 @@ export function AutopilotPanel({ vehicleId }: AutopilotPanelProps) {
     <GlassPanel className="p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <PanelTitle className="flex items-center gap-2">
-          <Bot className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Bot className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('autopilot.title', 'Charging Autopilot')}
         </PanelTitle>
         <div className="flex items-center gap-3">

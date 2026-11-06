@@ -68,7 +68,7 @@ export function EnergySummaryPanel({ drive, stats }: EnergySummaryPanelProps) {
           </div>
           <div>
             <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.netConsumption', 'Net Consumption')}</p>
-            <p className="text-lg font-bold text-cyan-400">{fmtEnergy(netWh)}</p>
+            <p className="text-lg font-bold text-theme-accent">{fmtEnergy(netWh)}</p>
           </div>
           <div>
             <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.efficiency', 'Efficiency')}</p>

@@ -18,7 +18,7 @@ export function HealthQuickLinksPanel() {
   return (
     <GlassPanel className="min-w-0 h-full p-4 sm:p-5">
       <PanelTitle className="mb-4 flex items-center gap-2">
-        <ArrowRight className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <ArrowRight className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('battery.links.title', 'Explore More')}
       </PanelTitle>
       <nav aria-label={t('battery.links.title', 'Explore More')} className="grid min-w-0 grid-cols-2 gap-4 md:grid-cols-3">

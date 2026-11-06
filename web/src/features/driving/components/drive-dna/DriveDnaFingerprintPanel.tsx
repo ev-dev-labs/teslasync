@@ -37,7 +37,7 @@ export function DriveDnaFingerprintPanel({
     >
       <GlassPanel className="h-full p-4 sm:p-5">
         <PanelTitle className="flex items-center gap-2">
-          <Fingerprint className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Fingerprint className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('driveDna.fingerprint.title', 'Emission fingerprint')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mt-1">

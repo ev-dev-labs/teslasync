@@ -1178,7 +1178,7 @@ export function DataTable<T>({
                 onKeyDown={(e) => e.stopPropagation()}
                 onChange={() => { /* handled in onClick */ }}
                 aria-label={selectionLabel}
-                className="border-[var(--border-strong)] bg-[var(--surface-2)] text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
+                className="border-[var(--border-strong)] bg-[var(--surface-2)] accent-[var(--theme-primary)] focus:ring-[var(--focus-ring)] focus:ring-offset-0"
               />
             )}
           </td>

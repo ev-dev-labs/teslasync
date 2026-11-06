@@ -39,7 +39,7 @@ const SQUARE_BG: Record<HeroStatus, string> = {
   degraded:    'bg-amber-400/80 hover:bg-amber-300',
   unhealthy:   'bg-red-400/80 hover:bg-red-300',
   unknown:     'bg-zinc-500/40 hover:bg-zinc-400/60',
-  maintenance: 'bg-blue-400/80 hover:bg-blue-300',
+  maintenance: 'bg-status-info/80 hover:bg-status-info',
 }
 
 const STATUS_LABEL: Record<HeroStatus, string> = {
@@ -108,7 +108,7 @@ export function UptimeHeatmap({
                 aria-label={`${day.date}: ${STATUS_LABEL[day.status]}`}
                 className={cn(
                   'h-3 w-3 shrink-0 rounded-sm transition-colors',
-                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent',
                   SQUARE_BG[day.status],
                 )}
               />

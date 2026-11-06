@@ -28,7 +28,7 @@ export function DrainEventProfile({
     <section data-testid="sleep-efficiency-event-profile">
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <ListChecks className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('sleep.eventProfile.title', 'Drain-event profile')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">

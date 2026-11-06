@@ -31,7 +31,7 @@ export function DetailedRecoveryEvidence({
   return (
     <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
       <Subhead className="flex items-center gap-2">
-        <Scale className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Scale className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('regen.overview.sampleTitle', 'Detailed returned sample')}
       </Subhead>
       <Text as="p" variant="caption" className="mt-1">
@@ -106,7 +106,7 @@ export function DetailedRecoveryEvidence({
                 </MetricLabel>
               </div>
             </div>
-            <div className="rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] p-3">
+            <div className="rounded-xl border border-theme-accent/15 bg-theme-accent/[0.04] p-3">
               <Text as="p" variant="bodySm">
                 {t(
                   'regen.overview.quartiles',

@@ -200,9 +200,9 @@ export function GeneralSettings() {
         ) : (
           <>
             {carPrefs && (carPrefs.setting_distance_unit || carPrefs.setting_temperature_unit) && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neon-cyan/20 bg-neon-cyan/5 p-4 mb-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-theme-accent/20 bg-theme-accent/5 p-4 mb-5">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <Car className="h-5 w-5 text-neon-cyan shrink-0" />
+                  <Car className="h-5 w-5 text-theme-accent shrink-0" />
                   <div className="min-w-0 break-words">
                     <Text as="p" variant="body" className="font-medium">
                       {t('app.carUses', 'Car uses')} {parseSettingEnum(carPrefs.setting_distance_unit, 'distance')} / {parseSettingEnum(carPrefs.setting_temperature_unit, 'temperature')} / {parseSettingEnum(carPrefs.setting_tire_pressure_unit, 'pressure')}

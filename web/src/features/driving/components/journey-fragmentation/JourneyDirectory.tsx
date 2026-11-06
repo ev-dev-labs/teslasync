@@ -28,7 +28,7 @@ export function JourneyDirectory({ result, state, loading = false }: JourneyFrag
             <div key={journey.driveIds.join('-')} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  {index === 0 ? <Trophy className="h-4 w-4 text-amber-300" aria-hidden="true" /> : <Link2 className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+                  {index === 0 ? <Trophy className="h-4 w-4 text-amber-300" aria-hidden="true" /> : <Link2 className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
                   <Text as="p" variant="label">{t('journeyFragmentation.directory.rank', 'Rank {{rank}}', { rank: index + 1 })}</Text>
                 </div>
                 <Text as="p" variant="caption">{t('journeyFragmentation.directory.fragments', '{{count}} drives', { count: journey.fragments })}</Text>

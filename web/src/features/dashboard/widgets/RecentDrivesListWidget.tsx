@@ -61,7 +61,7 @@ export default function RecentDrivesListWidget({ vehicleId, size, config }: Widg
   return (
     <WidgetShell
       title={t('widget.recentDrivesList', 'Recent drives')}
-      icon={<Route className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />}
+      icon={<Route className="h-3.5 w-3.5 text-theme-accent" aria-hidden="true" />}
       loading={isLoading}
       dataState={trust.hasData ? trust : undefined}
       error={trust.fatalError?.message ?? null}

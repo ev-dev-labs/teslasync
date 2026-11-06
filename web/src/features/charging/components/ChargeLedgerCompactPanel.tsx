@@ -18,7 +18,7 @@ export function ChargeLedgerCompactPanel({ sessionId }: { sessionId: string | un
   return (
     <GlassPanel className="space-y-3 p-4 sm:p-5" data-testid="charge-ledger-compact">
       <PanelTitle className="flex items-center gap-2">
-        <Scale className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Scale className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('charging.ledger.title', 'Charge energy ledger')}
       </PanelTitle>
       {state.status === 'initial' ? (

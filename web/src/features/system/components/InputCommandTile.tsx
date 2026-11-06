@@ -17,7 +17,7 @@ interface InputCommandTileProps {
 }
 
 const hoverStyles = {
-  default: 'hover:border-neon-cyan/30',
+  default: 'hover:border-theme-accent/30',
   danger: 'hover:border-neon-red/30',
   success: 'hover:border-neon-green/30',
 } as const;

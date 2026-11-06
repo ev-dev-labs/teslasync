@@ -54,7 +54,7 @@ export function ComfortConsistencyEvidenceKpiLedger({
       rawValue: resolved ? summary.consistencyScore ?? null : null,
       display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
       context: <><ShieldCheck aria-hidden="true" className={`h-5 w-5 ${
-        summary.consistencyScore == null ? 'text-cyan-300'
+        summary.consistencyScore == null ? 'text-theme-accent'
           : summary.consistencyScore >= 80 ? 'text-emerald-300'
             : summary.consistencyScore >= 60 ? 'text-amber-300' : 'text-rose-300'
       }`} />{resolved ? t('comfortConsistency.kpis.scoreHint', '{{confidence}} evidence confidence', {
@@ -66,7 +66,7 @@ export function ComfortConsistencyEvidenceKpiLedger({
       label: t('comfortConsistency.kpis.samples', 'Analyzed active samples'),
       rawValue: resolved ? summary.analyzedSamples : null,
       display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
-      context: <><Activity aria-hidden="true" className="h-5 w-5 text-indigo-300" />{resolved
+      context: <><Activity aria-hidden="true" className="h-5 w-5 text-theme-accent" />{resolved
         ? t('comfortConsistency.kpis.samplesHint', '{{returned}} returned rows', {
             returned: fmtInt(summary.rows.returnedRows),
           }) : unavailable}</>,
@@ -87,7 +87,7 @@ export function ComfortConsistencyEvidenceKpiLedger({
       rawValue: resolved && summary.intervalComposition.withinBandShare != null
         ? summary.intervalComposition.withinBandShare * 100 : null,
       display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
-      context: <><Gauge aria-hidden="true" className="h-5 w-5 text-cyan-300" />{resolved
+      context: <><Gauge aria-hidden="true" className="h-5 w-5 text-theme-accent" />{resolved
         ? t('comfortConsistency.kpis.inBandHint', 'duration-weighted support') : unavailable}</>,
     },
     {
@@ -104,7 +104,7 @@ export function ComfortConsistencyEvidenceKpiLedger({
       label: t('comfortConsistency.kpis.stabilized', 'Observed stabilization share'),
       rawValue: resolved && stabilizationShare != null ? stabilizationShare * 100 : null,
       display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
-      context: <><TimerReset aria-hidden="true" className="h-5 w-5 text-indigo-300" />{resolved
+      context: <><TimerReset aria-hidden="true" className="h-5 w-5 text-theme-accent" />{resolved
         ? t('comfortConsistency.kpis.stabilizedHint', '{{count}} outside-band fragments', {
             count: summary.stabilizationWindows.length,
           }) : unavailable}</>,

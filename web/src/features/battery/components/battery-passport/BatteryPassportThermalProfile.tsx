@@ -75,7 +75,7 @@ export function BatteryPassportThermalProfile({
           )} description={t(
             'batteryPassport.thermal.subtitle',
             'Reported shares of drives with ambient readings in three server bands; shares are not normalized in this workspace.',
-          )} actions={<Thermometer className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          )} actions={<Thermometer className="h-4 w-4 text-theme-accent" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
             <div className="space-y-4">
@@ -93,7 +93,7 @@ export function BatteryPassportThermalProfile({
               ))}
               <div className="flex flex-wrap items-center gap-4 pt-1">
                 <Text as="span" variant="caption" className="flex items-center gap-1">
-                  <Snowflake className="h-3.5 w-3.5 text-blue-300" aria-hidden="true" />
+                  <Snowflake className="h-3.5 w-3.5 text-theme-accent" aria-hidden="true" />
                   {t('batteryPassport.thermal.coldShort', 'Cold')}
                 </Text>
                 <Text as="span" variant="caption" className="flex items-center gap-1">

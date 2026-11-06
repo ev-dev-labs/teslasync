@@ -92,9 +92,9 @@ describe('AUTOMATION_STATE_ENTRIES', () => {
   it('overrides fully replace the themed style (evaluating → cyan, not info blue)', () => {
     const resolved = resolveStyle(AUTOMATION_STATE_ENTRIES.evaluating)
     expect(resolved.variant).toBe('info')
-    expect(resolved.text).toBe('text-cyan-400')
+    expect(resolved.text).toBe('text-status-activity')
     expect(resolved.text).not.toBe(VARIANT_THEME.info.text)
-    expect(resolved.badgeDot).toBe('bg-cyan-400')
+    expect(resolved.badgeDot).toBe('bg-status-activity')
   })
 
   it('partial overrides merge with the variant base (idle keeps neutral dot, swaps text)', () => {
@@ -209,10 +209,10 @@ describe('registry + theme integration', () => {
 
   it('getStateColor projects an overridden state to its four style classes', () => {
     expect(getStateColor('automation', 'evaluating')).toEqual({
-      badgeDot: 'bg-cyan-400',
-      bg: 'bg-cyan-500/10',
-      text: 'text-cyan-400',
-      dot: 'bg-cyan-400',
+      badgeDot: 'bg-status-activity',
+      bg: 'bg-status-activity/10',
+      text: 'text-status-activity',
+      dot: 'bg-status-activity',
     })
     expect(Object.keys(getStateColor('automation', 'executing')).sort()).toEqual([...STYLE_KEYS])
   })

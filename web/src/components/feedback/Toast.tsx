@@ -112,7 +112,7 @@ const icons: Record<ToastType, ReactNode> = {
 const styles: Record<ToastType, { border: string; icon: string; glow: string }> = {
   success: { border: 'border-emerald-500/30', icon: 'text-emerald-300', glow: 'shadow-[0_0_20px_rgba(16,185,129,0.15)]' },
   error:   { border: 'border-tesla-red/30',   icon: 'text-red-300',     glow: 'shadow-[0_0_20px_rgba(227,25,55,0.15)]' },
-  info:    { border: 'border-sky-500/30',     icon: 'text-sky-300',     glow: 'shadow-[0_0_20px_rgba(56,189,248,0.15)]' },
+  info:    { border: 'border-status-info/30',     icon: 'text-status-info',     glow: 'shadow-[0_0_20px_rgb(var(--semantic-info-rgb)/0.15)]' },
   warning: { border: 'border-amber-500/30',   icon: 'text-amber-300',   glow: 'shadow-[0_0_20px_rgba(245,158,11,0.15)]' },
 }
 

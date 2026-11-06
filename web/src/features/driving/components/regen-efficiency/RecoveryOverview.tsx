@@ -32,7 +32,7 @@ export function RecoveryOverview({
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-4 flex items-center gap-2">
-          <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Gauge className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('regen.overview.title', 'Recovery overview')}
         </PanelTitle>
         <div className="grid gap-5 xl:grid-cols-2">

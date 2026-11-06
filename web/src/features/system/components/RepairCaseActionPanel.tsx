@@ -32,7 +32,7 @@ export function RepairCaseActionPanel({
 
   if (mode === 'restore') {
     return (
-      <GlassPanel className="border-indigo-500/20 p-4">
+      <GlassPanel className="border-theme-accent/20 p-4">
         <PanelTitle>{t('dataRepair.cases.restoreTitle', 'Restore quarantined session')}</PanelTitle>
         <Text as="p" variant="bodySm" className="mt-1">
           {t(

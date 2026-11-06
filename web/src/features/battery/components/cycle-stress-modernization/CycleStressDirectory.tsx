@@ -197,7 +197,7 @@ export function CycleStressDirectory({ result, state, locale }: Props) {
     <section data-testid="cycle-stress-directory">
       <GlassPanel className="min-w-0 p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListTree className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <ListTree className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('cycleStress.directory.title', 'Recent reconstructed-cycle directory')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">

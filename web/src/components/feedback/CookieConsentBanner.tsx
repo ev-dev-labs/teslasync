@@ -119,7 +119,7 @@ export function CookieConsentBanner({
     >
       <div className="mx-auto max-w-3xl rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)]/95 backdrop-blur-md shadow-2xl pointer-events-auto">
         <div className="flex items-start gap-3 p-4 sm:p-5">
-          <div className="shrink-0 mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-neon-cyan/10 text-neon-cyan ring-1 ring-neon-cyan/20">
+          <div className="shrink-0 mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-theme-accent/10 text-theme-accent ring-1 ring-theme-accent/20">
             <ShieldCheck className="h-4 w-4" aria-hidden />
           </div>
           <div className="flex-1 min-w-0">

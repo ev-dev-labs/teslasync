@@ -120,7 +120,7 @@ export function ColdStartMethodology({
                 </Text>
               </div>
               <div className="flex items-start gap-2">
-                <Info className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-theme-accent" aria-hidden="true" />
                 <Text as="p" variant="bodySm">
                   {t(
                     'coldStart.method.coverage',

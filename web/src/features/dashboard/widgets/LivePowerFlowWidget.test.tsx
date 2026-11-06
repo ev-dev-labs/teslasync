@@ -440,6 +440,7 @@ describe('LivePowerFlowWidget — solar & grid flow direction', () => {
     const gridHome = arrowByEnds('grid', 'site');
     expect(gridHome?.active).toBe(true);
     expect(gridHome?.value).toBe(2);
+    expect(gridHome?.color).toBe('text-status-info');
     expect(arrowByEnds('home', 'grid')).toBeUndefined();
   });
 

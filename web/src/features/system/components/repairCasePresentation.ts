@@ -6,11 +6,11 @@ import type { TFunction } from 'i18next';
 
 export const REPAIR_STATUS_COLORS: Record<RepairCaseStatus, string> = {
   open: 'bg-amber-400',
-  in_review: 'bg-cyan-400',
+  in_review: 'bg-status-activity',
   applied: 'bg-emerald-400',
   dismissed: 'bg-slate-400',
   quarantined: 'bg-rose-400',
-  restored: 'bg-indigo-400',
+  restored: 'bg-status-update',
   resolved: 'bg-emerald-400',
 };
 

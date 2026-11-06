@@ -21,7 +21,7 @@ import { FadeIn } from '@/components/motion'
 import { UserCell, type StatMetric } from '@/components/data-display'
 import { AdminSummary } from '../components/operationalbrief-a-g/AdminSummary'
 import { cn } from '@/lib/cn'
-import { neonColorMap, typography } from '@/lib/tokens'
+import { typography } from '@/lib/tokens'
 import { isFiniteNumber } from '@/lib/numberFormat'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDateFormat } from '@/hooks/useDateFormat'
@@ -245,7 +245,7 @@ export default function FeedbackQueuePage() {
               href={row.github_issue_url}
               target="_blank"
               rel="noreferrer noopener"
-              className={cn(typography.role.caption, neonColorMap.cyan.text,
+              className={cn(typography.role.caption, 'text-[var(--theme-primary)]',
                 'inline-flex min-h-11 items-center gap-1 rounded-shape-sm underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] md:min-h-6')}
             >
               <Icon icon={ExternalLink} size="xs" />

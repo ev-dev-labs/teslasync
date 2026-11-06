@@ -28,7 +28,7 @@ import { withAiFeature } from '@/components/ai/withAiFeature'
  *
  * Visual contract:
  *   - One small inline-flex chip in the chatbot page header.
- *   - Cyan accent (matches the chatbot brand colour).
+ *   - The selected application accent.
  *   - Title attribute carries the long-form explanation so a user
  *     hovering for a tooltip understands what AI mode means.
  *   - `role="img"` + `aria-label` present the icon-and-label chip as a
@@ -43,7 +43,7 @@ function InnerIndicator() {
   const { t } = useTranslation()
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2.5 py-1 text-xs font-medium text-cyan-300"
+      className="inline-flex items-center gap-1.5 rounded-full border border-theme-accent/30 bg-theme-accent/10 px-2.5 py-1 text-xs font-medium text-theme-accent"
       role="img"
       title={t(
         'helix.tooltip',
@@ -52,7 +52,7 @@ function InnerIndicator() {
       aria-label={t('helix.ariaLabel', 'Helix')}
     >
       <HelixMark
-        className="h-3.5 w-3.5 text-cyan-300"
+        className="h-3.5 w-3.5 text-theme-accent"
         aria-hidden="true"
       />
       {t('helix.badge', 'Helix')}

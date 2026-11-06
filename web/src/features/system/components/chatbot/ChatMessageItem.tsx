@@ -155,7 +155,7 @@ export function ChatMessageItem({
         className={cn(
           'rounded-2xl px-4 py-3 text-sm leading-relaxed border min-w-0',
           isUser
-            ? 'max-w-[90%] sm:max-w-[70%] bg-cyan-500/10 border-cyan-500/20'
+            ? 'max-w-[90%] sm:max-w-[70%] bg-theme-accent/10 border-theme-accent/20'
             : 'max-w-[90%] sm:max-w-[80%] bg-[var(--surface-2)] border-[var(--border-subtle)]',
         )}
         data-print-card
@@ -230,7 +230,7 @@ export function ChatMessageItem({
                   <a
                     key={link.path}
                     href={link.path}
-                    className="inline-flex items-center rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-0.5 text-2xs font-medium text-cyan-300 transition-colors hover:bg-cyan-500/20"
+                    className="inline-flex items-center rounded-full border border-theme-accent/25 bg-theme-accent/10 px-2.5 py-0.5 text-2xs font-medium text-theme-accent transition-colors hover:bg-theme-accent/20"
                   >
                     {link.label}
                   </a>

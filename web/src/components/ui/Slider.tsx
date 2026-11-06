@@ -113,7 +113,7 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
           aria-valuetext={display}
           className={cn(
             'h-full min-w-11 w-full cursor-pointer appearance-auto bg-transparent',
-            'accent-[var(--semantic-info)]',
+            'accent-[var(--theme-primary)]',
             'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
             'disabled:cursor-not-allowed disabled:opacity-50',
           )}

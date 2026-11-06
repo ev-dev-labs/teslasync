@@ -10,8 +10,8 @@ import { AdminSourceContent } from './AdminSourceContent';
 
 const STATUS_TONE: Record<string, string> = {
   sent: 'text-emerald-300', pending: 'text-amber-300', deferred_dnd: 'text-amber-300', failed: 'text-rose-300',
-  ready: 'text-emerald-300', queued: 'text-amber-300', processing: 'text-cyan-300',
-  success: 'text-emerald-300', partial: 'text-amber-300', running: 'text-cyan-300',
+  ready: 'text-emerald-300', queued: 'text-amber-300', processing: 'text-status-activity',
+  success: 'text-emerald-300', partial: 'text-amber-300', running: 'text-status-activity',
   cancelled: 'text-[var(--text-muted)]', skipped: 'text-[var(--text-muted)]',
 };
 

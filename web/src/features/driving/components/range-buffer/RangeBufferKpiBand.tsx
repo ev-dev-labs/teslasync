@@ -86,7 +86,7 @@ export function RangeBufferKpiBand({
           <div>
             <PanelTitle className="flex items-center gap-2">
               <Gauge
-                className="h-4 w-4 text-cyan-300"
+                className="h-4 w-4 text-theme-accent"
                 aria-hidden="true"
               />
               {t(

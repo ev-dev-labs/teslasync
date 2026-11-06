@@ -56,7 +56,7 @@ export function YearPatternsPanel({ data }: Props) {
       <div className="space-y-2">
         {rows.map(({ icon: Icon, label, value }) => (
           <div key={label} className="flex items-center gap-3 rounded-xl bg-white/[0.03] p-3">
-            <Icon className="h-5 w-5 shrink-0 text-indigo-300" aria-hidden="true" />
+            <Icon className="h-5 w-5 shrink-0 text-theme-accent" aria-hidden="true" />
             <div className="min-w-0">
               <Caption>{label}</Caption>
               <Text size="sm" weight="semibold" color="primary" className="block truncate">{value}</Text>

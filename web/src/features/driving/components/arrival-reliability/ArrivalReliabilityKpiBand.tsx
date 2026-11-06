@@ -71,7 +71,7 @@ export function ArrivalReliabilityKpiBand({
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-4 flex items-center gap-2">
-          <CircleGauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <CircleGauge className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('arrivalReliability.kpis.title', 'Observed timing evidence')}
         </PanelTitle>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">

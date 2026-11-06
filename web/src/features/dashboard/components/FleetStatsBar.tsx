@@ -70,7 +70,7 @@ export function FleetStatsBar({
       <StaggerItem>
         <GlassPanel role="group" aria-label={distanceLabel} className="p-3 sm:p-4 text-center flex flex-col justify-center h-full">
           <p className="metric-label mb-1 text-2xs sm:text-xs">{distanceLabel}</p>
-          <p className="text-xl sm:text-2xl font-bold text-cyan-300">
+          <p className="text-xl sm:text-2xl font-bold text-theme-accent">
             <AnimatedNumber value={toDistanceDisplay(totalDistance)} kind="measurement" suffix={` ${distanceUnit}`} />
           </p>
           <MiniChart data={driveSparkline} color={palette.DATA_VISUAL_COLORS.info} height={24} width={60} />

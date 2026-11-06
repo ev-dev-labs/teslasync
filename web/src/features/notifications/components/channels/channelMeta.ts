@@ -16,6 +16,7 @@ import type {
   NotificationChannelKind,
 } from '@/api/types';
 import type { NotificationChannelInput } from '@/api/hooks/useNotifications';
+import { CHANNEL_BRAND_COLORS } from '@/lib/colors';
 
 export type ChannelType = NotificationChannelKind;
 
@@ -89,13 +90,13 @@ export const FIELD_HELP: Record<string, { i18nKey: string; content: string }> = 
 
 /** Provider catalog — the single source of truth for every supported channel kind. */
 export const CHANNEL_TYPES: readonly ChannelTypeMeta[] = [
-  { value: 'discord', label: 'Discord', i18nKey: 'notifications.channels.providerNames.discord', icon: Hash, color: '#5865F2', fields: [
+  { value: 'discord', label: 'Discord', i18nKey: 'notifications.channels.providerNames.discord', icon: Hash, color: CHANNEL_BRAND_COLORS.discord, fields: [
     { key: 'webhook_url', i18nKey: 'notifications.channels.fields.webhookUrl', label: 'Webhook URL', placeholder: 'https://discord.com/api/webhooks/...', type: 'url' },
   ] },
   { value: 'slack', label: 'Slack', i18nKey: 'notifications.channels.providerNames.slack', icon: MessageSquare, color: '#4A154B', fields: [
     { key: 'webhook_url', i18nKey: 'notifications.channels.fields.webhookUrl', label: 'Webhook URL', placeholder: 'https://hooks.slack.com/services/...', type: 'url' },
   ] },
-  { value: 'telegram', label: 'Telegram', i18nKey: 'notifications.channels.providerNames.telegram', icon: Send, color: '#0088cc', fields: [
+  { value: 'telegram', label: 'Telegram', i18nKey: 'notifications.channels.providerNames.telegram', icon: Send, color: CHANNEL_BRAND_COLORS.telegram, fields: [
     { key: 'bot_token', i18nKey: 'notifications.channels.fields.botToken', label: 'Bot token', placeholder: '123456:ABC-...', type: 'password' },
     { key: 'chat_id', i18nKey: 'notifications.channels.fields.chatId', label: 'Chat ID', placeholder: '-1001234567890', type: 'text' },
   ] },
@@ -115,7 +116,7 @@ export const CHANNEL_TYPES: readonly ChannelTypeMeta[] = [
     { key: 'server_url', i18nKey: 'notifications.channels.fields.serverUrl', label: 'Server URL', placeholder: 'https://ntfy.sh', type: 'url' },
     { key: 'topic', i18nKey: 'notifications.channels.fields.topic', label: 'Topic', placeholder: 'teslasync', type: 'text' },
   ] },
-  { value: 'pushover', label: 'Pushover', i18nKey: 'notifications.channels.providerNames.pushover', icon: Smartphone, color: '#249DF1', fields: [
+  { value: 'pushover', label: 'Pushover', i18nKey: 'notifications.channels.providerNames.pushover', icon: Smartphone, color: CHANNEL_BRAND_COLORS.pushover, fields: [
     { key: 'user_key', i18nKey: 'notifications.channels.fields.userKey', label: 'User key', placeholder: 'u1v2w3...', type: 'password' },
     { key: 'app_token', i18nKey: 'notifications.channels.fields.appToken', label: 'App token', placeholder: 'a1b2c3...', type: 'password' },
   ] },

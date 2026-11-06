@@ -1495,10 +1495,10 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
                             onClick={item.action}
                             onMouseEnter={() => setSelectedIndex(globalIndex)}
                             className={cn(
-                              'flex h-auto min-h-11 w-full items-center justify-start gap-3 whitespace-normal rounded-shape-sm px-4 py-3 text-start',
+                              'flex h-auto min-h-11 w-full items-center justify-start gap-3 whitespace-normal rounded-shape-sm border-s-2 px-4 py-3 text-start',
                               isSelected
-                                ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
-                                : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
+                                ? 'border-[var(--theme-primary)] bg-[var(--theme-accent-soft)] text-[var(--text-primary)]'
+                                : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
                             )}
                           >
                             <span className="shrink-0 text-[var(--text-muted)]" aria-hidden="true">

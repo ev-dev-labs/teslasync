@@ -66,7 +66,7 @@ export default function RbacMatrixPage() {
           <Card padding="none" className="p-6" data-testid="rbac-open-mode">
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-cyan-300" aria-hidden />
+                <ShieldCheck className="h-5 w-5 text-theme-accent" aria-hidden />
                 <Heading level="section">{t('rbac.openMode.title', 'RBAC requires forward-auth mode')}</Heading>
               </div>
               <HelperText className="max-w-3xl">

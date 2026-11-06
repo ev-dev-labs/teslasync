@@ -134,7 +134,7 @@ export function ChargingActivityList({ geofenceId }: ChargingActivityListProps) 
   );
 
   return (
-    <LayoutCard title={t('chargingPlaces.activity.title', 'Charging activity')} actions={<ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+    <LayoutCard title={t('chargingPlaces.activity.title', 'Charging activity')} actions={<ListChecks className="h-4 w-4 text-status-info" aria-hidden="true" />}>
       <SourceContent
         state={state.refreshError ? 'retained' : 'ready'}
         label={t('chargingPlaces.activity.title', 'Charging activity')}

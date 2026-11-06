@@ -58,7 +58,7 @@ export function ChargingEnergyMix({
         'batteryCare.energy.description',
         'Delivered energy is classified only when charger metadata or high-power evidence supports it',
       )}
-      icon={<PlugZap className="h-4 w-4 text-indigo-300" aria-hidden="true" />}
+      icon={<PlugZap className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
       emptyIcon={<PlugZap className="h-8 w-8" aria-hidden="true" />}
       emptyMessage={t(
         'batteryCare.energy.empty',

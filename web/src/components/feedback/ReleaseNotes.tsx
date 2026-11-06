@@ -46,13 +46,13 @@ const BADGE_FALLBACK: Record<ChangelogBadge, string> = {
 
 const ICON_TINT: Record<ChangelogBadge, string> = {
   latest: 'text-emerald-300',
-  stable: 'text-cyan-300',
+  stable: 'text-status-info',
   beta: 'text-amber-300',
 }
 
 const DOT_TINT: Record<ChangelogChangeType, string> = {
   added: 'bg-emerald-400/60',
-  changed: 'bg-cyan-400/60',
+  changed: 'bg-status-info/60',
   fixed: 'bg-amber-400/60',
   removed: 'bg-rose-400/60',
   deprecated: 'bg-purple-400/60',

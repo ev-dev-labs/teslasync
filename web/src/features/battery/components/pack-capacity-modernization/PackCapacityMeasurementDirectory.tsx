@@ -138,7 +138,7 @@ export function PackCapacityMeasurementDirectory({ result, state, locale, format
     <section data-testid="pack-capacity-directory">
       <GlassPanel className="min-w-0 p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListTree className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <ListTree className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('packCapacity.directory.title', 'Recent measurement directory')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">

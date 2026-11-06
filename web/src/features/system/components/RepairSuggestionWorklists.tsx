@@ -104,7 +104,7 @@ export function RepairSuggestionWorklists({
           'dataRepair.drives.suggestionsEmpty',
           'Every drive in the scanned window agrees with the durable signal history.',
         )}
-        icon={<Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+        icon={<Route className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
       />
       <RepairSuggestionSection
         {...sharedProps}
@@ -118,7 +118,7 @@ export function RepairSuggestionWorklists({
           'dataRepair.charging.suggestionsEmpty',
           'Every charging session in the scanned window agrees with the durable signal history.',
         )}
-        icon={<BatteryCharging className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+        icon={<BatteryCharging className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
       />
     </section>
   );

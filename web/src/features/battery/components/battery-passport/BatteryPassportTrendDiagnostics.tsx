@@ -142,7 +142,7 @@ export function BatteryPassportTrendDiagnostics({
           )} description={t(
             'batteryPassport.diagnostics.subtitle',
             'Coverage, source-calendar cadence, recency to the frozen page clock, variability, quantiles, and gated linear description.',
-          )} actions={<Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          )} actions={<Activity className="h-4 w-4 text-theme-accent" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard

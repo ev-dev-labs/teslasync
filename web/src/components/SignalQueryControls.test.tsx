@@ -231,8 +231,8 @@ describe('exported constants', () => {
     });
   });
 
-  it('TYPE_VALUE_COLOR uses toned-down 300-shade classes and a theme var for null', () => {
-    expect(TYPE_VALUE_COLOR.num).toBe('text-cyan-300');
+  it('TYPE_VALUE_COLOR uses independent data colors and a theme var for null', () => {
+    expect(TYPE_VALUE_COLOR.num).toBe('text-status-info');
     expect(TYPE_VALUE_COLOR.str).toBe('text-emerald-300');
     expect(TYPE_VALUE_COLOR.null).toContain('var(--text-muted)');
   });

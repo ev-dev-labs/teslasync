@@ -66,7 +66,7 @@ export function BatteryPassportTrendDistribution({
           )} description={t(
             'batteryPassport.distribution.subtitle',
             'Counts and shares of included certificate points in fixed SoH bands; no normal distribution is assumed.',
-          )} actions={<BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          )} actions={<BarChart3 className="h-4 w-4 text-theme-accent" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-3">

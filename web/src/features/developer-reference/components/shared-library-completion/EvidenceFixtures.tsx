@@ -9,7 +9,7 @@ export function EvidenceFixtures() {
   const segments: CompositionRailSegment[] = [
     { id: 'verified', label: c.verified, widthPercent: 75, detail: c.count750, fillClassName: 'bg-emerald-500' },
     { id: 'pending', label: c.pending, widthPercent: 24.9, detail: c.count249, fillClassName: 'bg-amber-500' },
-    { id: 'tiny', label: c.tiny, widthPercent: 0.1, detail: c.count1, fillClassName: 'bg-indigo-500', hideFromTrack: true },
+    { id: 'tiny', label: c.tiny, widthPercent: 0.1, detail: c.count1, fillClassName: 'bg-status-update', hideFromTrack: true },
     { id: 'zero', label: c.zero, widthPercent: 0, detail: c.count0, fillClassName: 'bg-slate-500' },
   ];
   const details = [

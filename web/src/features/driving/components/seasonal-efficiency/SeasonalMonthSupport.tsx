@@ -28,7 +28,7 @@ export function SeasonalMonthSupport({
     <section data-testid="seasonal-month-support">
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Route className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('seasonalEfficiency.monthSupport.title', 'Month support and distance profile')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mb-3">

@@ -19,7 +19,7 @@ export function SeasonalYearDirectory({
     <section data-testid="seasonal-year-directory">
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <FolderClock className="h-4 w-4 text-blue-300" aria-hidden="true" />
+          <FolderClock className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('seasonalEfficiency.yearDirectory.title', 'Year-over-year directory')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mb-3">

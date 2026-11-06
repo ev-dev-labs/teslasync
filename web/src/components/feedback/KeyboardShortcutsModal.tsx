@@ -184,7 +184,7 @@ export function KeyboardShortcutsModal({ open, onClose }: KeyboardShortcutsModal
                   className={
                     'rounded-md px-3 py-1 text-xs font-medium transition-colors ' +
                     (active
-                      ? 'bg-[var(--accent-blue,#3b82f6)]/20 text-[var(--text-primary)]'
+                      ? 'bg-[var(--theme-accent-soft)] text-[var(--text-primary)]'
                       : 'text-[var(--text-secondary)] hover:bg-white/[0.04] hover:text-[var(--text-primary)]')
                   }
                 >

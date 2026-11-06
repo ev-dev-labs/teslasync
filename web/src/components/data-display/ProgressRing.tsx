@@ -35,7 +35,7 @@ export const ProgressRing = forwardRef<HTMLDivElement, ProgressRingProps>(
       max = 100,
       size = 48,
       strokeWidth = 4,
-      color = 'var(--semantic-info)',
+      color = 'var(--theme-primary)',
       label,
       centerLabel,
       centerSubLabel,

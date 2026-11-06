@@ -92,7 +92,7 @@ export function VehicleMatchPanel({
 
   return (
     <LayoutCard title={t('serviceIntelligence.vehicle.title', 'Vehicle match context')}
-      actions={<CarFront className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+      actions={<CarFront className="h-4 w-4 text-theme-accent" aria-hidden="true" />}>
       <PanelState
         selected={selected}
         loading={loading}

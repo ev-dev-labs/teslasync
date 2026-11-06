@@ -221,7 +221,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
   return (
     <WidgetShell
       title={t('widget.fsmDistribution.title', 'State distribution')}
-      icon={<GitBranch className="h-3.5 w-3.5 text-cyan-400" />}
+      icon={<GitBranch className="h-3.5 w-3.5 text-theme-accent" />}
       loading={isLoading}
       dataState={state}
       updatedAt={updatedAt}

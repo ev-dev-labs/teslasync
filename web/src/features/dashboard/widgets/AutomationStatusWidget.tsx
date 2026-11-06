@@ -38,7 +38,7 @@ function CompactView({
 
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1">
-      <Workflow className="h-5 w-5 text-neon-cyan" />
+      <Workflow className="h-5 w-5 text-status-info" />
       <WidgetBigNumber
         value={`${fmtInt(enabled)}/${fmtInt(automations.length)}`}
         label={t('widget.active', 'Active')}
@@ -178,7 +178,7 @@ export default function AutomationStatusWidget({ size }: WidgetProps) {
       title={t('widget.automationStatus', 'Automation status')}
       icon={
         isCompact && size.cols <= 1 ? undefined : (
-          <Workflow className="h-3.5 w-3.5 text-neon-cyan" />
+          <Workflow className="h-3.5 w-3.5 text-status-info" />
         )
       }
       loading={isLoading}

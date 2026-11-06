@@ -309,7 +309,7 @@ describe('RecentActivityFeed — preservation and restrained navigation', () => 
         await user.tab();
         expect(link).toHaveFocus();
         expect(link).toHaveClass(
-          'text-[var(--semantic-info)]',
+          'text-[var(--theme-primary)]',
           'underline',
           'focus-visible:outline-2',
           'focus-visible:outline-offset-2',

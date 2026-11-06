@@ -42,7 +42,7 @@ export function ChartsRow({ energyTrend, chargerBreakdown, costByType }: ChartsR
       <FadeIn delay={0.1}>
         <GlassPanel className="p-6">
           <h3 className="section-title mb-4 flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-neon-cyan" aria-hidden="true" />
+            <Calendar className="h-4 w-4 text-theme-accent" aria-hidden="true" />
             {t('charging.charts.energyCostTrend', "Energy & cost trend")}
           </h3>
           <EmbeddedChart

@@ -60,7 +60,7 @@ describe('scoreScale.gradeInfo', () => {
   it.each([
     ['A+', '#10b981', 4.5],
     ['A',  '#10b981', 4.0],
-    ['B',  '#00f0ff', 3.0],
+    ['B',  'var(--semantic-info)', 3.0],
     ['C',  '#f59e0b', 2.0],
     ['D',  '#ef4444', 1.0],
     ['F',  '#b91c1c', 0.5],

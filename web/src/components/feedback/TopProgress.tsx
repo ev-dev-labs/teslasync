@@ -15,8 +15,7 @@ import { globalProgress } from '@/lib/globalProgress'
  * Visual:
  *   - 2 px tall, full-width, fixed at top, z-60 so it sits above all
  *     banners, modals stay above (z-70+).
- *   - Cyan→indigo gradient using palette-tone classes so it never
- *     trips the neon-text or tooltip-text-color audits.
+ *   - The user's exact accent is used for the progress fill.
  *   - Width reflects the asymptotic trickle (0..80 %) plus the final
  *     snap-back to 0 on completion.
  *
@@ -55,8 +54,7 @@ export function TopProgress() {
       data-testid="top-progress"
       className={cn(
         'fixed top-0 left-0 right-0 z-[60] h-0.5 pointer-events-none',
-        'bg-gradient-to-r from-cyan-400 via-indigo-400 to-emerald-400',
-        'shadow-[0_0_8px_rgba(34,211,238,0.55)]',
+        'bg-[var(--theme-primary)]',
         // Without reduced motion we transition the width smoothly so
         // the trickle reads as motion rather than a jumping bar.
         reduce ? null : 'transition-[width] duration-fast ease-linear',

@@ -34,7 +34,7 @@ export function TemperatureGauges({ sensors, loading = false }: TemperatureGauge
     <FadeIn delay={0.15}>
       <GlassPanel className="h-full p-4 sm:p-5">
         <PanelTitle className="mb-4 flex items-center gap-2">
-          <Thermometer className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Thermometer className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('drivetrain.tempGauges', 'Temperature Gauges')}
         </PanelTitle>
         {loading ? (

@@ -71,7 +71,7 @@ export function PreconditioningEvidenceLedger({
       label: t('preconditioningEffectiveness.kpis.classified', 'Classified departures'),
       rawValue: resolved ? summary.joinedDepartures : null,
       display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
-      context: <><Activity aria-hidden="true" className="h-5 w-5 text-indigo-300" />{resolved
+      context: <><Activity aria-hidden="true" className="h-5 w-5 text-theme-accent" />{resolved
         ? t('preconditioningEffectiveness.kpis.classifiedHint', '{{classified}} of {{valid}} unique valid drives', {
             classified: fmtInt(summary.joinedDepartures), valid: fmtInt(summary.driveRows.uniqueValidDrives),
           }) : unavailable}</>,
@@ -81,7 +81,7 @@ export function PreconditioningEvidenceLedger({
       label: t('preconditioningEffectiveness.kpis.active', 'Observed HVAC-active pre-drive'),
       rawValue: resolved && summary.conditionedShare != null ? summary.conditionedShare * 100 : null,
       display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
-      context: <><ThermometerSun aria-hidden="true" className="h-5 w-5 text-cyan-300" />{resolved
+      context: <><ThermometerSun aria-hidden="true" className="h-5 w-5 text-theme-accent" />{resolved
         ? t('preconditioningEffectiveness.kpis.activeHint', '{{value}} classified departures', {
             value: isFiniteNumber(summary.conditionedDepartures) ? fmtInt(summary.conditionedDepartures) : '—',
           }) : unavailable}</>,

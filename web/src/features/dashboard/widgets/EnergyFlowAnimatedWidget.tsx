@@ -131,7 +131,7 @@ export default function EnergyFlowAnimatedWidget({ vehicleId, size, config }: Wi
   return (
     <WidgetShell
       title={t('widget.energyFlowAnimated.title', 'Energy flow')}
-      icon={<Zap className="h-3.5 w-3.5 text-cyan-400" />}
+      icon={<Zap className="h-3.5 w-3.5 text-theme-accent" />}
       status={undefined}
       loading={loading}
       loadingContent={<Skeleton className="h-full min-h-16 rounded-shape-sm" />}

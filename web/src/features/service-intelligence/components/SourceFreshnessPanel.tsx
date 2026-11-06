@@ -24,7 +24,7 @@ export function SourceFreshnessPanel({
   const { t } = useTranslation();
   return (
     <LayoutCard title={t('serviceIntelligence.sources.title', 'Source freshness')}
-      actions={<Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+      actions={<Database className="h-4 w-4 text-theme-accent" aria-hidden="true" />}>
       <PanelState
         selected={selected}
         loading={loading}
@@ -82,7 +82,7 @@ export function SourceFreshnessPanel({
                 href={source.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-flex min-h-11 items-center gap-1 rounded text-sm font-medium text-cyan-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40"
+                className="mt-2 inline-flex min-h-11 items-center gap-1 rounded text-sm font-medium text-theme-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent"
               >
                 {t('serviceIntelligence.sources.open', 'Open source')}
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />

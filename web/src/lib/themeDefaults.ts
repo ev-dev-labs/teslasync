@@ -1,0 +1,5 @@
+export const DEFAULT_CUSTOM_PRIMARY = '#00b4d8';
+export const DEFAULT_CUSTOM_ACCENT = '#e63946';
+export const DEFAULT_ICON_PRIMARY = '#3b82f6';
+export const DEFAULT_ICON_ACCENT = '#06b6d4';
+export const DEFAULT_BRAND_ACCENT = DEFAULT_ICON_PRIMARY;

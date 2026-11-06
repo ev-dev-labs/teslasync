@@ -51,9 +51,9 @@ const TONES: Array<{ tone: TileTone; chip: string; value: string }> = [
   { tone: 'green', chip: 'bg-neon-green/10', value: 'text-emerald-300' },
   { tone: 'red', chip: 'bg-neon-red/10', value: 'text-rose-300' },
   { tone: 'amber', chip: 'bg-neon-amber/10', value: 'text-amber-300' },
-  { tone: 'blue', chip: 'bg-neon-blue/10', value: 'text-indigo-300' },
+  { tone: 'blue', chip: 'bg-status-info/10', value: 'text-status-info' },
   { tone: 'purple', chip: 'bg-neon-purple/10', value: 'text-purple-300' },
-  { tone: 'cyan', chip: 'bg-neon-cyan/10', value: 'text-cyan-300' },
+  { tone: 'cyan', chip: 'bg-status-activity/10', value: 'text-status-activity' },
   { tone: 'muted', chip: 'bg-white/[0.04]', value: 'text-[var(--text-secondary)]' },
 ];
 

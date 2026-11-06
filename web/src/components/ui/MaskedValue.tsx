@@ -173,7 +173,7 @@ export function MaskedValue({
         id={`masked-value-${reactId}`}
         className={cn(
           'font-mono text-sm break-all',
-          revealed ? 'text-cyan-300' : 'text-[var(--text-secondary)]',
+          revealed ? 'text-theme-accent' : 'text-[var(--text-secondary)]',
         )}
         data-revealed={revealed ? 'true' : 'false'}
       >

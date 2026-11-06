@@ -152,8 +152,8 @@ export function MaintenanceBanner() {
   // than a clsx call so the bundle stays free of the ternary helper.
   const toneClasses = tone === 'amber'
     ? 'border-amber-300/30 bg-amber-300/[0.08]'
-    : 'border-sky-300/30 bg-sky-300/[0.08]'
-  const iconBg = tone === 'amber' ? 'bg-amber-300/15 text-amber-300' : 'bg-sky-300/15 text-sky-300'
+    : 'border-status-info/30 bg-status-info/[0.08]'
+  const iconBg = tone === 'amber' ? 'bg-amber-300/15 text-amber-300' : 'bg-status-info/15 text-status-info'
 
   return (
     <div

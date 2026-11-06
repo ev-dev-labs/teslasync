@@ -30,7 +30,7 @@ export function DestinationTransitionsKpiBand({
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-4 flex items-center gap-2">
-          <GitBranch className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <GitBranch className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t(
             'destinationTransitions.kpis.title',
             'Continuity-safe destination evidence',

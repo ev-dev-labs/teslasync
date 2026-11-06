@@ -19,7 +19,7 @@ export function ChargeAdvisorReserveSensitivity({ analysis, state }: ChargeAdvis
         'chargeAdvisor.sensitivity.subtitle',
         'The reserve is a user planning threshold, not a battery operating limit.',
       )}
-      icon={<SlidersHorizontal className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<SlidersHorizontal className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
       state={state}
       dependency="drive"
       dataTestId="charge-advisor-sensitivity"

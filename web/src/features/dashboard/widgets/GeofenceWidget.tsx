@@ -144,7 +144,7 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
     return (
       <WidgetShell {...shellProps}>
         <div className="flex h-full flex-col items-center justify-center gap-1 min-h-[44px]">
-          <Crosshair aria-hidden="true" className="h-5 w-5 text-neon-cyan" />
+          <Crosshair aria-hidden="true" className="h-5 w-5 text-theme-accent" />
           {currentZone ? (
             <Badge variant="success" size="sm">
               {currentZone.name}
@@ -164,7 +164,7 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      icon={<Crosshair aria-hidden="true" className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={<Crosshair aria-hidden="true" className="h-3.5 w-3.5 text-theme-accent" />}
       noPadding={showMap}
       {...shellProps}
     >

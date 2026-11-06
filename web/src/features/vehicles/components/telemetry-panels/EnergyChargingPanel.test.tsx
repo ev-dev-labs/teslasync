@@ -103,8 +103,8 @@ describe('EnergyChargingPanel — charging-state badge', () => {
       <EnergyChargingPanel chargingTelemetry={makeTelemetry({ charging_state: 'Charging' })} />,
     )
     const charging = screen.getByText('Charging')
-    expect(charging).toHaveClass('text-cyan-400')
-    expect(charging).toHaveClass('bg-cyan-500/10')
+    expect(charging).toHaveClass('text-status-activity')
+    expect(charging).toHaveClass('bg-status-activity/10')
 
     rerender(
       <EnergyChargingPanel chargingTelemetry={makeTelemetry({ charging_state: 'Complete' })} />,

@@ -19,7 +19,7 @@ const DOT_FOR_STATUS: Record<HeroStatus, string> = {
   degraded:    'bg-amber-400',
   unhealthy:   'bg-red-400',
   unknown:     'bg-zinc-400',
-  maintenance: 'bg-blue-400',
+  maintenance: 'bg-status-info',
 }
 
 const TEXT_FOR_STATUS: Record<HeroStatus, string> = {
@@ -27,7 +27,7 @@ const TEXT_FOR_STATUS: Record<HeroStatus, string> = {
   degraded:    'text-amber-300',
   unhealthy:   'text-rose-300',
   unknown:     'text-[var(--text-muted)]',
-  maintenance: 'text-indigo-300',
+  maintenance: 'text-status-info',
 }
 
 export interface HealthRowProps {

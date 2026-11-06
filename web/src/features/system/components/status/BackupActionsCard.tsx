@@ -69,7 +69,7 @@ export function BackupActionsCard({ children }: BackupActionsCardProps) {
         </Button>
         <Link
           to="/backup"
-          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-cyan-300 hover:text-cyan-200 hover:bg-white/[0.04]"
+          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-theme-accent hover:text-theme-accent hover:bg-white/[0.04]"
         >
           Manage backups & restore
           <ExternalLink className="h-3.5 w-3.5" />

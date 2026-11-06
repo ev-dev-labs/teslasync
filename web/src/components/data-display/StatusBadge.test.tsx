@@ -37,10 +37,10 @@ function renderBadge(status: string | null | undefined, props: { size?: 'sm' | '
 // danger dot (no badgeDot override); asleep/updating/driving/... override it.
 const KNOWN_DOTS: Array<[status: string, dot: string]> = [
   ['online', 'bg-green-400'],
-  ['driving', 'bg-blue-500'],
+  ['driving', 'bg-status-info'],
   ['charging', 'bg-yellow-400'],
-  ['parked', 'bg-cyan-500'],
-  ['updating', 'bg-indigo-500'],
+  ['parked', 'bg-status-activity'],
+  ['updating', 'bg-status-update'],
   ['asleep', 'bg-purple-500'],
   ['offline', 'bg-red-400'],
 ];
@@ -157,17 +157,18 @@ describe('StatusBadge — className passthrough', () => {
 
 describe('StatusBadge — restrained presentation', () => {
   it.each([
-    ['online', 'green-400', 'semantic-success'],
-    ['driving', 'blue-500', 'semantic-info'],
-    ['charging', 'yellow-400', 'semantic-warning'],
-    ['parked', 'cyan-500', 'semantic-info'],
-    ['updating', 'indigo-500', 'semantic-info'],
-    ['asleep', 'purple-500', 'semantic-purple'],
-    ['offline', 'red-400', 'semantic-danger'],
-    ['away', 'gray-400', 'text-secondary'],
-  ])('adapts the existing %s dot hue to a theme-aware restrained role', (status, hue, role) => {
+    ['online', 'bg-green-400', '[&.bg-green-400]:bg-[var(--semantic-success)]'],
+    ['driving', 'bg-status-info', null],
+    ['charging', 'bg-yellow-400', '[&.bg-yellow-400]:bg-[var(--semantic-warning)]'],
+    ['parked', 'bg-status-activity', null],
+    ['updating', 'bg-status-update', null],
+    ['asleep', 'bg-purple-500', '[&.bg-purple-500]:bg-[var(--semantic-purple)]'],
+    ['offline', 'bg-red-400', '[&.bg-red-400]:bg-[var(--semantic-danger)]'],
+    ['away', 'bg-gray-400', '[&.bg-gray-400]:bg-[var(--text-secondary)]'],
+  ])('adapts the existing %s dot hue to a theme-aware restrained role', (status, color, adapter) => {
     const { dot } = renderBadge(status);
-    expect(dot).toHaveClass(`bg-${hue}`, `[&.bg-${hue}]:bg-[var(--${role})]`);
+    expect(dot).toHaveClass(color);
+    if (adapter) expect(dot).toHaveClass(adapter);
   });
 
   it('keeps long labels reachable without shrinking the decorative dot', () => {

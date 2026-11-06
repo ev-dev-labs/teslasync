@@ -165,7 +165,7 @@ export function VehiclePhotoUpload({ vehicleId, className }: VehiclePhotoUploadP
         className={cn(
           'flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-6 transition-colors',
           dragActive
-            ? 'border-cyan-400 bg-cyan-500/10'
+            ? 'border-theme-accent bg-theme-accent/10'
             : 'border-[var(--border-subtle)] bg-[var(--surface-2)]',
         )}
       >

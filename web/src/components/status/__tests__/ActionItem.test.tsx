@@ -55,7 +55,7 @@ describe('ActionItem', () => {
   })
 
   it.each([
-    ['info', 'bg-blue-500/10'],
+    ['info', 'bg-status-info/10'],
     ['warn', 'bg-amber-500/10'],
     ['error', 'bg-red-500/10'],
   ] as const)(
@@ -78,7 +78,7 @@ describe('ActionItem', () => {
     )
     expect(screen.getByText('Weird')).toBeInTheDocument()
     const root = container.firstElementChild as HTMLElement
-    expect(root).toHaveClass('bg-blue-500/10')
+    expect(root).toHaveClass('bg-status-info/10')
   })
 
   it('renders an internal CTA as a router link — same tab, no external hint', () => {

@@ -224,7 +224,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size, config }: 
   return (
     <WidgetShell
       title={!isCompact ? t('widget.driveEfficiencyChart.title', 'Drive efficiency') : undefined}
-      icon={!isCompact ? <TrendingUp className="h-3.5 w-3.5 text-cyan-300" /> : undefined}
+      icon={!isCompact ? <TrendingUp className="h-3.5 w-3.5 text-theme-accent" /> : undefined}
       loading={isLoading}
       dataState={drives != null || isLoading || isError || error ? trust : undefined}
       updatedAt={dataUpdatedAt}

@@ -42,7 +42,7 @@ export function OrderStatusBreakdown({
   return (
     <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <PieChart className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <PieChart className="h-4 w-4 text-status-info" aria-hidden="true" />
         {t('admin.teslaOrders.panels.breakdown', 'Order status')}
       </PanelTitle>
 

@@ -23,7 +23,7 @@ export type AutomationState = (typeof AUTOMATION_STATES)[number]
 
 export const AUTOMATION_STATE_ENTRIES: Record<AutomationState, StateEntry> = {
   idle:       { variant: 'neutral', overrides: { text: 'text-[var(--text-secondary)]' } },
-  evaluating: { variant: 'info',    overrides: { badgeDot: 'bg-cyan-400', bg: 'bg-cyan-500/10', text: 'text-cyan-400', dot: 'bg-cyan-400' } },
+  evaluating: { variant: 'info',    overrides: { badgeDot: 'bg-status-activity', bg: 'bg-status-activity/10', text: 'text-status-activity', dot: 'bg-status-activity' } },
   executing:  { variant: 'warning' },
   succeeded:  { variant: 'success' },
   partial:    { variant: 'warning' },

@@ -156,7 +156,7 @@ export default function EnergyAnatomyPage() {
         <LayoutCard
           title={t('energyAnatomy.sankey.title', 'Energy Flow')}
           actions={<>
-            <Waypoints className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Waypoints className="h-4 w-4 text-theme-accent" aria-hidden="true" />
             <HelpTooltip
               size="sm"
               i18nKey="help.energyAnatomy.body"

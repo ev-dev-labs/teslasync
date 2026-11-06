@@ -57,9 +57,9 @@ export function TripShareRow({
           <div className="flex min-w-0 items-center gap-3">
             <span
               aria-hidden="true"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cyan-500/10"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-theme-accent/10"
             >
-              <RouteIcon className="h-4 w-4 text-cyan-300" />
+              <RouteIcon className="h-4 w-4 text-theme-accent" />
             </span>
             <div className="min-w-0">
               <Text as="p" size="sm" weight="semibold" color="primary" className="truncate">
@@ -91,7 +91,7 @@ export function TripShareRow({
               color="primary"
               className="inline-flex items-center gap-1"
             >
-              <MapPin className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />
+              <MapPin className="h-3.5 w-3.5 text-theme-accent" aria-hidden="true" />
               {formatDistance(trip.total_distance_m)}
             </Text>
             <Text

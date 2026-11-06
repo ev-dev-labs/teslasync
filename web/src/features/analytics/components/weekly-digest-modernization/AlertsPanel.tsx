@@ -26,7 +26,7 @@ interface AlertsPanelProps {
 const SEVERITY_ICON_CLASS: Record<string, string> = {
   critical: 'text-rose-300',
   warning: 'text-amber-300',
-  info: 'text-sky-300',
+  info: 'text-status-info',
 };
 const SEVERITY_BADGE: Record<string, 'danger' | 'warning' | 'info'> = {
   critical: 'danger',
@@ -86,7 +86,7 @@ export function AlertsPanel({
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <Icon
-                      className={cn('h-4 w-4 shrink-0', SEVERITY_ICON_CLASS[severity] ?? 'text-sky-300')}
+                      className={cn('h-4 w-4 shrink-0', SEVERITY_ICON_CLASS[severity] ?? 'text-status-info')}
                       aria-hidden="true"
                     />
                     <Text size="sm" color="primary" className="break-words">{severity}</Text>

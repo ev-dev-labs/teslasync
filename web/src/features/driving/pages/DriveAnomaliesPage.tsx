@@ -256,7 +256,7 @@ export default function DriveAnomaliesPage() {
         <LayoutCard
           title={t('anomalies.cases', 'Case Files')}
           actions={<>
-            <AlertTriangle className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <AlertTriangle className="h-4 w-4 text-theme-accent" aria-hidden="true" />
             <HelpTooltip
               size="sm"
               i18nKey="help.driveAnomalies.body"

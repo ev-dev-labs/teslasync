@@ -41,7 +41,7 @@ export function EvidenceCoverage({
       <GlassPanel className={cn('p-5 sm:p-6')}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <PanelTitle className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Database className="h-4 w-4 text-theme-accent" aria-hidden="true" />
             {t('explorer.coverage.title', 'Coverage & discovery cadence')}
           </PanelTitle>
           <Badge

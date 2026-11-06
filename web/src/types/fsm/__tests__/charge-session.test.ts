@@ -51,8 +51,8 @@ describe('charge-session — state entries / theming', () => {
   it('overrides the active state with a cyan tint over the success theme', () => {
     const entry = CHARGE_SESSION_STATE_ENTRIES.active
     expect(entry.variant).toBe('success')
-    expect(entry.overrides?.text).toBe('text-cyan-400')
-    expect(entry.overrides?.dot).toBe('bg-cyan-400')
+    expect(entry.overrides?.text).toBe('text-status-activity')
+    expect(entry.overrides?.dot).toBe('bg-status-activity')
   })
 
   it('overrides the recovered state with a purple tint over the neutral theme', () => {
@@ -273,8 +273,8 @@ describe('charge-session — FSM assembly & registry integration', () => {
   })
 
   it('resolves state colors through the registry helpers (case-insensitive)', () => {
-    expect(getStateColor('charge_session', 'active').text).toBe('text-cyan-400')
-    expect(getStateColor('charge_session', 'ACTIVE').text).toBe('text-cyan-400')
+    expect(getStateColor('charge_session', 'active').text).toBe('text-status-activity')
+    expect(getStateColor('charge_session', 'ACTIVE').text).toBe('text-status-activity')
     expect(getStateDefinition('charge_session', 'recovered').variant).toBe('neutral')
   })
 

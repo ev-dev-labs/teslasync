@@ -33,7 +33,7 @@ export function SymptomMatchesPanel({
   const { t } = useTranslation();
   return (
     <LayoutCard title={t('serviceIntelligence.symptoms.title', 'Ranked observed symptoms')}
-      actions={<Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+      actions={<Activity className="h-4 w-4 text-theme-accent" aria-hidden="true" />}>
       <PanelState
         selected={selected}
         loading={loading}

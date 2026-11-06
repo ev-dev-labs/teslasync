@@ -25,7 +25,7 @@ const TEXT_FOR_STATUS: Record<HeroStatus, string> = {
   degraded: 'text-amber-400',
   unhealthy: 'text-red-400',
   unknown: 'text-zinc-400',
-  maintenance: 'text-blue-400',
+  maintenance: 'text-status-info',
 }
 
 const SHORT_HEADLINE: Record<HeroStatus, string> = {
@@ -112,7 +112,7 @@ export function StickyCompactHero({
         <button
           type="button"
           onClick={handleScrollTop}
-          className="flex flex-1 items-center gap-2 text-left transition-colors hover:text-cyan-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 rounded"
+          className="flex flex-1 items-center gap-2 text-left transition-colors hover:text-theme-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent rounded"
           aria-label="Scroll to top of page"
         >
           <Icon className={cn('h-4 w-4 shrink-0', text)} aria-hidden />
@@ -132,7 +132,7 @@ export function StickyCompactHero({
             className={cn(
               'shrink-0 rounded-md p-2 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
               'min-h-[36px] min-w-[36px] flex items-center justify-center',
-              'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent',
               refreshing && 'opacity-60',
             )}
           >

@@ -84,7 +84,7 @@ export function DestinationRankings({
                         as="span"
                         variant="label"
                         mono
-                        className="shrink-0 text-cyan-300"
+                        className="shrink-0 text-theme-accent"
                       >
                         {index + 1}
                       </Text>

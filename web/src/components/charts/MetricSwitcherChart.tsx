@@ -211,7 +211,7 @@ export function MetricSwitcherChart<P extends { date: string }>({
     : undefined;
 
   const chartType = active?.chart ?? 'bar';
-  const color = active?.color ?? 'var(--theme-primary, #3b82f6)';
+  const color = active?.color ?? 'var(--theme-primary)';
   const gradId = `metricSwitcherGrad-${active?.key ?? 'x'}`;
   const numericValues = projected.flatMap((point) => {
     const value = point[valueKey];

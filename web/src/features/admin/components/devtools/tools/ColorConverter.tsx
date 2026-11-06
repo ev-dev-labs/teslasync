@@ -4,11 +4,12 @@ import { Palette } from 'lucide-react'
 import { Input } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
 import { CopyButton } from '@/components/ui'
+import { DEFAULT_BRAND_ACCENT } from '@/lib/themeDefaults'
 import { rgbToHsl } from '../helpers'
 
 export function ColorConverterTool() {
   const { t } = useTranslation()
-  const [hex, setHex] = useState('#3b82f6')
+  const [hex, setHex] = useState(DEFAULT_BRAND_ACCENT)
 
   const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setHex(e.target.value)
@@ -41,7 +42,7 @@ export function ColorConverterTool() {
     <ToolCard icon={Palette} color="purple" title={t('devtools.utils.color', 'Color converter')} description={t('devtools.utils.colorDesc', 'Color converter desc')}>
       <div className="space-y-3">
         <div className="flex items-center gap-3">
-          <Input label={t('devtools.utils.colorHex', 'Hex color')} placeholder="#3b82f6" value={hex} onChange={handleChange} icon={<Palette className="h-4 w-4" />} />
+          <Input label={t('devtools.utils.colorHex', 'Hex color')} placeholder={DEFAULT_BRAND_ACCENT} value={hex} onChange={handleChange} icon={<Palette className="h-4 w-4" />} />
           <div
             role="img"
             aria-label={`${t('devtools.utils.colorPreview', 'Color preview')}: ${hex}`}

@@ -209,7 +209,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
   return (
     <WidgetShell
       title={t('widget.chargingSchedule.title', 'Charging schedule')}
-      icon={<Calendar className="h-3.5 w-3.5 text-cyan-400" aria-hidden="true" />}
+      icon={<Calendar className="h-3.5 w-3.5 text-theme-accent" aria-hidden="true" />}
       loading={isLoading}
       error={blockingError}
       dataState={dataState}

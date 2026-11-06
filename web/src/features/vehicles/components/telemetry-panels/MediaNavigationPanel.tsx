@@ -80,7 +80,7 @@ export function MediaNavigationPanel({ mediaData, locationData }: MediaNavigatio
               {locationData.destination_name ? (
                 <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4">
                   <p className="text-sm font-bold text-[var(--text-primary)] truncate flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-cyan-300 flex-shrink-0" aria-hidden="true" />
+                    <MapPin className="h-3.5 w-3.5 text-theme-accent flex-shrink-0" aria-hidden="true" />
                     {locationData.destination_name}
                   </p>
                   <div className="flex items-center gap-3 mt-2 text-xs text-[var(--text-secondary)]">
@@ -105,7 +105,7 @@ export function MediaNavigationPanel({ mediaData, locationData }: MediaNavigatio
                   </span>
                 )}
                 {locationData.located_at_work && (
-                  <span className="inline-flex items-center gap-1 text-2xs font-medium px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                  <span className="inline-flex items-center gap-1 text-2xs font-medium px-2 py-0.5 rounded-full bg-theme-accent/10 text-theme-accent border border-theme-accent/20">
                     <span aria-hidden="true">🏢</span> {t('telemetry.placeWork', 'Work')}
                   </span>
                 )}

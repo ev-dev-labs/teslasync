@@ -47,7 +47,7 @@ export function EvidenceBand({
                 : t('journeyFragmentation.evidence.noVehicle', 'Choose a vehicle to populate this observed history window.')}
             </Text>
           </div>
-          <Text as="p" variant="caption" className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-cyan-200">
+          <Text as="p" variant="caption" className="rounded-full border border-theme-accent/20 bg-theme-accent/10 px-3 py-1 text-theme-accent">
             {evidenceBandLabel}
           </Text>
         </div>

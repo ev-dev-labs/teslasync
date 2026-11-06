@@ -27,7 +27,7 @@ export function DetailedStatistics({ stats, enhanced }: DetailedStatisticsProps)
   return (
     <GlassPanel className="p-5">
       <h3 className="section-title flex items-center gap-2 mb-4">
-        <TrendingUp className="h-4 w-4 text-neon-cyan" aria-hidden="true" />
+        <TrendingUp className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('charging.stats.detailedStatistics', 'Detailed Statistics')}
       </h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-center">

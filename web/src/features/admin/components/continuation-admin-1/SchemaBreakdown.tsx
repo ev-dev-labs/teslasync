@@ -13,7 +13,7 @@ export function SchemaBreakdown({ state }: { state: SchemaSectionState }) {
   const { drift, isLoading, error, onRetry } = state;
   return (
     <LayoutCard title={t('admin.schemaDrift.breakdownTitle', 'Drift breakdown')}
-      actions={<GitCompare className="h-4 w-4 text-cyan-300" aria-hidden />}>
+      actions={<GitCompare className="h-4 w-4 text-theme-accent" aria-hidden />}>
       <Caption>{t('admin.schemaDrift.breakdownSub', 'Per-object comparison of current vs seed')}</Caption>
       {isLoading ? <Skeleton height={150} /> : error ? <QueryError error={error} onRetry={onRetry} /> : !drift ? (
         // no-action: the page header refreshes the shared schema query; this comparison has no independent recovery.

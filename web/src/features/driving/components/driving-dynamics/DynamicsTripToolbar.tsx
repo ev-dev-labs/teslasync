@@ -50,7 +50,7 @@ export default function DynamicsTripToolbar({
     <GlassPanel className="space-y-4 p-4 sm:p-5" data-testid="dynamics-trip-toolbar">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="mb-0 flex items-center gap-2">
-          <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Route className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('dynamics.trip.title', 'Trip review')}
         </PanelTitle>
         {selected && isOpenDrive(selected) ? (

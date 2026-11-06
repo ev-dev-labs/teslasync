@@ -127,7 +127,7 @@ export function GasPriceHistoryTable({ query }: GasPriceHistoryTableProps) {
   return (
     <GlassPanel className="min-w-0 p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <History className="h-4 w-4 text-theme-accent" aria-hidden="true" />
         {t('gas.historyTitle', 'Price history')}
       </PanelTitle>
 

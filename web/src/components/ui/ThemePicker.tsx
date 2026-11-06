@@ -1,9 +1,9 @@
-import * as palette from '@/lib/colors';
 import { useState, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle, Sun, Moon, Monitor, Sparkles } from 'lucide-react'
 import { Button } from './Button'
 import { Input } from './Input'
+import { ErrorText } from './Typography'
 import { useTheme, type ThemeId, type ModeId, type ModeTheme, modeCategoryOrder } from './ThemeProvider'
 import { useToast } from '@/components/feedback/Toast'
 import { cn } from '@/lib/cn'
@@ -64,9 +64,8 @@ export function ThemePicker({
 }: ThemePickerProps) {
   const { t } = useTranslation()
   const toast = useToast()
-  const { themeId, modeId, setTheme, setMode, setCustomColors, themes: allThemes, modes: allModes } = useTheme()
-  const [customPrimary, setCustomPrimary] = useState(() => localStorage.getItem('teslasync-custom-primary') || palette.DATA_VISUAL_COLORS.info)
-  const [customAccent, setCustomAccent] = useState(() => localStorage.getItem('teslasync-custom-accent') || palette.COLOR.BAD)
+  const { themeId, modeId, persistenceError, setTheme, setMode, setCustomColors, themes: allThemes, modes: allModes } = useTheme()
+  const customPrimary = allThemes.custom.primary
   const [modeQuery, setModeQuery] = useState('')
   const [showAllModes, setShowAllModes] = useState(false)
 
@@ -106,8 +105,8 @@ export function ThemePicker({
     onModeChange?.(id)
   }
 
-  const handleCustom = (primary: string, accent: string) => {
-    setCustomColors(primary, accent)
+  const handleCustom = (primary: string) => {
+    setCustomColors(primary)
     onChange?.('custom')
   }
 
@@ -119,6 +118,9 @@ export function ThemePicker({
 
   return (
     <div className={cn(sectionSpacing, className)}>
+      {persistenceError && (
+        <ErrorText>{t('theme.saveFailed', 'Could not save your theme to the server. Your current selection is still applied.')}</ErrorText>
+      )}
       {showMode && (
         <div>
           <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
@@ -249,7 +251,7 @@ export function ThemePicker({
               variant="ghost"
               aria-pressed={themeId === 'custom'}
               onClick={() => {
-                handleCustom(customPrimary, customAccent)
+                handleCustom(customPrimary)
                 toast.info(`${t('theme.theme', 'Theme')}: ${t('theme.custom', 'Custom')}`)
               }}
               className={cn(
@@ -279,32 +281,15 @@ export function ThemePicker({
         {showCustom && themeId === 'custom' && (
           <div className="flex flex-wrap gap-6 mt-4 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--glass-border)] animate-in fade-in">
             <div className="flex items-center gap-3">
-              <span className="text-xs font-medium text-[var(--text-secondary)]">{t('theme.primary', 'Primary')}</span>
-              <Input
-                type="color"
-                value={customPrimary}
-                aria-label={t('theme.primary', 'Primary')}
-                onChange={e => {
-                  setCustomPrimary(e.target.value)
-                  handleCustom(e.target.value, customAccent)
-                }}
-                className="h-8 w-10 rounded-lg border border-[var(--glass-border)] bg-transparent cursor-pointer p-0"
-              />
-              <span className="text-2xs font-mono text-[var(--text-muted)]">{customPrimary}</span>
-            </div>
-            <div className="flex items-center gap-3">
               <span className="text-xs font-medium text-[var(--text-secondary)]">{t('theme.accent', 'Accent')}</span>
               <Input
                 type="color"
-                value={customAccent}
+                value={customPrimary}
                 aria-label={t('theme.accent', 'Accent')}
-                onChange={e => {
-                  setCustomAccent(e.target.value)
-                  handleCustom(customPrimary, e.target.value)
-                }}
+                onChange={e => handleCustom(e.target.value)}
                 className="h-8 w-10 rounded-lg border border-[var(--glass-border)] bg-transparent cursor-pointer p-0"
               />
-              <span className="text-2xs font-mono text-[var(--text-muted)]">{customAccent}</span>
+              <span className="text-2xs font-mono text-[var(--text-muted)]">{customPrimary}</span>
             </div>
           </div>
         )}

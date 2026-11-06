@@ -73,7 +73,7 @@ export function AmbientTemperatureContext({
     >
       <GlassPanel className="h-full p-4 sm:p-5">
         <PanelTitle className="flex items-center gap-2">
-          <Thermometer className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Thermometer className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('regen.temperature.title', 'Ambient-temperature context')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mt-1">

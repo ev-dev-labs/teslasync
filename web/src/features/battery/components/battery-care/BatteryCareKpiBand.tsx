@@ -42,7 +42,7 @@ export function BatteryCareKpiBand({
         'batteryCare.summary.description',
         'Descriptive signals from the returned charging and drive windows',
       )}
-      icon={<HeartPulse className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<HeartPulse className="h-4 w-4 text-theme-accent" aria-hidden="true" />}
       emptyIcon={<HeartPulse className="h-8 w-8" aria-hidden="true" />}
       emptyMessage={t(
         'batteryCare.summary.empty',

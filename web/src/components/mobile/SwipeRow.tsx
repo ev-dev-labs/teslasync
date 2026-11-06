@@ -84,7 +84,7 @@ function defaultIcon(action: SwipeAction): ReactNode {
 function actionPanelClasses(tone: SwipeAction['tone']): string {
   return tone === 'danger'
     ? 'bg-rose-500/20 text-rose-100 hover:bg-rose-500/30'
-    : 'bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30';
+    : 'bg-theme-accent/20 text-theme-accent hover:bg-theme-accent/30';
 }
 
 function safeVibrate(ms: number): void {

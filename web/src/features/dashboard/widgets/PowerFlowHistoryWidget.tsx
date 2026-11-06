@@ -135,7 +135,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
   }, { provenance: 'historical', partial: chartData.some((d) => [d.solar, d.battery, d.grid, d.home].some((value) => value == null)) });
   const shellProps = {
     title: t('widget.powerFlowHistory.title', 'Power flow history'),
-    icon: <TrendingUp aria-hidden="true" className="h-3.5 w-3.5 text-cyan-400" />,
+    icon: <TrendingUp aria-hidden="true" className="h-3.5 w-3.5 text-theme-accent" />,
   };
 
   // No energy sites linked. Only surface the "no site" empty state when the

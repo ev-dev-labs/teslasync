@@ -10,6 +10,7 @@ import { VisuallyHidden } from '@/components/a11y/VisuallyHidden';
 import type { VehicleTwinState, WindowState, TurnSignalState } from '@/lib/vehicleState';
 import {
   FALLBACK_PAINT,
+  VEHICLE_TWIN_MATERIAL_COLORS,
   type PaintPalette,
 } from '@/lib/vehicleColors';
 import { buildCompositorUrl, COMPOSITOR_METRICS } from '@/lib/teslaCompositor';
@@ -1317,7 +1318,7 @@ function SvgDefs({ paint, ids }: { paint: PaintPalette; ids: TwinIds }) {
       <linearGradient id={ids.glassGrad} x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stopColor="rgba(5,10,22,0.88)" />
         <stop offset="62%" stopColor="rgba(24,36,58,0.62)" />
-        <stop offset="100%" stopColor="rgba(95,120,150,0.4)" />
+        <stop offset="100%" stopColor={VEHICLE_TWIN_MATERIAL_COLORS.glassReflection} />
       </linearGradient>
       <linearGradient id={ids.lowReflection} x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stopColor="rgba(255,255,255,0)" />
@@ -1331,7 +1332,7 @@ function SvgDefs({ paint, ids }: { paint: PaintPalette; ids: TwinIds }) {
       {/* Smoked headlight / taillight lenses — the bright accents come from
           the DRL strip and taillight core strokes, not the lens fill. */}
       <linearGradient id={ids.headlightLens} x1="0" y1="0" x2="1" y2="0.3">
-        <stop offset="0%" stopColor="rgba(90,115,145,0.85)" />
+        <stop offset="0%" stopColor={VEHICLE_TWIN_MATERIAL_COLORS.headlightLens} />
         <stop offset="55%" stopColor="rgba(35,48,68,0.85)" />
         <stop offset="100%" stopColor="rgba(12,18,32,0.85)" />
       </linearGradient>

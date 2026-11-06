@@ -93,7 +93,7 @@ export function buildAchievements(
         'driveScore.achievements.smoothOperatorDesc',
         'Score 28+ in smoothness on 3 drives.',
       ),
-      icon: <Icons.securityCheck className="h-5 w-5 text-cyan-300" aria-hidden="true" />,
+      icon: <Icons.securityCheck className="h-5 w-5 text-theme-accent" aria-hidden="true" />,
       check: (scores) => scores.filter((s) => s.smoothness >= 28).length >= 3,
     },
     {

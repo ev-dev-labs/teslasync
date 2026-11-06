@@ -106,7 +106,7 @@ export function DrivingRhythmMethodology({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Database className="h-4 w-4 text-theme-accent" aria-hidden="true" />
           {t('rhythm.method.title', 'Coverage & methodology')}
         </PanelTitle>
         {!state.isLoading && !state.error && (
@@ -135,7 +135,7 @@ export function DrivingRhythmMethodology({
                 key={method.text}
                 className="flex items-start gap-2"
               >
-                <span className="mt-0.5 shrink-0 text-cyan-300">
+                <span className="mt-0.5 shrink-0 text-theme-accent">
                   {method.icon}
                 </span>
                 <Text as="span" variant="bodySm">

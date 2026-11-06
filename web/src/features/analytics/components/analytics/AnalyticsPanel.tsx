@@ -53,7 +53,7 @@ export function AnalyticsPanel({
     <div className={cn('min-w-0', className)} aria-busy={loading ? true : undefined}>
       <LayoutCard title={title} actions={
         icon && (
-          <span className="inline-flex text-cyan-300" aria-hidden="true">
+          <span className="inline-flex text-theme-accent" aria-hidden="true">
             {icon}
           </span>
         )

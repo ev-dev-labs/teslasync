@@ -72,7 +72,7 @@ export function ClaimDraftPanel({ vehicleId }: ClaimDraftPanelProps) {
 
   return (
     <LayoutCard title={t('serviceIntelligence.claim.title', 'Warranty claim draft')}
-      actions={<Icons.fileText className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+      actions={<Icons.fileText className="h-4 w-4 text-theme-accent" aria-hidden="true" />}>
       <div className="mb-3 flex flex-col gap-2 sm:flex-row">
         <Input
           value={issue}

@@ -79,7 +79,7 @@ export function ChargingEvidenceTable({
         defaultWidth: 185, minWidth: 155,
         render: (s) => (
           <div className="flex min-w-0 items-center gap-2">
-            <Link to={`/charging/${s.id}`} className="rounded font-medium text-[var(--text-primary)] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400">
+            <Link to={`/charging/${s.id}`} className="rounded font-medium text-[var(--text-primary)] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-theme-accent">
               {formatDateTime(s.started_at, { tz: timezone })}
             </Link>
             {s.live && <Badge variant="info" size="sm">{t('charging.sessionCharging', 'Charging')}</Badge>}

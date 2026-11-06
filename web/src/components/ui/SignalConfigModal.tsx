@@ -348,7 +348,9 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                       ? t('signalConfig.deselectCategory', 'Deselect all {{category}} signals', { category })
                       : t('signalConfig.selectCategory', 'Select all {{category}} signals', { category })}
                     className={cn('min-h-11 min-w-11 md:min-h-9 md:min-w-9 px-2 shrink-0',
-                      someCatSelected && 'bg-[var(--semantic-info-bg)] border-[var(--semantic-info)]'
+                      allCatSelected
+                        ? 'border-[var(--theme-primary)] bg-[var(--theme-primary)] text-[var(--theme-on-primary)]'
+                        : someCatSelected && 'border-[var(--theme-primary)] bg-[var(--theme-accent-soft)]'
                     )}>
                     {allCatSelected && <Icon icon={CheckCircle} size="sm" />}
                     {someCatSelected && !allCatSelected && <span aria-hidden="true">−</span>}
@@ -376,14 +378,14 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                       return (
                         <div key={sig.name} className={cn(
                           'flex flex-wrap items-center gap-2 px-3 py-2',
-                          sig.selected && 'bg-[var(--surface-2)]'
+                          sig.selected && 'bg-[var(--theme-accent-soft)]'
                         )}>
                           <Button type="button" variant="outline" size="sm" onClick={() => updateSignal(sig.name, { selected: !sig.selected })} aria-pressed={sig.selected}
                             aria-label={sig.selected
                               ? t('signalConfig.deselectSignal', 'Deselect {{signal}}', { signal: sig.name })
                               : t('signalConfig.selectSignal', 'Select {{signal}}', { signal: sig.name })}
                             className={cn('min-h-11 min-w-11 md:min-h-9 md:min-w-9 px-2 shrink-0',
-                              sig.selected && 'bg-[var(--semantic-info-bg)] border-[var(--semantic-info)]'
+                              sig.selected && 'border-[var(--theme-primary)] bg-[var(--theme-primary)] text-[var(--theme-on-primary)]'
                             )}>
                             {sig.selected && <Icon icon={CheckCircle} size="sm" />}
                           </Button>

@@ -33,12 +33,12 @@ const STATUS_TONE: Record<string, string> = {
   // export
   ready: 'text-emerald-300',
   queued: 'text-amber-300',
-  processing: 'text-cyan-300',
+  processing: 'text-status-activity',
 
   // automation
   success: 'text-emerald-300',
   partial: 'text-amber-300',
-  running: 'text-cyan-300',
+  running: 'text-status-activity',
   cancelled: 'text-[var(--text-muted)]',
   skipped: 'text-[var(--text-muted)]',
 }

@@ -142,10 +142,10 @@ export function RangeSlider({
 
   const inputClasses = cn(
     'pointer-events-none absolute inset-0 h-full w-full appearance-none bg-transparent',
-    'accent-cyan-500',
+    'accent-[var(--theme-primary)]',
     '[&::-webkit-slider-thumb]:pointer-events-auto',
     '[&::-moz-range-thumb]:pointer-events-auto',
-    'focus-visible:outline-none',
+    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
     'disabled:cursor-not-allowed disabled:opacity-50',
   );
 
@@ -168,7 +168,7 @@ export function RangeSlider({
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-cyan-500/60 forced-colors:hidden"
+          className="pointer-events-none absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-[var(--theme-primary)] forced-colors:hidden"
           style={{
             left: `${Math.min(lowPct, highPct)}%`,
             right: `${100 - Math.max(lowPct, highPct)}%`,
