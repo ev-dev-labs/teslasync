@@ -21,6 +21,12 @@ export interface MobileDataTablePresentation<T> {
   allDetails?: (row: T) => readonly MobileDataTableDetail[]
   inlineActions?: (row: T) => ReactNode
   onOpenRow?: (row: T) => void
+  /** Place mobile column controls in the shared table toolbar instead of a separate row. */
+  controlsInToolbar?: boolean
+  /** Set false when a surrounding summary already supplies the row count. */
+  showRowCount?: boolean
+  /** Let card rows follow the table's compact-density setting. */
+  compactRows?: boolean
 }
 
 export interface MobileDataTableDetail {

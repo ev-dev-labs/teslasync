@@ -10,7 +10,6 @@
 import { PageLayout } from '@/components/layout';
 import { Accordion } from '@/components/ui';
 import { useFleetAPIPage } from '../hooks/useFleetAPIPage';
-import { FleetAPIBrief } from '../components/operationalbrief-a-g/FleetAPIBrief';
 import { FleetAPIPolling } from '../components/structural-closure/fleet-api/FleetAPIPolling';
 import { FleetAPIConfiguredEndpoints } from '../components/structural-closure/fleet-api/FleetAPIConfiguredEndpoints';
 import { FleetAPIEndpointControls } from '../components/structural-closure/fleet-api/FleetAPIEndpointControls';
@@ -29,7 +28,6 @@ export default function FleetAPIPage() {
       <FleetAPIEndpointControls controller={controller} />
       <Accordion title={t('fleetApi.connectionDetails', 'Connection details')}>
         <FleetAPIConfiguredEndpoints controller={controller} />
-        <FleetAPIBrief controller={controller} />
       </Accordion>
     </PageLayout>
   );

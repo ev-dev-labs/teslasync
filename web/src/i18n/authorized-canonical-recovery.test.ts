@@ -8,7 +8,9 @@ import currentCatalog from './en.json'
 import shell from './en/shell.json'
 import baseline from './known-missing-keys.json'
 import { finalFourAdditions, ownerRecoveryAdditions } from './authorized-owner-recovery.test'
+import fleetApiCopyChanges from './verified-fleet-api-copy.json'
 import { assertCombinedCheckpoint, catalogBeforeDashboardPolish } from './verified-combined-contract'
+import { readFleetCurrentSource, restoreVerifiedFleetSource } from './verified-fleet-source-contract'
 
 const catalog = catalogBeforeDashboardPolish(currentCatalog)
 
@@ -19004,7 +19006,12 @@ describe('authorized exact canonical catalog recovery attempt3', () => {
       expect(nested(catalog, key), key).toBe(value)
       expect(english.exists(key), key).toBe(true)
       expect(english.t(key, { skipInterpolation: true }), key).toBe(value)
-      expect(resources.some(resource => nested(resource, key) === value), key).toBe(true)
+      const reviewed = fleetApiCopyChanges.find(change => change.path.join('.') === key && 'previous' in change)
+      if (reviewed) {
+        expect(reviewed.previous, key).toBe(value)
+        expect(nested(currentCatalog, key), key).toBe(reviewed.current)
+      }
+      expect(resources.some(resource => nested(resource, key) === (reviewed?.current ?? value)), key).toBe(true)
     }
     expect(english.t('watch.command.error', { message: 'offline' })).toBe('Watch command failed: offline')
   })
@@ -19050,7 +19057,7 @@ describe('authorized exact canonical catalog recovery attempt3', () => {
       .toBe('1b5898ff8dd6c30a224607648e5bfc357395a2441e0ac6c66b116506892369e8')
     const calls = new Map<string, { tree: ts.SourceFile; found: Map<string, ts.CallExpression[]> }>()
     for (const [file] of producerHashes) {
-      const bytes = readFileSync(resolve(process.cwd(), '..', file), 'utf8')
+      const bytes = restoreVerifiedFleetSource(file, readFleetCurrentSource(file))
       const tree = ts.createSourceFile(file, bytes, ts.ScriptTarget.Latest, true)
       const found = new Map<string, ts.CallExpression[]>()
       const visit = (node: ts.Node) => {

@@ -53,6 +53,84 @@ function mount(extra: Partial<Parameters<typeof DataTable<Row>>[0]> = {}) {
 }
 
 describe('real DataTable mobile bridge', () => {
+  it('honors compact and comfortable density for opted-in mobile rows', () => {
+    const view = mount({ density: 'compact', mobilePresentation: { ...presentation, compactRows: true } })
+    resize(390)
+    const row = view.container.querySelector('[data-row-key="2"]') as HTMLElement
+    expect(row).toHaveClass('!min-h-16', '!py-2')
+    fireEvent.click(screen.getByRole('radio', { name: 'Comfortable' }))
+    expect(row).not.toHaveClass('!min-h-16', '!py-2')
+    fireEvent.click(screen.getByRole('radio', { name: 'Compact' }))
+    expect(row).toHaveClass('!min-h-16', '!py-2')
+  })
+
+  it('can place labelled filters in the toolbar and use a compact group summary without a duplicate count', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(max-width: 1279px)', media: query,
+      addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    }))
+    const view = mount({
+      enableValueFilters: true,
+      mobilePresentation: { ...presentation, controlsInToolbar: true, showRowCount: false },
+      rowGrouping: {
+        key: row => row.secret, label: key => key,
+        summary: () => <span>3 long routes</span>,
+        mobileSummary: () => <span>3</span>,
+      },
+    })
+    resize(390)
+    const mobile = view.container.querySelector('[data-mobile-table]') as HTMLElement
+    expect(within(mobile).queryByRole('button', { name: 'Name filter' })).not.toBeInTheDocument()
+    expect(within(mobile).queryByText(/matching.*loaded rows/)).not.toBeInTheDocument()
+    expect(within(mobile).getByText('3')).toBeInTheDocument()
+    expect(within(mobile).queryByText('3 long routes')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'More' }))
+    const more = screen.getByRole('dialog', { name: 'More' })
+    expect(within(more).getByText('Name')).toBeInTheDocument()
+    fireEvent.click(within(more).getByRole('button', { name: 'Name filter' }))
+    const filter = screen.getByRole('dialog', { name: 'Name filter' })
+    fireEvent.click(within(filter).getByRole('checkbox', { name: 'Select all shown values' }))
+    fireEvent.click(within(filter).getByRole('checkbox', { name: 'Last' }))
+    fireEvent.click(within(filter).getByRole('button', { name: 'Done' }))
+    fireEvent.click(within(more).getByRole('button', { name: 'Close' }))
+    expect(screen.getByRole('button', { name: 'Collapse private' })).toBeInTheDocument()
+    expect(screen.getByText('Last')).toBeInTheDocument()
+    expect(screen.queryByText('Zero')).not.toBeInTheDocument()
+  })
+
+  it('retains grouped disclosure and aligned, separate controls on mobile', () => {
+    const groupedColumns: Column<Row>[] = [
+      columns[0],
+      { key: 'access', header: 'Access', headerAction: <Button>All access</Button>,
+        render: row => <Button>{`Access ${row.name}`}</Button> },
+      { key: 'auto', header: 'Auto', headerAction: <Button>All auto</Button>,
+        render: row => <Button>{`Auto ${row.name}`}</Button> },
+    ]
+    const view = mount({ columns: groupedColumns,
+      rowGrouping: {
+        key: row => row.secret, label: key => key,
+        actionColumns: {
+          access: key => <Button>{`Access group ${key}`}</Button>,
+          auto: key => <Button>{`Auto group ${key}`}</Button>,
+        },
+      },
+    })
+    resize(390)
+    expect(screen.getByRole('button', { name: 'Expand private' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('button', { name: 'Access Zero' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Expand private' }))
+    const access = screen.getByRole('button', { name: 'Access Zero' })
+    const groupAccess = screen.getByRole('button', { name: 'Access group private' })
+    const headerAccess = screen.getByRole('button', { name: 'All access' })
+    for (const control of [access, groupAccess, headerAccess]) {
+      expect(control.closest('[data-mobile-action-column]')).toHaveAttribute('data-mobile-action-column', 'access')
+    }
+    expect(access.closest('[role="button"]')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Auto Zero' }).closest('[data-mobile-action-column]'))
+      .toHaveAttribute('data-mobile-action-column', 'auto')
+    expect(view.container.querySelector('[data-mobile-table]')).toBeInTheDocument()
+  })
+
   it('keeps typed desktop identities and cell/expansion state distinct through reorder, filtering and presentation transitions', async () => {
     const errors = vi.spyOn(console, 'error')
     const warnings = vi.spyOn(console, 'warn')

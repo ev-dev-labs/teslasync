@@ -110,12 +110,18 @@ describe('FleetEndpointTable existing export serialization', () => {
   it('preserves selected configuration while master polling is paused', async () => {
     const access = configuration(true);
     const auto = configuration(true);
+    const onAuto = vi.fn();
     render(<FleetEndpointTable endpoints={[endpoint]} candidates={[endpoint]} access={access} auto={auto}
-      pollingEnabled={false} pending={false} tableId="fleet:paused-fixture" onEnable={vi.fn()} onAuto={vi.fn()} />);
+      pollingEnabled={false} pending={false} tableId="fleet:paused-fixture" onEnable={vi.fn()} onAuto={onAuto} />);
 
     const pollSwitch = screen.getByRole('switch', { name: 'Auto-poll GET /api/1/vehicles/{vehicle_id}/data' });
     expect(pollSwitch).toHaveAttribute('aria-checked', 'true');
-    expect(pollSwitch).toBeDisabled();
+    expect(pollSwitch).toHaveAttribute('aria-disabled', 'true');
+    expect(pollSwitch).toHaveAccessibleDescription(/Turn on Tesla API Polling/);
+    pollSwitch.focus();
+    expect(pollSwitch).toHaveFocus();
+    fireEvent.click(pollSwitch);
+    expect(onAuto).not.toHaveBeenCalled();
     expect(screen.getByRole('switch', { name: 'Enable GET /api/1/vehicles/{vehicle_id}/data' })).toBeEnabled();
     expect(JSON.parse(await exportText('JSON'))).toEqual([{
       method: 'GET', operation: 'vehicle.data.fetch_snapshot', path: '/api/1/vehicles/{vehicle_id}/data',
@@ -138,8 +144,9 @@ describe('FleetEndpointTable existing export serialization', () => {
     };
     const view = render(<FleetEndpointTable {...props} />);
     expect(screen.getByText('fetch snapshot')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Endpoint access' })).toBeInTheDocument();
     expect(screen.getAllByRole('row')).toHaveLength(2);
-    expect(screen.getAllByRole('columnheader')).toHaveLength(5);
+    expect(screen.getAllByRole('columnheader')).toHaveLength(4);
     const accessSwitch = screen.getByRole('switch', { name: 'Enable GET /api/1/vehicles/{vehicle_id}/data' });
     const autoSwitch = screen.getByRole('switch', { name: 'Auto-poll GET /api/1/vehicles/{vehicle_id}/data' });
     expect(accessSwitch).toHaveAttribute('aria-checked', 'true');
@@ -151,7 +158,7 @@ describe('FleetEndpointTable existing export serialization', () => {
 
     view.rerender(<FleetEndpointTable {...props} pending />);
     expect(accessSwitch).toBeDisabled();
-    expect(autoSwitch).toBeDisabled();
+    expect(autoSwitch).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(accessSwitch);
     fireEvent.click(autoSwitch);
     expect(onEnable).toHaveBeenCalledTimes(1);
@@ -235,10 +242,10 @@ describe('FleetEndpointTable retained export matrix continuation', () => {
       tableId={tableId} onEnable={vi.fn()} onAuto={vi.fn()} />);
 
     expect(JSON.parse(await exportText('JSON'))).toEqual([{
-      auto: false, operation: 'vehicle.data.fetch_snapshot', access: false, method: 'GET',
+      auto: false, operation: 'vehicle.data.fetch_snapshot', path: '/api/1/vehicles/{vehicle_id}/data', access: false, method: 'GET',
     }]);
     expect(await exportText('CSV')).toBe(
-      'Auto-poll,Operation,Access,HTTP method\r\nfalse,vehicle.data.fetch_snapshot,false,GET',
+      'Auto-poll,Operation,API path,Access,HTTP method\r\nfalse,vehicle.data.fetch_snapshot,/api/1/vehicles/{vehicle_id}/data,false,GET',
     );
     expect(localStorage.getItem(layoutKey)).toBe(JSON.stringify(layout));
     expect(settings).toEqual({
@@ -259,7 +266,7 @@ describe('FleetEndpointTable retained export matrix continuation', () => {
       pollingEnabled: true, pending: false, tableId: 'fleet:action-branches-fixture', onEnable, onAuto,
     };
     const view = render(<FleetEndpointTable {...props} />);
-    expect(screen.getByLabelText('Not scheduled')).toHaveTextContent('—');
+    expect(screen.queryByLabelText('Not scheduled')).not.toBeInTheDocument();
     expect(screen.queryByRole('switch', { name: 'Auto-poll GET /api/1/vehicles/{vehicle_id}/data' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('switch', { name: 'Enable GET /api/1/vehicles/{vehicle_id}/data' }));
     expect(onEnable).toHaveBeenCalledExactlyOnceWith(nonpollable);
@@ -268,7 +275,7 @@ describe('FleetEndpointTable retained export matrix continuation', () => {
     view.rerender(<FleetEndpointTable {...props} endpoints={[endpoint]} candidates={[endpoint]} />);
     const autoSwitch = screen.getByRole('switch', { name: 'Auto-poll GET /api/1/vehicles/{vehicle_id}/data' });
     expect(autoSwitch).toHaveAttribute('aria-checked', 'false');
-    expect(autoSwitch).toBeDisabled();
+    expect(autoSwitch).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(autoSwitch);
     expect(onAuto).not.toHaveBeenCalled();
     expect(onEnable).toHaveBeenCalledTimes(1);

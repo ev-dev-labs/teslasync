@@ -1975,9 +1975,10 @@ describe('Layout — restrained host chrome and shared offsets', () => {
     expect(within(header as HTMLElement).getByRole('button', { name: 'Open theme picker' })).toHaveClass(
       'h-11', 'w-11', 'md:h-9', 'md:w-9',
     )
-    expect(container.querySelector('[data-role="main-content"]')).toHaveClass(
-      'overflow-y-auto', 'pb-[var(--shell-chrome-bottom)]',
-    )
+    const main = container.querySelector('[data-role="main-content"]')
+    expect(main).toHaveClass('overflow-y-auto')
+    expect(main).not.toHaveClass('pb-[var(--shell-chrome-bottom)]')
+    expect(main?.parentElement).toHaveClass('pb-[var(--shell-chrome-bottom)]')
   })
 
   it('renders no Layout-owned drawer scrim: the overlay backdrop is deck-Modal-owned', () => {

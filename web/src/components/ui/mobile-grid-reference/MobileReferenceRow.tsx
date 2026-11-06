@@ -18,8 +18,9 @@ interface Props {
   actions?: ReactNode;
   onSelectionEvent?: (event: React.MouseEvent | React.ChangeEvent | React.KeyboardEvent) => void;
   selectionLabel?: string;
+  compact?: boolean;
 }
-export function MobileReferenceRow({ row, variant, selecting, selected, onActivate, onToggle, actions, onSelectionEvent, selectionLabel }: Props) {
+export function MobileReferenceRow({ row, variant, selecting, selected, onActivate, onToggle, actions, onSelectionEvent, selectionLabel, compact = false }: Props) {
   const { t } = useTranslation();
   const activate = selecting ? onToggle : onActivate;
   const keyValue = variant === 'keyValue';
@@ -48,7 +49,7 @@ export function MobileReferenceRow({ row, variant, selecting, selected, onActiva
         data-kv-row={keyValue ? '' : undefined}
         data-row-key={row.key}
         className={cn('mgr-row min-w-0 flex-1 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus-ring)]',
-          keyValue ? 'mgr-kv' : 'mgr-card')}
+          keyValue ? 'mgr-kv' : 'mgr-card', !keyValue && compact && '!min-h-16 !py-2')}
         onClick={event => selecting && onSelectionEvent ? onSelectionEvent(event) : activate()}
         onKeyDown={event => {
           if (event.key === 'Enter' || event.key === ' ') {

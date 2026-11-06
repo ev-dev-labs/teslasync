@@ -179,6 +179,22 @@ describe('Toggle — icon-only naming lands on the button, not the wrapper', () 
 });
 
 describe('Toggle — interactions', () => {
+  it('can keep a disabled switch focusable for an explanatory tooltip without allowing activation', () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <Toggle checked={false} onChange={onChange} label="Scheduled reads" disabled focusableWhenDisabled />,
+    );
+    const sw = screen.getByRole('switch', { name: 'Scheduled reads' });
+    expect(sw).toHaveAttribute('aria-disabled', 'true');
+    expect(sw).not.toBeDisabled();
+    sw.focus();
+    expect(document.activeElement).toBe(sw);
+    fireEvent.click(sw);
+    fireEvent.click(screen.getByText('Scheduled reads'));
+    fireEvent.click(container.firstChild as HTMLElement);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('uses native disabled semantics and ignores button, label, and wrapper clicks', () => {
     const onChange = vi.fn();
     const { container } = render(
@@ -254,7 +270,7 @@ describe('Toggle — interactions', () => {
   });
 });
 
-describe('Toggle — size variants', () => {
+describe('Toggle — consistent size', () => {
   it('applies md track + thumb sizing by default', () => {
     render(<Toggle checked={false} onChange={() => {}} aria-label="Sync" />);
     const sw = screen.getByRole('switch');
@@ -264,17 +280,28 @@ describe('Toggle — size variants', () => {
     expect(getThumb(sw).className).toContain('w-5');
   });
 
-  it('applies sm track + thumb sizing when size="sm"', () => {
+  it('retains the standard track and thumb for legacy size="sm" callers', () => {
     render(<Toggle checked={false} onChange={() => {}} aria-label="Sync" size="sm" />);
     const sw = screen.getByRole('switch');
-    expect(getTrack(sw).className).toContain('h-5');
-    expect(getTrack(sw).className).toContain('w-9');
-    expect(getThumb(sw).className).toContain('h-3.5');
-    expect(getThumb(sw).className).toContain('w-3.5');
+    expect(getTrack(sw).className).toContain('h-6');
+    expect(getTrack(sw).className).toContain('w-11');
+    expect(getThumb(sw).className).toContain('h-5');
+    expect(getThumb(sw).className).toContain('w-5');
   });
 });
 
 describe('Toggle — visual state', () => {
+  it('uses the same white thumb and track dimensions for every switch size', () => {
+    const { rerender } = render(<Toggle checked onChange={() => {}} size="sm" aria-label="Sync" />);
+    const small = screen.getByRole('switch');
+    const trackClasses = getTrack(small).className;
+    const thumbClasses = getThumb(small).className;
+    expect(thumbClasses).toContain('bg-[var(--control-thumb)]');
+    rerender(<Toggle checked onChange={() => {}} size="md" aria-label="Sync" />);
+    expect(getTrack(screen.getByRole('switch')).className).toBe(trackClasses);
+    expect(getThumb(screen.getByRole('switch')).className).toBe(thumbClasses);
+  });
+
   it('paints the exact accent on track when checked and the neutral off track when unchecked', () => {
     const { rerender } = render(
       <Toggle checked={false} onChange={() => {}} aria-label="Sync" />,
@@ -283,8 +310,7 @@ describe('Toggle — visual state', () => {
     expect(getThumb(screen.getByRole('switch')).className).toContain('bg-[var(--control-thumb)]');
     rerender(<Toggle checked onChange={() => {}} aria-label="Sync" />);
     expect(getTrack(screen.getByRole('switch')).className).toContain('bg-[var(--theme-primary)]');
-    // Contrast comes from the on-accent thumb, never from shifting the accent.
-    expect(getThumb(screen.getByRole('switch')).className).toContain('bg-[var(--theme-on-primary)]');
+    expect(getThumb(screen.getByRole('switch')).className).toContain('bg-[var(--control-thumb)]');
   });
 
   it('rests the thumb at the start when off and translates it fully when on (md)', () => {
@@ -307,7 +333,7 @@ describe('Toggle — visual state', () => {
       render(<Toggle checked={false} onChange={() => {}} aria-label="Sync" size={size} />);
       const sw = screen.getByRole('switch');
       expect(sw).toHaveClass('h-11', 'min-w-11', 'md:h-6', 'md:min-w-0');
-      expect(getTrack(sw)).toHaveClass(size === 'sm' ? 'h-5' : 'h-6');
+      expect(getTrack(sw)).toHaveClass('h-6', 'w-11');
       expect(sw).toHaveClass('focus-visible:outline-2', 'focus-visible:outline-offset-2', 'focus-visible:outline-[var(--focus-ring)]');
       expect(getTrack(sw)).toHaveClass('motion-reduce:transition-none', 'ease-standard');
       expect(getThumb(sw)).toHaveClass('motion-reduce:transition-none', 'ease-standard');

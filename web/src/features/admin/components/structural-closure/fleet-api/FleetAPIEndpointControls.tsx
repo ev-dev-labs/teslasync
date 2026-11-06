@@ -13,7 +13,7 @@ export function FleetAPIEndpointControls({ controller }: Props) {
 
   return (
 <FadeIn delay={0.2}>
-        <LayoutCard title={t('fleetApi.controls.title', 'API endpoint controls')}>
+        <LayoutCard title={t('fleetApi.controls.title', 'Endpoint access')}>
           {pollingQuery.isLoading && !pollingState.hasData ? (
             <div className="space-y-3">
               <Skeleton width="30%" height={14} />

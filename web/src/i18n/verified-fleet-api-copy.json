@@ -1,0 +1,43 @@
+[
+  {
+    "path": ["fleetApi", "counts"],
+    "previous": "{{total}} endpoints · {{enabled}} enabled · {{auto}} selected for auto-poll",
+    "current": "{{enabled}} of {{total}} endpoints allowed · {{auto}} auto-polled"
+  },
+  { "path": ["fleetApi", "polling", "cardTitle"], "current": "Tesla API" },
+  { "path": ["fleetApi", "polling", "automatic"], "current": "Automatic polling" },
+  { "path": ["fleetApi", "polling", "scheduledReads"], "current": "Scheduled reads only · {{state}}" },
+  { "path": ["fleetApi", "polling", "on"], "current": "On" },
+  { "path": ["fleetApi", "polling", "off"], "current": "Off" },
+  { "path": ["fleetApi", "polling", "actions"], "current": "API actions" },
+  {
+    "path": ["fleetApi", "polling", "actionsHelp"],
+    "current": "Suspension blocks supported live requests and commands. Token refresh continues."
+  },
+  {
+    "path": ["fleetApi", "polling", "suspendedState"],
+    "current": "Suspended — live requests and commands are blocked; token refresh continues."
+  },
+  { "path": ["fleetApi", "polling", "allowedState"], "current": "Allowed" },
+  { "path": ["fleetApi", "polling", "resume"], "current": "Resume" },
+  { "path": ["fleetApi", "controls", "endpoint"], "current": "Endpoint" },
+  { "path": ["fleetApi", "controls", "method"], "current": "Method" },
+  {
+    "path": ["fleetApi", "controls", "bulkAccess"],
+    "previous": "Access all",
+    "current": "Allow all endpoints"
+  },
+  {
+    "path": ["fleetApi", "controls", "bulkAuto"],
+    "previous": "Auto-poll eligible routes",
+    "current": "Auto-poll all eligible endpoints"
+  },
+  { "path": ["fleetApi", "controls", "groupAuto"], "current": "Auto-poll all eligible {{group}}" },
+  { "path": ["fleetApi", "controls", "noEligible"], "current": "Allow an eligible endpoint before selecting auto-poll." },
+  { "path": ["fleetApi", "controls", "partial"], "current": "Some enabled" },
+  {
+    "path": ["fleetApi", "controls", "title"],
+    "previous": "API endpoint controls",
+    "current": "Endpoint access"
+  }
+]

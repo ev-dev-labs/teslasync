@@ -939,6 +939,26 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
     expect(await latestCsv()).toBe('Name,Canonical\r\nFormatted Alpha,1000\r\nFormatted Bravo,2000\r\nFormatted Charlie,3000')
   })
 
+  it('exports each field of a visible composite column in CSV and JSON', async () => {
+    const columns: Column<Row>[] = [{
+      key: 'summary',
+      header: 'Summary',
+      render: row => <span>{row.name} / {row.status}</span>,
+      exportFields: [
+        { key: 'name', header: 'Name', value: row => row.name },
+        { key: 'status', header: 'Status', value: row => row.status },
+      ],
+    }]
+    render(<DataTable tableId="test:composite-export" columns={columns} data={ROWS} keyExtractor={row => row.id} />)
+    clickExport('CSV')
+    await waitFor(() => expect(downloads).toHaveLength(1))
+    expect(await latestCsv()).toBe('Name,Status\r\nAlpha,ok\r\nBravo,fail\r\nCharlie,ok')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Export list' })).toBeEnabled())
+    clickExport('JSON')
+    await waitFor(() => expect(downloads).toHaveLength(2))
+    expect(JSON.parse(await latestCsv())).toEqual(ROWS.map(({ name, status }) => ({ name, status })))
+  })
+
   it('uses the server full-result handler without adding implicit loaded-row search', async () => {
     const exportAll = vi.fn(async () => ROWS)
     render(<DataTable columns={REORDER_COLS} data={[]} keyExtractor={row => row.id} exportAll={exportAll}

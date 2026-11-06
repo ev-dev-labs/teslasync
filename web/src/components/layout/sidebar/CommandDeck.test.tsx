@@ -622,7 +622,7 @@ describe('CommandDeck', () => {
     expect(desktopRail().getByRole('button', { name: 'Driving' })).toHaveAttribute('aria-current', 'true')
   })
 
-  it('persists the selection across mounts', () => {
+  it('follows the route rather than a browsed selection on the next mount', () => {
     const first = renderControlledDeck()
     fireEvent.click(desktopRail().getByRole('button', { name: 'Driving' }))
     expect(window.localStorage.getItem('teslasync-deck-view')).toBe('{"kind":"section","title":"Driving"}')
@@ -630,14 +630,31 @@ describe('CommandDeck', () => {
 
     renderControlledDeck({ activeSectionTitle: 'Home' })
     expect(screen.queryByTestId('command-deck-secondary')).toBeNull()
-    // The browsed section wins over the route on reload.
-    expect(desktopRail().getByRole('button', { name: 'Driving' })).toHaveAttribute('aria-current', 'true')
-    expect(desktopRail().getByRole('button', { name: 'Driving' })).toHaveAttribute('aria-expanded', 'false')
-    expect(desktopRail().getByRole('button', { name: 'Home' })).not.toHaveAttribute('aria-current')
-    expect(window.localStorage.getItem('teslasync-deck-view')).toBe('{"kind":"section","title":"Driving"}')
+    expect(desktopRail().getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'true')
+    expect(desktopRail().getByRole('button', { name: 'Home' })).toHaveAttribute('aria-expanded', 'false')
+    expect(desktopRail().getByRole('button', { name: 'Driving' })).not.toHaveAttribute('aria-current')
+    expect(window.localStorage.getItem('teslasync-deck-view')).toBe('{"kind":"section","title":"Home"}')
   })
 
-  it('restores a stored section once late-loading sections include it, without overwriting it', () => {
+  it('starts on the current route even when a different section was stored', () => {
+    window.localStorage.setItem('teslasync-deck-view', '{"kind":"section","title":"Driving"}')
+    renderDeck({ pathname: '/', activeSectionTitle: 'Home', panelOpen: true })
+    expect(desktopRail().getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'true')
+    expect(secondaryPanel().getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('follows late route metadata unless a section was explicitly browsed on this path', () => {
+    window.localStorage.setItem('teslasync-deck-view', '{"kind":"section","title":"Home"}')
+    const props = baseProps({ pathname: '/drives', panelOpen: true })
+    const { rerender } = render(<MemoryRouter><CommandDeck {...props} /></MemoryRouter>)
+    rerender(<MemoryRouter><CommandDeck {...props} activeSectionTitle="Driving" /></MemoryRouter>)
+    expect(desktopRail().getByRole('button', { name: 'Driving' })).toHaveAttribute('aria-current', 'true')
+    fireEvent.click(desktopRail().getByRole('button', { name: 'Home' }))
+    rerender(<MemoryRouter><CommandDeck {...props} activeSectionTitle="Driving" /></MemoryRouter>)
+    expect(desktopRail().getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('keeps the route section when a stored, unrelated section arrives late', () => {
     window.localStorage.setItem('teslasync-deck-view', '{"kind":"section","title":"Driving"}')
     const sections = makeSections()
     const props = baseProps({ pathname: '/drives', activeSectionTitle: 'Home', panelOpen: true })
@@ -648,16 +665,15 @@ describe('CommandDeck', () => {
     )
     expect(desktopRail().getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'true')
     expect(desktopRail().getByRole('button', { name: 'Home' })).toHaveAttribute('aria-expanded', 'true')
-    expect(window.localStorage.getItem('teslasync-deck-view')).toBe('{"kind":"section","title":"Driving"}')
+    expect(window.localStorage.getItem('teslasync-deck-view')).toBe('{"kind":"section","title":"Home"}')
 
     rerender(
       <MemoryRouter initialEntries={['/drives']}>
         <CommandDeck {...props} sections={sections} />
       </MemoryRouter>,
     )
-    expect(desktopRail().getByRole('button', { name: 'Driving' })).toHaveAttribute('aria-current', 'true')
-    expect(desktopRail().getByRole('button', { name: 'Driving' })).toHaveAttribute('aria-expanded', 'true')
-    expect(secondaryPanel().getByRole('link', { name: 'Drives' })).toHaveAttribute('aria-current', 'page')
+    expect(desktopRail().getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'true')
+    expect(desktopRail().getByRole('button', { name: 'Home' })).toHaveAttribute('aria-expanded', 'true')
   })
 
   it('replaces a retired search preference with the current section', () => {

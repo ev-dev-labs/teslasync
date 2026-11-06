@@ -1,11 +1,11 @@
 import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { expect } from 'vitest'
 import ts from 'typescript'
 import checkpoints from './verified-combined-checkpoints.json'
 import dataRepairCopyChanges from './verified-data-repair-copy.json'
+import fleetApiCopyChanges from './verified-fleet-api-copy.json'
 import notificationCopyChanges from './verified-notification-copy.json'
+import { readFleetCurrentSource } from './verified-fleet-source-contract'
 import { restoreVerifiedThemeSource } from './verified-theme-source-contract'
 
 // These exact files passed the key/default/interpolation/count audit before generation.
@@ -14,7 +14,7 @@ export function assertCombinedCheckpoint(group: 'canonical' | 'owner', file: str
   if (!checkpoints[group].includes(file)) return false
   const checkpoint = checkpoints.sources.find(entry => entry.file === file)
   if (!checkpoint) throw new Error('Missing verified combined producer: ' + file)
-  const source = restoreVerifiedThemeSource(file, readFileSync(resolve(process.cwd(), '..', file), 'utf8'))
+  const source = restoreVerifiedThemeSource(file, readFleetCurrentSource(file))
   expect(createHash('sha256').update(source).digest('hex'), file).toBe(checkpoint.sha256)
   const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true)
   let calls = 0
@@ -117,7 +117,7 @@ export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(
   expect(heatmapHelp.body).toBe('Each cell is one day in your selected time zone. Four levels rank active days by distance: darker in light mode, lighter in dark mode. Outlined cells are outside the range or before the first returned drive, not proof of no driving. Continuous coverage is unknown. Streaks count consecutive days with at least one drive.')
   heatmapHelp.body = "Each cell is one day; darker means more distance, scaled against your 95th-percentile day so one road trip doesn't flatten the rest. Streaks count consecutive days with at least one drive."
   // Pin reviewed copy before reconstructing the historical catalog.
-  for (const change of [...notificationCopyChanges, ...dataRepairCopyChanges]) {
+  for (const change of [...notificationCopyChanges, ...dataRepairCopyChanges, ...fleetApiCopyChanges]) {
     let parent: Record<string, unknown> = previous
     for (const part of change.path.slice(0, -1)) parent = parent[part] as Record<string, unknown>
     const leaf = change.path[change.path.length - 1]

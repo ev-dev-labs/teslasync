@@ -6,6 +6,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import currentCatalog from './en.json'
 import { catalogBeforeDashboardPolish } from './verified-combined-contract'
 import { producerProjection, projectionDigest, type ProducerProjection } from './producer-projection'
+import { readFleetCurrentSource } from './verified-fleet-source-contract'
 import { restoreVerifiedThemeSource } from './verified-theme-source-contract'
 import verifiedProducerCheckpoints from './verified-producer-checkpoints.json'
 import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
@@ -1401,7 +1402,7 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
   })
 
   it.each(sourceHashes)('preserves frozen producer contracts across accepted source modernization: %s', (path, sha256) => {
-    const actualSource = restoreVerifiedThemeSource(path, readFileSync(resolve(process.cwd(), '..', path), 'utf8'))
+    const actualSource = restoreVerifiedThemeSource(path, readFleetCurrentSource(path))
     // Reviewed current checkpoints pin every source byte after translation verification.
     // Unverified files retain their previous contracts and continue to fail visibly.
     const checkpoint = verifiedProducerCheckpoints.find(entry => entry.file === path)

@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FleetEndpoint, PollingConfig } from '@/api/hooks/useSettings';
@@ -143,18 +143,19 @@ describe('FleetAPIRouteCatalog source contracts', () => {
     expect(button).not.toHaveClass('h-9', 'w-11', 'md:w-11', 'md:min-w-11');
   });
 
-  it('runs method and category grouping handlers and resets the selected group while keeping raw method identity', () => {
+  it('runs method and category grouping handlers while keeping raw method identity', () => {
     renderCatalog();
     fireEvent.click(screen.getByRole('button', { name: 'HTTP method' }));
     expect(screen.getByRole('button', { name: 'HTTP method' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Category' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: 'Expand POST' })).toBeInTheDocument();
     expect(fixtures.table.mock.lastCall?.[0].grouping?.key(fixtures.catalog[2])).toBe('POST');
-    fireEvent.click(screen.getByRole('button', { name: /^POST\s*1$/ }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Fixture search' }), { target: { value: 'command.lock' } });
     expect(screen.queryByRole('button', { name: 'Expand GET' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Category' }));
     expect(screen.getByRole('button', { name: 'Category' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'All routes 3' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Collapse Fahrzeugbefehle' })).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Fixture search' }), { target: { value: '' } });
     expect(screen.getByRole('button', { name: 'Expand Fahrzeugdaten' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand Fahrzeugbefehle' })).toBeInTheDocument();
   });
@@ -167,7 +168,7 @@ describe('FleetAPIRouteCatalog source contracts', () => {
     { case: 'auto', value: 'auto', keys: ['vehicle.z', 'vehicle.a'], reversed: ['vehicle.a', 'vehicle.z'], direction: 'Sort ascending' },
   ])('runs the $case sort selection and direction handlers', ({ value, keys, reversed, direction }) => {
     renderCatalog();
-    fireEvent.click(screen.getByRole('button', { name: /^Fahrzeugdaten\s*2$/ }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Fixture search' }), { target: { value: 'vehicle.' } });
     fireEvent.change(screen.getByRole('combobox', { name: 'Sort routes by' }), { target: { value } });
     expect(screen.getByRole('combobox', { name: 'Sort routes by' })).toHaveValue(value);
     expect(routeKeys()).toEqual(keys);
@@ -176,34 +177,27 @@ describe('FleetAPIRouteCatalog source contracts', () => {
     expect(routeKeys()).toEqual(reversed);
   });
 
-  it('retains wrapping filters and clears search through group and all-route handlers', () => {
+  it('filters both grouping modes through the shared search without category chips', async () => {
     renderCatalog();
-    const navigation = screen.getByRole('navigation', { name: 'Route groups' });
-    expect(navigation).toHaveClass('flex-wrap', 'gap-2');
-    const group = within(navigation).getByRole('button', { name: /^Fahrzeugbefehle\s*1$/ });
-    expect(group).toHaveClass('whitespace-normal', 'max-w-full', 'h-auto', 'min-h-9', 'gap-2');
+    expect(screen.queryByRole('navigation', { name: 'Route groups' })).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole('textbox', { name: 'Fixture search' }), { target: { value: 'vehicle.a' } });
     expect(routeKeys()).toEqual(['vehicle.a']);
-    fireEvent.click(group);
-    expect(screen.getByRole('textbox', { name: 'Fixture search' })).toHaveValue('');
-    expect(group).toHaveAttribute('aria-pressed', 'true');
-    expect(routeKeys()).toEqual(['command.lock']);
-    fireEvent.change(screen.getByRole('textbox', { name: 'Fixture search' }), { target: { value: 'vehicle.z' } });
-    fireEvent.click(within(navigation).getByRole('button', { name: 'All routes 3' }));
-    expect(screen.getByRole('textbox', { name: 'Fixture search' })).toHaveValue('');
+    fireEvent.click(screen.getByRole('button', { name: 'HTTP method' }));
+    expect(screen.getByRole('button', { name: 'Collapse GET' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Fixture search' })).toHaveValue(''));
     expect(routeKeys()).toEqual(['vehicle.a', 'vehicle.z', 'command.lock']);
   });
 
-  it('retains the no-match message and executes the clear-search action without changing the selected group', async () => {
+  it('retains the no-match message and executes the clear-search action', async () => {
     renderCatalog();
-    fireEvent.click(screen.getByRole('button', { name: /^Fahrzeugdaten\s*2$/ }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Fixture search' }), { target: { value: 'missing-fixture-route' } });
     expect(screen.getByText('No API routes match that search.')).toBeInTheDocument();
     expect(screen.getAllByRole('table')).toHaveLength(1);
     expect(screen.queryByRole('button', { name: /^Collapse Fahrzeug/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Fixture search' })).toHaveValue(''));
-    expect(screen.getByRole('button', { name: /^Fahrzeugdaten\s*2$/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(routeKeys()).toEqual(['vehicle.a', 'vehicle.z']);
+    expect(screen.getByRole('button', { name: 'Expand Fahrzeugdaten' })).toBeInTheDocument();
+    expect(routeKeys()).toEqual(['vehicle.a', 'vehicle.z', 'command.lock']);
   });
 });

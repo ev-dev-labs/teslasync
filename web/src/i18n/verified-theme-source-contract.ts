@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto'
 import { expect } from 'vitest'
 import { producerProjection } from './producer-projection'
+import { restoreVerifiedFleetSource } from './verified-fleet-source-contract'
 import patches from './__fixtures__/verified-theme-source-patches.json'
 
 export function restoreVerifiedThemeSource(file: string, text: string): string {
+  text = restoreVerifiedFleetSource(file, text)
   const patch = patches.find(entry => entry.file === file)
   if (!patch) return text
 

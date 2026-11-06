@@ -6,24 +6,13 @@ export interface ToggleProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onCha
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
+  /** Keep a disabled control focusable when its explanation is in a tooltip. */
+  focusableWhenDisabled?: boolean;
   size?: 'sm' | 'md';
+  /** Visual partial state; callers must include its meaning in the accessible name or description. */
+  indeterminate?: boolean;
   className?: string;
 }
-
-const trackSize = {
-  sm: 'h-5 w-9',
-  md: 'h-6 w-11',
-} as const;
-
-const thumbSize = {
-  sm: 'h-3.5 w-3.5',
-  md: 'h-5 w-5',
-} as const;
-
-const thumbTranslate = {
-  sm: 'translate-x-4',
-  md: 'translate-x-5',
-} as const;
 
 /**
  * Switch toggle (WAI-ARIA `role="switch"`).
@@ -50,7 +39,9 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
       checked,
       onChange,
       disabled = false,
-      size = 'md',
+      focusableWhenDisabled = false,
+      size: _size,
+      indeterminate = false,
       className,
       // Naming/description attributes belong on the interactive
       // `role="switch"` button, not the neutral wrapper `<div>`.
@@ -97,12 +88,13 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           aria-labelledby={label ? labelId : ariaLabelledBy}
           aria-describedby={ariaDescribedBy}
           title={title}
-          disabled={disabled}
-          onClick={() => onChange(!isChecked)}
+          disabled={disabled && !focusableWhenDisabled}
+          aria-disabled={disabled && focusableWhenDisabled ? true : undefined}
+          onClick={() => { if (!disabled) onChange(!isChecked); }}
           className={cn(
             'inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full md:h-6 md:min-w-0',
             'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
-            size === 'sm' ? 'md:w-9' : 'md:w-11',
+            'md:w-11',
           )}
         >
           <span
@@ -110,7 +102,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
               'relative inline-flex shrink-0 items-center rounded-full px-0.5 ring-1 ring-inset ring-[var(--control-border)] transition-colors duration-fast ease-standard motion-reduce:transition-none',
               // Preserve track boundaries when forced colors flatten the tint.
               'forced-colors:border forced-colors:border-[ButtonBorder]',
-              trackSize[size],
+              'h-6 w-11',
               isChecked
                 ? 'bg-[var(--theme-primary)]'
                 : 'bg-[var(--control-track-off)]',
@@ -118,16 +110,15 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           >
             <span
               className={cn(
-                'pointer-events-none inline-block rounded-full transition-transform duration-fast ease-standard motion-reduce:transition-none',
-                // The thumb takes the readable on-accent colour; the track keeps the exact accent.
-                isChecked ? 'bg-[var(--theme-on-primary)]' : 'bg-[var(--control-thumb)]',
+                'pointer-events-none relative inline-block h-5 w-5 rounded-full bg-[var(--control-thumb)] ring-1 ring-inset ring-[var(--control-border)] transition-transform duration-fast ease-standard motion-reduce:transition-none',
                 'forced-colors:border forced-colors:border-[ButtonBorder]',
-                thumbSize[size],
                 'translate-x-0',
-                isChecked && thumbTranslate[size],
+                isChecked && 'translate-x-5',
               )}
               aria-hidden="true"
-            />
+            >
+              {indeterminate && <span className="absolute left-1/2 top-1/2 h-0.5 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--text-secondary)]" />}
+            </span>
           </span>
         </button>
         {label && (

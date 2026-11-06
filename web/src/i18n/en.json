@@ -14274,7 +14274,7 @@
     "apiUnknown": "API status unknown",
     "apiSuspended": "API suspended",
     "apiAllowed": "API allowed",
-    "counts": "{{total}} endpoints · {{enabled}} enabled · {{auto}} selected for auto-poll",
+    "counts": "{{enabled}} of {{total}} endpoints allowed · {{auto}} auto-polled",
     "copyPath": "Copy {{path}}",
     "allowBeforePolling": "Allow this endpoint before selecting auto-poll.",
     "viewOptions": "View options",
@@ -14293,6 +14293,16 @@
       "label": "Fleet API summary"
     },
     "polling": {
+      "cardTitle": "Tesla API",
+      "automatic": "Automatic polling",
+      "scheduledReads": "Scheduled reads only · {{state}}",
+      "on": "On",
+      "off": "Off",
+      "actions": "API actions",
+      "actionsHelp": "Suspension blocks supported live requests and commands. Token refresh continues.",
+      "suspendedState": "Suspended — live requests and commands are blocked; token refresh continues.",
+      "allowedState": "Allowed",
+      "resume": "Resume",
       "masterDesc": "Off by default. Turning this off stops scheduled Fleet API reads, not manual requests or token refresh.",
       "activeNote": "Only enabled routes selected for auto-polling participate. On-demand routes and commands remain independent.",
       "suspendedNote": "Automatic Fleet API polling is off. Enabled endpoints still work on demand; token refresh continues.",
@@ -14302,6 +14312,8 @@
       "toggleAria": "Toggle Tesla API polling"
     },
     "controls": {
+      "endpoint": "Endpoint",
+      "method": "Method",
       "enabled": "Access",
       "enable": "Enable",
       "autoPoll": "Auto-poll",
@@ -14309,9 +14321,12 @@
       "onDemandOnly": "Not scheduled",
       "subtitle": "Allow manual requests per endpoint, then opt supported reads into background refresh. Routes without a scheduled job stay manual only.",
       "bulkTitle": "All routes",
-      "bulkAccess": "Access all",
-      "bulkAuto": "Auto-poll eligible routes",
+      "bulkAccess": "Allow all endpoints",
+      "bulkAuto": "Auto-poll all eligible endpoints",
       "bulkHint": "Auto-poll selects only enabled routes with a scheduled job.",
+      "groupAuto": "Auto-poll all eligible {{group}}",
+      "noEligible": "Allow an eligible endpoint before selecting auto-poll.",
+      "partial": "Some enabled",
       "pausedHint": "Turn on Tesla API Polling to change auto-poll selections. Existing selections are retained while paused.",
       "search": "Search API routes",
       "accessSummary": "{{count}} routes available on demand",
@@ -14337,7 +14352,7 @@
       "retry": "Retry loading routes",
       "clearSearch": "Clear search",
       "noMatches": "No API routes match that search.",
-      "title": "API endpoint controls",
+      "title": "Endpoint access",
       "enabledCount": "{{enabled}}/{{total}} enabled"
     },
     "categories": {

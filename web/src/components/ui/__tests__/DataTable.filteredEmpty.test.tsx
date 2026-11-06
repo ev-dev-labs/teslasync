@@ -69,6 +69,54 @@ function excludeAllValues() {
 }
 
 describe('DataTable filtered empty copy', () => {
+  it('keeps multiple group and header controls in their fixed columns despite saved widths', () => {
+    localStorage.setItem('teslasync.table.filtered-empty:records.widths', JSON.stringify({ access: 350, auto: 400 }))
+    const actionColumns: Column<Row>[] = [
+      columns[0],
+      { key: 'access', header: 'Access', fixedWidth: 120, align: 'center',
+        headerAction: <Button>All access</Button>, render: row => <Button>{`Access ${row.name}`}</Button> },
+      { key: 'auto', header: 'Auto', fixedWidth: 140, align: 'center',
+        headerAction: <Button>All auto</Button>, render: row => <Button>{`Auto ${row.name}`}</Button> },
+    ]
+    const view = mount({ columns: actionColumns, resizable: false,
+      rowGrouping: {
+        key: row => row.status, label: key => key,
+        actionColumns: {
+          access: key => <Button>{`Access group ${key}`}</Button>,
+          auto: key => <Button>{`Auto group ${key}`}</Button>,
+        },
+      },
+    })
+    for (const [key, width] of [['access', '120px'], ['auto', '140px']]) {
+      const header = view.container.querySelector<HTMLElement>(`th[data-column-key="${key}"]`)!
+      expect(header).toHaveStyle({ width, minWidth: width, maxWidth: width })
+    }
+    expect(screen.getByRole('button', { name: 'All access' }).closest('th')).toHaveAttribute('data-column-key', 'access')
+    expect(screen.getByRole('button', { name: 'All auto' }).closest('th')).toHaveAttribute('data-column-key', 'auto')
+    expect(screen.getByRole('button', { name: 'Access group Ready' }).closest('td')).toHaveAttribute('data-column-key', 'access')
+    expect(screen.getByRole('button', { name: 'Auto group Ready' }).closest('td')).toHaveAttribute('data-column-key', 'auto')
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Ready' }))
+    expect(screen.getByRole('button', { name: 'Access Alpha' }).closest('td')).toHaveAttribute('data-column-key', 'access')
+    expect(screen.getByRole('button', { name: 'Auto Alpha' }).closest('td')).toHaveAttribute('data-column-key', 'auto')
+  })
+
+  it('filters a secondary field of a composite column using the full candidate set', () => {
+    mount({
+      columns: [{
+        ...columns[0],
+        additionalValueFilters: [{ key: 'status', header: 'Status', filterValue: row => row.status }],
+      }],
+      filterData: rows,
+      enableValueFilters: true,
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Status filter' }))
+    expect(screen.getByRole('checkbox', { name: 'Ready' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Ready' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+    expect(screen.getByText('Bravo')).toBeInTheDocument()
+  })
+
   it.each([false, true])('aligns group actions with their shared column when reordered=%s', (reversed) => {
     mount({ columns: reversed ? [...columns].reverse() : columns,
       rowGrouping: { key: row => row.status, label: key => key, actionsColumn: 'status',

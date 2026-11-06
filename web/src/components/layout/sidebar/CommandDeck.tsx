@@ -42,8 +42,10 @@ function readView(): DeckSelection | null {
   try { return JSON.parse(localStorage.getItem(VIEW_KEY) ?? 'null') as DeckSelection | null } catch { return null }
 }
 export function resolveDeckSection(stored: DeckSelection | null, sections: readonly SidebarSectionInput[] = [], routeTitle?: string): string {
+  const routeSection = sections.find(section => section.title === routeTitle)
+  if (routeSection) return routeSection.title
   if (stored?.kind === 'section' && sections.some(section => section.title === stored.title)) return stored.title
-  return sections.find(section => section.title === routeTitle)?.title ?? sections[0]?.title ?? 'Home'
+  return sections[0]?.title ?? 'Home'
 }
 export function CommandDeck(props: CommandDeckProps) {
   const { t } = useTranslation()
@@ -51,7 +53,9 @@ export function CommandDeck(props: CommandDeckProps) {
   const sectionLabel = props.navSectionTitle ?? ((section: { title: string }) => section.title)
   const railItems = useRef(new Map<string, HTMLButtonElement>())
   const [stored, setStored] = useState(readView)
-  const title = resolveDeckSection(stored, sections, activeSectionTitle)
+  const [browsed, setBrowsed] = useState<{ pathname: string; title: string } | null>(null)
+  const title = browsed?.pathname === pathname && sections.some(section => section.title === browsed.title)
+    ? browsed.title : resolveDeckSection(stored, sections, activeSectionTitle)
   const [homeView, setHomeView] = useState<DeckSelection | null>(null)
   const [phoneSheet, setPhoneSheet] = useState<'more' | 'section' | null>(null)
   const [viewport, setViewport] = useState(() => window.innerWidth < 768 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop')
@@ -72,18 +76,17 @@ export function CommandDeck(props: CommandDeckProps) {
   useEffect(() => {
     if (pathname === previousPath.current) return
     previousPath.current = pathname
+    setBrowsed(null)
     setStored({ kind: 'section', title: activeSectionTitle ?? sections[0]?.title ?? 'Home' })
     setHomeView(null)
     setPhoneSheet(null)
     if (viewport !== 'desktop') onPanelOpenChange(false)
   }, [pathname, activeSectionTitle, sections, viewport, onPanelOpenChange])
   useEffect(() => {
-    // Late-loading sections must not clobber the saved view: while the
-    // stored section is absent from the current list, leave storage alone
-    // so its arrival restores it instead of the fallback.
-    if (stored?.kind === 'section' && !sections.some(section => section.title === stored.title)) return
+    // Preserve a fallback until route metadata or the saved section arrives.
+    if (!activeSectionTitle && stored?.kind === 'section' && !sections.some(section => section.title === stored.title)) return
     try { localStorage.setItem(VIEW_KEY, JSON.stringify({ kind: 'section', title })) } catch { /* Private storage is optional. */ }
-  }, [title, stored, sections])
+  }, [title, stored, sections, activeSectionTitle])
   useEffect(() => {
     if (viewport !== 'tablet' || !panelOpen) return
     // The rail stays interactive beside the drawer, so Escape must also work
@@ -104,6 +107,7 @@ export function CommandDeck(props: CommandDeckProps) {
   const select = (selection: DeckSelection) => {
     if (selection.kind !== 'section') return
     setHomeView(null)
+    setBrowsed({ pathname, title: selection.title })
     setStored(selection)
     if (viewport === 'phone') setPhoneSheet('section')
     else onPanelOpenChange(!(panelOpen && title === selection.title))

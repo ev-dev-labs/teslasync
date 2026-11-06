@@ -1319,7 +1319,10 @@ export default function Layout() {
       )}
 
       {/* Main content */}
-      <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden supports-[overflow:clip]:overflow-clip">
+      <div className={cn(
+        'relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden supports-[overflow:clip]:overflow-clip',
+        presentation.mode === 'standard' && 'pb-[var(--shell-chrome-bottom)]',
+      )}>
         {/* Spacer for fixed mobile header */}
         {presentation.mode === 'standard' && <div ref={mobileHeaderSpacerRef} data-role="appbar-spacer" className="h-[calc(4.25rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden" />}
         {presentation.mode === 'standard' && <Suspense fallback={<div className="hidden h-workspace-header shrink-0 xl:block" />}>
@@ -1359,12 +1362,7 @@ export default function Layout() {
           ref={mainRef}
           role="main"
           tabIndex={-1}
-          className={cn(
-            'flex-1 overflow-y-auto outline-none',
-            // Same token Drawers/Modals use so list pages and overlays
-            // clear the tab bar + status bar together.
-            presentation.mode === 'standard' && 'pb-[var(--shell-chrome-bottom)]',
-          )}
+          className="flex-1 overflow-y-auto outline-none"
         >
           <div
             data-role="page-viewport"

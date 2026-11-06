@@ -1,0 +1,37 @@
+import { createHash } from 'node:crypto'
+import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { expect } from 'vitest'
+import patches from './__fixtures__/verified-fleet-source-patches.json'
+
+const hash = (value: string) => createHash('sha256').update(value).digest('hex')
+
+export function readFleetCurrentSource(file: string): string {
+  const path = resolve(process.cwd(), '..', file)
+  const patch = patches.find(entry => entry.file === file)
+  if (patch?.after === null) {
+    expect(existsSync(path), file + ': removed producer').toBe(false)
+    if (patch.deletedSource === null) throw new Error('Missing removed producer: ' + file)
+    return patch.deletedSource
+  }
+  return readFileSync(path, 'utf8')
+}
+
+export function restoreVerifiedFleetSource(file: string, text: string): string {
+  const patch = patches.find(entry => entry.file === file)
+  if (!patch) return text
+  if (patch.after === null) {
+    expect(hash(text), file + ': removed producer source').toBe(patch.before)
+    return text
+  }
+
+  expect(hash(text), file + ': current Fleet source').toBe(patch.after)
+  const lines = text.split('\n')
+  for (const hunk of [...patch.hunks].reverse()) {
+    expect(lines.slice(hunk.start, hunk.start + hunk.new.length), file + ': Fleet patch').toEqual(hunk.new)
+    lines.splice(hunk.start, hunk.new.length, ...hunk.old)
+  }
+  const previous = lines.join('\n')
+  expect(hash(previous), file + ': previous Fleet source').toBe(patch.before)
+  return previous
+}
