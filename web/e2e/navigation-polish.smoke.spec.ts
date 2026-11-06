@@ -84,6 +84,8 @@ for (const theme of ['dark', 'light'] as const) {
     await expect(panel.getByRole('link', { name: 'Quick access: MQTT inspector', exact: true })).toBeVisible()
     await page.reload()
     await waitForHarnessReady(page, api)
+    await expect(rail.getByRole('button', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'true')
+    await rail.getByRole('button', { name: 'Diagnostics', exact: true }).click()
     await expect(panel.getByRole('link', { name: 'Quick access: MQTT inspector', exact: true })).toBeVisible()
     await assertMockApiComplete(page, api)
   })
