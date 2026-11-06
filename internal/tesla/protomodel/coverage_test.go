@@ -203,6 +203,46 @@ func TestCoverage_RecentFleetTelemetryFields(t *testing.T) {
 	}
 }
 
+func TestCoverage_NewFleetTelemetryFieldSemantics(t *testing.T) {
+	tests := []struct {
+		name     string
+		category string
+		kind     ValueKind
+		unit     UnitKind
+	}{
+		{
+			name:     "SelfDrivingSoftwareVersion",
+			category: "config",
+			kind:     ValueKindString,
+			unit:     UnitKindNone,
+		},
+		{
+			name:     "SemiTrailerLatched",
+			category: "vehicle_state",
+			kind:     ValueKindBool,
+			unit:     UnitKindNone,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			meta, ok := SignalsByName[tt.name]
+			if !ok {
+				t.Fatalf("SignalMeta for %q is missing", tt.name)
+			}
+			if meta.Category != tt.category {
+				t.Errorf("Category = %q, want %q", meta.Category, tt.category)
+			}
+			if meta.ValueKind != tt.kind {
+				t.Errorf("ValueKind = %s, want %s", meta.ValueKind, tt.kind)
+			}
+			if meta.UnitKind != tt.unit {
+				t.Errorf("UnitKind = %s, want %s", meta.UnitKind, tt.unit)
+			}
+		})
+	}
+}
+
 func TestCoverage_UnitBearingFieldsAreMeasurements(t *testing.T) {
 	denied := sortedKeys(nonMeasurementCategories)
 

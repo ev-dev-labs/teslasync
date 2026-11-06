@@ -118,3 +118,30 @@ func TestRoutingCoverage(t *testing.T) {
 		t.Errorf("routing entries for unknown fields: %v", orphans)
 	}
 }
+
+func TestNewFleetTelemetryFieldsUseStaticSignalLogRoute(t *testing.T) {
+	m, err := rt.LoadMap()
+	if err != nil {
+		t.Fatalf("LoadMap: %v", err)
+	}
+
+	for _, field := range []string{
+		"SelfDrivingSoftwareVersion",
+		"SemiTrailerLatched",
+	} {
+		entry, ok := m[field]
+		if !ok {
+			t.Errorf("routing.yaml has no entry for %q", field)
+			continue
+		}
+		if entry.Destination != rt.DestSignalLog {
+			t.Errorf("%s destination = %q, want %q", field, entry.Destination, rt.DestSignalLog)
+		}
+		if entry.Column != "" {
+			t.Errorf("%s column = %q, want empty for signal_log", field, entry.Column)
+		}
+		if entry.ToColdLogToo {
+			t.Errorf("%s unexpectedly dual-writes to signal_log", field)
+		}
+	}
+}
