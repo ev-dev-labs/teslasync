@@ -3,9 +3,10 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { acceptedShellDeltas, restoreAcceptedShellSource } from './authorized-shell-preservation'
+import { restoreVerifiedThemeSource } from './verified-theme-source-contract'
 
 const currentSource = (file: string) =>
-  readFileSync(resolve(process.cwd(), '..', ...file.split('/')), 'utf8')
+  restoreVerifiedThemeSource(file, readFileSync(resolve(process.cwd(), '..', ...file.split('/')), 'utf8'))
 const hash = (text: string) => createHash('sha256').update(text).digest('hex')
 
 describe('exact accepted shell inverse, independent of recovery test registration', () => {
