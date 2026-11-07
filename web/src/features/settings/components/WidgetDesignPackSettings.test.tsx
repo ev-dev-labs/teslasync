@@ -5,15 +5,11 @@ import { ToastProvider } from '@/components/feedback';
 import WidgetDesignPackSettings from './WidgetDesignPackSettings';
 
 const mocks = vi.hoisted(() => ({
-  identity: vi.fn(),
   mode: vi.fn(),
   request: vi.fn(),
   eventSource: vi.fn(),
 }));
 
-vi.mock('@/api/hooks/useUser', () => ({
-  useCurrentUser: () => ({ refetch: mocks.identity }),
-}));
 vi.mock('@/api/hooks/useAuthMode', () => ({
   useAuthMode: () => ({ refetch: mocks.mode }),
 }));
@@ -63,9 +59,8 @@ beforeEach(() => {
   localStorage.clear();
   vi.stubGlobal('crypto', webcrypto);
   vi.stubGlobal('EventSource', mocks.eventSource);
-  mocks.identity.mockReset();
-  mocks.mode.mockResolvedValue({ isSuccess: true, data: { mode: 'forward_auth' } });
-  mocks.identity.mockResolvedValue({ isSuccess: true, data: { userId: 'preview-viewer' } });
+  mocks.mode.mockReset();
+  mocks.mode.mockResolvedValue({ isSuccess: true, data: { mode: 'forward_auth', subject: 'preview-viewer' } });
   mocks.request.mockReset();
   mocks.request.mockRejectedValue(new Error('Preview must not read vehicle APIs'));
   mocks.eventSource.mockClear();
@@ -91,7 +86,7 @@ describe('Widget design pack settings', () => {
   });
   it('does not claim an active preference or allow writes before identity is verified', async () => {
     let resolve!: (value: unknown) => void;
-    mocks.identity.mockReturnValue(new Promise(done => { resolve = done; }));
+    mocks.mode.mockReturnValue(new Promise(done => { resolve = done; }));
     renderSettings();
     expect(screen.getAllByRole('button', { name: /^Preview / })).toHaveLength(8);
     for (const button of screen.getAllByRole('button', { name: /^Use .* pack$/ })) {
@@ -99,7 +94,7 @@ describe('Widget design pack settings', () => {
     }
     expect(screen.queryByRole('button', { name: / active$/ })).not.toBeInTheDocument();
     expect(localStorage.length).toBe(0);
-    resolve({ isSuccess: true, data: { userId: 'preview-viewer' } });
+    resolve({ isSuccess: true, data: { mode: 'forward_auth', subject: 'preview-viewer' } });
     await ready();
   });
 
@@ -131,7 +126,7 @@ describe('Widget design pack settings', () => {
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
       await waitFor(() => expect(opener).toHaveFocus());
     }
-    expect(mocks.identity).toHaveBeenCalledTimes(1);
+    expect(mocks.mode).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'Classic active' })).toBeDisabled();
   }, 30_000);
 

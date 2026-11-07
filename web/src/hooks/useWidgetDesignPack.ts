@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useCurrentUser } from '@/api/hooks/useUser';
 import { useAuthMode } from '@/api/hooks/useAuthMode';
 import { subscribe } from '@/lib/broadcast';
 import { getServerBaseUrl } from '@/lib/serverConnection';
-import { isUser } from '@/types/user';
 import { resolveAvailablePackId } from '@/features/dashboard/widgets/designPacks/manifest';
 import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
 
@@ -21,13 +19,6 @@ interface Selection {
   generation: number;
   packId: PackId;
   error: string | null;
-}
-
-function authenticatedId(value: unknown): string | null {
-  if (isUser(value) && value.id.trim()) return value.id;
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
-  const id = (value as Record<string, unknown>).userId;
-  return typeof id === 'string' && id.trim() ? id : null;
 }
 
 async function preferenceKey(id: string | { mode: 'open' }, origin: string): Promise<string> {
@@ -57,7 +48,6 @@ function readPreference(key: string): PackId {
  */
 export function useWidgetDesignPack() {
   const authMode = useAuthMode();
-  const user = useCurrentUser(false);
   const origin = typeof window === 'undefined'
     ? ''
     : getServerBaseUrl() || window.location.origin;
@@ -71,7 +61,7 @@ export function useWidgetDesignPack() {
     const currentGeneration = ++generation.current;
     setSelection(null);
     setIdentityError(null);
-    // Revalidate rather than trusting a cached /users/me response after a
+    // Revalidate rather than trusting a cached principal after a
     // server-profile or authenticated-session change.
     void authMode.refetch().then(async mode => {
       if (!active || generation.current !== currentGeneration) return;
@@ -79,10 +69,8 @@ export function useWidgetDesignPack() {
         setIdentityError('Server authentication mode could not be verified');
         return;
       }
-      const result = mode.data.mode === 'open' ? null : await user.refetch();
-      if (!active || generation.current !== currentGeneration) return;
       const id = mode.data.mode === 'open' ? { mode: 'open' as const }
-        : result?.isSuccess ? authenticatedId(result.data) : null;
+        : typeof mode.data.subject === 'string' ? mode.data.subject.trim() : null;
       if (!id) {
         setIdentityError('Authenticated identity could not be verified');
         return;
@@ -101,7 +89,7 @@ export function useWidgetDesignPack() {
       if (active && generation.current === currentGeneration) setIdentityError('Authenticated identity could not be verified');
     });
     return () => { active = false; ++generation.current; };
-  }, [origin, authMode.refetch, user.refetch, retryGeneration]);
+  }, [origin, authMode.refetch, retryGeneration]);
 
   const key = selection?.key;
   useEffect(() => subscribe(message => {
