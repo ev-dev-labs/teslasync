@@ -12,6 +12,11 @@ import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useDataState } from '@/hooks/useDataState';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps, WidgetSize } from './types';
+import { usePackModule, usePackPresentation } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
+import type { CommandActionPresentation } from './designPacks/families/Actions.types';
+
+const loadActionsPresentation = () => import('./designPacks/families/CommandActionsLayout');
 
 export interface QuickCommand {
   id: string;
@@ -41,6 +46,8 @@ export function visibleCommandsForSize(size: WidgetSize): QuickCommand[] {
 }
 
 export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetProps) {
+  const packId = usePackPresentation();
+  const ActionsPresentation = usePackModule(packId, loadActionsPresentation);
   const { t } = useTranslation('dashboard');
   const vehicleQuery = useVehicles();
   const { data: vehicles, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = vehicleQuery;
@@ -77,6 +84,35 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
   }, [refetch]);
 
   const visibleCommands = visibleCommandsForSize(size);
+  const actions: CommandActionPresentation[] = visibleCommands.map(cmd => {
+    const Icon = cmd.icon;
+    const isRunning = activeCommand === cmd.command;
+    return {
+      id: cmd.id, busy: isRunning,
+      button: <Button
+        key={cmd.id}
+        variant={cmd.id === 'unlock' ? 'primary' : 'secondary'}
+        size="sm"
+        wrapLabel={false}
+        icon={isRunning
+          ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-theme-accent" />
+          : <Icon aria-hidden="true" className={`h-4 w-4 ${cmd.color}`} />}
+        disabled={!!activeCommand || !operationalMode.canWrite}
+        title={!operationalMode.canWrite ? operationalMode.writeBlockReason ?? undefined : undefined}
+        aria-busy={isRunning || undefined}
+        onClick={() => handleCommand(cmd.command)}
+        aria-label={t(cmd.labelKey, cmd.labelFallback)}
+        className={isCompact
+          ? 'h-full min-h-8 min-w-0 flex-col gap-1 px-1 rounded-shape-lg'
+          : 'h-auto min-h-[68px] min-w-0 flex-col gap-1 px-2 py-2 rounded-shape-lg'}
+      >
+        {!isCompact && <Text variant="bodySm" className="w-full text-center">{t(cmd.labelKey, cmd.labelFallback)}</Text>}
+      </Button>,
+    };
+  });
+  const classic = <div className={isCompact ? 'grid grid-cols-3 gap-1.5 h-full items-center' : 'grid grid-cols-3 gap-2'}>
+    {actions.map(action => action.button)}
+  </div>;
 
   return (
     <WidgetShell
@@ -91,50 +127,9 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
       onRefresh={handleRefresh}
     >
       {id ? (
-        <div
-          className={
-            isCompact
-              ? 'grid grid-cols-3 gap-1.5 h-full items-center'
-              : 'grid grid-cols-3 gap-2'
-          }
-        >
-          {visibleCommands.map((cmd) => {
-            const Icon = cmd.icon;
-            const isRunning = activeCommand === cmd.command;
-
-            return (
-              <Button
-                key={cmd.id}
-                variant={cmd.id === 'unlock' ? 'primary' : 'secondary'}
-                size="sm"
-                wrapLabel={false}
-                icon={isRunning
-                  ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-theme-accent" />
-                  : <Icon aria-hidden="true" className={`h-4 w-4 ${cmd.color}`} />}
-                disabled={!!activeCommand || !operationalMode.canWrite}
-                title={
-                  !operationalMode.canWrite
-                    ? operationalMode.writeBlockReason ?? undefined
-                    : undefined
-                }
-                aria-busy={isRunning || undefined}
-                onClick={() => handleCommand(cmd.command)}
-                aria-label={t(cmd.labelKey, cmd.labelFallback)}
-                className={
-                  isCompact
-                    ? 'h-full min-h-8 min-w-0 flex-col gap-1 px-1 rounded-shape-lg'
-                    : 'h-auto min-h-[68px] min-w-0 flex-col gap-1 px-2 py-2 rounded-shape-lg'
-                }
-              >
-                {!isCompact && (
-                  <Text variant="bodySm" className="w-full text-center">
-                    {t(cmd.labelKey, cmd.labelFallback)}
-                  </Text>
-                )}
-              </Button>
-            );
-          })}
-        </div>
+        packId !== 'classic' && ActionsPresentation
+          ? <ActionsPresentation appearance={PACK_APPEARANCES[packId]} compact={isCompact} actions={actions} />
+          : classic
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Zap className="h-5 w-5" />}

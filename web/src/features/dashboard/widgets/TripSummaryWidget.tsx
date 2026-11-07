@@ -9,10 +9,12 @@ import { useUnits } from '@/hooks/useUnits';
 import { formatDurationMinutes, formatDurationRange } from '@/lib/dateConvert';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid } from './shared';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDateLabels } from '@/hooks/useDateLabels';
+import { WidgetJourneyDiagram } from './shared/WidgetJourneyDiagram';
 
 /**
  * Resolve a human-readable trip label. A trip can arrive with a `null`,
@@ -24,7 +26,7 @@ function tripName(name: string | null | undefined, fallback: string): string {
   return trimmed.length > 0 ? trimmed : fallback;
 }
 
-export default function TripSummaryWidget(_props: WidgetProps) {
+export default function TripSummaryWidget({ size }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
@@ -44,6 +46,50 @@ export default function TripSummaryWidget(_props: WidgetProps) {
   };
   const count = (value: unknown) => knownNumber(value) == null ? '—' : fmtInt(knownNumber(value));
 
+  const empty = (
+    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+      icon={<Navigation className="h-5 w-5" />}
+      message={t('widget.noTrips', 'No trips recorded yet')}
+    />
+  );
+  const heading = lastTrip ? (
+    <div className="min-w-0">
+      <Text as="p" variant="bodySm" className="font-semibold [overflow-wrap:anywhere]">
+        {tripName(lastTrip.name, t('widget.tripUnnamed', 'Unnamed trip'))}
+      </Text>
+      <Text as="p" variant="caption" className="text-[var(--text-muted)]">
+        {formatWeekdayName(lastTrip.start_date)}
+        {' · '}
+        {knownNumber(lastTrip.total_duration_s) != null
+          ? formatDurationMinutes(lastTrip.total_duration_s / 60, { subMinuteLabel: `<1${t('widget.tripMinuteShort', 'm')}` })
+          : formatDurationRange(lastTrip.start_date, lastTrip.end_date)}
+      </Text>
+    </div>
+  ) : null;
+  const stats = lastTrip ? (
+    <WidgetStatGrid cols={3} stats={[
+      { label: t('widget.distance', 'Distance'), value: displayDist(lastTrip.total_distance_m), unit: displayDist(lastTrip.total_distance_m) == null ? undefined : distanceUnit },
+      {
+        label: t('widget.energy', 'Energy'),
+        value: knownNumber(lastTrip.total_energy_wh) == null
+          ? null
+          : fmtNumber(convertEnergyFromSI(lastTrip.total_energy_wh, unitPrefs.energy), unitPrefs.energy === 'kWh' ? 1 : 0),
+        unit: knownNumber(lastTrip.total_energy_wh) == null ? undefined : unitPrefs.energy,
+      },
+      { label: t('widget.stops', 'Stops'), value: count(lastTrip.charge_count) },
+    ]} />
+  ) : null;
+  const classic = trips.length === 0 ? empty : (
+    <div className="flex min-w-0 flex-col gap-3">
+      {lastTrip && (
+        <div className="min-w-0 space-y-2">
+          {heading}
+          {stats}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <WidgetShell
       title={t('widget.tripSummary', 'Trip summary')}
@@ -56,44 +102,18 @@ export default function TripSummaryWidget(_props: WidgetProps) {
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {trips.length === 0 ? (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Navigation className="h-5 w-5" />}
-          message={t('widget.noTrips', 'No trips recorded yet')}
-        />
-      ) : (
-        <div className="flex min-w-0 flex-col gap-3">
-          {lastTrip && (
-            <div className="min-w-0 space-y-2">
-              <div className="min-w-0">
-                <Text as="p" variant="bodySm" className="font-semibold [overflow-wrap:anywhere]">
-                  {tripName(lastTrip.name, t('widget.tripUnnamed', 'Unnamed trip'))}
-                </Text>
-                <Text as="p" variant="caption" className="text-[var(--text-muted)]">
-                  {formatWeekdayName(lastTrip.start_date)}
-                  {' · '}
-                  {knownNumber(lastTrip.total_duration_s) != null
-                    ? formatDurationMinutes(lastTrip.total_duration_s / 60, { subMinuteLabel: `<1${t('widget.tripMinuteShort', 'm')}` })
-                    : formatDurationRange(lastTrip.start_date, lastTrip.end_date)}
-                </Text>
-              </div>
-
-              <WidgetStatGrid cols={3} stats={[
-                { label: t('widget.distance', 'Distance'), value: displayDist(lastTrip.total_distance_m), unit: displayDist(lastTrip.total_distance_m) == null ? undefined : distanceUnit },
-                {
-                  label: t('widget.energy', 'Energy'),
-                  value: knownNumber(lastTrip.total_energy_wh) == null
-                    ? null
-                    : fmtNumber(convertEnergyFromSI(lastTrip.total_energy_wh, unitPrefs.energy), unitPrefs.energy === 'kWh' ? 1 : 0),
-                  unit: knownNumber(lastTrip.total_energy_wh) == null ? undefined : unitPrefs.energy,
-                },
-                { label: t('widget.stops', 'Stops'), value: count(lastTrip.charge_count) },
-              ]} />
-            </div>
-          )}
-
-        </div>
-      )}
+      <InstrumentPresentation
+        family="map"
+        compact={size.cols <= 1 || size.rows <= 1}
+        headline={heading}
+        icon={lastTrip ? <Navigation /> : undefined}
+        instrument={lastTrip ? <WidgetJourneyDiagram
+          start={lastTrip.start_date ? formatWeekdayName(lastTrip.start_date) : null}
+          end={lastTrip.end_date ? formatWeekdayName(lastTrip.end_date) : null} /> : empty}
+        details={stats}
+      >
+        {classic}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

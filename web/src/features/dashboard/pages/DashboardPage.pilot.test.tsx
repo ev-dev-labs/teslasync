@@ -18,6 +18,8 @@ import type { WidgetSettingsModal } from '../components/WidgetSettingsModal';
 import { WIDGET_DND_MIME } from '../widgets/types';
 import { toUrlSafeBase64 } from '../hooks/validateImport';
 
+vi.mock('@/hooks/useWidgetDesignPack', () => ({ useWidgetDesignPack: () => ({ packId: 'classic' }) }));
+
 const h = vi.hoisted(() => ({
   query: {
     data: [{ id: 7, display_name: 'Test vehicle' }] as Array<{ id: number; display_name: string }> | undefined,

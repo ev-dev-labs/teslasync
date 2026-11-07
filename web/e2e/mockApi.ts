@@ -1199,7 +1199,7 @@ export async function assertMockApiComplete(
       violations: beacon.violations,
     }));
   expect(beaconViolations, 'invalid or unreviewed navigator.sendBeacon requests').toEqual([]);
-  const incompleteRequests = controller.requests
+  const incompleteRequests = () => controller.requests
     .filter((request) => request.disposition === 'pending' || request.disposition === 'aborted')
     .map((request) => ({
       method: request.method,
@@ -1208,7 +1208,10 @@ export async function assertMockApiComplete(
       resourceType: request.resourceType,
       disposition: request.disposition,
     }));
-  expect(incompleteRequests, 'API requests escaped or were blocked by Playwright routing').toEqual([]);
+  await expect.poll(incompleteRequests, {
+    message: 'API requests escaped or were blocked by Playwright routing',
+    timeout: 5_000,
+  }).toEqual([]);
   await cleanupServiceWorkers(page);
 }
 

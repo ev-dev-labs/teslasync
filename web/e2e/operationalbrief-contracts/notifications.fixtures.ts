@@ -55,7 +55,7 @@ export const analysisRows: NotificationLog[] = deliveryRows.slice(0, 3).map((row
 
 export const ruleRows: AlertRule[] = Array.from({ length: 4 }, (_, index) => ({
   id: 71 + index, name: `Synthetic rule ${index + 1}`, enabled: index < 3,
-  signal_name: 'BatteryLevel', op: 'lt', value_num: 20,
+  signal_name: 'BatteryLevel', op: '<', value_num: 20,
   severity: index === 0 ? 'critical' : index === 1 ? 'warn' : 'info',
   cooldown_min: 10, trigger_mode: 'once', all_vehicles: true, vehicle_ids: [],
   kind: index === 3 ? 'computed_metric' : 'signal', channel_ids: [],

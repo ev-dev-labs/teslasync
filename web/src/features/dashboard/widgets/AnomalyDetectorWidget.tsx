@@ -15,6 +15,7 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import TimelinePresentation from './designPacks/TimelinePresentation';
 
 const SEVERITY_ORDER: Record<string, number> = { critical: 0, warning: 1, info: 2 };
 
@@ -138,6 +139,7 @@ export default memo(function AnomalyDetectorWidget({ vehicleId, size }: WidgetPr
 
     return (
       <WidgetShell {...shellProps}>
+        <TimelinePresentation compact>
         <div className="flex h-full flex-col items-center justify-center gap-2 min-h-[44px]">
           {count > 0 || !hasAnomalyEvidence ? (
             <WidgetBigNumber
@@ -158,6 +160,7 @@ export default memo(function AnomalyDetectorWidget({ vehicleId, size }: WidgetPr
             />
           )}
         </div>
+        </TimelinePresentation>
       </WidgetShell>
     );
   }
@@ -170,6 +173,7 @@ export default memo(function AnomalyDetectorWidget({ vehicleId, size }: WidgetPr
       <div className="flex flex-col h-full">
         <div className="flex-1 min-h-0">
           {hasAnomalyEvidence ? <WidgetDetailCard
+            presentation="timeline"
             entries={entries.slice(0, 3)}
             compact={false}
             emptyMessage={t('widget.anomalyDetector.noAnomalies', 'No anomalies')}

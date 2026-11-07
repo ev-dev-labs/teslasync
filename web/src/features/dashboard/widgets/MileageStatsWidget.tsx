@@ -12,6 +12,8 @@ import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import StatusPresentation from './designPacks/StatusPresentation';
+import StatStatusPresentation from './designPacks/StatStatusPresentation';
 
 /** Next 10 000-display-unit milestone, strictly above the current total. */
 function nextMilestone(total: number): number {
@@ -73,6 +75,36 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
   const progress = totalDisplay != null && milestone != null && previousMilestone != null
     ? Math.max(0, Math.min(100, ((totalDisplay - previousMilestone) / (milestone - previousMilestone)) * 100))
     : null;
+  const milestoneDetails = (totalDisplay != null || milestone != null) && (
+    <div className="min-w-0" data-testid="mileage-milestone">
+      <div className="mb-1.5 flex min-w-0 items-end justify-between gap-2 text-xs">
+        <span className="font-semibold tabular-nums text-[var(--text-primary)]">
+          {totalDisplay == null ? '—' : `${fmtInt(totalDisplay)} ${distanceUnit}`}
+        </span>
+        {milestone != null && (
+          <span className="min-w-0 text-end text-[var(--text-secondary)]">
+            {t('widget.mileageStats.nextMilestone', 'Next milestone')} {fmtInt(milestone)} {distanceUnit}
+            {monthsToMilestone > 0 && (
+              <> · {t('widget.mileageStats.inMonths', '~{{months}} mo', { months: monthsToMilestone })}</>
+            )}
+          </span>
+        )}
+      </div>
+      {progress != null && (
+        <div
+          className="h-2 overflow-hidden bg-[var(--surface-2)] rounded-shape-sm"
+          role="progressbar"
+          aria-label={t('widget.mileageStats.nextMilestone', 'Next milestone')}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(progress)}
+        >
+          <div className="h-full rounded-shape-sm bg-[var(--accent-primary)] transition-[width] duration-fast motion-reduce:transition-none"
+            style={{ width: `${progress}%` }} />
+        </div>
+      )}
+    </div>
+  );
 
   const shellProps = {
     title: t('widget.mileageStats.title', 'Mileage stats'),
@@ -87,10 +119,13 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
 
   // Compact: daily avg as large number
   if (isCompact) {
+    const headline = <WidgetBigNumber value={dailyAvgDisplay == null ? null : fmtInt(dailyAvgDisplay)} unit={`${distanceUnit}/${t('widget.mileageStats.day', 'day')}`} animated={false} />;
     return (
       <WidgetShell {...shellProps}>
         {hasData ? (
-          <WidgetBigNumber value={dailyAvgDisplay == null ? null : fmtInt(dailyAvgDisplay)} unit={`${distanceUnit}/${t('widget.mileageStats.day', 'day')}`} animated={false} />
+          <StatusPresentation compact headline={headline} icon={<TrendingUp className="size-6" aria-hidden="true" />} details={null}>
+            {headline}
+          </StatusPresentation>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<TrendingUp className="h-5 w-5" />}
@@ -110,39 +145,9 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
     >
       {hasData ? (
         <div className="flex min-w-0 flex-col gap-3" data-testid="mileage-stats-after-card">
-          <WidgetStatGrid stats={stats} cols={3} maxPerRow={3} />
-          {(totalDisplay != null || milestone != null) && (
-            <div className="min-w-0" data-testid="mileage-milestone">
-              <div className="mb-1.5 flex min-w-0 items-end justify-between gap-2 text-xs">
-                <span className="font-semibold tabular-nums text-[var(--text-primary)]">
-                  {totalDisplay == null ? '—' : `${fmtInt(totalDisplay)} ${distanceUnit}`}
-                </span>
-                {milestone != null && (
-                  <span className="min-w-0 text-end text-[var(--text-secondary)]">
-                    {t('widget.mileageStats.nextMilestone', 'Next milestone')} {fmtInt(milestone)} {distanceUnit}
-                    {monthsToMilestone > 0 && (
-                      <> · {t('widget.mileageStats.inMonths', '~{{months}} mo', { months: monthsToMilestone })}</>
-                    )}
-                  </span>
-                )}
-              </div>
-              {progress != null && (
-                <div
-                  className="h-2 overflow-hidden bg-[var(--surface-2)] rounded-shape-sm"
-                  role="progressbar"
-                  aria-label={t('widget.mileageStats.nextMilestone', 'Next milestone')}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Math.round(progress)}
-                >
-                  <div
-                    className="h-full rounded-shape-sm bg-[var(--accent-primary)] transition-[width] duration-fast motion-reduce:transition-none"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+          <StatStatusPresentation stats={stats} cols={3} maxPerRow={3} footer={milestoneDetails} icon={<TrendingUp className="size-6" aria-hidden="true" />}>
+            <WidgetStatGrid stats={stats} cols={3} maxPerRow={3} />{milestoneDetails}
+          </StatStatusPresentation>
         </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/feedback';
 import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import StatusPresentation from './designPacks/StatusPresentation';
 
 const DASH = '—';
 
@@ -134,6 +135,12 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
     ) : (
       <Unlock className="h-6 w-6 text-[var(--semantic-danger)]" aria-hidden="true" />
     );
+  const headline = model && <WidgetBigNumber value={model.lockValue} animated={false} />;
+  const details = model && <WidgetDetailCard entries={model.entries} />;
+  const classic = <div className="flex flex-col gap-3">
+    <div className="flex items-center justify-between gap-3">{headline}<span className="shrink-0">{heroIcon}</span></div>
+    {details}
+  </div>;
 
   return (
     <WidgetShell
@@ -149,13 +156,9 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
       onRefresh={() => refetch()}
     >
       {model ? (
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <WidgetBigNumber value={model.lockValue} animated={false} />
-            <span className="shrink-0">{heroIcon}</span>
-          </div>
-          <WidgetDetailCard entries={model.entries} />
-        </div>
+        <StatusPresentation headline={headline} icon={heroIcon} details={details}>
+          {classic}
+        </StatusPresentation>
       ) : (
         <EmptyState
           /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

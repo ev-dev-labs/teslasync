@@ -138,6 +138,7 @@ vi.mock('./shared', () => ({
 vi.mock('@/components/charts', async () => {
   const { useMeasuredAxisWidth } = await import('@/components/charts/useMeasuredAxisWidth');
   const { axisTick, axisTickSm, chartMargin } = await import('@/components/charts/chartUtils');
+  const { chartAnimationProps } = await import('@/components/charts/chartDefaults');
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   const Chart = (props: ChartProps) => {
     state.charts.push(props);
@@ -146,7 +147,7 @@ vi.mock('@/components/charts', async () => {
   const Grid = () => <g />;
   const Nothing = () => null;
   return {
-    ...chartTestDoubles, useMeasuredAxisWidth, axisTick, axisTickSm, chartMargin,
+    ...chartTestDoubles, useMeasuredAxisWidth, axisTick, axisTickSm, chartMargin, chartAnimationProps,
     CHART_COLORS: ['#06b6d4', '#3b82f6', '#f59e0b', '#22c55e', '#ef4444', '#a855f7'],
     chartAnimation: {}, chartGrid: <Grid />,
     useThemeChartPalette: () => ({ primary: '#123456', neutral: '#654321', series: ['#123456'] }),

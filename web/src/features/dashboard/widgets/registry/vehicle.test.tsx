@@ -51,6 +51,7 @@ const EXPECTED_IDS = [
   'warranty-status',
   'subscriptions',
   'vehicle-upgrades',
+  'new-axle-thermal',
 ];
 
 // Mirror of the dynamic-import targets `vehicle.ts` wraps in `React.lazy`. This
@@ -74,6 +75,7 @@ const MODULES: Record<string, () => Promise<{ default: unknown }>> = {
   'warranty-status': () => import('../WarrantyStatusWidget'),
   'subscriptions': () => import('../SubscriptionsWidget'),
   'vehicle-upgrades': () => import('../VehicleUpgradesWidget'),
+  'new-axle-thermal': () => import('../AxleThermalWidget'),
 };
 
 const REACT_LAZY = Symbol.for('react.lazy');
@@ -88,7 +90,7 @@ const inRange = (size: WidgetSize, lo: WidgetSize, hi: WidgetSize, axis: 'cols' 
   lo[axis] <= size[axis] && size[axis] <= hi[axis];
 
 describe('VEHICLE_WIDGETS — metadata contract', () => {
-  it('exports the sixteen vehicle widgets in a stable order', () => {
+  it('exports the approved vehicle widgets in a stable order', () => {
     expect(Array.isArray(VEHICLE_WIDGETS)).toBe(true);
     expect(VEHICLE_WIDGETS).toHaveLength(EXPECTED_IDS.length);
     expect(VEHICLE_WIDGETS.map((w) => w.id)).toEqual(EXPECTED_IDS);

@@ -16,10 +16,11 @@ export const userKeys = {
   teslaProfile: ['tesla-user-profile'] as const,
 };
 
-export function useCurrentUser() {
+export function useCurrentUser(enabled = true) {
   return useQuery({
     queryKey: userKeys.me,
     queryFn: ({ signal }) => request<User>('/users/me', { signal }),
+    enabled,
     // Identity is near-static — like the Tesla feature-config it changes
     // rarely, so don't refetch it on every mount/focus. Brings this hook in
     // line with the explicit staleTime every other query in this module sets.

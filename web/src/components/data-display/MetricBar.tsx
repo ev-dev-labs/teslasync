@@ -6,6 +6,7 @@ import { Text } from '@/components/ui/Typography'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 import { cn } from '@/lib/cn'
+import { SegmentedMeter } from './SegmentedMeter'
 
 export interface MetricBarProps {
   /** Null, undefined and nonfinite readings retain an empty track, not a zero fill. */
@@ -26,7 +27,7 @@ export interface MetricBarProps {
   /** Default preserves the existing 2.5-height track; slim uses a 1-height track. */
   size?: 'default' | 'slim'
   /** Both fills support caller-prepared CSS colors, including theme variables. */
-  fill?: 'gradient' | 'solid'
+  fill?: 'gradient' | 'solid' | 'segmented'
 }
 
 /**
@@ -84,11 +85,14 @@ export function MetricBar({
         </div>
       )}
       <div data-metric-track className={cn(
-        'overflow-hidden rounded-pill bg-[var(--surface-2)]',
+        'overflow-hidden',
+        fill !== 'segmented' && 'rounded-pill bg-[var(--surface-2)]',
         'forced-colors:[outline-style:solid] forced-colors:outline-1 forced-colors:outline-[CanvasText] forced-colors:!bg-[Canvas] forced-colors:[forced-color-adjust:none]',
         size === 'slim' ? 'h-1' : 'h-2.5',
       )}>
-        {hasReading && safeMax > 0 && (
+        {fill === 'segmented' ? (
+          <SegmentedMeter value={hasReading ? safeValue : null} max={safeMax} color={color} className="h-full" />
+        ) : hasReading && safeMax > 0 && (
           <motion.div
             data-metric-fill
             className="h-full rounded-pill forced-colors:!bg-[Highlight] forced-colors:!bg-none forced-colors:[forced-color-adjust:none]"

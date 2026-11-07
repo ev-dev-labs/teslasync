@@ -89,6 +89,711 @@
     "refresh60": "Every minute",
     "refresh300": "Every 5 minutes"
   },
+  "dashboardWidgets": {
+    "system": {
+      "apiUsage": {
+        "methodCalls": "Calls by method · retained logs",
+        "methodScope": "Method totals cover retained logs, not just the last 24 hours.",
+        "noMethodData": "No method breakdown available",
+        "httpMethod": "HTTP method",
+        "calls": "Calls"
+      },
+      "mqtt": {
+        "historyUnavailable": "This source provides the current message rate, not a throughput history.",
+        "sessionTrend": "Message rates fetched in this browser session",
+        "sessionScope": "Session samples use fetch times, not signal timestamps; missing rates are gaps."
+      }
+    },
+    "battery": {
+      "batteryCells": {
+        "voltageChart": "Cell voltage",
+        "truncatedScale": "Truncated voltage scale (V).",
+        "averageLine": "Average {{voltage}} V",
+        "voltageSpread": "Cell-voltage spread",
+        "reportedCells": "Source-reported cells: {{count}}",
+        "availability": "Only cells supplied by the source are plotted; availability varies."
+      },
+      "forecast": {
+        "uncertainty": "Forecasts are uncertain and are not warranty or service advice."
+      },
+      "costForecast": {
+        "estimateNote": "Future costs are estimates."
+      },
+      "energyFlowAnimated": {
+        "vehicleFlow": "Vehicle energy flow"
+      },
+      "wallConnector": {
+        "energyDeliveredToday": "Energy delivered today",
+        "period": "Period",
+        "daily": "Daily",
+        "energyNotPower": "Energy delivered is not the same as current power."
+      },
+      "batteryDegradationTrend": {
+        "period": "Observed {{start}} – {{end}}",
+        "periodUnknown": "Observation period unavailable",
+        "sinceObserved": "since first observation ({{range}})",
+        "firstObserved": "First observed",
+        "change": "Change",
+        "estimateNote": "Measured range estimates; the first observation is not factory capacity."
+      },
+      "rangeEstimateComparison": "Rated and ideal range comparison",
+      "rangeEstimateType": "Range type",
+      "rangeEstimateDisclaimer": "Estimates are not guarantees of real-world range.",
+      "rangeEstimateBadge": "Estimate",
+      "highVoltage": {
+        "title": "High-voltage overview",
+        "voltage": "Pack voltage",
+        "current": "Pack current",
+        "isolation": "Isolation resistance",
+        "interlock": "HV interlock",
+        "bms": "BMS state",
+        "dcdc": "DC/DC enabled",
+        "safetyNote": "Reported telemetry is not an inspection, alarm, or proof of electrical safety.",
+        "selectVehicle": "Select a vehicle to inspect high-voltage telemetry.",
+        "noEvidence": "No valid timestamped high-voltage observations for this vehicle.",
+        "lastReported": "Last reported; freshness is shown with each signal.",
+        "schematic": "High-voltage pack schematic",
+        "pack": "High-voltage pack",
+        "schematicNote": "Schematic only — not cell readings or the vehicle’s module layout.",
+        "readings": "Reported signals & source evidence",
+        "invalid": "No valid reading",
+        "retained": "Retained observation",
+        "stale": "Stale observation",
+        "fresh": "Fresh observation",
+        "freshnessUnknown": "Freshness unknown",
+        "timeUnknown": "Observation time unknown",
+        "source": "Source: {{source}}",
+        "currentNote": "Signed current is shown as reported; direction is not inferred.",
+        "historyNote": "Isolation resistance and HV interlock have no established signal-log history. This view shows live-source observations only.",
+        "configuration": "Configuration & capability evidence",
+        "desired": "Desired subscription",
+        "applied": "Applied to vehicle",
+        "support": "Vehicle support",
+        "evidenceNote": "Server intent and routing are not vehicle configuration, support, or delivery receipts. Missing readings do not prove a vehicle is unsupported.",
+        "refresh": "Refresh high-voltage signals"
+      }
+    },
+    "charging": {
+      "chargeHistory": {
+        "energyAdded": "Energy added",
+        "lastSession": "Last session",
+        "sessions": "Sessions",
+        "charger": "Charger",
+        "historicalNote": "Session energy is historical, not live power.",
+        "chartLabelInUnit": "Energy added per recent charge session, in {{unit}}"
+      },
+      "chargeSessionChart": {
+        "latestSession": "Latest session",
+        "byChargerType": "Energy by charger type"
+      },
+      "chargingSessionDetail": {
+        "lastSampledPower": "Last sampled power"
+      },
+      "chargingTelemetry": {
+        "vehicle": "Vehicle",
+        "chargingPower": "Charging power",
+        "flowLabel": "Charging flow schematic",
+        "sampleTime": "Telemetry sample",
+        "signalFreshnessUnavailable": "Individual signal freshness is unavailable."
+      },
+      "doorWindow": {
+        "openOrPartial": "Open or partial",
+        "allClosed": "All closed",
+        "incomplete": "State incomplete",
+        "position": "Position",
+        "doorColumn": "Door",
+        "windowColumn": "Window",
+        "lastReported": "LAST REPORTED",
+        "reportedStates": "Every door and window retains its own reported state."
+      },
+      "chargeReadiness": {
+        "title": "Charge-port readiness",
+        "label": "Charge readiness",
+        "loading": "Loading charge signals…",
+        "notObserved": "Not observed",
+        "timeUnknown": "Observation time unknown",
+        "retained": "Retained observation",
+        "stale": "Stale observation",
+        "fresh": "Recent observation",
+        "observedAt": "{{evidence}} · {{time}}",
+        "unrecognized": "{{evidence}} · Reported: {{value}}",
+        "availablePower": "Available power",
+        "powerUnknown": "These state signals do not measure available power.",
+        "evidence": "Reported signal evidence",
+        "limits": "Cable type does not confirm connection. A charge enable request does not confirm charging or permission to operate the port. Vehicle support and applied configuration are unknown.",
+        "readOnly": "Read-only vehicle observations",
+        "selectVehicle": "Select a vehicle to inspect charge readiness.",
+        "noEvidence": "No charge-readiness signals have been observed for this vehicle.",
+        "conflict": "Reported charge states differ; review each source.",
+        "note": "Each reported state is shown separately. This widget does not operate the charge port. A successful poll does not renew signal observation times.",
+        "fields": {
+          "ChargeState": "Charge state",
+          "DetailedChargeState": "Detailed charge state",
+          "ChargePort": "Port type",
+          "ChargePortDoorOpen": "Port",
+          "ChargePortLatch": "Latch",
+          "ChargingCableType": "Cable",
+          "ScheduledChargingPending": "Schedule",
+          "ChargeEnableRequest": "Charge enable request"
+        },
+        "values": {
+          "ChargeState": {
+            "Disconnected": "Disconnected",
+            "NoPower": "No power",
+            "Starting": "Starting",
+            "Complete": "Complete",
+            "Stopped": "Stopped"
+          },
+          "ChargePort": {
+            "US": "US",
+            "EU": "EU",
+            "GB": "GB",
+            "CCS": "CCS"
+          },
+          "ChargePortLatch": {
+            "Disengaged": "Released",
+            "Engaged": "Engaged",
+            "Blocking": "Blocking"
+          },
+          "ChargingCableType": {
+            "IEC": "IEC",
+            "SAE": "SAE",
+            "GB_AC": "GB AC",
+            "GB_DC": "GB DC"
+          },
+          "ScheduledChargingPending": {
+            "false": "Not pending"
+          },
+          "ChargeEnableRequest": {
+            "true": "Requested",
+            "false": "Not requested"
+          }
+        }
+      }
+    },
+    "climate": {
+      "climatePanel": {
+        "readOnly": "Climate readings only; no commands are sent."
+      },
+      "climateHistory": {
+        "cabinTemperature": "Cabin temperature",
+        "cabinChange": "Cabin change",
+        "comparisonNote": "Inside and outside temperatures can be compared over the same period."
+      },
+      "weatherAtVehicle": "AT VEHICLE",
+      "weatherSource": "Source",
+      "weatherVehicleReading": "Vehicle reading",
+      "weatherConditions": "Conditions",
+      "weatherConditionsNote": "Do not infer weather conditions from temperature alone.",
+      "cabinComfort": {
+        "title": "Cabin comfort & occupancy",
+        "temperatures": "Reported temperatures",
+        "cabinTemperature": "Cabin temperature",
+        "seats": "Front seat climate",
+        "frontLeft": "Front left",
+        "frontRight": "Front right",
+        "seatHeat": "Seat heat",
+        "seatCooling": "Seat cooling",
+        "occupants": "Occupancy and belts",
+        "driverSeat": "Driver seat",
+        "driverBelt": "Driver belt",
+        "passengerBelt": "Passenger belt",
+        "occupied": "Occupied",
+        "unoccupied": "Unoccupied",
+        "buckled": "Buckled",
+        "unbuckled": "Unbuckled",
+        "beltFault": "Belt fault reported",
+        "level": "Level {{value}}",
+        "ventilation": "Ventilation",
+        "fanSpeed": "Reported fan speed",
+        "evidence": "Observation limits",
+        "observed": "Observed: {{time}} · Source: {{source}}",
+        "fresh": "Fresh observation",
+        "stale": "Stale reading",
+        "retained": "Retained reading",
+        "historical": "Historical fallback",
+        "freshnessUnknown": "Freshness unknown",
+        "unreported": "Unknown or invalid reading",
+        "noPassengerInference": "Passenger occupancy is unknown; a belt or seat-climate reading does not establish occupancy.",
+        "limits": "Read-only observations, not command confirmation. Desired or routed signals do not prove applied configuration or vehicle support; both remain unknown.",
+        "noHistory": "Seat, belt, occupancy and fan history is not available from these live readings.",
+        "loading": "Loading cabin observations…",
+        "empty": "No reported cabin signals. Missing readings remain unknown.",
+        "selectVehicle": "Select a vehicle to view reported cabin observations.",
+        "refresh": "Refresh cabin observations"
+      }
+    },
+    "analytics": {
+      "costBreakdown": {
+        "estimatedGasSavings": "Estimated gas savings",
+        "period": "Period"
+      },
+      "fsmDistribution": {
+        "shareNote": "Percentages are based on the returned states."
+      },
+      "monthlyMileage": {
+        "averageLabel": "12-month average",
+        "window": "Window",
+        "monthToDate": "Month to date",
+        "availableDistances": "Only available distances are plotted; missing readings remain gaps."
+      },
+      "stateTimeline": {
+        "coverageNote": "Percentages reflect returned observations, not necessarily every hour."
+      },
+      "weeklyDigest": {
+        "chartLabel": "Drives this week compared with last week",
+        "period": "Period"
+      },
+      "weeklySummary": {
+        "distanceThisWeek": "Distance this week",
+        "periodComparison": "This week vs last week"
+      },
+      "fsdWeekly": {
+        "notAvailable": "Not available",
+        "reportedDistance": "Reported supervised-driving distance",
+        "unmeasured": "UNMEASURED",
+        "thisWeek": "This week",
+        "unmeasuredNote": "Unmeasured distance is not zero."
+      }
+    },
+    "maps": {
+      "journey": {
+        "schematic": "Schematic connection, not recorded route geometry.",
+        "start": "Start",
+        "end": "End"
+      },
+      "destinationETA": {
+        "map": "Destination map",
+        "noCoordinates": "Destination coordinates unavailable",
+        "arrival": "Arrival"
+      },
+      "geofence": {
+        "lastReported": "Last reported membership",
+        "currentUnconfirmed": "Current membership is unconfirmed",
+        "unavailable": "Geofence configuration unavailable"
+      },
+      "locationFavorites": {
+        "returnedLocations": "Returned locations"
+      },
+      "locationMap": {
+        "position": "Position",
+        "vehicleLocation": "Vehicle location"
+      },
+      "positionHeatmap": {
+        "showLocations": "Show locations",
+        "hideLocations": "Hide locations",
+        "locationsHidden": "Locations hidden on this screen",
+        "density": "Position density",
+        "visitedAreas": "Visited areas",
+        "history": "Historical GPS samples",
+        "densityScale": "Relative sample density",
+        "lowDensity": "Low density",
+        "highDensity": "High density",
+        "sampleScope": "Density uses returned GPS samples, not visit counts. The selected range filters only those samples.",
+        "unknownTimestamps": "Samples without valid timestamps may fall outside the selected range."
+      },
+      "arrivalEnergy": {
+        "unknown": "Unknown",
+        "loading": "Loading route evidence",
+        "observed": "{{status}} · {{time}}",
+        "retained": "Retained",
+        "reported": "Reported",
+        "minutes": "{{value}} min",
+        "traffic": "Traffic delay",
+        "expected": "Expected charge on arrival",
+        "destination": "Destination",
+        "selectVehicle": "Select a vehicle to view arrival estimates.",
+        "routeUnknown": "Current route evidence is unavailable; the arrival forecast is unknown.",
+        "arrivalUnknown": "A current arrival charge estimate is unavailable.",
+        "estimateNote": "Vehicle-reported estimates, not a guarantee. Traffic delay is shown separately.",
+        "map": "Navigation destination map",
+        "mapUnknown": "Destination coordinates are unknown.",
+        "mapNote": "Destination pin only; route geometry is unavailable.",
+        "lastEstimate": "Last reported arrival charge",
+        "routeUpdated": "Route last updated",
+        "supportNote": "Missing signals do not establish vehicle support or an applied telemetry configuration.",
+        "title": "Arrival energy outlook",
+        "refresh": "Refresh arrival estimates"
+      }
+    },
+    "driving": {
+      "driveEfficiencyChart": {
+        "consumptionHint": "Lower consumption is generally better.",
+        "latest": "Latest",
+        "measuredWindow": "Measured window"
+      },
+      "drivingCoach": {
+        "suggestion": "Suggestion"
+      },
+      "drivingDynamics": {
+        "peakContext": "Estimated peaks · all completed drives",
+        "peakScale": "Peak comparison scale: 0–{{max}} g",
+        "distributionPeriod": "Observed acceleration magnitudes · last 30 days"
+      },
+      "routeEfficiency": {
+        "drives": "Drives",
+        "average": "Average",
+        "compareNote": "Compare repeated journeys rather than a single trip."
+      },
+      "speedHeatmap": {
+        "peakContext": "Peak of sampled hourly averages",
+        "byHour": "By hour",
+        "averageDrivingSpeed": "Average driving speed",
+        "rows": "Rows",
+        "days": "Days",
+        "columns": "Columns",
+        "timeOfDay": "Time of day",
+        "noSampleLegend": "Dim = no sample",
+        "higherSpeedLegend": "Brighter = higher speed",
+        "blankCells": "Blank cells represent periods without samples, not zero speed."
+      },
+      "signalExplorer": {
+        "title": "Universal signal explorer",
+        "explore": "Explore signals",
+        "chooseNote": "Choose a field; inspect observed evidence, not assumed support.",
+        "refresh": "Refresh signal evidence",
+        "catalog": "Signal inventory",
+        "current": "Current observation",
+        "history": "Signal history",
+        "evidence": "Routing and evidence",
+        "catalogError": "Signal inventory could not be loaded.",
+        "vehicleError": "Vehicle inventory could not be loaded.",
+        "catalogEmpty": "No catalog fields are available.",
+        "vehicleRequired": "Select a vehicle to explore its signal evidence.",
+        "search": "Search catalog",
+        "field": "Signal field",
+        "choose": "Choose a catalog field",
+        "noMatches": "No matching catalog fields.",
+        "configuredMissing": "Configured field is not in this catalog: {{field}}",
+        "child": "Compound child",
+        "inventoryCount": "{{count}} catalog definitions; not proof of vehicle support.",
+        "liveError": "Live signal evidence could not be loaded.",
+        "observationEmpty": "Choose a field; unobserved compound children require the routing inventory.",
+        "observedAt": "Observed: {{time}}",
+        "source": "Source: {{source}}",
+        "emptyText": "(empty text)",
+        "dropped": "Dropped; unavailable",
+        "freshnessUnknown": "Freshness unknown",
+        "retained": "Retained snapshot",
+        "historical": "Historical fallback",
+        "stale": "Stale observation",
+        "fresh": "Fresh observation",
+        "freshnessNote": "Freshness is per signal, not the catalog or request time. Legacy scalars and invalid timestamps remain unknown.",
+        "historyError": "Signal history could not be loaded.",
+        "unitHistory": "Unit settings use a separate unit-history source, not signal_log.",
+        "noHistory": "No signal_log route; generic history is unavailable for this field.",
+        "historyUnknown": "History eligibility is unknown until routing evidence is available.",
+        "historyEmpty": "No recorded samples in the selected workspace range.",
+        "timestamp": "Timestamp",
+        "value": "Value",
+        "origin": "Ingest origin",
+        "emitted": "Source emitted at",
+        "received": "Received at",
+        "normalization": "Normalization version",
+        "historyProvenance": "Origin: {{origin}} · Emitted: {{emitted}} · Received: {{received}}",
+        "invalidTimes": "{{count}} samples have invalid timestamps and cannot be plotted.",
+        "samples": "{{count}} recorded samples returned. Server limits may truncate the selected range.",
+        "historyNote": "Recorded changes only; gaps are not zero, and history does not prove a live observation.",
+        "routingError": "Routing evidence could not be loaded.",
+        "routingEmpty": "No routing evidence is available.",
+        "destination": "Routing destination: {{destination}}",
+        "desired": "Desired subscription: {{desired}}",
+        "valueKind": "Value type: {{kind}}",
+        "capabilityNote": "Applied configuration and vehicle support: unknown. Definitions, desired subscriptions and routes are not capability evidence.",
+        "unitNote": "Known units follow display preferences. Fields without verified physical-unit normalization retain the raw reported value; no unit is inferred from a proto name."
+      },
+      "driverAssist": {
+        "title": "Driver-assist settings",
+        "configuration": "Configuration",
+        "assistance": "Driver assistance",
+        "settings": "Reported settings",
+        "braking": "Emergency braking",
+        "lane": "Lane departure",
+        "camera": "Blind-spot camera",
+        "follow": "Follow distance",
+        "chime": "Blind-spot warning chime",
+        "collision": "Forward collision warning",
+        "emergencyLane": "Emergency lane departure avoidance",
+        "brakingState": "Reported emergency braking state",
+        "values": {
+          "none": "None",
+          "warning": "Warning",
+          "assist": "Assist",
+          "off": "Off",
+          "late": "Late",
+          "average": "Average",
+          "early": "Early",
+          "unavailable": "Unavailable",
+          "standby": "Standby",
+          "enabled": "Enabled",
+          "standstill": "Standstill"
+        },
+        "observation": "Observed: {{time}} · Source: {{source}}",
+        "liveError": "Reported settings could not be loaded.",
+        "vehicleRequired": "Select a vehicle to inspect reported driver-assistance settings.",
+        "empty": "No valid reported settings in this snapshot. Missing evidence does not mean disabled or unsupported.",
+        "history": "Reported changes and samples",
+        "historySetting": "History setting",
+        "change": "{{before}} → {{after}}",
+        "reported": "Reported: {{value}}",
+        "historyUnknown": "Recorded sample count is unknown until history loads.",
+        "historyNote": "Changes compare adjacent valid reports only. Unknown samples break comparisons; repeated reports are not changes. History does not prove a live observation.",
+        "note": "Configuration and change history are not evidence of system activations.",
+        "evidence": "Vehicle support and desired/applied telemetry configuration are unknown. Reported values are separate from configured or routed signals. Follow distance is a setting, not a measured distance.",
+        "refresh": "Refresh driver-assistance evidence"
+      }
+    },
+    "energy": {
+      "livePowerFlow": {
+        "observedAt": "Observed {{time}}",
+        "snapshotNotCurrent": "Snapshot is stale or its observation time is unverified.",
+        "batteryLevel": "Battery level",
+        "siteConnections": "Connections show measured flow at the site, not source-to-load allocation."
+      },
+      "solarProduction": {
+        "producedToday": "Solar produced today",
+        "siteNote": "Energy-site data is separate from vehicle telemetry."
+      },
+      "vampireDrain": {
+        "startedAt": "Window started",
+        "parkedWindows": "Parked windows",
+        "highestUnavailable": "Highest parked drain unavailable",
+        "chargingExcluded": "Charging excluded",
+        "observedWindows": "Derived from observed parked, non-charging windows."
+      },
+      "powershare": {
+        "title": "Powershare overview",
+        "unknown": "Unknown",
+        "powerTransfer": "Power transfer",
+        "unitsUnverified": "Power and remaining-time units are not verified by the signal contract. Raw observations are shown below without unit assumptions.",
+        "vehicle": "Vehicle",
+        "output": "Output",
+        "flowDescription": "Vehicle to output. Transfer magnitude and direction are unverified.",
+        "remaining": "Remaining",
+        "status": "Last reported status",
+        "stopReason": "Stop reason",
+        "type": "Transfer type",
+        "transferStatus": "Power transfer status",
+        "support": "Vehicle support",
+        "selectVehicle": "Select a vehicle to inspect Powershare telemetry.",
+        "noEvidence": "No timestamped Powershare observations for this vehicle.",
+        "noEvidenceHint": "Missing reports do not establish that the vehicle is unsupported.",
+        "evidence": "Signal evidence",
+        "noObservationTime": "Observation time unknown",
+        "sourceUnknown": "Source unknown",
+        "trustNote": "Values are last reported observations, not proof of vehicle capability or applied configuration. Missing, stale or invalid evidence never starts flow animation."
+      }
+    },
+    "vehicle": {
+      "odometer": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month",
+        "lifetime": "Lifetime",
+        "periodOverlap": "Periods overlap and are shown separately.",
+        "comparison": "Distance by period",
+        "noDistance": "No measured distance for these periods",
+        "period": "Period",
+        "calendarScope": "Calendar periods in {{timezone}}"
+      },
+      "watchAccess": {
+        "label": "Watch access",
+        "notConnected": "Not connected",
+        "setupNeeded": "Setup needed",
+        "connect": "Connect",
+        "configureKey": "Configure a wearable API key",
+        "then": "Then",
+        "reviewReadings": "Review the latest available readings"
+      },
+      "digitalTwinDetails": {
+        "chargePort": "Charge port",
+        "closed": "Closed",
+        "interactive": "Interactive digital twin"
+      },
+      "axleThermal": {
+        "stator": "Stator temperature",
+        "inverter": "Inverter temperature",
+        "torque": "Torque",
+        "driveState": "Drive state",
+        "front": "Front axle",
+        "rear": "Rear axle",
+        "rearLeft": "Rear-left motor",
+        "rearRight": "Rear-right motor",
+        "scopeError": "Signal response does not match the selected vehicle.",
+        "unavailable": "Unavailable",
+        "standby": "Standby",
+        "fault": "Fault",
+        "abort": "Abort",
+        "enabled": "Enabled",
+        "rearStator": "Rear stator temperature",
+        "lastReported": "Last reported; check each signal’s freshness.",
+        "source": "Live axle evidence",
+        "empty": "No valid timestamped axle signals have been reported for this vehicle.",
+        "loadError": "Axle signal evidence is unavailable.",
+        "matrix": "Powertrain axle matrix",
+        "vehicle": "Selected vehicle illustration",
+        "modelUnknown": "Vehicle model not reported.",
+        "modelUnavailable": "No matching vehicle illustration is available for the reported model.",
+        "vehicleError": "Vehicle illustration could not be loaded.",
+        "invalid": "No valid reading",
+        "retained": "Retained observation",
+        "stale": "Stale observation",
+        "fresh": "Fresh observation",
+        "unknownFreshness": "Freshness unknown",
+        "timeUnknown": "Observation time unknown",
+        "signalSource": "Source: {{source}}",
+        "additionalNote": "Additional motor rows appear only with valid timestamped reports. Signed torque is shown as reported; drive activity is not inferred.",
+        "limits": "Configuration & evidence limits",
+        "desired": "Desired subscription",
+        "applied": "Applied to vehicle",
+        "supported": "Vehicle support",
+        "noHistory": "These axle signals have no established signal-log history. This view shows live-source observations only.",
+        "noInference": "Routing and server intent do not prove vehicle support or applied configuration. Missing evidence remains unknown; reported temperatures are not a thermal safety assessment.",
+        "inspect": "Inspect signals"
+      }
+    },
+    "telemetry": {
+      "signalObservation": {
+        "unknown": "Unknown observation",
+        "retained": "Retained observation",
+        "stale": "Stale observation",
+        "fresh": "Fresh observation",
+        "noTime": "Observation time unknown"
+      },
+      "signalCatalog": {
+        "definitionNote": "Catalog definitions and actual observations are different things."
+      },
+      "signalHistoryTime": "Sample time",
+      "signalHistoryLoading": "Loading signal history",
+      "liveSignalsHistoryError": "Trend unavailable",
+      "liveSignalsHistoryRetained": "Retained trend",
+      "liveSignalsHistoryLoading": "Loading trend",
+      "liveSignalsHistoryEmpty": "Insufficient history",
+      "liveSignalsCountUnit": "signals",
+      "liveSignalsSnapshot": "Live signal snapshot",
+      "liveSignalsObservationNote": "Each signal has its own observation time and freshness.",
+      "signalReadiness": {
+        "title": "Signal readiness & provenance",
+        "catalog": "Repository signal catalog",
+        "defined": "defined",
+        "definitionNote": "Catalog definitions are not proof that a vehicle is configured or has reported a signal.",
+        "selectVehicle": "Select a vehicle to inspect signal readiness.",
+        "catalogError": "Signal catalog unavailable",
+        "catalogEmpty": "The catalog returned no definitions.",
+        "vehiclesError": "Vehicle selection could not be loaded. Retry refresh.",
+        "routing": "Server subscription and routing",
+        "routingEmpty": "No routing evidence was returned.",
+        "routingError": "Routing evidence unavailable",
+        "desired": "Desired by server",
+        "dropped": "Dropped by routing",
+        "routingNote": "Server intent and routing are not vehicle-applied configuration or delivery receipts.",
+        "snapshot": "Selected vehicle snapshot",
+        "noEvidence": "No observed signal evidence is available for this vehicle.",
+        "liveError": "Vehicle signal evidence unavailable",
+        "observed": "Observed in snapshot",
+        "fresh": "Fresh observations",
+        "stale": "Stale observations",
+        "unknownFreshness": "Unknown freshness or invalid evidence",
+        "latest": "Latest observed timestamp",
+        "emptySnapshot": "This snapshot contains no reported signals; vehicle support remains unknown.",
+        "snapshotNote": "Fresh means timestamped, source-classified evidence no older than two minutes. Counts refer to this snapshot, not all-time reports; compound catalog parents and live child fields are different identities.",
+        "configuration": "Vehicle configuration evidence",
+        "configured": "Configured on vehicle",
+        "applied": "Applied to vehicle",
+        "supported": "Vehicle-supported signals",
+        "browse": "Inspect signals"
+      },
+      "unitContext": {
+        "title": "Signal unit context",
+        "headline": "Unit context",
+        "subtitle": "Telemetry preferences",
+        "distance": "Distance",
+        "temperature": "Temperature",
+        "pressure": "Tire pressure",
+        "charge": "Charge",
+        "miles": "Miles",
+        "kilometers": "Kilometers",
+        "fahrenheit": "Fahrenheit",
+        "celsius": "Celsius",
+        "psi": "PSI",
+        "bar": "Bar",
+        "percent": "Percent",
+        "notObserved": "Not observed",
+        "unknownContext": "Unknown context",
+        "retained": "Retained observation",
+        "stale": "Stale observation",
+        "fresh": "Fresh observation",
+        "freshnessUnknown": "Freshness unknown",
+        "noObservations": "No unit-setting observations are available for this vehicle.",
+        "noVehicle": "Select a vehicle to inspect its unit context.",
+        "loading": "Loading unit-setting evidence…",
+        "error": "Unit-setting evidence could not be loaded.",
+        "retainedNotice": "Previously loaded unit settings remain visible; the latest refresh is unconfirmed.",
+        "observedAt": "Observed: {{timestamp}}",
+        "normalization": "Normalization context: Unknown",
+        "historyNote": "Live preferences do not confirm the unit context used for normalization. A vehicle unit-history reader is not available here.",
+        "note": "Unit settings are ingestion metadata; missing context must not be silently guessed.",
+        "supportNote": "Vehicle support and applied subscription state remain unknown; configuration is not observation evidence.",
+        "source": "Source: vehicle live signal snapshot, not application display preferences."
+      }
+    },
+    "tires": {
+      "tirePressureHistory": {
+        "frontLeftPressure": "Front-left pressure",
+        "lastReported": "Last reported {{time}}",
+        "notReported": "Not reported",
+        "history": "History",
+        "recommendationUnavailable": "Unavailable"
+      },
+      "tireWarnings": {
+        "title": "Tire warnings & freshness",
+        "frontLeft": "Front left",
+        "frontRight": "Front right",
+        "rearLeft": "Rear left",
+        "rearRight": "Rear right",
+        "scopeError": "Signal response does not match the selected vehicle.",
+        "unknown": "Unknown",
+        "notReported": "Not reported",
+        "retained": "Retained",
+        "stale": "Stale",
+        "fresh": "Fresh",
+        "unknownFreshness": "Freshness unknown",
+        "reportedPressures": "Reported pressures",
+        "hardReported": "Hard warning reported",
+        "softReported": "Soft warning reported",
+        "clear": "No warnings reported",
+        "warningsUnknown": "Warnings unknown",
+        "source": "Live TPMS evidence",
+        "selectVehicle": "Select a vehicle",
+        "empty": "No tire signals have been reported for this vehicle.",
+        "loadError": "Tire signal evidence is unavailable.",
+        "vehicle": "Selected vehicle illustration",
+        "perWheel": "Per-wheel tire status",
+        "modelUnknown": "Vehicle model illustration unavailable.",
+        "vehicleError": "Vehicle illustration could not be loaded.",
+        "pressureObserved": "Pressure observed",
+        "lastSeen": "Last sensor report",
+        "age": "Sensor age",
+        "hard": "Hard warning",
+        "soft": "Soft warning",
+        "reported": "Reported",
+        "notActive": "No warning reported",
+        "limits": "Evidence limits",
+        "noInference": "Warnings and timestamps must be reported; no alert is inferred from a missing value.",
+        "freshnessNote": "Pressure freshness requires both a timestamped signal and a sensor report no older than two minutes.",
+        "noHistory": "Pressure and last-seen history are not established by this live source.",
+        "supportUnknown": "Vehicle support and applied telemetry configuration remain unknown.",
+        "open": "Open tire pressure"
+      }
+    },
+    "security": {
+      "vehicleAccessInvitations": "Invitations",
+      "vehicleAccessPendingNote": "Pending invitations are separate from active permissions."
+    },
+    "media": {
+      "mediaProgressUnavailable": "Playback progress depends on available media signals."
+    }
+  },
   "glance": {
     "location": {
       "home": "Home",
@@ -293,7 +998,10 @@
     "empty": "No widgets"
   },
   "quickNav": {
-    "label": "Quick navigation"
+    "label": "Quick navigation",
+    "shortcuts": "Shortcuts",
+    "dashboard": "Dashboard",
+    "telemetryIndependent": "Navigation does not depend on telemetry freshness."
   },
   "quickStats": {
     "title": "Quick stats",
@@ -467,7 +1175,53 @@
       "maps": "Maps"
     },
     "pickerDescription": "Choose the operational signals and workflows that belong on this dashboard.",
-    "searchLabel": "Search widgets"
+    "searchLabel": "Search widgets",
+    "catalog": {
+      "new-high-voltage": {
+        "name": "High Voltage",
+        "description": "Observed pack voltage, current and high-voltage system signals"
+      },
+      "new-charge-readiness": {
+        "name": "Charge Readiness",
+        "description": "Observed charge-port, cable and charging readiness signals"
+      },
+      "new-cabin-comfort": {
+        "name": "Cabin Comfort",
+        "description": "Observed cabin temperature, climate modes and seat comfort states"
+      },
+      "new-driver-assist": {
+        "name": "Driver Assist",
+        "description": "Last observed assistance states and their individual freshness"
+      },
+      "new-powershare": {
+        "name": "Powershare",
+        "description": "Last reported transfer state and raw observations with unverified units clearly identified"
+      },
+      "new-arrival-energy": {
+        "name": "Arrival Energy",
+        "description": "Reported destination, arrival charge estimate and navigation freshness"
+      },
+      "new-signal-explorer": {
+        "name": "Signal Explorer",
+        "description": "Selected signal value, metadata and timestamped history"
+      },
+      "new-signal-readiness": {
+        "name": "Signal Readiness",
+        "description": "Observed signal coverage and freshness, separate from configured or supported capability"
+      },
+      "new-unit-context": {
+        "name": "Unit Context",
+        "description": "Reported vehicle unit preferences, display preferences and observation freshness"
+      },
+      "new-tire-warnings": {
+        "name": "Tire Warnings",
+        "description": "Observed per-wheel pressure and warning states without inferred safety claims"
+      },
+      "new-axle-thermal": {
+        "name": "Axle Thermal",
+        "description": "Observed front and rear motor temperatures, torque and signal freshness"
+      }
+    }
   },
   "achievements": {
     "dismiss": "Dismiss achievement notification",
@@ -1113,6 +1867,40 @@
     "customizeHintCta": "Add widgets",
     "dashboardTools": "Dashboard tools",
     "dashboardToolsHelp": "Manage, present, or share this layout.",
+    "designPacks": {
+      "classic": {
+        "description": "Original widget presentation and familiar controls.",
+        "name": "Classic"
+      },
+      "v1": {
+        "description": "Instrument-led layouts with clear secondary readings.",
+        "name": "Studio"
+      },
+      "v2": {
+        "description": "Layered surfaces and generous spacing.",
+        "name": "Elevated"
+      },
+      "v3": {
+        "description": "Restrained layouts and quiet visual hierarchy.",
+        "name": "Precision"
+      },
+      "v4": {
+        "description": "Key information and useful actions first.",
+        "name": "Owner"
+      },
+      "v5": {
+        "description": "Clear pictograms and approachable status.",
+        "name": "Iconic"
+      },
+      "v6": {
+        "description": "Tonal surfaces and expressive shapes.",
+        "name": "Expressive"
+      },
+      "v7": {
+        "description": "Pixel pictograms and segmented readings.",
+        "name": "Pixel"
+      }
+    },
     "done": "Done",
     "export": "Export dashboard",
     "fleetPosture": {
@@ -2626,6 +3414,7 @@
         "success": "Export started"
       }
     },
+    "featureConfigRefreshed": "Feature config refreshed",
     "geofence": {
       "archive": {
         "success": "Place archived"
@@ -2688,6 +3477,7 @@
         "success": "Quiet hours window removed"
       }
     },
+    "regionRefreshed": "Region info refreshed",
     "savedViews": {
       "create": {
         "success": "Saved view created"
@@ -2729,6 +3519,11 @@
         "sync": {
           "success": "Vehicles synced"
         }
+      }
+    },
+    "user": {
+      "teslaProfile": {
+        "success": "Tesla profile refreshed"
       }
     },
     "vehicles": {
@@ -3029,7 +3824,6 @@
       "totalEnergy": "Total energy"
     },
     "chargeHistory": {
-      "chartLabel": "Energy added per recent charge session, in kilowatt-hours",
       "dcFast": "DC fast",
       "home": "Home",
       "lastSessions": "Last {{count}} sessions",
@@ -3377,6 +4171,7 @@
     "energyStats": {
       "avgEfficiency": "Avg efficiency",
       "chartAria": "Daily driving energy usage",
+      "co2Estimate": "CO₂ savings are estimated.",
       "co2Saved": "CO₂ saved",
       "dailyUsage": "Daily usage",
       "date": "Date",
@@ -3459,7 +4254,8 @@
       "statsError": "State distribution could not be loaded.",
       "statsRetained": "Previously loaded state distribution remains visible while it refreshes.",
       "title": "State distribution",
-      "transitionsError": "Recent transitions could not be loaded."
+      "transitionsError": "Recent transitions could not be loaded.",
+      "transitionsRetained": "Previously loaded transitions remain visible while they refresh."
     },
     "geofence": {
       "disabled": "Disabled",
@@ -3529,6 +4325,7 @@
       "work": "Work"
     },
     "locationMap": {
+      "heading": "Heading",
       "lastKnown": "Last known position",
       "noData": "No location data available",
       "status": "Vehicle location status",
@@ -3682,7 +4479,8 @@
       "thisMonth": "This month",
       "thisWeek": "This week",
       "thisYear": "This year",
-      "title": "Odometer"
+      "title": "Odometer",
+      "total": "Total odometer"
     },
     "off": "Off",
     "ok": "OK",

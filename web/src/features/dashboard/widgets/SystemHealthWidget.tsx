@@ -11,6 +11,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, WidgetStatusGrid, type StatusCell } from './shared';
 import type { WidgetProps } from './types';
+import StatusPresentation from './designPacks/StatusPresentation';
 
 type Translate = (key: string, fallback: string) => string;
 
@@ -181,6 +182,42 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
       ? true
       : health.isLoading && health.data == null
   );
+  const headline = <>
+    <Badge variant={
+      statusTier(overallStatus) === 'ok' ? 'success'
+        : statusTier(overallStatus) === 'degraded' ? 'warning'
+          : statusTier(overallStatus) === 'down' ? 'danger' : 'neutral'
+    }>
+      {overallLabel(overallStatus, t)}
+    </Badge>
+    <WidgetBigNumber value={summary} label={t('widget.systemHealth.services', 'services')} align="center" animated={false} />
+  </>;
+  const details = <>
+    {health.data ? (
+      <WidgetStatusGrid cells={cells} cols={size.cols >= 3 ? 4 : 2} />
+    ) : !health.isLoading ? (
+      <EmptyState
+        variant="informational"
+        message={health.isError
+          ? t('widget.systemHealth.healthError', 'Unable to load service health')
+          : t('widget.systemHealth.noData', 'No system health data')}
+        className="py-2"
+      />
+    ) : null}
+    {isLoading && <div role="status" aria-label={t('widget.systemHealth.loadingServices', 'Loading Services')}>
+      <Skeleton className="h-24 w-full rounded-xl" />
+    </div>}
+    <WidgetStatGrid
+      cols={3}
+      stats={[
+        { label: t('widget.systemHealth.dbSize', 'DB size'), value: dbSize },
+        { label: t('widget.systemHealth.memory', 'Memory'), value: formattedMemoryValue ?? null },
+        { label: t('widget.systemHealth.activeConns', 'Active conns'), value: connectionValue },
+        { label: t('widget.systemHealth.goroutines', 'Goroutines'), value: goroutines == null ? null : fmtInt(goroutines) },
+        { label: t('widget.versionInfo.serverUptime', 'Server uptime'), value: uptimeValue },
+      ]}
+    />
+  </>;
   return (
     <WidgetShell
       title={t('widget.systemHealth.title', 'System health')}
@@ -199,48 +236,11 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
         void version.refetch();
       }}
     >
-      {isCompact ? (
-        <div className="flex h-full min-h-[44px] flex-col items-center justify-center gap-2">
-          <Badge variant={
-            statusTier(overallStatus) === 'ok' ? 'success'
-              : statusTier(overallStatus) === 'degraded' ? 'warning'
-                : statusTier(overallStatus) === 'down' ? 'danger'
-                  : 'neutral'
-          }>
-            {overallLabel(overallStatus, t)}
-          </Badge>
-          <WidgetBigNumber value={summary} label={t('widget.systemHealth.services', "services")} align="center" animated={false} />
-        </div>
-      ) : (
-        <div className="flex h-full min-w-0 flex-col gap-3">
-          {health.data ? (
-            <WidgetStatusGrid cells={cells} cols={size.cols >= 3 ? 4 : 2} />
-          ) : !health.isLoading ? (
-            <EmptyState
-              variant="informational"
-              message={health.isError
-                ? t('widget.systemHealth.healthError', 'Unable to load service health')
-                : t('widget.systemHealth.noData', 'No system health data')}
-              className="py-2"
-            />
-          ) : null}
-          {isLoading && (
-            <div role="status" aria-label={t('widget.systemHealth.loadingServices', 'Loading Services')}>
-              <Skeleton className="h-24 w-full rounded-xl" />
-            </div>
-          )}
-          <WidgetStatGrid
-            cols={3}
-            stats={[
-              { label: t('widget.systemHealth.dbSize', 'DB size'), value: dbSize },
-              { label: t('widget.systemHealth.memory', 'Memory'), value: formattedMemoryValue ?? null },
-              { label: t('widget.systemHealth.activeConns', 'Active conns'), value: connectionValue },
-              { label: t('widget.systemHealth.goroutines', 'Goroutines'), value: goroutines == null ? null : fmtInt(goroutines) },
-              { label: t('widget.versionInfo.serverUptime', 'Server uptime'), value: uptimeValue },
-            ]}
-          />
-        </div>
-      )}
+      <StatusPresentation compact={isCompact} headline={<div className="flex min-w-0 flex-col gap-2">{headline}</div>} icon={<Server className="size-6" aria-hidden="true" />} details={isCompact ? null : details}>
+        {isCompact
+          ? <div className="flex h-full min-h-[44px] flex-col items-center justify-center gap-2">{headline}</div>
+          : <div className="flex h-full min-w-0 flex-col gap-3">{details}</div>}
+      </StatusPresentation>
     </WidgetShell>
   );
 }

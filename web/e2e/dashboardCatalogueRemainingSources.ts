@@ -11,6 +11,15 @@ import { fulfillApiFixture, type MockApiController } from './mockApi';
 
 export type CatalogueSources = Record<string, unknown>;
 
+export function catalogueScheduleSignals(now: string) {
+  return {
+    ChargeLimitSoc: { value: 80, timestamp: now },
+    ScheduledChargingMode: { value: 'StartAt', timestamp: now },
+    ScheduledChargingPending: { value: true, timestamp: now },
+    ScheduledChargingStartTime: { value: now, timestamp: now },
+  };
+}
+
 // Some legacy hook interfaces describe client aliases; the fake wire must still
 // emit the snake_case keys that the real server/client transform uses.
 export function catalogueWire(value: unknown): unknown {

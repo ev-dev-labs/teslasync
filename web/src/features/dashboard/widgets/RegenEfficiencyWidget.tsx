@@ -9,6 +9,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
 
@@ -30,6 +31,20 @@ export default function RegenEfficiencyWidget({ vehicleId, size, config }: Widge
   const regenPct = knownNumber(data?.regenRatio);
   const recoveredWh = knownNumber(data?.totalRegenWh);
   const driveWh = knownNumber(data?.totalDriveWh);
+  const headline = (
+    <WidgetBigNumber value={regenPct == null ? null : fmtInt(regenPct)} unit="%"
+      subtitle={t('widget.regenEfficiency.energyRecovered', 'Energy recovered')} align="center" />
+  );
+  const details = (
+    <WidgetStatGrid cols={2} maxPerRow={2} stats={[
+      { label: t('widget.regenEfficiency.totalKwh', 'Total recovered'), value: recoveredWh == null ? null : formatEnergy(recoveredWh) },
+      { label: t('widget.regenEfficiency.driveEnergy', 'Drive energy'), value: driveWh == null ? null : formatEnergy(driveWh) },
+    ]} />
+  );
+  const empty = (
+    <EmptyState variant="informational" icon={<RotateCcw className="h-5 w-5" />}
+      message={t('widget.regenEfficiency.noData', 'No regen data')} className="py-4" />
+  );
 
   const shellProps = {
     loading: isLoading,
@@ -52,36 +67,16 @@ export default function RegenEfficiencyWidget({ vehicleId, size, config }: Widge
       }}
       {...shellProps}
     >
+      <InstrumentPresentation family="ring" compact={isCompact} headline={data ? headline : empty}
+        reading={{ value: regenPct, max: 100, label: t('widget.regenEfficiency.energyRecovered', 'Energy recovered'), unit: '%' }}
+        icon={<RotateCcw />} details={data ? details : undefined}>
       {data ? (
         <div className="flex h-full min-w-0 flex-col justify-center gap-3">
-          <WidgetBigNumber
-            value={regenPct == null ? null : fmtInt(regenPct)}
-            unit="%"
-            subtitle={t('widget.regenEfficiency.energyRecovered', 'Energy recovered')}
-            align="center"
-          />
-          <WidgetStatGrid
-            cols={2}
-            maxPerRow={2}
-            stats={[
-              {
-                label: t('widget.regenEfficiency.totalKwh', 'Total recovered'),
-                value: recoveredWh == null ? null : formatEnergy(recoveredWh),
-              },
-              {
-                label: t('widget.regenEfficiency.driveEnergy', 'Drive energy'),
-                value: driveWh == null ? null : formatEnergy(driveWh),
-              },
-            ]}
-          />
+          {headline}
+          {details}
         </div>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<RotateCcw className="h-5 w-5" />}
-          message={t('widget.regenEfficiency.noData', 'No regen data')}
-          className="py-4"
-        />
-      )}
+      ) : empty}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

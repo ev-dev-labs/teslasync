@@ -9,6 +9,7 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
 
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import { ChargeBatteryPack, ChargeMeter, ChargeReadings, useVerifiedChargeActivity } from './instruments/ChargeInstruments';
 import { ChargeStatusSummary } from './instruments/ChargeStatusSummary';
@@ -77,6 +78,31 @@ export default function ChargeStatusWidget({ vehicleId, size }: WidgetProps) {
       active={active}
     />
   );
+  const summary = state && <ChargeStatusSummary charging={state.is_charging} active={active} limit={chargeLimit} />;
+  const battery = <WidgetBigNumber value={state?.is_charging ? headline : batteryLevel}
+    unit="%" decimals={state?.is_charging ? undefined : 0} animated={false} />;
+  const pack = <ChargeBatteryPack level={batteryLevel} active={state?.is_charging ? active : undefined}
+    className={isShort ? 'w-20' : state?.is_charging ? 'w-24' : undefined} />;
+  const readings = (
+    <ChargeReadings short={isShort}>
+      <WidgetStatGrid cols={state?.is_charging ? 3 : undefined} stats={state?.is_charging ? [
+        /* VehicleService exposes charger_power in kW, unlike canonical signal-store watts. */
+        { label: t('widget.power', 'Power'), value: chargerPower != null ? fmtNumber(chargerPower, 1) : null, unit: 'kW' },
+        { label: t('widget.chargingTelemetry.current', 'Current'), value: chargeAmps != null && chargeAmps >= 0 ? fmtNumber(chargeAmps, 1) : null, unit: 'A' },
+        { label: t('widget.rate', 'Rate'), value: chargeRate != null ? fmtNumber(convertDistanceFromSI(chargeRate, distanceUnit), 0) : null, unit: `${distanceUnit}/h` },
+        { label: t('widget.range', 'Range'), value: ratedRange != null ? fmtNumber(convertDistanceFromSI(ratedRange, distanceUnit), 0) : null, unit: distanceUnit },
+        { label: t('widget.timeToFull', 'Time to full'), value: timeLeftText },
+        { label: t('widget.doneAt', 'Done'), value: doneAtText },
+      ] : [
+        { label: t('widget.chargingTelemetry.current', 'Current'), value: chargeAmps != null && chargeAmps >= 0 ? fmtNumber(chargeAmps, 1) : null, unit: 'A' },
+        { label: t('widget.range', 'Range'), value: ratedRange != null ? fmtNumber(convertDistanceFromSI(ratedRange, distanceUnit), 0) : null, unit: distanceUnit },
+      ]} />
+    </ChargeReadings>
+  );
+  const empty = (
+    <EmptyState variant="informational" icon={<Zap className="h-5 w-5" />}
+      message={t('widget.noChargeData', 'No charge data')} className="py-4" />
+  );
 
   return (
     <WidgetShell
@@ -90,59 +116,24 @@ export default function ChargeStatusWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={() => { if (id > 0) void refetch(); else void vehiclesQuery.refetch(); }}
     >
-      {state?.is_charging ? (
-        <div className={isShort ? 'grid min-w-0 grid-cols-1 items-start gap-3 @sm:grid-cols-2' : 'flex min-w-0 flex-col gap-3'}>
+      <InstrumentPresentation family="ring" compact={isShort} headline={state ? battery : empty} context={summary}
+        reading={{ value: batteryLevel, max: 100, label: t('widget.battery', 'Battery'), unit: '%' }}
+        instrument={state ? <div className="min-w-0 space-y-3">{pack}{meter}</div> : undefined}
+        details={state ? readings : undefined}>
+      {state ? (
+        <div className={isShort ? `grid min-w-0 grid-cols-1 ${state.is_charging ? 'items-start' : 'items-center'} gap-3 @sm:grid-cols-2` : 'flex min-w-0 flex-col gap-3'}>
           <div className={isShort ? 'flex min-w-0 flex-col gap-1' : 'flex min-w-0 flex-col gap-3'}>
-            <ChargeStatusSummary charging={state.is_charging} active={active} limit={chargeLimit} />
-            <div className="flex min-w-0 items-center justify-between gap-2">
-              <WidgetBigNumber value={headline} unit="%" animated={false} />
-              <ChargeBatteryPack level={batteryLevel} active={active} className={isShort ? 'w-20' : 'w-24'} />
-            </div>
-            {meter}
-          </div>
-          <div className={isShort ? 'flex min-w-0 flex-col gap-1' : 'flex min-w-0 flex-col gap-3'}>
-          <ChargeReadings short={isShort}>
-          <WidgetStatGrid
-            cols={3}
-            stats={[
-              /* VehicleService exposes charger_power in kW, unlike canonical signal-store watts. */
-              { label: t('widget.power', 'Power'), value: chargerPower != null ? fmtNumber(chargerPower, 1) : null, unit: 'kW' },
-              { label: t('widget.chargingTelemetry.current', 'Current'), value: chargeAmps != null && chargeAmps >= 0 ? fmtNumber(chargeAmps, 1) : null, unit: 'A' },
-              { label: t('widget.rate', 'Rate'), value: chargeRate != null ? fmtNumber(convertDistanceFromSI(chargeRate, distanceUnit), 0) : null, unit: `${distanceUnit}/h` },
-              { label: t('widget.range', 'Range'), value: ratedRange != null ? fmtNumber(convertDistanceFromSI(ratedRange, distanceUnit), 0) : null, unit: distanceUnit },
-              { label: t('widget.timeToFull', 'Time to full'), value: timeLeftText },
-              { label: t('widget.doneAt', 'Done'), value: doneAtText },
-            ]}
-          />
-          </ChargeReadings>
-          </div>
-        </div>
-      ) : state ? (
-        <div className={isShort ? 'grid min-w-0 grid-cols-1 items-center gap-3 @sm:grid-cols-2' : 'flex min-w-0 flex-col gap-3'}>
-          <div className={isShort ? 'flex min-w-0 flex-col gap-1' : 'flex min-w-0 flex-col gap-3'}>
-          <ChargeStatusSummary charging={state.is_charging} active={active} limit={chargeLimit} />
-          <div className="flex min-w-0 items-center justify-between gap-3">
-            <WidgetBigNumber value={batteryLevel} unit="%" decimals={0} animated={false} />
-            <ChargeBatteryPack level={batteryLevel} className={isShort ? 'w-20' : undefined} />
+          {summary}
+          <div className={`flex min-w-0 items-center justify-between ${state.is_charging ? 'gap-2' : 'gap-3'}`}>
+            {battery}
+            {pack}
           </div>
           {meter}
           </div>
-          <ChargeReadings short={isShort}>
-          <WidgetStatGrid
-            stats={[
-              { label: t('widget.chargingTelemetry.current', 'Current'), value: chargeAmps != null && chargeAmps >= 0 ? fmtNumber(chargeAmps, 1) : null, unit: 'A' },
-              { label: t('widget.range', 'Range'), value: ratedRange != null ? fmtNumber(convertDistanceFromSI(ratedRange, distanceUnit), 0) : null, unit: distanceUnit },
-            ]}
-          />
-          </ChargeReadings>
+          {state.is_charging ? <div className={isShort ? 'flex min-w-0 flex-col gap-1' : 'flex min-w-0 flex-col gap-3'}>{readings}</div> : readings}
         </div>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Zap className="h-5 w-5" />}
-          message={t('widget.noChargeData', 'No charge data')}
-          className="py-4"
-        />
-      )}
+      ) : empty}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

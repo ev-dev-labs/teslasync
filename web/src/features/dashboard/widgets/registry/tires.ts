@@ -25,4 +25,17 @@ export const TIRE_WIDGETS: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('../TirePressureHistoryWidget')),
   },
+  {
+    id: 'new-tire-warnings',
+    name: 'Tire Warnings',
+    description: 'Observed per-wheel pressure and warning states without inferred safety claims',
+    nameKey: 'widgets.catalog.new-tire-warnings.name',
+    descriptionKey: 'widgets.catalog.new-tire-warnings.description',
+    icon: CircleDot,
+    category: 'tires',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../TireWarningsWidget')),
+  },
 ];

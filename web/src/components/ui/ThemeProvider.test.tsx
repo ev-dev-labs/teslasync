@@ -288,7 +288,7 @@ describe('initial state resolution', () => {
     await renderSettled()
     expect(screen.getByTestId('themeId')).toHaveTextContent('matrix-green')
     expect(screen.getByTestId('modeId')).toHaveTextContent('oled')
-    expect(screen.getByTestId('theme-primary')).toHaveTextContent('#00ff41')
+    expect(screen.getByTestId('theme-primary')).toHaveTextContent('#22c55e')
     expect(screen.getByTestId('mode-bg')).toHaveTextContent('#000000')
   })
 
@@ -709,15 +709,15 @@ describe('exposed registries', () => {
     await flush()
 
     expect(screen.getAllByRole('button')).toHaveLength(21)
-    fireEvent.click(screen.getByRole('button', { name: 'Ocean Teal' }))
-    expect(screen.getByRole('button', { name: 'Ocean Teal', pressed: true })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Teal' }))
+    expect(screen.getByRole('button', { name: 'Teal', pressed: true })).toBeInTheDocument()
     expect(document.documentElement.style.getPropertyValue('--theme-primary')).toBe('#14b8a6')
     expect(localStorage.getItem('teslasync-theme')).toBe('ocean-teal')
 
     fireEvent.click(screen.getByRole('button', { name: 'Custom' }))
     expect(screen.getByLabelText('Accent')).toHaveValue('#123456')
     expect(document.documentElement.style.getPropertyValue('--theme-primary')).toBe('#123456')
-    fireEvent.click(screen.getByRole('button', { name: 'Ocean Teal' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Teal' }))
     expect(localStorage.getItem('teslasync-custom-primary')).toBe('#123456')
     await waitFor(() => {
       const puts = mockedRequest.mock.calls.filter((call) => (call[1] as RequestInit | undefined)?.method === 'PUT')

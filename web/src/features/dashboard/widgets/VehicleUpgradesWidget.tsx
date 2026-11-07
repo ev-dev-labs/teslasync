@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowUpCircle, Link2 } from 'lucide-react';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { Text } from '@/components/ui';
 import { useVehicleUpgrades, useVehicles } from '@/api/hooks/useVehicles';
 import { useShareLinks } from '@/api/hooks/useSharing';
 import { useDrives } from '@/api/hooks/useDriving';
@@ -12,6 +13,7 @@ import { combineDataStates } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 
 /** Safely extract a string from an unknown value */
@@ -173,22 +175,100 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
     return price.trim() !== '' && Number.isFinite(number) ? fmtNumber(number) : price;
   };
   if (!stringId) {
+    const empty = <EmptyState icon={<ArrowUpCircle className="h-5 w-5" />}
+      message={t('widget.noVehicle', 'No vehicle data')}
+      actionTo={{ label: t('widget.chooseVehicle', 'Choose vehicle'), to: '/vehicles' }} />;
     return <WidgetShell {...shellProps}>
-      <EmptyState icon={<ArrowUpCircle className="h-5 w-5" />}
-        message={t('widget.noVehicle', 'No vehicle data')}
-        actionTo={{ label: t('widget.chooseVehicle', 'Choose vehicle'), to: '/vehicles' }} />
+      <InstrumentPresentation family="list" compact={isCompact} instrument={empty}>
+        {empty}
+      </InstrumentPresentation>
     </WidgetShell>;
   }
+
+  const headline = (
+    <WidgetBigNumber value={upgradesKnown ? fmtInt(eligibleCount) : null} animated={false}
+      align={isCompact ? 'center' : 'start'}
+      label={t('widget.upgrades.available', 'available')} />
+  );
 
   // ── Compact layout (1×2): upgrade count ──
   if (isCompact) {
     return (
       <WidgetShell {...shellProps}>
-        <WidgetBigNumber value={upgradesKnown ? fmtInt(eligibleCount) : null} animated={false} align="center"
-          label={t('widget.upgrades.available', 'available')} />
+        <InstrumentPresentation family="list" compact headline={headline} icon={<ArrowUpCircle />}>
+          {headline}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
+
+  const upgradesSection = (
+    <div>
+      <Text as="div" size="sm" weight="semibold" color="primary" className="mb-2">
+        {t('widget.upgrades.upgradesHeading', 'Available upgrades')}
+      </Text>
+      {upgradesState.fatalError ? (
+        <QueryError error={upgradesState.fatalError} onRetry={() => { void refetchUpgrades(); }} />
+      ) : upgradesState.status === 'initial' ? <Skeleton className="h-20" /> : upgrades.length > 0 ? (
+        <WidgetDetailCard entries={upgrades.map((upgrade, index): DetailEntry => ({
+          id: `${upgrade.name}-${index}`,
+          label: upgrade.name,
+          sublabel: upgrade.description ?? undefined,
+          value: formatPrice(upgrade.price),
+        }))} />
+      ) : (
+        <EmptyState /* no-action: eligibility evidence cannot be created in this widget */
+          message={emptyMessage} className="py-3" />
+      )}
+    </div>
+  );
+  const sharingSection = (
+    <div>
+      <Text as="div" size="sm" weight="semibold" color="primary" className="mb-2 flex items-center gap-1.5">
+        <Link2 className="h-3 w-3" aria-hidden="true" />
+        {t('widget.upgrades.shareLinksHeading', 'Share links')}
+      </Text>
+      {sharingState.fatalError ? (
+        <QueryError error={sharingState.fatalError} onRetry={() => {
+          void drivesQuery.refetch();
+          if (recentDriveId) void shareLinksQuery.refetch();
+        }} />
+      ) : sharingState.status === 'initial' ? <Skeleton className="h-16" /> : activeShareLinks.length > 0 ? (
+        <WidgetDetailCard entries={activeShareLinks.map((link, index): DetailEntry => {
+          const details: string[] = [];
+          if (link.expires_at) {
+            const relativeExpiry = fmtRelative(link.expires_at);
+            if (relativeExpiry && relativeExpiry !== '—') {
+              details.push(t('share.expiresOn', 'Expires {{date}}', { date: relativeExpiry }));
+            }
+          }
+          if (link.views > 0) {
+            details.push(`${fmtInt(link.views)} ${t('share.views', 'views')}`);
+          }
+          return {
+            id: link.id || `${link.token}-${index}`,
+            label: link.title?.trim() || link.description?.trim()
+              || t('share.untitled', 'Untitled share'),
+            sublabel: details.length > 0 ? details.join(' · ') : undefined,
+            value: null,
+            badge: {
+              text: t('live.connected', 'Live'),
+              variant: 'success',
+            },
+            status: 'success',
+          };
+        })} />
+      ) : (
+        <EmptyState
+          icon={<Link2 className="h-5 w-5" />}
+          message={recentDriveId && !Array.isArray(shareLinksData)
+            ? emptyMessage : t('widget.upgrades.noShareLinks', 'No active share links')}
+          actionTo={{ label: t('nav.drives', 'Drives'), to: '/drives' }}
+          className="py-2"
+        />
+      )}
+    </div>
+  );
 
   // ── Standard / Wide layout ──
   return (
@@ -197,75 +277,12 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
       {...shellProps}
     >
       <div className="h-full space-y-3 overflow-y-auto">
-        {/* Upgrades section */}
-        <div>
-          <div className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
-            {t('widget.upgrades.upgradesHeading', 'Available upgrades')}
-          </div>
-          {upgradesState.fatalError ? (
-            <QueryError error={upgradesState.fatalError} onRetry={() => { void refetchUpgrades(); }} />
-          ) : upgradesState.status === 'initial' ? <Skeleton className="h-20" /> : upgrades.length > 0 ? (
-            <WidgetDetailCard entries={upgrades.map((upgrade, index): DetailEntry => ({
-              id: `${upgrade.name}-${index}`,
-              label: upgrade.name,
-              sublabel: upgrade.description ?? undefined,
-              value: formatPrice(upgrade.price),
-            }))} />
-          ) : (
-            <EmptyState /* no-action: eligibility evidence cannot be created in this widget */
-              message={emptyMessage} className="py-3" />
-          )}
-        </div>
-
-        {/* Divider */}
-        <div className="border-t border-[var(--border-default)]" />
-
-        {/* Share Links section */}
-        <div>
-          <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)]">
-            <Link2 className="h-3 w-3" />
-            {t('widget.upgrades.shareLinksHeading', 'Share links')}
-          </div>
-          {sharingState.fatalError ? (
-            <QueryError error={sharingState.fatalError} onRetry={() => {
-              void drivesQuery.refetch();
-              if (recentDriveId) void shareLinksQuery.refetch();
-            }} />
-          ) : sharingState.status === 'initial' ? <Skeleton className="h-16" /> : activeShareLinks.length > 0 ? (
-            <WidgetDetailCard entries={activeShareLinks.map((link, index): DetailEntry => {
-              const details: string[] = [];
-              if (link.expires_at) {
-                const relativeExpiry = fmtRelative(link.expires_at);
-                if (relativeExpiry && relativeExpiry !== '—') {
-                  details.push(t('share.expiresOn', 'Expires {{date}}', { date: relativeExpiry }));
-                }
-              }
-              if (link.views > 0) {
-                details.push(`${fmtInt(link.views)} ${t('share.views', 'views')}`);
-              }
-              return {
-                id: link.id || `${link.token}-${index}`,
-                label: link.title?.trim() || link.description?.trim()
-                  || t('share.untitled', 'Untitled share'),
-                sublabel: details.length > 0 ? details.join(' · ') : undefined,
-                value: null,
-                badge: {
-                  text: t('live.connected', 'Live'),
-                  variant: 'success',
-                },
-                status: 'success',
-              };
-            })} />
-          ) : (
-            <EmptyState
-              icon={<Link2 className="h-5 w-5" />}
-              message={recentDriveId && !Array.isArray(shareLinksData)
-                ? emptyMessage : t('widget.upgrades.noShareLinks', 'No active share links')}
-              actionTo={{ label: t('nav.drives', 'Drives'), to: '/drives' }}
-              className="py-2"
-            />
-          )}
-        </div>
+        <InstrumentPresentation family="list" headline={headline} icon={<ArrowUpCircle />}
+          instrument={upgradesSection} details={sharingSection}>
+          {upgradesSection}
+          <div className="border-t border-[var(--border-default)]" />
+          {sharingSection}
+        </InstrumentPresentation>
       </div>
     </WidgetShell>
   );

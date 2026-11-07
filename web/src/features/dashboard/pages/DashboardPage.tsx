@@ -41,6 +41,7 @@ import {
 import { cn } from '@/lib/cn';
 import { neonColorMap, typography } from '@/lib/tokens';
 import { DashboardGrid } from '../components/DashboardGrid';
+import { useWidgetDesignPack } from '@/hooks/useWidgetDesignPack';
 import { WidgetPicker } from '../components/WidgetPicker';
 import { WidgetSettingsModal } from '../components/WidgetSettingsModal';
 import { LayoutSwitcher } from '../components/LayoutSwitcher';
@@ -229,6 +230,7 @@ function DashboardMoreMenu({
 }
 
 export default function DashboardPage() {
+  const { packId } = useWidgetDesignPack();
   const { t } = useTranslation('dashboard');
   usePageTitle(t("dashboard.title", 'Fleet operations'));
   const queryClient = useQueryClient();
@@ -711,6 +713,7 @@ export default function DashboardPage() {
 
               <div data-tour="dashboard-grid">
                 <DashboardGrid
+                  requestedPackId={packId}
                   dashboard={activeDashboard}
                   editMode={editMode}
                   onLayoutChange={updateLayouts}
@@ -818,6 +821,7 @@ export default function DashboardPage() {
           style={kioskBackgroundStyle(kioskConfig.backgroundOpacity ?? 1)}
         >
           <DashboardGrid
+            requestedPackId={packId}
             dashboard={activeDashboard}
             editMode={false}
             onLayoutChange={() => {}}

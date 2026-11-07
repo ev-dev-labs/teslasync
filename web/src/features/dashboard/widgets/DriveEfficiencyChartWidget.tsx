@@ -8,10 +8,13 @@ import { useDashboardDriveHistory } from '@/api/hooks/useDriving';
 import { useDataState } from '@/hooks/useDataState';
 import { convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
+import { Caption, Text } from '@/components/ui';
 
 import { getEnergyIntensityWhPerKm } from '@/lib/drivesAggregation';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
 import { WidgetBigNumber, WidgetChartSummary } from './shared';
 import type { WidgetProps } from './types';
 import type { Drive } from '@/api/types';
@@ -86,6 +89,7 @@ export function buildDailyEfficiency(
 export default function DriveEfficiencyChartWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const packId = usePackPresentation();
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
@@ -141,6 +145,15 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size, config }: 
 
   // Series colour follows the active theme.
   const palette = useThemeChartPalette();
+  const averageLabel = config?.timeRange && config.timeRange !== '30d'
+    ? t('widget.driveEfficiencyChart.selectedRangeAverage', 'Selected-range average')
+    : t('widget.driveEfficiencyChart.windowAverage', '30-day average');
+  const latest = displayData[displayData.length - 1];
+  const first = displayData[0];
+  const legend = [
+    { label: t('widget.driveEfficiencyChart.daily', 'Daily'), color: palette.series[0] },
+    ...(hasRollingAverage ? [{ label: t('widget.driveEfficiencyChart.rolling', '7-day avg'), color: ROLLING_AVG_COLOR }] : []),
+  ];
 
   const chartEl = (
     <EmbeddedChart
@@ -198,6 +211,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size, config }: 
               {...AREA_DEFAULTS}
               dataKey="efficiency"
               stroke={palette.series[0]}
+              strokeWidth={packId === 'v5' || packId === 'v6' ? 3 : AREA_DEFAULTS.strokeWidth}
               fill="url(#efficiency-grad)"
               fillOpacity={0.08}
               dot={{ r: 2, fill: palette.series[0], strokeWidth: 0 }}
@@ -233,6 +247,54 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size, config }: 
       isError={isError}
       onRefresh={() => refetch()}
     >
+      <InstrumentPresentation
+        family="line"
+        compact={isCompact}
+        icon={<TrendingUp />}
+        headline={(
+          <WidgetBigNumber
+            value={overallAvg != null ? fmtNumber(overallAvg, 0) : null}
+            unit={efficiencyUnit}
+            subtitle={!isCompact ? averageLabel : undefined}
+            align={isCompact ? 'center' : 'start'}
+            animated={false}
+          />
+        )}
+        context={!isCompact && (
+          <Caption>
+            {t('dashboardWidgets.driving.driveEfficiencyChart.consumptionHint', 'Lower consumption is generally better.')}
+          </Caption>
+        )}
+        instrument={(!isCompact || displayData.length === 0) && (
+          <div className={!isCompact && displayData.length > 0 ? 'h-56 min-h-0 min-w-0' : undefined}>
+            <WidgetChartSummary
+              stats={[]}
+              chart={displayData.length > 0 ? chartEl : null}
+              compact={isCompact}
+              isEmpty={displayData.length === 0}
+              emptyMessage={t('widget.driveEfficiencyChart.empty', 'No efficiency data yet')}
+              emptyIcon={<TrendingUp className="h-5 w-5" />}
+              legend={legend}
+            />
+          </div>
+        )}
+        details={!isCompact && (
+          <dl className="flex min-w-0 flex-wrap justify-between gap-3">
+            <div className="min-w-0">
+              <Caption as="dt">{t('dashboardWidgets.driving.driveEfficiencyChart.latest', 'Latest')}</Caption>
+              <Text as="dd" variant="bodySm">
+                {latest ? `${fmtNumber(latest.efficiency, 0)} ${efficiencyUnit}` : '—'}
+              </Text>
+            </div>
+            <div className="min-w-0">
+              <Caption as="dt">{t('dashboardWidgets.driving.driveEfficiencyChart.measuredWindow', 'Measured window')}</Caption>
+              <Text as="dd" variant="bodySm">
+                {first && latest ? `${first.label} – ${latest.label}` : '—'}
+              </Text>
+            </div>
+          </dl>
+        )}
+      >
       {displayData.length === 0 ? (
         <WidgetChartSummary
           chart={null}
@@ -249,9 +311,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size, config }: 
             <WidgetBigNumber
               value={overallAvg != null ? fmtNumber(overallAvg, 0) : null}
               unit={efficiencyUnit}
-              subtitle={config?.timeRange && config.timeRange !== '30d'
-                ? t('widget.driveEfficiencyChart.selectedRangeAverage', 'Selected-range average')
-                : t('widget.driveEfficiencyChart.windowAverage', '30-day average')}
+              subtitle={averageLabel}
               animated={false}
             />
             </div>
@@ -268,15 +328,13 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size, config }: 
             <WidgetChartSummary
               stats={[]}
               chart={chartEl}
-              legend={[
-                { label: t('widget.driveEfficiencyChart.daily', 'Daily'), color: palette.series[0] },
-                ...(hasRollingAverage ? [{ label: t('widget.driveEfficiencyChart.rolling', '7-day avg'), color: ROLLING_AVG_COLOR }] : []),
-              ]}
+              legend={legend}
             />
             </div>
           )}
         </div>
       )}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

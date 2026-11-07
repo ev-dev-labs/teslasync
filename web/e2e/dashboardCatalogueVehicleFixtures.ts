@@ -103,6 +103,7 @@ export async function installCatalogueVehicleSources(page: Page, mocks: MockApiC
       upgrades: [{ name: 'Acceleration Boost', price: 2000, description: 'Performance upgrade', eligible: true }],
     }),
     '/vehicles/7/warranty': envelope({
+      warranty_start_date: '2024-01-01',
       warranty_expiry_date: '2028-12-31', basic: { expiry_date: '2028-12-31' },
       battery_drive_unit: { expiry_date: '2032-12-31' },
     }),
@@ -120,6 +121,9 @@ export async function installCatalogueVehicleSources(page: Page, mocks: MockApiC
     '/maintenance': [{
       id: 'rotation', name: 'Review tire rotation', description: 'Rotate tires',
       intervalKm: 10_000, intervalMonths: 6, category: 'tires', estimatedCostUsd: 60,
+    }, {
+      id: 'cabin-filter', name: 'Review cabin filter', description: 'Replace cabin filter',
+      intervalKm: 20_000, intervalMonths: 18, category: 'climate', estimatedCostUsd: 45,
     }] satisfies MaintenanceItem[],
     '/maintenance/records': [{
       itemId: 'rotation', date: earlier, odometerKm: 30_000, notes: 'Rotation completed',

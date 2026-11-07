@@ -41,6 +41,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '@/components/feedback';
 import type { ReactNode } from 'react';
 
+vi.mock('@/hooks/useWidgetDesignPack', () => ({ useWidgetDesignPack: () => ({ packId: 'classic' }) }));
+
 // ── Hoisted, per-test controllable state ──────────────────────────────
 // `layout`/`kiosk` feed the stubbed dashboard hooks; the loose scalars feed
 // the data hooks + theme so individual tests can flip a single facet.

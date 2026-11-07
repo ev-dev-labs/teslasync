@@ -118,4 +118,17 @@ export const BATTERY_WIDGETS: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('../BatteryHealthAnalyticsWidget')),
   },
+  {
+    id: 'new-high-voltage',
+    name: 'High Voltage',
+    description: 'Observed pack voltage, current and high-voltage system signals',
+    nameKey: 'widgets.catalog.new-high-voltage.name',
+    descriptionKey: 'widgets.catalog.new-high-voltage.description',
+    icon: Cpu,
+    category: 'battery',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../HighVoltageWidget')),
+  },
 ];

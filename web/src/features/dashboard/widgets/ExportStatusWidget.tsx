@@ -17,6 +17,8 @@ import { combineDataStates } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
+import TimelinePresentation from './designPacks/TimelinePresentation';
+import { useTimelineStyles } from './designPacks/useTimelineStyles';
 
 // ── Normalised job shape used within this widget ─────────────────────
 
@@ -179,6 +181,7 @@ function StandardView({
   maxItems: number;
   t: (key: string, fallback: string) => string;
 }) {
+  const timeline = useTimelineStyles();
   const { formatDateTime } = useDateFormat();
   useNumberFormatting();
 
@@ -195,9 +198,10 @@ function StandardView({
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
       <div
+        data-timeline-appearance={timeline?.appearance}
         role="list"
         aria-label={t('widget.eventFeed.label', 'Event feed')}
-        className="divide-y divide-[var(--border-subtle)]"
+        className={cn('divide-y divide-[var(--border-subtle)]', timeline?.feed)}
       >
         {jobs.slice(0, maxItems).map(({ job, status }) => {
           const cfg = STATUS_BADGE[status];
@@ -222,7 +226,7 @@ function StandardView({
             <div
               role="listitem"
               key={job.id}
-              className="flex min-w-0 items-start justify-between gap-3 py-2.5 first:pt-0"
+              className={cn('flex min-w-0 items-start justify-between gap-3 py-2.5 first:pt-0', timeline?.row)}
             >
               <div className="min-w-0 flex-1">
                 <Text variant="bodySm" className="block min-w-0 whitespace-normal [overflow-wrap:anywhere]">
@@ -341,7 +345,9 @@ export default function ExportStatusWidget({ size }: WidgetProps) {
     >
       {isCompact ? (
         sortedJobs.length > 0 ? (
-          <CompactView activeCount={activeCount} hasRunning={hasRunning} hasUnknown={hasUnknown} t={t} />
+          <TimelinePresentation compact>
+            <CompactView activeCount={activeCount} hasRunning={hasRunning} hasUnknown={hasUnknown} t={t} />
+          </TimelinePresentation>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Download className="h-5 w-5" />}

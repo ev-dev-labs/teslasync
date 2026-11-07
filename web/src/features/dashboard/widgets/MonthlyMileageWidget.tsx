@@ -11,9 +11,13 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { zonedDateParts } from '@/lib/dateFormat';
 import { formatMonthName } from '@/lib/dateConvert';
 import { EmptyState } from '@/components/feedback';
+import { Caption, Text } from '@/components/ui';
 
-import { WidgetBigNumber, WidgetChartSummary } from './shared';
+import { WidgetBigNumber, WidgetChartSummary, WidgetStatGrid } from './shared';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
+import type { PackId } from './designPacks/types';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -24,6 +28,17 @@ interface BarDatum {
   distance: number | null;
   isCurrent: boolean;
 }
+
+const barRadii: Record<PackId, [number, number, number, number]> = {
+  classic: [4, 4, 0, 0],
+  v1: [7, 7, 3, 3],
+  v2: [8, 8, 4, 4],
+  v3: [6, 6, 2, 2],
+  v4: [7, 7, 3, 3],
+  v5: [4, 4, 0, 0],
+  v6: [16, 16, 5, 5],
+  v7: [2, 2, 0, 0],
+};
 
 /** Format "2026-04" → "Apr". Non-'YYYY-MM' or out-of-range input is returned unchanged. */
 export function shortMonth(iso: string): string {
@@ -50,6 +65,7 @@ export function currentMonthKey(timezone?: string): string {
 export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const packId = usePackPresentation();
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
@@ -91,7 +107,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
       distance: knownNumber(m.total_km) == null ? null : toDistanceDisplay(m.total_km * 1000),
       isCurrent: (m.year_month ?? '') === curMonth,
     }));
-  }, [data, toDistanceDisplay, curMonth]);
+  }, [data, toDistanceDisplay, curMonth, locale, tz]);
 
   const totalDistance = useMemo(
     () => chartData.length > 0 && chartData.every(d => d.distance != null)
@@ -138,6 +154,24 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
   }, [curMonth, locale, tz]);
 
   const dataState = data != null || isLoading || isError || error ? trust : undefined;
+  const headline = (
+    <WidgetBigNumber
+      size="primary"
+      value={currentMonthDistance == null ? null : fmtInt(currentMonthDistance)}
+      unit={distanceUnit}
+      subtitle={currentMonthLabel == null
+        ? t('widget.monthlyMileage.thisMonth', 'This month')
+        : t('widget.monthlyMileage.monthSoFar', '{{month}} so far', { month: currentMonthLabel })}
+      animated={false}
+    />
+  );
+  const empty = (
+    <EmptyState
+      variant="informational"
+      icon={<BarChart3 className="h-5 w-5" />}
+      message={t('widget.monthlyMileage.noData', 'No mileage data')}
+    />
+  );
 
   // ── Compact (1-col): summary stats only ──
   if (isCompact) {
@@ -152,27 +186,74 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
         isError={isError}
         onRefresh={handleRefresh}
       >
-        {hasData ? (
-          <WidgetBigNumber
-            value={currentMonthDistance == null ? null : fmtInt(currentMonthDistance)}
-            unit={distanceUnit}
-            subtitle={currentMonthLabel == null
-              ? t('widget.monthlyMileage.thisMonth', 'This month')
-              : t('widget.monthlyMileage.monthSoFar', '{{month}} so far', { month: currentMonthLabel })}
-          />
-        ) : (
-          <EmptyState
-            variant="informational"
-            icon={<BarChart3 className="h-5 w-5" />}
-            message={t('widget.monthlyMileage.noData', 'No mileage data')}
-          />
-        )}
+        <InstrumentPresentation
+          family="bars"
+          compact
+          headline={hasData ? headline : empty}
+          icon={<BarChart3 />}
+        >
+          {hasData ? headline : empty}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
 
   // ── Standard (2×4+): stat header + bar chart ──
   const tick = isWide ? axisTick : axisTickSm;
+  const renderMileageChart = (radius = barRadii.classic) => (
+    <EmbeddedChart
+      title={t('widget.monthlyMileage.title', 'Monthly mileage')}
+      ariaLabel={t('widget.monthlyMileage.chartAria', 'Distance driven by month')}
+      data={chartTableData}
+      dataColumns={[
+        { key: 'month', label: t('widget.monthlyMileage.month', 'Month') },
+        {
+          key: 'distance',
+          label: `${t('widget.monthlyMileage.distance', 'Distance')} (${distanceUnit})`,
+        },
+      ]}
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+          {chartGrid}
+          <XAxis
+            dataKey="month"
+            tick={tick}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            tick={tick}
+            tickLine={false}
+            axisLine={false}
+            width={axisWidth}
+            tickFormatter={(v: number) => fmtNumber(v)}
+          />
+          <Tooltip
+            content={<ChartTooltip />}
+            formatter={(value: number) => [
+              `${fmtNumber(value)} ${distanceUnit}`,
+              t('widget.monthlyMileage.distance', 'Distance'),
+            ]}
+            cursor={{ fill: chartTokens.gridStroke }}
+          />
+          <Bar
+            dataKey="distance"
+            radius={radius}
+            maxBarSize={32}
+            name={t('widget.monthlyMileage.distance', 'Distance')}
+          >
+            {chartData.map((entry, idx) => (
+              <Cell
+                key={`bar-${idx}`}
+                fill={entry.isCurrent ? chartTokens.series[5] : chartTokens.axisStroke}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </EmbeddedChart>
+  );
 
   return (
     <WidgetShell
@@ -186,91 +267,54 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <WidgetChartSummary
-        isEmpty={!hasData}
-        emptyMessage={t('widget.monthlyMileage.noData', 'No mileage data')}
-        emptyIcon={<BarChart3 className="h-5 w-5" />}
-        stats={[]}
-        chart={
-          <div className="flex h-full min-w-0 flex-col">
-            <div className="mb-2 flex min-w-0 items-end justify-between gap-3">
-              <WidgetBigNumber
-                size="primary"
-                value={currentMonthDistance == null ? null : fmtInt(currentMonthDistance)}
-                unit={distanceUnit}
-                subtitle={currentMonthLabel == null
-                  ? t('widget.monthlyMileage.thisMonth', 'This month')
-                  : t('widget.monthlyMileage.monthSoFar', '{{month}} so far', { month: currentMonthLabel })}
-                animated={false}
-              />
-              <span className="shrink-0 pb-1 text-sm text-[var(--text-muted)] tabular-nums">
-                {averageDistance == null
-                  ? '—'
-                  : t('widget.monthlyMileage.average12m', '12-mo avg {{value}}', {
-                      value: `${fmtInt(averageDistance)} ${distanceUnit}`,
-                    })}
-              </span>
-            </div>
-            <div className="min-h-0 flex-1">
-          <EmbeddedChart
-            title={t('widget.monthlyMileage.title', 'Monthly mileage')}
-            ariaLabel={t(
-              'widget.monthlyMileage.chartAria',
-              'Distance driven by month',
-            )}
-            data={chartTableData}
-            dataColumns={[
-              { key: 'month', label: t('widget.monthlyMileage.month', 'Month') },
+      <InstrumentPresentation
+        family="bars"
+        headline={headline}
+        icon={<BarChart3 />}
+        instrument={hasData ? <div className="h-48 min-w-0 @lg:h-56">{renderMileageChart(barRadii[packId])}</div> : empty}
+        details={
+          <div className="space-y-2">
+            <WidgetStatGrid cols={2} stats={[
               {
-                key: 'distance',
-                label: `${t('widget.monthlyMileage.distance', 'Distance')} (${distanceUnit})`,
+                label: t('dashboardWidgets.analytics.monthlyMileage.averageLabel', '12-month average'),
+                value: averageDistance == null ? null : fmtInt(averageDistance),
+                unit: distanceUnit,
               },
-            ]}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
-              {chartGrid}
-              <XAxis
-                dataKey="month"
-                tick={tick}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tick={tick}
-                tickLine={false}
-                axisLine={false}
-                width={axisWidth}
-                tickFormatter={(v: number) => fmtNumber(v)}
-              />
-              <Tooltip
-                content={<ChartTooltip />}
-                formatter={(value: number) => [
-                  `${fmtNumber(value)} ${distanceUnit}`,
-                  t('widget.monthlyMileage.distance', 'Distance'),
-                ]}
-                cursor={{ fill: chartTokens.gridStroke }}
-              />
-              <Bar
-                dataKey="distance"
-                radius={[4, 4, 0, 0]}
-                maxBarSize={32}
-                name={t('widget.monthlyMileage.distance', 'Distance')}
-              >
-                {chartData.map((entry, idx) => (
-                  <Cell
-                    key={`bar-${idx}`}
-                    fill={entry.isCurrent ? chartTokens.series[5] : chartTokens.axisStroke}
-                  />
-                ))}
-              </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </EmbeddedChart>
-            </div>
+              {
+                label: t('dashboardWidgets.analytics.monthlyMileage.window', 'Window'),
+                value: t('dashboardWidgets.analytics.monthlyMileage.monthToDate', 'Month to date'),
+              },
+            ]} />
+            <Caption as="p">
+              {t('dashboardWidgets.analytics.monthlyMileage.availableDistances', 'Only available distances are plotted; missing readings remain gaps.')}
+            </Caption>
           </div>
         }
-      />
+      >
+        <WidgetChartSummary
+          isEmpty={!hasData}
+          emptyMessage={t('widget.monthlyMileage.noData', 'No mileage data')}
+          emptyIcon={<BarChart3 className="h-5 w-5" />}
+          stats={[]}
+          chart={
+            <div className="flex h-full min-w-0 flex-col">
+              <div className="mb-2 flex min-w-0 items-end justify-between gap-3">
+                {headline}
+                <Text size="sm" color="muted" className="shrink-0 pb-1 tabular-nums">
+                  {averageDistance == null
+                    ? '—'
+                    : t('widget.monthlyMileage.average12m', '12-mo avg {{value}}', {
+                        value: `${fmtInt(averageDistance)} ${distanceUnit}`,
+                      })}
+                </Text>
+              </div>
+              <div className="min-h-0 flex-1">
+                {renderMileageChart()}
+              </div>
+            </div>
+          }
+        />
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

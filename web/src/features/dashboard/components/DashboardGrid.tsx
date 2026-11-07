@@ -12,6 +12,8 @@ import { Button as UiButton, GlassPanel, Modal, SectionTitle } from '@/component
 import { EmptyState, Skeleton, SectionErrorBoundary } from '@/components/feedback';
 import { getWidgetDef } from '../widgets/registry';
 import { WidgetHeaderContext } from '../widgets/WidgetHeaderContext';
+import { PackBoundary, usePackPresentation } from '../widgets/designPacks/PackBoundary';
+import { resolveAvailablePackId } from '../widgets/designPacks/manifest';
 import { kioskPanelStyle } from '../lib/kioskAppearance';
 import { arrangeOrderedWidget, normalizeDashboard, orderedLayouts, packOrderedWidgets, widgetHeightBounds } from '../lib/orderedLayout';
 import { useWidgetContentHeights } from '../hooks/useWidgetContentHeights';
@@ -35,6 +37,8 @@ import {
 /* ─── Types ─── */
 interface DashboardGridProps {
   dashboard: SavedDashboard;
+  /** Viewer-level presentation; omitted when an ancestor already supplies it. */
+  requestedPackId?: unknown;
   editMode: boolean;
   onLayoutChange: (layouts: RGLLayouts, breakpoint?: keyof typeof GRID_COLS, widgets?: WidgetInstance[]) => void;
   onRemoveWidget: (instanceId: string) => void;
@@ -72,6 +76,7 @@ interface FullscreenOverlayProps {
   onClose: () => void;
   getWidgetSize: (id: string) => { cols: number; rows: number };
   motionPaused: boolean;
+  packId: string;
 }
 
 function FullscreenOverlay({
@@ -81,6 +86,7 @@ function FullscreenOverlay({
   onClose,
   getWidgetSize,
   motionPaused,
+  packId,
 }: FullscreenOverlayProps) {
   const Component = def.component;
   const size = getWidgetSize(widget.id);
@@ -94,7 +100,7 @@ function FullscreenOverlay({
           <Minimize2 className="h-4 w-4 mr-1" /> {t('dashboard.grid.exitFullscreen', 'Exit fullscreen')}
         </UiButton>
       </div>
-      <GlassPanel className="dashboard-widget-panel dashboard-canvas min-h-0 flex-1 overflow-hidden" data-motion-paused={motionPaused}>
+      <GlassPanel className="dashboard-widget-panel dashboard-canvas min-h-0 flex-1 overflow-hidden" data-motion-paused={motionPaused} data-widget-pack={packId}>
         <Suspense fallback={<Skeleton className="h-full" />}>
           <WidgetHeaderContext.Provider value={{ showTitle: widget.config?.showTitle, fallbackTitle: def.name }}>
             <Component
@@ -112,6 +118,7 @@ function FullscreenOverlay({
 /* ─── Main Grid ─── */
 export const DashboardGrid = memo(function DashboardGrid({
   dashboard,
+  requestedPackId,
   editMode,
   onLayoutChange,
   onRemoveWidget,
@@ -127,6 +134,8 @@ export const DashboardGrid = memo(function DashboardGrid({
   getDraggedWidgetId,
 }: DashboardGridProps) {
   const { t } = useTranslation();
+  const inheritedPackId = usePackPresentation();
+  const packId = resolveAvailablePackId(requestedPackId === undefined ? inheritedPackId : requestedPackId);
   const widgets = useMemo(() => normalizeDashboard(dashboard).widgets, [dashboard]);
   const { containerRef, width } = useContainerWidth({
     initialWidth: typeof window !== 'undefined' ? window.innerWidth : 1200,
@@ -492,12 +501,13 @@ export const DashboardGrid = memo(function DashboardGrid({
   ]);
 
   return (
-    <>
+    <PackBoundary requestedPackId={packId}>
       <div
         ref={containerRef as React.RefObject<HTMLDivElement>}
         className={cn('dashboard-canvas relative', editMode && 'edit-mode', isDragging && 'dragging-active')}
         data-motion-paused={motionPaused}
         data-grid-columns={GRID_COLS[activeBreakpoint]}
+        data-widget-pack={packId}
       >
       {/* Edit mode grid dot pattern — only meaningful for the absolute-
           positioned RGL path; on the mobile stack widgets flow naturally. */}
@@ -564,8 +574,9 @@ export const DashboardGrid = memo(function DashboardGrid({
           onClose={() => setFullscreenWidget(null)}
           getWidgetSize={getWidgetSizeLive}
           motionPaused={motionPaused}
+          packId={packId}
         />
       )}
-    </>
+    </PackBoundary>
   );
 });

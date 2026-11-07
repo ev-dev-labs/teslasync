@@ -20,6 +20,8 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import type { StatMetric } from '@/components/data-display';
 import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { neonColorMap } from '@/lib/tokens';
+import TimelinePresentation from './designPacks/TimelinePresentation';
+import { useTimelineStyles } from './designPacks/useTimelineStyles';
 
 const PRIORITY_IMPACT: Record<string, 'high' | 'medium' | 'low'> = {
   high: 'high',
@@ -28,6 +30,7 @@ const PRIORITY_IMPACT: Record<string, 'high' | 'medium' | 'low'> = {
 };
 
 export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps) {
+  const timeline = useTimelineStyles();
   const { fmtNumber } = useNumberFormatting();
   const { formatCurrency } = useFormatting();
   const { t } = useTranslation('dashboard');
@@ -138,6 +141,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
   if (isCompact) {
     return (
       <WidgetShell {...shellProps}>
+        <TimelinePresentation compact>
         {!data ? (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Sparkles className="h-5 w-5" />}
@@ -155,6 +159,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
             } : undefined}
           />
         )}
+        </TimelinePresentation>
       </WidgetShell>
     );
   }
@@ -172,15 +177,17 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
           className="py-4"
         />
       ) : (
-        <div className="flex flex-col gap-3 h-full">
+        <div data-timeline-appearance={timeline?.appearance} className={cn('flex flex-col gap-3 h-full', timeline?.feed)}>
+          <div className={timeline?.row}>
           <DashboardSourceBrief metrics={summaryMetrics} state={sourceState}
             eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
             title={t('widget.chargingOptimizer.summaryTitle', 'Best window')}
             description={t('widget.chargingOptimizer.summaryDescription', 'Returned start-hour, target charge and monthly savings estimates. Exact window duration and end time are not supplied.')}
             scope={t('widget.chargingOptimizer.summaryScope', 'Vehicle {{id}} · returned optimizer analysis; exact source recording bounds and completeness are not supplied.', { id: vid ?? '—' })}
             testId="dashboard-charging-optimizer-brief" />
+          </div>
 
-          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <div className={cn('flex min-w-0 flex-wrap items-center justify-between gap-2', timeline?.row)}>
             <Caption className="min-w-0 [overflow-wrap:anywhere]">
               {t('widget.chargingOptimizer.peakUsage', 'Peak charging: {{pct}}%', { pct: peakPct == null ? '—' : fmtNumber(peakPct) })}
             </Caption>
@@ -195,7 +202,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
 
           {/* Wide mode: 24h timeline bar */}
           {isWide && (
-            <div className="flex flex-col gap-1">
+            <div className={cn('flex flex-col gap-1', timeline?.row)}>
               <Caption>
                 {t('widget.chargingOptimizer.rateTimeline', '24h rate timeline')}
               </Caption>
@@ -235,7 +242,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
           )}
 
           {/* Recommendations as tip cards */}
-          <div className="flex-1 min-h-0">
+          <div className={cn('flex-1 min-h-0', timeline?.row)}>
             <WidgetTipCards
               tips={tips}
               maxTips={isWide ? 5 : 3}

@@ -7,6 +7,7 @@ import fleetApiCopyChanges from './verified-fleet-api-copy.json'
 import notificationCopyChanges from './verified-notification-copy.json'
 import { readFleetCurrentSource } from './verified-fleet-source-contract'
 import { restoreVerifiedThemeSource } from './verified-theme-source-contract'
+import { catalogBeforeWidgetImplementation } from './verified-widget-implementation-contract'
 
 // These exact files passed the key/default/interpolation/count audit before generation.
 // Keep all historical assertions for producers outside this explicit checkpoint set.
@@ -109,7 +110,7 @@ const themePresetAdditions = {
 
 /** Assert exact new copy before projecting it out of unchanged historical fingerprints. */
 export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(catalog: T): T {
-  const previous = structuredClone(catalog)
+  const previous = catalogBeforeWidgetImplementation(catalog)
   const theme = previous.theme as Record<string, unknown>
   expect(theme.presets, 'theme.presets').toEqual(themePresetAdditions)
   delete theme.presets

@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
+import StatusPresentation from './designPacks/StatusPresentation';
+import StatStatusPresentation from './designPacks/StatStatusPresentation';
 
 const METERS_PER_KM = 1000;
 const METERS_PER_SECOND_PER_KMH = 3.6;
@@ -122,17 +124,27 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
     isError,
     onRefresh: () => { void refetch(); },
   };
+  const highlights = chips.length > 0 && (
+    <div className="flex flex-wrap gap-2" aria-label={t('widget.yearReview.highlights', 'Year highlights')}>
+      {chips.map((chip) => <Badge key={chip.label} variant="neutral" size="sm">
+        {chip.label}: {chip.value}
+      </Badge>)}
+    </div>
+  );
 
   if (isCompact) {
+    const headline = <WidgetBigNumber
+      value={displayDistance == null ? null : fmtNumber(displayDistance, 0)}
+      unit={distanceUnit}
+      subtitle={t('widget.yearReview.inYear', 'in {{year}}', { year: currentYear })}
+      align="center"
+    />;
     return (
       <WidgetShell {...shellProps} icon={<Calendar className="h-3.5 w-3.5 text-violet-400" />}>
         {data != null ? (
-          <WidgetBigNumber
-            value={displayDistance == null ? null : fmtNumber(displayDistance, 0)}
-            unit={distanceUnit}
-            subtitle={t('widget.yearReview.inYear', 'in {{year}}', { year: currentYear })}
-            align="center"
-          />
+          <StatusPresentation compact headline={headline} icon={<Calendar className="size-6" aria-hidden="true" />} details={null}>
+            {headline}
+          </StatusPresentation>
         ) : (
           <EmptyState
             variant="informational"
@@ -156,16 +168,9 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
           <Badge variant="neutral" size="sm" className="self-start tabular-nums">
             {t('widget.yearReview.calendarYear', '{{year}} so far', { year: currentYear })}
           </Badge>
-          <WidgetStatGrid stats={stats} cols={3} maxPerRow={3} />
-          {chips.length > 0 && (
-            <div className="flex flex-wrap gap-2" aria-label={t('widget.yearReview.highlights', 'Year highlights')}>
-              {chips.map((chip) => (
-                <Badge key={chip.label} variant="neutral" size="sm">
-                  {chip.label}: {chip.value}
-                </Badge>
-              ))}
-            </div>
-          )}
+          <StatStatusPresentation stats={stats} cols={3} maxPerRow={3} footer={highlights} icon={<Calendar className="size-6" aria-hidden="true" />}>
+            <WidgetStatGrid stats={stats} cols={3} maxPerRow={3} />{highlights}
+          </StatStatusPresentation>
         </section>
       ) : (
         <EmptyState

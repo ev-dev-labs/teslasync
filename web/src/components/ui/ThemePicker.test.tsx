@@ -296,7 +296,7 @@ describe('ThemePicker — mode search', () => {
 describe('ThemePicker — accent themes', () => {
   it('lists every non-custom accent and never the custom entry inside the grid', () => {
     renderPicker()
-    expect(screen.getByText('Accent Color')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Accent Color' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Neon Cyan' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tesla Red' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Matrix Green' })).toBeInTheDocument()
@@ -378,7 +378,7 @@ describe('ThemePicker — prop toggles', () => {
     expect(screen.queryByRole('searchbox')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Dark' })).toBeNull()
     // Accent section still renders.
-    expect(screen.getByText('Accent Color')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Accent Color' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Neon Cyan' })).toBeInTheDocument()
   })
 

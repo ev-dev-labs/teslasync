@@ -13,6 +13,9 @@ import type { SoftwareUpdate } from '@/types/vehicle-systems';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { COLOR, DATA_VISUAL_COLORS, CHART_NEUTRAL } from '@/lib/colors';
+import { cn } from '@/lib/cn';
+import TimelinePresentation from './designPacks/TimelinePresentation';
+import type { TimelineSlots } from './designPacks/families/Timeline.types';
 
 /** Narrow translate signature — the shared `t` is structurally compatible. */
 type TranslateFn = (key: string, fallback: string) => string;
@@ -92,6 +95,7 @@ function isInstalledStatus(status: string | null | undefined): boolean {
 function CompactView({ latest, t }: { latest: SoftwareUpdate; t: TranslateFn }) {
   const meta = updateStatusMeta(latest.status);
   return (
+    <TimelinePresentation compact>
     <div className="flex items-center justify-between gap-2 min-h-[44px]">
       <div className="flex items-center gap-2 min-w-0">
         <Download className="h-4 w-4 flex-shrink-0 text-theme-accent" aria-hidden="true" />
@@ -103,6 +107,7 @@ function CompactView({ latest, t }: { latest: SoftwareUpdate; t: TranslateFn }) 
           : statusLabel(t, meta)}
       </Badge>
     </div>
+    </TimelinePresentation>
   );
 }
 
@@ -167,54 +172,8 @@ export default function SoftwareUpdateHistoryWidget({ vehicleId, size }: WidgetP
     void refetch();
   }, [vidStr, vehiclesQuery.refetch, refetch]);
 
-  return (
-    <WidgetShell
-      title={t('widget.softwareUpdateHistory', 'Update history')}
-      icon={<Download className="h-3.5 w-3.5 text-theme-accent" aria-hidden="true" />}
-      loading={isLoading}
-      dataState={dataState}
-      updatedAt={vidStr ? dataUpdatedAt : vehiclesQuery.dataUpdatedAt}
-      isFetching={vidStr ? isFetching : vehiclesQuery.isFetching}
-      isStale={vidStr ? isStale : vehiclesQuery.isStale}
-      isError={vidStr ? isError : vehiclesQuery.isError}
-      onRefresh={handleRefresh}
-      footer={
-        sorted.length > 0 ? (
-          <div className="flex items-center justify-between gap-3">
-            <Text variant="caption">
-              {t('widget.updatesThisYear', '{{count}} updates this year', { count: updatesThisYear })}
-            </Text>
-            <Link
-              to="/software-updates"
-              className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-[var(--accent-primary)] hover:underline"
-            >
-              {t('widget.changelogs', 'Changelogs')}
-              <span aria-hidden="true">→</span>
-            </Link>
-          </div>
-        ) : undefined
-      }
-    >
-      {isCompact ? (
-        latest ? (
-          <CompactView latest={latest} t={t} />
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<Download className="h-5 w-5" aria-hidden="true" />}
-            message={t('widget.noUpdates', 'No update history')}
-            className="py-4"
-          />
-        )
-      ) : (
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          {sorted.length === 0 ? (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<Download className="h-5 w-5" aria-hidden="true" />}
-              message={t('widget.noUpdates', 'No update history')}
-              className="py-4"
-            />
-          ) : (
-          <div role="list" aria-label={t('widget.eventFeed.label', 'Event feed')}>
+  const renderHistory = (slots?: TimelineSlots) => (
+          <div role="list" aria-label={t('widget.eventFeed.label', 'Event feed')} className={slots?.feed}>
             {sorted.slice(0, 15).map((upd) => {
               const meta = updateStatusMeta(upd.status);
               const installed = isInstalledStatus(upd.status);
@@ -229,7 +188,7 @@ export default function SoftwareUpdateHistoryWidget({ vehicleId, size }: WidgetP
                 <div
                   role="listitem"
                   key={upd.id}
-                  className="flex min-h-8 gap-2.5 py-2"
+                  className={cn('flex min-h-8 gap-2.5 py-2', slots?.row)}
                 >
                   <span
                     aria-hidden="true"
@@ -256,6 +215,42 @@ export default function SoftwareUpdateHistoryWidget({ vehicleId, size }: WidgetP
               );
             })}
           </div>
+  );
+
+  return (
+    <WidgetShell
+      title={t('widget.softwareUpdateHistory', 'Update history')}
+      icon={<Download className="h-3.5 w-3.5 text-theme-accent" aria-hidden="true" />}
+      loading={isLoading}
+      dataState={dataState}
+      updatedAt={vidStr ? dataUpdatedAt : vehiclesQuery.dataUpdatedAt}
+      isFetching={vidStr ? isFetching : vehiclesQuery.isFetching}
+      isStale={vidStr ? isStale : vehiclesQuery.isStale}
+      isError={vidStr ? isError : vehiclesQuery.isError}
+      onRefresh={handleRefresh}
+      footer={sorted.length > 0 ? (
+        <div className="flex items-center justify-between gap-3">
+          <Text variant="caption">{t('widget.updatesThisYear', '{{count}} updates this year', { count: updatesThisYear })}</Text>
+          <Link to="/software-updates" className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-[var(--accent-primary)] hover:underline">
+            {t('widget.changelogs', 'Changelogs')}<span aria-hidden="true">→</span>
+          </Link>
+        </div>
+      ) : undefined}
+    >
+      {isCompact ? (
+        latest ? <CompactView latest={latest} t={t} /> : (
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+            icon={<Download className="h-5 w-5" aria-hidden="true" />}
+            message={t('widget.noUpdates', 'No update history')} className="py-4" />
+        )
+      ) : (
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {sorted.length === 0 ? (
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+              icon={<Download className="h-5 w-5" aria-hidden="true" />}
+              message={t('widget.noUpdates', 'No update history')} className="py-4" />
+          ) : (
+            <TimelinePresentation render={renderHistory}>{renderHistory()}</TimelinePresentation>
           )}
         </div>
       )}

@@ -27,13 +27,16 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup, within, waitFor } from '@testing-library/react';
 
+const translatedLabels = vi.hoisted(() => new Map<string, string>());
+
 // Interpolating passthrough i18n — returns the English default and substitutes
 // `{{var}}` placeholders from the options bag so announcements / counts read
 // naturally without booting the real i18n instance.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, defaultValue?: string, opts?: Record<string, unknown>) => {
-      let out = typeof defaultValue === 'string' ? defaultValue : _key;
+      let out = translatedLabels.get(_key)
+        ?? (typeof defaultValue === 'string' ? defaultValue : _key);
       if (opts) {
         for (const [k, v] of Object.entries(opts)) {
           out = out.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v));
@@ -81,6 +84,7 @@ function widgetCard(desc: string): HTMLElement {
 afterEach(() => {
   cleanup();
   localStorage.clear();
+  translatedLabels.clear();
 });
 
 describe('WidgetPicker', () => {
@@ -128,6 +132,42 @@ describe('WidgetPicker', () => {
     expect(onAddWidgets).toHaveBeenCalledWith(['battery-gauge']);
     // A plain click adds without dismissing the dock.
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'new-signal-explorer',
+    'new-arrival-energy',
+    'new-powershare',
+    'new-cabin-comfort',
+    'new-charge-readiness',
+    'new-driver-assist',
+    'new-signal-readiness',
+    'new-unit-context',
+    'new-tire-warnings',
+    'new-high-voltage',
+    'new-axle-thermal',
+  ])('offers %s without adding it until requested', (id) => {
+    const widget = WIDGET_REGISTRY.find(def => def.id === id);
+    expect(widget).toBeDefined();
+    const { onAddWidgets } = renderPicker();
+    expect(onAddWidgets).not.toHaveBeenCalled();
+    const card = screen.getByRole('button', { name: new RegExp(widget!.description) });
+    fireEvent.click(card);
+    expect(onAddWidgets).toHaveBeenCalledWith([id]);
+  });
+
+  it('uses localized concept metadata for search, recent cards and announcements', () => {
+    translatedLabels.set('widgets.catalog.new-axle-thermal.name', 'Temperaturas de ejes');
+    translatedLabels.set('widgets.catalog.new-axle-thermal.description', 'Temperaturas y par observados');
+    localStorage.setItem(RECENT_KEY, JSON.stringify(['new-axle-thermal']));
+    const { onAddWidgets } = renderPicker();
+    expect(screen.getByText('Recently added')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Temperaturas de ejes/ })).toHaveLength(2);
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'par observados' } });
+    fireEvent.click(screen.getByRole('button', { name: /Temperaturas de ejes/ }));
+    expect(onAddWidgets).toHaveBeenCalledWith(['new-axle-thermal']);
+    expect(screen.getByRole('status')).toHaveTextContent('Temperaturas de ejes added to dashboard');
   });
 
   it('disables an already-added widget, badges it, and ignores clicks on it', () => {

@@ -64,7 +64,8 @@ vi.mock('@/api/hooks/useVehicles', () => ({
 // WidgetFlowDiagram — a prop-recording stub. It records the derived nodes/arrows
 // (the real unit under test) and mirrors them into the DOM so both the structure
 // and the rendered copy are assertable, without the animated SVG scene.
-vi.mock('./shared', () => ({
+vi.mock('./shared', async importOriginal => ({
+  ...await importOriginal<typeof import('./shared')>(),
   WidgetFlowDiagram: (props: { nodes: FlowNode[]; arrows: FlowArrow[]; emptyMessage?: string }) => {
     flowSpy(props);
     return (

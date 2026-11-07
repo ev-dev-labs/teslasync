@@ -1644,6 +1644,13 @@
     "unavailable": "Not provided",
     "version": "Calculation version"
   },
+  "carbon": {
+    "source": {
+      "status": {
+        "paused": "Paused"
+      }
+    }
+  },
   "chargePlanner": {
     "aiAgent": {
       "badge": "Helix",
@@ -1678,6 +1685,15 @@
         "generateButton": "Generate diagnosis",
         "title": "Charging diagnosis"
       }
+    }
+  },
+  "chart": {
+    "a11y": {
+      "metricSelector": "{{title}} metric"
+    },
+    "col": {
+      "date": "Date",
+      "value": "Value"
     }
   },
   "checklist": {
@@ -1779,6 +1795,49 @@
       "title": "Narrate the charging-cost forecast"
     }
   },
+  "dashboard": {
+    "designPacks": {
+      "classic": {
+        "description": "Original widget presentation and familiar controls.",
+        "name": "Classic"
+      },
+      "v1": {
+        "description": "Instrument-led layouts with clear secondary readings.",
+        "name": "Studio"
+      },
+      "v2": {
+        "description": "Layered surfaces and generous spacing.",
+        "name": "Elevated"
+      },
+      "v3": {
+        "description": "Restrained layouts and quiet visual hierarchy.",
+        "name": "Precision"
+      },
+      "v4": {
+        "description": "Key information and useful actions first.",
+        "name": "Owner"
+      },
+      "v5": {
+        "description": "Clear pictograms and approachable status.",
+        "name": "Iconic"
+      },
+      "v6": {
+        "description": "Tonal surfaces and expressive shapes.",
+        "name": "Expressive"
+      },
+      "v7": {
+        "description": "Pixel pictograms and segmented readings.",
+        "name": "Pixel"
+      }
+    },
+    "fleetPosture": {
+      "scope": {
+        "failedHelp": "The live-state request failed. This is a fact about our pipeline, not about the vehicle.",
+        "noObservation": "No verified observation time for this vehicle",
+        "observed": "Last real observation {{age}}"
+      }
+    }
+  },
   "dataRepair": {
     "aiSuggestions": {
       "badge": "Helix",
@@ -1817,6 +1876,11 @@
       "summaryDays_one": "{{count}} day",
       "summaryDays_other": "{{count}} days",
       "trigger": "Date range"
+    }
+  },
+  "dayLog": {
+    "windowStates": {
+      "partial": "Partially open"
     }
   },
   "delta": {
@@ -2010,6 +2074,34 @@
         "label": "Fleet Telemetry"
       }
     }
+  },
+  "digitalTwin": {
+    "brief": {
+      "title": "Physical-state summary"
+    },
+    "chargePort": "Charge port",
+    "doorDriverFront": "Driver front",
+    "doorDriverRear": "Driver rear",
+    "doorPassengerFront": "Passenger front",
+    "doorPassengerRear": "Passenger rear",
+    "driverSeat": "Driver seat",
+    "driving": "Driving",
+    "empty": "Empty",
+    "frunk": "Frunk",
+    "hazards": "Hazards",
+    "headlights": "Headlights",
+    "occupied": "Occupied",
+    "sentryMode": "Sentry Mode",
+    "title": "Digital twin",
+    "trunk": "Trunk",
+    "turnBoth": "Both",
+    "turnLeft": "Left",
+    "turnRight": "Right",
+    "turnSignal": "Turn signal",
+    "windowFD": "Front driver",
+    "windowFP": "Front passenger",
+    "windowRD": "Rear driver",
+    "windowRP": "Rear passenger"
   },
   "draft": {
     "discardDraft": "Discard draft",
@@ -2272,6 +2364,9 @@
       "title": "Suggest a geofence for this location",
       "unnamed": "(unnamed)"
     }
+  },
+  "guard": {
+    "sentryActive": "Sentry mode active"
   },
   "helix": {
     "ariaLabel": "Helix",
@@ -2571,6 +2666,17 @@
     "noMetricValues": "No metric values are available yet.",
     "reviewAll": "Review all"
   },
+  "paint": {
+    "deepBlue": "Deep Blue Metallic",
+    "detected": "Auto-detected",
+    "label": "Paint",
+    "midnightSilver": "Midnight Silver Metallic",
+    "pearlWhite": "Pearl White Multi-Coat",
+    "pickerLabel": "Vehicle paint color",
+    "redMulticoat": "Red Multi-Coat",
+    "reset": "Reset to auto-detected",
+    "solidBlack": "Solid Black"
+  },
   "powerDashboards": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
@@ -2823,6 +2929,15 @@
     "resourceName": "Region",
     "subtitle": "Tesla account region and Fleet API endpoint",
     "title": "Region & API"
+  },
+  "replay": {
+    "elevation": {
+      "aria": "Elevation profile chart — no data available yet",
+      "gainLoss": "↑ {{gain}}m  ↓ {{loss}}m",
+      "label": "Elevation",
+      "noData": "No elevation data available",
+      "title": "Elevation profile"
+    }
   },
   "requiresAuth": {
     "title": "{{feature}} requires authentication mode"
@@ -3348,9 +3463,35 @@
     "title": "Tesla account",
     "tokenExpires": "Token expires"
   },
+  "teslaOnly": {
+    "door": "Door",
+    "window": "Window"
+  },
   "theme": {
     "accent": "Accent",
     "accentColor": "Accent color",
+    "accentPresets": {
+      "coral": "Coral",
+      "emerald-green": "Emerald",
+      "forest-green": "Forest",
+      "gold": "Gold",
+      "indigo": "Indigo",
+      "lavender": "Lavender",
+      "lime-green": "Lime",
+      "magenta": "Magenta",
+      "matrix-green": "Green",
+      "navy-blue": "Navy",
+      "neon-cyan": "Blue",
+      "ocean-teal": "Teal",
+      "rose-pink": "Pink",
+      "royal-purple": "Purple",
+      "sky-blue": "Sky",
+      "slate-gray": "Slate",
+      "solar-amber": "Amber",
+      "sunny-yellow": "Yellow",
+      "sunset-orange": "Orange",
+      "tesla-red": "Red"
+    },
     "browseModes": "Browse all {{count}} modes",
     "chartPalette": {
       "cbSafe": "Color-blind safe",
@@ -3379,28 +3520,6 @@
     "mode": "Mode",
     "moreOptions": "More appearance options",
     "noModes": "No display modes match your search.",
-    "presets": {
-      "coral": "Coral",
-      "emerald-green": "Emerald Green",
-      "forest-green": "Forest Green",
-      "gold": "Gold",
-      "indigo": "Indigo",
-      "lavender": "Lavender",
-      "lime-green": "Lime Green",
-      "magenta": "Magenta",
-      "matrix-green": "Matrix Green",
-      "navy-blue": "Navy Blue",
-      "neon-cyan": "Signal Blue",
-      "ocean-teal": "Ocean Teal",
-      "rose-pink": "Rose Pink",
-      "royal-purple": "Royal Purple",
-      "sky-blue": "Sky Blue",
-      "slate-gray": "Slate Gray",
-      "solar-amber": "Solar Amber",
-      "sunny-yellow": "Sunny Yellow",
-      "sunset-orange": "Sunset Orange",
-      "tesla-red": "Tesla Red"
-    },
     "saveFailed": "Could not save your theme to the server. Your current selection is still applied.",
     "searchModes": "Search display modes…",
     "showCoreModes": "Show essential modes",
@@ -3423,7 +3542,42 @@
       "relative": "Relative (2h ago)",
       "relativeHelp": "Best for recent activity feeds"
     },
-    "title": "Appearance"
+    "title": "Appearance",
+    "widgetDesignPacks": {
+      "active": "Active",
+      "activeNamed": "{{name}} active",
+      "battery": "Battery",
+      "close": "Close preview",
+      "commands": "Commands",
+      "history": "History",
+      "inertCommands": "Preview commands are disabled.",
+      "loading": "Loading preview...",
+      "preview": "Preview",
+      "previewError": "The preview could not load. Retry, or close the preview without changing your selection.",
+      "previewNamed": "Preview {{name}}",
+      "retry": "Retry preview",
+      "retryPreference": "Retry preference",
+      "sampleBattery": "Sample battery level",
+      "sampleClimate": "Climate",
+      "sampleFlash": "Flash lights",
+      "sampleHistory": "Sample battery history",
+      "sampleLimit": "Sample charge limit: 80%",
+      "sampleLocked": "Locked",
+      "sampleParked": "Parked",
+      "sampleUnlock": "Unlock",
+      "sampleVehicle": "Sample vehicle",
+      "saveError": "Your previous selection is unchanged. Check your server connection and browser storage, then retry.",
+      "saved": "{{name}} saved for this browser profile.",
+      "saving": "Saving...",
+      "scope": "Applies to dashboards in this browser profile on this server. Signed-in accounts have separate selections. Other appearance settings and saved layouts stay unchanged.",
+      "status": "Status",
+      "synthetic": "Synthetic examples only. Preview does not connect to a vehicle, change preferences or send commands.",
+      "title": "Widget design packs",
+      "use": "Use pack",
+      "useNamed": "Use {{name}} pack",
+      "vehicle": "Vehicle",
+      "verifying": "Verifying your browser preference..."
+    }
   },
   "timeMachine": {
     "ageFresh": "Fresh"
@@ -3704,6 +3858,29 @@
       "title": "Explain the recent vampire drain"
     }
   },
+  "vehicleHero": {
+    "action": {
+      "details": "Details"
+    },
+    "gauge": {
+      "battery": "Battery",
+      "inside": "Inside",
+      "outside": "Outside",
+      "range": "Range"
+    },
+    "locked": "Locked",
+    "noState": "Live telemetry unavailable",
+    "observationLimitation": "Telemetry stream observation does not verify individual reading timestamps or completeness.",
+    "photo": {
+      "alt": "{{name}} photo"
+    },
+    "stat": {
+      "power": "Power",
+      "sentry": "Sentry",
+      "status": "Status"
+    },
+    "unlocked": "Unlocked"
+  },
   "vehicles": {
     "aiPaintPreview": {
       "badge": "Helix",
@@ -3746,6 +3923,12 @@
     "inputLabel": "Your question for Helix",
     "placeholder": "e.g. how is my battery? Is the car locked? Leave empty for a summary.",
     "title": "Ask Helix about your watch face"
+  },
+  "widget": {
+    "motorPerformance": {
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
+    },
+    "verifiedFields": "{{count}} verified fields"
   },
   "workspaceContext": {
     "ranges": {

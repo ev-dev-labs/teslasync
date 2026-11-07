@@ -16,6 +16,7 @@ import { cn } from '@/lib/cn';
 import { buildFleetPosture, formatObservationAge, type VehiclePosture } from '../components/fleet-posture';
 import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 
 export default function FleetPostureWidget({ vehicleId }: WidgetProps) {
@@ -119,6 +120,36 @@ export default function FleetPostureWidget({ vehicleId }: WidgetProps) {
       ? { text: t('dashboard.fleetPosture.row.active', 'Active'), variant: 'info' as const }
       : undefined,
   }));
+  const verified = (
+    <div className="flex flex-wrap items-start justify-between gap-2">
+      <WidgetBigNumber value={totalsPending ? null : posture.verifiedCount}
+        unit={posture.total > 0 ? `/ ${posture.total}` : undefined}
+        label={t('dashboard.fleetPosture.metric.verified', 'Verified')} animated={false} />
+      <Badge variant={pill.variant} size="sm">{pill.text}</Badge>
+    </div>
+  );
+  const coverage = (
+    <div>
+      <div role="meter" aria-label={t('dashboard.fleetPosture.coverage', 'Coverage')}
+        aria-valuenow={totalsPending ? undefined : coveragePct} aria-valuemin={0} aria-valuemax={100}
+        aria-valuetext={totalsPending ? undefined : `${coveragePct}%`}
+        className="h-2 w-full min-w-0 overflow-hidden rounded-full bg-[var(--surface-2)]">
+        <div className="h-full rounded-full bg-[var(--semantic-success)] transition-all duration-slow motion-reduce:transition-none"
+          style={{ width: `${totalsPending ? 0 : coveragePct}%` }} />
+      </div>
+      <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
+        <span className="tabular-nums">
+          {t('dashboard.fleetPosture.coverageLabel', 'Coverage {{pct}}%', { pct: totalsPending ? '—' : coveragePct })}
+        </span>
+        <span className="min-w-0 truncate text-end">
+          {newestAge ? t('dashboard.fleetPosture.newestEvidence', 'Newest evidence {{age}}', { age: newestAge })
+            : t('dashboard.fleetPosture.metric.oldestNone', 'no verified observation')}
+        </span>
+      </div>
+    </div>
+  );
+  const rows = <WidgetDetailCard entries={rowEntries}
+    emptyMessage={t('dashboard.fleetPosture.emptyFleet', 'No vehicles registered yet. Vehicles will appear here once they are added to your fleet.')} />;
 
   return (
     <WidgetShell
@@ -164,49 +195,14 @@ export default function FleetPostureWidget({ vehicleId }: WidgetProps) {
             className="py-4"
           />
         ) : (
+          <InstrumentPresentation family="meter" headline={verified} instrument={coverage} details={rows}
+            reading={{ value: totalsPending ? null : coveragePct, max: 100, label: t('dashboard.fleetPosture.coverage', 'Coverage'), unit: '%' }}>
           <div className="flex min-w-0 flex-col gap-3">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <WidgetBigNumber
-                value={totalsPending ? null : posture.verifiedCount}
-                unit={posture.total > 0 ? `/ ${posture.total}` : undefined}
-                label={t('dashboard.fleetPosture.metric.verified', 'Verified')}
-                animated={false}
-              />
-              <Badge variant={pill.variant} size="sm">{pill.text}</Badge>
-            </div>
-
-            <div>
-              <div
-                role="meter"
-                aria-label={t('dashboard.fleetPosture.coverage', 'Coverage')}
-                aria-valuenow={totalsPending ? undefined : coveragePct}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuetext={totalsPending ? undefined : `${coveragePct}%`}
-                className="h-2 w-full min-w-0 overflow-hidden rounded-full bg-[var(--surface-2)]"
-              >
-                <div
-                  className="h-full rounded-full bg-[var(--semantic-success)] transition-all duration-slow motion-reduce:transition-none"
-                  style={{ width: `${totalsPending ? 0 : coveragePct}%` }}
-                />
-              </div>
-              <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
-                <span className="tabular-nums">
-                  {t('dashboard.fleetPosture.coverageLabel', 'Coverage {{pct}}%', { pct: totalsPending ? '—' : coveragePct })}
-                </span>
-                <span className="min-w-0 truncate text-end">
-                  {newestAge
-                    ? t('dashboard.fleetPosture.newestEvidence', 'Newest evidence {{age}}', { age: newestAge })
-                    : t('dashboard.fleetPosture.metric.oldestNone', 'no verified observation')}
-                </span>
-              </div>
-            </div>
-
-            <WidgetDetailCard
-              entries={rowEntries}
-              emptyMessage={t('dashboard.fleetPosture.emptyFleet', 'No vehicles registered yet. Vehicles will appear here once they are added to your fleet.')}
-            />
+            {verified}
+            {coverage}
+            {rows}
           </div>
+          </InstrumentPresentation>
         )}
       </section>
     </WidgetShell>

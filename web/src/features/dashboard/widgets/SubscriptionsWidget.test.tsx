@@ -268,7 +268,7 @@ describe('parseSubscriptions', () => {
     expect(matches).toHaveLength(1);
   });
 
-  it('ignores null/non-object entries and defaults a nameless item to "Unknown"', () => {
+  it('ignores null/non-object entries and keeps an undocumented item unknown', () => {
     const res = parseSubscriptions(
       { subscriptions: [null, 'nope', 42, {}] },
       tt,
@@ -276,7 +276,28 @@ describe('parseSubscriptions', () => {
 
     expect(res).toHaveLength(1);
     expect(res[0].name).toBe('Unknown');
-    expect(res[0].active).toBe(true);
+    expect(res[0].active).toBeNull();
+  });
+
+  it('does not infer an entitlement from configuration, an unrecognized status or an invalid expiry', () => {
+    const res = parseSubscriptions({
+      premium_connectivity: { configured: true },
+      full_self_driving: true,
+      full_self_driving_expiry_date: 'not-a-date',
+      subscriptions: [
+        { name: 'Pending service', status: 'pending' },
+        { name: 'Unnamed status' },
+        { name: 'Cancelled service', status: 'cancelled' },
+      ],
+    }, tt);
+
+    expect(res.map((sub) => [sub.name, sub.active])).toEqual([
+      ['Premium Connectivity', null],
+      ['Full Self-Driving', null],
+      ['Pending service', null],
+      ['Unnamed status', null],
+      ['Cancelled service', false],
+    ]);
   });
 });
 

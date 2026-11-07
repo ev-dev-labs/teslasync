@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, c
 import { useTeslaWCChargingHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
 import { knownNumber, sumKnown } from '@/api/dataState';
 import { Skeleton } from '@/components/feedback';
+import { Caption } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
@@ -15,6 +16,8 @@ import { chartTokens } from '@/lib/tokens';
 import { WidgetBigNumber, WidgetChartSummary } from './shared';
 import { WidgetShell } from './WidgetShell';
 import { ChargeConnector } from './instruments/ChargeInstruments';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -41,6 +44,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const { tz } = useDateFormat('user');
+  const packId = usePackPresentation();
 
   // Discover energy sites
   const {
@@ -154,6 +158,90 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
     title: t('widget.wallConnector.title', 'Wall connector'),
     icon: <Plug className="h-3.5 w-3.5 text-emerald-400" />,
   };
+  const packHeadline = hasData ? (
+    <WidgetBigNumber
+      value={todayEnergy == null ? null : fmt(todayEnergy)}
+      unit={todayEnergy == null ? undefined : unitPrefs.energy}
+      label={t('dashboardWidgets.battery.wallConnector.energyDeliveredToday', 'Energy delivered today')}
+      align={isCompact ? 'center' : 'start'}
+      animated={false}
+    />
+  ) : undefined;
+  const packDetails = (
+    <div className="flex min-w-0 flex-col gap-2">
+      <Caption>
+        {t('dashboardWidgets.battery.wallConnector.period', 'Period')}: {t('dashboardWidgets.battery.wallConnector.daily', 'Daily')}
+      </Caption>
+      <Caption>{t('dashboardWidgets.battery.wallConnector.energyNotPower', 'Energy delivered is not the same as current power.')}</Caption>
+    </div>
+  );
+  const emptySummary = (
+    <WidgetChartSummary
+      compact={isCompact}
+      isEmpty
+      emptyMessage={hasSites
+        ? t('widget.wallConnector.noData', 'No wall connector data')
+        : t('widget.wallConnector.noSite', 'No Tesla energy site linked')}
+      emptyIcon={<Plug className="h-5 w-5" />}
+      stats={[]}
+      chart={null}
+    />
+  );
+  const tick = isWide ? axisTick : axisTickSm;
+  const barRadius: [number, number, number, number] = packId === 'v6'
+    ? [16, 16, 5, 5]
+    : packId === 'v7' ? [2, 2, 0, 0]
+      : packId === 'v3' ? [6, 6, 2, 2] : [4, 4, 0, 0];
+  // Both presentations use the complete source plot, including unknown buckets.
+  const energyChart = (
+    <EmbeddedChart
+      className="h-full min-h-0"
+      viewportClassName="min-h-0 sm:min-h-0"
+      title={t('widget.wallConnector.title', 'Wall connector')}
+      ariaLabel={t(
+        'widget.wallConnector.chartLabel',
+        'Daily wall connector charging energy over the last 14 days',
+      )}
+      data={chartData}
+      dataColumns={[
+        { key: 'date', label: t('widget.wallConnector.date', 'Date') },
+        { key: 'energy_kwh', label: `${t('widget.wallConnector.energy', 'Energy')} (${unitPrefs.energy})` },
+      ]}
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+          {chartGrid}
+          <XAxis
+            dataKey="date"
+            tick={tick}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            tick={tick}
+            tickLine={false}
+            axisLine={false}
+            width={axisWidth}
+            tickFormatter={(v: number) => fmt(v)}
+          />
+          <Tooltip
+            content={<ChartTooltip />}
+            formatter={(value: number) => [
+              `${fmtNumber(value)} ${unitPrefs.energy}`,
+              t('widget.wallConnector.energy', 'Energy'),
+            ]}
+            cursor={{ fill: chartTokens.gridStroke }}
+          />
+          <Bar
+            dataKey="energy_kwh"
+            fill={chartTokens.series[1]}
+            radius={barRadius}
+            name={t('widget.wallConnector.energy', 'Energy')}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    </EmbeddedChart>
+  );
 
   // No energy sites linked. Guard on `!sitesError` so a *failed* sites fetch
   // surfaces the shared error panel (below) rather than this misleading empty
@@ -170,19 +258,14 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
         isError={sitesIsError}
         onRefresh={() => refetchSites()}
       >
-        <WidgetChartSummary
-          compact={isCompact}
-          isEmpty
-          emptyMessage={t('widget.wallConnector.noSite', 'No Tesla energy site linked')}
-          emptyIcon={<Plug className="h-5 w-5" />}
-          stats={[]}
-          chart={null}
-        />
+        <InstrumentPresentation family="bars" compact={isCompact} icon={<Plug />} instrument={emptySummary}>
+          {emptySummary}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
 
-  // Compact (1-col): month total kWh as large number
+  // Compact (1-col): today's energy without a chart.
   if (isCompact) {
     return (
       <WidgetShell
@@ -196,32 +279,27 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
         isError={isError}
         onRefresh={handleRefresh}
       >
-        {hasData ? (
-          <div className="flex h-full min-w-0 items-center justify-center gap-3">
-          <WidgetBigNumber
-            value={todayEnergy == null ? null : fmt(todayEnergy)}
-            unit={todayEnergy == null ? undefined : unitPrefs.energy}
-            label={t('widget.wallConnector.today', 'Today')}
-            align="center"
-            animated={false}
-          />
-          <ChargeConnector />
-          </div>
-        ) : (
-          <WidgetChartSummary
-            compact
-            isEmpty
-            emptyMessage={t('widget.wallConnector.noData', 'No wall connector data')}
-            emptyIcon={<Plug className="h-5 w-5" />}
-            stats={[]}
-            chart={null}
-          />
-        )}
+        <InstrumentPresentation family="bars" compact headline={packHeadline}
+          icon={hasData ? <ChargeConnector /> : <Plug />}
+          instrument={hasData ? undefined : emptySummary} details={packDetails}>
+          {hasData ? (
+            <div className="flex h-full min-w-0 items-center justify-center gap-3">
+              <WidgetBigNumber
+                value={todayEnergy == null ? null : fmt(todayEnergy)}
+                unit={todayEnergy == null ? undefined : unitPrefs.energy}
+                label={t('widget.wallConnector.today', 'Today')}
+                align="center"
+                animated={false}
+              />
+              <ChargeConnector />
+            </div>
+          ) : (
+            emptySummary
+          )}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
-
-  const tick = isWide ? axisTick : axisTickSm;
 
   return (
     <WidgetShell
@@ -235,75 +313,34 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <WidgetChartSummary
-        isEmpty={!hasData}
-        emptyMessage={t('widget.wallConnector.noData', 'No wall connector data')}
-        emptyIcon={<Plug className="h-5 w-5" />}
-        stats={[]}
-        chart={
-          <div className="flex h-full min-h-0 flex-col gap-2">
-            <div className="flex shrink-0 items-center justify-between gap-3">
-            <WidgetBigNumber
-              value={todayEnergy == null ? null : fmt(todayEnergy)}
-              unit={todayEnergy == null ? undefined : unitPrefs.energy}
-              label={t('widget.wallConnector.today', 'Today')}
-              align="start"
-              animated={false}
-            />
-            <ChargeConnector />
+      <InstrumentPresentation family="bars" headline={packHeadline}
+        icon={hasData ? <ChargeConnector /> : <Plug />}
+        instrument={hasData ? <div className="h-40 min-h-0 w-full @md:h-48">{energyChart}</div> : emptySummary}
+        details={packDetails}>
+        <WidgetChartSummary
+          isEmpty={!hasData}
+          emptyMessage={t('widget.wallConnector.noData', 'No wall connector data')}
+          emptyIcon={<Plug className="h-5 w-5" />}
+          stats={[]}
+          chart={
+            <div className="flex h-full min-h-0 flex-col gap-2">
+              <div className="flex shrink-0 items-center justify-between gap-3">
+                <WidgetBigNumber
+                  value={todayEnergy == null ? null : fmt(todayEnergy)}
+                  unit={todayEnergy == null ? undefined : unitPrefs.energy}
+                  label={t('widget.wallConnector.today', 'Today')}
+                  align="start"
+                  animated={false}
+                />
+                <ChargeConnector />
+              </div>
+              <div className="min-h-0 flex-1">
+                {energyChart}
+              </div>
             </div>
-            <div className="min-h-0 flex-1">
-            <EmbeddedChart
-            className="h-full min-h-0"
-            viewportClassName="min-h-0 sm:min-h-0"
-            title={t('widget.wallConnector.title', 'Wall connector')}
-            ariaLabel={t(
-              'widget.wallConnector.chartLabel',
-              'Daily wall connector charging energy over the last 14 days',
-            )}
-            data={chartData}
-            dataColumns={[
-              { key: 'date', label: t('widget.wallConnector.date', 'Date') },
-              { key: 'energy_kwh', label: `${t('widget.wallConnector.energy', 'Energy')} (${unitPrefs.energy})` },
-            ]}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
-                {chartGrid}
-                <XAxis
-                  dataKey="date"
-                  tick={tick}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  tick={tick}
-                  tickLine={false}
-                  axisLine={false}
-                  width={axisWidth}
-                  tickFormatter={(v: number) => fmt(v)}
-                />
-                <Tooltip
-                  content={<ChartTooltip />}
-                  formatter={(value: number) => [
-                    `${fmtNumber(value)} ${unitPrefs.energy}`,
-                    t('widget.wallConnector.energy', 'Energy'),
-                  ]}
-                  cursor={{ fill: chartTokens.gridStroke }}
-                />
-                <Bar
-                  dataKey="energy_kwh"
-                  fill={chartTokens.series[1]}
-                  radius={[4, 4, 0, 0]}
-                  name={t('widget.wallConnector.energy', 'Energy')}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </EmbeddedChart>
-            </div>
-          </div>
-        }
-      />
+          }
+        />
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

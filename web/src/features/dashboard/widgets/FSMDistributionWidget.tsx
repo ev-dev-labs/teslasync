@@ -2,13 +2,14 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitBranch } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, EmbeddedChart, type ChartDataRow } from '@/components/charts';
-import { Button, Caption, MetricValue, Text } from '@/components/ui';
+import { Caption, MetricValue, Subhead, Text } from '@/components/ui';
 import { SourceContent } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import { useFSMStats, useFSMTransitions } from '@/api/hooks/useFSM';
 import { useVehicles } from '@/api/hooks/useVehicles';
 
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
@@ -107,7 +108,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
 
   const statsQuery = useFSMStats(idStr);
   const transitionsQuery = useFSMTransitions(idStr, 'vehicle', 24, 1, 5);
-  const transitionsData = transitionsQuery.data?.data ?? [];
+  const transitionsData = Array.isArray(transitionsQuery.data?.data) ? transitionsQuery.data.data : [];
   const transitionState = useDataState(transitionsQuery);
   const {
     data: statsData,
@@ -124,9 +125,6 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
     typeof rawStats !== 'object' || Array.isArray(rawStats) ||
     Object.values(rawStats).some(value => typeof value !== 'number' || !Number.isFinite(value) || value < 0)
   );
-  const statsState = useDataState(statsQuery, { partial: invalidStats });
-  const vehiclesState = useDataState(vehiclesQuery);
-
   const isCompact = size.cols <= 1;
 
   const segments = useMemo(
@@ -135,6 +133,21 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
   );
 
   const hasData = segments.length > 0;
+  const statsState = useDataState(statsQuery, {
+    partial: invalidStats,
+    unavailable: statsData != null && !invalidStats && !hasData,
+  });
+  const vehiclesState = useDataState(vehiclesQuery);
+  const leading = segments[0];
+  const leadingPct = leading ? fmtNumber(leading.pct, 0) : null;
+  const reading = leading ? {
+    value: leading.pct,
+    max: 100,
+    label: t('widget.fsmDistribution.share', 'Share'),
+    unit: '%',
+    color: stateColor(leading.state),
+  } : undefined;
+  const context = <Caption>{t('dashboardWidgets.analytics.fsmDistribution.shareNote', 'Percentages are based on the returned states.')}</Caption>;
 
   // Keep the skeleton up while the default vehicle is still resolving from
   // useVehicles: the FSM queries are disabled for an empty id and would report
@@ -148,7 +161,8 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
       return;
     }
     void refetchStats();
-  }, [idStr, vehiclesQuery.refetch, refetchStats]);
+    if (!isCompact) void transitionsQuery.refetch();
+  }, [idStr, isCompact, vehiclesQuery.refetch, refetchStats, transitionsQuery.refetch]);
   const hasPayload = statsState.hasData || transitionState.hasData;
   const sourceError = statsState.fatalError;
   const combined = combineDataStates([statsState, transitionState]);
@@ -165,18 +179,39 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
   const state = resolvingVehicle ? vehiclesState : isCompact ? { ...statsState, retry: handleRefresh } : mergedState;
   const sourceTimes = [
     statsState.hasData ? statsUpdatedAt : 0,
+    !isCompact && transitionState.hasData ? transitionsQuery.dataUpdatedAt : 0,
   ].filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0);
   const updatedAt = resolvingVehicle
     ? vehiclesQuery.dataUpdatedAt
     : sourceTimes.length > 0 ? Math.min(...sourceTimes) : 0;
-  const isFetching = resolvingVehicle ? vehiclesQuery.isFetching : statsFetching;
-  const isStale = resolvingVehicle ? vehiclesQuery.isStale : statsStale;
-  const isError = resolvingVehicle ? vehiclesQuery.isError : statsIsError;
+  const isFetching = resolvingVehicle ? vehiclesQuery.isFetching : statsFetching || (!isCompact && transitionsQuery.isFetching);
+  const isStale = resolvingVehicle ? vehiclesQuery.isStale : statsStale || (!isCompact && transitionsQuery.isStale);
+  const isError = resolvingVehicle ? vehiclesQuery.isError : statsIsError || (!isCompact && transitionsQuery.isError);
 
   /* Compact view: state with the largest share of recorded time */
   if (isCompact) {
-    const currentState = segments[0]?.state ?? '—';
-    const currentMs = segments[0]?.value ?? 0;
+    const currentState = leading?.state ?? '—';
+    const compactBody = hasData ? (
+          <div className="flex flex-col items-center justify-center gap-2 h-full py-2">
+            <span
+              className="inline-block h-3 w-3 rounded-full"
+              style={{ backgroundColor: stateColor(currentState) }}
+            />
+            <MetricValue className="leading-none tabular-nums">{`${leadingPct}%`}</MetricValue>
+            <WidgetBigNumber
+              value={t(`widget.fsmDistribution.state.${currentState}`, currentState)}
+              subtitle={leading ? fmtDuration(leading.value, t) : '—'}
+              align="center"
+              size="secondary"
+            />
+          </div>
+        ) : (
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+            icon={<GitBranch className="h-5 w-5" />}
+            message={t('widget.fsmDistribution.noData', 'No state data')}
+            className="py-4"
+          />
+        );
 
     return (
       <WidgetShell
@@ -189,48 +224,16 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
         isError={isError}
         onRefresh={handleRefresh}
       >
-        {hasData ? (
-          <div className="flex flex-col items-center justify-center gap-2 h-full py-2">
-            <span
-              className="inline-block h-3 w-3 rounded-full"
-              style={{ backgroundColor: stateColor(currentState) }}
-            />
-            <MetricValue className="leading-none tabular-nums">{`${fmtNumber(segments[0]?.pct ?? 0, 0)}%`}</MetricValue>
-            <WidgetBigNumber
-              value={t(`widget.fsmDistribution.state.${currentState}`, currentState)}
-              subtitle={fmtDuration(currentMs, t)}
-              align="center"
-              size="secondary"
-            />
-          </div>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<GitBranch className="h-5 w-5" />}
-            message={t('widget.fsmDistribution.noData', 'No state data')}
-            className="py-4"
-          />
-        )}
+        <InstrumentPresentation family="segments" compact headline={compactBody}
+          icon={<GitBranch />} context={context} reading={reading}>
+          {compactBody}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
 
   /* Standard (2×4) view: donut chart + transitions feed */
-  const leading = segments[0];
-  const leadingPct = leading ? fmtNumber(leading.pct, 0) : '0';
-
-  return (
-    <WidgetShell
-      title={t('widget.fsmDistribution.title', 'State distribution')}
-      icon={<GitBranch className="h-3.5 w-3.5 text-theme-accent" />}
-      loading={isLoading}
-      dataState={state}
-      updatedAt={updatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={handleRefresh}
-    >
-      <div className="grid h-full min-h-0 grid-cols-[minmax(120px,0.9fr)_minmax(150px,1.1fr)] items-center gap-4">
+  const chart = (
         <SourceContent
             state={statsState.fatalError ? 'error' : !statsState.hasData && statsLoading ? 'loading' : !hasData ? 'empty' : statsState.refreshError ? 'retained' : 'ready'}
             label={t('widget.fsmDistribution.title', 'State distribution')}
@@ -285,6 +288,8 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
             </div>
           </EmbeddedChart>
         </SourceContent>
+  );
+  const details = (
         <div className="min-w-0">
             <ol aria-label={t('widget.fsmDistribution.rankedStates', 'State shares')} className="min-w-0 divide-y divide-[var(--border-subtle)]">
               {segments.map((seg) => (
@@ -297,29 +302,52 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
                 </li>
               ))}
             </ol>
-            <h4 className="mt-2 text-sm font-medium text-[var(--text-primary)]">{t('widget.fsmDistribution.recentTransitions', 'Recent transitions')}</h4>
-            {transitionState.fatalError ? (
-              <div>
-                <Text variant="bodySm" className="text-[var(--text-danger)]">{t('widget.fsmDistribution.transitionsError', 'Recent transitions could not be loaded.')}</Text>
-                <Button size="sm" variant="ghost" className="mt-2" onClick={() => { void transitionsQuery.refetch(); }}>
-                  {t('common.retry', 'Retry')}
-                </Button>
-              </div>
-            ) : transitionsData.length === 0 ? (
-              <Text variant="bodySm" className="text-[var(--text-muted)]">{t('widget.fsmDistribution.noTransitions', 'No recent transitions')}</Text>
-            ) : (
+            <Subhead className="mt-2">{t('widget.fsmDistribution.recentTransitions', 'Recent transitions')}</Subhead>
+            <SourceContent
+              state={transitionState.fatalError ? 'error' : !transitionState.hasData && transitionsQuery.isLoading ? 'loading' : transitionState.refreshError ? 'retained' : transitionsData.length === 0 ? 'empty' : 'ready'}
+              label={t('widget.fsmDistribution.recentTransitions', 'Recent transitions')}
+              emptyMessage={t('widget.fsmDistribution.noTransitions', 'No recent transitions')}
+              emptyContent={<Text variant="bodySm" className="text-[var(--text-muted)]">{t('widget.fsmDistribution.noTransitions', 'No recent transitions')}</Text>}
+              errorMessage={t('widget.fsmDistribution.transitionsError', 'Recent transitions could not be loaded.')}
+              error={transitionState.fatalError}
+              errorRecovery={{ onRetry: () => { void transitionsQuery.refetch(); } }}
+              retainedMessage={t('widget.fsmDistribution.transitionsRetained', 'Previously loaded transitions remain visible while they refresh.')}
+            >
               <ol aria-label={t('widget.fsmDistribution.recentTransitions', 'Recent transitions')} className="m-0 mt-1 list-none p-0">
                 {transitionsData.slice(0, 5).map((row: { id?: number|string; from_state?: string; to_state?: string; ts?: string }, index: number) => (
-                  <li key={row.id ?? index} className="min-w-0 py-1 text-xs text-[var(--text-secondary)]">
-                    <span className="block break-words">{row.from_state}</span>
-                    <span className="block break-words">{row.to_state}</span>
-                    <time>{formatDateTime?.(row.ts ?? '') ?? formatTime(row.ts ?? '')}</time>
+                  <li key={row.id ?? index} className="min-w-0 py-1">
+                    <Caption className="block break-words">{row.from_state ?? '—'}</Caption>
+                    <Caption className="block break-words">{row.to_state ?? '—'}</Caption>
+                    <time dateTime={row.ts}><Caption>{row.ts ? formatDateTime?.(row.ts) ?? formatTime(row.ts) : '—'}</Caption></time>
                   </li>
                 ))}
               </ol>
-            )}
+            </SourceContent>
         </div>
+  );
+
+  return (
+    <WidgetShell
+      title={t('widget.fsmDistribution.title', 'State distribution')}
+      icon={<GitBranch className="h-3.5 w-3.5 text-theme-accent" />}
+      loading={isLoading}
+      dataState={state}
+      updatedAt={updatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={handleRefresh}
+    >
+      <InstrumentPresentation family="segments" compact={false} icon={<GitBranch />}
+        headline={<WidgetBigNumber value={leadingPct} unit="%" label={t('widget.fsmDistribution.share', 'Share')}
+          subtitle={leading ? t(`widget.fsmDistribution.state.${leading.state}`, leading.state) : undefined} />}
+        context={context} reading={reading}
+        instrument={<div className="min-h-[160px]">{chart}</div>} details={details}>
+      <div className="grid h-full min-h-0 grid-cols-[minmax(120px,0.9fr)_minmax(150px,1.1fr)] items-center gap-4">
+        {chart}
+        {details}
       </div>
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

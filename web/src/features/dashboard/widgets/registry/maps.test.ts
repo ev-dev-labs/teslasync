@@ -34,6 +34,7 @@ const EXPECTED_MAP_IDS = [
   'geofence-status',
   'destination-eta',
   'position-heatmap',
+  'new-arrival-energy',
 ] as const;
 
 // React tags lazy() output with this well-known symbol; DashboardGrid relies

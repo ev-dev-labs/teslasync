@@ -59,7 +59,8 @@ vi.mock('@/api/hooks/useEnergy', () => ({
 // WidgetFlowDiagram — a prop-recording stub. It records the derived
 // nodes/arrows (the unit under test) and mirrors them into the DOM so both the
 // structure and the rendered copy are assertable, without the animated SVG.
-vi.mock('./shared', () => ({
+vi.mock('./shared', async () => ({
+  ...await vi.importActual<typeof import('./shared')>('./shared'),
   WidgetFlowDiagram: (props: {
     nodes: FlowNode[];
     arrows: FlowArrow[];
@@ -113,7 +114,10 @@ vi.mock('react-i18next', async () => {
 // FreshnessDot display hooks — stubbed so the freshness chip renders without a
 // Settings/QueryClient provider.
 vi.mock('@/hooks/useDateFormat', () => ({
-  useDateFormat: () => ({ formatTime: (v: unknown) => String(v) }),
+  useDateFormat: () => ({
+    formatTime: (v: unknown) => String(v),
+    formatDateTime: (v: unknown) => String(v),
+  }),
 }));
 vi.mock('@/hooks/useMotionPreference', () => ({
   useMotionPreference: () => ({ reduce: false, durationMs: 250 }),

@@ -9,6 +9,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 
 import { severityTokens } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 
@@ -167,6 +168,46 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
       : healthLevel === 'red'
         ? 'bg-[var(--semantic-danger)]'
         : 'bg-[var(--text-muted)]';
+  const reporting = <WidgetBigNumber value={observedTotal > 0 ? `${analysis.activeCount}/${observedTotal}` : null}
+    label={t('widget.signalHealth.signalsReporting', 'Signals reporting')} animated={false} size={isCompact ? undefined : 'primary'} />;
+  const badge = <Badge variant={healthBadgeVariant} className={isCompact ? 'text-xs' : 'text-2xs'}>
+    {isCompact ? coveragePercent == null ? '—' : `${coveragePercent}%` : healthLabel}
+  </Badge>;
+  const coverage = (
+    <div role="progressbar" aria-label={t('widget.signalHealth.reportingCoverage', 'Reporting coverage')}
+      aria-valuemin={0} aria-valuemax={100} aria-valuenow={coveragePercent ?? undefined}
+      className="h-1.5 overflow-hidden rounded-shape-sm bg-[var(--track)]">
+      {coveragePercent != null && <div className={`h-full rounded-shape-sm ${meterColor}`} style={{ width: `${coveragePercent}%` }} />}
+    </div>
+  );
+  const details = (isWide || !hasData) && (
+    <>
+      {isWide && (
+        <div className="mt-auto pt-2 border-t border-[var(--border-subtle)] flex-1 min-h-0 overflow-y-auto">
+          <PanelTitle className="mb-1.5">{t('widget.signalHealth.staleSignals', 'Stale / gap signals')}</PanelTitle>
+          <div className="space-y-1">
+            {analysis.gapSignals.length === 0 && <EmptyState message={gapData == null
+              ? t('widget.signalHealth.noData', 'No signal health data') : t('widget.signalHealth.noGaps', 'No observed signal gaps')}
+              // no-action: A successful observation without gaps needs no corrective action.
+              action={gapData == null ? { label: t('common.refresh', 'Refresh'), onClick: refresh } : undefined} />}
+            {analysis.gapSignals.slice(0, 15).map(sig => {
+              const ageSeconds = sig.lastSeen ? Math.max(0, Math.floor((Date.now() - new Date(sig.lastSeen).getTime()) / 1000)) : null;
+              const detail = ageSeconds == null ? t('widget.signalHealth.gap', 'Gap')
+                : `${t('widget.signalHealth.stale', 'Stale')} · ${formatAge(ageSeconds)}`;
+              return (
+                <div key={sig.name} className="flex min-w-0 items-baseline justify-between gap-3 min-h-8 py-1.5">
+                  <Text variant="bodySm" mono className="min-w-0 [overflow-wrap:anywhere]">{sig.name}</Text>
+                  <Caption className="shrink-0">{detail}</Caption>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {!hasData && !isWide && <EmptyState icon={<Activity className="size-5" />} message={t('widget.signalHealth.noData', 'No signal health data')} className="py-4"
+        action={{ label: t('common.refresh', 'Refresh'), onClick: refresh }} />}
+    </>
+  );
 
   return (
     <WidgetShell
@@ -186,79 +227,30 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
           <QueryError error={source.fatalError} onRetry={source.retry ?? undefined} />
         </div>
       ))}
+      <InstrumentPresentation family="meter" compact={isCompact}
+        headline={<div className="flex min-w-0 items-start justify-between gap-3">{reporting}{!isCompact && badge}</div>}
+        context={isCompact ? <div className="flex items-center gap-2">{badge}<Caption>{healthLabel}</Caption></div> : undefined}
+        reading={{ value: coveragePercent, max: 100, label: t('widget.signalHealth.reportingCoverage', 'Reporting coverage'), unit: '%' }}
+        instrument={isCompact ? undefined : coverage} details={details}>
       {isCompact ? (
         /* ── Compact layout (1-col) ── */
         <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
-          <Badge variant={healthBadgeVariant} className="text-xs">
-            {coveragePercent == null ? '—' : `${coveragePercent}%`}
-          </Badge>
+          {badge}
           <Caption>{healthLabel}</Caption>
-          <WidgetBigNumber
-            value={observedTotal > 0 ? `${analysis.activeCount}/${observedTotal}` : null}
-            label={t('widget.signalHealth.signalsReporting', 'Signals reporting')}
-            animated={false}
-          />
+          {reporting}
         </div>
       ) : (
         /* ── Standard / Wide layout ── */
         <div className="flex flex-col gap-3 h-full">
           <div className="flex min-w-0 items-start justify-between gap-3">
-            <WidgetBigNumber
-              value={observedTotal > 0 ? `${analysis.activeCount}/${observedTotal}` : null}
-              label={t('widget.signalHealth.signalsReporting', 'Signals reporting')}
-              animated={false}
-              size="primary"
-            />
-            <Badge variant={healthBadgeVariant} className="text-2xs">
-              {healthLabel}
-            </Badge>
+            {reporting}
+            {badge}
           </div>
-
-          <div
-            role="progressbar"
-            aria-label={t('widget.signalHealth.reportingCoverage', 'Reporting coverage')}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={coveragePercent ?? undefined}
-            className="h-1.5 overflow-hidden rounded-shape-sm bg-[var(--track)]"
-          >
-            {coveragePercent != null && (
-              <div className={`h-full rounded-shape-sm ${meterColor}`} style={{ width: `${coveragePercent}%` }} />
-            )}
-          </div>
-
-          {isWide && (
-            <div className="mt-auto pt-2 border-t border-[var(--border-subtle)] flex-1 min-h-0 overflow-y-auto">
-              <PanelTitle className="mb-1.5">
-                {t('widget.signalHealth.staleSignals', 'Stale / gap signals')}
-              </PanelTitle>
-              <div className="space-y-1">
-                {analysis.gapSignals.length === 0 && <EmptyState message={gapData == null
-                  ? t('widget.signalHealth.noData', 'No signal health data')
-                  : t('widget.signalHealth.noGaps', 'No observed signal gaps')}
-                  // no-action: A successful observation without gaps needs no corrective action.
-                  action={gapData == null ? { label: t('common.refresh', 'Refresh'), onClick: refresh } : undefined} />}
-                {analysis.gapSignals.slice(0, 15).map((sig) => {
-                  const ageSeconds = sig.lastSeen
-                    ? Math.max(0, Math.floor((Date.now() - new Date(sig.lastSeen).getTime()) / 1000))
-                    : null;
-                  const detail = ageSeconds == null
-                    ? t('widget.signalHealth.gap', 'Gap')
-                    : `${t('widget.signalHealth.stale', 'Stale')} · ${formatAge(ageSeconds)}`;
-                  return (
-                    <div key={sig.name} className="flex min-w-0 items-baseline justify-between gap-3 min-h-8 py-1.5">
-                      <Text variant="bodySm" mono className="min-w-0 [overflow-wrap:anywhere]">{sig.name}</Text>
-                      <Caption className="shrink-0">{detail}</Caption>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          {!hasData && !isWide && <EmptyState icon={<Activity className="size-5" />} message={t('widget.signalHealth.noData', 'No signal health data')} className="py-4"
-            action={{ label: t('common.refresh', 'Refresh'), onClick: refresh }} />}
+          {coverage}
+          {details}
         </div>
       )}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

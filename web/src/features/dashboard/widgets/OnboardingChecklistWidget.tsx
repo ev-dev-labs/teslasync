@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 
 import { EmptyState } from '@/components/feedback'
-import { Badge, Button, IconButton } from '@/components/ui'
+import { Badge, Button, IconButton, Text } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { useAlertRules, useNotificationChannels } from '@/api/hooks/useNotifications'
@@ -27,6 +27,7 @@ import {
 } from '@/features/onboarding/checklist'
 
 import { WidgetShell } from './WidgetShell'
+import InstrumentPresentation from './designPacks/InstrumentPresentation'
 import type { WidgetProps } from './types'
 
 /**
@@ -45,7 +46,7 @@ import type { WidgetProps } from './types'
  *     affordance so the user can opt back in without leaving the page.
  *     Layout-level removal is the user's job from dashboard customize mode.
  */
-export default function OnboardingChecklistWidget(_props: WidgetProps) {
+export default function OnboardingChecklistWidget({ size }: WidgetProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { fmtInt } = useNumberFormatting()
@@ -115,9 +116,19 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
 
   const title = t('checklist.title', 'Get started')
   const icon = <Rocket className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
+  const compact = size.cols === 1 || size.rows === 1
 
   // ── Hidden / dismissed state — small footprint with restart affordance ──
   if (hidden) {
+    const hiddenTitle = allComplete
+      ? t('checklist.completeMessage', "You're all set! 🎉")
+      : t('checklist.dismissedTitle', 'Setup checklist hidden')
+    const hiddenMessage = t(
+      'checklist.dismissedMessage',
+      'Remove this widget from your dashboard or restart the checklist to see your remaining setup steps.',
+    )
+    const restartLabel = t('checklist.restart', 'Restart checklist')
+
     return (
       <WidgetShell
         title={title}
@@ -129,23 +140,26 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
         isError={vehicles.isError || rules.isError || channels.isError}
         onRefresh={retry}
       >
-        <EmptyState
+        <InstrumentPresentation
+          family="empty"
+          compact={compact}
           icon={<Sparkles className="h-5 w-5" />}
-          title={
-            allComplete
-              ? t('checklist.completeMessage', "You're all set! 🎉")
-              : t('checklist.dismissedTitle', 'Setup checklist hidden')
+          headline={<Text as="p" variant="subhead">{hiddenTitle}</Text>}
+          instrument={
+            <Button size="sm" wrapLabel onClick={restart} className="min-h-11">
+              {restartLabel}
+            </Button>
           }
-          message={t(
-            'checklist.dismissedMessage',
-            'Remove this widget from your dashboard or restart the checklist to see your remaining setup steps.',
-          )}
-          action={{
-            label: t('checklist.restart', 'Restart checklist'),
-            onClick: restart,
-          }}
-          className="py-4"
-        />
+          details={<Text as="p" variant="bodySm">{hiddenMessage}</Text>}
+        >
+          <EmptyState
+            icon={<Sparkles className="h-5 w-5" />}
+            title={hiddenTitle}
+            message={hiddenMessage}
+            action={{ label: restartLabel, onClick: restart }}
+            className="py-4"
+          />
+        </InstrumentPresentation>
       </WidgetShell>
     )
   }
@@ -154,6 +168,100 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
   const headerActions = (
     <IconButton icon={<X className="h-4 w-4" aria-hidden="true" />}
       label={t('checklist.dismiss', 'Dismiss')} aria-label={t('checklist.dismiss', 'Dismiss')} onClick={dismiss} />
+  )
+
+  const progressLabel = t('checklist.progressDone', '{{done}} of {{total}} done', {
+    done: fmtInt(completed),
+    total: fmtInt(total),
+  })
+  const progressHeadline = (
+    <Text size="sm" weight="semibold" color="primary" className={dashboardTokens.density.text}>
+      {progressLabel}
+    </Text>
+  )
+  const progressMeter = (
+    <div
+      className={cn('mt-3 h-2 overflow-hidden bg-[var(--surface-2)]', dashboardTokens.radius.control)}
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={total}
+      aria-valuenow={completed}
+      aria-label={t('checklist.progressDone', '{{done}} of {{total}} done', {
+        done: completed,
+        total,
+      })}
+    >
+      <div
+        className={cn(
+          'h-full transition-all duration-slow motion-reduce:transition-none',
+          dashboardTokens.radius.control,
+          'bg-[var(--theme-primary)]',
+        )}
+        style={{ width: `${progressPct}%` }}
+      />
+    </div>
+  )
+
+  // Keep the original rows in every appearance: completion, source uncertainty
+  // and CTAs belong to this controller, not to the selected pack.
+  const taskList = total === 0 ? (
+    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+      icon={<CheckCircle2 className="h-5 w-5" />}
+      message={t('checklist.empty', 'No setup steps available right now.')}
+      className="py-4 mt-3"
+    />
+  ) : (
+    <ul className="mt-3 flex flex-col" data-testid="onboarding-checklist">
+      {tasks.map((task) => {
+        const source = taskSources[task.id as keyof typeof taskSources]
+        const unknown = source != null && !source.hasData
+        return (
+          <li
+            key={task.id}
+            className={cn(
+              'flex flex-wrap items-center py-[7px] transition-colors',
+              dashboardTokens.density.row,
+              dashboardTokens.density.rowGap,
+            )}
+            data-testid={`checklist-task-${task.id}`}
+            data-complete={task.complete ? 'true' : 'false'}
+          >
+            <span
+              className={cn(
+                'grid h-[18px] w-[18px] flex-none place-items-center rounded-full border-[1.5px]',
+                task.complete
+                  ? 'border-[var(--semantic-success)] bg-[var(--semantic-success)] text-[var(--text-on-accent)]'
+                  : 'border-[var(--border-default)] text-transparent',
+              )}
+              aria-hidden="true"
+            >
+              <Check className="h-3 w-3" strokeWidth={3} />
+            </span>
+            <Text
+              size="sm"
+              weight="medium"
+              color={task.complete ? 'muted' : 'primary'}
+              className={cn('min-w-0 flex-1', dashboardTokens.density.text, task.complete && 'line-through')}
+            >
+              {t(task.titleKey, task.titleFallback)}
+            </Text>
+            {unknown && <Badge variant="neutral">{t('common.unknown', 'Unknown')}</Badge>}
+            {!task.complete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                wrapLabel
+                onClick={() => handleCta(task.ctaTo)}
+                className="min-h-11 flex-shrink-0 text-[var(--theme-primary)]"
+              >
+                {t(task.ctaKey, task.ctaFallback)}
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Button>
+            )}
+          </li>
+        )
+      })}
+    </ul>
   )
 
   return (
@@ -168,104 +276,24 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
       isError={vehicles.isError || rules.isError || channels.isError}
       onRefresh={retry}
     >
-      <div className="flex flex-col h-full">
-        {/* After hero: one headline ("X of Y done") + progress meter. The
-            standalone % is dropped — the meter carries it (spec rule 3). */}
-        <div className="flex flex-wrap items-end justify-between gap-2.5">
-          <span className={cn(dashboardTokens.density.text, 'font-semibold text-[var(--text-primary)]')}>
-            {t('checklist.progressDone', '{{done}} of {{total}} done', {
-              done: fmtInt(completed),
-              total: fmtInt(total),
-            })}
-          </span>
+      <InstrumentPresentation
+        family="empty"
+        compact={compact}
+        icon={icon}
+        headline={progressHeadline}
+        reading={total > 0 ? { value: completed, max: total, label: progressLabel } : undefined}
+        instrument={total === 0 ? progressMeter : undefined}
+        details={taskList}
+      >
+        <div className="flex flex-col h-full">
+          {/* Classic retains its original headline, continuous meter and rows. */}
+          <div className="flex flex-wrap items-end justify-between gap-2.5">
+            {progressHeadline}
+          </div>
+          {progressMeter}
+          {taskList}
         </div>
-        <div
-          className={cn('mt-3 h-2 overflow-hidden bg-[var(--surface-2)]', dashboardTokens.radius.control)}
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={total}
-          aria-valuenow={completed}
-          aria-label={t('checklist.progressDone', '{{done}} of {{total}} done', {
-            done: completed,
-            total,
-          })}
-        >
-          <div
-            className={cn(
-              'h-full transition-all duration-slow motion-reduce:transition-none',
-              dashboardTokens.radius.control,
-              'bg-[var(--theme-primary)]',
-            )}
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
-
-        {/* Task list — After `.check` rows: 18px round box + title only.
-            Descriptions and per-task icons are dropped per the preview;
-            the CTA and Unknown badge stay (navigation / trust semantics). */}
-        {total === 0 ? (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<CheckCircle2 className="h-5 w-5" />}
-            message={t('checklist.empty', 'No setup steps available right now.')}
-            className="py-4 mt-3"
-          />
-        ) : (
-          <ul className="mt-3 flex flex-col" data-testid="onboarding-checklist">
-            {tasks.map((task) => {
-              const source = taskSources[task.id as keyof typeof taskSources]
-              const unknown = source != null && !source.hasData
-              return (
-                <li
-                  key={task.id}
-                  className={cn(
-                    'flex flex-wrap items-center py-[7px] transition-colors',
-                    dashboardTokens.density.row,
-                    dashboardTokens.density.rowGap,
-                  )}
-                  data-testid={`checklist-task-${task.id}`}
-                  data-complete={task.complete ? 'true' : 'false'}
-                >
-                  <span
-                    className={cn(
-                      'grid h-[18px] w-[18px] flex-none place-items-center rounded-full border-[1.5px]',
-                      task.complete
-                        ? 'border-[var(--semantic-success)] bg-[var(--semantic-success)] text-[var(--text-on-accent)]'
-                        : 'border-[var(--border-default)] text-transparent',
-                    )}
-                    aria-hidden="true"
-                  >
-                    <Check className="h-3 w-3" strokeWidth={3} />
-                  </span>
-                  <span
-                    className={cn(
-                      'min-w-0 flex-1 font-medium',
-                      dashboardTokens.density.text,
-                      task.complete
-                        ? 'text-[var(--text-muted)] line-through'
-                        : 'text-[var(--text-primary)]',
-                    )}
-                  >
-                    {t(task.titleKey, task.titleFallback)}
-                  </span>
-                  {unknown && <Badge variant="neutral">{t('common.unknown', 'Unknown')}</Badge>}
-                  {!task.complete && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      wrapLabel
-                      onClick={() => handleCta(task.ctaTo)}
-                      className="min-h-11 flex-shrink-0 text-[var(--theme-primary)]"
-                    >
-                      {t(task.ctaKey, task.ctaFallback)}
-                      <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                    </Button>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </div>
+      </InstrumentPresentation>
     </WidgetShell>
   )
 }

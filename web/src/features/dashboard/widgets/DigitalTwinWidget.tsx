@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Monitor, Lock, Unlock, ArrowUpRight } from 'lucide-react';
-import { Badge, Text } from '@/components/ui';
+import { Badge, Caption, IconButton, MetricValue, Text } from '@/components/ui';
+import { KVList } from '@/components/data-display';
 import { SourceContent } from '@/components/layout';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
@@ -10,7 +11,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
 import { WidgetStatusGrid } from './shared';
 import { WidgetShell } from './WidgetShell';
-import { IconButton } from '@/components/ui';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
 import VehicleStudio from './vehicle-instruments/VehicleStudio';
@@ -76,6 +77,7 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
   ];
   const openDoorCount = sideDoorStates.filter(Boolean).length;
   const twinSize = size.cols >= 3 || size.rows >= 5 ? 'md' : 'sm';
+  const isCompact = size.rows <= 4;
 
   const lockBadgeVariant = twinState.locked === null ? 'neutral' : twinState.locked ? 'success' : 'danger';
   const lockLabel = twinState.locked === null
@@ -90,40 +92,24 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
       ? t('widget.windowsClosed', 'Windows closed')
       : `${openWindowCount} ${t('widget.windowsOpen', 'Open')}`;
 
-  return (
-    <WidgetShell
-      title={t('widget.digitalTwin', 'Digital twin')}
-      icon={<Monitor className="h-3.5 w-3.5" />}
-      dataState={dataState}
-      loadingContent={<div className="flex flex-col gap-3"><Skeleton className="h-40" /><Skeleton className="h-11" /></div>}
-      loading={vehiclesLoading || stateLoading || securityLoading}
-      updatedAt={combined.updatedAt ?? dataUpdatedAt}
-      refreshIntervalMs={REFRESH_INTERVAL}
-      isFetching={combined.isRefreshing || isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={handleRefresh}
-      actions={
-        <IconButton href="/digital-twin" icon={<ArrowUpRight className="h-4 w-4" aria-hidden="true" />}
-          label={t('widget.open', 'Open')} aria-label={t('widget.open', 'Open')} />
-      }
-    >
-      {vehicle ? (
-        <div className="h-full min-h-0 flex flex-col items-center gap-3">
-          {/* Keep the scene's intrinsic height measurable by grid auto-fit.
-              Flexing it into a smaller box centered overflow above the body
-              and underestimated the required rows when sm changes to md. */}
-          <div className="relative shrink-0 w-full flex items-center justify-center">
+  const vehicleName = vehicle?.display_name || vehicle?.vin || t('widget.unknownVehicle', 'Unknown vehicle');
+  const unknownLabel = t('widget.status.unknown', 'Unknown');
+  const scene = vehicle ? (
+          <div className="relative shrink-0 w-full flex items-center justify-center
+            [[data-widget-appearance=expressive]_&]:rounded-3xl
+            [[data-widget-appearance=expressive]_&]:bg-[var(--surface-2)]
+            [[data-widget-appearance=expressive]_&]:p-3">
             <VehicleStudio
               twinState={twinState}
               vehicle={vehicle}
               driving={driving}
               lightsOn={lightsOn}
               size={twinSize}
-              bounded={size.rows <= 4}
+              bounded={isCompact}
             />
           </div>
-
+  ) : null;
+  const badges = (
           <div className="flex w-full flex-shrink-0 flex-wrap gap-2 border-t border-[var(--border-subtle)] pt-2">
             <Badge variant={lockBadgeVariant}>
               {twinState.locked === false ? (
@@ -177,7 +163,8 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
               </Badge>
             ) : null}
           </div>
-
+  );
+  const accessStatus = (
           <WidgetStatusGrid cols={2} cells={[
             {
               id: 'doors', label: t('widget.doorsOpen', 'Doors open'),
@@ -191,10 +178,8 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
               statusLabel: hasWindowData ? t('widget.reported', 'Reported') : t('widget.status.unknown', 'Unknown'),
             },
           ]} />
-          <Text as="p" variant="bodySm" className="shrink-0 text-center max-w-full [overflow-wrap:anywhere]">
-            {vehicle.display_name || vehicle.vin || t('widget.unknownVehicle', 'Unknown vehicle')}
-          </Text>
-          {[
+  );
+  const sourceWarnings = [
             { id: 'state', label: t('widget.digitalTwinSources.state', 'Vehicle state'), trust: stateTrust, hasContent: stateData != null, retry: () => { void refetch(); } },
             { id: 'security', label: t('widget.digitalTwinSources.security', 'Security state'), trust: securityTrust, hasContent: security != null, retry: () => { void securityQuery.refetch(); } },
             { id: 'charging', label: t('widget.digitalTwinSources.charging', 'Charging state'), trust: chargingTrust, hasContent: charging != null, retry: () => { void chargingQuery.refetch(); } },
@@ -212,9 +197,8 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
                 {null}
               </SourceContent>
             </div>
-          ))}
-        </div>
-      ) : (
+          ));
+  const empty = (
         <div className="flex min-w-0 flex-col gap-3">
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Monitor className="h-5 w-5" />}
@@ -226,7 +210,79 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
           { id: 'windows', label: t('widget.windowsUnknown', 'Windows unknown'), status: 'unknown' },
         ]} />
         </div>
-      )}
+  );
+  const details = (
+    <div className="flex min-w-0 flex-col gap-3">
+      {accessStatus}
+      <KVList layout="responsive" items={[
+        {
+          id: 'charge-port', label: t('dashboardWidgets.vehicle.digitalTwinDetails.chargePort', 'Charge port'),
+          // Active charging alone does not establish a reported port-door position.
+          value: charging?.charge_port_door_open == null ? unknownLabel
+            : charging.charge_port_door_open ? t('widget.open', 'Open')
+              : t('dashboardWidgets.vehicle.digitalTwinDetails.closed', 'Closed'),
+        },
+        { id: 'lock', label: t('widget.lockStatus', 'Lock'), value: lockLabel },
+        {
+          id: 'sentry', label: t('widget.sentryOn', 'Sentry'),
+          value: twinState.sentryMode == null ? unknownLabel
+            : twinState.sentryMode ? t('widget.active', 'Active') : t('widget.off', 'Off'),
+        },
+        {
+          id: 'state', label: t('widget.digitalTwinSources.state', 'Vehicle state'),
+          value: twinState.isDriving ? t('widget.driving', 'Driving') : state?.state?.trim() || unknownLabel,
+        },
+        {
+          id: 'charging', label: t('widget.digitalTwinSources.charging', 'Charging state'),
+          value: twinState.isCharging ? t('widget.charging', 'Charging')
+            : charging?.charging_state?.trim() || (state?.is_charging === false ? t('widget.notCharging', 'Not charging') : unknownLabel),
+        },
+      ]} />
+      {sourceWarnings}
+    </div>
+  );
+
+  return (
+    <WidgetShell
+      title={t('widget.digitalTwin', 'Digital twin')}
+      icon={<Monitor className="h-3.5 w-3.5" />}
+      dataState={dataState}
+      loadingContent={<div className="flex flex-col gap-3"><Skeleton className="h-40" /><Skeleton className="h-11" /></div>}
+      loading={vehiclesLoading || stateLoading || securityLoading}
+      updatedAt={combined.updatedAt ?? dataUpdatedAt}
+      refreshIntervalMs={REFRESH_INTERVAL}
+      isFetching={combined.isRefreshing || isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={handleRefresh}
+      actions={
+        <IconButton href="/digital-twin" icon={<ArrowUpRight className="h-4 w-4" aria-hidden="true" />}
+          label={t('widget.open', 'Open')} aria-label={t('widget.open', 'Open')} />
+      }
+    >
+      <InstrumentPresentation family="twin" compact={isCompact}
+        icon={vehicle ? <Monitor /> : undefined}
+        headline={vehicle ? <div className="min-w-0 space-y-1">
+          <Caption>{t('dashboardWidgets.vehicle.digitalTwinDetails.interactive', 'Interactive digital twin')}</Caption>
+          <MetricValue className="[overflow-wrap:anywhere]">{vehicleName}</MetricValue>
+        </div> : undefined}
+        context={vehicle ? badges : undefined}
+        instrument={vehicle ? scene : empty}
+        details={vehicle ? details : undefined}
+      >
+        {vehicle ? (
+          <div className="h-full min-h-0 flex flex-col items-center gap-3">
+            {/* Keep intrinsic scene height measurable for grid auto-fit. */}
+            {scene}
+            {badges}
+            {accessStatus}
+            <Text as="p" variant="bodySm" className="shrink-0 text-center max-w-full [overflow-wrap:anywhere]">
+              {vehicleName}
+            </Text>
+            {sourceWarnings}
+          </div>
+        ) : empty}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

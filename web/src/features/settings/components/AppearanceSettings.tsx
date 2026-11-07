@@ -14,6 +14,7 @@ import { Palette, Rows3, PanelBottom, Trophy, Clock, Eye, PlayCircle, RotateCcw,
 import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors'
 import { startTour } from '@/lib/tourLauncher'
 import { resetAllTours } from '@/lib/tourRegistry'
+import WidgetDesignPackSettings from './WidgetDesignPackSettings'
 
 type DensityId = 'compact' | 'comfortable' | 'spacious'
 type TimeFormatId = 'relative' | 'absolute'
@@ -122,6 +123,8 @@ export function AppearanceSettings() {
             the top-bar quick-switcher renders a compact variant. */}
         <ThemePicker showMode showCustom />
       </GlassPanel>
+
+      <WidgetDesignPackSettings />
 
       <GlassPanel className="p-6 space-y-6">
         {/* Density (information density) */}

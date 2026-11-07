@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, CreditCard } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Badge } from '@/components/ui';
+import { Badge, Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useVehicleSubscriptions, useVehicles } from '@/api/hooks/useVehicles';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -11,6 +11,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useFormatting } from '@/hooks/useFormatting';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 
 /** Safely extract a string from an unknown value */
@@ -42,7 +43,7 @@ const SUBSCRIPTION_TYPES = [
 
 export interface ParsedSub {
   name: string;
-  active: boolean;
+  active: boolean | null;
   expiryDate: string | null;
   renewalType: string | null;
   daysLeft: number | null;
@@ -56,6 +57,14 @@ function knownNumber(val: unknown): number | null {
     const parsed = Number(val);
     return Number.isFinite(parsed) ? parsed : null;
   }
+  return null;
+}
+
+function subscriptionStatus(value: unknown): boolean | null {
+  if (typeof value === 'boolean') return value;
+  const status = asString(value)?.trim().toLowerCase();
+  if (status && ['active', 'included', 'enabled', 'subscribed', 'trial', 'true', '1'].includes(status)) return true;
+  if (status && ['expired', 'inactive', 'cancelled', 'canceled', 'disabled', 'false', '0'].includes(status)) return false;
   return null;
 }
 
@@ -75,7 +84,9 @@ export function parseSubscriptions(
       ?? (data as Record<string, unknown>)[`${sub.key}_expiry`],
     );
     const days = daysUntil(expiryDate);
-    const active = expiryDate ? (days != null && days > 0) : Boolean(val);
+    const active = expiryDate
+      ? days == null ? null : days > 0
+      : subscriptionStatus(val);
 
     const renewalRaw = asString(
       (data as Record<string, unknown>)[`${sub.key}_renewal`]
@@ -104,8 +115,8 @@ export function parseSubscriptions(
       const days = daysUntil(expiryDate);
       const status = asString(rec.status);
       const active = status
-        ? status.toLowerCase() === 'active'
-        : expiryDate ? (days != null && days > 0) : true;
+        ? subscriptionStatus(status)
+        : days != null ? days > 0 : null;
 
       // Avoid duplicates from known types
       if (subs.some((s) => s.name.toLowerCase() === name.toLowerCase())) continue;
@@ -158,7 +169,9 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
 
   const parsed = useMemo(() => parseSubscriptions(subsData, t), [subsData, t]);
 
-  const activeCount = useMemo(() => parsed.filter((s) => s.active).length, [parsed]);
+  const activeCount = useMemo(() => parsed.some((sub) => sub.active == null)
+    ? null
+    : parsed.filter((sub) => sub.active).length, [parsed]);
 
   const nextExpiry = useMemo(() => {
     const upcoming = parsed
@@ -169,7 +182,7 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
 
   const entries: DetailEntry[] = useMemo(() => {
     return parsed.map((sub) => {
-      const renewalDate = sub.expiryDate ? formatDateShort(sub.expiryDate) : null;
+      const renewalDate = sub.expiryDate && sub.daysLeft != null ? formatDateShort(sub.expiryDate) : null;
       const period = sub.billingPeriod?.toLowerCase() === 'month' || sub.billingPeriod?.toLowerCase() === 'monthly'
         ? t('widget.subscriptions.perMonth', '/mo')
         : sub.billingPeriod ? `/${sub.billingPeriod}` : null;
@@ -177,11 +190,13 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
       return {
         label: sub.name,
         sublabel: renewalDate ?? sub.renewalType ?? undefined,
-        value: sub.price != null ? formatCurrency(sub.price, 2) : sub.active ? '—' : '—',
+        value: sub.price != null ? formatCurrency(sub.price, 2) : '—',
         hint: period ?? undefined,
         status: sub.active ? 'success' as const : 'neutral' as const,
         badge: {
-          text: sub.active ? t('widget.subscriptions.active', 'Active') : t('widget.subscriptions.expired', 'Expired'),
+          text: sub.active == null
+            ? t('widget.subscriptions.unknown', 'Unknown')
+            : sub.active ? t('widget.subscriptions.active', 'Active') : t('widget.subscriptions.expired', 'Expired'),
           variant: sub.active ? 'success' as const : 'neutral' as const,
         },
       };
@@ -216,38 +231,56 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
     onRefresh: handleRefresh,
   };
 
+  const headline = parsed.length > 0 ? (
+    <WidgetBigNumber
+      value={activeCount == null ? null : fmtInt(activeCount)}
+      label={t('widget.subscriptions.activeCount', 'active')}
+      align={isCompact ? 'center' : 'start'}
+      size="secondary"
+    />
+  ) : undefined;
+  const expiryBadge = nextExpiry ? (
+    <Badge
+      variant="neutral"
+      size="sm"
+      className="min-h-[44px] min-w-[44px] max-w-full whitespace-normal break-words text-center"
+    >
+      {formatDateShort(nextExpiry.expiryDate) ?? '—'}
+    </Badge>
+  ) : undefined;
+  const empty = (
+    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+      icon={<CreditCard className="h-5 w-5" />}
+      message={emptyMessage}
+      className="py-2"
+    />
+  );
+  const detailList = (
+    <WidgetDetailCard
+      entries={entries}
+      compact={isCompact}
+      emptyMessage={emptyMessage}
+      emptyIcon={<CreditCard className="h-5 w-5" />}
+    />
+  );
+
   // ── Compact layout (1×2): active count + next expiry ──
   if (isCompact) {
     return (
       <WidgetShell {...shellProps}>
-        <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
-          {parsed.length > 0 ? (
-            <>
-              <CreditCard className="h-4 w-4 text-theme-accent" />
-              <WidgetBigNumber
-                value={fmtInt(activeCount)}
-                label={t('widget.subscriptions.activeCount', 'active')}
-                align="center"
-                size="secondary"
-              />
-              {nextExpiry && (
-                <Badge
-                  variant="neutral"
-                  size="sm"
-                  className="min-h-[44px] min-w-[44px] max-w-full whitespace-normal break-words text-center"
-                >
-                  {formatDateShort(nextExpiry.expiryDate) ?? '—'}
-                </Badge>
-              )}
-            </>
-          ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<CreditCard className="h-5 w-5" />}
-              message={emptyMessage}
-              className="py-2"
-            />
-          )}
-        </div>
+        <InstrumentPresentation family="list" compact headline={headline}
+          icon={parsed.length > 0 ? <CreditCard /> : undefined}
+          details={parsed.length > 0 ? expiryBadge : empty}>
+          <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
+            {parsed.length > 0 ? (
+              <>
+                <CreditCard className="h-4 w-4 text-theme-accent" />
+                {headline}
+                {expiryBadge}
+              </>
+            ) : empty}
+          </div>
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
@@ -259,11 +292,13 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
       {...shellProps}
       footer={parsed.length > 0 ? (
         <div className="flex min-w-0 items-center justify-between gap-2">
-          <span className="min-w-0 text-xs text-[var(--text-muted)] tabular-nums">
+          <Caption className="min-w-0 tabular-nums">
             {monthlyTotal == null
-              ? t('widget.subscriptions.activeSummary', '{{count}} active', { count: activeCount })
+              ? activeCount == null
+                ? t('widget.subscriptions.unknown', 'Unknown')
+                : t('widget.subscriptions.activeSummary', '{{count}} active', { count: activeCount })
               : t('widget.subscriptions.monthlySummary', '{{total}} / month', { total: formatCurrency(monthlyTotal, 2) })}
-          </span>
+          </Caption>
           <Link
             to="/vehicle-management"
             className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-[var(--accent-primary)] hover:underline"
@@ -274,12 +309,10 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
         </div>
       ) : undefined}
     >
-      <WidgetDetailCard
-        entries={entries}
-        compact={isCompact}
-        emptyMessage={emptyMessage}
-        emptyIcon={<CreditCard className="h-5 w-5" />}
-      />
+      <InstrumentPresentation family="list" headline={headline} details={detailList}
+        icon={parsed.length > 0 ? <CreditCard /> : undefined}>
+        {detailList}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

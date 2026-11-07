@@ -75,6 +75,14 @@ describe('normalizeUnitKind', () => {
 })
 
 describe('normalizeEnvelope', () => {
+  it('preserves codec enum strings without coercing them to numeric codes', () => {
+    expect(normalizeEnvelope({ kind: 'ValueKindEnum', value: 'D', ts: 'T' }))
+      .toEqual({ kind: 'string', value: 'D', ts: 'T' })
+    expect(normalizeEnvelope({ kind: 7, value: '0', ts: 'T' }))
+      .toEqual({ kind: 'string', value: '0', ts: 'T' })
+    expect(normalizeEnvelope({ kind: 'ValueKindEnum', value: 0, ts: 'T' }))
+      .toEqual({ kind: 'int', value: 0, ts: 'T' })
+  })
   it('preserves the typed primitive matching kind', () => {
     expect(normalizeEnvelope({ kind: 'ValueKindFloat', value: 27.7, ts: 'T' }))
       .toEqual({ kind: 'float', value: 27.7, ts: 'T' })

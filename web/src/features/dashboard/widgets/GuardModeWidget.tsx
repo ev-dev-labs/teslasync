@@ -19,6 +19,7 @@ import type { WidgetProps } from './types';
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { COLOR, DATA_VISUAL_COLORS, CHART_NEUTRAL } from '@/lib/colors';
+import StatusPresentation from './designPacks/StatusPresentation';
 
 // ── Event type → visual mapping ──────────────────────────────────────
 
@@ -91,35 +92,33 @@ function CompactView({
   t: (key: string, fallback: string) => string;
 }) {
   const { fmtInt } = useNumberFormatting();
-  return (
-    <div className="flex min-w-0 flex-col gap-3">
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 min-h-[44px]">
-        <div className="flex items-center gap-2 min-w-0">
-          {enabled ? (
-            <ShieldCheck className="h-4 w-4 flex-shrink-0" />
-          ) : (
-            <ShieldOff className="h-4 w-4 flex-shrink-0 text-[var(--text-muted)]" />
-          )}
-          <Badge variant={enabled ? 'success' : 'neutral'}>
-            {enabled === null ? t('widget.guardUnknown', 'Unknown')
-              : enabled ? t('widget.guardArmed', 'Armed') : t('widget.guardDisarmed', 'Disarmed')}
-          </Badge>
-        </div>
-        <Badge variant={eventCount !== null && eventCount > 0 ? 'warning' : 'neutral'}>
-          {eventCount === null ? '—' : fmtInt(eventCount)} {t('widget.guardEvents', 'events')}
-        </Badge>
-      </div>
-      <Button variant="danger" size="sm" onClick={onPanic} loading={panicPending}
-        disabled={enabled === null || panicPending || panicDisabled} className="w-full">
-        <Volume2 className="h-4 w-4" aria-hidden="true" />
-        {panicPending ? t('widget.guardPanicSending', 'Sending…') : t('widget.guardPanicAlarm', 'Panic alarm')}
-      </Button>
-      {autoPanic !== null && (
-        <span className="text-xs text-[var(--text-muted)]">
-          {t('widget.guardAutoPanic', 'Auto-panic')}: {autoPanic ? t('widget.guardOn', 'On') : t('widget.guardOff', 'Off')}
-        </span>
-      )}
+  const headline = <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 min-h-[44px]">
+    <div className="flex items-center gap-2 min-w-0">
+      {enabled ? <ShieldCheck className="h-4 w-4 flex-shrink-0" />
+        : <ShieldOff className="h-4 w-4 flex-shrink-0 text-[var(--text-muted)]" />}
+      <Badge variant={enabled ? 'success' : 'neutral'}>
+        {enabled === null ? t('widget.guardUnknown', 'Unknown')
+          : enabled ? t('widget.guardArmed', 'Armed') : t('widget.guardDisarmed', 'Disarmed')}
+      </Badge>
     </div>
+    <Badge variant={eventCount !== null && eventCount > 0 ? 'warning' : 'neutral'}>
+      {eventCount === null ? '—' : fmtInt(eventCount)} {t('widget.guardEvents', 'events')}
+    </Badge>
+  </div>;
+  const details = <>
+    <Button variant="danger" size="sm" onClick={onPanic} loading={panicPending}
+      disabled={enabled === null || panicPending || panicDisabled} className="w-full">
+      <Volume2 className="h-4 w-4" aria-hidden="true" />
+      {panicPending ? t('widget.guardPanicSending', 'Sending…') : t('widget.guardPanicAlarm', 'Panic alarm')}
+    </Button>
+    {autoPanic !== null && <span className="text-xs text-[var(--text-muted)]">
+      {t('widget.guardAutoPanic', 'Auto-panic')}: {autoPanic ? t('widget.guardOn', 'On') : t('widget.guardOff', 'Off')}
+    </span>}
+  </>;
+  return (
+    <StatusPresentation compact headline={headline} icon={<Shield className="size-6" aria-hidden="true" />} details={details}>
+      <div className="flex min-w-0 flex-col gap-3">{headline}{details}</div>
+    </StatusPresentation>
   );
 }
 
@@ -148,48 +147,43 @@ function StandardView({
   panicDisabled: boolean;
   t: (key: string, fallback: string) => string;
 }) {
-  return (
-    <div className="flex flex-col gap-3 h-full">
-      <div className="flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
-          {enabled ? (
-            <ShieldCheck className="h-5 w-5 flex-shrink-0" />
-          ) : (
-            <ShieldOff className="h-5 w-5 flex-shrink-0 text-[var(--text-muted)]" />
-          )}
-          <div className="min-w-0">
-            <p className={dashboardTokens.metric}>
-              {enabled === null ? t('widget.guardUnknown', 'Unknown')
-                : enabled ? t('widget.guardArmed', 'Armed') : t('widget.guardDisarmed', 'Disarmed')}
-            </p>
-            {autoPanic !== null && (
-              <p className="text-xs text-[var(--text-muted)]">
-                {t('widget.guardAutoPanic', 'Auto-panic')}: {autoPanic ? t('widget.guardOn', 'On') : t('widget.guardOff', 'Off')}
-              </p>
-            )}
-          </div>
-        </div>
-        {enabled === true && (
-          <Badge variant="success">{t('widget.guardProtected', 'Protected')}</Badge>
-        )}
+  const headline = <div className="flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
+    <div className="flex items-center gap-2 min-w-0">
+      {enabled ? <ShieldCheck className="h-5 w-5 flex-shrink-0" />
+        : <ShieldOff className="h-5 w-5 flex-shrink-0 text-[var(--text-muted)]" />}
+      <div className="min-w-0">
+        <p className={dashboardTokens.metric}>
+          {enabled === null ? t('widget.guardUnknown', 'Unknown')
+            : enabled ? t('widget.guardArmed', 'Armed') : t('widget.guardDisarmed', 'Disarmed')}
+        </p>
+        {autoPanic !== null && <p className="text-xs text-[var(--text-muted)]">
+          {t('widget.guardAutoPanic', 'Auto-panic')}: {autoPanic ? t('widget.guardOn', 'On') : t('widget.guardOff', 'Off')}
+        </p>}
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        {eventsError ? <QueryError error={eventsError} onRetry={onRetryEvents} />
-          : eventsLoading ? <Skeleton className="h-16" /> : <WidgetEventFeed
-          items={feedItems}
-          maxItems={1}
-          compact={false}
-          emptyMessage={t('widget.guardNoEvents', 'No guard events')}
-          emptyIcon={<Shield className="h-5 w-5" />}
-        />}
-      </div>
-      <Button variant="danger" size="sm" onClick={onPanic} loading={panicPending}
-        disabled={enabled === null || panicPending || panicDisabled}
-        className="w-full">
-        <Volume2 className="h-4 w-4" aria-hidden="true" />
-        {panicPending ? t('widget.guardPanicSending', 'Sending…') : t('widget.guardPanicAlarm', 'Panic alarm')}
-      </Button>
     </div>
+    {enabled === true && <Badge variant="success">{t('widget.guardProtected', 'Protected')}</Badge>}
+  </div>;
+  const details = <>
+    <div className="flex-1 min-h-0 overflow-y-auto">
+      {eventsError ? <QueryError error={eventsError} onRetry={onRetryEvents} />
+        : eventsLoading ? <Skeleton className="h-16" /> : <WidgetEventFeed
+        items={feedItems}
+        maxItems={1}
+        compact={false}
+        emptyMessage={t('widget.guardNoEvents', 'No guard events')}
+        emptyIcon={<Shield className="h-5 w-5" />}
+      />}
+    </div>
+    <Button variant="danger" size="sm" onClick={onPanic} loading={panicPending}
+      disabled={enabled === null || panicPending || panicDisabled} className="w-full">
+      <Volume2 className="h-4 w-4" aria-hidden="true" />
+      {panicPending ? t('widget.guardPanicSending', 'Sending…') : t('widget.guardPanicAlarm', 'Panic alarm')}
+    </Button>
+  </>;
+  return (
+    <StatusPresentation headline={headline} icon={<Shield className="size-6" aria-hidden="true" />} details={details}>
+      <div className="flex flex-col gap-3 h-full">{headline}{details}</div>
+    </StatusPresentation>
   );
 }
 

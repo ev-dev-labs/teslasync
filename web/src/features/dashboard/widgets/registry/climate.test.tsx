@@ -53,6 +53,9 @@ vi.mock('@/api/hooks/useVehicles', () => ({
 vi.mock('@/api/hooks/useVehicleSystems', () => ({
   useClimateHistory: vi.fn(),
 }));
+vi.mock('@/api/hooks/useTelemetry', () => ({
+  useVehicleLiveSignals: () => query({ data: { vehicle_id: 1, signals: {} } }),
+}));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
 vi.mock('@/hooks/useDateFormat', () => ({ useDateFormat: vi.fn() }));
 vi.mock('@/hooks/useRangeState', () => ({
@@ -99,6 +102,7 @@ const EXPECTED_IDS = [
   'climate-control-panel',
   'weather-at-car',
   'climate-history',
+  'new-cabin-comfort',
 ];
 
 // The visible WidgetShell title each entry's lazy component renders — the
@@ -108,6 +112,7 @@ const EXPECTED_TITLES: Record<string, string> = {
   'climate-control-panel': 'Climate control',
   'weather-at-car': 'Weather at car',
   'climate-history': 'Climate history',
+  'new-cabin-comfort': 'Cabin comfort & occupancy',
 };
 
 const REACT_LAZY = Symbol.for('react.lazy');
@@ -122,7 +127,7 @@ const inRange = (size: WidgetSize, lo: WidgetSize, hi: WidgetSize, axis: 'cols' 
   lo[axis] <= size[axis] && size[axis] <= hi[axis];
 
 describe('CLIMATE_WIDGETS — metadata contract', () => {
-  it('exports the four climate widgets in a stable order', () => {
+  it('exports the approved climate widgets in a stable order', () => {
     expect(Array.isArray(CLIMATE_WIDGETS)).toBe(true);
     expect(CLIMATE_WIDGETS.map((w) => w.id)).toEqual(EXPECTED_IDS);
   });
@@ -178,6 +183,7 @@ describe('CLIMATE_WIDGETS — lazy component wiring', () => {
     'climate-control-panel': () => import('../ClimateControlPanelWidget'),
     'weather-at-car': () => import('../WeatherAtCarWidget'),
     'climate-history': () => import('../ClimateHistoryWidget'),
+    'new-cabin-comfort': () => import('../CabinComfortWidget'),
   };
 
   it('wires every widget to a React.lazy component', () => {

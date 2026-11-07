@@ -1,14 +1,16 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { Sparkline } from '@/components/charts';
-import { EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { EmbeddedChart, Line, LineChart, Sparkline, XAxis, YAxis } from '@/components/charts';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { Caption, Text } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSignals, useSignalGaps, useSignalHistory } from '@/api/hooks/useTelemetry';
 
 import { CHART_COLORS } from '@/lib/colors';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useUnits } from '@/hooks/useUnits';
@@ -77,6 +79,7 @@ interface SignalRowProps {
 }
 
 function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: SignalRowProps) {
+  const packId = usePackPresentation();
   const { fmtNumber } = useNumberFormatting();
   const { unitPrefs, formatSpeed, formatTemperature, formatDistance } = useUnits();
   const historyQuery = useSignalHistory(vehicleId, encodeURIComponent(signal), 1);
@@ -87,20 +90,34 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
   }, { provenance: 'historical' });
   const { t } = useTranslation('dashboard');
 
-  const numericPoints = useMemo(() => {
+  const historyPoints = useMemo(() => {
     const points = Array.isArray(history?.data) ? history.data : [];
-    const raw = points
-      .map((p) => p?.value)
-      .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
     const kind = getSignalDisplayKind(signal);
-    if (kind === 'speed') return raw.map((value) => convertSpeedFromSI(value, unitPrefs.speed));
-    if (kind === 'temperature') return raw.map((value) => convertTempFromSI(value, unitPrefs.temperature));
-    if (kind === 'distance') return raw.map((value) => convertDistanceFromSI(value, unitPrefs.distance));
-    return raw;
+    return points.map((point, sample) => {
+      const raw = point?.value;
+      let value = typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
+      if (value != null) {
+        if (kind === 'speed') value = convertSpeedFromSI(value, unitPrefs.speed);
+        if (kind === 'temperature') value = convertTempFromSI(value, unitPrefs.temperature);
+        if (kind === 'distance') value = convertDistanceFromSI(value, unitPrefs.distance);
+      }
+      if (value != null && !Number.isFinite(value)) value = null;
+      return { sample, timestamp: point?.ts, value };
+    });
   }, [history, signal, unitPrefs.speed, unitPrefs.temperature, unitPrefs.distance]);
+  const numericPoints = useMemo(
+    () => historyPoints.map(point => point.value).filter((value): value is number => value != null),
+    [historyPoints],
+  );
+  const hasGaps = historyPoints.some(point => point.value == null);
+  const samples = useMemo(() => historyPoints.map(point => ({
+    timestamp: typeof point.timestamp === 'string' ? Date.parse(point.timestamp) : Number.NaN,
+    value: point.value,
+  })), [historyPoints]);
 
   const currentValue = extractNumericValue(liveValue);
-  const hasSparkline = numericPoints.length >= 2;
+  const hasSparkline = (packId === 'classic' ? numericPoints.length
+    : samples.filter(point => Number.isFinite(point.timestamp) && point.value != null).length) >= 2;
 
   // Trend: compare first quarter average to last quarter average
   const trend = useMemo(() => {
@@ -135,50 +152,91 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
     return fmtNumber(currentValue);
   }, [currentValue, fmtNumber, formatDistance, formatSpeed, formatTemperature, kind]);
 
-  return (
-    <div className={cn(
-      'grid min-w-0 items-center border-b border-[var(--border-subtle)] py-2 last:border-b-0',
-      isWide ? 'grid-cols-[minmax(0,1fr)_minmax(56px,80px)_16px]' : 'grid-cols-[minmax(0,1fr)_56px_16px]',
-      'gap-2.5',
-    )}>
-      <div className="min-w-0">
-        <Caption className="block truncate" title={label}>
-          {label}
-        </Caption>
-        <Text as="p" size="lg" weight="semibold" color="primary" className="truncate tabular-nums" title={formattedValue ?? undefined}>
-          {formattedValue ?? '—'}
-        </Text>
-      </div>
-
-      {!historyState.fatalError && (hasSparkline ? (
-        <Sparkline
-          data={numericPoints}
-          color={color}
-          width={isWide ? 80 : 56}
-          height={20}
-          ariaLabel={`${label} ${t('widget.trendSparkline', 'trend')}`}
-        />
-      ) : (
-        <Caption className="w-14 break-words text-center">
-          {t('widget.noHistory', 'no data')}
-        </Caption>
-      ))}
-
-      <span role="img" aria-label={numericPoints.length >= 4 ? trendLabel : t('widget.noHistory', 'no data')} className="col-start-3 row-start-1 flex-shrink-0">
-        <TrendIcon className={cn(
-          'h-3.5 w-3.5',
-          trend === 'up' && 'text-emerald-300',
-          trend === 'down' && 'text-rose-300',
-          trend === 'flat' && 'text-[var(--text-muted)]',
-        )} aria-hidden="true" />
-      </span>
+  const headline = (
+    <div className="min-w-0">
+      <Caption className="block truncate" title={label}>
+        {label}
+      </Caption>
+      <Text as="p" size="lg" weight="semibold" color="primary" className="truncate tabular-nums" title={formattedValue ?? undefined}>
+        {formattedValue ?? '—'}
+      </Text>
+    </div>
+  );
+  const sparklineLabel = `${label} ${t('widget.trendSparkline', 'trend')}`;
+  const chartWidth = isWide ? 80 : 56;
+  const displayUnit = kind === 'percent' ? '%' : kind === 'speed' ? unitPrefs.speed
+    : kind === 'temperature' ? unitPrefs.temperature : kind === 'distance' ? unitPrefs.distance
+      : kind === 'current' ? 'A' : '';
+  const sparkline = <Sparkline
+    {...(packId === 'classic' ? { data: numericPoints } : { samples })}
+    color={color} width={chartWidth} height={20} ariaLabel={sparklineLabel}
+  />;
+  const instrument = !historyState.fatalError && (historyQuery.isLoading && !hasSparkline ? (
+    <div role="status" aria-label={t('dashboardWidgets.telemetry.signalHistoryLoading', 'Loading signal history')}>
+      <Skeleton className="h-5 w-14" />
+    </div>
+  ) : hasSparkline ? (
+    hasGaps ? (
+      <EmbeddedChart title={sparklineLabel} ariaLabel={sparklineLabel} height={20} mobileHeight={20}
+        toolbar={false} className="min-w-0 max-w-full" viewportClassName="min-h-0 overflow-hidden"
+        data={historyPoints} dataColumns={[
+          { key: 'timestamp', label: t('dashboardWidgets.telemetry.signalHistoryTime', 'Sample time') },
+          { key: 'value', label: displayUnit ? `${label} (${displayUnit})` : label, format: value => value == null ? '—' : fmtNumber(value, 1) },
+        ]}>
+        {packId === 'classic' ? <LineChart width={chartWidth} height={20} data={historyPoints} margin={{ top: 0, right: 0, bottom: 0, left: 0 }} accessibilityLayer={false}>
+          <XAxis dataKey="sample" type="number" domain={['dataMin', 'dataMax']} hide />
+          <YAxis type="number" domain={['dataMin', 'dataMax']} hide />
+          <Line dataKey="value" type="linear" stroke={color} strokeWidth={1.5}
+            connectNulls={false} dot={{ r: 1.5 }} activeDot={false} isAnimationActive={false} />
+        </LineChart> : <div aria-hidden="true">{sparkline}</div>}
+      </EmbeddedChart>
+    ) : (
+      sparkline
+    )
+  ) : (
+    <Caption className="w-14 break-words text-center">
+      {t('widget.noHistory', 'no data')}
+    </Caption>
+  ));
+  const trendIndicator = (
+    <span role="img" aria-label={numericPoints.length >= 4 ? trendLabel : t('widget.noHistory', 'no data')} className="col-start-3 row-start-1 flex-shrink-0">
+      <TrendIcon className={cn(
+        'h-3.5 w-3.5',
+        trend === 'up' && 'text-emerald-300',
+        trend === 'down' && 'text-rose-300',
+        trend === 'flat' && 'text-[var(--text-muted)]',
+      )} aria-hidden="true" />
+    </span>
+  );
+  const recovery = (
+    <>
       {historyState.fatalError && (
         <div className="col-span-full min-w-0">
           <QueryError error={historyState.fatalError} onRetry={() => { void historyQuery.refetch(); }} />
         </div>
       )}
       <StaleRefreshWarning state={historyState} className="col-span-full w-full min-w-0" />
-    </div>
+    </>
+  );
+
+  return (
+    <InstrumentPresentation family="line" compact={!isWide} headline={headline}
+      icon={<Activity />} instrument={instrument} context={recovery}
+      details={<div className="flex min-w-0 items-center gap-2">
+        {trendIndicator}
+        <Caption>{numericPoints.length >= 4 ? trendLabel : t('widget.noHistory', 'no data')}</Caption>
+      </div>}>
+      <div className={cn(
+        'grid min-w-0 items-center border-b border-[var(--border-subtle)] py-2 last:border-b-0',
+        isWide ? 'grid-cols-[minmax(0,1fr)_minmax(56px,80px)_16px]' : 'grid-cols-[minmax(0,1fr)_56px_16px]',
+        'gap-2.5',
+      )}>
+        {headline}
+        {instrument}
+        {trendIndicator}
+        {recovery}
+      </div>
+    </InstrumentPresentation>
   );
 }
 
@@ -209,6 +267,7 @@ export default function LiveSignalSparklinesWidget({ vehicleId, config, size }: 
 
   // Safely extract configured signals, intersect with available
   const configuredSignals = useMemo(() => {
+    if (Array.isArray(config?.signals) && config.signals.length === 0) return [];
     const raw = Array.isArray(config?.signals)
       ? (config.signals as unknown[]).filter((s): s is string => typeof s === 'string')
       : DEFAULT_SIGNALS;

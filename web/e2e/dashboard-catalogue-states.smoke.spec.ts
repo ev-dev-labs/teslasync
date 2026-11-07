@@ -15,9 +15,9 @@ import {
 test.skip(process.env.E2E_MOCKS === '0', 'Requires local catalogue fixtures');
 test.beforeEach(({ page }) => { recordCatalogueObservationSources(page); });
 
-const weekly: WeeklyDigestData = {
-  drives: 4, distanceKm: 42, energyKwh: 7, cost: 2.1, efficiency: 166.67,
-  prevDrives: 2, prevDistanceKm: 21, prevEnergyKwh: 4, prevCost: 1.2, prevEfficiency: 190.48,
+const weekly: Omit<WeeklyDigestData, 'energyWh' | 'prevEnergyWh'> = {
+  drives: 4, distanceKm: 42, energy_kwh: 7, cost: 2.1, efficiency: 166.67,
+  prevDrives: 2, prevDistanceKm: 21, prev_energy_kwh: 4, prevCost: 1.2, prevEfficiency: 190.48,
 };
 const panelFor = (page: Page, id: string) => page.locator(`[data-widget-id="state-${id}"] > .widget-panel`);
 

@@ -5,6 +5,7 @@ import type { VampireDrainEvent, VampireDrainStats, VampireDrainWatch } from '@/
 import { STATUS_COLORS } from '@/lib/colors';
 import VampireDrainWidget, {
   buildDrainBarData,
+  buildDrainTrendData,
   getDrainStatus,
   drainColor,
 } from './VampireDrainWidget';
@@ -186,5 +187,20 @@ describe('Vampire drain helpers', () => {
       { index: '2', rate: 2.1 },
     ]);
     expect(buildDrainBarData([])).toEqual([]);
+  });
+
+  it('preserves the window positions and timestamps around gaps in the parked drain trend', () => {
+    expect(buildDrainTrendData([
+      { started_at: '2026-10-01T12:00:00Z', drain_pct_per_day: 0 },
+      { started_at: '2026-10-02T12:00:00Z', drain_pct_per_day: null },
+      { started_at: '2026-10-03T12:00:00Z', drain_pct_per_day: -0.5 },
+      { started_at: '2026-10-04T12:00:00Z', drain_pct_per_day: Number.NaN },
+    ])).toEqual([
+      { index: '1', startedAt: '2026-10-01T12:00:00Z', rate: 0 },
+      { index: '2', startedAt: '2026-10-02T12:00:00Z', rate: null },
+      { index: '3', startedAt: '2026-10-03T12:00:00Z', rate: -0.5 },
+      { index: '4', startedAt: '2026-10-04T12:00:00Z', rate: null },
+    ]);
+    expect(buildDrainTrendData([])).toEqual([]);
   });
 });

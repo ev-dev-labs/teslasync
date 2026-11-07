@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartAnimation, axisTickSm, useMeasuredAxisWidth, useThemeChartPalette, EmbeddedChart, ChartLegend, type ChartDataRow } from '@/components/charts';
+import { ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartAnimation, chartAnimationProps, axisTickSm, useMeasuredAxisWidth, useThemeChartPalette, EmbeddedChart, ChartLegend, type ChartDataRow } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { SourceContent } from '@/components/layout';
@@ -14,12 +14,17 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 import { WidgetShell } from './WidgetShell';
+import { Caption } from '@/components/ui';
+import { usePackModule, usePackPresentation } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
 import { WidgetChartSummary } from './shared';
 import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
 import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
+
+const loadLinePresentation = () => import('./designPacks/families/LineTelemetryLayout');
 
 interface ChartDatum extends ChartDataRow {
   time: string;
@@ -29,12 +34,14 @@ interface ChartDatum extends ChartDataRow {
 
 export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const packId = usePackPresentation();
+  const LinePresentation = usePackModule(packId, loadLinePresentation);
   const { formatTime } = useDateFormat();
   const { fmtNumber } = useNumberFormatting();
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatDuration } = useUnits();
 
   const {
     data: drives,
@@ -156,6 +163,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
 
   const chart = useMemo(() => {
     if (chartData.length === 0) return null;
+    const seriesAnimation = packId === 'classic' ? {} : chartAnimationProps();
     return (
       <EmbeddedChart
         className="h-full min-h-0"
@@ -204,6 +212,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
           <Tooltip content={<ChartTooltip />} />
           <ChartLegend />
           <Line
+            {...seriesAnimation}
             yAxisId="speed"
             dataKey="speed"
             stroke={palette.series[0]}
@@ -214,10 +223,12 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             hide={hiddenSeries?.isHidden('speed')}
           />
           <Line
+            {...seriesAnimation}
             yAxisId="power"
             dataKey="power"
             stroke={palette.series[1]}
             strokeWidth={1.5}
+            strokeDasharray={packId === 'v7' ? '2 3' : undefined}
             dot={false}
             name={`${t('widget.driveTelemetry.powerLabel', 'Power')} (${unitPrefs.power ?? 'kW'})`}
             connectNulls={false}
@@ -228,7 +239,60 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
         )}
       </EmbeddedChart>
     );
-  }, [chartData, isCompact, unitPrefs.speed, unitPrefs.power, t, palette, axisWidth, fmtNumber]);
+  }, [chartData, isCompact, unitPrefs.speed, unitPrefs.power, t, palette, axisWidth, fmtNumber, packId]);
+
+  if (packId !== 'classic') {
+    const duration = knownNumber(latestDrive?.durationS);
+    const context = (
+      <Caption as="p" className="shrink-0 break-words pb-1">
+        {t('widget.driveTelemetry.lastDrive', 'Last drive')}
+        {latestDrive?.startAddress && ` · ${latestDrive.startAddress}`}
+        {latestDrive?.endAddress && ` → ${latestDrive.endAddress}`}
+      </Caption>
+    );
+    const fallback = <SourceContent {...telemetrySourceProps}>
+      <WidgetChartSummary stats={compactStats} chart={chart} compact={isCompact} />
+    </SourceContent>;
+    return (
+      <WidgetShell
+        title={t('widget.driveTelemetry.title', 'Drive telemetry')}
+        icon={isCompact ? undefined : <Activity className="h-3.5 w-3.5" aria-hidden="true" />}
+        loading={isLoading}
+        dataState={trust.hasData ? trust : undefined}
+        error={trust.fatalError?.message ?? null}
+        updatedAt={combinedUpdatedAt}
+        isFetching={combinedIsFetching}
+        isStale={isStale}
+        isError={combinedIsError}
+        onRefresh={handleRefresh}
+      >
+        {latestDrive ? (
+          LinePresentation ? (
+            <LinePresentation
+              appearance={PACK_APPEARANCES[packId]}
+              compact={isCompact}
+              context={context}
+              headline={compactStats[0]}
+              details={[
+                compactStats[1],
+                { label: t('common:common.duration', 'Duration'),
+                  value: duration != null && duration >= 0 ? formatDuration(duration) : null },
+              ]}
+              chart={chart}
+              sourceBoundary={content => <SourceContent {...telemetrySourceProps}>{content}</SourceContent>}
+            />
+          ) : <div className="flex h-full min-h-0 flex-col">{context}{fallback}</div>
+        ) : (
+          <EmptyState
+            icon={<Activity className="h-5 w-5" />}
+            message={t('widget.driveTelemetry.empty', 'No recent drives')}
+            action={{ label: t('common:common.refresh', 'Refresh'), onClick: handleRefresh }}
+            className="py-4"
+          />
+        )}
+      </WidgetShell>
+    );
+  }
 
   // Compact layout
   if (isCompact) {

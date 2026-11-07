@@ -16,6 +16,8 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates, knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
+import { cn } from '@/lib/cn';
+import { useTimelineStyles } from './designPacks/useTimelineStyles';
 
 function verdictLabel(v: NextChargeVerdict, t: (key: string, fallback: string) => string): string {
   switch (v) {
@@ -35,6 +37,7 @@ function verdictLabel(v: NextChargeVerdict, t: (key: string, fallback: string) =
 }
 
 export default function NextChargeDecisionWidget({ vehicleId }: WidgetProps) {
+  const timeline = useTimelineStyles();
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
@@ -128,7 +131,7 @@ export default function NextChargeDecisionWidget({ vehicleId }: WidgetProps) {
             target: numberOperand(targetSoc),
           });
           return (
-        <div className="flex h-full min-w-0 flex-col justify-center gap-2">
+        <div data-timeline-appearance={timeline?.appearance} className={cn('flex h-full min-w-0 flex-col justify-center gap-2', timeline?.row)}>
           <Text as="p" variant="body" className="font-semibold text-[var(--text-primary)]">
             {verdictLabel(data.verdict, t)}
           </Text>

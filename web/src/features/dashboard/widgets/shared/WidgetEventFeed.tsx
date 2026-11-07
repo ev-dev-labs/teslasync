@@ -4,6 +4,9 @@ import { TimelineItem } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useDateLabels } from '@/hooks/useDateLabels';
+import { cn } from '@/lib/cn';
+import TimelinePresentation from '../designPacks/TimelinePresentation';
+import type { TimelineSlots } from '../designPacks/families/Timeline.types';
 
 export interface EventFeedItem {
   id: string | number;
@@ -96,24 +99,26 @@ export function WidgetEventFeed({
 
   if (sorted.length === 0) {
     return (
+      <TimelinePresentation compact={compact}>
       <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
         icon={emptyIcon}
         message={emptyMessage ?? t('widget.noEvents', 'No events yet')}
         className="py-4"
       />
+      </TimelinePresentation>
     );
   }
 
   // Rows intentionally bleed ±4px (-mx-1) for their hover background;
   // overflow-x-clip keeps the feed from scrolling horizontally.
-  return (
+  const renderFeed = (slots?: TimelineSlots) => (
     <div
       role="list"
       aria-label={t('widget.eventFeed.label', 'Event feed')}
-      className="widget-event-feed space-y-0 overflow-x-clip overflow-y-auto h-full"
+      className={cn('widget-event-feed space-y-0 overflow-x-clip overflow-y-auto h-full', slots?.feed)}
     >
       {sorted.map((item, i) => (
-        <div role="listitem" key={item.id}>
+        <div role="listitem" key={item.id} className={slots?.row}>
           <TimelineItem
             icon={item.icon}
             title={item.title}
@@ -131,4 +136,5 @@ export function WidgetEventFeed({
       ))}
     </div>
   );
+  return <TimelinePresentation compact={compact} render={renderFeed}>{renderFeed()}</TimelinePresentation>;
 }

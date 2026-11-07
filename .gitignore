@@ -86,6 +86,11 @@ PROMPT_COMMANDS.txt
 # Copilot session state (per-user, not committed)
 .copilot/
 
+# Local widget-design loop and comparison previews.
+/.github/extensions/widget-design-packs/
+/docs/widget-design-packs/
+/docs/widget-redesign/widgets-compare*.html
+
 # Temporary files from audits/scripts
 /tmp/
 !/tmp/.gitkeep

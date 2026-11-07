@@ -12,6 +12,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { WidgetBigNumber } from './shared';
 import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
@@ -98,6 +99,39 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
       },
     ];
   }, [data, distanceUnit, t, fmtNumber, fmtInt]);
+  const headline = (
+    <div className="flex min-w-0 items-start justify-between gap-3">
+      <WidgetBigNumber value={projectedRange != null ? fmtNumber(projectedRange, 0) : null}
+        unit={distanceUnit} label={t('widget.projectedRange.projected', 'Projected')}
+        badge={badge && { ...badge, text: isCompact ? badge.text : `${badge.text} · ${fmtNumber(healthScore, 0)}%` }}
+        animated={false} />
+      {!isCompact && epaRange != null && (
+        <span className={`${dashboardTokens.metricLabel} mt-1 shrink-0 text-end`}>
+          {t('widget.projectedRange.epa', 'EPA')}: {fmtNumber(epaRange, 0)} {distanceUnit}
+        </span>
+      )}
+    </div>
+  );
+  const comparison = !isCompact && <ComparisonBar rangePct={rangePct} t={t} />;
+  const details = (isWide || !data) && (
+    <>
+      {isWide && (
+        <section className="flex min-w-0 flex-col gap-2">
+          <h4 className={dashboardTokens.metricLabel}>{t('widget.projectedRange.factors', 'Range factors')}</h4>
+          <DashboardSourceBrief metrics={factors} state={trust}
+            eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+            title={t('widget.projectedRange.summaryTitle', 'Returned range-model inputs')}
+            description={t('widget.projectedRange.summaryDescription', 'Degradation, daily distance, capacity and equivalent cycles remain distinct from the projected-range hero and retained EPA comparison.')}
+            scope={t('widget.projectedRange.summaryScope', 'Vehicle {{id}} · inferred range analysis; exact observation bounds and recording completeness are not supplied.', { id: id ?? '—' })}
+            testId="dashboard-projected-range-factors-brief" />
+        </section>
+      )}
+      {!data && (
+        <EmptyState variant="informational" icon={<Navigation className="h-6 w-6" />}
+          message={t('widget.projectedRange.noData', 'No projected range data')} className="py-4" />
+      )}
+    </>
+  );
 
   return (
     <WidgetShell
@@ -111,47 +145,11 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={() => refetch()}
     >
-      <div className="flex min-w-0 flex-col gap-3">
-        {/* After hero: one headline projection, rated range quiet on the right. */}
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <WidgetBigNumber
-            value={projectedRange != null ? fmtNumber(projectedRange, 0) : null}
-            unit={distanceUnit}
-            label={t('widget.projectedRange.projected', 'Projected')}
-            badge={badge && {
-              ...badge,
-              text: isCompact ? badge.text : `${badge.text} · ${fmtNumber(healthScore, 0)}%`,
-            }}
-            animated={false}
-          />
-          {!isCompact && epaRange != null && (
-            <span className={`${dashboardTokens.metricLabel} mt-1 shrink-0 text-end`}>
-              {t('widget.projectedRange.epa', 'EPA')}: {fmtNumber(epaRange, 0)} {distanceUnit}
-            </span>
-          )}
-        </div>
-        {!isCompact && (
-          <ComparisonBar rangePct={rangePct} t={t} />
-        )}
-        {isWide && (
-          <section className="flex min-w-0 flex-col gap-2">
-            <h4 className={dashboardTokens.metricLabel}>{t('widget.projectedRange.factors', 'Range factors')}</h4>
-            <DashboardSourceBrief metrics={factors} state={trust}
-              eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
-              title={t('widget.projectedRange.summaryTitle', 'Returned range-model inputs')}
-              description={t('widget.projectedRange.summaryDescription', 'Degradation, daily distance, capacity and equivalent cycles remain distinct from the projected-range hero and retained EPA comparison.')}
-              scope={t('widget.projectedRange.summaryScope', 'Vehicle {{id}} · inferred range analysis; exact observation bounds and recording completeness are not supplied.', { id: id ?? '—' })}
-              testId="dashboard-projected-range-factors-brief" />
-          </section>
-        )}
-        {!data && (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<Navigation className="h-6 w-6" />}
-            message={t('widget.projectedRange.noData', 'No projected range data')}
-            className="py-4"
-          />
-        )}
-      </div>
+      <InstrumentPresentation family="meter" compact={isCompact} headline={headline}
+        reading={isCompact ? undefined : { value: rangePct, max: 100, label: t('widget.projectedRange.rangeComparison', 'Projected range vs EPA rated'), unit: '%' }}
+        instrument={comparison} details={details} icon={<Navigation />}>
+        <div className="flex min-w-0 flex-col gap-3">{headline}{comparison}{details}</div>
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

@@ -11,8 +11,10 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertPowerFromSI } from '@/lib/unitConversion';
 
 import { chartTokens } from '@/lib/tokens';
-import { WidgetChartSummary, type ChartSummaryStat } from './shared';
+import { WidgetBigNumber, WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -42,6 +44,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
   const { formatTime } = useDateFormat();
   const { startInstant, endInstantExclusive } = useRangeState({ defaultPresetId: '24h' });
   const widgetId = useId();
+  const packId = usePackPresentation();
 
   const {
     data: sites,
@@ -137,12 +140,30 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
     title: t('widget.powerFlowHistory.title', 'Power flow history'),
     icon: <TrendingUp aria-hidden="true" className="h-3.5 w-3.5 text-theme-accent" />,
   };
+  const headline = hasData ? (
+    <WidgetBigNumber
+      value={avgSolarKw == null ? null : fmtNumber(avgSolarKw)}
+      unit={unitPrefs.power}
+      label={t('widget.powerFlowHistory.avgSolar', 'Avg solar')}
+      animated={false}
+    />
+  ) : undefined;
 
   // No energy sites linked. Only surface the "no site" empty state when the
   // sites query genuinely returned none — a sites *error* must fall through so
   // the shell can render it, rather than masking a fetch failure behind a
   // misleading "no site linked" message.
   if (!hasSites && !isLoading && !sitesError) {
+    const emptyBody = (
+      <WidgetChartSummary
+        compact={isCompact}
+        isEmpty
+        emptyMessage={t('widget.powerFlowHistory.noSite', 'No Tesla energy site linked')}
+        emptyIcon={<TrendingUp aria-hidden="true" className="h-5 w-5" />}
+        stats={[]}
+        chart={null}
+      />
+    );
     return (
       <WidgetShell
         {...shellProps}
@@ -154,20 +175,37 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
         isError={sitesIsError}
         onRefresh={() => refetchSites()}
       >
-        <WidgetChartSummary
-          compact={isCompact}
-          isEmpty
-          emptyMessage={t('widget.powerFlowHistory.noSite', 'No Tesla energy site linked')}
-          emptyIcon={<TrendingUp aria-hidden="true" className="h-5 w-5" />}
-          stats={[]}
-          chart={null}
-        />
+        <InstrumentPresentation family="line" compact={isCompact} context={emptyBody}>
+          {emptyBody}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
 
   // Compact (1-col): summary stats only
   if (isCompact) {
+    const compactStats: ChartSummaryStat[] = hasData ? [
+      {
+        label: t('widget.powerFlowHistory.avgSolar', 'Avg solar'),
+        value: avgSolarKw == null ? null : fmtNumber(avgSolarKw),
+        unit: unitPrefs.power,
+      },
+      {
+        label: t('widget.powerFlowHistory.peakHome', 'Peak home'),
+        value: peakHomeKw == null ? null : fmtNumber(peakHomeKw),
+        unit: unitPrefs.power,
+      },
+    ] : [];
+    const compactBody = (
+      <WidgetChartSummary
+        compact
+        isEmpty={!hasData}
+        emptyMessage={t('widget.powerFlowHistory.noData', 'No power flow data')}
+        emptyIcon={<TrendingUp aria-hidden="true" className="h-5 w-5" />}
+        stats={compactStats}
+        chart={null}
+      />
+    );
     return (
       <WidgetShell
         {...shellProps}
@@ -180,25 +218,18 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
         isError={isError}
         onRefresh={handleRefresh}
       >
-        <WidgetChartSummary
+        <InstrumentPresentation
+          family="line"
           compact
-          isEmpty={!hasData}
-          emptyMessage={t('widget.powerFlowHistory.noData', 'No power flow data')}
-          emptyIcon={<TrendingUp aria-hidden="true" className="h-5 w-5" />}
-          stats={hasData ? [
-            {
-              label: t('widget.powerFlowHistory.avgSolar', 'Avg solar'),
-              value: avgSolarKw == null ? null : fmtNumber(avgSolarKw),
-              unit: unitPrefs.power,
-            },
-            {
-              label: t('widget.powerFlowHistory.peakHome', 'Peak home'),
-              value: peakHomeKw == null ? null : fmtNumber(peakHomeKw),
-              unit: unitPrefs.power,
-            },
-          ] : []}
-          chart={null}
-        />
+          headline={headline}
+          icon={hasData ? <TrendingUp aria-hidden="true" /> : undefined}
+          context={hasData
+            ? <DataProvenanceBadge provenance={dataState.provenance} status={dataState.status} />
+            : compactBody}
+          details={hasData ? <WidgetChartSummary compact stats={compactStats.slice(1)} chart={null} /> : undefined}
+        >
+          {compactBody}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
@@ -225,6 +256,122 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
     : [];
 
   const tick = isWide ? axisTick : axisTickSm;
+  const chart = (
+    <EmbeddedChart
+      title={t('widget.powerFlowHistory.title', 'Power flow history')}
+      ariaLabel={t(
+        'widget.powerFlowHistory.chartAria',
+        'Solar, battery, grid, and home power over the last 24 hours',
+      )}
+      data={chartData}
+      dataColumns={[
+        { key: 'time', label: t('widget.powerFlowHistory.time', 'Time') },
+        { key: 'solar', label: `${t('widget.powerFlowHistory.solar', 'Solar')} (${unitPrefs.power})` },
+        { key: 'battery', label: `${t('widget.powerFlowHistory.battery', 'Battery')} (${unitPrefs.power})` },
+        { key: 'grid', label: `${t('widget.powerFlowHistory.grid', 'Grid')} (${unitPrefs.power})` },
+        { key: 'home', label: `${t('widget.powerFlowHistory.home', 'Home')} (${unitPrefs.power})` },
+      ]}
+      chartKey="dashboard-power-flow-history"
+    >
+      {({ hiddenSeries }) => (
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+            {chartGrid}
+            <XAxis
+              dataKey="time"
+              tick={tick}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(value: string) => formatTime(value)}
+            />
+            <YAxis
+              tick={tick}
+              tickLine={false}
+              axisLine={false}
+              width={axisWidth}
+              tickFormatter={(v: number) => fmt(v)}
+            />
+            <Tooltip
+              content={<ChartTooltip />}
+              formatter={(value: number, name: string) => [
+                `${fmtNumber(value)} ${unitPrefs.power}`,
+                name,
+              ]}
+              labelFormatter={(value: string) => formatTime(value)}
+              cursor={{ fill: chartTokens.gridStroke }}
+            />
+            <ChartLegend />
+            <defs>
+              <linearGradient id={`${widgetId}-solarGrad`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={chartTokens.series[2]} stopOpacity={0.2} />
+                <stop offset="95%" stopColor={chartTokens.series[2]} stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id={`${widgetId}-batteryGrad`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={chartTokens.series[1]} stopOpacity={0.2} />
+                <stop offset="95%" stopColor={chartTokens.series[1]} stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id={`${widgetId}-gridGrad`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={chartTokens.series[0]} stopOpacity={0.2} />
+                <stop offset="95%" stopColor={chartTokens.series[0]} stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id={`${widgetId}-homeGrad`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={chartTokens.tooltipMutedText} stopOpacity={0.2} />
+                <stop offset="95%" stopColor={chartTokens.tooltipMutedText} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Area
+              type="monotone"
+              dataKey="solar"
+              stroke={chartTokens.series[2]}
+              strokeWidth={packId === 'classic' ? 2 : 3}
+              fill={`url(#${widgetId}-solarGrad)`}
+              name={t('widget.powerFlowHistory.solar', 'Solar')}
+              hide={hiddenSeries?.isHidden('solar')}
+            />
+            <Area
+              type="monotone"
+              dataKey="battery"
+              stroke={chartTokens.series[1]}
+              strokeWidth={packId === 'classic' ? 2 : 2.5}
+              strokeDasharray={packId === 'v5' ? '2 3' : undefined}
+              fill={`url(#${widgetId}-batteryGrad)`}
+              name={t('widget.powerFlowHistory.battery', 'Battery')}
+              hide={hiddenSeries?.isHidden('battery')}
+            />
+            <Area
+              type="monotone"
+              dataKey="grid"
+              stroke={chartTokens.series[0]}
+              strokeWidth={packId === 'classic' ? 2 : 2.5}
+              strokeDasharray={packId === 'v5' ? '1 3' : undefined}
+              fill={`url(#${widgetId}-gridGrad)`}
+              name={t('widget.powerFlowHistory.grid', 'Grid')}
+              hide={hiddenSeries?.isHidden('grid')}
+            />
+            <Area
+              type="monotone"
+              dataKey="home"
+              stroke={chartTokens.tooltipMutedText}
+              strokeWidth={packId === 'classic' ? 2 : 2.5}
+              strokeDasharray={packId === 'v5' ? '2 5' : undefined}
+              fill={`url(#${widgetId}-homeGrad)`}
+              name={t('widget.powerFlowHistory.home', 'Home')}
+              hide={hiddenSeries?.isHidden('home')}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      )}
+    </EmbeddedChart>
+  );
+  const classicBody = (
+    <WidgetChartSummary
+      isEmpty={!hasData}
+      emptyMessage={t('widget.powerFlowHistory.noData', 'No power flow data')}
+      emptyIcon={<TrendingUp aria-hidden="true" className="h-5 w-5" />}
+      stats={stats}
+      chart={chart}
+    />
+  );
 
   return (
     <WidgetShell
@@ -239,116 +386,16 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <WidgetChartSummary
-        isEmpty={!hasData}
-        emptyMessage={t('widget.powerFlowHistory.noData', 'No power flow data')}
-        emptyIcon={<TrendingUp aria-hidden="true" className="h-5 w-5" />}
-        stats={stats}
-        chart={
-          <EmbeddedChart
-            title={t('widget.powerFlowHistory.title', 'Power flow history')}
-            ariaLabel={t(
-              'widget.powerFlowHistory.chartAria',
-              'Solar, battery, grid, and home power over the last 24 hours',
-            )}
-            data={chartData}
-            dataColumns={[
-              { key: 'time', label: t('widget.powerFlowHistory.time', 'Time') },
-              { key: 'solar', label: `${t('widget.powerFlowHistory.solar', 'Solar')} (${unitPrefs.power})` },
-              { key: 'battery', label: `${t('widget.powerFlowHistory.battery', 'Battery')} (${unitPrefs.power})` },
-              { key: 'grid', label: `${t('widget.powerFlowHistory.grid', 'Grid')} (${unitPrefs.power})` },
-              { key: 'home', label: `${t('widget.powerFlowHistory.home', 'Home')} (${unitPrefs.power})` },
-            ]}
-            chartKey="dashboard-power-flow-history"
-          >
-            {({ hiddenSeries }) => (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
-              {chartGrid}
-              <XAxis
-                dataKey="time"
-                tick={tick}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value: string) => formatTime(value)}
-              />
-              <YAxis
-                tick={tick}
-                tickLine={false}
-                axisLine={false}
-                width={axisWidth}
-                tickFormatter={(v: number) => fmt(v)}
-              />
-              <Tooltip
-                content={<ChartTooltip />}
-                formatter={(value: number, name: string) => [
-                  `${fmtNumber(value)} ${unitPrefs.power}`,
-                  name,
-                ]}
-                labelFormatter={(value: string) => formatTime(value)}
-                cursor={{ fill: chartTokens.gridStroke }}
-              />
-              <ChartLegend />
-              <defs>
-                <linearGradient id={`${widgetId}-solarGrad`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={chartTokens.series[2]} stopOpacity={0.2} />
-                  <stop offset="95%" stopColor={chartTokens.series[2]} stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id={`${widgetId}-batteryGrad`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={chartTokens.series[1]} stopOpacity={0.2} />
-                  <stop offset="95%" stopColor={chartTokens.series[1]} stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id={`${widgetId}-gridGrad`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={chartTokens.series[0]} stopOpacity={0.2} />
-                  <stop offset="95%" stopColor={chartTokens.series[0]} stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id={`${widgetId}-homeGrad`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={chartTokens.tooltipMutedText} stopOpacity={0.2} />
-                  <stop offset="95%" stopColor={chartTokens.tooltipMutedText} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area
-                type="monotone"
-                dataKey="solar"
-                stroke={chartTokens.series[2]}
-                strokeWidth={2}
-                fill={`url(#${widgetId}-solarGrad)`}
-                name={t('widget.powerFlowHistory.solar', 'Solar')}
-                hide={hiddenSeries?.isHidden('solar')}
-              />
-              <Area
-                type="monotone"
-                dataKey="battery"
-                stroke={chartTokens.series[1]}
-                strokeWidth={2}
-                fill={`url(#${widgetId}-batteryGrad)`}
-                name={t('widget.powerFlowHistory.battery', 'Battery')}
-                hide={hiddenSeries?.isHidden('battery')}
-              />
-              <Area
-                type="monotone"
-                dataKey="grid"
-                stroke={chartTokens.series[0]}
-                strokeWidth={2}
-                fill={`url(#${widgetId}-gridGrad)`}
-                name={t('widget.powerFlowHistory.grid', 'Grid')}
-                hide={hiddenSeries?.isHidden('grid')}
-              />
-              <Area
-                type="monotone"
-                dataKey="home"
-                stroke={chartTokens.tooltipMutedText}
-                strokeWidth={2}
-                fill={`url(#${widgetId}-homeGrad)`}
-                name={t('widget.powerFlowHistory.home', 'Home')}
-                hide={hiddenSeries?.isHidden('home')}
-              />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </EmbeddedChart>
-        }
-      />
+      <InstrumentPresentation
+        family="line"
+        headline={headline}
+        icon={hasData ? <TrendingUp aria-hidden="true" /> : undefined}
+        context={!hasData ? classicBody : undefined}
+        instrument={hasData ? <div className="widget-chart-well h-56 min-w-0">{chart}</div> : undefined}
+        details={hasData ? <WidgetChartSummary compact stats={stats.slice(1)} chart={null} /> : undefined}
+      >
+        {classicBody}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

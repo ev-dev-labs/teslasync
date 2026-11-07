@@ -19,6 +19,8 @@ import { combineDataStates, knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { WidgetBigNumber, WidgetDetailCard, WidgetStatGrid } from './shared';
 import { sourcePresentation } from '../components/continuation-dashboard-3/sourcePresentation';
+import TimelinePresentation from './designPacks/TimelinePresentation';
+import StatTimelinePresentation from './designPacks/StatTimelinePresentation';
 
 /**
  * Maps a charge-plan status to a semantic <Badge> variant. Exported for direct
@@ -220,6 +222,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
   }, [safeRates]);
 
   const hasData = safePlans.length > 0 || safeRates.length > 0;
+  const summaryStats = planEntries.slice(0, 2).map(({ label, value }) => ({ label, value }));
 
   const handleRefresh = () => {
     if (vehicleId == null) void vehiclesQuery.refetch?.();
@@ -239,12 +242,14 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
         onRefresh={handleRefresh}
       >
         {activePlan ? (
+          <TimelinePresentation compact>
           <WidgetBigNumber
             align="center"
             value={knownNumber(activePlan.target_soc) == null ? null : `${fmtNumber(activePlan.target_soc)}%`}
             label={t('widget.chargePlans.targetSoc', 'Target SOC')}
             subtitle={activePlan.depart_by ? formatTime(activePlan.depart_by) : undefined}
           />
+          </TimelinePresentation>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Clock className="h-5 w-5" />}
@@ -287,8 +292,11 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
                   {chargePlanStatusLabel(activePlan.status, (key, fallback) => t(key, fallback))}
                 </Badge>
               </div>
-              <WidgetStatGrid stats={planEntries.slice(0, 2).map(({ label, value }) => ({ label, value }))} />
+              <StatTimelinePresentation stats={summaryStats}>
+                <WidgetStatGrid stats={summaryStats} />
+              </StatTimelinePresentation>
               <WidgetDetailCard
+                presentation="timeline"
                 entries={planEntries.slice(2)}
                 compact={size.rows <= 3}
                 emptyMessage={t('widget.chargePlans.noDetails', 'No plan details')}
@@ -308,6 +316,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
             errorRecovery={{ onRetry: ratesState.retry ?? undefined }}
           >
             <WidgetDetailCard
+              presentation="timeline"
               entries={rateEntries}
               compact={size.rows <= 3}
               emptyMessage={t('widget.chargePlans.noRates', 'No rate plans')}

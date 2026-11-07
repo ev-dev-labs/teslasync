@@ -18,6 +18,7 @@ import { useDateLabels } from '@/hooks/useDateLabels';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { gaugeTone } from '@/lib/tokens';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { WidgetBigNumber, WidgetChartSummary, WidgetTipCards, type TipItem } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -85,13 +86,14 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
   // month keys are already calendar labels (same convention as the trend widget).
   const chartData = useMemo(() => {
     const history = (data?.monthly_trend ?? [])
-      .map((entry) => ({ month: entry.month ?? '', health: knownNumber(entry.avg_health), forecast: null as number | null }))
-      .filter((point) => point.health != null);
+      .map((entry) => ({ month: entry.month ?? '', health: knownNumber(entry.avg_health), forecast: null as number | null }));
     const forecast = (data?.projections ?? [])
-      .map((point) => ({ month: formatMonthYear(point.date), health: null as number | null, forecast: knownNumber(point.health_pct) }))
-      .filter((point) => point.forecast != null && point.month !== '—');
+      .map((point) => ({ month: formatMonthYear(point.date), health: null as number | null, forecast: knownNumber(point.health_pct) }));
     if (history.length > 0 && forecast.length > 0) {
-      forecast[0] = { ...forecast[0], health: history[history.length - 1].health };
+      // Join at the actual last observation, never move it to a forecast date.
+      // Null observations stay in both series so source gaps remain visible.
+      const last = history[history.length - 1];
+      history[history.length - 1] = { ...last, forecast: last.health };
     }
     return [...history, ...forecast];
   }, [data, formatMonthYear]);
@@ -136,6 +138,155 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
     ? t('widget.emptyMessage', 'This widget has no qualifying data yet.')
     : t('widget.forecast.noData', 'No degradation forecast data');
 
+  const headline = isCompact ? (
+    <div className="flex min-w-0 flex-col gap-2">
+      <WidgetBigNumber value={currentHealthPct != null ? `${fmtNumber(currentHealthPct, 0)}%` : null} label={t('widget.forecast.currentHealth', 'Current health')} />
+      {tier && <Badge variant={tier.variant} size="sm" className="self-start">
+        {t(`widget.forecast.${tier.key}`, tier.label)}
+      </Badge>}
+    </div>
+  ) : (
+    <div className="flex min-w-0 items-start justify-between gap-3">
+      <WidgetBigNumber value={projectedDate === '—' ? null : projectedDate} label={t('widget.forecast.projected80', 'Projected 80% capacity')} animated={false} />
+      {tier && <Badge variant={tier.variant} size="sm" className="mt-1 shrink-0">
+        {t(`widget.forecast.${tier.key}`, tier.label)}
+      </Badge>}
+    </div>
+  );
+  const compactEmpty = !hasData && (
+    <EmptyState icon={<TrendingDown className="h-5 w-5" />} message={t('widget.forecast.noData', 'No degradation forecast data')}
+      action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }} />
+  );
+  const summary = (
+    <DashboardSourceBrief metrics={summaryMetrics} state={trust}
+      eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+      title={t('widget.forecast.summaryTitle', 'Returned degradation measurements')}
+      description={t('widget.forecast.summaryDescription', 'Current health and monthly degradation retain their separate meanings; the projected date, horizon intervals, risks and recommendations remain separate model outputs.')}
+      scope={t('widget.forecast.summaryScope', 'Vehicle {{id}} · returned inferred forecast; the response does not establish continuous recording coverage.', { id: id ?? '—' })}
+      loading={isLoading && !data} testId="dashboard-battery-forecast-brief" />
+  );
+  const chart = (
+    <WidgetChartSummary
+      stats={[]}
+      legend={[
+        { label: t('widget.healthPct', 'Health %') },
+        { label: t('widget.costForecast.forecast', 'Forecast') },
+      ]}
+      chart={(
+        <EmbeddedChart
+          title={t('widget.batteryDegradation', 'Battery degradation')}
+          ariaLabel={t('widget.batteryDegradationChart.aria', 'Monthly battery health trend')}
+          empty={chartData.filter((point) => point.health != null || point.forecast != null).length <= 1}
+          emptyMessage={data ? t('widget.needMoreData', 'More data needed for trend') : t('widget.noDegradation', 'No degradation data')}
+          data={chartData}
+          dataColumns={[
+            { key: 'month', label: t('widget.batteryDegradationChart.month', 'Month') },
+            { key: 'health', label: t('widget.healthPct', 'Health %') },
+            { key: 'forecast', label: t('widget.costForecast.forecast', 'Forecast') },
+          ]}
+          chartKey="dashboard-battery-degradation-forecast"
+          height={140}
+        >
+          {({ hiddenSeries }) => (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+                {chartGrid}
+                <XAxis dataKey="month" {...axisTickSm} />
+                <YAxis domain={['dataMin - 2', 100]} tickFormatter={(v: number) => `${v}%`} {...axisTickSm} tick={axisTickSm} width={44} />
+                <Tooltip content={<ChartTooltip />} />
+                <ReferenceLine y={80} stroke={gaugeTone.danger} strokeDasharray="4 4" strokeOpacity={0.4} />
+                <ChartLegend />
+                <Line type="monotone" dataKey="health" stroke={palette.series[1]} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={!reduce} name={t('widget.healthPct', 'Health %')} hide={hiddenSeries?.isHidden('health')} />
+                <Line type="monotone" dataKey="forecast" stroke={palette.series[1]} strokeWidth={2} strokeDasharray="5 4" dot={false} connectNulls={false} isAnimationActive={!reduce} name={t('widget.costForecast.forecast', 'Forecast')} hide={hiddenSeries?.isHidden('forecast')} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </EmbeddedChart>
+      )}
+    />
+  );
+  const outlook = (
+    <div className="flex flex-col gap-1.5">
+      <Subhead className="break-words">
+        {t('widget.forecast.horizon', '1 / 3 / 5-year outlook')}
+      </Subhead>
+      {(data?.horizon_outlook?.points?.length ?? 0) > 0 ? <ul className="grid grid-cols-1 gap-2 @xs:grid-cols-3">
+        {(data?.horizon_outlook?.points ?? []).map((p) => (
+          <li
+            key={p.years}
+            className="min-w-0 border-b border-[var(--border-subtle)] py-2"
+          >
+            <Caption className="block break-words">
+              {t('widget.forecast.years', '{{n}} yr', { n: p.years })}
+            </Caption>
+            <Text as="p" size="lg" weight="semibold" color="primary" className="break-words tabular-nums">
+              {knownNumber(p.health_pct) != null ? `${fmtNumber(p.health_pct, 0)}%` : '—'}
+            </Text>
+            <Caption className="block break-words tabular-nums">
+              {knownNumber(p.confidence_low) != null ? fmtNumber(p.confidence_low, 0) : '—'}–{knownNumber(p.confidence_high) != null ? fmtNumber(p.confidence_high, 0) : '—'}
+            </Caption>
+          </li>
+        ))}
+      </ul> : (
+        // no-action: Outlook points are read-only model output; the widget owns refresh.
+        <EmptyState message={emptySectionMessage} />
+      )}
+    </div>
+  );
+  const risks = (
+    <div className="flex flex-col gap-1.5">
+      <Subhead className="break-words">
+        {t('widget.forecast.riskFactors', 'Risk factors')}
+      </Subhead>
+      {riskFactors.length > 0 ? <ul className="flex flex-col gap-1">
+        {riskFactors.slice(0, 5).map((rf, idx) => {
+          const score = knownNumber(rf.score);
+          const impact = score != null ? scoreToImpact(score) : null;
+          return (
+            <li
+              key={`${rf.name ?? 'risk'}-${idx}`}
+              className="flex min-w-0 items-start gap-2 border-b border-[var(--border-subtle)] py-2"
+            >
+              <span className="shrink-0 text-[var(--text-secondary)]">
+                {riskIcon(rf.name)}
+              </span>
+              <div className="flex-1 min-w-0">
+                <Text as="span" variant="bodySm" className="block break-words">
+                  {rf.label ?? rf.name ?? '—'}
+                </Text>
+                <Caption className="block break-words">
+                  {rf.detail ?? '—'}
+                </Caption>
+              </div>
+              <Badge variant={impact != null ? impactVariant(impact) : 'neutral'} size="sm">
+                {score != null ? fmtNumber(score, 0) : '—'}
+              </Badge>
+            </li>
+          );
+        })}
+      </ul> : (
+        // no-action: Missing model risk factors cannot be authored here; the widget owns refresh.
+        <EmptyState message={emptySectionMessage} />
+      )}
+    </div>
+  );
+  const tips = (
+    <div className="flex flex-col gap-1.5">
+      <Subhead className="break-words">
+        {t('widget.forecast.recommendations', 'Recommendations')}
+      </Subhead>
+      <WidgetTipCards tips={tipItems} maxTips={3} emptyMessage={t('widget.chargingOptimizer.noRecommendations', 'No recommendations')} />
+    </div>
+  );
+  const details = (
+    <div className="flex min-w-0 flex-col gap-3">
+      {isCompact ? compactEmpty : <>{summary}{outlook}{risks}{tips}</>}
+      <Caption as="p">
+        {t('dashboardWidgets.battery.forecast.uncertainty', 'Forecasts are uncertain and are not warranty or service advice.')}
+      </Caption>
+    </div>
+  );
+
   return (
     <WidgetShell
       title={t('widget.forecast.title', 'Battery forecast')}
@@ -148,149 +299,18 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {isCompact ? (
-          /* ── Compact layout (1×2) ── */
-          <div className="flex min-w-0 flex-col gap-2">
-            <WidgetBigNumber value={currentHealthPct != null ? `${fmtNumber(currentHealthPct, 0)}%` : null} label={t('widget.forecast.currentHealth', 'Current health')} />
-            {tier && <Badge variant={tier.variant} size="sm" className="self-start">
-              {t(`widget.forecast.${tier.key}`, tier.label)}
-            </Badge>}
-            {!hasData && <EmptyState icon={<TrendingDown className="h-5 w-5" />} message={t('widget.forecast.noData', 'No degradation forecast data')}
-              action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }} />}
-          </div>
+      <InstrumentPresentation family="line" compact={isCompact} headline={headline}
+        icon={<TrendingDown />}
+        context={<Badge variant="neutral" size="sm" className="self-start">{t('widget.costForecast.forecast', 'Forecast')}</Badge>}
+        instrument={isCompact ? undefined : chart} details={details}>
+        {isCompact ? (
+          <div className="flex min-w-0 flex-col gap-2">{headline}{compactEmpty}</div>
         ) : (
-          /* ── Standard layout (2×4) ── */
           <div className="flex min-w-0 flex-col gap-3">
-            {/* Projected 80% date — hero section (After: headline + status pill) */}
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <WidgetBigNumber value={projectedDate === '—' ? null : projectedDate} label={t('widget.forecast.projected80', 'Projected 80% capacity')} animated={false} />
-              {tier && <Badge variant={tier.variant} size="sm" className="mt-1 shrink-0">
-                  {t(`widget.forecast.${tier.key}`, tier.label)}
-              </Badge>}
-            </div>
-
-            {/* Current health stat */}
-            <DashboardSourceBrief metrics={summaryMetrics} state={trust}
-              eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
-              title={t('widget.forecast.summaryTitle', 'Returned degradation measurements')}
-              description={t('widget.forecast.summaryDescription', 'Current health and monthly degradation retain their separate meanings; the projected date, horizon intervals, risks and recommendations remain separate model outputs.')}
-              scope={t('widget.forecast.summaryScope', 'Vehicle {{id}} · returned inferred forecast; the response does not establish continuous recording coverage.', { id: id ?? '—' })}
-              loading={isLoading && !data} testId="dashboard-battery-forecast-brief" />
-
-            {/* After-spec history + forecast line (85–100% health band) */}
-            <WidgetChartSummary
-              stats={[]}
-              legend={[
-                { label: t('widget.healthPct', 'Health %') },
-                { label: t('widget.costForecast.forecast', 'Forecast') },
-              ]}
-              chart={(
-                <EmbeddedChart
-                  title={t('widget.batteryDegradation', 'Battery degradation')}
-                  ariaLabel={t('widget.batteryDegradationChart.aria', 'Monthly battery health trend')}
-                  empty={chartData.filter((point) => point.health != null || point.forecast != null).length <= 1}
-                  emptyMessage={data ? t('widget.needMoreData', 'More data needed for trend') : t('widget.noDegradation', 'No degradation data')}
-                  data={chartData}
-                  dataColumns={[
-                    { key: 'month', label: t('widget.batteryDegradationChart.month', 'Month') },
-                    { key: 'health', label: t('widget.healthPct', 'Health %') },
-                    { key: 'forecast', label: t('widget.costForecast.forecast', 'Forecast') },
-                  ]}
-                  chartKey="dashboard-battery-degradation-forecast"
-                  height={140}
-                >
-                  {({ hiddenSeries }) => (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
-                      {chartGrid}
-                      <XAxis dataKey="month" {...axisTickSm} />
-                      <YAxis domain={['dataMin - 2', 100]} tickFormatter={(v: number) => `${v}%`} {...axisTickSm} tick={axisTickSm} width={44} />
-                      <Tooltip content={<ChartTooltip />} />
-                      <ReferenceLine y={80} stroke={gaugeTone.danger} strokeDasharray="4 4" strokeOpacity={0.4} />
-                      <ChartLegend />
-                      <Line type="monotone" dataKey="health" stroke={palette.series[1]} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={!reduce} name={t('widget.healthPct', 'Health %')} hide={hiddenSeries?.isHidden('health')} />
-                      <Line type="monotone" dataKey="forecast" stroke={palette.series[1]} strokeWidth={2} strokeDasharray="5 4" dot={false} connectNulls={false} isAnimationActive={!reduce} name={t('widget.costForecast.forecast', 'Forecast')} hide={hiddenSeries?.isHidden('forecast')} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                  )}
-                </EmbeddedChart>
-              )}
-            />
-
-            {/* Horizon outlook: 1/3/5-year twin readout */}
-              <div className="flex flex-col gap-1.5">
-                <Subhead className="break-words">
-                  {t('widget.forecast.horizon', '1 / 3 / 5-year outlook')}
-                </Subhead>
-                {(data?.horizon_outlook?.points?.length ?? 0) > 0 ? <ul className="grid grid-cols-1 gap-2 @xs:grid-cols-3">
-                  {(data?.horizon_outlook?.points ?? []).map((p) => (
-                    <li
-                      key={p.years}
-                      className="min-w-0 border-b border-[var(--border-subtle)] py-2"
-                    >
-                      <Caption className="block break-words">
-                        {t('widget.forecast.years', '{{n}} yr', { n: p.years })}
-                      </Caption>
-                      <Text as="p" size="lg" weight="semibold" color="primary" className="break-words tabular-nums">
-                        {knownNumber(p.health_pct) != null ? `${fmtNumber(p.health_pct, 0)}%` : '—'}
-                      </Text>
-                      <Caption className="block break-words tabular-nums">
-                        {knownNumber(p.confidence_low) != null ? fmtNumber(p.confidence_low, 0) : '—'}–{knownNumber(p.confidence_high) != null ? fmtNumber(p.confidence_high, 0) : '—'}
-                      </Caption>
-                    </li>
-                  ))}
-                </ul> : (
-                  // no-action: Outlook points are read-only model output; the widget owns refresh.
-                  <EmptyState message={emptySectionMessage} />
-                )}
-              </div>
-
-            {/* Risk factors list */}
-              <div className="flex flex-col gap-1.5">
-                <Subhead className="break-words">
-                  {t('widget.forecast.riskFactors', 'Risk factors')}
-                </Subhead>
-                {riskFactors.length > 0 ? <ul className="flex flex-col gap-1">
-                  {riskFactors.slice(0, 5).map((rf, idx) => {
-                    const score = knownNumber(rf.score);
-                    const impact = score != null ? scoreToImpact(score) : null;
-                    return (
-                      <li
-                        key={`${rf.name ?? 'risk'}-${idx}`}
-                        className="flex min-w-0 items-start gap-2 border-b border-[var(--border-subtle)] py-2"
-                      >
-                        <span className="shrink-0 text-[var(--text-secondary)]">
-                          {riskIcon(rf.name)}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <Text as="span" variant="bodySm" className="block break-words">
-                            {rf.label ?? rf.name ?? '—'}
-                          </Text>
-                          <Caption className="block break-words">
-                            {rf.detail ?? '—'}
-                          </Caption>
-                        </div>
-                        <Badge variant={impact != null ? impactVariant(impact) : 'neutral'} size="sm">
-                          {score != null ? fmtNumber(score, 0) : '—'}
-                        </Badge>
-                      </li>
-                    );
-                  })}
-                </ul> : (
-                  // no-action: Missing model risk factors cannot be authored here; the widget owns refresh.
-                  <EmptyState message={emptySectionMessage} />
-                )}
-              </div>
-
-            {/* Recommendations as tip cards */}
-              <div className="flex flex-col gap-1.5">
-                <Subhead className="break-words">
-                  {t('widget.forecast.recommendations', 'Recommendations')}
-                </Subhead>
-                <WidgetTipCards tips={tipItems} maxTips={3} emptyMessage={t('widget.chargingOptimizer.noRecommendations', 'No recommendations')} />
-              </div>
+            {headline}{summary}{chart}{outlook}{risks}{tips}
           </div>
-      )}
+        )}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

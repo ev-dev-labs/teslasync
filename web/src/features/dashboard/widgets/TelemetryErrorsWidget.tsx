@@ -13,10 +13,14 @@ import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
+import { cn } from '@/lib/cn';
+import TimelinePresentation from './designPacks/TimelinePresentation';
+import { useTimelineStyles } from './designPacks/useTimelineStyles';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 export default function TelemetryErrorsWidget({ size }: WidgetProps) {
+  const timeline = useTimelineStyles();
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
 
@@ -143,15 +147,17 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
       )}
       {isCompact ? (
         /* ── Compact layout (1×2) ── */
+        <TimelinePresentation compact>
         <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
           <WidgetBigNumber value={activeVINCount == null ? null : fmtInt(activeVINCount)} label={t('widget.telemetryErrors.errorVINs', "error VINs")} />
           <Badge variant={statusBadge} className="text-xs min-h-[28px]">
             {statusLabel}
           </Badge>
         </div>
+        </TimelinePresentation>
       ) : (
         /* ── Standard layout (2×4) ── */
-        <div className="flex flex-col gap-2 h-full">
+        <div data-timeline-appearance={timeline?.appearance} className="flex flex-col gap-2 h-full">
             {!isCompact && (
               <div className="flex min-w-0 items-center justify-between gap-2">
                 <div className="flex min-w-0 items-baseline gap-2">
@@ -185,7 +191,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
           )}
 
           {/* Error feed */}
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
+          <div className={cn('flex-1 min-h-0 overflow-y-auto space-y-1', timeline?.feed)}>
             <SourceContent
               state={sourceBoundaryState(sourceStates[1], errors != null)}
               label={t('widget.telemetryErrors.sample', 'Errors in fetched sample')}
@@ -208,7 +214,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
                 return (
                   <div
                     key={`${entry.vin}-${entry.error_code}-${idx}`}
-                    className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-[var(--border-subtle)] py-2 first:pt-0 last:border-b-0 min-h-11"
+                    className={cn('grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-[var(--border-subtle)] py-2 first:pt-0 last:border-b-0 min-h-11', timeline?.row)}
                   >
                     <span
                       aria-hidden="true"

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui';
 import { KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
+import TimelinePresentation from '../designPacks/TimelinePresentation';
 
 /**
  * One row of the shared detail-card primitive.
@@ -37,6 +38,7 @@ interface WidgetDetailCardProps {
   compact?: boolean;
   emptyMessage?: string;
   emptyIcon?: ReactNode;
+  presentation?: 'timeline';
 }
 
 const badgeVariantMap = {
@@ -61,6 +63,7 @@ export function WidgetDetailCard({
   compact = false,
   emptyMessage,
   emptyIcon,
+  presentation,
 }: WidgetDetailCardProps) {
   const { t } = useTranslation('dashboard');
 
@@ -81,12 +84,7 @@ export function WidgetDetailCard({
 
   const visible = compact ? source.slice(0, 4) : source;
 
-  return (
-    <KVList
-      layout="responsive"
-      wrap
-      className="widget-detail-list h-full overflow-y-auto"
-      items={visible.map((entry) => ({
+  const items = visible.map((entry) => ({
         id: entry.id,
         label: entry.status || entry.sublabel ? (
           <span className="flex min-w-0 items-center gap-2">
@@ -125,7 +123,17 @@ export function WidgetDetailCard({
             )}
           </span>
         ),
-      }))}
-    />
-  );
+      }));
+  const classic = <KVList layout="responsive" wrap className="widget-detail-list h-full overflow-y-auto" items={items} />;
+  return presentation === 'timeline' ? (
+    <TimelinePresentation compact={compact} render={slots => (
+      <div className={cn('widget-detail-list h-full overflow-y-auto', slots.feed)}>
+        {items.map((item, index) => (
+          <div key={item.id ?? index} className={slots.row}>
+            <KVList layout="responsive" wrap items={[item]} />
+          </div>
+        ))}
+      </div>
+    )}>{classic}</TimelinePresentation>
+  ) : classic;
 }

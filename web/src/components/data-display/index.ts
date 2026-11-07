@@ -53,6 +53,7 @@ export { MetricCard } from './MetricCard';
 export { MetricTile, type MetricTileProps } from './MetricTile';
 export { InlineMetric } from './InlineMetric';
 export { MetricBar } from './MetricBar';
+export { SegmentedMeter } from './SegmentedMeter';
 export { TimelineItem, type TimelineItemProps } from './TimelineItem';
 export { FSMBadge } from './FSMBadge';
 export { TransitionArrow, type TransitionArrowProps } from './TransitionArrow';

@@ -2,10 +2,10 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Watch, Lock, Unlock } from 'lucide-react';
 import { LinearGauge } from '@/components/charts';
-import { TimeStamp } from '@/components/data-display';
+import { KVList, TimeStamp } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display';
 import { AlertBanner, EmptyState, Skeleton } from '@/components/feedback';
-import { Button, Text } from '@/components/ui';
+import { Badge, Button, Caption, MetricValue, Text } from '@/components/ui';
 import { useWatchSummary, useWatchComplication } from '@/api/hooks/useWatch';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
@@ -13,6 +13,7 @@ import { combineDataStates, knownNumber } from '@/api/dataState';
 
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatusGrid } from './shared';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
@@ -137,6 +138,29 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
     />
   ) : null;
 
+  // A local key prerequisite is not proof of a working or current watch source.
+  const setupHeadline = notConfigured ? (
+    <div className="min-w-0 space-y-2">
+      <Caption as="p">{t('dashboardWidgets.vehicle.watchAccess.label', 'Watch access')}</Caption>
+      <MetricValue>{t('dashboardWidgets.vehicle.watchAccess.notConnected', 'Not connected')}</MetricValue>
+      <Badge variant="warning" size="sm">{t('dashboardWidgets.vehicle.watchAccess.setupNeeded', 'Setup needed')}</Badge>
+    </div>
+  ) : undefined;
+  const setupSteps = notConfigured ? (
+    <KVList layout="responsive" wrap items={[
+      {
+        id: 'connect',
+        label: t('dashboardWidgets.vehicle.watchAccess.connect', 'Connect'),
+        value: t('dashboardWidgets.vehicle.watchAccess.configureKey', 'Configure a wearable API key'),
+      },
+      {
+        id: 'review',
+        label: t('dashboardWidgets.vehicle.watchAccess.then', 'Then'),
+        value: t('dashboardWidgets.vehicle.watchAccess.reviewReadings', 'Review the latest available readings'),
+      },
+    ]} />
+  ) : undefined;
+
   // Compact (1×2): Watch-face circular display
   if (isCompact) {
     const isCharging = complication?.charging === true || summary?.is_charging === true;
@@ -148,6 +172,35 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
         : t('widget.unlocked', 'Unlocked'));
     }
     const compactStatus = compactStatusParts.join(' · ');
+
+    const compactBody = (
+      <div className="h-full flex flex-col items-center justify-center gap-1.5 py-1">
+        <div className="w-full">
+          {batteryLevel == null ? <WidgetBigNumber value={null} label={t('widget.battery', 'Battery')} /> : <LinearGauge
+            preserveReadingAndScale
+            value={batteryLevel}
+            max={100}
+            label=""
+            ariaLabel={t('widget.battery', 'Battery')}
+            unit="%"
+            color={color}
+            size={80}
+            decimals={displayPrecision}
+          />}
+        </div>
+        {displayRange != null && (
+          <span className={dashboardTokens.metricLabel}>
+            {fmtNumber(displayRange)} {distanceUnit}
+          </span>
+        )}
+        {compactStatus && (
+          <span className={dashboardTokens.metricLabel}>
+            {compactStatus}
+          </span>
+        )}
+        {!readsBlocked && !hasData && !summaryLoading && <p className={dashboardTokens.metricLabel}>{t('widget.noWatchData', 'No watch data')}</p>}
+      </div>
+    );
 
     return (
       <WidgetShell
@@ -161,36 +214,73 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
         isError={summaryError || capabilityFailure}
         onRefresh={notConfigured ? undefined : handleRefresh}
       >
+        <InstrumentPresentation family="empty" compact headline={setupHeadline}
+          icon={<Watch aria-hidden="true" />} context={capabilityState}
+          instrument={compactBody} details={setupSteps}>
           {capabilityState}
-          <div className="h-full flex flex-col items-center justify-center gap-1.5 py-1">
-            <div className="w-full">
-              {batteryLevel == null ? <WidgetBigNumber value={null} label={t('widget.battery', 'Battery')} /> : <LinearGauge
-                preserveReadingAndScale
-                value={batteryLevel}
-                max={100}
-                label=""
-                ariaLabel={t('widget.battery', 'Battery')}
-                unit="%"
-                color={color}
-                size={80}
-                decimals={displayPrecision}
-              />}
-            </div>
-            {displayRange != null && (
-              <span className={dashboardTokens.metricLabel}>
-                {fmtNumber(displayRange)} {distanceUnit}
-              </span>
-            )}
-            {compactStatus && (
-              <span className={dashboardTokens.metricLabel}>
-                {compactStatus}
-              </span>
-            )}
-            {!readsBlocked && !hasData && !summaryLoading && <p className={dashboardTokens.metricLabel}>{t('widget.noWatchData', 'No watch data')}</p>}
-          </div>
+          {compactBody}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
+
+  const batteryHeadline = (
+    <WidgetBigNumber
+      value={batteryLevel == null ? null : fmtNumber(batteryLevel)}
+      unit="%"
+      label={t('widget.battery', 'Battery')}
+      badge={
+        stateLabel
+          ? {
+              text: stateLabel,
+              variant: state === 'online' ? 'success' : state === 'asleep' ? 'neutral' : 'warning',
+            }
+          : undefined
+      }
+    />
+  );
+
+  const measurements = (
+    <DashboardSourceBrief
+      metrics={measurementMetrics}
+      state={summaryTrust}
+      eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+      title={t('widget.watchMeasurementsTitle', 'Returned watch measurements')}
+      description={t('widget.watchMeasurementsDescription', 'Range and cabin temperature come only from the watch summary; battery, vehicle state, lock and charging indicators remain separate.')}
+      scope={t('widget.watchMeasurementsScope', 'Requested vehicle {{id}} · returned watch summary snapshot; complication freshness does not establish measurement freshness or continuous recording coverage.', { id: vehicleId ?? t('widget.watchDefaultVehicle', 'default') })}
+      testId="dashboard-watch-measurements-brief"
+    />
+  );
+  const details = (
+    <>
+      <WidgetStatusGrid cols={2} cells={[
+        {
+          id: 'lock',
+          label: t('widget.lockStatus', 'Lock'),
+          status: isLocked == null ? 'unknown' : isLocked ? 'ok' : 'warning',
+          icon: isLocked === false ? <Unlock className="size-4" /> : <Lock className="size-4" />,
+          statusLabel: isLocked == null ? '—' : isLocked ? t('widget.locked', 'Locked') : t('widget.unlocked', 'Unlocked'),
+        },
+        {
+          id: 'charging',
+          label: t('widget.charging', 'Charging'),
+          status: complication?.charging == null ? 'unknown' : complication.charging ? 'ok' : 'inactive',
+          statusLabel: complication?.charging == null
+            ? t('widget.status.unknown', 'Unknown')
+            : complication.charging
+              ? t('widget.charging', 'Charging')
+              : t('widget.status.inactive', 'Inactive'),
+        },
+      ]} />
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+        <span className={dashboardTokens.metricLabel}>{t('widget.lastSeen', 'Last seen')}</span>
+        <span className="min-w-0 max-w-full break-words [overflow-wrap:anywhere]">
+          <TimeStamp value={lastUpdated} className={dashboardTokens.metricLabel} />
+        </span>
+      </div>
+      {!readsBlocked && !hasData && !summaryLoading && <p className={dashboardTokens.metricLabel}>{t('widget.noWatchData', 'No watch data')}</p>}
+    </>
+  );
 
   // Standard (2×2+): Full watch summary with all fields
   return (
@@ -206,59 +296,17 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
       isError={summaryError || capabilityFailure}
       onRefresh={notConfigured ? undefined : handleRefresh}
     >
+      <InstrumentPresentation family="empty" headline={setupHeadline ?? batteryHeadline}
+        icon={<Watch aria-hidden="true" />} context={capabilityState}
+        instrument={<div className="min-w-0 space-y-3">{notConfigured && batteryHeadline}{measurements}</div>}
+        details={<div className="min-w-0 space-y-3">{setupSteps}{details}</div>}>
         {capabilityState}
         <div className="h-full flex flex-col gap-3">
-          {/* Hero: Battery big number */}
-          <WidgetBigNumber
-            value={batteryLevel == null ? null : fmtNumber(batteryLevel)}
-            unit="%"
-            label={t('widget.battery', 'Battery')}
-            badge={
-              stateLabel
-                ? {
-                    text: stateLabel,
-                    variant: state === 'online' ? 'success' : state === 'asleep' ? 'neutral' : 'warning',
-                  }
-                : undefined
-            }
-          />
-
-          <DashboardSourceBrief
-            metrics={measurementMetrics}
-            state={summaryTrust}
-            eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
-            title={t('widget.watchMeasurementsTitle', 'Returned watch measurements')}
-            description={t('widget.watchMeasurementsDescription', 'Range and cabin temperature come only from the watch summary; battery, vehicle state, lock and charging indicators remain separate.')}
-            scope={t('widget.watchMeasurementsScope', 'Requested vehicle {{id}} · returned watch summary snapshot; complication freshness does not establish measurement freshness or continuous recording coverage.', { id: vehicleId ?? t('widget.watchDefaultVehicle', 'default') })}
-            testId="dashboard-watch-measurements-brief"
-          />
-          <WidgetStatusGrid cols={2} cells={[
-            {
-              id: 'lock',
-              label: t('widget.lockStatus', 'Lock'),
-              status: isLocked == null ? 'unknown' : isLocked ? 'ok' : 'warning',
-              icon: isLocked === false ? <Unlock className="size-4" /> : <Lock className="size-4" />,
-              statusLabel: isLocked == null ? '—' : isLocked ? t('widget.locked', 'Locked') : t('widget.unlocked', 'Unlocked'),
-            },
-            {
-              id: 'charging',
-              label: t('widget.charging', 'Charging'),
-              status: complication?.charging == null ? 'unknown' : complication.charging ? 'ok' : 'inactive',
-              statusLabel: complication?.charging == null
-                ? t('widget.status.unknown', 'Unknown')
-                : complication.charging
-                  ? t('widget.charging', 'Charging')
-                  : t('widget.status.inactive', 'Inactive'),
-            },
-          ]} />
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-              <span className={dashboardTokens.metricLabel}>{t('widget.lastSeen', 'Last seen')}</span>
-              <span className="min-w-0 max-w-full break-words [overflow-wrap:anywhere]">
-                <TimeStamp value={lastUpdated} className={dashboardTokens.metricLabel} />
-              </span>
-            </div>
-          {!readsBlocked && !hasData && !summaryLoading && <p className={dashboardTokens.metricLabel}>{t('widget.noWatchData', 'No watch data')}</p>}
+          {batteryHeadline}
+          {measurements}
+          {details}
         </div>
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

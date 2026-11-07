@@ -2,14 +2,17 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThermometerSun } from 'lucide-react';
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, ChartLegend, EmbeddedChart, type ChartDataRow } from '@/components/charts';
+import { Caption } from '@/components/ui';
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useRangeState } from '@/hooks/useRangeState';
-import { WidgetChartSummary, type ChartSummaryStat } from './shared';
+import { WidgetBigNumber, WidgetChartSummary, WidgetStatGrid, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -46,8 +49,9 @@ function buildChartData(
 }
 
 export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtInt: fmt } = useNumberFormatting();
+  const { fmtInt: fmt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const packId = usePackPresentation();
   const { formatTime } = useDateFormat();
   const vehiclesQuery = useVehicles();
   const candidate = vehicleId ?? safeArray(vehiclesQuery.data)[0]?.id;
@@ -115,8 +119,45 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
     { label: t('widget.climateHistory.cabin', 'Cabin'), value: latestInside != null ? fmt(latestInside) : '—', unit: tempUnit },
     { label: t('widget.climateHistory.outside', 'Outside'), value: latestOutside != null ? fmt(latestOutside) : '—', unit: tempUnit },
   ] : [];
+  const cabinChange = useMemo(() => {
+    const readings = chartData.flatMap(row => row.inside == null ? [] : [row.inside]);
+    const first = readings[0];
+    const last = readings[readings.length - 1];
+    // A single observation cannot establish a change; subtract display values
+    // so Fahrenheit differences never receive the absolute-temperature offset.
+    return readings.length > 1 && first != null && last != null ? last - first : null;
+  }, [chartData]);
+  const headline = (
+    <WidgetBigNumber
+      value={latestInside == null ? null : fmtNumber(latestInside)}
+      unit={tempUnit}
+      label={t('dashboardWidgets.climate.climateHistory.cabinTemperature', 'Cabin temperature')}
+      animated={false}
+    />
+  );
+  const details = (
+    <WidgetStatGrid cols={2} maxPerRow={2} stats={[
+      { label: t('widget.climateHistory.outside', 'Outside'), value: latestOutside == null ? null : fmtNumber(latestOutside), unit: latestOutside == null ? undefined : tempUnit },
+      { label: t('dashboardWidgets.climate.climateHistory.cabinChange', 'Cabin change'), value: cabinChange == null ? null : `${cabinChange > 0 ? '+' : ''}${fmtNumber(cabinChange)}`, unit: cabinChange == null ? undefined : tempUnit },
+    ]} />
+  );
+  const context = (
+    <Caption>
+      {t('dashboardWidgets.climate.climateHistory.comparisonNote', 'Inside and outside temperatures can be compared over the same period.')}
+    </Caption>
+  );
 
   if (isCompact) {
+    const summary = (
+      <WidgetChartSummary
+        compact
+        isEmpty={!hasData}
+        emptyMessage={t('widget.climateHistory.noData', 'No climate history')}
+        emptyIcon={<ThermometerSun className="h-5 w-5" />}
+        stats={stats}
+        chart={null}
+      />
+    );
     return (
       <WidgetShell
         title={t('widget.climateHistory.title', 'Climate history')}
@@ -127,17 +168,94 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
         isError={isError}
         onRefresh={handleRefresh}
       >
-        <WidgetChartSummary
-          compact
-          isEmpty={!hasData}
-          emptyMessage={t('widget.climateHistory.noData', 'No climate history')}
-          emptyIcon={<ThermometerSun className="h-5 w-5" />}
-          stats={stats}
-          chart={null}
-        />
+        <InstrumentPresentation family="line" compact headline={headline}
+          icon={<ThermometerSun />} context={context} details={details}
+          instrument={!hasData ? summary : undefined}>
+          {summary}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
+
+  const chart = (
+    <WidgetChartSummary
+      isEmpty={!hasData}
+      emptyMessage={t('widget.climateHistory.noData', 'No climate history')}
+      emptyIcon={<ThermometerSun className="h-5 w-5" />}
+      stats={[]}
+      legend={[
+        { label: t('widget.inside', 'Inside'), color: CHART_COLORS[0] },
+        { label: t('widget.climateHistory.outside', 'Outside'), color: CHART_COLORS[1] },
+      ]}
+      chart={
+        <EmbeddedChart
+          title={t('widget.climateHistory.title', 'Climate history')}
+          ariaLabel={t(
+            'widget.climateHistory.chartAria',
+            'Cabin and outside temperature history',
+          )}
+          data={chartData}
+          dataColumns={[
+            { key: 'time', label: t('widget.climateHistory.time', 'Time') },
+            { key: 'inside', label: `${t('widget.climateHistory.cabin', 'Cabin')} (${tempUnit})` },
+            { key: 'outside', label: `${t('widget.climateHistory.outside', 'Outside')} (${tempUnit})` },
+          ]}
+          chartKey="dashboard-climate-history"
+          className="h-full w-full"
+        >
+          {({ hiddenSeries }) => (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ ...chartMargin, left: 4, right: 4 }} {...chartAnimation}>
+                {chartGrid}
+                <XAxis
+                  dataKey="time"
+                  tick={tick}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: string) => formatTime(v)}
+                />
+                <Tooltip
+                  content={<ChartTooltip />}
+                  labelFormatter={(v: string) => formatTime(v)}
+                  formatter={(value: number, name: string) => {
+                    const label =
+                      name === 'inside'
+                        ? t('widget.climateHistory.cabin', 'Cabin')
+                        : t('widget.climateHistory.outside', 'Outside');
+                    return [`${fmt(value)}${tempUnit}`, label];
+                  }}
+                />
+                <ChartLegend />
+                <Line
+                  type="monotone"
+                  dataKey="inside"
+                  stroke={CHART_COLORS[0]}
+                  strokeWidth={2}
+                  connectNulls={false}
+                  name="inside"
+                  hide={hiddenSeries?.isHidden('inside')}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="outside"
+                  stroke={CHART_COLORS[1]}
+                  strokeWidth={packId === 'v6' ? 2.5 : 2}
+                  strokeDasharray={packId === 'v5' ? '2 3' : undefined}
+                  connectNulls={false}
+                  name="outside"
+                  hide={hiddenSeries?.isHidden('outside')}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </EmbeddedChart>
+      }
+    />
+  );
 
   return (
     <WidgetShell
@@ -150,82 +268,11 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <WidgetChartSummary
-        isEmpty={!hasData}
-        emptyMessage={t('widget.climateHistory.noData', 'No climate history')}
-        emptyIcon={<ThermometerSun className="h-5 w-5" />}
-        stats={[]}
-        legend={[
-          { label: t('widget.inside', 'Inside'), color: CHART_COLORS[0] },
-          { label: t('widget.climateHistory.outside', 'Outside'), color: CHART_COLORS[1] },
-        ]}
-        chart={
-          <EmbeddedChart
-            title={t('widget.climateHistory.title', 'Climate history')}
-            ariaLabel={t(
-              'widget.climateHistory.chartAria',
-              'Cabin and outside temperature history',
-            )}
-            data={chartData}
-            dataColumns={[
-              { key: 'time', label: t('widget.climateHistory.time', 'Time') },
-              { key: 'inside', label: `${t('widget.climateHistory.cabin', 'Cabin')} (${tempUnit})` },
-              { key: 'outside', label: `${t('widget.climateHistory.outside', 'Outside')} (${tempUnit})` },
-            ]}
-            chartKey="dashboard-climate-history"
-            className="h-full w-full"
-          >
-            {({ hiddenSeries }) => (
-              <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ ...chartMargin, left: 4, right: 4 }} {...chartAnimation}>
-              {chartGrid}
-              <XAxis
-                dataKey="time"
-                tick={tick}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v: string) => formatTime(v)}
-              />
-              <Tooltip
-                content={<ChartTooltip />}
-                labelFormatter={(v: string) => formatTime(v)}
-                formatter={(value: number, name: string) => {
-                  const label =
-                    name === 'inside'
-                      ? t('widget.climateHistory.cabin', 'Cabin')
-                      : t('widget.climateHistory.outside', 'Outside');
-                  return [`${fmt(value)}${tempUnit}`, label];
-                }}
-              />
-              <ChartLegend />
-              <Line
-                type="monotone"
-                dataKey="inside"
-                stroke={CHART_COLORS[0]}
-                strokeWidth={2}
-                connectNulls={false}
-                name="inside"
-                hide={hiddenSeries?.isHidden('inside')}
-                dot={false}
-                isAnimationActive={false}
-              />
-              <Line
-                type="monotone"
-                dataKey="outside"
-                stroke={CHART_COLORS[1]}
-                strokeWidth={2}
-                connectNulls={false}
-                name="outside"
-                hide={hiddenSeries?.isHidden('outside')}
-                dot={false}
-                isAnimationActive={false}
-              />
-              </LineChart>
-            </ResponsiveContainer>
-            )}
-            </EmbeddedChart>
-        }
-      />
+      <InstrumentPresentation family="line" headline={headline} icon={<ThermometerSun />}
+        context={context} details={details}
+        instrument={<div className="h-48 min-w-0 w-full">{chart}</div>}>
+        {chart}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

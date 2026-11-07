@@ -112,7 +112,7 @@ for (const mode of modes) {
     });
     await attachDiagnostics(info, diagnostics);
     await expectNoRuntimeFailures(diagnostics);
-    await assertMockApiComplete(mocks);
+    await assertMockApiComplete(page, mocks);
   });
 }
 
@@ -186,7 +186,7 @@ test('allocated marker positions and focused tooltip containment', async ({ page
     }
   }
   writeFileSync(info.outputPath('overflow-descendants.json'), JSON.stringify(results, null, 2));
-  await assertMockApiComplete(mocks);
+  await assertMockApiComplete(page, mocks);
 });
 
 test('200 percent RTL preserves readable action labels', async ({ page }, info) => {
@@ -245,7 +245,7 @@ test('200 percent RTL preserves readable action labels', async ({ page }, info) 
   });
   await attachDiagnostics(info, diagnostics);
   await expectNoRuntimeFailures(diagnostics);
-  await assertMockApiComplete(mocks);
+  await assertMockApiComplete(page, mocks);
 });
 
 test('forced colors preserve visible measurement fills and temporal tracks', async ({ page }, info) => {
@@ -290,7 +290,7 @@ test('forced colors preserve visible measurement fills and temporal tracks', asy
   writeFileSync(info.outputPath('forced-colors-paints.json'), JSON.stringify(measurements, null, 2));
   await attachDiagnostics(info, diagnostics);
   await expectNoRuntimeFailures(diagnostics);
-  await assertMockApiComplete(mocks);
+  await assertMockApiComplete(page, mocks);
 });
 
 for (const mode of [
@@ -429,7 +429,7 @@ for (const mode of [
         ...diagnostics,
         consoleErrors: diagnostics.consoleErrors.filter(error => !error.startsWith('CopyButton: clipboard write failed')),
       });
-      await assertMockApiComplete(mocks);
+      await assertMockApiComplete(page, mocks);
     });
   });
 }

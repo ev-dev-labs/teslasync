@@ -13,6 +13,7 @@ import type { WidgetProps } from './types';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
+import TimelinePresentation from './designPacks/TimelinePresentation';
 
 /**
  * Parse an entry's ISO start timestamp to epoch milliseconds. A missing or
@@ -102,12 +103,14 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
         onRefresh={() => refetch()}
       >
         {entries.length > 0 ? (
+          <TimelinePresentation compact>
           <div role="group" aria-label={t('widget.superchargerHistory.compactLabel', '30-day Supercharger')}>
             <WidgetBigNumber
               value={totalSpend == null ? null : formatCurrency(totalSpend)}
               label={t('widget.superchargerHistory.compactLabel', '30-day Supercharger')}
             />
           </div>
+          </TimelinePresentation>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Zap className="h-5 w-5" />}
@@ -148,6 +151,7 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
         <div className="flex flex-col gap-2 h-full">
           <div className="flex-1 min-h-0 overflow-y-auto">
             <WidgetDetailCard
+              presentation="timeline"
               entries={detailEntries}
               emptyMessage={t('widget.superchargerHistory.noData', 'No Supercharger sessions')}
               emptyIcon={<Zap className="h-5 w-5" />}

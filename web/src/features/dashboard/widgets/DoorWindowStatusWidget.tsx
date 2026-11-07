@@ -1,16 +1,18 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DoorOpen } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Caption, Table, Text } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { useVehicles, useSecurityLatest } from '@/api/hooks/useVehicles';
 import { asNonEmptyString } from '@/lib/typeGuards';
 import { WidgetStatusGrid, type StatusCell } from './shared';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 
-// Exported for direct unit testing of the parse/label branches; the component
-// remains the module's default export and its behaviour is unchanged.
+const POSITIONS = ['fl', 'fr', 'rl', 'rr'] as const;
+
+// Exported for direct unit testing of the parse/label branches.
 export type DoorWindowState = 'closed' | 'open' | 'partial' | 'unknown';
 
 export function toGridStatus(state: DoorWindowState): StatusCell['status'] {
@@ -36,10 +38,10 @@ export function parseWindowState(val: unknown): DoorWindowState {
   // sentinel meaning closed. Match defensively so an "Unknown" (or a prefixed
   // "WindowStateClosed") value is never mis-reported as an open window — the
   // old `=== 'closed'` / fall-through-to-'open' logic flagged both as open.
-  const lower = raw.toLowerCase().replace(/windowstate/g, '');
-  if (lower.includes('closed') || lower === '0') return 'closed';
-  if (lower.includes('vent') || lower.includes('partial')) return 'partial';
-  if (lower.includes('open')) return 'open';
+  const lower = raw.toLowerCase().replace(/^windowstate/, '').replace(/[\s:_-]/g, '');
+  if (lower === 'closed' || lower === '0') return 'closed';
+  if (['vent', 'vented', 'partial', 'partiallyopen', 'partiallyopened'].includes(lower)) return 'partial';
+  if (lower === 'open' || lower === 'opened') return 'open';
   return 'unknown';
 }
 
@@ -71,15 +73,18 @@ export function parseDoorStates(doorState: unknown): Record<string, DoorWindowSt
     return { fl: 'open', fr: 'open', rl: 'open', rr: 'open' };
   }
 
-  // A list of open doors is exhaustive; an unknown enum is not such a list.
-  if (parts.some((part) => part.includes('open'))) {
+  const reportedParts = parts.filter((part) => part === 'open' ||
+    /^(?:(?:driver|passenger)(?:front|rear)|(?:front|rear)(?:left|right))(?:open|closed)$/
+      .test(part.replace(/^doorstate/, '').replace(/[\s:_-]/g, '')));
+  // Only a fully recognized open-door list establishes the unnamed doors as closed.
+  if (reportedParts.length === parts.length && reportedParts.some((part) => part.includes('open'))) {
     result.fl = 'closed';
     result.fr = 'closed';
     result.rl = 'closed';
     result.rr = 'closed';
   }
 
-  for (const part of parts) {
+  for (const part of reportedParts) {
     if (part.includes('driver') && part.includes('front') && part.includes('open')) result.fl = 'open';
     else if (part.includes('passenger') && part.includes('front') && part.includes('open')) result.fr = 'open';
     else if (part.includes('driver') && part.includes('rear') && part.includes('open')) result.rl = 'open';
@@ -134,41 +139,105 @@ export default function DoorWindowStatusWidget({ vehicleId, size }: WidgetProps)
   const doorsKnown = Object.values(doors).every((s) => s !== 'unknown');
   const windowsKnown = Object.values(windows).every((s) => s !== 'unknown');
 
+  const positionLabels = useMemo<Record<string, string>>(() => ({
+    fl: t('widget.doorWindow.fl', 'Front left'),
+    fr: t('widget.doorWindow.fr', 'Front right'),
+    rl: t('widget.doorWindow.rl', 'Rear left'),
+    rr: t('widget.doorWindow.rr', 'Rear right'),
+  }), [t]);
+
   const doorCells = useMemo<StatusCell[]>(() => {
-    const positions = ['fl', 'fr', 'rl', 'rr'] as const;
-    const labels: Record<string, string> = {
-      fl: t('widget.doorWindow.fl', 'Front left'),
-      fr: t('widget.doorWindow.fr', 'Front right'),
-      rl: t('widget.doorWindow.rl', 'Rear left'),
-      rr: t('widget.doorWindow.rr', 'Rear right'),
-    };
     const doorLabel = t('widget.doorWindow.door', 'door');
-    return positions.map((pos) => ({
+    return POSITIONS.map((pos) => ({
       id: `door-${pos}`,
-      label: `${labels[pos]} ${doorLabel}`,
+      label: `${positionLabels[pos]} ${doorLabel}`,
       status: toGridStatus(doors[pos]),
       statusLabel: toValueLabel(doors[pos], t),
     }));
-  }, [doors, t]);
+  }, [doors, positionLabels, t]);
 
   const windowCells = useMemo<StatusCell[]>(() => {
-    const positions = ['fl', 'fr', 'rl', 'rr'] as const;
-    const labels: Record<string, string> = {
-      fl: t('widget.doorWindow.fl', 'Front left'),
-      fr: t('widget.doorWindow.fr', 'Front right'),
-      rl: t('widget.doorWindow.rl', 'Rear left'),
-      rr: t('widget.doorWindow.rr', 'Rear right'),
-    };
     const windowLabel = t('widget.doorWindow.window', 'window');
-    return positions.map((pos) => ({
+    return POSITIONS.map((pos) => ({
       id: `window-${pos}`,
-      label: `${labels[pos]} ${windowLabel}`,
+      label: `${positionLabels[pos]} ${windowLabel}`,
       status: toGridStatus(windows[pos]),
       statusLabel: toValueLabel(windows[pos], t),
     }));
-  }, [windows, t]);
+  }, [windows, positionLabels, t]);
 
   const cells: StatusCell[] = [...doorCells, ...windowCells];
+  const classicBody = securityData ? (
+    isCompact ? (
+      <div className="flex min-w-0 flex-col items-start justify-center h-full gap-2">
+        <Badge variant={openDoorCount > 0 ? 'warning' : doorsKnown ? 'success' : 'neutral'} size="sm">
+          {openDoorCount === 0 && !doorsKnown
+            ? t('widget.doorWindow.doorsUnknown', 'Doors unknown')
+            : openDoorCount === 0
+            ? t('widget.doorWindow.doorsAllClosed', 'Doors ✓')
+            : `${openDoorCount} ${t('widget.doorWindow.doorsOpen', 'door(s) open')}`}
+        </Badge>
+        <Badge variant={openWindowCount > 0 ? 'warning' : windowsKnown ? 'success' : 'neutral'} size="sm">
+          {openWindowCount === 0 && !windowsKnown
+            ? t('widget.doorWindow.windowsUnknown', 'Windows unknown')
+            : openWindowCount === 0
+            ? t('widget.doorWindow.windowsAllClosed', 'Windows ✓')
+            : `${openWindowCount} ${t('widget.doorWindow.windowsOpen', 'window(s) open')}`}
+        </Badge>
+      </div>
+    ) : (
+      <WidgetStatusGrid
+        cells={cells}
+        cols={2}
+        compact={size.cols === 2 && size.rows === 2}
+      />
+    )
+  ) : (
+    <WidgetStatusGrid
+      cells={[]}
+      emptyIcon={<DoorOpen className="h-5 w-5" />}
+      emptyMessage={t('widget.doorWindow.noData', 'No door/window data')}
+    />
+  );
+  const summary = !securityData
+    ? t('widget.status.unknown', 'Unknown')
+    : openDoorCount + openWindowCount > 0
+      ? t('dashboardWidgets.charging.doorWindow.openOrPartial', 'Open or partial')
+      : doorsKnown && windowsKnown
+        ? t('dashboardWidgets.charging.doorWindow.allClosed', 'All closed')
+        : t('dashboardWidgets.charging.doorWindow.incomplete', 'State incomplete');
+  const matrix = (
+    <div className="min-w-0 space-y-2">
+      {!securityData && <Caption as="p">{t('widget.doorWindow.noData', 'No door/window data')}</Caption>}
+      <Table variant="embedded" aria-label={t('widget.doorWindow.title', 'Door & window status')}>
+        <thead>
+          <tr>
+            <th scope="col"><Text variant="label">{t('dashboardWidgets.charging.doorWindow.position', 'Position')}</Text></th>
+            <th scope="col"><Text variant="label">{t('dashboardWidgets.charging.doorWindow.doorColumn', 'Door')}</Text></th>
+            <th scope="col"><Text variant="label">{t('dashboardWidgets.charging.doorWindow.windowColumn', 'Window')}</Text></th>
+          </tr>
+        </thead>
+        <tbody>
+          {POSITIONS.map((position) => (
+            <tr key={position}>
+              <th scope="row"><Caption>{positionLabels[position]}</Caption></th>
+              {[doors[position], windows[position]].map((reported, index) => (
+                <td key={index}>
+                  <Badge
+                    size="sm"
+                    variant={reported === 'closed' ? 'success' : reported === 'unknown' ? 'neutral' : 'warning'}
+                    data-status={toGridStatus(reported)}
+                  >
+                    {reported === 'unknown' ? t('widget.status.unknown', 'Unknown') : toValueLabel(reported, t)}
+                  </Badge>
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </div>
+  );
 
   return (
     <WidgetShell
@@ -183,38 +252,19 @@ export default function DoorWindowStatusWidget({ vehicleId, size }: WidgetProps)
       refreshIntervalMs={5_000}
       onRefresh={() => { if (id > 0) void refetch(); else void vehicleQuery.refetch(); }}
     >
-      {securityData ? (
-        isCompact ? (
-          <div className="flex min-w-0 flex-col items-start justify-center h-full gap-2">
-            <Badge variant={openDoorCount > 0 ? 'warning' : doorsKnown ? 'success' : 'neutral'} size="sm">
-              {openDoorCount === 0 && !doorsKnown
-                ? t('widget.doorWindow.doorsUnknown', 'Doors unknown')
-                : openDoorCount === 0
-                ? t('widget.doorWindow.doorsAllClosed', 'Doors ✓')
-                : `${openDoorCount} ${t('widget.doorWindow.doorsOpen', 'door(s) open')}`}
-            </Badge>
-            <Badge variant={openWindowCount > 0 ? 'warning' : windowsKnown ? 'success' : 'neutral'} size="sm">
-              {openWindowCount === 0 && !windowsKnown
-                ? t('widget.doorWindow.windowsUnknown', 'Windows unknown')
-                : openWindowCount === 0
-                ? t('widget.doorWindow.windowsAllClosed', 'Windows ✓')
-                : `${openWindowCount} ${t('widget.doorWindow.windowsOpen', 'window(s) open')}`}
-            </Badge>
-          </div>
-        ) : (
-          <WidgetStatusGrid
-            cells={cells}
-            cols={2}
-            compact={size.cols === 2 && size.rows === 2}
-          />
-        )
-      ) : (
-        <WidgetStatusGrid
-          cells={[]}
-          emptyIcon={<DoorOpen className="h-5 w-5" />}
-          emptyMessage={t('widget.doorWindow.noData', 'No door/window data')}
-        />
-      )}
+      <InstrumentPresentation
+        family="access-matrix"
+        compact={isCompact}
+        icon={<DoorOpen className="size-6" aria-hidden="true" />}
+        headline={isCompact ? classicBody : <Text variant="metricValue" className="block break-words">{summary}</Text>}
+        context={isCompact ? undefined : <Badge variant="neutral" size="sm">{securityData
+          ? t('dashboardWidgets.charging.doorWindow.lastReported', 'LAST REPORTED')
+          : t('widget.status.unknown', 'Unknown')}</Badge>}
+        instrument={isCompact ? undefined : matrix}
+        details={isCompact ? undefined : <Caption as="p">{t('dashboardWidgets.charging.doorWindow.reportedStates', 'Every door and window retains its own reported state.')}</Caption>}
+      >
+        {classicBody}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

@@ -1,5 +1,39 @@
 {
   "dashboard": {
+    "designPacks": {
+      "classic": {
+        "name": "Classic",
+        "description": "Original widget presentation and familiar controls."
+      },
+      "v1": {
+        "name": "Studio",
+        "description": "Instrument-led layouts with clear secondary readings."
+      },
+      "v2": {
+        "name": "Elevated",
+        "description": "Layered surfaces and generous spacing."
+      },
+      "v3": {
+        "name": "Precision",
+        "description": "Restrained layouts and quiet visual hierarchy."
+      },
+      "v4": {
+        "name": "Owner",
+        "description": "Key information and useful actions first."
+      },
+      "v5": {
+        "name": "Iconic",
+        "description": "Clear pictograms and approachable status."
+      },
+      "v6": {
+        "name": "Expressive",
+        "description": "Tonal surfaces and expressive shapes."
+      },
+      "v7": {
+        "name": "Pixel",
+        "description": "Pixel pictograms and segmented readings."
+      }
+    },
     "chargingEstimatedLabel": "{{label}} (estimated)",
     "chargerAc": "AC",
     "chargeStatus": {

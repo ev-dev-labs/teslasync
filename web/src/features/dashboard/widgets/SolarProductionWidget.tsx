@@ -5,6 +5,7 @@ import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, chartG
 import { useTeslaEnergyHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
 import { averageKnown, knownNumber } from '@/api/dataState';
 import { Skeleton } from '@/components/feedback';
+import { Badge, Caption } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
@@ -12,6 +13,8 @@ import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { chartTokens } from '@/lib/tokens';
 import { WidgetChartSummary, WidgetBigNumber } from './shared';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -24,6 +27,7 @@ interface ChartDatum extends ChartDataRow {
 }
 
 export default function SolarProductionWidget({ size }: WidgetProps) {
+  const packId = usePackPresentation();
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
@@ -140,12 +144,120 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
     title: t('widget.solarProduction.title', 'Solar production'),
     icon: <Sun className="h-3.5 w-3.5 text-yellow-400" />,
   };
+  const headlineProps = {
+    value: todayKwh == null ? null : fmtNumber(todayKwh, 1),
+    unit: unitPrefs.energy,
+    animated: false,
+  };
+  const classicHeadline = (
+    <WidgetBigNumber
+      {...headlineProps}
+      label={t('widget.solarProduction.today', 'Today')}
+      subtitle={avgKwh == null ? undefined : `${t('widget.solarProduction.avg', 'Daily avg')} ${fmtNumber(avgKwh, 1)} ${unitPrefs.energy}`}
+    />
+  );
+  const sourceNote = (
+    <Caption as="p">
+      {t('dashboardWidgets.energy.solarProduction.siteNote', 'Energy-site data is separate from vehicle telemetry.')}
+    </Caption>
+  );
+  const empty = (
+    <WidgetChartSummary
+      compact={isCompact}
+      isEmpty
+      emptyMessage={t('widget.solarProduction.noData', 'No solar data')}
+      emptyIcon={<Sun className="h-5 w-5" />}
+      stats={[]}
+      chart={null}
+    />
+  );
+  const presentationProps = {
+    family: 'bars' as const,
+    compact: isCompact,
+    headline: hasData ? (
+      <WidgetBigNumber {...headlineProps}
+        label={t('dashboardWidgets.energy.solarProduction.producedToday', 'Solar produced today')} />
+    ) : undefined,
+    icon: hasData ? <Sun /> : undefined,
+    context: siteId ? (
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <Badge variant="neutral" size="sm">{t('widget.energySiteInfo.title', 'Energy site')}</Badge>
+        <Caption className="break-words">{sites?.[0]?.site_name ?? '—'}</Caption>
+      </div>
+    ) : undefined,
+    details: hasData ? (
+      <div className="space-y-3">
+        <WidgetBigNumber
+          value={avgKwh == null ? null : fmtNumber(avgKwh, 1)}
+          unit={unitPrefs.energy}
+          label={t('widget.solarProduction.avg', 'Daily avg')}
+          size="secondary"
+          animated={false}
+        />
+        {sourceNote}
+      </div>
+    ) : sourceNote,
+  };
+  const chart = (
+    <EmbeddedChart
+      className="h-full min-h-0"
+      viewportClassName="min-h-0 sm:min-h-0"
+      title={t('widget.solarProduction.title', 'Solar production')}
+      ariaLabel={t('widget.solarProduction.chartLabel', 'Daily solar production over the last 30 days')}
+      data={chartData}
+      dataColumns={[
+        { key: 'date', label: t('widget.solarProduction.date', 'Date') },
+        { key: 'solar_kwh', label: `${t('widget.solarProduction.solar', 'Solar')} (${unitPrefs.energy})` },
+      ]}
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+          {chartGrid}
+          <XAxis dataKey="date" tick={isWide ? axisTick : axisTickSm} tickLine={false} axisLine={false} />
+          <YAxis
+            tick={isWide ? axisTick : axisTickSm}
+            tickLine={false}
+            axisLine={false}
+            width={axisWidth}
+            tickFormatter={(value: number) => fmtNumber(value)}
+          />
+          <Tooltip
+            content={<ChartTooltip />}
+            formatter={(value: number) => [
+              `${fmtNumber(value, 1)} ${unitPrefs.energy}`,
+              t('widget.solarProduction.solar', 'Solar'),
+            ]}
+            cursor={{ fill: chartTokens.gridStroke }}
+          />
+          <Bar dataKey="solar_kwh" name={t('widget.solarProduction.solar', 'Solar')}
+            radius={packId === 'v7' ? 0 : [3, 3, 0, 0]} maxBarSize={32}>
+            {chartData.map((entry, index) => (
+              <Cell
+                key={`${entry.date}-${index}`}
+                fill={entry.date_key === civilDateInTimeZone(new Date(), tz) ? chartTokens.series[3] : chartTokens.axisStroke}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </EmbeddedChart>
+  );
 
   // ── No energy sites linked ──
   // Guard on `!sitesError` so a *failed* sites fetch surfaces the shared error
   // panel (in the branches below) rather than the misleading "no site linked"
   // empty state — a fetch failure must be distinguishable from an unlinked site.
   if (!hasSites && !isLoading && !sitesError) {
+    const noSite = (
+      <WidgetChartSummary
+        compact={isCompact}
+        isEmpty
+        emptyMessage={t('widget.solarProduction.noSite', 'No Tesla energy site linked')}
+        emptyIcon={<Sun className="h-5 w-5" />}
+        stats={[]}
+        chart={null}
+      />
+    );
     return (
       <WidgetShell
         {...shellProps}
@@ -157,14 +269,9 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
         isError={sitesIsError}
         onRefresh={() => refetchSites()}
       >
-        <WidgetChartSummary
-          compact={isCompact}
-          isEmpty
-          emptyMessage={t('widget.solarProduction.noSite', 'No Tesla energy site linked')}
-          emptyIcon={<Sun className="h-5 w-5" />}
-          stats={[]}
-          chart={null}
-        />
+        <InstrumentPresentation family="bars" compact={isCompact} instrument={noSite} details={sourceNote}>
+          {noSite}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
@@ -183,24 +290,9 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
         isError={isError}
         onRefresh={handleRefresh}
       >
-        {hasData ? (
-          <WidgetBigNumber
-            value={todayKwh == null ? null : fmtNumber(todayKwh, 1)}
-            unit={unitPrefs.energy}
-            label={t('widget.solarProduction.today', 'Today')}
-            subtitle={avgKwh == null ? undefined : `${t('widget.solarProduction.avg', 'Daily avg')} ${fmtNumber(avgKwh, 1)} ${unitPrefs.energy}`}
-            animated={false}
-          />
-        ) : (
-          <WidgetChartSummary
-            compact
-            isEmpty
-            emptyMessage={t('widget.solarProduction.noData', 'No solar data')}
-            emptyIcon={<Sun className="h-5 w-5" />}
-            stats={[]}
-            chart={null}
-          />
-        )}
+        <InstrumentPresentation {...presentationProps} instrument={hasData ? undefined : empty}>
+          {hasData ? classicHeadline : empty}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
@@ -217,70 +309,15 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      {hasData ? (
-        <div className="flex h-full min-h-0 flex-col">
-          <div className="shrink-0">
-          <WidgetBigNumber
-            value={todayKwh == null ? null : fmtNumber(todayKwh, 1)}
-            unit={unitPrefs.energy}
-            label={t('widget.solarProduction.today', 'Today')}
-            subtitle={avgKwh == null ? undefined : `${t('widget.solarProduction.avg', 'Daily avg')} ${fmtNumber(avgKwh, 1)} ${unitPrefs.energy}`}
-            animated={false}
-          />
+      <InstrumentPresentation {...presentationProps}
+        instrument={hasData ? <div className="h-44 min-h-0">{chart}</div> : empty}>
+        {hasData ? (
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="shrink-0">{classicHeadline}</div>
+            <div className="mt-2 min-h-0 flex-1">{chart}</div>
           </div>
-          <div className="mt-2 min-h-0 flex-1">
-            <EmbeddedChart
-              className="h-full min-h-0"
-              viewportClassName="min-h-0 sm:min-h-0"
-              title={t('widget.solarProduction.title', 'Solar production')}
-              ariaLabel={t('widget.solarProduction.chartLabel', 'Daily solar production over the last 30 days')}
-              data={chartData}
-              dataColumns={[
-                { key: 'date', label: t('widget.solarProduction.date', 'Date') },
-                { key: 'solar_kwh', label: `${t('widget.solarProduction.solar', 'Solar')} (${unitPrefs.energy})` },
-              ]}
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
-                  {chartGrid}
-                  <XAxis dataKey="date" tick={isWide ? axisTick : axisTickSm} tickLine={false} axisLine={false} />
-                  <YAxis
-                    tick={isWide ? axisTick : axisTickSm}
-                    tickLine={false}
-                    axisLine={false}
-                    width={axisWidth}
-                    tickFormatter={(value: number) => fmtNumber(value)}
-                  />
-                  <Tooltip
-                    content={<ChartTooltip />}
-                    formatter={(value: number) => [
-                      `${fmtNumber(value, 1)} ${unitPrefs.energy}`,
-                      t('widget.solarProduction.solar', 'Solar'),
-                    ]}
-                    cursor={{ fill: chartTokens.gridStroke }}
-                  />
-                  <Bar dataKey="solar_kwh" name={t('widget.solarProduction.solar', 'Solar')} radius={[3, 3, 0, 0]} maxBarSize={32}>
-                    {chartData.map((entry, index) => (
-                      <Cell
-                        key={`${entry.date}-${index}`}
-                        fill={entry.date_key === civilDateInTimeZone(new Date(), tz) ? chartTokens.series[3] : chartTokens.axisStroke}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </EmbeddedChart>
-          </div>
-        </div>
-      ) : (
-        <WidgetChartSummary
-          isEmpty
-          emptyMessage={t('widget.solarProduction.noData', 'No solar data')}
-          emptyIcon={<Sun className="h-5 w-5" />}
-          stats={[]}
-          chart={null}
-        />
-      )}
+        ) : empty}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

@@ -54,12 +54,12 @@ test.describe.configure({ mode: 'serial' })
 
 test('capture manifest screenshots', async ({ page }) => {
   await seedBrowserState(page, 'dark', '/')
-  await installApiMocks(page)
+  const mocks = await installApiMocks(page)
 
   // Narrow (phone) — dashboard.
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
-  await waitForHarnessReady(page)
+  await waitForHarnessReady(page, mocks)
   await page.getByRole('main').waitFor()
   await page.screenshot({
     path: path.join(SCREENSHOTS, 'screenshot-narrow.jpg'),
@@ -72,7 +72,7 @@ test('capture manifest screenshots', async ({ page }) => {
   // Wide (desktop) — fleet overview.
   await page.setViewportSize({ width: 1280, height: 720 })
   await page.goto('/vehicles')
-  await waitForHarnessReady(page)
+  await waitForHarnessReady(page, mocks)
   await page.getByRole('main').waitFor()
   await page.screenshot({
     path: path.join(SCREENSHOTS, 'screenshot-wide.jpg'),

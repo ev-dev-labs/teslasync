@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Music } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { MetricBar } from '@/components/data-display';
+import { Caption, Text } from '@/components/ui';
 import { useVehicles, useMediaLatest } from '@/api/hooks/useVehicles';
 import { formatDurationClock } from '@/lib/dateConvert';
 import { WidgetShell } from './WidgetShell';
@@ -9,6 +10,8 @@ import type { WidgetProps } from './types';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
 import { dashboardTokens } from '../lib/dashboardTokens';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
 
 /**
  * Clamp a raw percentage into the inclusive 0–100 range. A non-finite input
@@ -31,6 +34,7 @@ export function volumePercent(volume: number, max: number): number {
 
 export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const packId = usePackPresentation();
   const vehicleQuery = useVehicles();
   const { data: vehicles } = vehicleQuery;
   const vehicleState = useDataState(vehicleQuery);
@@ -54,8 +58,38 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
   const source = media?.playback_source ?? media?.now_playing_station;
   const sourceText = typeof source === 'string' && source.trim() ? source : null;
   const subtitle = [artist, sourceText].filter((value): value is string => Boolean(value)).join(' · ');
-  const elapsed = knownNumber(media?.now_playing_elapsed);
+  const rawElapsed = knownNumber(media?.now_playing_elapsed);
+  const elapsed = rawElapsed != null && rawElapsed >= 0 ? rawElapsed : null;
   const duration = knownNumber(media?.now_playing_duration);
+  const artwork = (
+    <div className="flex items-center justify-center h-14 w-14 rounded-shape-lg bg-gradient-to-br from-[var(--theme-primary)]/70 to-[var(--text-secondary)]/30 shrink-0" aria-hidden="true">
+      <Music className="h-6 w-6 text-[var(--text-primary)]" />
+    </div>
+  );
+  const playback = (segmented = false) => duration != null && duration > 0 && elapsed != null ? (
+    <div className="space-y-1">
+      <MetricBar
+        value={progressPercent(elapsed, duration)}
+        max={100}
+        color="var(--theme-primary)"
+        ariaLabel={t('widget.playbackProgress', 'Playback progress')}
+        showHeader={false}
+        size="slim"
+        fill={segmented ? 'segmented' : 'solid'}
+      />
+      <div className="flex items-center justify-between text-2xs text-[var(--text-muted)]">
+        <span>{formatDurationClock(elapsed)}</span>
+        <span>{formatDurationClock(duration)}</span>
+      </div>
+    </div>
+  ) : null;
+  const empty = (
+    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+      icon={<Music className="h-5 w-5" aria-hidden="true" />}
+      message={t('widget.noMedia', 'Nothing playing')}
+      className="py-4"
+    />
+  );
 
   return (
     <WidgetShell
@@ -69,6 +103,24 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
       isError={isError}
       onRefresh={recover}
     >
+      <InstrumentPresentation
+        family="media"
+        compact={isCompact}
+        icon={media ? isCompact ? <Music className="h-5 w-5" aria-hidden="true" /> : artwork : undefined}
+        headline={media ? (
+          <div className={`min-w-0 ${isCompact ? 'text-center' : ''}`}>
+            <Text as="p" size="sm" weight="medium" color="primary" className="break-words [overflow-wrap:anywhere]" title={title}>{title}</Text>
+            {(isCompact ? artist : subtitle) && (
+              <Caption as="p" className="break-words [overflow-wrap:anywhere]" title={isCompact ? artist ?? undefined : subtitle}>
+                {isCompact ? artist : subtitle}
+              </Caption>
+            )}
+          </div>
+        ) : undefined}
+        instrument={media ? isCompact ? undefined : playback(packId === 'v7') ?? (
+          <Caption as="p">{t('dashboardWidgets.media.mediaProgressUnavailable', 'Playback progress depends on available media signals.')}</Caption>
+        ) : empty}
+      >
       {media ? (
         isCompact ? (
           /* ── Compact 1×1 ── */
@@ -81,9 +133,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
           /* ── Standard / Tall ── */
           <div className="flex flex-col gap-3 h-full">
             <div className="flex items-start gap-3 min-w-0">
-              <div className="flex items-center justify-center h-14 w-14 rounded-shape-lg bg-gradient-to-br from-[var(--theme-primary)]/70 to-[var(--text-secondary)]/30 shrink-0" aria-hidden="true">
-                <Music className="h-6 w-6 text-[var(--text-primary)]" />
-              </div>
+              {artwork}
               <div className="min-w-0 flex-1">
                 <p className={`${dashboardTokens.secondaryMetric} break-words [overflow-wrap:anywhere]`} title={title}>{title}</p>
                 {subtitle && (
@@ -92,33 +142,14 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
               </div>
             </div>
 
-            {duration != null && duration > 0 && elapsed != null && (
-              <div className="space-y-1">
-                <MetricBar
-                  value={progressPercent(elapsed, duration)}
-                  max={100}
-                  color="var(--theme-primary)"
-                  ariaLabel={t('widget.playbackProgress', 'Playback progress')}
-                  showHeader={false}
-                  size="slim"
-                  fill="solid"
-                />
-                <div className="flex items-center justify-between text-2xs text-[var(--text-muted)]">
-                  <span>{formatDurationClock(elapsed)}</span>
-                  <span>{formatDurationClock(duration)}</span>
-                </div>
-              </div>
-            )}
+            {playback()}
 
           </div>
         )
       ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Music className="h-5 w-5" aria-hidden="true" />}
-          message={t('widget.noMedia', 'Nothing playing')}
-          className="py-4"
-        />
+        empty
       )}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

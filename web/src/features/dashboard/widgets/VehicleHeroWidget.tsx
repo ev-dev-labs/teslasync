@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Children, memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Car, HelpCircle, Lock, Unlock } from 'lucide-react';
@@ -33,6 +33,10 @@ import VehicleStudio from './vehicle-instruments/VehicleStudio';
 import { useVerifiedDriving } from './vehicle-instruments/useVerifiedDriving';
 import { useVerifiedStudioLights } from './vehicle-instruments/useVerifiedStudioLights';
 import { observedVehicleReadings } from '../lib/observedVehicleReadings';
+import { usePackModule, usePackPresentation } from './designPacks/PackBoundary';
+import { vehicleHeroPresentations } from './designPacks/presentationLoaders';
+import ClassicVehicleHero from './designPacks/families/ClassicVehicleHero';
+import type { VehicleHeroPresentationProps } from './designPacks/viewModels/VehicleHeroViewModel';
 
 /** Stable identity so an unresolved read never re-renders the hero body. */
 const EMPTY_VERIFIED_FIELDS: readonly VerifiedVehicleStateField[] = [];
@@ -83,6 +87,8 @@ function tempChipText(
 
 export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const packId = usePackPresentation();
+  const Presentation = usePackModule(packId, packId === 'classic' ? null : vehicleHeroPresentations[packId]);
   const unknownReading = t('hero.unknownStatus', 'Unknown');
   const rangeLabel = t('hero.range', 'Range');
   const { fmtNumber } = useNumberFormatting();
@@ -256,24 +262,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
     </span>
   ) : undefined;
 
-  return (
-    <WidgetShell
-      title={!vehicle || vehiclesLoading ? t('glance.overviewAria', 'Vehicle overview') : undefined}
-      loading={vehiclesLoading}
-      dataState={dataState}
-      footer={footer}
-      // `0` means "no verified observation" to WidgetShell (it renders the
-      // freshness control with a null timestamp). Passing `undefined` would
-      // HIDE the freshness + refresh control entirely — exactly when the user
-      // most needs it.
-      updatedAt={observedAt ?? 0}
-      refreshIntervalMs={recoveryInterval || undefined}
-      isFetching={isFetching}
-      isStale={!trusted}
-      isError={isError}
-      onRefresh={handleRefresh}
-    >
-      {vehicle ? (
+  const classicBody = vehicle ? (
         <div className="flex min-w-0 flex-col gap-3">
           {/* Vehicle name + model, with the trusted status pill. */}
           <div className="flex flex-wrap items-start justify-between gap-2">
@@ -344,13 +333,24 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
               role={batteryLevel != null ? 'meter' : 'group'}
               aria-label={t('hero.battery', 'Battery')}
               aria-description={batteryLevel == null ? unknownReading : undefined}
-              aria-valuenow={batteryLevel != null ? Math.round(batteryLevel) : undefined}
+              aria-valuenow={batteryLevel != null ? packId === 'v7' ? batteryLevel : Math.round(batteryLevel) : undefined}
               aria-valuemin={batteryLevel != null ? 0 : undefined}
               aria-valuemax={batteryLevel != null ? 100 : undefined}
-              aria-valuetext={batteryLevel != null ? `${fmtNumber(batteryLevel, 0)}%` : undefined}
+              aria-valuetext={batteryLevel != null ? `${fmtNumber(batteryLevel, packId === 'v7' ? 1 : 0)}%` : undefined}
               className="relative h-3 w-full overflow-visible rounded-shape-sm bg-[var(--surface-2)]"
             >
-              {batteryLevel != null && (
+              {batteryLevel != null && packId === 'v7' ? (
+                <div aria-hidden="true" className="grid h-full grid-cols-[repeat(20,minmax(0,1fr))] gap-px">
+                  {Array.from({ length: 20 }, (_, index) => (
+                    <span key={index} className="h-full bg-[var(--surface-2)]">
+                      <span
+                        className={`${batteryFillClass} block h-full motion-reduce:transition-none`}
+                        style={{ width: `${Math.min(100, Math.max(0, batteryLevel - index * 5) * 20)}%` }}
+                      />
+                    </span>
+                  ))}
+                </div>
+              ) : batteryLevel != null && (
                 <div
                   className={`${batteryFillClass} h-full rounded-shape-sm transition-[width] duration-slow ease-out motion-reduce:transition-none`}
                   style={{ width: `${Math.min(100, Math.max(0, batteryLevel))}%` }}
@@ -368,6 +368,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
             <div className="mt-1 flex items-baseline justify-between gap-2 text-xs tabular-nums text-[var(--text-muted)]">
               <span>0%</span>
               <span className="text-center">
+                {packId === 'v7' && batteryLevel != null && <>{fmtNumber(batteryLevel, 1)}%{' · '}</>}
                 {isCharging && (remainingPct != null || hasEta) ? (
                   <>
                     {remainingPct != null && <>+{remainingPct}%</>}
@@ -430,7 +431,34 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
           message={t('widget.noVehicle', 'No vehicle data')}
           className="py-4"
         />
-      )}
+      );
+
+  const [identity, vehicleArt, headline, charge, readings] =
+    vehicle ? Children.toArray(classicBody.props.children) : [];
+  const sections: VehicleHeroPresentationProps['sections'] = {
+    identity, vehicle: vehicleArt, headline, charge, readings,
+  };
+
+  return (
+    <WidgetShell
+      title={!vehicle || vehiclesLoading ? t('glance.overviewAria', 'Vehicle overview') : undefined}
+      loading={vehiclesLoading}
+      dataState={dataState}
+      footer={footer}
+      // `0` means "no verified observation" to WidgetShell (it renders the
+      // freshness control with a null timestamp). Passing `undefined` would
+      // HIDE the freshness + refresh control entirely — exactly when the user
+      // most needs it.
+      updatedAt={observedAt ?? 0}
+      refreshIntervalMs={recoveryInterval || undefined}
+      isFetching={isFetching}
+      isStale={!trusted}
+      isError={isError}
+      onRefresh={handleRefresh}
+    >
+      {Presentation && vehicle ? (
+        <Presentation sections={sections} />
+      ) : vehicle ? <ClassicVehicleHero sections={sections} /> : classicBody}
     </WidgetShell>
   );
 }

@@ -159,4 +159,17 @@ export const CHARGING_WIDGETS: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('../ChargingSessionDetailWidget')),
   },
+  {
+    id: 'new-charge-readiness',
+    name: 'Charge Readiness',
+    description: 'Observed charge-port, cable and charging readiness signals',
+    nameKey: 'widgets.catalog.new-charge-readiness.name',
+    descriptionKey: 'widgets.catalog.new-charge-readiness.description',
+    icon: Plug,
+    category: 'charging',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../ChargeReadinessWidget')),
+  },
 ];

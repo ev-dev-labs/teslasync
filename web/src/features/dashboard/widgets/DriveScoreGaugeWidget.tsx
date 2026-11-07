@@ -10,6 +10,8 @@ import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { WidgetShell } from './WidgetShell';
+import { WidgetBigNumber } from './shared';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 import { COLOR, CHART_NEUTRAL } from '@/lib/colors';
 
@@ -60,6 +62,27 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
       { key: 'speed', label: t('widget.driveTelemetry.speed', 'Speed'), value: score.speedDiscipline },
     ];
   }, [score, t]);
+  const gauge = overall != null ? (
+    <LinearGauge value={overall} preserveReadingAndScale max={100}
+      label={t('widget.weeklySummary.thisWeek', 'this week')}
+      ariaLabel={t('widget.driveScoreGauge.title', 'Drive score')}
+      unit="" color={color} size={isCompact ? 70 : 100} decimals={0} kind="count" hideScale />
+  ) : (
+    <div className="flex min-w-0 flex-col items-center gap-1 text-[var(--text-muted)]">
+      <span className="text-lg font-semibold tabular-nums">—</span>
+      <span className="text-xs">{t('widget.weeklySummary.thisWeek', 'this week')}</span>
+    </div>
+  );
+  const details = !isCompact && (
+    <div className={constrained ? 'flex flex-col gap-0.5 w-full' : 'flex flex-col gap-2 w-full'}>
+      {subScores.map(s => (
+        <MetricBar key={s.key} value={knownNumber(s.value)} max={100}
+          color={knownNumber(s.value) == null ? CHART_NEUTRAL : scoreColor(s.value)}
+          label={s.label} sublabel={knownNumber(s.value) == null ? '—' : fmtNumber(s.value)}
+          size="slim" fill="solid" />
+      ))}
+    </div>
+  );
 
   return (
     <WidgetShell
@@ -74,54 +97,16 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
       onRefresh={() => refetch()}
     >
       {hasScoredDrives ? (
+        <InstrumentPresentation family="ring" compact={isCompact}
+          headline={<WidgetBigNumber value={overall == null ? null : fmtNumber(overall, 0)} unit="/100"
+            label={t('widget.weeklySummary.thisWeek', 'this week')} animated={false} />}
+          reading={{ value: overall, max: 100, label: t('widget.driveScoreGauge.title', 'Drive score'), color }}
+          icon={<Gauge />} details={details}>
         <div className={constrained ? 'flex min-w-0 flex-col gap-1' : 'flex min-w-0 flex-col gap-3'}>
-          {overall != null ? (
-            <LinearGauge
-              value={overall}
-              preserveReadingAndScale
-              max={100}
-              label={t('widget.weeklySummary.thisWeek', 'this week')}
-              ariaLabel={t('widget.driveScoreGauge.title', 'Drive score')}
-              unit=""
-              color={color}
-              size={isCompact ? 70 : 100}
-              decimals={0}
-              kind="count"
-              hideScale
-            />
-          ) : (
-            <div className="flex min-w-0 flex-col items-center gap-1 text-[var(--text-muted)]">
-              <span className="text-lg font-semibold tabular-nums">—</span>
-              <span className="text-xs">{t('widget.weeklySummary.thisWeek', 'this week')}</span>
-            </div>
-          )}
-          {!isCompact && (
-            <div className={constrained ? 'flex flex-col gap-0.5 w-full' : 'flex flex-col gap-2 w-full'}>
-              {subScores.map((s) => knownNumber(s.value) != null ? (
-                <MetricBar
-                  key={s.key}
-                  value={s.value}
-                  max={100}
-                  color={scoreColor(s.value)}
-                  label={s.label}
-                  sublabel={fmtNumber(s.value)}
-                  size="slim"
-                  fill="solid"
-                />
-              ) : (
-                <MetricBar
-                  key={s.key}
-                  value={null}
-                  max={100}
-                  color={CHART_NEUTRAL}
-                  label={s.label}
-                  sublabel="—"
-                  size="slim"
-                />
-              ))}
-            </div>
-          )}
+          {gauge}
+          {details}
         </div>
+        </InstrumentPresentation>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Gauge className="h-5 w-5" />}

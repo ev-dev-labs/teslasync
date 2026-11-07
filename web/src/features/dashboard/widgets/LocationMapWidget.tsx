@@ -1,10 +1,11 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigation } from 'lucide-react';
+import { MapPin, Navigation } from 'lucide-react';
 import { AnimatedMarker } from '@/components/maps';
-import { Text } from '@/components/ui';
+import { Caption, Text } from '@/components/ui';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -68,6 +69,42 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
+  const map = (
+    <WidgetMapView
+      center={center}
+      zoom={isCompact ? 13 : 14}
+      compact={isCompact}
+      isEmpty={!hasCoords}
+      emptyMessage={t('widget.locationMap.noData', 'No location data available')}
+    >
+      <AnimatedMarker
+        position={center}
+        heading={heading}
+      />
+    </WidgetMapView>
+  );
+  const retainedPosition = hasCoords && (
+    !isLive || isStale || dataState.status === 'stale' || stateData?.freshness !== 'fresh'
+  );
+  const locationDetails = !isCompact && (
+    <dl
+      className="grid min-w-0 grid-cols-2 gap-3"
+      aria-label={t('widget.locationMap.status', 'Vehicle location status')}
+    >
+      <div className="min-w-0">
+        <Caption as="dt">{t('dashboardWidgets.maps.locationMap.position', 'Position')}</Caption>
+        <Text as="dd" variant="bodySm" className="break-words tabular-nums">
+          {hasCoords ? `${fmtNumber(lat, 2)}, ${fmtNumber(lng, 2)}` : '—'}
+        </Text>
+      </div>
+      <div className="min-w-0">
+        <Caption as="dt">{t('widget.locationMap.heading', 'Heading')}</Caption>
+        <Text as="dd" variant="bodySm" className="tabular-nums">
+          {hasCoords && heading != null ? `${fmtNumber(heading, 0)}°` : '—'}
+        </Text>
+      </div>
+    </dl>
+  );
 
   return (
     <WidgetShell
@@ -81,48 +118,56 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <div className="relative flex min-h-0 flex-1 flex-col">
-        <WidgetMapView
-          center={center}
-          zoom={isCompact ? 13 : 14}
-          compact={isCompact}
-          isEmpty={!hasCoords}
-          emptyMessage={t('widget.locationMap.noData', 'No location data available')}
-        >
-          <AnimatedMarker
-            position={center}
-            heading={heading}
-          />
-        </WidgetMapView>
-
-        {/* The map remains the primary surface; source status is a quiet footer,
-            so only information present in the vehicle payload is exposed. */}
-        {hasCoords && !isCompact && (
-          <div
-            className="flex min-w-0 items-center justify-between gap-2 border-t border-[var(--border-subtle)] px-4 py-2"
-            role="group"
-            aria-label={t('widget.locationMap.status', 'Vehicle location status')}
-          >
-            {!isLive && (
-              <Text variant="caption" className="min-w-0 truncate text-amber-300">
-                {t('widget.locationMap.lastKnown', 'Last known position')}
-              </Text>
-            )}
-            {isLive && <span aria-hidden="true" className="min-w-0 flex-1" />}
-            {isExpanded && heading != null && (
-              <Text variant="caption" className="flex shrink-0 items-center gap-1">
-                <Navigation className="h-3 w-3 shrink-0" aria-hidden="true" />
-                {fmtNumber(heading, 0)}°
-              </Text>
-            )}
-            {isExpanded && (
-              <Text variant="caption" className="shrink-0 tabular-nums">
-                {fmtNumber(lat, 2)}, {fmtNumber(lng, 2)}
-              </Text>
-            )}
+      <InstrumentPresentation
+        family="map"
+        compact={isCompact}
+        icon={<MapPin />}
+        headline={(
+          <div className="flex min-w-0 flex-col gap-1">
+            <Caption>{t('widget.mapView.label', 'Map')}</Caption>
+            <Text variant="subhead">{t('dashboardWidgets.maps.locationMap.vehicleLocation', 'Vehicle location')}</Text>
           </div>
         )}
-      </div>
+        context={retainedPosition && !isCompact ? (
+          <Text variant="caption" className="text-amber-300">
+            {t('widget.locationMap.lastKnown', 'Last known position')}
+          </Text>
+        ) : undefined}
+        instrument={<div className="relative flex min-h-0 flex-1 flex-col">{map}</div>}
+        details={locationDetails}
+      >
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          {map}
+
+          {/* The map remains the primary surface; source status is a quiet footer,
+              so only information present in the vehicle payload is exposed. */}
+          {hasCoords && !isCompact && (
+            <div
+              className="flex min-w-0 items-center justify-between gap-2 border-t border-[var(--border-subtle)] px-4 py-2"
+              role="group"
+              aria-label={t('widget.locationMap.status', 'Vehicle location status')}
+            >
+              {!isLive && (
+                <Text variant="caption" className="min-w-0 truncate text-amber-300">
+                  {t('widget.locationMap.lastKnown', 'Last known position')}
+                </Text>
+              )}
+              {isLive && <span aria-hidden="true" className="min-w-0 flex-1" />}
+              {isExpanded && heading != null && (
+                <Text variant="caption" className="flex shrink-0 items-center gap-1">
+                  <Navigation className="h-3 w-3 shrink-0" aria-hidden="true" />
+                  {fmtNumber(heading, 0)}°
+                </Text>
+              )}
+              {isExpanded && (
+                <Text variant="caption" className="shrink-0 tabular-nums">
+                  {fmtNumber(lat, 2)}, {fmtNumber(lng, 2)}
+                </Text>
+              )}
+            </div>
+          )}
+        </div>
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

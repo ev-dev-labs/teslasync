@@ -1,13 +1,15 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Users } from 'lucide-react';
-import { EmptyState, QueryError } from '@/components/feedback';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { Caption, MetricValue, Subhead, Text } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates, knownString } from '@/api/dataState';
 import { useVehicleDrivers, useVehicleInvitations } from '@/api/hooks/useVehicleAccess';
 import { useVehicleMobileEnabled, useVehicles } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
 import { WidgetDetailCard, type DetailEntry } from './shared';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
@@ -143,6 +145,75 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
     void refetchMobile();
   }, [refetchDrivers, refetchInvitations, refetchMobile]);
 
+  const driverCount = Array.isArray(drivers) ? drivers.length : null;
+  const pendingCount = Array.isArray(invitations) && safeInvitations.every((inv) => knownString(inv.status) != null)
+    ? safeInvitations.filter((inv) => inv.status === 'pending').length
+    : null;
+  const mobileLabel = mobileEnabled === true
+    ? t('widget.vehicleAccessMobileOn', 'Mobile access enabled')
+    : mobileEnabled === false
+      ? t('widget.vehicleAccessMobileOff', 'Mobile access disabled')
+      : t('widget.vehicleAccessMobileUnknown', 'Mobile access unknown');
+  const sources = [
+    {
+      id: 'drivers', label: t('widget.vehicleAccessAuthorized', 'Authorized drivers'),
+      state: driverState, loading: driversLoading, entries: driverEntries,
+      emptyMessage: Array.isArray(drivers)
+        ? t('widget.vehicleAccessNoDrivers', 'No authorized drivers')
+        : t('widget.vehicleAccessUnknown', 'Unknown'),
+    },
+    {
+      id: 'invitations', label: t('dashboardWidgets.security.vehicleAccessInvitations', 'Invitations'),
+      state: invitationState, loading: invitationsLoading, entries: invitationEntries,
+      emptyMessage: Array.isArray(invitations)
+        ? t('widget.vehicleAccessNoInvitations', 'No pending invitations')
+        : t('widget.vehicleAccessUnknown', 'Unknown'),
+    },
+  ];
+  const headline = (
+    <div className="min-w-0 space-y-1">
+      <Caption as="p">{t('widget.vehicleAccessAuthorized', 'Authorized drivers')}</Caption>
+      <MetricValue>{driverCount ?? '—'}</MetricValue>
+    </div>
+  );
+  const details = (
+    <div className="min-w-0 space-y-3">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+        <Caption>{t('widget.vehicleAccessPending', 'Pending invitations')}</Caption>
+        <Text variant="bodySm" data-access-pending-count>{pendingCount ?? '—'}</Text>
+      </div>
+      <Caption as="p">
+        {t('dashboardWidgets.security.vehicleAccessPendingNote', 'Pending invitations are separate from active permissions.')}
+      </Caption>
+      {!isCompact && sources.map((source) => (
+        <section key={source.id} aria-label={source.label} data-access-source={source.id}
+          data-data-state={source.state.status} className="min-w-0 space-y-2 border-t border-[var(--border-subtle)] pt-3">
+          <Subhead>{source.label}</Subhead>
+          <StaleRefreshWarning state={source.state} label={source.label} />
+          {source.state.fatalError ? (
+            <QueryError error={source.state.fatalError} onRetry={source.state.retry ?? undefined} />
+          ) : source.loading && !source.state.hasData ? (
+            <Skeleton className="h-12 w-full" />
+          ) : (
+            <WidgetDetailCard entries={source.entries} emptyMessage={source.emptyMessage} />
+          )}
+        </section>
+      ))}
+      <section aria-label={t('widget.vehicleAccessMobile', 'Mobile access')} data-access-source="mobile"
+        data-data-state={mobileState.status} className="min-w-0 space-y-2 border-t border-[var(--border-subtle)] pt-3">
+        <Caption as="p">{t('widget.vehicleAccessMobile', 'Mobile access')}</Caption>
+        <StaleRefreshWarning state={mobileState} label={t('widget.vehicleAccessMobile', 'Mobile access')} />
+        {!isCompact && mobileState.fatalError ? (
+          <QueryError error={mobileState.fatalError} onRetry={mobileState.retry ?? undefined} />
+        ) : mobileLoading && !mobileState.hasData ? (
+          <Skeleton className="h-6 w-full" />
+        ) : (
+          <Text as="p" variant="bodySm">{mobileLabel}</Text>
+        )}
+      </section>
+    </div>
+  );
+
   return (
     <WidgetShell
       title={t('widget.vehicleAccess', 'Vehicle access')}
@@ -160,50 +231,53 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      {hasAnyData ? (
-        isCompact ? (
-          <div className="flex min-h-[44px] min-w-0 flex-wrap items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <Users className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
-              <span className="min-w-0 text-sm font-medium text-[var(--text-primary)] [overflow-wrap:anywhere]">
-                {drivers === undefined
-                  ? `— ${t('widget.vehicleAccessDrivers', 'drivers')}`
-                  : `${safeDrivers.length} ${t('widget.vehicleAccessDrivers', 'drivers')}`}
-              </span>
+      <InstrumentPresentation family="list" compact={isCompact} headline={headline}
+        icon={<Users aria-hidden="true" />} details={details}>
+        {hasAnyData ? (
+          isCompact ? (
+            <div className="flex min-h-[44px] min-w-0 flex-wrap items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <Users className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
+                <span className="min-w-0 text-sm font-medium text-[var(--text-primary)] [overflow-wrap:anywhere]">
+                  {drivers === undefined
+                    ? `— ${t('widget.vehicleAccessDrivers', 'drivers')}`
+                    : `${safeDrivers.length} ${t('widget.vehicleAccessDrivers', 'drivers')}`}
+                </span>
+              </div>
+              <span
+                role="img"
+                aria-label={mobileEnabled === true
+                  ? t('widget.vehicleAccessMobileOn', 'Mobile access enabled')
+                  : mobileEnabled === false
+                    ? t('widget.vehicleAccessMobileOff', 'Mobile access disabled')
+                    : t('widget.vehicleAccessMobileUnknown', 'Mobile access unknown')}
+                className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                  mobileEnabled === true
+                    ? 'bg-emerald-400'
+                    : mobileEnabled === false ? 'bg-red-400' : 'bg-[var(--surface-2)]'
+                }`}
+                title={mobileEnabled === true
+                  ? t('widget.vehicleAccessMobileOn', 'Mobile access enabled')
+                  : mobileEnabled === false
+                    ? t('widget.vehicleAccessMobileOff', 'Mobile access disabled')
+                    : t('widget.vehicleAccessMobileUnknown', 'Mobile access unknown')}
+              />
             </div>
-            <span
-              role="img"
-              aria-label={mobileEnabled === true
-                ? t('widget.vehicleAccessMobileOn', 'Mobile access enabled')
-                : mobileEnabled === false
-                  ? t('widget.vehicleAccessMobileOff', 'Mobile access disabled')
-                  : t('widget.vehicleAccessMobileUnknown', 'Mobile access unknown')}
-              className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                mobileEnabled === true
-                  ? 'bg-emerald-400'
-                  : mobileEnabled === false ? 'bg-red-400' : 'bg-[var(--surface-2)]'
-              }`}
-              title={mobileEnabled === true
-                ? t('widget.vehicleAccessMobileOn', 'Mobile access enabled')
-                : mobileEnabled === false
-                  ? t('widget.vehicleAccessMobileOff', 'Mobile access disabled')
-                  : t('widget.vehicleAccessMobileUnknown', 'Mobile access unknown')}
+          ) : (
+            <WidgetDetailCard
+              entries={accessEntries}
+              compact={false}
+              emptyMessage={t('widget.vehicleAccessNoData', 'No access data available')}
             />
-          </div>
+          )
         ) : (
-          <WidgetDetailCard
-            entries={accessEntries}
-            compact={false}
-            emptyMessage={t('widget.vehicleAccessNoData', 'No access data available')}
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+            icon={<Users className="h-5 w-5" />}
+            message={t('widget.vehicleAccessNoData', 'No access data available')}
+            className="py-4"
           />
-        )
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Users className="h-5 w-5" />}
-          message={t('widget.vehicleAccessNoData', 'No access data available')}
-          className="py-4"
-        />
-      )}
+        )}
+      </InstrumentPresentation>
       {isCompact && driverState.fatalError && <QueryError error={driverState.fatalError} onRetry={driverState.retry ?? undefined} />}
       {isCompact && invitationState.fatalError && <QueryError error={invitationState.fatalError} onRetry={invitationState.retry ?? undefined} />}
       {isCompact && mobileState.fatalError && <QueryError error={mobileState.fatalError} onRetry={mobileState.retry ?? undefined} />}

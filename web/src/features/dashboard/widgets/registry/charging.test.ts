@@ -58,6 +58,7 @@ const EXPECTED_IDS = [
   'charge-plans',
   'next-charge-decision',
   'charging-session-detail',
+  'new-charge-readiness',
 ] as const;
 
 /** kebab-case, lowercase, no leading/trailing/double hyphens. */

@@ -78,6 +78,7 @@ const EXPECTED_IDS = [
   'driving-coach',
   'trip-summary',
   'drive-telemetry',
+  'new-driver-assist',
 ] as const;
 
 /** Uniquely-targetable copy for the <WidgetPicker> consumer assertions. */

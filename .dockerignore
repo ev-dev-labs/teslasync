@@ -8,6 +8,10 @@ helm/
 grafana/
 web/node_modules
 web/dist
+.agent-status
+web/test-results
+docs/widget-design-packs
+docs/widget-redesign/widgets-compare*.html
 
 # Keep the API/web image build context small. The ~260MB Windows Docker build
 # context was canceling mid-transfer ("error from sender: context canceled").

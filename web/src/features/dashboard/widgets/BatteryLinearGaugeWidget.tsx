@@ -9,6 +9,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import { batteryColor } from './BatteryGaugeWidget';
 import { ChargeBatteryPack, ChargeMeter, useVerifiedChargeActivity } from './instruments/ChargeInstruments';
@@ -42,6 +43,33 @@ export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProp
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
+  const status = state && <ChargeStatusSummary charging={state.is_charging} active={active} limit={chargeLimitSoc} />;
+  const headline = batteryLevel != null ? (
+    <WidgetBigNumber value={batteryLevel} unit="%" decimals={0} animated={false} />
+  ) : state ? (
+    <WidgetBigNumber value={null} label={t('widget.batteryLevel', 'Battery')} />
+  ) : (
+    <EmptyState variant="informational" icon={<Battery className="h-6 w-6" />}
+      message={t('widget.noBattery', 'No battery data')} className="py-4" />
+  );
+  const pack = batteryLevel != null && (
+    <ChargeBatteryPack level={batteryLevel} active={active} className={isCompact || denseShort ? 'w-20' : 'w-28'} />
+  );
+  const meter = batteryLevel != null && (
+    <ChargeMeter value={batteryLevel} label={t('widget.batteryLevel', 'Battery')}
+      color={batteryColor(batteryLevel)} marker={chargeLimitSoc} showMarkerValue={false}
+      markerLabel={chargeLimitSoc != null ? `${t('widget.chargeLimit', 'Limit')} ${chargeLimitSoc}%` : undefined}
+      preserveOutOfScaleMarker active={active} />
+  );
+  const details = batteryLevel != null ? !isCompact && rangeText != null && (
+    <div className={denseShort ? 'flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center' : 'flex min-w-0 flex-col items-center gap-1 text-center'}>
+      <p className="text-xs leading-snug text-[var(--text-muted)]">
+        {t('widget.batteryGauge.range', '{{range}} range', { range: rangeText })}
+      </p>
+    </div>
+  ) : state && !isCompact && chargeLimitSoc != null && (
+    <WidgetStatGrid stats={[{ label: t('widget.chargeLimit', 'Limit'), value: chargeLimitSoc, unit: '%' }]} />
+  );
 
   return (
     <WidgetShell
@@ -55,49 +83,30 @@ export default function BatteryLinearGaugeWidget({ vehicleId, size }: WidgetProp
       isError={isError}
       onRefresh={handleRefresh}
     >
-      {state && <ChargeStatusSummary charging={state.is_charging} active={active} limit={chargeLimitSoc} />}
+      <InstrumentPresentation family="ring" compact={isCompact} headline={headline} context={status}
+        reading={{ value: batteryLevel, max: 100, label: t('widget.batteryLevel', 'Battery'), unit: '%', color: batteryColor(batteryLevel) }}
+        instrument={batteryLevel != null ? <div className="min-w-0 space-y-2">{pack}{meter}</div> : undefined} details={details}>
+      {status}
       <div className="flex min-w-0 flex-col gap-2">
         {batteryLevel != null ? (
           <div className={`flex w-full min-w-0 flex-col ${size.rows <= 2 ? 'gap-1' : 'gap-3'}`}>
             <div className="flex min-w-0 items-center justify-between gap-3">
-              <WidgetBigNumber value={batteryLevel} unit="%" decimals={0} animated={false} />
-              <ChargeBatteryPack level={batteryLevel} active={active} className={isCompact || denseShort ? 'w-20' : 'w-28'} />
+              {headline}
+              {pack}
             </div>
-            <ChargeMeter
-              value={batteryLevel}
-              label={t('widget.batteryLevel', 'Battery')}
-              color={batteryColor(batteryLevel)}
-              marker={chargeLimitSoc}
-              showMarkerValue={false}
-              markerLabel={chargeLimitSoc != null ? `${t('widget.chargeLimit', 'Limit')} ${chargeLimitSoc}%` : undefined}
-              preserveOutOfScaleMarker
-              active={active}
-            />
-            {!isCompact && rangeText != null && (
-              <div className={denseShort ? 'flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center' : 'flex min-w-0 flex-col items-center gap-1 text-center'}>
-                {rangeText != null && (
-                  <p className="text-xs leading-snug text-[var(--text-muted)]">
-                    {t('widget.batteryGauge.range', '{{range}} range', { range: rangeText })}
-                  </p>
-                )}
-              </div>
-            )}
+            {meter}
+            {details}
           </div>
         ) : state ? (
           <>
-            <WidgetBigNumber value={null} label={t('widget.batteryLevel', 'Battery')} />
-            {!isCompact && chargeLimitSoc != null && (
-              <WidgetStatGrid stats={[{ label: t('widget.chargeLimit', 'Limit'), value: chargeLimitSoc, unit: '%' }]} />
-            )}
+            {headline}
+            {details}
           </>
         ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<Battery className="h-6 w-6" />}
-            message={t('widget.noBattery', 'No battery data')}
-            className="py-4"
-          />
+          headline
         )}
       </div>
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

@@ -6,10 +6,25 @@ import { fulfillApiMock, installApiMocks, mockAppSettings, seedBrowserState, wai
 // `custom` resolves to the mocked settings' custom_primary.
 const SELECTIONS: ReadonlyArray<{ id: ThemeId; hex: string }> = [
   { id: 'neon-cyan', hex: '#3b82f6' },
-  { id: 'tesla-red', hex: '#e31937' },
-  { id: 'matrix-green', hex: '#00ff41' },
-  { id: 'royal-purple', hex: '#a855f7' },
+  { id: 'tesla-red', hex: '#ef4444' },
+  { id: 'matrix-green', hex: '#22c55e' },
+  { id: 'royal-purple', hex: '#8b5cf6' },
   { id: 'solar-amber', hex: '#f59e0b' },
+  { id: 'sky-blue', hex: '#0ea5e9' },
+  { id: 'ocean-teal', hex: '#14b8a6' },
+  { id: 'emerald-green', hex: '#10b981' },
+  { id: 'forest-green', hex: '#16a34a' },
+  { id: 'lime-green', hex: '#84cc16' },
+  { id: 'sunny-yellow', hex: '#eab308' },
+  { id: 'sunset-orange', hex: '#f97316' },
+  { id: 'coral', hex: '#fb7185' },
+  { id: 'rose-pink', hex: '#ec4899' },
+  { id: 'magenta', hex: '#d946ef' },
+  { id: 'lavender', hex: '#a78bfa' },
+  { id: 'indigo', hex: '#6366f1' },
+  { id: 'navy-blue', hex: '#1e40af' },
+  { id: 'gold', hex: '#ca8a04' },
+  { id: 'slate-gray', hex: '#64748b' },
   { id: 'custom', hex: '#00b4d8' },
 ]
 
@@ -141,8 +156,8 @@ for (const mode of ['dark', 'light'] as const) {
     await waitForHarnessReady(page, api)
     const semantic = await statusColors(page)
     const selections = [
-      { name: 'Tesla Red', id: 'tesla-red', hex: '#e31937' },
-      { name: 'Matrix Green', id: 'matrix-green', hex: '#00ff41' },
+      { name: 'Red', id: 'tesla-red', hex: '#ef4444' },
+      { name: 'Green', id: 'matrix-green', hex: '#22c55e' },
       { name: 'Custom', id: 'custom', hex: '#8e3abb' },
     ] as const
 

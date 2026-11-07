@@ -30,7 +30,7 @@ async function select(item: Locator, page: Page, capture?: string, key?: 'Enter'
   await expect(target).toHaveClass(/is-animating/)
   const timings = await target.evaluate(element => element.getAnimations({ subtree: true }).map(animation => {
     const timing = animation.effect!.getTiming()
-    return { duration: Number(timing.duration), delay: timing.delay, iterations: timing.iterations }
+    return { duration: Number(timing.duration), delay: timing.delay ?? 0, iterations: timing.iterations }
   }))
   const avatar = await target.locator('[data-nav-icon=avatar]').count()
   expect(timings.length).toBeGreaterThanOrEqual(avatar ? 1 : 2)

@@ -379,6 +379,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap,
+    minify: 'terser',
+    terserOptions: { maxWorkers: 2 },
     modulePreload: {
       resolveDependencies: (_filename, dependencies) => canonicalPreloadDependencies(dependencies),
     },

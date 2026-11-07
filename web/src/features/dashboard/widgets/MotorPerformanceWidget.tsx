@@ -11,6 +11,7 @@ import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { COLOR } from '@/lib/colors';
+import StatusPresentation from './designPacks/StatusPresentation';
 
 const LIVE_REFRESH_MS = 5_000;
 
@@ -62,19 +63,45 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
     isError,
     onRefresh: () => refetch(),
   };
+  const headline = <WidgetBigNumber
+    value={torque != null ? fmtNumber(torque, 0) : null}
+    unit={torque != null ? t('widget.motorPerformance.nm', 'Nm') : undefined}
+    label={t('widget.motorPerformance.torque', 'Torque')}
+    animated={false}
+  />;
+  const details = <WidgetStatGrid
+    stats={[
+      {
+        label: t('widget.motorPerformance.statorTemp', 'Stator temp'),
+        value: statorTemp != null ? fmtNumber(toTemperatureDisplay(statorTemp), 0) : null,
+        unit: statorTemp != null ? tempUnit : undefined,
+      },
+      {
+        label: t('widget.motorPerformance.gearState', 'Gear state'),
+        value: gear != null && String(gear).trim() ? String(gear) : null,
+      },
+      {
+        label: t('widget.motorPerformance.lateralG', 'Lateral G'),
+        value: lateralG != null ? fmtNumber(lateralG, 2) : null,
+        unit: lateralG != null ? 'g' : undefined,
+      },
+      {
+        label: t('widget.motorPerformance.longitudinalG', 'Longitudinal G'),
+        value: longitudinalG != null ? fmtNumber(longitudinalG, 2) : null,
+        unit: longitudinalG != null ? 'g' : undefined,
+      },
+    ]}
+    compact={size.cols <= 2}
+    cols={2}
+  />;
+  const emptyNote = !data && <p className="text-xs text-[var(--text-muted)]">{t('widget.motorPerformance.noData', 'No motor data')}</p>;
 
   if (isCompact) {
     return (
       <WidgetShell title={t('widget.motorPerformance.title', 'Motor performance')} {...shellProps}>
-        <div className="flex h-full min-h-[44px] flex-col justify-center">
-          <WidgetBigNumber
-            value={torque != null ? fmtNumber(torque, 0) : null}
-            unit={torque != null ? t('widget.motorPerformance.nm', 'Nm') : undefined}
-            label={t('widget.motorPerformance.torque', 'Torque')}
-            animated={false}
-          />
-          {!data && <p className="text-xs text-[var(--text-muted)]">{t('widget.motorPerformance.noData', 'No motor data')}</p>}
-        </div>
+        <StatusPresentation compact headline={headline} icon={<Gauge className="size-6" aria-hidden="true" />} details={emptyNote}>
+          <div className="flex h-full min-h-[44px] flex-col justify-center">{headline}{emptyNote}</div>
+        </StatusPresentation>
       </WidgetShell>
     );
   }
@@ -86,39 +113,9 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
       {...shellProps}
     >
       {data ? (
-        <div className="flex min-w-0 flex-col gap-3">
-          <WidgetBigNumber
-            value={torque != null ? fmtNumber(torque, 0) : null}
-            unit={torque != null ? t('widget.motorPerformance.nm', 'Nm') : undefined}
-            label={t('widget.motorPerformance.torque', 'Torque')}
-            animated={false}
-          />
-          <WidgetStatGrid
-            stats={[
-              {
-                label: t('widget.motorPerformance.statorTemp', 'Stator temp'),
-                value: statorTemp != null ? fmtNumber(toTemperatureDisplay(statorTemp), 0) : null,
-                unit: statorTemp != null ? tempUnit : undefined,
-              },
-              {
-                label: t('widget.motorPerformance.gearState', 'Gear state'),
-                value: gear != null && String(gear).trim() ? String(gear) : null,
-              },
-              {
-                label: t('widget.motorPerformance.lateralG', 'Lateral G'),
-                value: lateralG != null ? fmtNumber(lateralG, 2) : null,
-                unit: lateralG != null ? 'g' : undefined,
-              },
-              {
-                label: t('widget.motorPerformance.longitudinalG', 'Longitudinal G'),
-                value: longitudinalG != null ? fmtNumber(longitudinalG, 2) : null,
-                unit: longitudinalG != null ? 'g' : undefined,
-              },
-            ]}
-            compact={size.cols <= 2}
-            cols={2}
-          />
-        </div>
+        <StatusPresentation headline={headline} icon={<Gauge className="size-6" aria-hidden="true" />} details={details}>
+          <div className="flex min-w-0 flex-col gap-3">{headline}{details}</div>
+        </StatusPresentation>
       ) : (
         <EmptyState
           variant="informational"

@@ -7,6 +7,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import { ChargeBatteryPack, ChargeMeter, ChargeReadings, useVerifiedChargeActivity, useTelemetryChargeActivity } from './instruments/ChargeInstruments';
 import { ChargeStatusSummary } from './instruments/ChargeStatusSummary';
@@ -144,21 +145,24 @@ function CompactChargingView({ power, batteryLevel, amps, active }: { power: num
   const { fmtNumber } = useNumberFormatting();
   const { unitPrefs } = useUnits();
   const { t } = useTranslation('dashboard');
+  const pack = <ChargeBatteryPack level={batteryLevel} active={active} className="w-16" />;
+  const headline = <WidgetBigNumber
+    value={power == null ? null : fmtNumber(convertPowerFromSI(power, unitPrefs.power), 0)}
+    unit={unitPrefs.power} animated={false} align="center" size="secondary" />;
+  const battery = <span className={dashboardTokens.metricLabel}>{batteryLevel == null ? '—' : `${fmtNumber(batteryLevel, 0)}%`}</span>;
+  const current = <WidgetStatGrid compact stats={[{ label: t('widget.chargingTelemetry.current', 'Current'), value: amps == null ? null : fmtNumber(amps, 1), unit: 'A' }]} />;
   return (
+    <InstrumentPresentation family="meter" compact headline={<div>{headline}{battery}</div>} instrument={pack} details={current}
+      reading={{ value: batteryLevel, max: 100, label: t('widget.battery', 'Battery'), unit: '%' }}>
     <div className="flex min-w-0 items-center justify-center gap-3">
-      <ChargeBatteryPack level={batteryLevel} active={active} className="w-16" />
+      {pack}
       <div className="flex min-w-0 flex-col items-center gap-1">
-      <WidgetBigNumber
-        value={power == null ? null : fmtNumber(convertPowerFromSI(power, unitPrefs.power), 0)}
-        unit={unitPrefs.power}
-        animated={false}
-        align="center"
-        size="secondary"
-      />
-      <span className={dashboardTokens.metricLabel}>{batteryLevel == null ? '—' : `${fmtNumber(batteryLevel, 0)}%`}</span>
-      <WidgetStatGrid compact stats={[{ label: t('widget.chargingTelemetry.current', 'Current'), value: amps == null ? null : fmtNumber(amps, 1), unit: 'A' }]} />
+      {headline}
+      {battery}
+      {current}
       </div>
     </div>
+    </InstrumentPresentation>
   );
 }
 
@@ -166,12 +170,18 @@ function CompactChargingView({ power, batteryLevel, amps, active }: { power: num
 function CompactIdleView({ batteryLevel, amps }: { batteryLevel: number | null; amps: number | null }) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const pack = <ChargeBatteryPack level={batteryLevel} className="w-20" />;
+  const headline = <WidgetBigNumber value={batteryLevel == null ? null : `${fmtNumber(batteryLevel, 0)}%`} animated={false} align="center" size="secondary" />;
+  const current = <WidgetStatGrid compact stats={[{ label: t('widget.chargingTelemetry.current', 'Current'), value: amps == null ? null : fmtNumber(amps, 1), unit: 'A' }]} />;
   return (
+    <InstrumentPresentation family="meter" compact headline={headline} instrument={pack} details={current}
+      reading={{ value: batteryLevel, max: 100, label: t('widget.battery', 'Battery'), unit: '%' }}>
     <div className="flex min-w-0 items-center justify-center gap-3">
-      <ChargeBatteryPack level={batteryLevel} className="w-20" />
-      <WidgetBigNumber value={batteryLevel == null ? null : `${fmtNumber(batteryLevel, 0)}%`} animated={false} align="center" size="secondary" />
-      <WidgetStatGrid compact stats={[{ label: t('widget.chargingTelemetry.current', 'Current'), value: amps == null ? null : fmtNumber(amps, 1), unit: 'A' }]} />
+      {pack}
+      {headline}
+      {current}
     </div>
+    </InstrumentPresentation>
   );
 }
 
@@ -196,24 +206,18 @@ interface FullChargingViewProps {
 
 function FullChargingView({ metrics, unitPrefs, fmtNumber, t, active, short }: FullChargingViewProps) {
   const { power, voltage, amps, energyAdded, timeToFull, doneAt } = metrics;
-
-  return (
-    <div className={short ? 'grid min-w-0 grid-cols-1 items-start gap-2 @sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : 'flex h-full min-w-0 flex-col justify-center gap-3'}>
-      <div className={short ? 'flex min-w-0 flex-col gap-2' : 'contents'}>
-      <ChargeStatusSummary charging active={active} limit={metrics.chargeLimit} />
-      <div className="flex min-w-0 items-center justify-between gap-3">
-        <WidgetBigNumber value={metrics.batteryLevel} unit="%" decimals={0} animated={false} />
-        <ChargeBatteryPack level={metrics.batteryLevel} active={active} className={short ? 'w-20' : undefined} />
-      </div>
-      <ChargeMeter
+  const summary = <ChargeStatusSummary charging active={active} limit={metrics.chargeLimit} />;
+  const headline = <WidgetBigNumber value={metrics.batteryLevel} unit="%" decimals={0} animated={false} />;
+  const pack = <ChargeBatteryPack level={metrics.batteryLevel} active={active} className={short ? 'w-20' : undefined} />;
+  const meter = <ChargeMeter
         value={metrics.batteryLevel}
         label={t('widget.battery', 'Battery')}
         marker={metrics.chargeLimit}
         showMarkerValue={false}
         markerLabel={metrics.chargeLimit != null ? `${t('dashboard.chargeStatus.chargeLimit', 'Charge limit')} ${fmtNumber(metrics.chargeLimit, 0)}%` : undefined}
         active={active}
-      />
-      </div>
+      />;
+  const readings = (
       <ChargeReadings short={short}>
       <WidgetStatGrid
         cols={3}
@@ -249,7 +253,20 @@ function FullChargingView({ metrics, unitPrefs, fmtNumber, t, active, short }: F
         ]}
       />
       </ChargeReadings>
+  );
+  return (
+    <InstrumentPresentation family="meter" compact={short} headline={headline} context={summary}
+      reading={{ value: metrics.batteryLevel, max: 100, label: t('widget.battery', 'Battery'), unit: '%' }}
+      instrument={<div className="min-w-0 space-y-3">{pack}{meter}</div>} details={readings}>
+    <div className={short ? 'grid min-w-0 grid-cols-1 items-start gap-2 @sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : 'flex h-full min-w-0 flex-col justify-center gap-3'}>
+      <div className={short ? 'flex min-w-0 flex-col gap-2' : 'contents'}>
+        {summary}
+        <div className="flex min-w-0 items-center justify-between gap-3">{headline}{pack}</div>
+        {meter}
+      </div>
+      {readings}
     </div>
+    </InstrumentPresentation>
   );
 }
 
@@ -267,16 +284,23 @@ interface IdleViewProps {
 function IdleView({ metrics, short }: IdleViewProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  return (
-    <div className={short ? 'flex min-w-0 items-center justify-center gap-3' : 'flex flex-col items-center justify-center gap-3'}>
-      {!short && <Plug className="h-6 w-6 text-[var(--text-muted)]" />}
-      <ChargeBatteryPack level={metrics.batteryLevel} />
-      <div className="text-center">
-        <p className={dashboardTokens.secondaryMetric}>
-          {metrics.batteryLevel == null ? '—' : `${fmtNumber(metrics.batteryLevel, 0)}%`}
-        </p>
-      </div>
-      <WidgetStatGrid compact stats={[{ label: t('widget.chargingTelemetry.current', 'Current'), value: metrics.amps == null ? null : fmtNumber(metrics.amps, 1), unit: 'A' }]} />
+  const icon = !short && <Plug className="h-6 w-6 text-[var(--text-muted)]" />;
+  const pack = <ChargeBatteryPack level={metrics.batteryLevel} />;
+  const headline = (
+    <div className="text-center">
+      <p className={dashboardTokens.secondaryMetric}>{metrics.batteryLevel == null ? '—' : `${fmtNumber(metrics.batteryLevel, 0)}%`}</p>
     </div>
+  );
+  const current = <WidgetStatGrid compact stats={[{ label: t('widget.chargingTelemetry.current', 'Current'), value: metrics.amps == null ? null : fmtNumber(metrics.amps, 1), unit: 'A' }]} />;
+  return (
+    <InstrumentPresentation family="meter" compact={short} headline={headline} instrument={pack} details={current} icon={icon}
+      reading={{ value: metrics.batteryLevel, max: 100, label: t('widget.battery', 'Battery'), unit: '%' }}>
+    <div className={short ? 'flex min-w-0 items-center justify-center gap-3' : 'flex flex-col items-center justify-center gap-3'}>
+      {icon}
+      {pack}
+      {headline}
+      {current}
+    </div>
+    </InstrumentPresentation>
   );
 }

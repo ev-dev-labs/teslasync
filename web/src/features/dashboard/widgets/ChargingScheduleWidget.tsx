@@ -14,6 +14,8 @@ import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
+import TimelinePresentation from './designPacks/TimelinePresentation';
+import StatTimelinePresentation from './designPacks/StatTimelinePresentation';
 
 export interface ScheduleSignals {
   mode: string | null;
@@ -193,12 +195,14 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
         onRefresh={handleRefresh}
       >
         {hasScheduleData ? (
+          <TimelinePresentation compact>
           <WidgetBigNumber
             value={schedule.chargeLimit != null ? `${schedule.chargeLimit}%` : null}
             label={t('widget.chargingSchedule.limit', 'Charge limit')}
             align="center"
             animated={false}
           />
+          </TimelinePresentation>
         ) : (
           emptyState
         )}
@@ -240,7 +244,9 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
               </Badge>
             )}
           </div>
-          <WidgetStatGrid stats={scheduleStats} cols={3} />
+          <StatTimelinePresentation stats={scheduleStats}>
+            <WidgetStatGrid stats={scheduleStats} cols={3} />
+          </StatTimelinePresentation>
           </SourceContent>
 
           {/* Extra detail row when tall */}

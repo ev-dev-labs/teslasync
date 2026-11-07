@@ -23,9 +23,9 @@ test.describe.configure({ mode: 'serial' })
 
 test('device review: dashboard', async ({ page }, testInfo) => {
   await seedBrowserState(page, 'dark', '/')
-  await installApiMocks(page)
+  const mocks = await installApiMocks(page)
   await page.goto('/')
-  await waitForHarnessReady(page)
+  await waitForHarnessReady(page, mocks)
   await page.getByRole('main').waitFor()
   await page.screenshot({
     path: path.join(OUT, `${testInfo.project.name}.png`),
@@ -42,9 +42,9 @@ test('device review: fleet', async ({ page }, testInfo) => {
     'fleet review is desktop-only',
   )
   await seedBrowserState(page, 'dark', '/vehicles')
-  await installApiMocks(page)
+  const mocks = await installApiMocks(page)
   await page.goto('/vehicles')
-  await waitForHarnessReady(page)
+  await waitForHarnessReady(page, mocks)
   await page.getByRole('main').waitFor()
   await page.screenshot({
     path: path.join(OUT, `${testInfo.project.name}-fleet.png`),

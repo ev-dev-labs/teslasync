@@ -162,6 +162,7 @@ const twinBatchPath = '/api/v1/vehicles/states';
 // batch held/failed alongside the three single-vehicle sources — otherwise
 // the brief legitimately publishes batch-sourced state while the gate holds.
 function twinLedgerPaths(mocks: Mocks): string[] {
+  if (!mocks) throw new Error('Twin source ledger requires isolated API fixtures');
   const paths = twinPaths.map((path) => `/api/v1${path}`);
   // The fleet batch is read only when the desktop status bar mounts (not on
   // mobile widths); when it is read it must have been gated like the singles.

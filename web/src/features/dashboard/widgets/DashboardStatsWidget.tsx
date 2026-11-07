@@ -12,6 +12,7 @@ import { safeArray } from '@/lib/safeArray';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
+import StatStatusPresentation from './designPacks/StatStatusPresentation';
 
 export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
   const { fmtInt } = useNumberFormatting();
@@ -96,19 +97,17 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
       onRefresh={handleRefresh}
     >
       {hasData ? (
-        isCompact ? (
-          <WidgetBigNumber
-            value={widgetsPlaced == null ? null : fmtInt(widgetsPlaced)}
-            label={t('widget.dashboardStats.widgetsPlaced', 'Widgets placed')}
-            align="center"
-          />
-        ) : (
-          <WidgetStatGrid
-            stats={statItems}
-            cols={size.cols >= 3 ? 3 : 2}
-            maxPerRow={3}
-          />
-        )
+        <StatStatusPresentation stats={isCompact ? statItems.slice(0, 1) : statItems} cols={size.cols >= 3 ? 3 : 2} maxPerRow={3} compact={isCompact} icon={<LayoutDashboard className="size-6" aria-hidden="true" />}>
+          {isCompact ? (
+            <WidgetBigNumber
+              value={widgetsPlaced == null ? null : fmtInt(widgetsPlaced)}
+              label={t('widget.dashboardStats.widgetsPlaced', 'Widgets placed')}
+              align="center"
+            />
+          ) : (
+            <WidgetStatGrid stats={statItems} cols={size.cols >= 3 ? 3 : 2} maxPerRow={3} />
+          )}
+        </StatStatusPresentation>
       ) : (
         <EmptyState
           icon={<LayoutDashboard aria-hidden="true" className="h-5 w-5" />}

@@ -5,8 +5,8 @@ import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { queryPolicy } from '../queryPolicy';
 import { deriveDataState, type DataState } from '../dataState';
 import { useToast } from '@/components/feedback/Toast';
-import type { SignalHistoryResponse, SignalStats, TelemetryStatus } from '@/types/telemetry';
-import { telemetryUptimeSeconds, telemetryVehicleList } from '@/types/telemetry';
+import type { SignalHistoryResponse, SignalStats, TelemetryStatus, MqttStatusData } from '@/types/telemetry';
+import { appendTelemetryRateSample, telemetryUptimeSeconds, telemetryVehicleList } from '@/types/telemetry';
 import type { SignalsCatalogResponse, SignalObservation } from '@/types/signals';
 
 export const telemetryKeys = {
@@ -475,10 +475,13 @@ export function useChargingScheduleSignals(vehicleId: number) {
 }
 
 export function useMQTTStatus() {
-  return useQuery({
+  const client = useQueryClient();
+  return useQuery<MqttStatusData>({
     queryKey: telemetryKeys.mqttStatus,
     queryFn: async ({ signal }) => {
       const raw = await request<TelemetryStatus>('/telemetry', { signal });
+      const vehicles = telemetryVehicleList(raw);
+      const previous = client.getQueryData<MqttStatusData>(telemetryKeys.mqttStatus)?.sessionSamples ?? [];
       // The backend has shipped vehicles as an array or a Record<vin, …> map,
       // under `vehicles` or the older `streaming_vehicles`, in either casing.
       // telemetryVehicleList() preserves unknown versus observed empty lists
@@ -486,7 +489,8 @@ export function useMQTTStatus() {
       return {
         ...raw,
         uptimeSeconds: telemetryUptimeSeconds(raw),
-        vehicles: telemetryVehicleList(raw),
+        vehicles,
+        sessionSamples: appendTelemetryRateSample(previous, vehicles, Date.now()),
       };
     },
     refetchInterval: INTERVALS.REALTIME,

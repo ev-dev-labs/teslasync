@@ -13,6 +13,7 @@ import { safeArray } from '@/lib/safeArray';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useDateLabels } from '@/hooks/useDateLabels';
+import TimelinePresentation from './designPacks/TimelinePresentation';
 
 // ── Severity → visual mapping ────────────────────────────────────────
 
@@ -239,11 +240,13 @@ export default function AuditLogWidget({ vehicleId, size }: WidgetProps) {
     >
       {isCompact ? (
         feedItems.length > 0 ? (
+          <TimelinePresentation compact>
           <CompactView
             totalEvents24h={totalEvents24h}
             worstSeverity={worstSeverity}
             t={t}
           />
+          </TimelinePresentation>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<FileSearch className="h-5 w-5" />}
@@ -254,6 +257,7 @@ export default function AuditLogWidget({ vehicleId, size }: WidgetProps) {
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto">
           <WidgetDetailCard
+            presentation="timeline"
             entries={feedItems.slice(0, 15).map((item): DetailEntry => ({
               id: item.id,
               label: item.title,

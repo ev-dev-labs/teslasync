@@ -97,6 +97,20 @@ export function WidgetPicker({
   const { t } = useTranslation('dashboard');
   const categoryLabel = (category: WidgetCategory) =>
     t(`widgets.categories.${category}`, CATEGORY_LABELS[category]);
+  const localizedWidgets = useMemo(
+    () => WIDGET_REGISTRY.map(widget => ({
+      ...widget,
+      name: widget.nameKey ? t(widget.nameKey, widget.name) : widget.name,
+      description: widget.descriptionKey
+        ? t(widget.descriptionKey, widget.description)
+        : widget.description,
+    })),
+    [t],
+  );
+  const localizedWidgetById = useMemo(
+    () => new Map(localizedWidgets.map(widget => [widget.id, widget])),
+    [localizedWidgets],
+  );
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<WidgetCategory | 'all'>('all');
   const [addedThisSessionIds, setAddedThisSessionIds] = useState<string[]>([]);
@@ -153,7 +167,7 @@ export function WidgetPicker({
   );
 
   const filteredWidgets = useMemo(() => {
-    let pool = WIDGET_REGISTRY;
+    let pool = localizedWidgets;
     if (categoryFilter !== 'all') pool = pool.filter(inCategory);
     if (!query) return pool;
     return pool.filter(
@@ -162,11 +176,11 @@ export function WidgetPicker({
         w.description.toLowerCase().includes(query) ||
         w.category.toLowerCase().includes(query),
     );
-  }, [categoryFilter, inCategory, query]);
+  }, [categoryFilter, inCategory, localizedWidgets, query]);
 
   const grouped = useMemo(
     () =>
-      WIDGET_REGISTRY.filter(inCategory).reduce(
+      localizedWidgets.filter(inCategory).reduce(
         (acc, w) => {
           if (!acc[w.category]) acc[w.category] = [];
           acc[w.category].push(w);
@@ -174,7 +188,7 @@ export function WidgetPicker({
         },
         {} as Record<string, WidgetDef[]>,
       ),
-    [inCategory],
+    [inCategory, localizedWidgets],
   );
 
   const groupedEntries = useMemo(
@@ -196,10 +210,10 @@ export function WidgetPicker({
   const recentlyAddedVisible = useMemo(() => {
     if (query || categoryFilter !== 'all') return [];
     return recentlyAddedIds
-      .map((id) => WIDGET_BY_ID.get(id))
+      .map((id) => localizedWidgetById.get(id))
       .filter((w): w is WidgetDef => Boolean(w) && !activeWidgetIdSet.has(w!.id))
       .slice(0, RECENTLY_ADDED_MAX);
-  }, [activeWidgetIdSet, categoryFilter, query, recentlyAddedIds]);
+  }, [activeWidgetIdSet, categoryFilter, localizedWidgetById, query, recentlyAddedIds]);
 
   /** Categories that actually have widgets — used to render the filter pills. */
   const availableCategories = useMemo(() => {
@@ -258,7 +272,7 @@ export function WidgetPicker({
       });
 
       if (addableIds.length === 1) {
-        const widget = WIDGET_BY_ID.get(addableIds[0]);
+        const widget = localizedWidgetById.get(addableIds[0]);
         if (widget) {
           setAnnouncement(t('widgets.addedAnnouncement', '{{name}} added to dashboard', { name: widget.name }));
         }
@@ -277,7 +291,7 @@ export function WidgetPicker({
 
       if (options?.closeAfterAdd) onClose();
     },
-    [activeWidgetIdSet, focusNextAddableWidget, onAddWidgets, onClose, t],
+    [activeWidgetIdSet, focusNextAddableWidget, localizedWidgetById, onAddWidgets, onClose, t],
   );
 
   const handleAdd = useCallback(

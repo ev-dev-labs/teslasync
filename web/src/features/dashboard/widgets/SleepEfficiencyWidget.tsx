@@ -5,6 +5,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
 
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
@@ -59,6 +60,20 @@ export default function SleepEfficiencyWidget({ vehicleId, size }: WidgetProps) 
   const wakeEventsCount = Array.isArray(data?.recent_events) ? data.recent_events.length : null;
 
   const hasData = data != null;
+  const headline = (
+    <WidgetBigNumber value={efficiencyPct != null ? fmtInt(efficiencyPct) : null} unit="%"
+      label={t('widget.sleepEfficiency.timeAsleep', 'Time asleep when parked')} align="center" animated={false} />
+  );
+  const details = !isCompact && (
+    <WidgetStatGrid cols={2} stats={[
+      { label: t('widget.sleepEfficiency.wakeEvents', 'Wake events'), value: wakeEventsCount != null ? fmtInt(wakeEventsCount) : null },
+      { label: t('widget.sleepEfficiency.drain', 'Drain'), value: drainRate != null ? fmtNumber(drainRate * 24, 1) : null, unit: '%/day' },
+    ]} />
+  );
+  const empty = (
+    <EmptyState variant="informational" icon={<Moon className="h-5 w-5" />}
+      message={t('widget.sleepEfficiency.noData', 'No sleep efficiency data')} className="py-4" />
+  );
 
   return (
     <WidgetShell
@@ -76,39 +91,16 @@ export default function SleepEfficiencyWidget({ vehicleId, size }: WidgetProps) 
       isError={isError}
       onRefresh={refresh}
     >
+      <InstrumentPresentation family="ring" compact={isCompact} headline={hasData ? headline : empty}
+        reading={{ value: efficiencyPct, max: 100, label: t('widget.sleepEfficiency.timeAsleep', 'Time asleep when parked'), unit: '%' }}
+        icon={<Moon />} details={hasData ? details : undefined}>
       {hasData ? (
         <div className="flex h-full min-h-0 flex-col justify-center gap-3">
-          <WidgetBigNumber
-            value={efficiencyPct != null ? fmtInt(efficiencyPct) : null}
-            unit="%"
-            label={t('widget.sleepEfficiency.timeAsleep', 'Time asleep when parked')}
-            align="center"
-            animated={false}
-          />
-          {!isCompact && (
-            <WidgetStatGrid
-              cols={2}
-              stats={[
-                {
-                  label: t('widget.sleepEfficiency.wakeEvents', 'Wake events'),
-                  value: wakeEventsCount != null ? fmtInt(wakeEventsCount) : null,
-                },
-                {
-                  label: t('widget.sleepEfficiency.drain', 'Drain'),
-                  value: drainRate != null ? fmtNumber(drainRate * 24, 1) : null,
-                  unit: '%/day',
-                },
-              ]}
-            />
-          )}
+          {headline}
+          {details}
         </div>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Moon className="h-5 w-5" />}
-          message={t('widget.sleepEfficiency.noData', 'No sleep efficiency data')}
-          className="py-4"
-        />
-      )}
+      ) : empty}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

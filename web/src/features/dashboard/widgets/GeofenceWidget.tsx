@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Crosshair } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Caption, MetricValue } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { Circle, Marker, vehicleIcon } from '@/components/maps';
 import { useGeofences } from '@/api/hooks/useLocations';
@@ -10,8 +10,11 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
 import { useDataState, useCombinedDataState } from '@/hooks/useDataState';
+import { TELEMETRY_STALE_AFTER_MS } from '@/hooks/useTelemetryFreshness';
 import { WidgetDetailCard, type DetailEntry } from './shared';
 import { CHART_SEMANTIC, CHART_NEUTRAL } from '@/lib/colors';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
 
 /** Haversine distance in meters between two lat/lon points */
 export function haversineMeters(
@@ -43,6 +46,7 @@ interface FenceStatus {
 
 export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const enhanced = usePackPresentation() !== 'classic';
 
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -127,6 +131,35 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
   const isCompact = size.cols <= 1;
   const isEmpty = fences.length === 0;
   const markerIcon = useMemo(() => vehicleIcon(), []);
+  const observedAge = stateData?.observedAt != null && Number.isFinite(stateData.observedAt)
+    ? Date.now() - stateData.observedAt : null;
+  const membershipConfirmed = stateData?.live === true && stateData.freshness === 'fresh' &&
+    observedAge != null && observedAge >= 0 && observedAge <= TELEMETRY_STALE_AFTER_MS &&
+    stateData.verifiedFields?.includes('latitude') && stateData.verifiedFields.includes('longitude') &&
+    stateTrust.status === 'ok' && fenceTrust.status === 'ok' && !isStale;
+  const canResolveZone = hasCoords && Array.isArray(geofences) &&
+    !stateTrust.fatalError && !fenceTrust.fatalError &&
+    fences.every((fence) => !fence.enabled || fence.validMap);
+  const outside = canResolveZone && fences.some((fence) => fence.enabled) && !currentZone;
+  const reportedLabel = t('dashboardWidgets.maps.geofence.lastReported', 'Last reported membership');
+  const stateFeedback = (
+    <>
+      <StaleRefreshWarning state={stateTrust} />
+      {stateTrust.fatalError && <QueryError error={stateTrust.fatalError} onRetry={stateTrust.retry ?? undefined} />}
+    </>
+  );
+  const fenceError = fenceTrust.fatalError
+    ? <QueryError error={fenceTrust.fatalError} onRetry={() => { void fenceRefetch(); }} />
+    : null;
+  const membershipContext = (
+    <>
+      {stateFeedback}
+      <StaleRefreshWarning state={fenceTrust} />
+      {hasCoords && !membershipConfirmed && (
+        <Caption as="p">{t('dashboardWidgets.maps.geofence.currentUnconfirmed', 'Current membership is unconfirmed')}</Caption>
+      )}
+    </>
+  );
 
   const shellProps = {
     title: t('widget.geofence.title', 'Geofence status'),
@@ -143,107 +176,133 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell {...shellProps}>
-        <div className="flex h-full flex-col items-center justify-center gap-1 min-h-[44px]">
-          <Crosshair aria-hidden="true" className="h-5 w-5 text-theme-accent" />
-          {currentZone ? (
-            <Badge variant="success" size="sm">
-              {currentZone.name}
-            </Badge>
-          ) : (
-            <Badge variant="neutral" size="sm">
-              {hasCoords && Array.isArray(geofences) && !fenceTrust.fatalError ? t('widget.geofence.noZone', 'No zone') : '—'}
-            </Badge>
-          )}
-        </div>
+        <InstrumentPresentation family="map" compact
+          icon={<Crosshair aria-hidden="true" />}
+          headline={
+            <div className="flex min-w-0 flex-col gap-2">
+              <Caption>{reportedLabel}</Caption>
+              <Badge variant={currentZone && membershipConfirmed ? 'success' : 'neutral'} size="sm">
+                {currentZone?.name ?? (canResolveZone ? t('widget.geofence.noZone', 'No zone') : '—')}
+              </Badge>
+            </div>
+          }
+          context={<>{membershipContext}{fenceError}</>}
+        >
+          <div className="flex h-full flex-col items-center justify-center gap-1 min-h-[44px]">
+            <Crosshair aria-hidden="true" className="h-5 w-5 text-theme-accent" />
+            {currentZone ? (
+              <Badge variant="success" size="sm">
+                {currentZone.name}
+              </Badge>
+            ) : (
+              <Badge variant="neutral" size="sm">
+                {hasCoords && Array.isArray(geofences) && !fenceTrust.fatalError ? t('widget.geofence.noZone', 'No zone') : '—'}
+              </Badge>
+            )}
+          </div>
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
 
   // ─── Standard layout (2×4) ───
   const showMap = hasCoords && size.rows >= 3;
+  const fenceFeedback = fenceError ?? (fenceLoading && isEmpty ? (
+    <Skeleton className="h-24" />
+  ) : isEmpty ? (
+    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+      icon={<Crosshair aria-hidden="true" className="h-5 w-5" />}
+      message={enhanced && !Array.isArray(geofences)
+        ? t('dashboardWidgets.maps.geofence.unavailable', 'Geofence configuration unavailable')
+        : t('widget.geofence.noFences', 'No geofences configured')}
+      className="py-4"
+    />
+  ) : null);
+  const mapSection = (
+    <div className="flex flex-1 min-h-0 flex-col">
+      <WidgetMapView
+        center={[vLat, vLon]}
+        zoom={12}
+        compact={false}
+        isEmpty={!hasCoords}
+        emptyMessage={t('widget.mapView.noData', 'No location data available')}
+      >
+        {fences.filter((f) => f.validMap).map((f) => (
+          <Circle
+            key={f.id}
+            center={[f.latitude, f.longitude]}
+            radius={f.radius ?? 0}
+            pathOptions={{
+              color: f.inside && (!enhanced || (f.enabled && membershipConfirmed)) ? CHART_SEMANTIC.vehicle.online : CHART_NEUTRAL,
+              fillColor: f.inside && (!enhanced || (f.enabled && membershipConfirmed)) ? CHART_SEMANTIC.vehicle.online : CHART_NEUTRAL,
+              fillOpacity: 0.15,
+              weight: 2,
+            }}
+          />
+        ))}
+        <Marker
+          position={[vLat, vLon]}
+          icon={markerIcon}
+          title={t('maps.animatedMarker.label', 'Vehicle position', { ns: 'translation' })}
+        />
+      </WidgetMapView>
+    </div>
+  );
+  const fenceList = (
+    <div className={enhanced ? 'flex-1 min-h-0 overflow-y-auto py-2' : 'flex-1 min-h-0 overflow-y-auto px-4 py-2'}>
+      <WidgetDetailCard
+        entries={fences.map((fence): DetailEntry => {
+          const status = !fence.enabled
+            ? t('widget.geofence.disabled', 'Disabled')
+            : fence.inside
+              ? t('widget.geofence.inside', 'Inside')
+              : hasCoords && fence.validMap
+                ? t('widget.geofence.outside', 'Outside')
+                : null;
+          const success = fence.enabled && fence.inside && (!enhanced || membershipConfirmed);
+          return {
+            id: fence.id,
+            label: fence.name,
+            value: status ? '' : '—',
+            status: success ? 'success' : 'neutral',
+            badge: status ? { text: status, variant: success ? 'success' : 'neutral' } : undefined,
+          };
+        })}
+        emptyMessage={t('widget.geofence.noFences', 'No geofences configured')}
+        emptyIcon={<Crosshair aria-hidden="true" className="h-5 w-5" />}
+      />
+    </div>
+  );
 
   return (
     <WidgetShell
       icon={<Crosshair aria-hidden="true" className="h-3.5 w-3.5 text-theme-accent" />}
-      noPadding={showMap}
+      noPadding={showMap && !enhanced}
       {...shellProps}
     >
-      <StaleRefreshWarning state={stateTrust} />
-      {stateTrust.fatalError && <QueryError error={stateTrust.fatalError} onRetry={stateTrust.retry ?? undefined} />}
-      {fenceTrust.fatalError ? (
-        <QueryError error={fenceTrust.fatalError} onRetry={() => { void fenceRefetch(); }} />
-      ) : fenceLoading && isEmpty ? (
-        <Skeleton className="h-24" />
-      ) : isEmpty ? (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Crosshair aria-hidden="true" className="h-5 w-5" />}
-          message={t('widget.geofence.noFences', 'No geofences configured')}
-          className="py-4"
-        />
-      ) : (
-        <div className={showMap ? 'flex flex-1 min-h-0 flex-col' : 'flex h-full flex-col'}>
-          {/* Map section */}
-          {showMap && (
-            <div className="flex flex-1 min-h-0 flex-col">
-              <WidgetMapView
-                center={[vLat, vLon]}
-                zoom={12}
-                compact={false}
-              >
-                {fences.filter((f) => f.validMap).map((f) => (
-                  <Circle
-                    key={f.id}
-                    center={[f.latitude, f.longitude]}
-                    radius={f.radius ?? 0}
-                    pathOptions={{
-                      color: f.inside ? CHART_SEMANTIC.vehicle.online : CHART_NEUTRAL,
-                      fillColor: f.inside ? CHART_SEMANTIC.vehicle.online : CHART_NEUTRAL,
-                      fillOpacity: 0.15,
-                      weight: 2,
-                    }}
-                  />
-                ))}
-                <Marker
-                  position={[vLat, vLon]}
-                  icon={markerIcon}
-                  title={t('maps.animatedMarker.label', 'Vehicle position', { ns: 'translation' })}
-                />
-              </WidgetMapView>
-            </div>
-          )}
-
-          {/* Fence list */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-2">
-            <WidgetDetailCard
-              entries={fences.map((fence): DetailEntry => {
-                const status = !fence.enabled
-                  ? t('widget.geofence.disabled', 'Disabled')
-                  : fence.inside
-                    ? t('widget.geofence.inside', 'Inside')
-                    : hasCoords && fence.validMap
-                      ? t('widget.geofence.outside', 'Outside')
-                      : null;
-                const variant = !fence.enabled
-                  ? 'neutral'
-                  : fence.inside
-                    ? 'success'
-                    : status
-                      ? 'neutral'
-                      : 'neutral';
-                return {
-                  id: fence.id,
-                  label: fence.name,
-                  value: status ? '' : '—',
-                  status: fence.enabled && fence.inside ? 'success' : 'neutral',
-                  badge: status ? { text: status, variant } : undefined,
-                };
-              })}
-              emptyMessage={t('widget.geofence.noFences', 'No geofences configured')}
-              emptyIcon={<Crosshair aria-hidden="true" className="h-5 w-5" />}
-            />
+      <InstrumentPresentation family="map"
+        icon={<Crosshair aria-hidden="true" />}
+        headline={
+          <div className="min-w-0 space-y-1">
+            <Caption>{reportedLabel}</Caption>
+            <MetricValue>{currentZone ? t('widget.geofence.inside', 'Inside') : outside ? t('widget.geofence.outside', 'Outside') : '—'}</MetricValue>
+            <Caption>{currentZone?.name ?? (outside ? t('widget.geofence.noZone', 'No zone') : '—')}</Caption>
           </div>
-        </div>
-      )}
+        }
+        context={membershipContext}
+        instrument={size.rows >= 3 ? mapSection : undefined}
+        details={fenceFeedback ?? fenceList}
+      >
+        {stateFeedback}
+        {fenceFeedback ?? (
+          <div className={showMap ? 'flex flex-1 min-h-0 flex-col' : 'flex h-full flex-col'}>
+            {/* Map section */}
+            {showMap && mapSection}
+            {/* Fence list */}
+            {fenceList}
+          </div>
+        )}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

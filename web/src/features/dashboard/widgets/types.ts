@@ -61,6 +61,8 @@ export interface WidgetDef {
   id: string;
   name: string;
   description: string;
+  nameKey?: string;
+  descriptionKey?: string;
   icon: LucideIcon;
   category: WidgetCategory;
   defaultSize: WidgetSize;

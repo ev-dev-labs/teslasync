@@ -6,9 +6,16 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
+import { Caption } from '@/components/ui';
+import {
+  Bar, BarChart, ChartTooltip, EmbeddedChart, ReferenceLine, ResponsiveContainer,
+  Tooltip, XAxis, YAxis, axisTickSm, chartGrid,
+} from '@/components/charts';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetStatGrid, WidgetStatusGrid } from './shared';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
+import { WidgetBigNumber, WidgetStatGrid, WidgetStatusGrid } from './shared';
 import type { StatGridItem, StatusCell } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -45,6 +52,7 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
   } = query;
   const trust = useDataState(query, { provenance: 'historical' });
   const { formatTemperature } = useUnits();
+  const pack = usePackPresentation();
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
@@ -66,11 +74,8 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
     });
   }, [cells, avgV, isWide, t, formatTemperature, fmtNumber, fmtScientificNumber]);
 
-  // After-spec summary row (stats primitive): Min / Max / Spread / Temp.
-  // Voltages keep 3-decimal honest precision; the spread is shown in mV with
-  // the healthy-threshold note from the target design; temperature collapses
-  // to the min–max range converted at the display boundary. A measured zero
-  // stays a value; a missing reading stays null so the tile shows '—'.
+  // Preserve voltage precision and display-only temperature conversion.
+  // Measured zero stays a value; missing readings remain null.
   const minV = knownNumber(data?.min_voltage);
   const maxV = knownNumber(data?.max_voltage);
   const spreadMvRaw = knownNumber(data?.voltage_spread);
@@ -107,6 +112,47 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
       value: tempRange,
     },
   ];
+  const chartData = useMemo(() => cells.map((cell, index) => ({
+    cell: statusCells[index].label,
+    voltage: knownNumber(cell.voltage),
+  })), [cells, statusCells]);
+  const voltageLabel = t('dashboardWidgets.battery.batteryCells.voltageChart', 'Cell voltage');
+  const emptyMessage = data ? t('widget.batteryCells.noCells', 'No cell data') : t('widget.batteryCells.noData', 'No battery cell data');
+  const cellsGrid = (
+    <div className="min-w-0">
+      <WidgetStatusGrid
+        cells={statusCells}
+        cols={isWide ? 4 : isCompact ? 2 : 3}
+        compact={isCompact}
+        emptyMessage={emptyMessage}
+        emptyIcon={<Cpu className="h-5 w-5" />}
+      />
+    </div>
+  );
+  const stats = <WidgetStatGrid cols={isCompact ? 2 : 4} stats={summaryStats} />;
+  const voltageChart = (
+    <EmbeddedChart title={voltageLabel} ariaLabel={voltageLabel} height={isCompact ? 160 : 200}
+      empty={!chartData.some(cell => cell.voltage != null)} emptyMessage={emptyMessage}
+      data={chartData} dataColumns={[
+        { key: 'cell', label: t('widget.batteryCells.cell', 'Cell') },
+        { key: 'voltage', label: `${voltageLabel} (V)`, format: value => knownNumber(value) == null ? '—' : `${fmtScientificNumber(value, 3)} V` },
+      ]}
+      caption={<Caption>{t('dashboardWidgets.battery.batteryCells.truncatedScale', 'Truncated voltage scale (V).')}</Caption>}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData}>
+          {chartGrid}
+          <XAxis dataKey="cell" tick={axisTickSm} tickLine={false} axisLine={false} />
+          <YAxis domain={['dataMin - 0.01', 'dataMax + 0.01']} unit=" V" width={76}
+            tick={axisTickSm} tickLine={false} axisLine={false} tickFormatter={value => fmtScientificNumber(value, 3)} />
+          <Tooltip content={<ChartTooltip valueFormatter={value => knownNumber(value) == null ? '—' : `${fmtScientificNumber(value, 3)} V`} />} />
+          {avgV != null && <ReferenceLine y={avgV} ifOverflow="extendDomain" stroke="var(--text-muted)" strokeDasharray="4 4"
+            label={{ value: t('dashboardWidgets.battery.batteryCells.averageLine', 'Average {{voltage}} V', { voltage: fmtScientificNumber(avgV, 3) }), position: 'insideTopRight', fill: 'var(--text-secondary)' }} />}
+          <Bar dataKey="voltage" name={voltageLabel} unit="V" fill="var(--theme-primary)"
+            radius={pack === 'v7' ? 0 : [4, 4, 0, 0]} isAnimationActive={false} />
+        </BarChart>
+      </ResponsiveContainer>
+    </EmbeddedChart>
+  );
 
   return (
     <WidgetShell
@@ -120,21 +166,22 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={() => refetch()}
     >
+      <InstrumentPresentation family="bars" compact={isCompact} icon={<Cpu />}
+        headline={<WidgetBigNumber value={spreadMv != null ? fmtNumber(spreadMv) : null} unit="mV"
+          label={t('dashboardWidgets.battery.batteryCells.voltageSpread', 'Cell-voltage spread')} animated={false} />}
+        context={<div className="space-y-1">
+          <Caption>{t('dashboardWidgets.battery.batteryCells.reportedCells', 'Source-reported cells: {{count}}', { count: cells.length })}</Caption>
+          <Caption>{t('dashboardWidgets.battery.batteryCells.availability', 'Only cells supplied by the source are plotted; availability varies.')}</Caption>
+        </div>}
+        instrument={voltageChart}
+        details={<div className="flex min-w-0 flex-col gap-3">{cellsGrid}{stats}</div>}>
         <div className="flex min-w-0 flex-col gap-3">
           {/* Voltage heatmap grid */}
-          <div className="min-w-0">
-            <WidgetStatusGrid
-              cells={statusCells}
-              cols={isWide ? 4 : isCompact ? 2 : 3}
-              compact={isCompact}
-              emptyMessage={data ? t('widget.batteryCells.noCells', 'No cell data') : t('widget.batteryCells.noData', 'No battery cell data')}
-              emptyIcon={<Cpu className="h-5 w-5" />}
-            />
-          </div>
-
+          {cellsGrid}
           {/* Min / Max / Spread / Temp summary (After stats row) */}
-          <WidgetStatGrid cols={isCompact ? 2 : 4} stats={summaryStats} />
+          {stats}
         </div>
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

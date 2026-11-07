@@ -154,4 +154,17 @@ export const DRIVING_WIDGETS: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('../DriveTelemetryWidget')),
   },
+  {
+    id: 'new-driver-assist',
+    name: 'Driver Assist',
+    description: 'Last observed assistance states and their individual freshness',
+    nameKey: 'widgets.catalog.new-driver-assist.name',
+    descriptionKey: 'widgets.catalog.new-driver-assist.description',
+    icon: Car,
+    category: 'driving',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../DriverAssistWidget')),
+  },
 ];

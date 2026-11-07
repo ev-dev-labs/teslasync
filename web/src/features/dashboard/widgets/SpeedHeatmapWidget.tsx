@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Grid3X3 } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { EmbeddedChart } from '@/components/charts';
+import { Caption, Text } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDashboardDriveHistory } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';
@@ -18,6 +19,8 @@ import type { Drive } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { zonedDateParts } from '@/lib/dateFormat';
 import { formatHourName, formatWeekdayName } from '@/lib/dateConvert';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
 
 /** 7 rows (Mon–Sun) × 24 cols (0h–23h) */
 const ROWS = 7;
@@ -89,19 +92,20 @@ export function lerpColor(a: [number, number, number], b: [number, number, numbe
   return `rgb(${r},${g},${bl})`;
 }
 
-export function speedToColor(speed: number, maxSpeed: number): string {
+export function speedToColor(speed: number, maxSpeed: number, ink = 'var(--accent)'): string {
   if (!Number.isFinite(speed) || !Number.isFinite(maxSpeed) || speed <= 0 || maxSpeed <= 0) {
     return 'color-mix(in srgb, var(--text-primary) 3%, transparent)';
   }
   const t = Math.max(0, Math.min(speed / maxSpeed, 1));
   const opacity = 0.06 + 0.94 * t;
-  return `color-mix(in srgb, var(--accent) ${Math.round(opacity * 100)}%, var(--surface-2))`;
+  return `color-mix(in srgb, ${ink} ${Math.round(opacity * 100)}%, var(--surface-2))`;
 }
 
 
 export default function SpeedHeatmapWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t, i18n } = useTranslation('dashboard');
+  const packId = usePackPresentation();
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
@@ -147,17 +151,25 @@ export default function SpeedHeatmapWidget({ vehicleId, size, config }: WidgetPr
     count: cell.count,
   }))), [grid]);
 
+  const icon = <Grid3X3 aria-hidden="true" className="h-3.5 w-3.5" />;
+  const headline = (
+    <WidgetBigNumber
+      value={totalDrives > 0 ? fmtNumber(maxSpeed) : null}
+      unit={unitPrefs.speed}
+      label={t('widget.speedHeatmap.peak', 'Peak')}
+      align="center"
+      animated={false}
+    />
+  );
+
   // Compact: show peak speed metric
   if (isCompact) {
     return (
       <WidgetShell title={t('widget.speedHeatmap.title', 'Speed heatmap')} dataState={trust.hasData ? trust : undefined} loading={isLoading} error={trust.fatalError?.message ?? null} updatedAt={dataUpdatedAt} isFetching={isFetching} isStale={isStale} isError={isError} onRefresh={() => refetch()}>
-        <WidgetBigNumber
-          value={totalDrives > 0 ? fmtNumber(maxSpeed) : null}
-          unit={unitPrefs.speed}
-          label={t('widget.speedHeatmap.peak', 'Peak')}
-          align="center"
-          animated={false}
-        />
+        <InstrumentPresentation family="heatmap" compact icon={icon} headline={headline}
+          details={<Caption>{t('dashboardWidgets.driving.speedHeatmap.peakContext', 'Peak of sampled hourly averages')}</Caption>}>
+          {headline}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
@@ -172,10 +184,47 @@ export default function SpeedHeatmapWidget({ vehicleId, size, config }: WidgetPr
     ? dayLabelsFull
     : dayLabelsFull.map((label) => label.slice(0, 1));
 
+  const renderHeatmap = (pixel = false) => totalDrives > 0 ? (
+    <div className="flex min-h-36 h-full flex-col">
+      <EmbeddedChart
+        title={t('widget.speedHeatmap.title', 'Speed heatmap')}
+        ariaLabel={t('widget.speedHeatmap.gridLabel', 'Average speed by day of week and hour of day')}
+        chartKey="dashboard-speed-heatmap"
+        className="min-h-36 h-full"
+        data={cellData}
+        dataColumns={[
+          { key: 'day', label: t('widget.speedHeatmap.day', 'Day'), format: (value) => dayLabelsFull[Number(value)] ?? '—' },
+          { key: 'hour', label: t('widget.speedHeatmap.hour', 'Hour'), format: (value) => `${value}:00` },
+          { key: 'avgSpeed', label: `${t('widget.speedHeatmap.averageSpeed', 'Average speed')} (${unitPrefs.speed})`, format: (value) => value == null ? '—' : fmtNumber(Number(value)) },
+          { key: 'count', label: t('widget.speedHeatmap.driveCount', 'Drive count'), format: (value) => fmtInt(Number(value)) },
+        ]}
+      >
+        <div className="flex-1 min-h-28">
+          <HeatmapGrid
+            grid={grid}
+            maxSpeed={maxSpeed}
+            dayLabels={dayLabels}
+            isWide={isWide}
+            speedUnit={unitPrefs.speed}
+            t={t}
+            locale={i18n?.language ?? 'en-US'}
+            pixel={pixel}
+          />
+        </div>
+      </EmbeddedChart>
+    </div>
+  ) : (
+    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+      icon={<Grid3X3 aria-hidden="true" className="h-5 w-5" />}
+      message={t('widget.speedHeatmap.empty', 'No drive data yet')}
+      className="py-4"
+    />
+  );
+
   return (
     <WidgetShell
       title={t('widget.speedHeatmap.title', 'Speed heatmap')}
-      icon={<Grid3X3 aria-hidden="true" className="h-3.5 w-3.5" />}
+      icon={icon}
       loading={isLoading}
       dataState={trust.hasData ? trust : undefined}
       error={trust.fatalError?.message ?? null}
@@ -185,41 +234,32 @@ export default function SpeedHeatmapWidget({ vehicleId, size, config }: WidgetPr
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {totalDrives > 0 ? (
-        <div className="flex min-h-36 h-full flex-col">
-          <EmbeddedChart
-            title={t('widget.speedHeatmap.title', 'Speed heatmap')}
-            ariaLabel={t('widget.speedHeatmap.gridLabel', 'Average speed by day of week and hour of day')}
-            chartKey="dashboard-speed-heatmap"
-            className="min-h-36 h-full"
-            data={cellData}
-            dataColumns={[
-              { key: 'day', label: t('widget.speedHeatmap.day', 'Day'), format: (value) => dayLabelsFull[Number(value)] ?? '—' },
-              { key: 'hour', label: t('widget.speedHeatmap.hour', 'Hour'), format: (value) => `${value}:00` },
-              { key: 'avgSpeed', label: `${t('widget.speedHeatmap.averageSpeed', 'Average speed')} (${unitPrefs.speed})`, format: (value) => value == null ? '—' : fmtNumber(Number(value)) },
-              { key: 'count', label: t('widget.speedHeatmap.driveCount', 'Drive count'), format: (value) => fmtInt(Number(value)) },
-            ]}
-          >
-          <div className="flex-1 min-h-28">
-            <HeatmapGrid
-              grid={grid}
-              maxSpeed={maxSpeed}
-              dayLabels={dayLabels}
-              isWide={isWide}
-              speedUnit={unitPrefs.speed}
-              t={t}
-              locale={i18n?.language ?? 'en-US'}
-            />
+      <InstrumentPresentation family="heatmap" icon={icon}
+        headline={<div className="space-y-1">
+          <Text as="p" variant="subhead">{t('dashboardWidgets.driving.speedHeatmap.byHour', 'By hour')}</Text>
+          <Caption as="p">{t('dashboardWidgets.driving.speedHeatmap.averageDrivingSpeed', 'Average driving speed')}</Caption>
+        </div>}
+        instrument={renderHeatmap(packId === 'v7')}
+        details={<div className="space-y-3">
+          <dl className="grid grid-cols-2 gap-3">
+            <div>
+              <Caption as="dt">{t('dashboardWidgets.driving.speedHeatmap.rows', 'Rows')}</Caption>
+              <Text as="dd" variant="bodySm">{t('dashboardWidgets.driving.speedHeatmap.days', 'Days')}</Text>
+            </div>
+            <div>
+              <Caption as="dt">{t('dashboardWidgets.driving.speedHeatmap.columns', 'Columns')}</Caption>
+              <Text as="dd" variant="bodySm">{t('dashboardWidgets.driving.speedHeatmap.timeOfDay', 'Time of day')}</Text>
+            </div>
+          </dl>
+          <div className="flex flex-wrap justify-between gap-2">
+            <Caption>{t('dashboardWidgets.driving.speedHeatmap.noSampleLegend', 'Dim = no sample')}</Caption>
+            <Caption>{t('dashboardWidgets.driving.speedHeatmap.higherSpeedLegend', 'Brighter = higher speed')}</Caption>
           </div>
-          </EmbeddedChart>
-        </div>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Grid3X3 aria-hidden="true" className="h-5 w-5" />}
-          message={t('widget.speedHeatmap.empty', 'No drive data yet')}
-          className="py-4"
-        />
-      )}
+          <Caption as="p">{t('dashboardWidgets.driving.speedHeatmap.blankCells', 'Blank cells represent periods without samples, not zero speed.')}</Caption>
+        </div>}
+      >
+        {renderHeatmap()}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }
@@ -234,9 +274,10 @@ interface HeatmapGridProps {
   speedUnit: string;
   t: (key: string, fallback: string, options?: Record<string, unknown>) => string;
   locale: string;
+  pixel?: boolean;
 }
 
-function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t, locale }: HeatmapGridProps) {
+function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t, locale, pixel }: HeatmapGridProps) {
   const { fmtNumber } = useNumberFormatting();
   const leftMargin = isWide ? 30 : 14;
   const topMargin = 14;
@@ -266,6 +307,7 @@ function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t, locale }
       preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={t('widget.speedHeatmap.gridLabel', 'Average speed by day of week and hour of day')}
+      shapeRendering={pixel ? 'crispEdges' : undefined}
     >
       {/* Hour labels along top */}
       {hourLabels.map(({ hour, label }) => (
@@ -304,8 +346,12 @@ function HeatmapGrid({ grid, maxSpeed, dayLabels, isWide, speedUnit, t, locale }
             y={topMargin + day * 12}
             width={9}
             height={11}
-            rx={1.5}
-            fill={cell.count === 0 ? 'var(--surface-2)' : speedToColor(cell.avgSpeed || Number.EPSILON, maxSpeed || 1)}
+            rx={pixel ? 0 : 1.5}
+            fill={cell.count === 0 ? 'var(--surface-2)' : speedToColor(
+              cell.avgSpeed || Number.EPSILON,
+              maxSpeed || 1,
+              pixel ? 'var(--text-primary)' : undefined,
+            )}
           >
             <title>
               {dayLabels[day]} {cell.hour}:00 – {cell.count > 0

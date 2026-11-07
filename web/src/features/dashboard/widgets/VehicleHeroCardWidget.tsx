@@ -1,14 +1,14 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Car, Battery, Gauge, Thermometer } from 'lucide-react';
-import { StatusBadge } from '@/components/data-display';
+import { MetricBar, StatusBadge } from '@/components/data-display';
 import { Badge, Text } from '@/components/ui';
-import { deriveDataState } from '@/api/dataState';
+import { deriveDataState, knownNumber } from '@/api/dataState';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useVehicles, useVehicleState, useSecurityLatest } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertPowerFromSI, convertTempFromSI } from '@/lib/unitConversion';
 
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
@@ -19,9 +19,13 @@ import { useVerifiedDriving } from './vehicle-instruments/useVerifiedDriving';
 import { useVerifiedStudioLights } from './vehicle-instruments/useVerifiedStudioLights';
 import { cn } from '@/lib/cn';
 import { observedVehicleReadings } from '../lib/observedVehicleReadings';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
 
 export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { fmtNumber } = useNumberFormatting();
+  const packId = usePackPresentation();
   const { data: vehicles, isLoading: vehiclesLoading, isError: vehiclesError } = useVehicles();
   const vehicle = vehicleId
     ? vehicles?.find((v) => v.id === vehicleId) ?? vehicles?.[0]
@@ -42,36 +46,44 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
   const driving = useVerifiedDriving(stateData, isError);
   const securityQuery = useSecurityLatest(driving ? id : 0);
   const lightsOn = useVerifiedStudioLights(id, securityQuery);
-  /* SI-floor: state.ideal_range in METERS, state.{inside,outside}_temp in °C. */
+  /* SI-floor: ideal_range in meters, temperatures in °C, charger_power in watts. */
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const tempUnit = unitPrefs.temperature;
+  const powerUnit = unitPrefs.power;
+  const observedBattery = knownNumber(state?.battery_level);
+  const batteryLevel = observedBattery != null && observedBattery >= 0 && observedBattery <= 100
+    ? observedBattery : null;
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
   const isWide = size.cols >= 3;
   const isTall = size.rows >= 2;
 
   const batteryColor = useMemo(() => {
-    if (state?.battery_level == null) return 'text-[var(--text-muted)]';
-    if (state.battery_level > 50) return 'text-emerald-400 [&_.tabular-nums]:text-emerald-400';
-    if (state.battery_level > 20) return 'text-amber-400 [&_.tabular-nums]:text-amber-400';
+    if (batteryLevel == null) return 'text-[var(--text-muted)]';
+    if (batteryLevel > 50) return 'text-emerald-400 [&_.tabular-nums]:text-emerald-400';
+    if (batteryLevel > 20) return 'text-amber-400 [&_.tabular-nums]:text-amber-400';
     return 'text-red-400 [&_.tabular-nums]:text-red-400';
-  }, [state]);
+  }, [batteryLevel]);
 
-  const range = useMemo(
-    () => (state?.ideal_range != null ? convertDistanceFromSI(state.ideal_range, distanceUnit) : null),
-    [state, distanceUnit],
-  );
+  const range = useMemo(() => {
+    const reading = knownNumber(state?.ideal_range);
+    return reading != null && reading >= 0 ? convertDistanceFromSI(reading, distanceUnit) : null;
+  }, [state, distanceUnit]);
 
-  const insideTemp = useMemo(
-    () => (state?.inside_temp != null ? convertTempFromSI(state.inside_temp, tempUnit) : null),
-    [state, tempUnit],
-  );
+  const insideTemp = useMemo(() => {
+    const reading = knownNumber(state?.inside_temp);
+    return reading != null ? convertTempFromSI(reading, tempUnit) : null;
+  }, [state, tempUnit]);
 
-  const outsideTemp = useMemo(
-    () => (state?.outside_temp != null ? convertTempFromSI(state.outside_temp, tempUnit) : null),
-    [state, tempUnit],
-  );
+  const outsideTemp = useMemo(() => {
+    const reading = knownNumber(state?.outside_temp);
+    return reading != null ? convertTempFromSI(reading, tempUnit) : null;
+  }, [state, tempUnit]);
+  const chargerPower = useMemo(() => {
+    const reading = knownNumber(state?.charger_power);
+    return reading != null && reading >= 0 ? convertPowerFromSI(reading, powerUnit) : null;
+  }, [state, powerUnit]);
 
   // Loading spans two async sources. Before any vehicle is known the state
   // query runs with id 0 (disabled) and therefore reports `isLoading: false`,
@@ -98,6 +110,34 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
     dataUpdatedAt,
     refetch,
   });
+  const fullViewProps: FullViewProps = {
+    name: vehicle?.display_name || vehicle?.vin || '—',
+    model: vehicle?.model ?? '',
+    trimBadging: vehicle?.trim_badging ?? '',
+    status: state?.state ?? 'unknown',
+    batteryLevel,
+    batteryColor,
+    range,
+    distanceUnit,
+    insideTemp,
+    outsideTemp,
+    tempUnit,
+    isCharging: state?.is_charging === true,
+    chargerPower,
+    powerUnit,
+    isWide,
+    isTall,
+    dense: true,
+    t,
+  };
+  const artwork = vehicle
+    ? <VehicleStudio vehicle={vehicle} driving={driving} lightsOn={lightsOn} compact size="sm" />
+    : null;
+  const empty = <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+    icon={<Car className="h-5 w-5" />}
+    message={t('widget.noVehicle', 'No vehicle data')}
+    className="py-4"
+  />;
 
   return (
     <WidgetShell
@@ -114,47 +154,63 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
         if (driving) void securityQuery.refetch();
       }}
     >
-      {vehicle ? (
-        <FadeIn className="grid grid-cols-[minmax(72px,0.28fr)_minmax(0,1fr)] items-center gap-3">
-          <VehicleStudio vehicle={vehicle} driving={driving} lightsOn={lightsOn} compact size="sm" />
-          <div className="min-w-0" data-vehicle-card-layout="short">
-          {isCompact ? (
-            <CompactView
-              name={vehicle.display_name || vehicle.vin}
-              batteryLevel={state?.battery_level ?? null}
-              batteryColor={batteryColor}
-              status={state?.state ?? 'unknown'}
-            />
-          ) : (
-            <FullView
-              name={vehicle.display_name || vehicle.vin}
-              model={vehicle.model}
-              trimBadging={vehicle.trim_badging}
-              status={state?.state ?? 'unknown'}
-              batteryLevel={state?.battery_level ?? null}
-              batteryColor={batteryColor}
-              range={range}
-              distanceUnit={distanceUnit}
-              insideTemp={insideTemp}
-              outsideTemp={outsideTemp}
-              tempUnit={tempUnit}
-              isCharging={state?.is_charging ?? false}
-              chargerPower={state?.charger_power ?? null}
-              isWide={isWide}
-              isTall={isTall}
-              dense
-              t={t}
-            />
-          )}
+      <InstrumentPresentation
+        family="vehicle"
+        compact={isCompact}
+        icon={vehicle ? <Car className="size-6" aria-hidden="true" /> : undefined}
+        context={vehicle ? (
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <Text weight="semibold" className="min-w-0 break-words">{fullViewProps.name}</Text>
+            <StatusBadge status={fullViewProps.status} size="sm" className="shrink-0" />
+            {!isCompact && <Text variant="caption" className="break-words">
+              {fullViewProps.model}{fullViewProps.trimBadging ? ` ${fullViewProps.trimBadging}` : ''}
+            </Text>}
           </div>
-        </FadeIn>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Car className="h-5 w-5" />}
-          message={t('widget.noVehicle', 'No vehicle data')}
-          className="py-4"
-        />
-      )}
+        ) : undefined}
+        headline={vehicle ? <WidgetBigNumber
+          value={batteryLevel != null ? `${fmtNumber(batteryLevel)}%` : null}
+          label={t('widget.battery', 'Battery')}
+          valueColor={batteryColor}
+          animated={false}
+        /> : undefined}
+        instrument={vehicle ? (
+          <div className="min-w-0 space-y-3" data-vehicle-card-layout="pack">
+            {artwork}
+            <MetricBar
+              value={batteryLevel}
+              max={100}
+              ariaLabel={t('widget.battery', 'Battery')}
+              color="var(--theme-primary)"
+              fill={packId === 'v7' ? 'segmented' : 'solid'}
+              size={packId === 'v3' ? 'slim' : 'default'}
+              showHeader={false}
+            />
+          </div>
+        ) : empty}
+        details={vehicle && !isCompact
+          ? <FullView {...fullViewProps} showIdentity={false} showBattery={false} />
+          : undefined}
+      >
+        {vehicle ? (
+          <FadeIn className="grid grid-cols-[minmax(72px,0.28fr)_minmax(0,1fr)] items-center gap-3">
+            {artwork}
+            <div className="min-w-0" data-vehicle-card-layout="short">
+              {isCompact ? (
+                <CompactView
+                  name={vehicle.display_name || vehicle.vin}
+                  batteryLevel={batteryLevel}
+                  batteryColor={batteryColor}
+                  status={state?.state ?? 'unknown'}
+                />
+              ) : (
+                <FullView {...fullViewProps} />
+              )}
+            </div>
+          </FadeIn>
+        ) : (
+          empty
+        )}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }
@@ -196,9 +252,12 @@ interface FullViewProps {
   tempUnit: string;
   isCharging: boolean;
   chargerPower: number | null;
+  powerUnit: string;
   isWide: boolean;
   isTall: boolean;
   dense: boolean;
+  showIdentity?: boolean;
+  showBattery?: boolean;
   t: (k: string, f: string) => string;
 }
 
@@ -207,12 +266,12 @@ function FullView({
   batteryLevel, batteryColor,
   range, distanceUnit,
   insideTemp, outsideTemp, tempUnit,
-  isCharging, chargerPower,
-  isWide, isTall, dense, t,
+  isCharging, chargerPower, powerUnit,
+  isWide, isTall, dense, showIdentity = true, showBattery = true, t,
 }: FullViewProps) {
   const { fmtNumber } = useNumberFormatting();
   const stats = [
-    { icon: <Battery className="size-4" />, label: t('widget.battery', 'Battery'), value: batteryLevel != null ? `${fmtNumber(batteryLevel)}%` : '—', valueColor: batteryColor },
+    ...(showBattery ? [{ icon: <Battery className="size-4" />, label: t('widget.battery', 'Battery'), value: batteryLevel != null ? `${fmtNumber(batteryLevel)}%` : '—', valueColor: batteryColor }] : []),
     { icon: <Gauge className="size-4" />, label: t('widget.range', 'Range'), value: range != null ? `${fmtNumber(range)} ${distanceUnit}` : '—' },
     { icon: <Thermometer className="size-4" />, label: t('widget.cabin', 'Cabin'), value: insideTemp != null ? `${fmtNumber(insideTemp)}${tempUnit}` : '—' },
     ...(isWide || isTall ? [{
@@ -224,14 +283,14 @@ function FullView({
   return (
     <div className={cn('flex min-w-0 flex-col', dense ? 'gap-1' : 'gap-3')}>
       {/* Header: name + status badge */}
-      <div className="flex flex-wrap items-center gap-2 min-w-0">
+      {showIdentity && <div className="flex flex-wrap items-center gap-2 min-w-0">
         <Text weight="semibold" className="min-w-0 break-words">{name}</Text>
         <StatusBadge status={status} size="sm" className="shrink-0" />
         {dense && <Text variant="caption" className="break-words">{model}{trimBadging ? ` ${trimBadging}` : ''}</Text>}
-      </div>
+      </div>}
 
       {/* Subtitle: model + trim */}
-      {!dense && <Text variant="bodySm" className="break-words">
+      {showIdentity && !dense && <Text variant="bodySm" className="break-words">
         {model}{trimBadging ? ` ${trimBadging}` : ''}
       </Text>}
 
@@ -252,7 +311,7 @@ function FullView({
           </Badge>
           {chargerPower != null && chargerPower > 0 && (
             <Text variant="bodySm" className="ml-auto">
-              {fmtNumber(chargerPower)} kW
+              {fmtNumber(chargerPower)} {powerUnit}
             </Text>
           )}
         </div>

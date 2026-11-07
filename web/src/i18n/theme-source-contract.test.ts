@@ -27,8 +27,8 @@ describe('reviewed theme changes', () => {
     expect(catalogBeforeDashboardPolish(catalog).theme.presets).toBeUndefined()
     expect(themeCatalog.theme.saveFailed).toBe(catalog.theme.saveFailed)
     expect(settings.theme.saveFailed).toBe(catalog.theme.saveFailed)
-    expect(themeCatalog.theme.presets).toEqual(catalog.theme.presets)
-    expect(settings.theme.presets).toEqual(catalog.theme.presets)
+    expect(themeCatalog.theme.accentPresets).toEqual(catalog.theme.accentPresets)
+    expect(settings.theme.accentPresets).toEqual(catalog.theme.accentPresets)
 
     const changed = structuredClone(catalog)
     changed.theme.saveFailed = 'Changed'
@@ -37,5 +37,9 @@ describe('reviewed theme changes', () => {
     const changedPreset = structuredClone(catalog)
     changedPreset.theme.presets['neon-cyan'] = 'Changed'
     expect(() => catalogBeforeDashboardPolish(changedPreset)).toThrow()
+
+    const changedCurrentPreset = structuredClone(catalog)
+    changedCurrentPreset.theme.accentPresets['neon-cyan'] = 'Changed'
+    expect(() => catalogBeforeDashboardPolish(changedCurrentPreset)).toThrow()
   })
 })

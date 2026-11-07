@@ -92,6 +92,11 @@ vi.mock('@/components/ui/ThemePicker', () => ({
 }))
 
 vi.mock('@/lib/tourLauncher', () => ({ startTour: vi.fn() }))
+vi.mock('@/hooks/useWidgetDesignPack', () => ({
+  useWidgetDesignPack: () => ({
+    packId: 'classic', isReady: false, isSaving: false, error: null, setPackId: vi.fn(),
+  }),
+}))
 
 vi.mock('@/lib/tourRegistry', async () => {
   const actual = await vi.importActual<typeof import('@/lib/tourRegistry')>(
@@ -187,6 +192,9 @@ describe('AppearanceSettings — structure & delegation', () => {
     const picker = screen.getByTestId('theme-picker')
     expect(picker).toHaveAttribute('data-show-mode', 'true')
     expect(picker).toHaveAttribute('data-show-custom', 'true')
+    const packHeading = screen.getByRole('heading', { name: 'Widget design packs' })
+    expect(picker.compareDocumentPosition(packHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(packHeading.compareDocumentPosition(screen.getByText('Information density')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('renders every preference section label', () => {
