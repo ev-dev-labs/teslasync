@@ -110,7 +110,7 @@ interface SourceRequest {
   requestKey: string;
   status: number;
 }
-type SourceResponse = Parameters<typeof fulfillApiFixture>[2];
+type SourceResponse = NonNullable<Parameters<typeof fulfillApiFixture>[2]>;
 const thermalKeys = [
   'thermal-heater-energy', 'thermal-heater-share',
   'thermal-heater-on-time', 'thermal-peak-heater',

@@ -280,7 +280,7 @@ for (const [width, theme] of [[320, 'light'], [1440, 'dark']] as const) {
       if (subject.name === 'resilience') await stormSources(page, mocks);
       await page.route(`**/api/v1${subject.endpoint}`, async route => {
         expect(route.request().method()).toBe('POST');
-        expect(route.request().postDataJSON()).toMatchObject(subject.request);
+        expect(route.request().postDataJSON()).toMatchObject({ ...subject.request });
         calls += 1;
         if (calls === 2) await recalculation;
         await fulfillApiFixture(route, mocks, { json: variant.response });

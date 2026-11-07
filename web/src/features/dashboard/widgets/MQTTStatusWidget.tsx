@@ -3,70 +3,21 @@ import { useTranslation } from 'react-i18next';
 import { Radio } from 'lucide-react';
 import { KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
+import { HelperText } from '@/components/ui';
+import { Sparkline } from '@/components/charts';
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
 
-import { deriveDataState, knownNumber } from '@/api/dataState';
-import type { VehicleTelemetry } from '@/types/telemetry';
+import { deriveDataState } from '@/api/dataState';
+import { deriveMqttStats } from '@/types/telemetry';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { WidgetBigNumber, WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
-export interface MqttWidgetStats {
-  /** Sum of per-vehicle signal counts across the streaming fleet. */
-  totalMessages: number | null;
-  /** Sum of per-vehicle signal rates (signals/sec) across the fleet. */
-  messagesPerSec: number | null;
-  /** ISO timestamp of the most recently received signal, or null when none. */
-  lastMessage: string | null;
-}
-
-/**
- * Fold the per-vehicle telemetry rows into the three fleet-level figures the
- * widget renders. Pure + null-safe so it can be unit-tested in isolation and
- * reused without a React tree.
- *
- * A missing counter makes its fleet total unknown: a partial sum cannot be
- * presented as a complete fleet measurement. `lastMessage` is
- * chosen by parsed instant rather than lexical order — an out-of-band
- * timestamp format (e.g. differing fractional-second precision) can sort
- * incorrectly as a raw string, and unparseable timestamps are skipped instead
- * of winning the comparison.
- */
-export function deriveMqttStats(
-  vehicles: VehicleTelemetry[] | null | undefined,
-): MqttWidgetStats {
-  let totalMessages: number | null = vehicles != null && vehicles.length === 0 ? 0 : null;
-  let messagesPerSec: number | null = vehicles != null && vehicles.length === 0 ? 0 : null;
-  let countsComplete = true;
-  let ratesComplete = true;
-  let lastMessage: string | null = null;
-  let lastMessageMs = -Infinity;
-
-  for (const v of vehicles ?? []) {
-    const count = knownNumber(v.signalCount ?? v.signal_count);
-    const rate = knownNumber(v.signalsPerSecond ?? v.signals_per_second);
-    countsComplete &&= count != null;
-    ratesComplete &&= rate != null;
-    if (count != null) totalMessages = (totalMessages ?? 0) + count;
-    if (rate != null) messagesPerSec = (messagesPerSec ?? 0) + rate;
-    const received = v.lastReceived ?? v.last_received;
-    if (received) {
-      const ms = new Date(received).getTime();
-      if (Number.isFinite(ms) && ms > lastMessageMs) {
-        lastMessageMs = ms;
-        lastMessage = received;
-      }
-    }
-  }
-
-  return {
-    totalMessages: countsComplete ? totalMessages : null,
-    messagesPerSec: ratesComplete ? messagesPerSec : null,
-    lastMessage,
-  };
-}
+export { deriveMqttStats } from '@/types/telemetry';
+export type { MqttWidgetStats } from '@/types/telemetry';
 
 export default function MQTTStatusWidget({ size }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
@@ -80,10 +31,52 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
 
   const stats = useMemo(() => deriveMqttStats(data?.vehicles), [data]);
 
-  const connected = data?.connected;
+  const connected = typeof data?.connected === 'boolean' ? data.connected : null;
   const statusLabel = connected == null ? t('widget.mqtt.unknown', 'Unknown')
       : connected ? t('widget.mqtt.online', 'Online') : t('widget.mqtt.offline', 'Offline');
-  const broker = data?.broker || '—';
+  // Broker userinfo must not leak into either the reading or its tooltip.
+  const broker = data?.broker?.replace(/(^|\/\/)[^/\s]*@/, '$1') || '—';
+  const headline = (
+    <WidgetBigNumber
+      label={isCompact ? undefined : t('widget.mqtt.msgRate', 'Messages/sec')}
+      value={stats.messagesPerSec == null ? null : fmtNumber(stats.messagesPerSec)}
+      unit={t('widget.mqtt.msgSec', 'msg/s')}
+      badge={{ text: statusLabel, variant: connected == null ? 'neutral' : connected ? 'success' : 'error' }}
+    />
+  );
+  const messageCount = (
+    <WidgetStatGrid
+      stats={[{
+        label: t('widget.mqtt.totalToday', 'Total messages'),
+        value: stats.totalMessages == null ? null : fmtInt(stats.totalMessages),
+      }]}
+      cols={2}
+      maxPerRow={2}
+    />
+  );
+  const metadata = (
+    <div className="mt-auto pt-2 border-t border-[var(--border-subtle)] space-y-1.5">
+      <KVList layout="responsive" wrap items={[
+        {
+          id: 'last-message',
+          label: t('widget.mqtt.lastMessage', 'Last message'),
+          value: stats.lastMessage ? formatRelative(stats.lastMessage) : '—',
+        },
+        {
+          id: 'broker',
+          label: t('widget.mqtt.broker', 'Broker'),
+          value: <span title={broker}>{broker}</span>,
+        },
+      ]} />
+    </div>
+  );
+  const empty = !data && (
+    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+      icon={<Radio className="h-5 w-5" />}
+      message={t('widget.mqtt.noData', 'No MQTT status data')}
+      className="py-4"
+    />
+  );
 
   return (
     <WidgetShell
@@ -97,53 +90,40 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {isCompact ? (
+      <InstrumentPresentation
+        family="line"
+        compact={isCompact}
+        headline={headline}
+        icon={<Radio />}
+        details={!isCompact && <div className="flex min-w-0 flex-col gap-3">{messageCount}{metadata}</div>}
+        context={empty}
+        instrument={!isCompact && (
+          <div className="min-w-0 space-y-2">
+            {data?.sessionSamples?.some(point => point.value != null) && <Sparkline
+              samples={data.sessionSamples} width={360} height={80}
+              ariaLabel={t('dashboardWidgets.system.mqtt.sessionTrend', 'Message rates fetched in this browser session')} />}
+            <HelperText>
+              {t('dashboardWidgets.system.mqtt.historyUnavailable', 'This source provides the current message rate, not a throughput history.')}
+            </HelperText>
+            {data?.sessionSamples?.length ? <HelperText>
+              {t('dashboardWidgets.system.mqtt.sessionScope', 'Session samples use fetch times, not signal timestamps; missing rates are gaps.')}
+            </HelperText> : null}
+          </div>
+        )}
+      >
+        {isCompact ? (
           <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
-            <WidgetBigNumber
-              value={stats.messagesPerSec == null ? null : fmtNumber(stats.messagesPerSec)}
-              unit={t('widget.mqtt.msgSec', 'msg/s')}
-              badge={{ text: statusLabel, variant: connected == null ? 'neutral' : connected ? 'success' : 'error' }}
-            />
+            {headline}
           </div>
         ) : (
           <div className="flex flex-col gap-3 h-full">
-            <WidgetBigNumber
-              label={t('widget.mqtt.msgRate', 'Messages/sec')}
-              value={stats.messagesPerSec == null ? null : fmtNumber(stats.messagesPerSec)}
-              unit={t('widget.mqtt.msgSec', 'msg/s')}
-              badge={{ text: statusLabel, variant: connected == null ? 'neutral' : connected ? 'success' : 'error' }}
-            />
-            <WidgetStatGrid
-              stats={[{
-                label: t('widget.mqtt.totalToday', 'Total messages'),
-                  value: stats.totalMessages == null ? null : fmtInt(stats.totalMessages),
-              }]}
-              cols={2}
-              maxPerRow={2}
-            />
-            <div className="mt-auto pt-2 border-t border-[var(--border-subtle)] space-y-1.5">
-              <KVList layout="responsive" wrap items={[
-                {
-                  id: 'last-message',
-                  label: t('widget.mqtt.lastMessage', 'Last message'),
-                  value: stats.lastMessage ? formatRelative(stats.lastMessage) : '—',
-                },
-                {
-                  id: 'broker',
-                  label: t('widget.mqtt.broker', 'Broker'),
-                  value: <span title={broker}>{broker}</span>,
-                },
-              ]} />
-            </div>
+            {headline}
+            {messageCount}
+            {metadata}
           </div>
-      )}
-      {!data && (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Radio className="h-5 w-5" />}
-          message={t('widget.mqtt.noData', 'No MQTT status data')}
-          className="py-4"
-        />
-      )}
+        )}
+        {empty}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

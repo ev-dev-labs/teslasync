@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { expect } from 'vitest'
 import patches from './__fixtures__/verified-fleet-source-patches.json'
+import { restoreWidgetImplementationSource } from './verified-widget-implementation-contract'
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 
@@ -18,6 +19,7 @@ export function readFleetCurrentSource(file: string): string {
 }
 
 export function restoreVerifiedFleetSource(file: string, text: string): string {
+  text = restoreWidgetImplementationSource(file, text)
   const patch = patches.find(entry => entry.file === file)
   if (!patch) return text
   if (patch.after === null) {

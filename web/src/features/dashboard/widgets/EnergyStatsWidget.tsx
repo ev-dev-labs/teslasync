@@ -13,10 +13,12 @@ import {
   chartAnimation,
   ChartTooltip,
   EmbeddedChart,
+  PatternedBar,
   useMeasuredAxisWidth,
   type ChartDataRow,
 } from '@/components/charts';
 import { EmptyState, Skeleton } from '@/components/feedback';
+import { Caption } from '@/components/ui';
 import { knownNumber } from '@/api/dataState';
 import { useEnergyStats } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -32,6 +34,8 @@ import {
 import { chartTokens } from '@/lib/tokens';
 
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
 import { WidgetBigNumber, WidgetChartSummary, WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
 import type { DailyEnergy } from '@/types/energy';
@@ -58,6 +62,7 @@ export function buildEnergyChartData(
 
 export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const packId = usePackPresentation();
   const { fmtNumber } = useNumberFormatting();
   const dateFormat = useDateFormat();
   const formatDayKey = dateFormat.formatDayKey ?? ((value: string | null | undefined) => String(value ?? ''));
@@ -139,26 +144,32 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
     onRefresh: handleRefresh,
   };
 
+  const headline = (
+    <WidgetBigNumber
+      value={usedWh == null ? null : fmtNumber(convertEnergyFromSI(usedWh, unitPrefs.energy), unitPrefs.energy === 'kWh' ? 1 : 0)}
+      unit={unitPrefs.energy}
+      label={isCompact || usedWh != null || packId !== 'classic' ? t('widget.energyStats.totalUsed', 'Total used') : undefined}
+      animated={false}
+      decimals={isCompact ? (unitPrefs.energy === 'kWh' ? 1 : 0) : undefined}
+      align={isCompact ? 'center' : 'start'}
+    />
+  );
+  const empty = (
+    <EmptyState
+      variant="informational"
+      icon={<Zap className="h-5 w-5" />}
+      message={t('widget.energyStats.noData', 'No energy data available')}
+      className="py-4"
+    />
+  );
+
   if (isCompact) {
     return (
       <WidgetShell {...shellProps}>
-        {data ? (
-          <WidgetBigNumber
-            value={usedWh == null ? null : fmtNumber(convertEnergyFromSI(usedWh, unitPrefs.energy), unitPrefs.energy === 'kWh' ? 1 : 0)}
-            unit={unitPrefs.energy}
-            label={t('widget.energyStats.totalUsed', 'Total used')}
-            animated={false}
-            decimals={unitPrefs.energy === 'kWh' ? 1 : 0}
-            align="center"
-          />
-        ) : (
-          <EmptyState
-            variant="informational"
-            icon={<Zap className="h-5 w-5" />}
-            message={t('widget.energyStats.noData', 'No energy data available')}
-            className="py-4"
-          />
-        )}
+        <InstrumentPresentation family="bars" compact headline={headline}
+          icon={<Zap />} context={data ? undefined : empty}>
+          {data ? headline : empty}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
@@ -180,82 +191,87 @@ export default function EnergyStatsWidget({ vehicleId, size, config }: WidgetPro
     },
   ];
 
+  const stats = <WidgetStatGrid cols={3} maxPerRow={3} stats={secondaryStats} />;
+  const barRadius: [number, number, number, number] = packId === 'v7'
+    ? [2, 2, 0, 0]
+    : packId === 'v6' ? [16, 16, 5, 5] : [3, 3, 0, 0];
+  const dailyChart = (
+    <WidgetChartSummary
+      yAxisLabel={unitPrefs.energy}
+      stats={[]}
+      chart={
+        <EmbeddedChart
+          empty={!hasChartData}
+          emptyMessage={t('widget.energyStats.noData', 'No energy data available')}
+          title={t('widget.energyStats.title', 'Energy stats')}
+          ariaLabel={t('widget.energyStats.chartAria', 'Daily driving energy usage')}
+          data={chartData}
+          dataColumns={[
+            { key: 'date', label: t('widget.energyStats.date', 'Date') },
+            { key: 'energy', label: `${t('widget.energyStats.dailyUsage', 'Daily usage')} (${unitPrefs.energy})` },
+          ]}
+          className="h-full min-h-0"
+          viewportClassName="min-h-0 sm:min-h-0"
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+              {chartGrid}
+              <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                width={axisWidth}
+                tickFormatter={(value: number) => fmtNumber(value)}
+                tick={{ fontSize: size.cols >= 3 ? 11 : 10 }}
+              />
+              <Tooltip
+                content={<ChartTooltip />}
+                formatter={(value: number) => [
+                  `${fmtNumber(value)} ${unitPrefs.energy}`,
+                  t('widget.energyStats.dailyUsage', 'Daily usage'),
+                ]}
+                cursor={{ fill: chartTokens.gridStroke }}
+              />
+              <Bar
+                dataKey="energy"
+                fill={chartTokens.series[2]}
+                shape={packId === 'v7' ? <PatternedBar /> : undefined}
+                radius={barRadius}
+                name={t('widget.energyStats.dailyUsage', 'Daily usage')}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </EmbeddedChart>
+      }
+    />
+  );
+
   return (
     <WidgetShell {...shellProps}>
-      {data ? (
-        <div className="flex h-full min-h-0 flex-col gap-3">
-          <div className="shrink-0 space-y-3">
-          <WidgetBigNumber
-            value={usedWh == null ? null : fmtNumber(convertEnergyFromSI(usedWh, unitPrefs.energy), unitPrefs.energy === 'kWh' ? 1 : 0)}
-            unit={unitPrefs.energy}
-            label={usedWh == null ? undefined : t('widget.energyStats.totalUsed', 'Total used')}
-            animated={false}
-            align="start"
-          />
-          <WidgetStatGrid
-            cols={3}
-            maxPerRow={3}
-            stats={secondaryStats}
-          />
+      <InstrumentPresentation
+        family="bars"
+        headline={headline}
+        icon={<Zap />}
+        instrument={<div className="h-48 min-h-0">{dailyChart}</div>}
+        details={
+          <div className="space-y-3">
+            {stats}
+            <Caption as="p">{t('widget.energyStats.co2Estimate', 'CO₂ savings are estimated.')}</Caption>
           </div>
-          <div className="min-h-0 flex-1">
-          <WidgetChartSummary
-            yAxisLabel={unitPrefs.energy}
-            stats={[]}
-            chart={
-              <EmbeddedChart
-                empty={!hasChartData}
-                emptyMessage={t('widget.energyStats.noData', 'No energy data available')}
-                title={t('widget.energyStats.title', 'Energy stats')}
-                ariaLabel={t('widget.energyStats.chartAria', 'Daily driving energy usage')}
-                data={chartData}
-                dataColumns={[
-                  { key: 'date', label: t('widget.energyStats.date', 'Date') },
-                  { key: 'energy', label: `${t('widget.energyStats.dailyUsage', 'Daily usage')} (${unitPrefs.energy})` },
-                ]}
-                className="h-full min-h-0"
-                viewportClassName="min-h-0 sm:min-h-0"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
-                    {chartGrid}
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      width={axisWidth}
-                      tickFormatter={(value: number) => fmtNumber(value)}
-                      tick={{ fontSize: size.cols >= 3 ? 11 : 10 }}
-                    />
-                    <Tooltip
-                      content={<ChartTooltip />}
-                      formatter={(value: number) => [
-                        `${fmtNumber(value)} ${unitPrefs.energy}`,
-                        t('widget.energyStats.dailyUsage', 'Daily usage'),
-                      ]}
-                      cursor={{ fill: chartTokens.gridStroke }}
-                    />
-                    <Bar
-                      dataKey="energy"
-                      fill={chartTokens.series[2]}
-                      radius={[3, 3, 0, 0]}
-                      name={t('widget.energyStats.dailyUsage', 'Daily usage')}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </EmbeddedChart>
-            }
-          />
+        }
+      >
+        {data ? (
+          <div className="flex h-full min-h-0 flex-col gap-3">
+            <div className="shrink-0 space-y-3">
+              {headline}
+              {stats}
+            </div>
+            <div className="min-h-0 flex-1">
+              {dailyChart}
+            </div>
           </div>
-        </div>
-      ) : (
-        <EmptyState
-          variant="informational"
-          icon={<Zap className="h-5 w-5" />}
-          message={t('widget.energyStats.noData', 'No energy data available')}
-          className="py-4"
-        />
-      )}
+        ) : empty}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

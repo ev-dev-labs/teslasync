@@ -12,6 +12,8 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { WidgetBigNumber } from './shared';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import StatusPresentation from './designPacks/StatusPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
 
 function getStatusBadge(
   a: Automation,
@@ -35,21 +37,21 @@ function CompactView({
   const { fmtInt } = useNumberFormatting();
   const enabled = automations.filter((a) => a.enabled).length;
   const failing = automations.filter((a) => a.consecutive_failures > 0 && a.enabled).length;
+  const headline = <WidgetBigNumber
+    value={`${fmtInt(enabled)}/${fmtInt(automations.length)}`}
+    label={t('widget.active', 'Active')}
+    align="center"
+  />;
+  const details = failing > 0 && <Badge variant="warning" size="sm" dot>
+    {fmtInt(failing)} {t('widget.failing', 'Failing')}
+  </Badge>;
 
   return (
-    <div className="h-full flex flex-col items-center justify-center gap-1">
-      <Workflow className="h-5 w-5 text-status-info" />
-      <WidgetBigNumber
-        value={`${fmtInt(enabled)}/${fmtInt(automations.length)}`}
-        label={t('widget.active', 'Active')}
-        align="center"
-      />
-      {failing > 0 && (
-        <Badge variant="warning" size="sm" dot>
-          {fmtInt(failing)} {t('widget.failing', 'Failing')}
-        </Badge>
-      )}
-    </div>
+    <StatusPresentation compact headline={headline} icon={<Workflow className="size-6" aria-hidden="true" />} details={details}>
+      <div className="h-full flex flex-col items-center justify-center gap-1">
+        <Workflow className="h-5 w-5 text-status-info" />{headline}{details}
+      </div>
+    </StatusPresentation>
   );
 }
 
@@ -132,18 +134,22 @@ function FullView({
   const enabled = automations.filter((automation) => automation.enabled).length;
   const failing = automations.filter((automation) => automation.consecutive_failures > 0 && automation.enabled).length;
   const { fmtInt } = useNumberFormatting();
+  const packId = usePackPresentation();
+  const headline = <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] pb-1.5">
+    <div className="flex min-w-0 items-baseline gap-1">
+      <Text variant="bodySm" mono>{fmtInt(enabled)}</Text>
+      <Caption>{t('widget.active', 'Active')}</Caption>
+    </div>
+    {failing > 0 && <Badge variant="warning" size="sm" dot>
+      {fmtInt(failing)} {t('widget.failing', 'Failing')}
+    </Badge>}
+  </div>;
   return (
     <div className="h-full flex flex-col gap-2">
-      <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] pb-1.5">
-        <div className="flex min-w-0 items-baseline gap-1">
-          <Text variant="bodySm" mono>{fmtInt(enabled)}</Text>
-          <Caption>{t('widget.active', 'Active')}</Caption>
-        </div>
-        {failing > 0 && (
-          <Badge variant="warning" size="sm" dot>
-            {fmtInt(failing)} {t('widget.failing', 'Failing')}
-          </Badge>
-        )}
+      <div className={packId === 'v4' ? 'order-last' : undefined}>
+        <StatusPresentation headline={headline} icon={<Workflow className="size-6" aria-hidden="true" />} details={null}>
+          {headline}
+        </StatusPresentation>
       </div>
       {/* Automation list */}
       <div className="flex-1 min-h-0 overflow-auto">

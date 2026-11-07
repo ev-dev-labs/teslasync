@@ -49,7 +49,7 @@ let MOCK_DISTANCE_UNIT: 'km' | 'mi';
 let MOCK_TEMP_UNIT: '°C' | '°F';
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
-    unitPrefs: { distance: MOCK_DISTANCE_UNIT, temperature: MOCK_TEMP_UNIT },
+    unitPrefs: { distance: MOCK_DISTANCE_UNIT, temperature: MOCK_TEMP_UNIT, power: 'kW' },
   }),
 }));
 
@@ -362,7 +362,7 @@ describe('VehicleHeroCardWidget — battery colour classifier', () => {
 describe('VehicleHeroCardWidget — charging banner', () => {
   it('shows the charging banner with formatted power and hides the bolt from AT', () => {
     renderWidget(FULL, {
-      state: makeStateQuery({ data: { state: makeState({ is_charging: true, charger_power: 11 }) } }),
+      state: makeStateQuery({ data: { state: makeState({ is_charging: true, charger_power: 11_000 }) } }),
     });
 
     expect(screen.getByText('Charging')).toBeInTheDocument();

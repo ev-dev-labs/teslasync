@@ -143,8 +143,9 @@ test('mobile New Layout creates populated Operations Desk without mixing templat
       Array<{ id: string; widgets: Array<{ widgetId: string }>; layouts: Record<string, unknown[]> }>
     return dashboards.find((d) => d.id === localStorage.getItem('teslasync-active-dashboard'))
   })
-  expect(widgets?.widgets.map((widget) => widget.widgetId)).toContain('fleet-posture')
-  expect(widgets?.layouts.xs).toHaveLength(widgets?.widgets.length)
+  if (!widgets) throw new Error('Missing newly created active Operations desk layout')
+  expect(widgets.widgets.map((widget) => widget.widgetId)).toContain('fleet-posture')
+  expect(widgets.layouts.xs).toHaveLength(widgets.widgets.length)
 
   await page.getByRole('button', { name: 'Customize' }).click()
   await page.getByRole('button', { name: 'Add Widget' }).first().click()

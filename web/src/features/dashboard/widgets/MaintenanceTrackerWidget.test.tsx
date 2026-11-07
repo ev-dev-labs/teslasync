@@ -249,6 +249,35 @@ describe('MaintenanceTrackerWidget — compact layout', () => {
 });
 
 describe('MaintenanceTrackerWidget — standard layout', () => {
+  it.each(['missing', 'invalid date'])('retains configured intervals without inventing remaining distance when forecast evidence is %s', evidence => {
+    mockMaintenance.mockReturnValue(qr({ data: [makeItem()] }));
+    if (evidence === 'invalid date') mockForecast.mockReturnValue(qr({ data: {
+      items: [{ name: 'Brake Fluid', category: 'fluids', status: 'good', due_date: 'invalid' }],
+    } }));
+    renderWidget(STANDARD);
+    expect(screen.getByText(/Every.*40,000.*km/)).toBeInTheDocument();
+    expect(screen.getByText(evidence === 'missing' ? 'Unknown' : 'Good')).toBeInTheDocument();
+    expect(screen.queryByText(/^40,000(?:\.00)? km$/)).not.toBeInTheDocument();
+    expect(screen.queryByText('left', { exact: true })).not.toBeInTheDocument();
+  });
+
+  it.each([12, 18])('preserves an exact %i-month interval instead of rounding it into years', months => {
+    mockMaintenance.mockReturnValue(qr({ data: [makeItem({ intervalMonths: months })] }));
+    renderWidget(STANDARD);
+    expect(screen.getByText(new RegExp(`Every ${months} mo.*40,000.*km`))).toBeInTheDocument();
+  });
+
+  it('preserves verified zero remaining distance from the matching forecast', () => {
+    mockMaintenance.mockReturnValue(qr({ data: [makeItem()] }));
+    mockForecast.mockReturnValue(qr({ data: {
+      items: [{ name: 'Brake Fluid', category: 'fluids', status: 'overdue', km_remaining: 0 }],
+      overdue_count: 1, due_soon_count: 0, km_per_day: 0, vehicle_id: 7,
+    } }));
+    renderWidget(STANDARD);
+    expect(screen.getByText(/^0(?:\.00)? km$/)).toBeInTheDocument();
+    expect(screen.getByText('left', { exact: true })).toBeInTheDocument();
+  });
+
   it('renders the After-card Upcoming and Last service sections', () => {
     mockMaintenance.mockReturnValue(
       qr({

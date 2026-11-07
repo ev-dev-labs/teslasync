@@ -40,6 +40,7 @@ const EXPECTED_IDS = [
   'battery-cells',
   'battery-degradation-forecast',
   'battery-health-analytics',
+  'new-high-voltage',
 ] as const;
 
 /** The exact icon each widget binds — locks the id→icon mapping the picker
@@ -55,6 +56,7 @@ const EXPECTED_ICONS: Record<string, LucideIcon> = {
   'battery-cells': Cpu,
   'battery-degradation-forecast': TrendingDown,
   'battery-health-analytics': HeartPulse,
+  'new-high-voltage': Cpu,
 };
 
 /** react.lazy internals (stable in React 18) — the registry's captured loader
@@ -73,7 +75,7 @@ function clampMinMax(value: number, min: number, max: number): number {
 }
 
 describe('BATTERY_WIDGETS — roster & structure', () => {
-  it('exposes exactly the ten battery widgets in a stable declaration order', () => {
+  it('exposes the approved battery widgets in a stable declaration order', () => {
     expect(BATTERY_WIDGETS).toHaveLength(EXPECTED_IDS.length);
     expect(BATTERY_WIDGETS.map((w) => w.id)).toEqual([...EXPECTED_IDS]);
   });

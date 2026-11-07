@@ -1,11 +1,13 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "types": ["node"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client", "vite-plugin-pwa/react"],
     "noEmit": true
   },
   "include": [
     "./**/*.ts",
+    "../src/vite-env.d.ts",
     "../playwright.config.ts",
     "../playwright.visual.config.ts",
     "../playwright.contract.config.ts"

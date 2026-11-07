@@ -214,10 +214,11 @@ export function ThemePicker({
       <div>
         <p className="text-xs font-medium uppercase tracking-wider mb-3 text-[var(--text-muted)]">
           {t('theme.accentColor', 'Accent Color')}
+          {' '}({Object.keys(allThemes).length - 1})
         </p>
         <div role="group" aria-label={t('theme.accentColor', 'Accent Color')} className={cn('grid gap-3', themeGridCols)}>
           {Object.values(allThemes).filter(thm => thm.id !== 'custom').map(thm => {
-            const name = t(`theme.presets.${thm.id}`, thm.name)
+            const name = t(`theme.accentPresets.${thm.id}`, thm.name)
             return (
               <Button
                 key={thm.id}

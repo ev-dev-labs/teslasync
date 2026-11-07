@@ -15,6 +15,7 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetDetailCard, WidgetStatGrid, type DetailEntry, type StatGridItem } from './shared';
 import { COLOR, DATA_VISUAL_COLORS, CHART_NEUTRAL } from '@/lib/colors';
+import TimelinePresentation from './designPacks/TimelinePresentation';
 
 export type Severity = 'info' | 'warning' | 'critical';
 
@@ -286,12 +287,14 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
     >
       {isCompact ? (
         windowRows.length > 0 ? (
+          <TimelinePresentation compact>
           <CompactView
             totalEvents={stats.totalEvents}
             mostCommon={stats.mostCommon}
             trend={stats.trend}
             t={t}
           />
+          </TimelinePresentation>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<AlertOctagon className="h-5 w-5" />}
@@ -304,6 +307,7 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
           <WidgetStatGrid stats={gridStats} cols={3} />
           <div className="flex-1 min-h-0 overflow-y-auto">
             <WidgetDetailCard
+              presentation="timeline"
               entries={entries.slice(0, 10)}
               compact={false}
               emptyMessage={t('widget.noSafetyEvents', 'No safety events recorded')}

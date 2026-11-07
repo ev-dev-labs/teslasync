@@ -58,4 +58,17 @@ export const MAP_WIDGETS: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('../PositionHeatmapWidget')),
   },
+  {
+    id: 'new-arrival-energy',
+    name: 'Arrival Energy',
+    description: 'Reported destination, arrival charge estimate and navigation freshness',
+    nameKey: 'widgets.catalog.new-arrival-energy.name',
+    descriptionKey: 'widgets.catalog.new-arrival-energy.description',
+    icon: Navigation2,
+    category: 'maps',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../ArrivalEnergyWidget')),
+  },
 ];

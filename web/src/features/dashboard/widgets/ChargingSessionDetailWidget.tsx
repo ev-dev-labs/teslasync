@@ -16,10 +16,12 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, type ChartSummaryStat } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { classifyChargingSource, type ChargerKind } from '@/lib/chargerKind';
 import { dashboardTokens } from '../lib/dashboardTokens';
-import { Badge } from '@/components/ui';
+import { Badge, Caption } from '@/components/ui';
 import { CHART_SEMANTIC } from '@/lib/colors';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 
 interface ChartDatum extends ChartDataRow {
   time: string;
@@ -49,6 +51,7 @@ export function chargingAxisWidth(labels: string[], measure: (label: string) => 
 
 export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber: fmt, fmtNumber } = useNumberFormatting();
+  const { reduce } = useMotionPreference();
   const { t } = useTranslation('dashboard');
   const { formatDateShort, formatTime } = useDateFormat();
   const { data: vehicles } = useVehicles();
@@ -319,6 +322,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             name={`${t('widget.power', 'Power')} (${unitPrefs.power})`}
             connectNulls={false}
             hide={hiddenSeries?.isHidden('power')}
+            isAnimationActive={!reduce}
           />
 
           <Line
@@ -331,6 +335,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             name={t('widget.chargingSessionDetail.soc', 'SOC %')}
             connectNulls={false}
             hide={hiddenSeries?.isHidden('soc')}
+            isAnimationActive={!reduce}
           />
             </ComposedChart>
           </ResponsiveContainer>
@@ -338,7 +343,80 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
       </EmbeddedChart>
       </SourceContent>
     );
-  }, [chartData, tick, t, unitPrefs.power, fmt, powerAxisWidth, socAxisWidth, telemetryState, telemetryLoading]);
+  }, [chartData, tick, t, unitPrefs.power, fmt, powerAxisWidth, socAxisWidth, telemetryState, telemetryLoading, reduce]);
+
+  const compactContent = detail ? (
+    <WidgetBigNumber
+      value={knownNumber(detail.total_energy_added_wh) == null
+        ? null
+        : fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh, unitPrefs.energy), 1)}
+      label={unitPrefs.energy === 'kWh' ? t('widget.chargingSessionDetail.unitKwh', 'kWh added') : `${unitPrefs.energy} ${t('widget.energyAdded', 'Added')}`}
+      badge={{ text: chargerLabel, variant: charger.variant }}
+      align="center"
+      animated={false}
+      valueColor="text-emerald-300"
+    />
+  ) : (
+    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+      icon={<Zap className="h-5 w-5" />}
+      message={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
+      className="py-4"
+    />
+  );
+
+  const sessionHeader = (sessionContext || durationStr !== '—') ? (
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <span className={dashboardTokens.metricLabel}>
+          {sessionContext || t('widget.chargingSessionDetail.session', 'Charging session')}
+        </span>
+        {detail && (
+          <>
+            <span className={dashboardTokens.metricLabel}>
+              {t('widget.chargingSessionDetail.charger', 'Charger')}
+            </span>
+            <Badge variant={charger.variant} size="sm">{chargerLabel}</Badge>
+          </>
+        )}
+      </div>
+      {durationStr !== '—' && (
+        <span className={dashboardTokens.metricLabel}>
+          {t('widget.chargingSessionDetail.duration', 'Duration')}: {durationStr}
+        </span>
+      )}
+    </div>
+  ) : null;
+  const summaryStats = (
+    <WidgetStatGrid
+      stats={stats.map((stat) => ({
+        label: stat.label,
+        value: stat.value,
+        unit: stat.unit,
+      }))}
+      cols={3}
+      maxPerRow={3}
+    />
+  );
+  const emptySession = (
+    <EmptyState
+      variant="informational"
+      icon={<Zap className="h-5 w-5" />}
+      message={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
+      className="py-4"
+    />
+  );
+  const hasSessionContent = detail != null || latestSessionId != null || chartData.length > 0;
+  // The final sample stays unknown if it is a gap; an earlier reading is not current evidence.
+  const lastSample = chartData[chartData.length - 1];
+  const powerHeadline = (
+    <WidgetBigNumber
+      value={lastSample?.power == null ? null : fmtNumber(lastSample.power, 1)}
+      unit={unitPrefs.power}
+      label={t('dashboardWidgets.charging.chargingSessionDetail.lastSampledPower', 'Last sampled power')}
+      subtitle={lastSample?.time}
+      animated={false}
+    />
+  );
 
   // ── Compact layout: large kWh number + charger badge ──
   if (isCompact) {
@@ -365,24 +443,9 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
         isError={isError || telemetryQuery.isError || sessionsQuery.isError}
         onRefresh={refresh}
       >
-        {detail ? (
-          <WidgetBigNumber
-            value={knownNumber(detail.total_energy_added_wh) == null
-              ? null
-              : fmtNumber(convertEnergyFromSI(detail.total_energy_added_wh, unitPrefs.energy), 1)}
-            label={unitPrefs.energy === 'kWh' ? t('widget.chargingSessionDetail.unitKwh', 'kWh added') : `${unitPrefs.energy} ${t('widget.energyAdded', 'Added')}`}
-            badge={{ text: chargerLabel, variant: charger.variant }}
-            align="center"
-            animated={false}
-            valueColor="text-emerald-300"
-          />
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<Zap className="h-5 w-5" />}
-            message={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
-            className="py-4"
-          />
-        )}
+        <InstrumentPresentation family="line" compact headline={compactContent} icon={<Zap />}>
+          {compactContent}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
@@ -425,53 +488,34 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
           {null}
         </SourceContent>
       )}
-      {!detail && latestSessionId == null && chartData.length === 0 ? (
-        <EmptyState
-          variant="informational"
-          icon={<Zap className="h-5 w-5" />}
-          message={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
-          className="py-4"
-        />
-      ) : (
-        <div className="flex h-full min-w-0 flex-col">
-          {(sessionContext || durationStr !== '—') && (
+      <InstrumentPresentation
+        family="line"
+        headline={powerHeadline}
+        icon={<Zap />}
+        context={<>{sessionHeader}{!hasSessionContent && emptySession}</>}
+        instrument={
+          <div className="flex min-w-0 flex-col gap-2">
             <div className="flex items-start justify-between gap-3">
-              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                <span className={dashboardTokens.metricLabel}>
-                  {sessionContext || t('widget.chargingSessionDetail.session', 'Charging session')}
-                </span>
-                {detail && (
-                  <>
-                    <span className={dashboardTokens.metricLabel}>
-                      {t('widget.chargingSessionDetail.charger', 'Charger')}
-                    </span>
-                    <Badge variant={charger.variant} size="sm">{chargerLabel}</Badge>
-                  </>
-                )}
+              <Caption>{t('widget.power', 'Power')} ({unitPrefs.power})</Caption>
+              <Caption>{t('widget.chargingSessionDetail.soc', 'SOC %')}</Caption>
+            </div>
+            <div className="h-56 min-h-48">{chart}</div>
+          </div>
+        }
+        details={summaryStats}
+      >
+        {!hasSessionContent ? emptySession : (
+          <div className="flex h-full min-w-0 flex-col">
+            {sessionHeader}
+            <div className="mt-2 min-h-0 flex-1">{chart}</div>
+            {detail && (
+              <div className="mt-2">
+                {summaryStats}
               </div>
-              {durationStr !== '—' && (
-                <span className={dashboardTokens.metricLabel}>
-                  {t('widget.chargingSessionDetail.duration', 'Duration')}: {durationStr}
-                </span>
-              )}
-            </div>
-          )}
-          <div className="mt-2 min-h-0 flex-1">{chart}</div>
-          {detail && (
-            <div className="mt-2">
-              <WidgetStatGrid
-                stats={stats.map((stat) => ({
-                  label: stat.label,
-                  value: stat.value,
-                  unit: stat.unit,
-                }))}
-                cols={3}
-                maxPerRow={3}
-              />
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

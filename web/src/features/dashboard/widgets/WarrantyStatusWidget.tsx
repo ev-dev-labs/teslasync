@@ -17,6 +17,8 @@ import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { cn } from '@/lib/cn';
+import { useTimelineStyles } from './designPacks/useTimelineStyles';
 
 /** Safely extract a string from an unknown value */
 export function asString(val: unknown): string | null {
@@ -89,6 +91,7 @@ export function statusLabel(days: number | null, t: (k: string, f: string) => st
 
 /** Known warranty coverage types to extract from data */
 export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
+  const timeline = useTimelineStyles();
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
@@ -199,7 +202,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell {...shellProps}>
-        <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
+        <div data-timeline-appearance={timeline?.appearance} className={cn('h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]', timeline?.row)}>
             <>
               <ShieldCheck className="h-4 w-4 text-emerald-400" />
               <WidgetBigNumber
@@ -315,7 +318,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
       icon={<ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />}
       {...shellProps}
     >
-        <div className="h-full flex min-w-0 flex-col justify-center gap-3 overflow-y-auto">
+        <div data-timeline-appearance={timeline?.appearance} className={cn('h-full flex min-w-0 flex-col justify-center gap-3 overflow-y-auto', timeline?.feed)}>
           {!warrantyData ? (
             <>
               <EmptyState
@@ -357,7 +360,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
                   : 'var(--text-muted)';
 
             return (
-              <section key={row.key} className="min-w-0">
+              <section key={row.key} className={cn('min-w-0', timeline?.row)}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{row.title}</p>
@@ -387,6 +390,7 @@ export default function WarrantyStatusWidget({ size, vehicleId }: WidgetProps) {
                 </div>
                 {periodDays != null && row.days != null ? (
                   <MetricBar
+                    fill={timeline?.appearance === 'pixel' ? 'segmented' : undefined}
                     value={Math.max(row.days, 0)}
                     max={periodDays}
                     color={barColor}

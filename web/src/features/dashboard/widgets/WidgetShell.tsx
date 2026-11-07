@@ -15,6 +15,7 @@ import type { WidgetHelp } from './types';
 import { WidgetTitleContext } from './WidgetTitleContext';
 import { WidgetHeaderContext } from './WidgetHeaderContext';
 import { WidgetAutoRefresh } from './WidgetAutoRefresh';
+import { usePackPresentation } from './designPacks/PackBoundary';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import '../dashboard.css';
 
@@ -77,6 +78,7 @@ export function WidgetShell({
   widgetId, dashboardId,
 }: WidgetShellProps) {
   const { t } = useTranslation();
+  const packId = usePackPresentation();
   const header = useContext(WidgetHeaderContext);
   const { reduce: reduceMotion } = useMotionPreference();
   const visibleTitle = title ?? header.fallbackTitle ?? t('widget.overview', 'Widget overview');
@@ -135,6 +137,7 @@ export function WidgetShell({
       aria-busy={Boolean(initialLoading || dataState?.isRefreshing)}
       data-data-state={dataState?.status}
       data-motion-suppressed={suppressActivity || undefined}
+      data-widget-pack={packId}
     >
         {canAutoRefresh && retry && (
           <WidgetAutoRefresh

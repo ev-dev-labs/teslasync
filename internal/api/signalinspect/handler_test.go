@@ -3,6 +3,7 @@ package signalinspect
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -456,6 +457,31 @@ func TestClassifyLiveSourceBoundary(t *testing.T) {
 	zeroTs := &signal.Value{Raw: float64(1)}
 	if got := classifyLiveSource(zeroTs, now); got != "l2" {
 		t.Fatalf("zero timestamp: source = %q, want l2", got)
+	}
+}
+
+func TestDecodedTimeCompoundRetainsItsScalarWireKind(t *testing.T) {
+	at := time.Now().UTC()
+	entry := buildLiveEntry("ScheduledChargingStartTime", &signal.Value{Raw: at, Timestamp: at}, at)
+	if entry["kind"] != "ValueKindTime" || entry["value"] != at {
+		t.Fatalf("decoded time must remain a typed scalar: %v", entry)
+	}
+	if got := resolveLiveKind("SettingDistanceUnit", "Kilometers"); got != "ValueKindEnum" {
+		t.Fatalf("scalar enum metadata changed: %s", got)
+	}
+}
+
+func TestCanonicalSeatbeltObservationsRetainBooleanWireKind(t *testing.T) {
+	at := time.Now().UTC()
+	for _, name := range []string{"DriverSeatBelt", "PassengerSeatBelt"} {
+		for _, value := range []bool{true, false} {
+			t.Run(fmt.Sprintf("%s/%t", name, value), func(t *testing.T) {
+				entry := buildLiveEntry(name, &signal.Value{Raw: value, Timestamp: at}, at)
+				if entry["kind"] != "ValueKindBool" || entry["value"] != value {
+					t.Fatalf("canonical seatbelt observation must remain Boolean: %v", entry)
+				}
+			})
+		}
 	}
 }
 

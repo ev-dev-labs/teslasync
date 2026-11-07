@@ -17,6 +17,7 @@ import type { WidgetProps } from './types';
 import type { ChargingSession } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { isEstimatedChargingCost } from '@/lib/chargingAggregation';
+import StatusPresentation from './designPacks/StatusPresentation';
 
 export interface CostMetrics {
   totalKwh: number | null;
@@ -166,9 +167,27 @@ export default function ChargeCostTrackerWidget({ vehicleId, size, config }: Wid
     isError && !sessions
       ? t('widget.chargeCost.error', 'Failed to load charge data')
       : null;
+  const headline = <WidgetBigNumber
+    value={currency(metrics.totalCost)}
+    label={costLabel}
+    delta={metrics.gasSavings != null ? {
+      text: t('widget.chargeCost.saved', 'Saved {{amount}} vs gas', { amount: formatCurrency(metrics.gasSavings) }),
+      tone: metrics.gasSavings >= 0 ? 'good' : 'neutral',
+    } : undefined}
+    subtitle={metrics.gasSavings == null ? t('widget.chargeCost.configureGas', 'Set gas price in settings') : undefined}
+    animated={false}
+  />;
+  const details = <>
+    <WidgetStatGrid stats={stats} cols={3} />
+    <p className={`flex min-w-0 flex-wrap gap-x-2 ${dashboardTokens.metricLabel}`}>
+      <span>{t('widget.chargeCost.sessions', '{{count}} sessions', { count: metrics.sessionCount })}</span>
+      {isTall && metrics.gasSavings != null ? <span>{config?.timeRange && config.timeRange !== '30d' ? t('widget.chargeCost.selectedRangeEstimate', 'Estimate for selected range') : t('widget.chargeCost.savingsNote', '30-day estimate')}</span> : null}
+    </p>
+  </>;
 
   // Compact: single big metric (total cost)
   if (isCompact) {
+    const compactHeadline = <WidgetBigNumber value={currency(metrics.totalCost)} label={costLabel} animated={false} align="center" />;
     return (
       <WidgetShell
         title={t('widget.chargeCost.title', 'Charge cost tracker')}
@@ -182,7 +201,9 @@ export default function ChargeCostTrackerWidget({ vehicleId, size, config }: Wid
         onRefresh={handleRefresh}
       >
         {hasData ? (
-          <WidgetBigNumber value={currency(metrics.totalCost)} label={costLabel} animated={false} align="center" />
+          <StatusPresentation compact headline={compactHeadline} icon={<DollarSign className="size-6" aria-hidden="true" />} details={null}>
+            {compactHeadline}
+          </StatusPresentation>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<DollarSign className="h-5 w-5" />}
@@ -208,23 +229,9 @@ export default function ChargeCostTrackerWidget({ vehicleId, size, config }: Wid
       onRefresh={handleRefresh}
     >
       {hasData ? (
-        <div className="flex min-w-0 flex-col gap-3">
-          <WidgetBigNumber
-            value={currency(metrics.totalCost)}
-            label={costLabel}
-            delta={metrics.gasSavings != null ? {
-              text: t('widget.chargeCost.saved', 'Saved {{amount}} vs gas', { amount: formatCurrency(metrics.gasSavings) }),
-              tone: metrics.gasSavings >= 0 ? 'good' : 'neutral',
-            } : undefined}
-            subtitle={metrics.gasSavings == null ? t('widget.chargeCost.configureGas', 'Set gas price in settings') : undefined}
-            animated={false}
-          />
-          <WidgetStatGrid stats={stats} cols={3} />
-          <p className={`flex min-w-0 flex-wrap gap-x-2 ${dashboardTokens.metricLabel}`}>
-            <span>{t('widget.chargeCost.sessions', '{{count}} sessions', { count: metrics.sessionCount })}</span>
-            {isTall && metrics.gasSavings != null ? <span>{config?.timeRange && config.timeRange !== '30d' ? t('widget.chargeCost.selectedRangeEstimate', 'Estimate for selected range') : t('widget.chargeCost.savingsNote', '30-day estimate')}</span> : null}
-          </p>
-        </div>
+        <StatusPresentation headline={headline} icon={<DollarSign className="size-6" aria-hidden="true" />} details={details}>
+          <div className="flex min-w-0 flex-col gap-3">{headline}{details}</div>
+        </StatusPresentation>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<DollarSign className="h-5 w-5" />}

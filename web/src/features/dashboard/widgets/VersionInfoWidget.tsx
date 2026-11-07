@@ -12,6 +12,7 @@ import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates, knownNumber } from '@/api/dataState';
+import StatusPresentation from './designPacks/StatusPresentation';
 
 function formatUptime(seconds: unknown): string {
   if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < 0) return '—';
@@ -118,34 +119,11 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
     retry,
   };
   const hasData = version.data != null;
-
-  return (
-    <WidgetShell
-      title={t('widget.versionInfo.title', 'Version info')}
-      icon={<Info className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
-      dataState={dataState}
-      updatedAt={dataState.updatedAt ?? 0}
-      isFetching={dataState.isRefreshing}
-      isStale={version.isStale || (!isCompact && capture.isStale)}
-      isError={version.isError || (!isCompact && capture.isError)}
-      onRefresh={retry}
-    >
-      {isCompact ? (
-        hasData ? (
-          /* ── Compact layout (1×2) ── */
-          <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
-            <Text size="lg" weight="semibold" color="primary" className="max-w-full break-words tabular-nums">{chartVersion}</Text>
-            <Badge variant="neutral" className="text-2xs">
-              {truncatedSha}
-            </Badge>
-          </div>
-        ) : (
-          <EmptyState /* no-action: the widget header already exposes version refresh */
-            icon={<Info className="h-5 w-5" />} message={t('widget.versionInfo.noData', 'No version data available')} className="py-4" />
-        )
-      ) : (
-          /* ── Standard / Wide layout ── */
-          <div className="flex flex-col gap-3 h-full">
+  const headline = <>
+    <Text size="lg" weight="semibold" color="primary" className="max-w-full break-words tabular-nums">{chartVersion}</Text>
+    <Badge variant="neutral" className="text-2xs">{truncatedSha}</Badge>
+  </>;
+  const details = <>
             <SourceContent
               state={versionState.fatalError ? 'error' : !versionState.hasData ? 'loading' : !hasData ? 'empty' : versionState.refreshError ? 'retained' : 'ready'}
               label={t('widget.versionInfo.title', 'Version info')}
@@ -178,7 +156,28 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
               {captureState.fatalError && <QueryError error={captureState.fatalError} onRetry={captureState.retry ?? undefined} />}
               {!captureState.hasData && capture.isLoading && <Skeleton className="mb-2 h-8 w-full" />}
             </div>
-          </div>
+  </>;
+
+  return (
+    <WidgetShell
+      title={t('widget.versionInfo.title', 'Version info')}
+      icon={<Info className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
+      dataState={dataState}
+      updatedAt={dataState.updatedAt ?? 0}
+      isFetching={dataState.isRefreshing}
+      isStale={version.isStale || (!isCompact && capture.isStale)}
+      isError={version.isError || (!isCompact && capture.isError)}
+      onRefresh={retry}
+    >
+      {isCompact && !hasData ? (
+        <EmptyState /* no-action: the widget header already exposes version refresh */
+          icon={<Info className="h-5 w-5" />} message={t('widget.versionInfo.noData', 'No version data available')} className="py-4" />
+      ) : (
+        <StatusPresentation compact={isCompact} headline={<div className="flex min-w-0 flex-col gap-2">{headline}</div>} icon={<Info className="size-6" aria-hidden="true" />} details={isCompact ? null : details}>
+          {isCompact
+            ? <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">{headline}</div>
+            : <div className="flex flex-col gap-3 h-full">{details}</div>}
+        </StatusPresentation>
       )}
     </WidgetShell>
   );

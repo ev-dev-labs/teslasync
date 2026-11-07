@@ -34,6 +34,9 @@ const EXPECTED_IDS = [
   'signal-health',
   'signal-catalog',
   'signal-log',
+  'new-signal-explorer',
+  'new-signal-readiness',
+  'new-unit-context',
 ] as const;
 
 /** The exact display name each widget renders in the picker — locks the copy
@@ -44,6 +47,9 @@ const EXPECTED_NAMES: Record<string, string> = {
   'signal-health': 'Signal Health',
   'signal-catalog': 'Signal Catalog',
   'signal-log': 'Signal Log',
+  'new-signal-explorer': 'Signal Explorer',
+  'new-signal-readiness': 'Signal Readiness',
+  'new-unit-context': 'Unit Context',
 };
 
 /** The exact icon each widget binds — locks the id→icon mapping the picker
@@ -54,6 +60,9 @@ const EXPECTED_ICONS: Record<string, LucideIcon> = {
   'signal-health': Activity,
   'signal-catalog': BookOpen,
   'signal-log': ScrollText,
+  'new-signal-explorer': BookOpen,
+  'new-signal-readiness': Activity,
+  'new-unit-context': Radio,
 };
 
 /** react.lazy internals (stable in React 18) — the registry's captured loader
@@ -72,7 +81,7 @@ function clampMinMax(value: number, min: number, max: number): number {
 }
 
 describe('TELEMETRY_WIDGETS — roster & structure', () => {
-  it('exposes exactly the five telemetry widgets in a stable declaration order', () => {
+  it('exposes the approved telemetry widgets in a stable declaration order', () => {
     expect(TELEMETRY_WIDGETS).toHaveLength(EXPECTED_IDS.length);
     expect(TELEMETRY_WIDGETS.map((w) => w.id)).toEqual([...EXPECTED_IDS]);
   });

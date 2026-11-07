@@ -57,7 +57,7 @@ export function parseSignalChangeEvent(raw: unknown): SignalChangeEvent | null {
   if (typeof payload.field !== 'string' || payload.field.length === 0) return null
   if (typeof payload.vehicle_id !== 'number') return null
 
-  const kind = normalizeSignalKind(payload.kind)
+  const kind = normalizeSignalKind(payload.kind, payload.value)
   const value = coerceValue(payload.value, kind)
   return {
     stream_id: typeof payload.stream_id === 'string' ? payload.stream_id : '',

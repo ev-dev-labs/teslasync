@@ -45,7 +45,7 @@ const REACT_LAZY_TYPE = Symbol.for('react.lazy');
  * rename, or reorder surfaces as a readable diff instead of silently shrinking
  * (or scrambling) the widget picker.
  */
-const EXPECTED_IDS = ['tire-pressure-visual', 'tire-pressure-history'] as const;
+const EXPECTED_IDS = ['tire-pressure-visual', 'tire-pressure-history', 'new-tire-warnings'] as const;
 
 /** kebab-case, lowercase, no leading/trailing/double hyphens. */
 const ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;

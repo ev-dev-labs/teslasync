@@ -16,6 +16,7 @@ import { WidgetBigNumber, WidgetStatusGrid } from './shared';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import StatusPresentation from './designPacks/StatusPresentation';
 
 export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
@@ -152,24 +153,54 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
   };
 
   if (isCompact) {
+    const headline = <SourceContent
+      state={healthTrust.fatalError ? 'error' : !healthTrust.hasData && healthLoading ? 'loading' : 'ready'}
+      label={t('widget.drivetrainHealth.assessment', 'Assessment')}
+      emptyMessage={t('widget.drivetrainHealth.noData', 'No drivetrain data')}
+      errorMessage={t('widget.drivetrainHealth.assessmentError', 'The drivetrain assessment could not be loaded.')}
+      error={healthTrust.fatalError}
+      errorRecovery={{ onRetry: healthTrust.retry ?? undefined }}
+    >
+      <WidgetStatusGrid cells={assessment} compact />
+    </SourceContent>;
+    const missing = !hasData && <Caption className="break-words">{t('widget.drivetrainHealth.noData', 'No drivetrain data')}</Caption>;
     return (
       <WidgetShell title={t('widget.drivetrainHealth.title', 'Drivetrain health')} {...shellProps}>
-        <div className="h-full flex flex-col items-center justify-center min-h-[44px]">
-          <SourceContent
-            state={healthTrust.fatalError ? 'error' : !healthTrust.hasData && healthLoading ? 'loading' : 'ready'}
-            label={t('widget.drivetrainHealth.assessment', 'Assessment')}
-            emptyMessage={t('widget.drivetrainHealth.noData', 'No drivetrain data')}
-            errorMessage={t('widget.drivetrainHealth.assessmentError', 'The drivetrain assessment could not be loaded.')}
-            error={healthTrust.fatalError}
-            errorRecovery={{ onRetry: healthTrust.retry ?? undefined }}
-          >
-          <WidgetStatusGrid cells={assessment} compact />
-          </SourceContent>
-          {!hasData && <Caption className="break-words">{t('widget.drivetrainHealth.noData', 'No drivetrain data')}</Caption>}
-        </div>
+        <StatusPresentation compact headline={headline} icon={<Cog className="size-6" aria-hidden="true" />} details={missing}>
+          <div className="h-full flex flex-col items-center justify-center min-h-[44px]">{headline}{missing}</div>
+        </StatusPresentation>
       </WidgetShell>
     );
   }
+
+  const headline = <SourceContent
+    state={healthTrust.fatalError ? 'error' : !healthTrust.hasData && healthLoading ? 'loading' : health == null ? 'empty' : healthTrust.refreshError ? 'retained' : 'ready'}
+    label={t('widget.drivetrainHealth.assessment', 'Assessment')}
+    emptyMessage={t('widget.drivetrainHealth.noData', 'No drivetrain data')}
+    errorMessage={t('widget.drivetrainHealth.assessmentError', 'The drivetrain assessment could not be loaded.')}
+    error={healthTrust.fatalError}
+    errorRecovery={{ onRetry: healthTrust.retry ?? undefined }}
+    emptyContent={<WidgetStatusGrid cells={assessment} />}
+    retainedMessage={t('widget.drivetrainHealth.assessmentRetained', 'The previous drivetrain assessment remains visible while it refreshes.')}
+  >
+    <WidgetBigNumber
+      value={health ? statusLabel : t('widget.drivetrainHealth.statusUnknown', 'Unknown')}
+      subtitle={t('widget.drivetrainHealth.assessment', 'Assessment')}
+      animated={false}
+      align="start"
+    />
+  </SourceContent>;
+  const details = <>
+    <div data-testid="dashboard-drivetrain-readings-brief">
+      <WidgetStatusGrid cells={detailCells} cols={2} emptyMessage={t('widget.drivetrainHealth.noData', 'No drivetrain data')} />
+    </div>
+    <StaleRefreshWarning state={motorTrust} />
+    {motorTrust.fatalError && <QueryError error={motorTrust.fatalError} onRetry={motorTrust.retry ?? undefined} />}
+    <Caption className="block break-words">
+      {t('widget.drivetrainHealth.assessmentCaveat', 'Assessment from available telemetry; not a mechanical inspection.')}
+    </Caption>
+    {!hasData && <Caption className="block break-words">{t('widget.drivetrainHealth.noData', 'No drivetrain data')}</Caption>}
+  </>;
 
   return (
     <WidgetShell
@@ -177,34 +208,9 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
       icon={<Cog className="h-3.5 w-3.5 text-emerald-400" />}
       {...shellProps}
     >
-      <div className="flex min-w-0 flex-col gap-3">
-        <SourceContent
-          state={healthTrust.fatalError ? 'error' : !healthTrust.hasData && healthLoading ? 'loading' : health == null ? 'empty' : healthTrust.refreshError ? 'retained' : 'ready'}
-          label={t('widget.drivetrainHealth.assessment', 'Assessment')}
-          emptyMessage={t('widget.drivetrainHealth.noData', 'No drivetrain data')}
-          errorMessage={t('widget.drivetrainHealth.assessmentError', 'The drivetrain assessment could not be loaded.')}
-          error={healthTrust.fatalError}
-          errorRecovery={{ onRetry: healthTrust.retry ?? undefined }}
-          emptyContent={<WidgetStatusGrid cells={assessment} />}
-          retainedMessage={t('widget.drivetrainHealth.assessmentRetained', 'The previous drivetrain assessment remains visible while it refreshes.')}
-        >
-          <WidgetBigNumber
-            value={health ? statusLabel : t('widget.drivetrainHealth.statusUnknown', 'Unknown')}
-            subtitle={t('widget.drivetrainHealth.assessment', 'Assessment')}
-            animated={false}
-            align="start"
-          />
-        </SourceContent>
-        <div data-testid="dashboard-drivetrain-readings-brief">
-          <WidgetStatusGrid cells={detailCells} cols={2} emptyMessage={t('widget.drivetrainHealth.noData', 'No drivetrain data')} />
-        </div>
-        <StaleRefreshWarning state={motorTrust} />
-        {motorTrust.fatalError && <QueryError error={motorTrust.fatalError} onRetry={motorTrust.retry ?? undefined} />}
-        <Caption className="block break-words">
-          {t('widget.drivetrainHealth.assessmentCaveat', 'Assessment from available telemetry; not a mechanical inspection.')}
-        </Caption>
-        {!hasData && <Caption className="block break-words">{t('widget.drivetrainHealth.noData', 'No drivetrain data')}</Caption>}
-      </div>
+      <StatusPresentation headline={headline} icon={<Cog className="size-6" aria-hidden="true" />} details={details}>
+        <div className="flex min-w-0 flex-col gap-3">{headline}{details}</div>
+      </StatusPresentation>
     </WidgetShell>
   );
 }

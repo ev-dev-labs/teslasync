@@ -10,6 +10,10 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetBigNumber } from './shared';
 import { WidgetShell } from './WidgetShell';
+import { usePackModule, usePackPresentation } from './designPacks/PackBoundary';
+import { batteryGaugePresentations } from './designPacks/presentationLoaders';
+import ClassicBatteryGauge from './designPacks/families/ClassicBatteryGauge';
+import type { BatteryGaugePresentationProps } from './designPacks/viewModels/BatteryGaugeViewModel';
 import { ChargeBatteryPack, ChargeMeter, useVerifiedChargeActivity } from './instruments/ChargeInstruments';
 import { ChargeStatusSummary } from './instruments/ChargeStatusSummary';
 import type { WidgetProps } from './types';
@@ -27,6 +31,8 @@ export function batteryColor(level: number | null | undefined): string {
 }
 
 export default function BatteryGaugeWidget({ vehicleId, size }: WidgetProps) {
+  const packId = usePackPresentation();
+  const Presentation = usePackModule(packId, packId === 'classic' ? null : batteryGaugePresentations[packId]);
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -50,6 +56,47 @@ export default function BatteryGaugeWidget({ vehicleId, size }: WidgetProps) {
   const rangeText =
     ratedRange != null ? `${fmtNumber(convertDistanceFromSI(ratedRange, distanceUnit), 0)} ${distanceUnit}` : null;
 
+  const status = state && <ChargeStatusSummary charging={state.is_charging} active={active} limit={chargeLimit} />;
+  const headline = batteryLevel != null
+    ? <WidgetBigNumber value={batteryLevel} unit="%" decimals={0} animated={false} />
+    : state
+      ? <WidgetBigNumber value={null} label={t('widget.battery', 'Battery')} />
+      : <EmptyState
+          icon={<Battery className="h-6 w-6" />}
+          message={t('widget.noBattery', 'No battery data')}
+          action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }}
+          className="py-4"
+        />;
+  const pack = batteryLevel != null
+    ? <ChargeBatteryPack level={batteryLevel} active={active} className={size.rows <= 2 ? 'w-20' : undefined} />
+    : null;
+  const meter = batteryLevel != null
+    ? <ChargeMeter
+        value={batteryLevel}
+        label={t('widget.battery', 'Battery')}
+        marker={chargeLimit}
+        showMarkerValue={false}
+        markerLabel={chargeLimit != null ? t('widget.batteryGauge.limitMarker', 'Charge limit {{pct}}%', { pct: fmtNumber(chargeLimit, 0) }) : undefined}
+        color={batteryColor(batteryLevel)}
+        active={active}
+      />
+    : null;
+  const details = batteryLevel != null && (
+    <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1">
+      {state?.is_charging && remainingToLimit != null && remainingToLimit > 0 && (
+        <p className="text-xs leading-snug text-[var(--text-muted)]">
+          {t('widget.batteryGauge.chargingToLimit', 'Charging · +{{pct}}% to limit', { pct: remainingToLimit })}
+        </p>
+      )}
+      {rangeText != null && (
+        <p className="text-xs leading-snug text-[var(--text-muted)]">
+          {t('widget.batteryGauge.range', '{{range}} range', { range: rangeText })}
+        </p>
+      )}
+    </div>
+  );
+  const sections: BatteryGaugePresentationProps = { status, headline, pack, meter, details, level: batteryLevel };
+
   return (
     <WidgetShell
       title={t('widget.battery', 'Battery')}
@@ -61,47 +108,11 @@ export default function BatteryGaugeWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {state && <ChargeStatusSummary charging={state.is_charging} active={active} limit={chargeLimit} />}
-      <div className="flex min-w-0 flex-col gap-1.5">
-        {batteryLevel != null ? (
-          <>
-            <div className="flex min-w-0 items-center justify-between gap-3">
-              <WidgetBigNumber value={batteryLevel} unit="%" decimals={0} animated={false} />
-              <ChargeBatteryPack level={batteryLevel} active={active} className={size.rows <= 2 ? 'w-20' : undefined} />
-            </div>
-            <ChargeMeter
-              value={batteryLevel}
-              label={t('widget.battery', 'Battery')}
-              marker={chargeLimit}
-              showMarkerValue={false}
-              markerLabel={chargeLimit != null ? t('widget.batteryGauge.limitMarker', 'Charge limit {{pct}}%', { pct: fmtNumber(chargeLimit, 0) }) : undefined}
-              color={batteryColor(batteryLevel)}
-              active={active}
-            />
-            <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1">
-              {state?.is_charging && remainingToLimit != null && remainingToLimit > 0 && (
-                <p className="text-xs leading-snug text-[var(--text-muted)]">
-                  {t('widget.batteryGauge.chargingToLimit', 'Charging · +{{pct}}% to limit', { pct: remainingToLimit })}
-                </p>
-              )}
-              {rangeText != null && (
-                <p className="text-xs leading-snug text-[var(--text-muted)]">
-                  {t('widget.batteryGauge.range', '{{range}} range', { range: rangeText })}
-                </p>
-              )}
-            </div>
-          </>
-        ) : state ? (
-          <WidgetBigNumber value={null} label={t('widget.battery', 'Battery')} />
-        ) : (
-          <EmptyState
-            icon={<Battery className="h-6 w-6" />}
-            message={t('widget.noBattery', 'No battery data')}
-            action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }}
-            className="py-4"
-          />
-        )}
-      </div>
+      {Presentation ? (
+        <Presentation {...sections} />
+      ) : (
+        <ClassicBatteryGauge {...sections} />
+      )}
     </WidgetShell>
   );
 }

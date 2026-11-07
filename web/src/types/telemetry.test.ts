@@ -34,6 +34,7 @@ import {
   normalizeVehicleTelemetry,
   telemetryVehicleList,
   telemetryUptimeSeconds,
+  appendTelemetryRateSample,
 } from './telemetry';
 import type {
   SignalPoint,
@@ -46,6 +47,41 @@ import type {
   TelemetryStatus,
   VehicleTelemetry,
 } from './telemetry';
+
+describe('observed browser-session MQTT rates', () => {
+  it('records real zero and preserves missing rates as timed gaps', () => {
+    const zero = appendTelemetryRateSample([], [], 10_000);
+    const missing = appendTelemetryRateSample(zero, [{ vin: 'fixture' }], 20_000);
+    const resumed = appendTelemetryRateSample(missing, [
+      { vin: 'fixture-a', signals_per_second: 2.5 },
+      { vin: 'fixture-b', signalsPerSecond: 1.5 },
+    ], 50_000);
+    expect(resumed).toEqual([
+      { timestamp: 10_000, value: 0 },
+      { timestamp: 20_000, value: null },
+      { timestamp: 50_000, value: 4 },
+    ]);
+  });
+
+  it('does not invent duplicate or future observations after a clock change', () => {
+    const previous = [
+      { timestamp: 10_000, value: 1 },
+      { timestamp: 20_000, value: 2 },
+      { timestamp: 40_000, value: 3 },
+    ];
+    expect(appendTelemetryRateSample(previous, [], 20_000)).toEqual([
+      { timestamp: 10_000, value: 1 },
+      { timestamp: 20_000, value: 0 },
+    ]);
+    expect(previous).toHaveLength(3);
+  });
+
+  it('expires old samples without manufacturing a connecting history', () => {
+    const previous = [{ timestamp: 10_000, value: 2 }];
+    expect(appendTelemetryRateSample(previous, [], 1_000_000))
+      .toEqual([{ timestamp: 1_000_000, value: 0 }]);
+  });
+});
 
 /* ── Runtime helpers ────────────────────────────────────────────────────── */
 

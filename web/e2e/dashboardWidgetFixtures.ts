@@ -53,7 +53,7 @@ export async function installDashboardWidgetSources(page: Page, mocks: MockApiCo
     power: chargingMode ? -7680 : 14_000, battery_level: 72,
     rated_range: 410_000, ideal_range: 430_000, odometer: 32_100_000,
     inside_temp: 21, outside_temp: 18, is_climate_on: false,
-    is_charging: chargingMode, charger_power: chargingMode ? 7680 : 0,
+    is_charging: chargingMode, charger_power: chargingMode ? 7.68 : 0,
     charge_rate: chargingMode ? 30_000 : 0, time_to_full_charge: chargingMode ? 3600 : 0,
     is_locked: true, sentry_mode: true, software_version: '2026.26.3',
   };

@@ -8,6 +8,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -64,6 +65,18 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size, config }
     isError,
     onRefresh: () => refetch(),
   };
+  const headline = healthScore != null ? (
+    <div className="flex flex-wrap items-start justify-between gap-2">
+      <WidgetBigNumber value={healthScore} unit="%" label={t('widget.batteryHealthAnalytics.score', 'health')} decimals={0} animated={false} />
+      {healthPill && <Badge variant={healthPill.variant} size="sm">{healthPill.text}</Badge>}
+    </div>
+  ) : data ? (
+    <WidgetBigNumber value={null} label={t('widget.batteryHealthAnalytics.score', 'health')} />
+  ) : (
+    <EmptyState variant="informational" icon={<HeartPulse className="h-5 w-5" />}
+      message={t('widget.batteryHealthAnalytics.noData', 'No battery health data')} className="py-4" />
+  );
+  const details = !isCompact && data && <WidgetStatGrid stats={stats} cols={4} />;
 
   return (
     <WidgetShell
@@ -71,31 +84,11 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size, config }
       icon={<HeartPulse className="h-3.5 w-3.5" />}
       {...shellProps}
     >
-      <div className="flex min-w-0 flex-col gap-3">
-        {healthScore != null ? (
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <WidgetBigNumber
-              value={healthScore}
-              unit="%"
-              label={t('widget.batteryHealthAnalytics.score', 'health')}
-              decimals={0}
-              animated={false}
-            />
-            {healthPill && (
-              <Badge variant={healthPill.variant} size="sm">{healthPill.text}</Badge>
-            )}
-          </div>
-        ) : data ? (
-          <WidgetBigNumber value={null} label={t('widget.batteryHealthAnalytics.score', 'health')} />
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<HeartPulse className="h-5 w-5" />}
-            message={t('widget.batteryHealthAnalytics.noData', 'No battery health data')}
-            className="py-4"
-          />
-        )}
-        {!isCompact && data && <WidgetStatGrid stats={stats} cols={4} />}
-      </div>
+      <InstrumentPresentation family="ring" compact={isCompact} headline={headline} details={details}
+        reading={{ value: healthScore, max: 100, label: t('widget.batteryHealthAnalytics.score', 'health'), unit: '%' }}
+        icon={<HeartPulse />}>
+        <div className="flex min-w-0 flex-col gap-3">{headline}{details}</div>
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

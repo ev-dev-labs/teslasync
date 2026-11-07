@@ -7,8 +7,11 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePressureFormat } from '@/hooks/usePressureFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useRangeState } from '@/hooks/useRangeState';
-import { WidgetChartSummary, type ChartSummaryStat } from './shared';
+import { Caption, Text } from '@/components/ui';
+import { EmptyState } from '@/components/feedback';
+import { WidgetBigNumber, WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
@@ -138,10 +141,10 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
     labels: axisLabels, fontSize: isWide ? 11 : 10, minWidth: 35, padding: 20, enabled: !isCompact,
   });
 
-  const latestFL = isCompact ? latestNonNull(chartData, 'fl') : null;
-  const latestFR = isCompact ? latestNonNull(chartData, 'fr') : null;
-  const latestRL = isCompact ? latestNonNull(chartData, 'rl') : null;
-  const latestRR = isCompact ? latestNonNull(chartData, 'rr') : null;
+  const latestFL = latestNonNull(chartData, 'fl');
+  const latestFR = latestNonNull(chartData, 'fr');
+  const latestRL = latestNonNull(chartData, 'rl');
+  const latestRR = latestNonNull(chartData, 'rr');
   const stats: ChartSummaryStat[] = isCompact && hasData ? [
     { label: t('widget.tirePressureHistory.fl', 'FL'), value: fmtNumber(latestFL) === '—' ? null : fmtNumber(latestFL), unit: pressureUnit },
     { label: t('widget.tirePressureHistory.fr', 'FR'), value: fmtNumber(latestFR) === '—' ? null : fmtNumber(latestFR), unit: pressureUnit },
@@ -160,9 +163,10 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
       ? t(`date.preset.${presetId}`, presetId)
       : `${formatDateShort(`${start}T00:00:00`)} – ${formatDateShort(`${end}T00:00:00`)}`;
 
-  const chart = (
+  const renderChart = (showClassicReference: boolean) => (
     <EmbeddedChart
       title={t('widget.tirePressureHistory.title', 'Tire pressure history')}
+      height={showClassicReference ? undefined : 240}
       ariaLabel={t(
         'widget.tirePressureHistory.chartAria',
         'Front and rear tire pressure history',
@@ -181,12 +185,12 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
         {chartGrid}
-        <ReferenceArea
+        {showClassicReference && <ReferenceArea
           y1={refLow}
           y2={refHigh}
           fill="var(--ok)"
           fillOpacity={0.12}
-        />
+        />}
         <XAxis
           dataKey="time"
           tick={tick}
@@ -224,6 +228,54 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
       )}
     </EmbeddedChart>
   );
+  const chart = renderChart(true);
+  const tires = [
+    { key: 'fl', value: latestFL, label: t('widget.tirePressureHistory.fl', 'FL') },
+    { key: 'fr', value: latestFR, label: t('widget.tirePressureHistory.fr', 'FR') },
+    { key: 'rl', value: latestRL, label: t('widget.tirePressureHistory.rl', 'RL') },
+    { key: 'rr', value: latestRR, label: t('widget.tirePressureHistory.rr', 'RR') },
+  ] as const;
+  const lastReported = (key: typeof tires[number]['key']) => {
+    const sample = [...chartData].reverse().find(row => isFiniteNumber(row[key]));
+    return sample
+      ? t('dashboardWidgets.tires.tirePressureHistory.lastReported', 'Last reported {{time}}', { time: formatTime(sample.time) })
+      : t('dashboardWidgets.tires.tirePressureHistory.notReported', 'Not reported');
+  };
+  const presentation = {
+    family: 'line' as const,
+    compact: isCompact,
+    icon: <CircleDot />,
+    context: <Caption>{rangeLabel} · {pressureUnit}</Caption>,
+    headline: <WidgetBigNumber value={latestFL == null ? null : fmtNumber(latestFL)} unit={pressureUnit}
+      label={t('dashboardWidgets.tires.tirePressureHistory.frontLeftPressure', 'Front-left pressure')}
+      subtitle={lastReported('fl')} animated={false}
+      badge={{ text: t('dashboardWidgets.tires.tirePressureHistory.history', 'History'), variant: 'neutral' }} />,
+    details: (
+      <div className="grid min-w-0 grid-cols-1 gap-3 @xs:grid-cols-2">
+        {tires.slice(1).map(tire => (
+          <WidgetBigNumber key={tire.key} value={tire.value == null ? null : fmtNumber(tire.value)}
+            unit={pressureUnit} label={tire.label} subtitle={lastReported(tire.key)}
+            animated={false} size="secondary" />
+        ))}
+        <div className="flex min-w-0 flex-col justify-center gap-2">
+          <Caption>{t('widget.tirePressureHistory.recommended', 'Recommended')}</Caption>
+          <Text variant="bodySm">{t('dashboardWidgets.tires.tirePressureHistory.recommendationUnavailable', 'Unavailable')}</Text>
+        </div>
+      </div>
+    ),
+    // History supplies no vehicle-specific recommendation; keep the legacy band
+    // only in the unchanged Classic body, never present it as a measured target.
+    instrument: isCompact ? (!hasData && (
+      <EmptyState variant="informational" icon={<CircleDot className="h-5 w-5" />}
+        message={t('widget.tirePressureHistory.noData', 'No tire pressure history')} />
+    )) : (
+      <WidgetChartSummary stats={[]} chart={renderChart(false)} isEmpty={!hasData}
+        emptyMessage={t('widget.tirePressureHistory.noData', 'No tire pressure history')}
+        emptyIcon={<CircleDot className="h-5 w-5" />}
+        yAxisLabel={`${rangeLabel} · ${pressureUnit}`}
+        legend={tires.map(tire => ({ label: tire.label, color: TIRE_COLORS[tire.key] }))} />
+    ),
+  };
 
   if (isCompact) {
     return (
@@ -237,14 +289,16 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
         isError={isError}
         onRefresh={handleRefresh}
       >
-        <WidgetChartSummary
-          compact
-          isEmpty={!hasData}
-          emptyMessage={t('widget.tirePressureHistory.noData', 'No tire pressure history')}
-          emptyIcon={<CircleDot className="h-5 w-5" />}
-          stats={stats}
-          chart={null}
-        />
+        <InstrumentPresentation {...presentation}>
+          <WidgetChartSummary
+            compact
+            isEmpty={!hasData}
+            emptyMessage={t('widget.tirePressureHistory.noData', 'No tire pressure history')}
+            emptyIcon={<CircleDot className="h-5 w-5" />}
+            stats={stats}
+            chart={null}
+          />
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
@@ -261,21 +315,23 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <WidgetChartSummary
-        isEmpty={!hasData}
-        emptyMessage={t('widget.tirePressureHistory.noData', 'No tire pressure history')}
-        emptyIcon={<CircleDot className="h-5 w-5" />}
-        stats={stats}
-        yAxisLabel={`${rangeLabel} · ${pressureUnit}`}
-        legend={[
-          { label: t('widget.tirePressureHistory.fl', 'FL'), color: TIRE_COLORS.fl },
-          { label: t('widget.tirePressureHistory.fr', 'FR'), color: TIRE_COLORS.fr },
-          { label: t('widget.tirePressureHistory.rl', 'RL'), color: TIRE_COLORS.rl },
-          { label: t('widget.tirePressureHistory.rr', 'RR'), color: TIRE_COLORS.rr },
-          { label: t('widget.tirePressureHistory.recommended', 'Recommended'), color: 'color-mix(in srgb, var(--ok) 25%, transparent)' },
-        ]}
-        chart={chart}
-      />
+      <InstrumentPresentation {...presentation}>
+        <WidgetChartSummary
+          isEmpty={!hasData}
+          emptyMessage={t('widget.tirePressureHistory.noData', 'No tire pressure history')}
+          emptyIcon={<CircleDot className="h-5 w-5" />}
+          stats={stats}
+          yAxisLabel={`${rangeLabel} · ${pressureUnit}`}
+          legend={[
+            { label: t('widget.tirePressureHistory.fl', 'FL'), color: TIRE_COLORS.fl },
+            { label: t('widget.tirePressureHistory.fr', 'FR'), color: TIRE_COLORS.fr },
+            { label: t('widget.tirePressureHistory.rl', 'RL'), color: TIRE_COLORS.rl },
+            { label: t('widget.tirePressureHistory.rr', 'RR'), color: TIRE_COLORS.rr },
+            { label: t('widget.tirePressureHistory.recommended', 'Recommended'), color: 'color-mix(in srgb, var(--ok) 25%, transparent)' },
+          ]}
+          chart={chart}
+        />
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

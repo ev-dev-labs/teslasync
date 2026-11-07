@@ -182,4 +182,17 @@ export const VEHICLE_WIDGETS: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('../VehicleUpgradesWidget')),
   },
+  {
+    id: 'new-axle-thermal',
+    name: 'Axle Thermal',
+    description: 'Observed front and rear motor temperatures, torque and signal freshness',
+    nameKey: 'widgets.catalog.new-axle-thermal.name',
+    descriptionKey: 'widgets.catalog.new-axle-thermal.description',
+    icon: Cog,
+    category: 'vehicle',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../AxleThermalWidget')),
+  },
 ];

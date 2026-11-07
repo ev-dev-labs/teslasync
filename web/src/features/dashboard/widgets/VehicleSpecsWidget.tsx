@@ -9,6 +9,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
+import StatusPresentation from './designPacks/StatusPresentation';
 
 export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -123,6 +124,12 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
     dataUpdatedAt: updatedAt,
     refetch: handleRefresh,
   });
+  const headline = <CompactView specs={specs} configData={(configData ?? null) as Record<string, unknown> | null} t={t} />;
+  const details = <WidgetDetailCard
+    entries={entries}
+    emptyMessage={t('widget.specs.noData', 'No specs available')}
+    emptyIcon={<FileText className="h-5 w-5" />}
+  />;
 
   return (
     <WidgetShell
@@ -139,15 +146,9 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
     >
       {hasAnyData ? (
         <FadeIn>
-          {isCompact ? (
-            <CompactView specs={specs} configData={(configData ?? null) as Record<string, unknown> | null} t={t} />
-          ) : (
-            <WidgetDetailCard
-              entries={entries}
-              emptyMessage={t('widget.specs.noData', 'No specs available')}
-              emptyIcon={<FileText className="h-5 w-5" />}
-            />
-          )}
+          <StatusPresentation compact={isCompact} headline={headline} icon={<FileText className="size-6" aria-hidden="true" />} details={isCompact ? null : details}>
+            {isCompact ? headline : details}
+          </StatusPresentation>
         </FadeIn>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

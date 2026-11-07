@@ -6,26 +6,26 @@ import { DEFAULT_BRAND_ACCENT, DEFAULT_CUSTOM_PRIMARY, DEFAULT_CUSTOM_ACCENT } f
 import { themePresets, themeCategories } from './themePresets'
 
 const accentPresets = {
-  'neon-cyan': DEFAULT_BRAND_ACCENT,
-  'tesla-red': '#e31937',
-  'matrix-green': '#00ff41',
-  'royal-purple': '#a855f7',
-  'solar-amber': '#f59e0b',
-  'sky-blue': '#0ea5e9',
-  'ocean-teal': '#14b8a6',
-  'emerald-green': '#10b981',
-  'forest-green': '#228b22',
-  'lime-green': '#84cc16',
-  'sunny-yellow': '#eab308',
-  'sunset-orange': '#f97316',
-  coral: '#ff7f50',
-  'rose-pink': '#ec4899',
-  magenta: '#d946ef',
-  lavender: '#a78bfa',
-  indigo: '#6366f1',
-  'navy-blue': '#1e3a8a',
-  gold: '#d4a017',
-  'slate-gray': '#64748b',
+  'neon-cyan': ['Blue', DEFAULT_BRAND_ACCENT],
+  'tesla-red': ['Red', '#ef4444'],
+  'matrix-green': ['Green', '#22c55e'],
+  'royal-purple': ['Purple', '#8b5cf6'],
+  'solar-amber': ['Amber', '#f59e0b'],
+  'sky-blue': ['Sky', '#0ea5e9'],
+  'ocean-teal': ['Teal', '#14b8a6'],
+  'emerald-green': ['Emerald', '#10b981'],
+  'forest-green': ['Forest', '#16a34a'],
+  'lime-green': ['Lime', '#84cc16'],
+  'sunny-yellow': ['Yellow', '#eab308'],
+  'sunset-orange': ['Orange', '#f97316'],
+  coral: ['Coral', '#fb7185'],
+  'rose-pink': ['Pink', '#ec4899'],
+  magenta: ['Magenta', '#d946ef'],
+  lavender: ['Lavender', '#a78bfa'],
+  indigo: ['Indigo', '#6366f1'],
+  'navy-blue': ['Navy', '#1e40af'],
+  gold: ['Gold', '#ca8a04'],
+  'slate-gray': ['Slate', '#64748b'],
 } as const
 
 export type ThemeId = keyof typeof accentPresets | 'custom'
@@ -173,12 +173,8 @@ function buildCustomTheme(primary: string): ColorTheme {
 }
 
 const presetThemes = Object.fromEntries(
-  Object.entries(accentPresets).map(([id, primary]) => {
-    const name = id === 'neon-cyan'
-      ? 'Signal Blue'
-      : id.split('-').map(part => part[0].toUpperCase() + part.slice(1)).join(' ')
-    return [id, { id, name, ...themeColors(primary) }]
-  }),
+  Object.entries(accentPresets).map(([id, [name, primary]]) =>
+    [id, { id, name, ...themeColors(primary) }]),
 ) as Record<Exclude<ThemeId, 'custom'>, ColorTheme>
 
 const themes: Record<ThemeId, ColorTheme> = {

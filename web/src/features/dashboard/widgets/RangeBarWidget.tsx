@@ -8,6 +8,7 @@ import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
@@ -48,6 +49,21 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
       primaryConverted: primary != null ? convertDistanceFromSI(primary, distanceUnit) : null,
     };
   }, [state, distanceUnit]);
+  const headline = (
+    <WidgetBigNumber value={range.primaryConverted != null ? fmtInt(range.primaryConverted) : null}
+      unit={distanceUnit}
+      label={range.usesRated || !range.hasData ? t('widget.ratedRange', 'Rated range') : t('widget.idealRange', 'Ideal range')}
+      animated={false} />
+  );
+  const comparison = !isCompact && (
+    <WidgetBigNumber value={range.comparisonRaw != null ? fmtInt(convertDistanceFromSI(range.comparisonRaw, distanceUnit)) : null}
+      unit={distanceUnit} label={range.usesRated ? t('widget.idealRange', 'Ideal range') : t('widget.ratedRange', 'Rated range')}
+      animated={false} size="secondary" />
+  );
+  const empty = !range.hasData && (
+    <EmptyState variant="informational" icon={<Gauge className="h-6 w-6" />}
+      message={t('widget.noRange', 'No range data')} className="py-4" />
+  );
 
   return (
     <WidgetShell
@@ -61,32 +77,16 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
+      <InstrumentPresentation family="meter" compact={isCompact} headline={headline}
+        icon={<Gauge />} details={!isCompact || !range.hasData ? <>{comparison}{empty}</> : undefined}>
       <div className="flex min-w-0 flex-col gap-3">
         <div className="flex min-w-0 items-end justify-between gap-3">
-          <WidgetBigNumber
-            value={range.primaryConverted != null ? fmtInt(range.primaryConverted) : null}
-            unit={distanceUnit}
-            label={range.usesRated || !range.hasData ? t('widget.ratedRange', 'Rated range') : t('widget.idealRange', 'Ideal range')}
-            animated={false}
-          />
-          {!isCompact && (
-            <WidgetBigNumber
-              value={range.comparisonRaw != null ? fmtInt(convertDistanceFromSI(range.comparisonRaw, distanceUnit)) : null}
-              unit={distanceUnit}
-              label={range.usesRated ? t('widget.idealRange', 'Ideal range') : t('widget.ratedRange', 'Rated range')}
-              animated={false}
-              size="secondary"
-            />
-          )}
+          {headline}
+          {comparison}
         </div>
-        {!range.hasData && (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Gauge className="h-6 w-6" />}
-          message={t('widget.noRange', 'No range data')}
-          className="py-4"
-        />
-        )}
+        {empty}
       </div>
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

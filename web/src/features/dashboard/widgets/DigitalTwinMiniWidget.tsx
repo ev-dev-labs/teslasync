@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Monitor, ArrowUpRight, Lock, Unlock, Shield } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Caption, IconButton, Text } from '@/components/ui';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { buildTwinState } from '@/lib/vehicleState';
@@ -9,7 +9,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
 import { WidgetStatusGrid } from './shared';
 import { WidgetShell } from './WidgetShell';
-import { IconButton } from '@/components/ui';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 import VehicleStudio from './vehicle-instruments/VehicleStudio';
 import { useVerifiedDriving } from './vehicle-instruments/useVerifiedDriving';
@@ -69,6 +69,72 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
   );
 
   const isCompact = size.cols <= 2 && size.rows <= 2;
+  const showStatus = !isCompact || size.rows >= 2;
+  const windows = [twinState.windowFD, twinState.windowFP, twinState.windowRD, twinState.windowRP];
+  const doors = [twinState.doors.driverFront, twinState.doors.passengerFront, twinState.doors.driverRear, twinState.doors.passengerRear];
+  const windowsOpen = windows.some(value => value === 'open' || value === 'partial');
+  const windowsClosed = windows.every(value => value === 'closed');
+  const doorsOpen = doors.some(value => value === true);
+  const doorsClosed = doors.every(value => value === false);
+  const openings = showStatus && <WidgetStatusGrid compact cells={[
+    {
+      id: 'windows', label: t('widget.windows', 'Windows'),
+      status: windowsOpen ? 'warning' : windowsClosed ? 'inactive' : 'unknown',
+      statusLabel: windows.includes('open') ? t('widget.doorWindow.open', 'Open')
+        : windows.includes('partial') ? t('widget.doorWindow.partial', 'Partial')
+          : windowsClosed ? t('widget.doorWindow.closed', 'Closed') : t('widget.status.unknown', 'Unknown'),
+    },
+    {
+      id: 'doors', label: t('widget.doors', 'Doors'),
+      status: doorsOpen ? 'warning' : doorsClosed ? 'inactive' : 'unknown',
+      statusLabel: doorsOpen ? t('widget.doorWindow.open', 'Open')
+        : doorsClosed ? t('widget.doorWindow.closed', 'Closed') : t('widget.status.unknown', 'Unknown'),
+    },
+  ]} />;
+  const twin = vehicle && (
+    <div className="shrink-0 flex items-center justify-center w-full">
+      <VehicleStudio twinState={twinState} vehicle={vehicle} driving={driving}
+        lightsOn={lightsOn} size="sm" compact />
+    </div>
+  );
+  // Status badges — shown unless very cramped.
+  const badges = showStatus && (
+    <div className="flex w-full flex-shrink-0 flex-wrap justify-center gap-2 border-t border-[var(--border-subtle)] pt-2">
+      <Badge variant={
+        // Unknown lock state stays neutral, never falsely signalling a secured vehicle.
+        twinState.locked === false ? 'danger' : twinState.locked ? 'success' : 'neutral'
+      }>
+        {twinState.locked === false
+          ? <Unlock className="h-2.5 w-2.5 me-0.5" aria-hidden="true" />
+          : <Lock className="h-2.5 w-2.5 me-0.5" aria-hidden="true" />}
+        {twinState.locked === false ? t('widget.unlocked', 'Unlocked')
+          : twinState.locked ? t('widget.locked', 'Locked') : '—'}
+      </Badge>
+      {twinState.sentryMode != null && (
+        <Badge variant={twinState.sentryMode ? 'info' : 'neutral'}>
+          <Shield className="h-2.5 w-2.5 me-0.5" aria-hidden="true" />
+          {twinState.sentryMode ? t('widget.sentryOn', 'Sentry') : t('widget.sentryOff', 'Off')}
+        </Badge>
+      )}
+    </div>
+  );
+  const sentry = !isCompact && <WidgetStatusGrid compact cells={[
+    {
+      id: 'sentry', label: t('widget.sentryOn', 'Sentry'),
+      status: twinState.sentryMode == null ? 'unknown' : twinState.sentryMode ? 'ok' : 'inactive',
+      statusLabel: twinState.sentryMode == null ? t('widget.status.unknown', 'Unknown')
+        : twinState.sentryMode ? t('widget.sentryOn', 'Sentry') : t('widget.sentryOff', 'Off'),
+    },
+  ]} />;
+  const empty = (
+    <div className="flex min-w-0 flex-col gap-2">
+      <EmptyState /* no-action: transient missing source data; no specific recovery action available */
+        icon={<Monitor className="h-5 w-5" />} message={t('widget.noVehicle', 'No vehicle data')} className="py-4" />
+      <WidgetStatusGrid compact cells={[
+        { id: 'lock', label: t('widget.lockStatus', 'Lock'), status: 'unknown' },
+      ]} />
+    </div>
+  );
 
   return (
     <WidgetShell
@@ -88,70 +154,21 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
           label={t('widget.open', 'Open')} aria-label={t('widget.open', 'Open')} />
       }
     >
-      {vehicle ? (
-        <div className="h-full flex flex-col items-center justify-center gap-2 px-2 pb-2">
-          <div className="shrink-0 flex items-center justify-center w-full">
-            <VehicleStudio
-              twinState={twinState}
-              vehicle={vehicle}
-              driving={driving}
-              lightsOn={lightsOn}
-              size="sm"
-              compact
-            />
+      <InstrumentPresentation family="twin" compact={isCompact} icon={<Monitor />}
+        headline={vehicle ? <div className="flex min-w-0 flex-col gap-1">
+          <Caption>{t('widget.digitalTwinMini', 'Digital twin')}</Caption>
+          <Text variant="subhead" className="break-words">{vehicle.display_name || t('widget.digitalTwinMini', 'Digital twin')}</Text>
+        </div> : undefined}
+        context={vehicle ? badges : undefined}
+        instrument={vehicle ? twin : empty}
+        details={vehicle && showStatus ? <div className="space-y-2">{openings}{sentry}</div> : undefined}
+      >
+        {vehicle ? (
+          <div className="h-full flex flex-col items-center justify-center gap-2 px-2 pb-2">
+            {twin}{badges}{sentry}
           </div>
-
-          {/* Status badges — shown unless very cramped */}
-          {!isCompact || size.rows >= 2 ? (
-            <div className="flex w-full flex-shrink-0 flex-wrap justify-center gap-2 border-t border-[var(--border-subtle)] pt-2">
-              <Badge
-                variant={
-                  // Unknown lock state stays neutral — a green "success" chip
-                  // here would falsely signal a secured vehicle.
-                  twinState.locked === false ? 'danger' : twinState.locked ? 'success' : 'neutral'
-                }
-              >
-                {twinState.locked === false ? (
-                  <Unlock className="h-2.5 w-2.5 me-0.5" aria-hidden="true" />
-                ) : (
-                  <Lock className="h-2.5 w-2.5 me-0.5" aria-hidden="true" />
-                )}
-                {twinState.locked === false
-                  ? t('widget.unlocked', 'Unlocked')
-                  : twinState.locked
-                    ? t('widget.locked', 'Locked')
-                    : '—'}
-              </Badge>
-              {twinState.sentryMode != null && (
-                <Badge variant={twinState.sentryMode ? 'info' : 'neutral'}>
-                  <Shield className="h-2.5 w-2.5 me-0.5" aria-hidden="true" />
-                  {twinState.sentryMode
-                    ? t('widget.sentryOn', 'Sentry')
-                    : t('widget.sentryOff', 'Off')}
-                </Badge>
-              )}
-            </div>
-          ) : null}
-          {!isCompact && <WidgetStatusGrid compact cells={[
-            {
-              id: 'sentry', label: t('widget.sentryOn', 'Sentry'),
-              status: twinState.sentryMode == null ? 'unknown' : twinState.sentryMode ? 'ok' : 'inactive',
-              statusLabel: twinState.sentryMode == null ? t('widget.status.unknown', 'Unknown') : twinState.sentryMode ? t('widget.sentryOn', 'Sentry') : t('widget.sentryOff', 'Off'),
-            },
-          ]} />}
-        </div>
-      ) : (
-        <div className="flex min-w-0 flex-col gap-2">
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Monitor className="h-5 w-5" />}
-          message={t('widget.noVehicle', 'No vehicle data')}
-          className="py-4"
-        />
-        <WidgetStatusGrid compact cells={[
-          { id: 'lock', label: t('widget.lockStatus', 'Lock'), status: 'unknown' },
-        ]} />
-        </div>
-      )}
+        ) : empty}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

@@ -47,6 +47,7 @@ const EXPECTED_IDS = [
   'backup-history',
   'power-flow-history',
   'energy-stats',
+  'new-powershare',
 ] as const;
 
 // Widgets that intentionally opt into contextual "?" help copy (WidgetShell).

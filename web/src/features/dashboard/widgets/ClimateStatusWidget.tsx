@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Thermometer } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
-import { Badge } from '@/components/ui';
+import { Badge, Caption } from '@/components/ui';
 import { deriveDataState } from '@/api/dataState';
 import { useVehicles, useClimateLatest } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
@@ -15,8 +15,14 @@ import { convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import ClimateAirflow from './vehicle-instruments/ClimateAirflow';
 import { useObservationCurrent } from './vehicle-instruments/useObservationCurrent';
+import { usePackModule, usePackPresentation } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
+
+const loadClimatePresentation = () => import('./designPacks/families/ClimateStatusLayout');
 
 export default function ClimateStatusWidget({ vehicleId, size }: WidgetProps) {
+  const packId = usePackPresentation();
+  const ClimatePresentation = usePackModule(packId, loadClimatePresentation);
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
@@ -27,7 +33,7 @@ export default function ClimateStatusWidget({ vehicleId, size }: WidgetProps) {
 
   const tempUnit = unitPrefs.temperature;
   const hvacState = climateData
-    ? resolveHvacActive(climateData.hvac_power, climateData.is_ac_on)
+    ? resolveHvacActive(climateData.hvac_power ?? climateData.is_climate_on, climateData.is_ac_on)
     : null;
   const observationCurrent = useObservationCurrent(climateData?.ts, !isError);
   const loading = isLoading || (vehiclesLoading && !id);
@@ -43,14 +49,28 @@ export default function ClimateStatusWidget({ vehicleId, size }: WidgetProps) {
 
   const formatTemp = (raw: number | null | undefined): string | null =>
     raw != null && Number.isFinite(raw) ? fmtInt(toTemperatureDisplay(raw)) : null;
-  const insideValue = climateData ? formatTemp(climateData.inside_temp) : null;
-  const outsideValue = climateData ? formatTemp(climateData.outside_temp) : null;
+  const insideValue = climateData ? formatTemp(climateData.inside_temp_c ?? climateData.inside_temp) : null;
+  const outsideValue = climateData ? formatTemp(climateData.outside_temp_c ?? climateData.outside_temp) : null;
+  const setpointValue = climateData ? formatTemp(climateData.driver_setpoint_c ?? climateData.driver_temp_setting) : null;
 
   const hvacPill = hvacState === true
     ? { text: t('widget.climatePanel.hvacOn', 'HVAC on'), variant: 'success' as const }
     : hvacState === false
       ? { text: t('widget.climatePanel.hvacOff', 'HVAC off'), variant: 'neutral' as const }
       : { text: t('widget.climatePanel.hvacUnknown', 'HVAC unknown'), variant: 'neutral' as const };
+  const headline = <WidgetBigNumber value={insideValue} unit={tempUnit} label={t('hero.inside', 'Inside')} />;
+  const status = <Badge variant={hvacPill.variant} size="sm">{hvacPill.text}</Badge>;
+  const airflow = <ClimateAirflow active={hvacState === true && observationCurrent} compact={size.rows <= 2} />;
+  const outside = <span className={`${dashboardTokens.metricLabel} mt-1.5`}>
+    {t('widget.outside', 'Outside')} {outsideValue != null ? `${outsideValue}${tempUnit}` : '—'}
+  </span>;
+  const setpoint = <Caption>{t('widget.climatePanel.set', 'set')} {setpointValue != null ? `${setpointValue}${tempUnit}` : '—'}</Caption>;
+  const classic = (
+    <div className="flex w-full min-w-0 flex-col items-start gap-1">
+      <div className="flex w-full flex-wrap items-start justify-between gap-3">{headline}{status}</div>
+      {airflow}{outside}
+    </div>
+  );
 
   return (
     <WidgetShell
@@ -65,20 +85,9 @@ export default function ClimateStatusWidget({ vehicleId, size }: WidgetProps) {
       onRefresh={() => refetch()}
     >
       {climateData ? (
-        <div className="flex w-full min-w-0 flex-col items-start gap-1">
-          <div className="flex w-full flex-wrap items-start justify-between gap-3">
-          <WidgetBigNumber
-            value={insideValue}
-            unit={tempUnit}
-            label={t('hero.inside', 'Inside')}
-          />
-          <Badge variant={hvacPill.variant} size="sm">{hvacPill.text}</Badge>
-          </div>
-          <ClimateAirflow active={hvacState === true && observationCurrent} compact={size.rows <= 2} />
-          <span className={`${dashboardTokens.metricLabel} mt-1.5`}>
-            {t('widget.outside', 'Outside')} {outsideValue != null ? `${outsideValue}${tempUnit}` : '—'}
-          </span>
-        </div>
+        packId !== 'classic' && ClimatePresentation
+          ? <ClimatePresentation appearance={PACK_APPEARANCES[packId]} headline={headline} status={status} airflow={airflow} outside={outside} setpoint={setpoint} />
+          : classic
       ) : (
         <EmptyState
           variant="informational"

@@ -47,4 +47,17 @@ export const CLIMATE_WIDGETS: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('../ClimateHistoryWidget')),
   },
+  {
+    id: 'new-cabin-comfort',
+    name: 'Cabin Comfort',
+    description: 'Observed cabin temperature, climate modes and seat comfort states',
+    nameKey: 'widgets.catalog.new-cabin-comfort.name',
+    descriptionKey: 'widgets.catalog.new-cabin-comfort.description',
+    icon: ThermometerSun,
+    category: 'climate',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../CabinComfortWidget')),
+  },
 ];

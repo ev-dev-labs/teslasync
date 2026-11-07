@@ -3,7 +3,7 @@ import { writeFile } from 'node:fs/promises';
 import type { MapConfig } from '../src/api/types';
 import type { FsdInsightsPeriod, FsdInsightsTotals } from '../src/types/fsd';
 import type { SignalHistoryResponse } from '../src/types/telemetry';
-import { catalogueAnalyticsSources, catalogueWire, installCatalogueRoutes, type CatalogueSources } from './dashboardCatalogueRemainingSources';
+import { catalogueAnalyticsSources, catalogueScheduleSignals, catalogueWire, installCatalogueRoutes, type CatalogueSources } from './dashboardCatalogueRemainingSources';
 import { catalogueOperationalSources } from './dashboardCatalogueOperationalSources';
 import { catalogueSystemSources } from './dashboardCatalogueSystemSources';
 import { fulfillApiFixture, resolveApiFixture, type MockApiController } from './mockApi';
@@ -111,16 +111,7 @@ function record(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === 'object' && !Array.isArray(value);
 }
 
-export async function installRemainingCatalogueSources(page: Page, mocks: MockApiController) {
-  const now = new Date().toISOString();
-  const sources: CatalogueSources = {
-    ...catalogueAnalyticsSources(now),
-    ...catalogueOperationalSources(now),
-    ...catalogueSystemSources(now),
-    '/system/map-config': { provider: 'free', api_key: '' } satisfies MapConfig,
-    '/alerts/rules': [],
-    '/notifications/channels': [],
-  };
+export async function installCatalogueSignalSources(page: Page, mocks: MockApiController, now: string) {
   const numericSignals = {
     BatteryLevel: { unit: '%', values: [69, 70, 71, 72] },
     ACChargingPower: { unit: 'W', values: [8000, 9000, 10000, 11000] },
@@ -130,14 +121,12 @@ export async function installRemainingCatalogueSources(page: Page, mocks: MockAp
   };
   const liveSignals = {
     Soc: { value: 72, timestamp: now },
-    ChargeLimitSoc: { value: 80, timestamp: now },
-    ScheduledChargingMode: { value: 'StartAt', timestamp: now },
-    ScheduledChargingPending: { value: true, timestamp: now },
-    ScheduledChargingStartTime: { value: now, timestamp: now },
+    ...catalogueScheduleSignals(now),
     ...Object.fromEntries(Object.entries(numericSignals).map(([name, { values }]) => [
       name, { value: values[values.length - 1], timestamp: now },
     ])),
   };
+  const sources: CatalogueSources = {};
   sources['/signals/7/available'] = {
     count: 1 + Object.keys(numericSignals).length,
     signals: [
@@ -166,6 +155,19 @@ export async function installRemainingCatalogueSources(page: Page, mocks: MockAp
       return fulfillApiFixture(route, mocks, { json: history });
     });
   }
+}
+
+export async function installRemainingCatalogueSources(page: Page, mocks: MockApiController) {
+  const now = new Date().toISOString();
+  await installCatalogueRoutes(page, mocks, {
+    ...catalogueAnalyticsSources(now),
+    ...catalogueOperationalSources(now),
+    ...catalogueSystemSources(now),
+    '/system/map-config': { provider: 'free', api_key: '' } satisfies MapConfig,
+    '/alerts/rules': [],
+    '/notifications/channels': [],
+  });
+  await installCatalogueSignalSources(page, mocks, now);
   await page.route('https://tile.openstreetmap.org/**', route => {
     if (!/\/\d+\/\d+\/\d+\.png$/.test(new URL(route.request().url()).pathname)) {
       throw new Error(`Unexpected catalogue tile request: ${route.request().url()}`);

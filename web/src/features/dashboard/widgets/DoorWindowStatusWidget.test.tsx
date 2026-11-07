@@ -214,13 +214,25 @@ describe('parseWindowState', () => {
     expect(parseWindowState('Unknown')).toBe('unknown');
     expect(parseWindowState('WindowStateUnknown')).toBe('unknown');
   });
+
+  it('does not interpret unrecognized strings containing state words as observations', () => {
+    for (const raw of ['Not closed', 'Not open', 'WindowStateUnknownClosed', 'UnrecognizedPartiallyOpen']) {
+      expect(parseWindowState(raw)).toBe('unknown');
+    }
+  });
 });
 
 describe('parseDoorStates', () => {
   it('does not turn unknown or unrecognized door enums into closed readings', () => {
-    for (const raw of ['Unknown', 'DoorStateUnknown', 'unrecognized']) {
+    for (const raw of ['Unknown', 'DoorStateUnknown', 'unrecognized', 'UnrecognizedOpenState', 'DriverFrontUnknownClosed']) {
       expect(Object.values(parseDoorStates(raw))).toEqual(['unknown', 'unknown', 'unknown', 'unknown']);
     }
+  });
+
+  it('retains a recognized door reading without inferring closed neighbors from a mixed unknown list', () => {
+    expect(parseDoorStates('DriverFront:Open,Unknown')).toEqual({
+      fl: 'open', fr: 'unknown', rl: 'unknown', rr: 'unknown',
+    });
   });
   it('coerces native booleans to all-open / all-closed', () => {
     expect(parseDoorStates(true)).toEqual({ fl: 'open', fr: 'open', rl: 'open', rr: 'open' });

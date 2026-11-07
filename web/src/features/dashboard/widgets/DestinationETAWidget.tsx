@@ -1,11 +1,15 @@
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigation2 } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
+import { CircleMarker, Popup } from '@/components/maps';
+import { Text } from '@/components/ui';
 import { useLocationSnapshotLatest, useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber } from './shared';
+import { WidgetBigNumber, WidgetMapView, WidgetStatGrid } from './shared';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -48,19 +52,58 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
   const destinationName = snapshot?.destination_name ?? '—';
 
   const displayDistance = milesToArrival != null ? toDistanceDisplay(milesToArrival) : null;
-  // Only blank the whole widget on an INITIAL load failure — i.e. when there is
-  // no cached snapshot to fall back on. This widget refetches on an interval, so
-  // once a snapshot is on screen a transient background-refetch error must not
-  // wipe otherwise-valid numbers; it is surfaced through the freshness
-  // indicator's error state instead (WidgetShell forwards `isError` to
-  // <FreshnessDot>).
-  const blockingError = !snapshot && error ? String(error) : null;
+  const arrivalTime = !isCompact && isNavigating && minutesToArrival != null
+    ? formatTime(Date.now() + minutesToArrival * 60_000)
+    : null;
+  const destination = useMemo<[number, number]>(() => [
+    snapshot?.destination_lat ?? Number.NaN, snapshot?.destination_lon ?? Number.NaN,
+  ], [snapshot?.destination_lat, snapshot?.destination_lon]);
+  const hasDestination = Number.isFinite(destination[0]) && Number.isFinite(destination[1]) &&
+    Math.abs(destination[0]) <= 90 && Math.abs(destination[1]) <= 180 &&
+    (destination[0] !== 0 || destination[1] !== 0);
+  const noData = (
+    <EmptyState /* no-action: location comes from vehicle telemetry; the shared shell owns refresh */
+      icon={<Navigation2 className="h-5 w-5" />}
+      message={t('widget.destinationETA.noData', 'No location data')} className="py-4" />
+  );
+  const noNavigation = (
+    <EmptyState variant="informational" icon={<Navigation2 className="h-5 w-5" />}
+      message={t('widget.destinationETA.noNav', 'No active navigation')}
+      description={t('widget.destinationETA.noNavDescription', 'Start a route in the car to see distance and arrival time here.')}
+      className="py-4" />
+  );
+  const present = (classic: ReactNode) => (
+    <InstrumentPresentation family="map" compact={isCompact}
+      icon={isNavigating ? <Navigation2 /> : undefined}
+      context={isNavigating ? <Text as="p" variant="label" className="break-words" title={destinationName}>{destinationName}</Text> : undefined}
+      headline={isNavigating ? <WidgetBigNumber
+        value={minutesToArrival != null ? fmtNumber(minutesToArrival, 0) : null}
+        unit={t('widget.destinationETA.min', 'min')}
+        label={t('widget.destinationETA.eta', 'ETA')} animated={false} /> : undefined}
+      instrument={!isNavigating ? classic : !isCompact ? (
+        <WidgetMapView key={destination.join(',')} center={destination} isEmpty={!hasDestination}
+          ariaLabel={t('dashboardWidgets.maps.destinationETA.map', 'Destination map')}
+          emptyMessage={t('dashboardWidgets.maps.destinationETA.noCoordinates', 'Destination coordinates unavailable')}>
+          {/* Only the reported destination is plotted; the snapshot has no route geometry. */}
+          <CircleMarker center={destination} radius={7}>
+            <Popup>{destinationName}</Popup>
+          </CircleMarker>
+        </WidgetMapView>
+      ) : undefined}
+      details={isNavigating && !isCompact ? <WidgetStatGrid cols={2} stats={[
+        { label: t('dashboardWidgets.maps.destinationETA.arrival', 'Arrival'), value: arrivalTime },
+        { label: t('widget.destinationETA.remaining', 'Remaining'),
+          value: displayDistance != null ? `${fmtNumber(displayDistance, 0)} ${distanceUnit}` : null },
+      ]} /> : undefined}>
+      {classic}
+    </InstrumentPresentation>
+  );
 
   const shellProps = {
     title: t('widget.destinationETA.title', 'Destination ETA'),
     loading: isLoading,
     dataState,
-    error: blockingError,
+    error: dataState.fatalError ? String(dataState.fatalError) : null,
     updatedAt: dataUpdatedAt ?? 0,
     isFetching,
     isStale,
@@ -73,11 +116,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
     if (!snapshot) {
       return (
         <WidgetShell {...shellProps}>
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<Navigation2 className="h-5 w-5" />}
-            message={t('widget.destinationETA.noData', 'No location data')}
-            className="py-4"
-          />
+          {present(noData)}
         </WidgetShell>
       );
     }
@@ -85,24 +124,18 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
     if (isNavigating) {
       return (
         <WidgetShell {...shellProps}>
-          <WidgetBigNumber
+          {present(<WidgetBigNumber
             value={minutesToArrival != null ? fmtNumber(minutesToArrival, 0) : null}
             unit={t('widget.destinationETA.min', 'min')}
             label={t('widget.destinationETA.eta', 'ETA')}
-          />
+          />)}
         </WidgetShell>
       );
     }
 
     return (
       <WidgetShell {...shellProps}>
-        <EmptyState
-          variant="informational"
-          icon={<Navigation2 className="h-5 w-5" />}
-          message={t('widget.destinationETA.noNav', 'No active navigation')}
-          description={t('widget.destinationETA.noNavDescription', 'Start a route in the car to see distance and arrival time here.')}
-          className="py-4"
-        />
+        {present(noNavigation)}
       </WidgetShell>
     );
   }
@@ -114,11 +147,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
         icon={<Navigation2 className="h-3.5 w-3.5 text-theme-accent" />}
         {...shellProps}
       >
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Navigation2 className="h-5 w-5" />}
-          message={t('widget.destinationETA.noData', 'No location data')}
-          className="py-4"
-        />
+        {present(noData)}
       </WidgetShell>
     );
   }
@@ -129,28 +158,18 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
         icon={<Navigation2 className="h-3.5 w-3.5 text-theme-accent" />}
         {...shellProps}
       >
-        <EmptyState
-          variant="informational"
-          icon={<Navigation2 className="h-5 w-5" />}
-          message={t('widget.destinationETA.noNav', 'No active navigation')}
-          description={t('widget.destinationETA.noNavDescription', 'Start a route in the car to see distance and arrival time here.')}
-          className="py-4"
-        />
+        {present(noNavigation)}
       </WidgetShell>
     );
   }
 
   // Navigating — full layout
-  const arrivalTime = minutesToArrival != null
-    ? formatTime(Date.now() + minutesToArrival * 60_000)
-    : null;
-
   return (
     <WidgetShell
       icon={<Navigation2 className="h-3.5 w-3.5 text-theme-accent" />}
       {...shellProps}
     >
-      <div className="flex h-full min-h-0 flex-col justify-center gap-3 px-1">
+      {present(<div className="flex h-full min-h-0 flex-col justify-center gap-3 px-1">
         <div className={`${dashboardTokens.metricLabel} truncate`} title={destinationName}>
           {destinationName}
         </div>
@@ -175,8 +194,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
             {displayDistance != null ? `${fmtNumber(displayDistance, 0)} ${distanceUnit}` : '—'}
           </span>
         </div>
-
-      </div>
+      </div>)}
     </WidgetShell>
   );
 }

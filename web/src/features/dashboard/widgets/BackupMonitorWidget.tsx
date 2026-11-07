@@ -15,6 +15,7 @@ import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { WidgetStatGrid } from './shared';
 import { severityTokens } from '@/lib/tokens';
+import StatusPresentation from './designPacks/StatusPresentation';
 
 type BackupStatus = 'completed' | 'failed' | 'running' | 'queued';
 
@@ -123,6 +124,24 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
 
   // ── Compact layout (1×2) ──
   if (isCompact) {
+    const headline = <div className="flex items-center gap-3 min-h-[44px]">
+      <span
+        role="img"
+        aria-label={statusLabel(latestStatus, t)}
+        className={cn(
+          'inline-block h-2.5 w-2.5 rounded-full shadow-[0_0_6px] shrink-0',
+          statusDotColor(latestStatus),
+        )}
+      />
+      <div className="min-w-0">
+        <Text as="p" variant="metricValue" className="min-w-0 [overflow-wrap:anywhere]">
+          <TimeStamp value={latestRun?.completedAt ?? latestRun?.createdAt ?? null} format="relative" />
+        </Text>
+        <Caption className="block [overflow-wrap:anywhere]">
+          {t('widget.backupMonitor.lastBackup', 'Last backup')}
+        </Caption>
+      </div>
+    </div>;
     return (
       <WidgetShell {...shellProps}>
         {runs.length === 0 && !isLoading ? (
@@ -132,38 +151,53 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
             className="py-4"
           />
         ) : (
-          <div className="flex items-center gap-3 min-h-[44px]">
-            <span
-              role="img"
-              aria-label={statusLabel(latestStatus, t)}
-              className={cn(
-                'inline-block h-2.5 w-2.5 rounded-full shadow-[0_0_6px] shrink-0',
-                statusDotColor(latestStatus),
-              )}
-            />
-            <div className="min-w-0">
-              <Text as="p" variant="metricValue" className="min-w-0 [overflow-wrap:anywhere]">
-                <TimeStamp
-                  value={latestRun?.completedAt ?? latestRun?.createdAt ?? null}
-                  format="relative"
-                />
-              </Text>
-              <Caption className="block [overflow-wrap:anywhere]">
-                {t('widget.backupMonitor.lastBackup', 'Last backup')}
-              </Caption>
-            </div>
-          </div>
+          <StatusPresentation compact headline={headline} icon={<HardDrive className="size-6" aria-hidden="true" />} details={null}>
+            {headline}
+          </StatusPresentation>
         )}
       </WidgetShell>
     );
   }
 
-  // ── Standard (2×2) and Wide (2×4) layouts ──
+  const headline = <div className="flex min-w-0 flex-wrap items-end justify-between gap-2">
+    <div className="min-w-0">
+      <Caption className="block">{t('widget.backupMonitor.lastBackup', 'Last backup')}</Caption>
+      <Text variant="metricValue" className="block min-w-0 [overflow-wrap:anywhere]">
+        <TimeStamp value={latestRun?.completedAt ?? latestRun?.createdAt ?? null} format="absolute" />
+      </Text>
+    </div>
+    <Badge variant={statusVariant(latestStatus)}>{statusLabel(latestStatus, t)}</Badge>
+  </div>;
+  const details = <>
+    <WidgetStatGrid cols={2} stats={[
+      { label: t('widget.backupMonitor.size', 'Backup size'), value: fmtBytes(latestRun?.fileSize) },
+      { label: t('widget.backupMonitor.type', 'Type'), value: latestRun?.backupType ?? '—' },
+    ]} />
+    {isWide && (
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
+        <Subhead className="mb-1">{t('widget.backupMonitor.recentRuns', 'Recent runs')}</Subhead>
+        <KVList layout="responsive" wrap items={sortedRuns.slice(0, 5).map((run) => ({
+          id: run.id,
+          leading: (
+            <span aria-hidden="true" className={cn('inline-block h-2 w-2 rounded-full shrink-0', statusDotColor(run.status))} />
+          ),
+          label: (
+            <span className="flex min-w-0 flex-col gap-1">
+              <TimeStamp value={run.completedAt ?? run.createdAt} format="absolute" />
+              <Caption>
+                {fmtBytes(run.fileSize)}
+                {knownNumber(run.durationMs) != null ? ` · ${formatDurationMs(run.durationMs)}` : ''}
+              </Caption>
+            </span>
+          ),
+          value: <Badge variant={statusVariant(run.status)}>{statusLabel(run.status, t)}</Badge>,
+        }))} />
+      </div>
+    )}
+  </>;
+
   return (
-    <WidgetShell
-      icon={<HardDrive className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
-      {...shellProps}
-    >
+    <WidgetShell icon={<HardDrive className="h-3.5 w-3.5 text-[var(--text-secondary)]" />} {...shellProps}>
       {runs.length === 0 && !isLoading ? (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<HardDrive className="h-5 w-5" />}
@@ -171,53 +205,9 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
           className="py-4"
         />
       ) : (
-        <div className="flex flex-col gap-3 h-full">
-          {/* One sourced headline, then the quiet metrics from the same run. */}
-          <div className="flex min-w-0 flex-wrap items-end justify-between gap-2">
-            <div className="min-w-0">
-              <Caption className="block">{t('widget.backupMonitor.lastBackup', 'Last backup')}</Caption>
-              <Text variant="metricValue" className="block min-w-0 [overflow-wrap:anywhere]">
-                <TimeStamp
-                  value={latestRun?.completedAt ?? latestRun?.createdAt ?? null}
-                  format="absolute"
-                />
-              </Text>
-            </div>
-            <Badge variant={statusVariant(latestStatus)}>
-              {statusLabel(latestStatus, t)}
-            </Badge>
-          </div>
-
-          <WidgetStatGrid cols={2} stats={[
-            { label: t('widget.backupMonitor.size', 'Backup size'), value: fmtBytes(latestRun?.fileSize) },
-            { label: t('widget.backupMonitor.type', 'Type'), value: latestRun?.backupType ?? '—' },
-          ]} />
-
-          {/* Wide layout: last 5 backup runs */}
-          {isWide && (
-            <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
-              <Subhead className="mb-1">
-                {t('widget.backupMonitor.recentRuns', 'Recent runs')}
-              </Subhead>
-              <KVList layout="responsive" wrap items={sortedRuns.slice(0, 5).map((run) => ({
-                id: run.id,
-                leading: (
-                  <span aria-hidden="true" className={cn('inline-block h-2 w-2 rounded-full shrink-0', statusDotColor(run.status))} />
-                ),
-                label: (
-                  <span className="flex min-w-0 flex-col gap-1">
-                    <TimeStamp value={run.completedAt ?? run.createdAt} format="absolute" />
-                    <Caption>
-                      {fmtBytes(run.fileSize)}
-                      {knownNumber(run.durationMs) != null ? ` · ${formatDurationMs(run.durationMs)}` : ''}
-                    </Caption>
-                  </span>
-                ),
-                value: <Badge variant={statusVariant(run.status)}>{statusLabel(run.status, t)}</Badge>,
-              }))} />
-            </div>
-          )}
-        </div>
+        <StatusPresentation headline={headline} icon={<HardDrive className="size-6" aria-hidden="true" />} details={details}>
+          <div className="flex flex-col gap-3 h-full">{headline}{details}</div>
+        </StatusPresentation>
       )}
     </WidgetShell>
   );

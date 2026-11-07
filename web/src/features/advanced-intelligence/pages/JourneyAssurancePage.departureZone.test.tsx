@@ -260,9 +260,11 @@ describe('Journey departure display-zone contract', () => {
     expect(departureInput()).toHaveValue('2026-02-20T08:45');
     expect(payload().departure_at).toBe(submittedByMode.vehicle);
     expect(payload(1).departure_at).toBe('2026-02-20T07:45:00.000Z');
-    for (const title of ['Journey scenario', 'Readiness and arrival range', 'Readiness factors', 'Evidence, quality, and limitations']) {
-      expect(screen.getByRole('heading', { name: title })).toBeVisible();
-    }
+    await waitFor(() => {
+      for (const title of ['Journey scenario', 'Readiness and arrival range', 'Readiness factors', 'Evidence, quality, and limitations']) {
+        expect(screen.getByRole('heading', { name: title })).toBeVisible();
+      }
+    });
     expect(screen.getByText('Observed charge, not readiness proof.')).toBeVisible();
     expect(screen.getByText('Unknown weather is not zero degrees.')).toBeVisible();
     assertOperationalMetricUnavailable(screen.getByTestId('advanced-intelligence-journey-brief'), 'Energy required');

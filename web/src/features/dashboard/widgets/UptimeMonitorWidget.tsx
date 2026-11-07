@@ -7,6 +7,7 @@ import { useSystemHealth } from '@/api/hooks/useAdmin';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatusGrid, type StatusCell } from './shared';
 import type { WidgetProps } from './types';
+import StatusPresentation from './designPacks/StatusPresentation';
 
 const SERVICE_KEYS = ['database', 'mqtt', 'tesla_api', 'fleet_telemetry'] as const;
 type StatusKind = 'success' | 'warning' | 'danger' | 'unknown';
@@ -80,6 +81,15 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
     value: service.value,
   }));
   const healthyCount = services.filter((service) => service.kind === 'success').length;
+  const headline = <WidgetBigNumber
+    value={data ? `${healthyCount}/${services.length}` : null}
+    label={t('widget.uptime.servicesHealthy', 'Services healthy')}
+  />;
+  const details = <WidgetStatusGrid
+    cells={cells}
+    cols={size.cols >= 3 ? 4 : 2}
+    emptyMessage={t('widget.uptime.noData', 'No system health data')}
+  />;
 
   return (
     <WidgetShell
@@ -94,20 +104,9 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
       isError={isError}
       onRefresh={refetch}
     >
-      {isCompact ? (
-        <div className="flex h-full items-center justify-center">
-          <WidgetBigNumber
-            value={data ? `${healthyCount}/${services.length}` : null}
-            label={t('widget.uptime.servicesHealthy', 'Services healthy')}
-          />
-        </div>
-      ) : (
-        <WidgetStatusGrid
-          cells={cells}
-          cols={size.cols >= 3 ? 4 : 2}
-          emptyMessage={t('widget.uptime.noData', 'No system health data')}
-        />
-      )}
+      <StatusPresentation compact={isCompact} headline={headline} icon={<Activity className="size-6" aria-hidden="true" />} details={isCompact ? null : details}>
+        {isCompact ? <div className="flex h-full items-center justify-center">{headline}</div> : details}
+      </StatusPresentation>
       {!data && !isLoading && (
         <EmptyState
           variant="informational"

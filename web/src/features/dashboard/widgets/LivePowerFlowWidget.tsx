@@ -2,19 +2,24 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sun, Battery, Home, Zap } from 'lucide-react';
 import { EmptyState, Skeleton } from '@/components/feedback';
+import { Caption } from '@/components/ui';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useTeslaEnergyLiveStatus, useTeslaEnergySites } from '@/api/hooks/useEnergy';
-import { WidgetFlowDiagram, type FlowNode, type FlowArrow } from './shared';
+import { WidgetBigNumber, WidgetFlowDiagram, WidgetStatGrid, type FlowNode, type FlowArrow } from './shared';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 
-export default function LivePowerFlowWidget(_props: WidgetProps) {
+export default function LivePowerFlowWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { formatPower } = useUnits();
+  const { formatDateTime } = useDateFormat();
   const { fmtInt } = useNumberFormatting();
+  const compact = size.cols === 1 || size.rows === 1;
 
   const {
     data: sites,
@@ -57,7 +62,9 @@ export default function LivePowerFlowWidget(_props: WidgetProps) {
   const batteryW = knownNumber(liveStatus?.battery_power);
   const gridW = knownNumber(liveStatus?.grid_power);
   const homeW = knownNumber(liveStatus?.load_power);
-  const batteryPercent = knownNumber(liveStatus?.percentage_charged);
+  const measuredBatteryPercent = knownNumber(liveStatus?.percentage_charged);
+  const batteryPercent = measuredBatteryPercent != null && measuredBatteryPercent >= 0 && measuredBatteryPercent <= 100
+    ? measuredBatteryPercent : null;
 
   // Diagram weights use kW magnitudes; labels use the user's formatter.
   const solarKw = solarW == null ? null : solarW / 1000;
@@ -79,7 +86,7 @@ export default function LivePowerFlowWidget(_props: WidgetProps) {
   }, {
     provenance: 'cached',
     maxAgeMs: hasData ? 120_000 : undefined,
-    partial: hasData && [solarW, batteryW, gridW, homeW].some((value) => value == null),
+    partial: hasData && [solarW, batteryW, gridW, homeW, batteryPercent].some((value) => value == null),
   });
 
   const nodes = useMemo<FlowNode[]>(() => {
@@ -207,6 +214,12 @@ export default function LivePowerFlowWidget(_props: WidgetProps) {
 
   // No energy sites linked
   if (!hasSites && !isLoading) {
+    const empty = (
+      <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+        message={t('widget.livePowerFlow.noSite', 'No Tesla energy site linked')}
+        className="py-8"
+      />
+    );
     return (
       <WidgetShell
         title={t('widget.livePowerFlow.title', 'Live power flow')}
@@ -217,13 +230,48 @@ export default function LivePowerFlowWidget(_props: WidgetProps) {
         isError={sitesIsError}
         onRefresh={handleRefresh}
       >
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          message={t('widget.livePowerFlow.noSite', 'No Tesla energy site linked')}
-          className="py-8"
-        />
+        <InstrumentPresentation family="siteflow" compact={compact} instrument={empty}>
+          {empty}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
+
+  const diagram = (
+    <div className="widget-flow-frame flex h-full min-h-0 w-full items-center" data-motion-suppressed={!hasFreshFlow || undefined}>
+      <WidgetFlowDiagram
+        nodes={nodes}
+        arrows={arrows}
+        compact={false}
+        ariaLabel={`${t('widget.livePowerFlow.title', 'Live power flow')}: ${nodes.map((node) => `${node.label} ${node.formattedValue}`).join(', ')}; ${arrows.map((arrow) => `${nodes.find((node) => node.id === arrow.from)?.label} → ${nodes.find((node) => node.id === arrow.to)?.label}`).join(', ')}`}
+        emptyMessage={t('widget.livePowerFlow.noData', 'No live power data')}
+      />
+    </div>
+  );
+  const context = (
+    <div className="flex min-w-0 flex-col gap-1">
+      <Caption>{t('widget.energySiteInfo.title', 'Energy site')} · {(sites ?? [])[0]?.site_name || '—'}</Caption>
+      {Number.isFinite(observedAt) && observedAt > 0 && (
+        <Caption><time dateTime={liveStatus?.timestamp}>{t('dashboardWidgets.energy.livePowerFlow.observedAt', 'Observed {{time}}', {
+          time: formatDateTime(liveStatus?.timestamp),
+        })}</time></Caption>
+      )}
+      {hasData && !hasFreshFlow && (
+        <Caption>{t('dashboardWidgets.energy.livePowerFlow.snapshotNotCurrent', 'Snapshot is stale or its observation time is unverified.')}</Caption>
+      )}
+    </div>
+  );
+  const details = (
+    <div className="space-y-3">
+      <WidgetStatGrid cols={compact ? 2 : 4} stats={[
+        { label: t('widget.livePowerFlow.home', 'Home'), value: homeW == null ? null : formatPower(homeW) },
+        { label: t('widget.livePowerFlow.grid', 'Grid'), value: gridW == null ? null : formatPower(gridW) },
+        { label: t('widget.livePowerFlow.battery', 'Battery'), value: batteryW == null ? null : formatPower(batteryW) },
+        { label: t('dashboardWidgets.energy.livePowerFlow.batteryLevel', 'Battery level'), value: batteryPercent == null ? null : `${fmtInt(batteryPercent)}%` },
+      ]} />
+      <Caption as="p">{t('dashboardWidgets.energy.livePowerFlow.siteConnections', 'Connections show measured flow at the site, not source-to-load allocation.')}</Caption>
+    </div>
+  );
 
   return (
     <WidgetShell
@@ -237,15 +285,13 @@ export default function LivePowerFlowWidget(_props: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <div className="widget-flow-frame flex h-full min-h-0 w-full items-center" data-motion-suppressed={!hasFreshFlow || undefined}>
-        <WidgetFlowDiagram
-          nodes={nodes}
-          arrows={arrows}
-          compact={false}
-          ariaLabel={`${t('widget.livePowerFlow.title', 'Live power flow')}: ${nodes.map((node) => `${node.label} ${node.formattedValue}`).join(', ')}; ${arrows.map((arrow) => `${nodes.find((node) => node.id === arrow.from)?.label} → ${nodes.find((node) => node.id === arrow.to)?.label}`).join(', ')}`}
-          emptyMessage={t('widget.livePowerFlow.noData', 'No live power data')}
-        />
-      </div>
+      <InstrumentPresentation family="siteflow" compact={compact} context={context}
+        headline={<WidgetBigNumber value={solarW == null ? null : formatPower(solarW)}
+          label={solarW != null && solarW >= 0 ? t('widget.solarProduction.title', 'Solar production') : t('widget.livePowerFlow.solar', 'Solar')}
+          animated={false} />}
+        icon={<Sun />} instrument={diagram} details={details}>
+        {diagram}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

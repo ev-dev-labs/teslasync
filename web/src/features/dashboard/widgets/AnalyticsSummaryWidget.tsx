@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/feedback';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
+import StatStatusPresentation from './designPacks/StatStatusPresentation';
 
 const METERS_PER_KM = 1000;
 const KM_PER_MILE = 1.609344;
@@ -100,11 +101,9 @@ export default function AnalyticsSummaryWidget({ size, config }: WidgetProps) {
     >
       {retained ? (
         <section aria-label={t('widget.analyticsSummary.summary.title', 'Analytics operating summary')} data-testid="analytics-summary">
-          <WidgetStatGrid
-            stats={stats}
-            cols={size.cols >= 4 ? 4 : 2}
-            maxPerRow={size.cols >= 4 ? 4 : 2}
-          />
+          <StatStatusPresentation stats={stats} cols={size.cols >= 4 ? 4 : 2} maxPerRow={size.cols >= 4 ? 4 : 2} compact={size.cols <= 1} icon={<BarChart3 className="size-6" aria-hidden="true" />}>
+            <WidgetStatGrid stats={stats} cols={size.cols >= 4 ? 4 : 2} maxPerRow={size.cols >= 4 ? 4 : 2} />
+          </StatStatusPresentation>
         </section>
       ) : (
         <EmptyState

@@ -54,6 +54,38 @@ The Digital Twin fits its photo and wheel positions to the actual available pane
 
 Map widgets share the mobile panel's available height and recalculate their viewport when that container resizes, keeping locations and clusters aligned with the visible map. Geofence maps use the shared CSS vehicle marker rather than relying on Leaflet's default image-path detection.
 
+## Widget design packs
+
+Open **Settings → Appearance & experience → Widget design packs** to choose
+**Classic**, **Studio**, **Elevated**, **Precision**, **Owner**, **Iconic**,
+**Expressive**, or **Pixel**. All 132 widgets use the selected appearance;
+Classic retains their original presentation. Changing a pack does not replace
+your vehicle photos, saved dashboards, data sources, configuration, or actions.
+
+**Preview** opens inert synthetic examples of the shared vehicle, battery,
+history, status, and command presentations. Preview buttons never send vehicle
+commands or save a selection. **Use pack** applies the appearance to dashboards
+in this browser profile on the current server. Signed-in accounts have separate
+selections; deployments in open authentication mode do not require an account.
+Server verification or browser-storage failures retain the previous selection
+and expose **Retry preference**. The preference does not roam with dashboard
+layouts.
+
+The same Appearance section offers 20 practical accent colors plus **Custom**.
+Saved custom colors are retained. Accent, theme, and widget pack are independent
+preferences.
+
+The added diagnostic widgets expose live axle temperatures, high-voltage
+observations, cabin comfort, charge-port readiness, driver assistance, tire
+warnings, arrival estimates, Powershare, unit context, signal exploration, and
+signal provenance. A configured subscription or route is not proof that a
+vehicle supports a signal or has applied that configuration. Missing readings
+remain unknown, timestamps retain their source meaning, and unverified
+Powershare measurements remain raw rather than receiving an assumed unit.
+Journey diagrams without recorded geometry are labeled as schematics, not GPS
+routes. MQTT throughput history is limited to samples observed in the current
+browser session.
+
 ## Multiple dashboards
 
 Use **New blank layout** or **New from template** in the Personal workspace layout menu to open one creation flow. Choose **Blank Dashboard** to start with no widgets, or search and preview a starter such as Operations Desk, Battery Care, Winter Ready, Daily Commuter, or Fleet Manager; name it before creating it. When the `nl-dashboard-composer` Helix feature is enabled, you can also describe the layout in the creation dialog. Helix proposes up to 16 widgets from the available catalog; review the responsive preview and name, then choose **Create layout** to save it. Helix never replaces the current layout automatically. The starter creates its widgets and responsive grid positions together. **Add Widget** adds individual widgets to the current layout instead. The **Personal workspace** menu also lets you switch, rename, and duplicate layouts; **Customize** reveals the drag handles and always-visible **Arrange**, settings, and remove controls. **Auto Arrange** fills the earliest available cells at each breakpoint without resetting widget widths or heights. Each dashboard has its own widgets and layout. Common patterns:

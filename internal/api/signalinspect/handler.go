@@ -574,12 +574,17 @@ func buildLiveEntry(name string, v *signal.Value, now time.Time) map[string]inte
 
 // resolveLiveKind picks the canonical protomodel.ValueKind name for a
 // signal observed in the live store. The vendored proto is the
-// authority for any field present in protomodel.SignalsByName; for
+// authority for scalar fields present in protomodel.SignalsByName; for
 // codec-flattened compound children (e.g. Latitude / Longitude), which
 // are NOT in SignalsByName, the kind is inferred from the Go type of
-// the raw value because the codec emits them as typed primitives.
+// the raw value because the codec emits them as typed primitives. Time
+// compounds retain their parent name but also become a scalar after decoding.
 func resolveLiveKind(name string, raw interface{}) string {
-	if meta, ok := protomodel.SignalsByName[name]; ok && meta != nil {
+	if meta, ok := protomodel.SignalsByName[name]; ok && meta != nil && !meta.IsCompound {
+		// The codec canonicalizes some enum fields, including seatbelts, to booleans.
+		if _, ok := raw.(bool); ok && meta.ValueKind == protomodel.ValueKindEnum {
+			return protomodel.ValueKindBool.String()
+		}
 		return meta.ValueKind.String()
 	}
 	switch raw.(type) {

@@ -6,8 +6,12 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDashboardChargingHistory } from '@/api/hooks/useCharging';
 import { deriveDataState, knownNumber, sumKnown } from '@/api/dataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { WidgetChartSummary, type ChartSummaryStat } from './shared';
+import { Caption } from '@/components/ui';
+import { WidgetBigNumber, WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
+import type { PackId } from './designPacks/types';
 import type { WidgetProps } from './types';
 import type { ChargingSession } from '@/api/types';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
@@ -47,9 +51,21 @@ const CHARGER_SERIES: Record<ChartChargerType, string> = {
   unknown: dashboardTokens.chart.series[4],
 };
 
+const BAR_RADII: Record<PackId, [number, number, number, number]> = {
+  classic: [4, 4, 0, 0],
+  v1: [7, 7, 3, 3],
+  v2: [8, 8, 4, 4],
+  v3: [6, 6, 2, 2],
+  v4: [7, 7, 3, 3],
+  v5: [4, 4, 0, 0],
+  v6: [16, 16, 5, 5],
+  v7: [2, 2, 0, 0],
+};
+
 export default function ChargeSessionChartWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtNumber: fmt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const packId = usePackPresentation();
   const vehiclesQuery = useVehicles();
   const { data: vehicles } = vehiclesQuery;
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -77,6 +93,11 @@ export default function ChargeSessionChartWidget({ vehicleId, size, config }: Wi
   );
 
   const hasData = chartData.length > 0;
+  const dataState = sessions ? deriveDataState(query, {
+    provenance: 'historical',
+    partial: chartData.some(point => point.energy == null),
+    unavailable: !hasData,
+  }) : undefined;
   const isCompact = size.cols <= 1 && size.rows <= 1;
   const isWide = size.cols >= 3;
   const tick = isWide ? axisTick : axisTickSm;
@@ -95,45 +116,56 @@ export default function ChargeSessionChartWidget({ vehicleId, size, config }: Wi
     ];
   }, [chartData, hasData, t, unitPrefs.energy, fmt]);
 
+  const sourceStats: ChartSummaryStat[] = useMemo(() => {
+    const groups: { type: ChartChargerType; types: ChartChargerType[] }[] = [
+      { type: 'home', types: ['home', 'ac'] },
+      { type: 'dc', types: ['dc', 'supercharger'] },
+      ...(chartData.some(point => point.type === 'unknown')
+        ? [{ type: 'unknown' as const, types: ['unknown' as const] }] : []),
+    ];
+    return groups.map(({ type, types }) => {
+      const points = chartData.filter(point => types.includes(point.type));
+      const total = points.some(point => point.energy == null) ? null : sumKnown(points.map(point => point.energy));
+      return {
+        label: t(`widget.chargeSessionChart.type.${type}`, CHARGER_TYPE_LABEL[type]),
+        value: total == null ? null : fmt(total),
+        unit: unitPrefs.energy,
+      };
+    });
+  }, [chartData, fmt, t, unitPrefs.energy]);
+  const latest = chartData[chartData.length - 1];
+  const compactBody = (
+    <WidgetChartSummary
+      compact
+      isEmpty={!hasData}
+      emptyMessage={t('widget.chargeSessionChart.empty', 'No charge sessions yet')}
+      emptyIcon={<Zap className="h-5 w-5" />}
+      stats={stats}
+      chart={null}
+    />
+  );
+
   if (isCompact) {
     return (
       <WidgetShell
         title={t('widget.chargeSessionChart.title', 'Charge Session Chart')}
         loading={isLoading && !sessions}
         error={!sessions && error ? String(error) : null}
-        dataState={sessions ? deriveDataState(query, { provenance: 'historical', partial: chartData.some(d => d.energy == null) }) : undefined}
+        dataState={dataState}
         updatedAt={dataUpdatedAt}
         isFetching={isFetching}
         isStale={isStale}
         isError={isError}
         onRefresh={handleRefresh}
       >
-        <WidgetChartSummary
-          compact
-          isEmpty={!hasData}
-          emptyMessage={t('widget.chargeSessionChart.empty', 'No charge sessions yet')}
-          emptyIcon={<Zap className="h-5 w-5" />}
-          stats={stats}
-          chart={null}
-        />
+        <InstrumentPresentation family="bars" compact headline={compactBody} icon={<Zap />}>
+          {compactBody}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
 
-  return (
-    <WidgetShell
-      title={t('widget.chargeSessionChart.title', 'Charge Session Chart')}
-      icon={<Zap className="h-3.5 w-3.5 text-emerald-400" />}
-      loading={isLoading && !sessions}
-      error={!sessions && error ? String(error) : null}
-      dataState={sessions ? deriveDataState(query, { provenance: 'historical', partial: chartData.some(d => d.energy == null) }) : undefined}
-      updatedAt={dataUpdatedAt}
-      isFetching={isFetching}
-      isStale={isStale}
-      isError={isError}
-      onRefresh={handleRefresh}
-      noPadding
-    >
+  const renderChartBody = (redesigned = false) => (
       <div className="min-h-0 flex-1 px-4 pb-3">
         <WidgetChartSummary
           isEmpty={!hasData}
@@ -162,6 +194,7 @@ export default function ChargeSessionChartWidget({ vehicleId, size, config }: Wi
                   { key: 'type', label: t('widget.chargeSessionChart.chargerType', 'Charger type') },
                 ]}
                 className="min-h-0 flex-1"
+                height={redesigned ? 220 : undefined}
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
@@ -183,7 +216,7 @@ export default function ChargeSessionChartWidget({ vehicleId, size, config }: Wi
                       labelFormatter={(label: string) => label}
                       cursor={{ fill: chartTokens.gridStroke }}
                     />
-                    <Bar dataKey="energy" radius={[4, 4, 0, 0]} maxBarSize={32}>
+                    <Bar dataKey="energy" radius={BAR_RADII[redesigned ? packId : 'classic']} maxBarSize={redesigned ? packId === 'v2' ? 46 : 42 : 32}>
                       {chartData.map((d, i) => (
                         <Cell key={i} fill={CHARGER_SERIES[d.type]} />
                       ))}
@@ -195,6 +228,40 @@ export default function ChargeSessionChartWidget({ vehicleId, size, config }: Wi
           }
         />
       </div>
+  );
+
+  return (
+    <WidgetShell
+      title={t('widget.chargeSessionChart.title', 'Charge Session Chart')}
+      icon={<Zap className="h-3.5 w-3.5 text-emerald-400" />}
+      loading={isLoading && !sessions}
+      error={!sessions && error ? String(error) : null}
+      dataState={dataState}
+      updatedAt={dataUpdatedAt}
+      isFetching={isFetching}
+      isStale={isStale}
+      isError={isError}
+      onRefresh={handleRefresh}
+      noPadding
+    >
+      <InstrumentPresentation
+        family="bars"
+        icon={<Zap />}
+        headline={<WidgetBigNumber
+          value={latest?.energy == null ? null : fmt(latest.energy)}
+          unit={unitPrefs.energy}
+          label={t('dashboardWidgets.charging.chargeSessionChart.latestSession', 'Latest session')}
+          subtitle={latest?.label}
+          animated={false}
+        />}
+        instrument={renderChartBody(true)}
+        details={<div className="space-y-2 px-4 pb-3">
+          <Caption>{t('dashboardWidgets.charging.chargeSessionChart.byChargerType', 'Energy by charger type')}</Caption>
+          <WidgetChartSummary compact stats={sourceStats} chart={null} />
+        </div>}
+      >
+        {renderChartBody()}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

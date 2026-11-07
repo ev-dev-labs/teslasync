@@ -11,13 +11,15 @@ import { useDateLabels } from '@/hooks/useDateLabels';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
-import { WidgetDetailCard, type DetailEntry } from './shared';
+import { Caption, IconButton } from '@/components/ui';
+import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
 import { WidgetShell } from './WidgetShell';
-import { IconButton } from '@/components/ui/IconButton';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { WidgetJourneyDiagram } from './shared/WidgetJourneyDiagram';
 
-export default function RecentDrivesWidget({ vehicleId, config }: WidgetProps) {
+export default function RecentDrivesWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
@@ -76,6 +78,15 @@ export default function RecentDrivesWidget({ vehicleId, config }: WidgetProps) {
   const trust = useDataState({
     data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch,
   }, { provenance: 'historical' });
+  const latest = entries[0];
+  const content = (
+    <WidgetDetailCard
+      entries={entries}
+      compact
+      emptyIcon={<Route className="h-5 w-5" aria-hidden="true" />}
+      emptyMessage={t('widget.noDrives', 'No recent drives')}
+    />
+  );
 
   return (
     <WidgetShell
@@ -95,12 +106,12 @@ export default function RecentDrivesWidget({ vehicleId, config }: WidgetProps) {
       }
       footer={driveList.length > 0 ? (
         <div className="flex min-w-0 items-center justify-between gap-2">
-          <span className="min-w-0 text-xs text-[var(--text-muted)]">
+          <Caption className="min-w-0">
             {t('widget.recentDrivesSummary', '{{count}} recent drives · {{total}}', {
               count: driveList.length,
               total: footerTotal,
             })}
-          </span>
+          </Caption>
           <Link
             to="/drives"
             className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-[var(--accent-primary)] hover:underline"
@@ -111,12 +122,24 @@ export default function RecentDrivesWidget({ vehicleId, config }: WidgetProps) {
         </div>
       ) : undefined}
     >
-      <WidgetDetailCard
-        entries={entries}
-        compact
-        emptyIcon={<Route className="h-5 w-5" aria-hidden="true" />}
-        emptyMessage={t('widget.noDrives', 'No recent drives')}
-      />
+      <InstrumentPresentation
+        family="map"
+        compact={size.cols <= 1 || size.rows === 1}
+        headline={latest ? (
+          <WidgetBigNumber value={latest.value} label={latest.label}
+            subtitle={latest.sublabel} animated={false} />
+        ) : undefined}
+        icon={latest ? <Route aria-hidden="true" /> : undefined}
+        instrument={<div className="min-w-0 space-y-2">
+          {latest && <WidgetJourneyDiagram
+            start={driveList[0]?.start_address?.trim() || null}
+            end={driveList[0]?.end_address?.trim() || null} />}
+          {content}
+        </div>}
+        details={latest?.hint ? <Caption className="block tabular-nums">{latest.hint}</Caption> : undefined}
+      >
+        {content}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

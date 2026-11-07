@@ -1,12 +1,14 @@
 package sse
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 )
 
 func TestEventHub_SubscribeAndBroadcast(t *testing.T) {
@@ -105,6 +107,22 @@ func TestEventHub_SignalChangeSequenceAndStreamEpoch(t *testing.T) {
 	restarted.BroadcastSignalChange(7, "VehicleSpeed", &signal.Value{Raw: float32(13), Timestamp: at})
 	if got := readSignalChange(t, restartedCh); got.Sequence != 1 {
 		t.Fatalf("restarted sequence = %d, want 1", got.Sequence)
+	}
+}
+
+func TestEventHub_CanonicalSeatbeltBooleans(t *testing.T) {
+	hub := NewEventHub()
+	ch, unsub := hub.Subscribe("seatbelt-client")
+	defer unsub()
+	at := time.Now().UTC()
+	for _, field := range []string{"DriverSeatBelt", "PassengerSeatBelt"} {
+		for _, value := range []bool{true, false} {
+			hub.BroadcastSignalChangeWithContext(context.Background(), 7, field, &signal.Value{Raw: value, Timestamp: at})
+			event := readSignalChange(t, ch)
+			if event.Kind != protomodel.ValueKindBool || event.Value != value {
+				t.Fatalf("%s must retain its canonical Boolean value: %+v", field, event)
+			}
+		}
 	}
 }
 

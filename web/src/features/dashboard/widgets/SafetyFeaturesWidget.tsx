@@ -10,6 +10,8 @@ import { WidgetDetailCard, type DetailEntry } from './shared';
 import type { StatusCell } from './shared';
 import type { WidgetProps } from './types';
 import type { SafetySnapshot } from '@/types/vehicle-systems';
+import { Caption, Text } from '@/components/ui';
+import StatusPresentation from './designPacks/StatusPresentation';
 
 export function boolStatus(val: boolean | null | undefined): StatusCell['status'] {
   if (val == null) return 'unknown';
@@ -102,7 +104,7 @@ export function buildEntries(
   });
 }
 
-export default function SafetyFeaturesWidget({ vehicleId }: WidgetProps) {
+export default function SafetyFeaturesWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const vehicleQuery = useVehicles();
   const { data: vehicles } = vehicleQuery;
@@ -127,6 +129,12 @@ export default function SafetyFeaturesWidget({ vehicleId }: WidgetProps) {
     if (vid > 0) void refetch();
     else void vehicleQuery.refetch();
   }, [refetch, vid, vehicleQuery.refetch]);
+  const details = <WidgetDetailCard
+    entries={entries}
+    compact={false}
+    emptyMessage={t('widget.safety.noData', 'No safety data')}
+    emptyIcon={<ShieldAlert className="h-5 w-5" />}
+  />;
 
   return (
     <WidgetShell
@@ -141,12 +149,14 @@ export default function SafetyFeaturesWidget({ vehicleId }: WidgetProps) {
       onRefresh={handleRefresh}
     >
       {data ? (
-        <WidgetDetailCard
-          entries={entries}
-          compact={false}
-          emptyMessage={t('widget.safety.noData', 'No safety data')}
-          emptyIcon={<ShieldAlert className="h-5 w-5" />}
-        />
+        <StatusPresentation
+          compact={size.cols <= 1}
+          headline={<div className="min-w-0"><Text variant="metricValue" className="block break-words">{entries[0]?.value ?? '—'}</Text><Caption>{entries[0]?.label}</Caption></div>}
+          icon={<ShieldAlert className="size-6" aria-hidden="true" />}
+          details={details}
+        >
+          {details}
+        </StatusPresentation>
       ) : (
         <WidgetDetailCard
           entries={[]}

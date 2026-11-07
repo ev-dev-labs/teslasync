@@ -2,11 +2,13 @@ import { type ReactNode, useMemo } from 'react';
 import { EmptyState } from '@/components/feedback';
 import { Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { usePackPresentation } from '../designPacks/PackBoundary';
+import { PACK_APPEARANCES } from '../designPacks/types';
 
 export interface FlowNode {
   id: string;
   label: string;
-  value: number;
+  value: number | null;
   formattedValue: string;
   icon?: ReactNode;
   position: 'top' | 'bottom' | 'left' | 'right' | 'center';
@@ -15,7 +17,7 @@ export interface FlowNode {
 export interface FlowArrow {
   from: string;
   to: string;
-  value: number;
+  value: number | null;
   active: boolean;
   color?: string;
   /**
@@ -50,7 +52,7 @@ const FLOW_DASH = '9 23';
 
 /** A link animates only when the caller marks it active AND it carries flow. */
 function isFlowing(arrow: FlowArrow): boolean {
-  return arrow.active && Number.isFinite(arrow.value) && arrow.value !== 0;
+  return arrow.active && arrow.value != null && Number.isFinite(arrow.value) && arrow.value !== 0;
 }
 
 function linkColor(arrow: FlowArrow, flowing: boolean): string {
@@ -85,6 +87,11 @@ export function WidgetFlowDiagram({
   emptyMessage = 'No flow data available',
   ariaLabel = 'Energy flow diagram',
 }: WidgetFlowDiagramProps) {
+  const packId = usePackPresentation();
+  const appearance = packId === 'classic' ? 'classic' : PACK_APPEARANCES[packId];
+  const circular = appearance === 'owner' || appearance === 'iconic';
+  const radius = appearance === 'pixel' ? 0 : appearance === 'precision' ? 3
+    : appearance === 'elevated' ? 18 : appearance === 'expressive' ? 14 : 10;
   const nodeMap = useMemo(
     () => new Map(nodes.map((n) => [n.id, n])),
     [nodes],
@@ -93,7 +100,7 @@ export function WidgetFlowDiagram({
   const visibleArrows = useMemo(() => {
     if (!compact) return arrows;
     return [...arrows]
-      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+      .sort((a, b) => Math.abs(b.value ?? 0) - Math.abs(a.value ?? 0))
       .slice(0, 3);
   }, [arrows, compact]);
 
@@ -115,6 +122,7 @@ export function WidgetFlowDiagram({
       className="widget-flow-diagram mx-auto h-full min-h-0 w-full"
       role="img"
       aria-label={ariaLabel}
+      data-widget-flow-appearance={appearance === 'classic' ? undefined : appearance}
     >
       {/* Nodes cover link endpoints so activity never runs across a reading. */}
       {visibleArrows.map((arrow) => {
@@ -172,18 +180,25 @@ export function WidgetFlowDiagram({
 
         return (
           <g key={node.id}>
-            <rect
+            {circular ? <circle
+              data-flow-node={node.id}
+              cx={pos.cx}
+              cy={pos.cy}
+              r={34}
+              className="fill-[var(--surface-1)] stroke-[var(--border-default)] forced-colors:fill-[Canvas] forced-colors:stroke-[CanvasText]"
+              strokeWidth={1.5}
+            /> : <rect
               data-flow-node={node.id}
               x={pos.cx - 48}
               y={pos.cy - 34}
               width={96}
               height={68}
-              rx={10}
+              rx={radius}
               className="fill-[var(--surface-1)] stroke-[var(--border-default)] forced-colors:fill-[Canvas] forced-colors:stroke-[CanvasText]"
               strokeWidth={1.5}
-            />
+            />}
 
-            <foreignObject x={pos.cx - 43} y={pos.cy - 31} width={86} height={62}>
+            <foreignObject x={pos.cx - (circular ? 29 : 43)} y={pos.cy - 31} width={circular ? 58 : 86} height={62}>
               <div className="flex h-full min-w-0 flex-col items-center justify-center gap-0.5 text-center">
                 <div className="flex max-w-full items-center justify-center gap-1">
                   {node.icon && (

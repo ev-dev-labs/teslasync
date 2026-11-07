@@ -37,6 +37,27 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { WidgetFlowDiagram, type FlowNode, type FlowArrow } from './WidgetFlowDiagram';
+import { PackBoundary } from '../designPacks/PackBoundary';
+
+describe('shared pack node shapes and unresolved flow', () => {
+  it.each([
+    ['classic', 'rect', '10'], ['v1', 'rect', '10'], ['v2', 'rect', '18'],
+    ['v3', 'rect', '3'], ['v4', 'circle', null], ['v5', 'circle', null],
+    ['v6', 'rect', '14'], ['v7', 'rect', '0'],
+  ])('renders %s without turning unknown power into animated flow', (pack, shape, radius) => {
+    const { container } = render(<PackBoundary requestedPackId={pack}>
+      <WidgetFlowDiagram nodes={[
+        node({ id: 'a', value: null, formattedValue: '—' }),
+        node({ id: 'b', position: 'right', value: null, formattedValue: '—' }),
+      ]} arrows={[arrow({ active: true, value: null })]} />
+    </PackBoundary>);
+    const rendered = container.querySelector('[data-flow-node="a"]');
+    expect(rendered?.tagName.toLowerCase()).toBe(shape);
+    expect(rendered?.getAttribute('rx')).toBe(radius);
+    expect(container.querySelector('.flow-active')).toBeNull();
+    expect(container.querySelectorAll('[data-flow-node]')).toHaveLength(2);
+  });
+});
 
 const EM_DASH = '\u2014';
 

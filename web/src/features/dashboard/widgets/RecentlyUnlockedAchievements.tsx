@@ -12,6 +12,8 @@ import { safeArray } from '@/lib/safeArray';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { Caption, Text } from '@/components/ui';
+import { cn } from '@/lib/cn';
+import { useTimelineStyles } from './designPacks/useTimelineStyles';
 
 /**
  * Parse an achievement `unlocked_at` ISO string into a sortable epoch-ms value.
@@ -47,6 +49,7 @@ export function unlockedTs(unlockedAt: string | null): number {
  * with shared trust/recovery instead of replacing it with an error panel.
  */
 export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: WidgetProps) {
+  const timeline = useTimelineStyles();
   const { t } = useTranslation('dashboard');
   const { formatDate } = useDateFormat();
   const vehiclesQuery = useVehicles();
@@ -116,7 +119,8 @@ export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: 
     >
       {recent.length > 0 ? (
         <ul
-          className="grid grid-cols-3 gap-2"
+          data-timeline-appearance={timeline?.appearance}
+          className={cn(timeline ? 'flex flex-col' : 'grid grid-cols-3 gap-2', timeline?.feed)}
           data-testid="recently-unlocked-list"
         >
           {recent.map((achievement, index) => {
@@ -128,11 +132,14 @@ export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: 
             const icon = achievement.icon?.trim() || null;
 
             return (
-            <li key={achievement.id || `achievement-${index}`} className="min-w-0">
+            <li key={achievement.id || `achievement-${index}`} className={cn('min-w-0', timeline?.row)}>
               <Link
                 to={`/lifetime?achievement=${encodeURIComponent(achievement.id)}`}
                 aria-label={t('achievements.viewNamed', 'View achievement: {{name}}', { name })}
-                className="group flex min-h-24 min-w-0 flex-col items-center rounded-lg px-2.5 py-2 text-center transition-colors duration-fast motion-reduce:transition-none hover:bg-[var(--surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)]"
+                className={cn(
+                  'group flex min-w-0 items-center rounded-lg px-2.5 py-2 transition-colors duration-fast motion-reduce:transition-none hover:bg-[var(--surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)]',
+                  timeline ? 'min-h-14 flex-row gap-3 text-start' : 'min-h-24 flex-col text-center',
+                )}
               >
                 <span
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--semantic-warning)]/20 bg-[var(--semantic-warning)]/10 text-amber-300"
@@ -140,7 +147,7 @@ export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: 
                 >
                   {icon || <Trophy className="h-4 w-4" />}
                 </span>
-                <Text as="span" size="sm" weight="semibold" className="mt-1 max-w-full truncate text-[var(--text-primary)]">
+                <Text as="span" size="sm" weight="semibold" className={cn('mt-1 max-w-full truncate text-[var(--text-primary)]', timeline && 'min-w-0 flex-1')}>
                   {name}
                 </Text>
                 <Caption className="mt-0.5 block max-w-full truncate tabular-nums text-[var(--text-muted)]">

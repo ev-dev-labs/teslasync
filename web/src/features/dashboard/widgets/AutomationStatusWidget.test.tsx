@@ -33,10 +33,17 @@
  * network is touched. `Date.now` is pinned so relative-time output is stable.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within, act } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within, act, waitFor } from '@testing-library/react';
 import { getGlobalLocale, setGlobalLocale } from '@/lib/numberFormat';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { PACK_APPEARANCES, type PackId } from './designPacks/types';
+
+const pack = vi.hoisted(() => ({ id: 'classic' as PackId }));
+vi.mock('./designPacks/PackBoundary', async importOriginal => ({
+  ...await importOriginal<typeof import('./designPacks/PackBoundary')>(),
+  usePackPresentation: () => pack.id,
+}));
 
 // i18n stub: passthrough that honours the English default and interpolates
 // {{var}} tokens so every count/name assertion is real.
@@ -152,8 +159,30 @@ const COMPACT: WidgetSize = { cols: 1, rows: 1 };
 const WIDE: WidgetSize = { cols: 3, rows: 2 };
 
 beforeEach(() => {
+  pack.id = 'classic';
   vi.spyOn(Date, 'now').mockReturnValue(NOW);
   mockToggleMutate.mockClear();
+});
+
+it('keeps the existing per-row mutation owner and focused toggle mounted through every pack switch', async () => {
+  MOCK_QUERY = makeQuery({ data: [makeAutomation({ name: 'Retained routine' })] });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const tree = () => <QueryClientProvider client={client}><MemoryRouter><AutomationStatusWidget size={WIDE} /></MemoryRouter></QueryClientProvider>;
+  const view = render(tree());
+  const toggle = screen.getByRole('switch', { name: 'Toggle Retained routine' });
+  toggle.focus();
+  for (const [id, appearance] of Object.entries(PACK_APPEARANCES)) {
+    pack.id = id as PackId;
+    view.rerender(tree());
+    await waitFor(() => expect(view.container.querySelector(`[data-status-appearance="${appearance}"]`)).not.toBeNull());
+    expect(screen.getByRole('switch', { name: 'Toggle Retained routine' })).toBe(toggle);
+    expect(toggle).toHaveFocus();
+  }
+  pack.id = 'classic';
+  view.rerender(tree());
+  expect(screen.getByRole('switch', { name: 'Toggle Retained routine' })).toBe(toggle);
+  fireEvent.click(toggle);
+  expect(mockToggleMutate).toHaveBeenCalledExactlyOnceWith({ id: 1, enabled: false });
 });
 
 afterEach(() => {

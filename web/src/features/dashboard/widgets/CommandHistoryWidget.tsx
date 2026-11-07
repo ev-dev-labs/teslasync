@@ -12,6 +12,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { WidgetEventFeed, type EventFeedItem } from './shared';
+import TimelinePresentation from './designPacks/TimelinePresentation';
 
 /** Minimal translate signature the widget threads to its pure helpers. */
 type TranslateFn = (key: string, fallback: string) => string;
@@ -91,6 +92,7 @@ function CompactView({
   t: TranslateFn;
 }) {
   return (
+    <TimelinePresentation compact>
     <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 min-h-[44px]">
       <div className="flex items-center gap-2 min-w-0">
         <Terminal className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
@@ -101,6 +103,7 @@ function CompactView({
       </div>
       <Badge variant={commandBadgeVariant(lastStatus)}>{commandStatusLabel(lastStatus, t)}</Badge>
     </div>
+    </TimelinePresentation>
   );
 }
 

@@ -14,6 +14,7 @@ import { combineDataStates } from '@/api/dataState';
 import { isFiniteNumber } from '@/lib/numberFormat';
 import { useRangeState } from '@/hooks/useRangeState';
 import { WidgetStatGrid, type StatGridItem } from './shared';
+import StatStatusPresentation from './designPacks/StatStatusPresentation';
 
 /**
  * Convert a fleet-analytics `total_distance_km` value to the user's display
@@ -123,11 +124,9 @@ export default function FleetStatsBarWidget({ size, config }: WidgetProps) {
     >
       {hasData ? (
         <section aria-label={t('widget.fleetStats.summary.title', 'Fleet operating totals')} data-testid="fleet-stats-bar">
-          <WidgetStatGrid
-            stats={stats}
-            cols={size.cols >= 4 ? 4 : 2}
-            maxPerRow={size.cols >= 4 ? 4 : 2}
-          />
+          <StatStatusPresentation stats={stats} cols={size.cols >= 4 ? 4 : 2} maxPerRow={size.cols >= 4 ? 4 : 2} compact={size.cols <= 1} icon={<Car className="size-6" aria-hidden="true" />}>
+            <WidgetStatGrid stats={stats} cols={size.cols >= 4 ? 4 : 2} maxPerRow={size.cols >= 4 ? 4 : 2} />
+          </StatStatusPresentation>
         </section>
       ) : (
         <EmptyState

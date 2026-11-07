@@ -11,6 +11,7 @@ import { isFiniteNumber } from '@/lib/numberFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 import { WidgetBigNumber } from './shared';
 import { SoftwareUpdateBadge, type UpdateStatus } from '../components/continuation-dashboard-3/SoftwareUpdateBadge';
@@ -91,6 +92,53 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
   const hasData = state != null || updateVersion != null;
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
+  const headline = (
+    <div className="flex min-w-0 items-start justify-between gap-2">
+      <WidgetBigNumber label={t('widget.currentVersion', 'Current version')} value={currentVersion} size="primary" />
+      <SoftwareUpdateBadge status={updateStatus} />
+    </div>
+  );
+  const progress = (
+    <>
+      {updateStatus === 'downloading' && downloadPct != null && (
+        <MetricBar value={downloadPct} max={100} color="var(--theme-primary)"
+          label={t('widget.downloading', 'Downloading')} sublabel={`${fmtNumber(downloadPct, 0)}%`} size="default" />
+      )}
+      {updateStatus === 'installing' && installPct != null && (
+        <MetricBar value={installPct} max={100} color="var(--theme-primary)"
+          label={t('widget.installing', 'Installing')} sublabel={`${fmtNumber(installPct, 0)}%`} size="default" />
+      )}
+    </>
+  );
+  const updateDetails = updateVersion && updateStatus !== 'up-to-date' ? (
+    <div className="min-w-0 space-y-2.5">
+      <div className="min-w-0">
+        <span className="text-sm text-[var(--text-secondary)]">{t('widget.updateAvailable', 'Update available')}</span>
+        <span className="ms-1 text-sm font-semibold text-status-info [overflow-wrap:anywhere]">{updateVersion}</span>
+      </div>
+      {progress}
+      {updateStatus === 'ready' && (
+        <p className="text-sm font-medium text-emerald-300">{t('widget.readyToInstall', 'Ready to install')}</p>
+      )}
+      {size.rows >= 2 && isFiniteNumber(expectedDuration) && expectedDuration > 0 && (
+        <p className="border-t border-[var(--border-subtle)] pt-2 text-sm text-[var(--text-secondary)]">
+          {t('widget.estimatedTime', 'Est. time')}: ~{fmtNumber(expectedDuration, 0)}{' '}{t('widget.minutes', 'min')}
+        </p>
+      )}
+      {size.rows >= 2 && scheduledStart && (() => {
+        const scheduledDate = new Date(scheduledStart);
+        const scheduledText = Number.isNaN(scheduledDate.getTime()) ? null : formatDateTime(scheduledDate);
+        return scheduledText ? (
+          <p className="border-t border-[var(--border-subtle)] pt-2 text-sm text-[var(--text-secondary)]">
+            {t('widget.scheduledStart', 'Scheduled')}: {scheduledText}
+          </p>
+        ) : null;
+      })()}
+    </div>
+  ) : updateStatus === 'up-to-date' ? (
+    <p className="text-sm font-medium text-emerald-300">{t('widget.upToDate', 'Up to date')}</p>
+  ) : null;
+  const activeProgress = updateStatus === 'installing' ? installPct : updateStatus === 'downloading' ? downloadPct : null;
 
   return (
     <WidgetShell
@@ -105,6 +153,12 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
       onRefresh={handleRefresh}
     >
       {hasData ? (
+        <InstrumentPresentation family="meter" compact={isCompact} headline={headline}
+          reading={activeProgress == null ? undefined : {
+            value: activeProgress, max: 100, unit: '%',
+            label: updateStatus === 'installing' ? t('widget.installing', 'Installing') : t('widget.downloading', 'Downloading'),
+          }}
+          instrument={isCompact ? undefined : updateDetails} icon={<MonitorSmartphone />}>
         <FadeIn>
           {isCompact ? (
             <div className="h-full min-w-0 flex flex-col items-center justify-center gap-1.5 px-1">
@@ -114,80 +168,12 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
             </div>
           ) : (
             <div className="h-full min-w-0 flex flex-col justify-center gap-3">
-              <div className="flex min-w-0 items-start justify-between gap-2">
-                <WidgetBigNumber
-                  label={t('widget.currentVersion', 'Current version')}
-                  value={currentVersion}
-                  size="primary"
-                />
-                <SoftwareUpdateBadge status={updateStatus} />
-              </div>
-
-              {updateVersion && updateStatus !== 'up-to-date' ? (
-                <div className="min-w-0 space-y-2.5">
-                  <div className="min-w-0">
-                    <span className="text-sm text-[var(--text-secondary)]">
-                      {t('widget.updateAvailable', 'Update available')}
-                    </span>
-                    <span className="ms-1 text-sm font-semibold text-status-info [overflow-wrap:anywhere]">
-                      {updateVersion}
-                    </span>
-                  </div>
-
-                  {updateStatus === 'downloading' && downloadPct != null && (
-                    <MetricBar
-                      value={downloadPct}
-                      max={100}
-                      color="var(--theme-primary)"
-                      label={t('widget.downloading', 'Downloading')}
-                      sublabel={`${fmtNumber(downloadPct, 0)}%`}
-                      size="default"
-                    />
-                  )}
-                  {updateStatus === 'installing' && installPct != null && (
-                    <MetricBar
-                      value={installPct}
-                      max={100}
-                      color="var(--theme-primary)"
-                      label={t('widget.installing', 'Installing')}
-                      sublabel={`${fmtNumber(installPct, 0)}%`}
-                      size="default"
-                    />
-                  )}
-                  {updateStatus === 'ready' && (
-                    <p className="text-sm font-medium text-emerald-300">
-                      {t('widget.readyToInstall', 'Ready to install')}
-                    </p>
-                  )}
-
-                  {size.rows >= 2 && isFiniteNumber(expectedDuration) && expectedDuration > 0 && (
-                    <p className="border-t border-[var(--border-subtle)] pt-2 text-sm text-[var(--text-secondary)]">
-                      {t('widget.estimatedTime', 'Est. time')}: ~{fmtNumber(expectedDuration, 0)}{' '}
-                      {t('widget.minutes', 'min')}
-                    </p>
-                  )}
-                  {size.rows >= 2 && scheduledStart && (
-                    (() => {
-                      const scheduledDate = new Date(scheduledStart);
-                      const scheduledText = Number.isNaN(scheduledDate.getTime())
-                        ? null
-                        : formatDateTime(scheduledDate);
-                      return scheduledText ? (
-                        <p className="border-t border-[var(--border-subtle)] pt-2 text-sm text-[var(--text-secondary)]">
-                          {t('widget.scheduledStart', 'Scheduled')}: {scheduledText}
-                        </p>
-                      ) : null;
-                    })()
-                  )}
-                </div>
-              ) : updateStatus === 'up-to-date' ? (
-                <p className="text-sm font-medium text-emerald-300">
-                  {t('widget.upToDate', 'Up to date')}
-                </p>
-              ) : null}
+              {headline}
+              {updateDetails}
             </div>
           )}
         </FadeIn>
+        </InstrumentPresentation>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<MonitorSmartphone className="h-5 w-5" />}

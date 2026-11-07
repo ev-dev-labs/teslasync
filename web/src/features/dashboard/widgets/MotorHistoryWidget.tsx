@@ -7,6 +7,7 @@ import {
   chartAnimation, EmbeddedChart, ChartTooltip, ChartLegend, useMeasuredAxisWidth, type ChartDataRow,
 } from '@/components/charts';
 import { EmptyState, Skeleton } from '@/components/feedback';
+import { Caption } from '@/components/ui';
 import { useMotorHistory, useVehicles } from '@/api/hooks/useVehicles';
 import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -16,6 +17,8 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { WidgetBigNumber } from './shared';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
 import type { WidgetProps } from './types';
 import { CHART_COLORS, COLOR } from '@/lib/colors';
 
@@ -48,6 +51,7 @@ function buildChartData(
 }
 
 export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
+  const packId = usePackPresentation();
   const { fmtNumber: fmt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatDateTime, formatTime, formatDateShort } = useDateFormat();
@@ -143,18 +147,149 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
     />
   );
 
+  const headline = (
+    <WidgetBigNumber
+      value={peak == null ? null : fmt(peak, 0)}
+      unit={tempUnit}
+      label={t('widget.motorHistory.statorTempRange', 'Stator temp · {{range}}', { range: rangeLabel })}
+      animated={false}
+      align="start"
+      size="secondary"
+    />
+  );
+  const dangerStatus = peak != null
+    ? t(
+        peak >= dangerThreshold ? 'widget.motorHistory.dangerReached' : 'widget.motorHistory.dangerNotReached',
+        peak >= dangerThreshold ? 'Danger threshold reached' : 'Danger zone not reached',
+      )
+    : t('widget.motorHistory.awaitingReading', 'Awaiting temperature reading');
+  const historyChart = !hasData ? noData : (
+    <div className="mt-2 flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1">
+        <EmbeddedChart
+          title={t('widget.motorHistory.title', 'Motor history')}
+          ariaLabel={t(
+            'widget.motorHistory.chartAria',
+            'Motor torque, stator temperature, and acceleration history',
+          )}
+          data={chartData}
+          dataColumns={[
+            { key: 'time', label: t('widget.motorHistory.time', 'Time'), format: (value) => formatDateTime(String(value ?? '')) },
+            { key: 'temperature', label: `${t('widget.motorHistory.statorTemp', 'Stator')} (${tempUnit})`, format: value => value == null ? '—' : fmt(Number(value)) },
+            { key: 'torque', label: `${t('widget.motorHistory.torque', 'Torque')} (N·m)`, format: value => value == null ? '—' : fmt(Number(value)) },
+          ]}
+          chartKey="dashboard-motor-history"
+          height={packId === 'classic' ? undefined : 200}
+          className="h-full min-h-0"
+        >
+          {({ hiddenSeries }) => (
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+                {chartGrid}
+                <XAxis
+                  dataKey="time"
+                  tick={size.cols >= 3 ? axisTick : axisTickSm}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value: string) => formatTime(value)}
+                />
+                <YAxis
+                  yAxisId="torque"
+                  tick={size.cols >= 3 ? axisTick : axisTickSm}
+                  tickLine={false}
+                  axisLine={false}
+                  width={torqueWidth}
+                  tickFormatter={(value: number) => fmt(value)}
+                />
+                <YAxis
+                  yAxisId="temp"
+                  orientation="right"
+                  tick={size.cols >= 3 ? axisTick : axisTickSm}
+                  tickLine={false}
+                  axisLine={false}
+                  width={statorWidth}
+                  domain={[tempMin, tempMax]}
+                  tickFormatter={(value: number) => `${fmt(value)}°`}
+                />
+                <YAxis
+                  yAxisId="acceleration"
+                  hide={true}
+                  tick={size.cols >= 3 ? axisTick : axisTickSm}
+                />
+                <Tooltip
+                  content={<ChartTooltip />}
+                  labelFormatter={(value: string) => formatDateTime(value)}
+                  formatter={(value: number, name: string | number) => [
+                    name === t('widget.motorHistory.torque', 'Torque')
+                      ? `${fmt(value)} N·m`
+                      : `${fmt(value)} ${tempUnit}`,
+                    name,
+                  ]}
+                />
+                <ReferenceArea
+                  yAxisId="temp"
+                  y1={dangerThreshold}
+                  y2={tempMax}
+                  fill={COLOR.BAD}
+                  fillOpacity={0.1}
+                />
+                <ChartLegend />
+                <Line
+                  yAxisId="torque"
+                  type="monotone"
+                  dataKey="torque"
+                  stroke={CHART_COLORS[3]}
+                  strokeWidth={2}
+                  strokeDasharray={packId === 'v7' ? '2 3' : undefined}
+                  dot={false}
+                  connectNulls={false}
+                  name={t('widget.motorHistory.torque', 'Torque')}
+                  hide={hiddenSeries?.isHidden('torque')}
+                />
+                <Line
+                  yAxisId="temp"
+                  type="monotone"
+                  dataKey="temperature"
+                  stroke={CHART_COLORS[1]}
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls={false}
+                  name={t('widget.motorHistory.statorTemp', 'Stator')}
+                  hide={hiddenSeries?.isHidden('temperature')}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          )}
+        </EmbeddedChart>
+      </div>
+      <div className="mt-1 shrink-0 text-xs text-[var(--text-muted)]">
+        {t(
+          'widget.motorHistory.dangerThreshold',
+          'Danger zone above {{value}} {{unit}}',
+          { value: fmt(dangerThreshold, 0), unit: tempUnit },
+        )}
+      </div>
+    </div>
+  );
+
   if (isCompact) {
+    const compactHeadline = (
+      <WidgetBigNumber
+        value={peak == null ? null : fmt(peak, 0)}
+        unit={tempUnit}
+        label={t('widget.motorHistory.peakStator', 'Peak stator temp')}
+        subtitle={rangeLabel}
+        animated={false}
+        align="center"
+      />
+    );
     return (
       <WidgetShell title={t('widget.motorHistory.title', 'Motor history')} {...shellProps}>
-        <WidgetBigNumber
-          value={peak == null ? null : fmt(peak, 0)}
-          unit={tempUnit}
-          label={t('widget.motorHistory.peakStator', 'Peak stator temp')}
-          subtitle={rangeLabel}
-          animated={false}
-          align="center"
-        />
-        {!hasData && noData}
+        <InstrumentPresentation family="line" compact headline={compactHeadline}
+          icon={<Cog />} instrument={!hasData ? noData : undefined}>
+          {compactHeadline}
+          {!hasData && noData}
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
@@ -165,133 +300,16 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
       icon={<Cog className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
       {...shellProps}
     >
-      <div className="flex h-full min-h-0 min-w-0 flex-col">
-        <div className="flex min-w-0 shrink-0 items-end justify-between gap-3">
-          <WidgetBigNumber
-            value={peak == null ? null : fmt(peak, 0)}
-            unit={tempUnit}
-            label={t('widget.motorHistory.statorTempRange', 'Stator temp · {{range}}', { range: rangeLabel })}
-            animated={false}
-            align="start"
-            size="secondary"
-          />
-          <span className="pb-1 text-end text-xs text-[var(--text-muted)]">
-            {peak != null
-              ? t(
-                  peak >= dangerThreshold ? 'widget.motorHistory.dangerReached' : 'widget.motorHistory.dangerNotReached',
-                  peak >= dangerThreshold ? 'Danger threshold reached' : 'Danger zone not reached',
-                )
-              : t('widget.motorHistory.awaitingReading', 'Awaiting temperature reading')}
-          </span>
-        </div>
-
-        {!hasData ? noData : (
-          <div className="mt-2 flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1">
-            <EmbeddedChart
-              title={t('widget.motorHistory.title', 'Motor history')}
-              ariaLabel={t(
-                'widget.motorHistory.chartAria',
-                'Motor torque, stator temperature, and acceleration history',
-              )}
-              data={chartData}
-              dataColumns={[
-                { key: 'time', label: t('widget.motorHistory.time', 'Time'), format: (value) => formatDateTime(String(value ?? '')) },
-                { key: 'temperature', label: `${t('widget.motorHistory.statorTemp', 'Stator')} (${tempUnit})`, format: value => value == null ? '—' : fmt(Number(value)) },
-                { key: 'torque', label: `${t('widget.motorHistory.torque', 'Torque')} (N·m)`, format: value => value == null ? '—' : fmt(Number(value)) },
-              ]}
-              chartKey="dashboard-motor-history"
-              className="h-full min-h-0"
-            >
-              {({ hiddenSeries }) => (
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
-                    {chartGrid}
-                    <XAxis
-                      dataKey="time"
-                      tick={size.cols >= 3 ? axisTick : axisTickSm}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value: string) => formatTime(value)}
-                    />
-                    <YAxis
-                      yAxisId="torque"
-                      tick={size.cols >= 3 ? axisTick : axisTickSm}
-                      tickLine={false}
-                      axisLine={false}
-                      width={torqueWidth}
-                      tickFormatter={(value: number) => fmt(value)}
-                    />
-                    <YAxis
-                      yAxisId="temp"
-                      orientation="right"
-                      tick={size.cols >= 3 ? axisTick : axisTickSm}
-                      tickLine={false}
-                      axisLine={false}
-                      width={statorWidth}
-                      domain={[tempMin, tempMax]}
-                      tickFormatter={(value: number) => `${fmt(value)}°`}
-                    />
-                    <YAxis
-                      yAxisId="acceleration"
-                      hide={true}
-                      tick={size.cols >= 3 ? axisTick : axisTickSm}
-                    />
-                    <Tooltip
-                      content={<ChartTooltip />}
-                      labelFormatter={(value: string) => formatDateTime(value)}
-                      formatter={(value: number, name: string | number) => [
-                        name === t('widget.motorHistory.torque', 'Torque')
-                          ? `${fmt(value)} N·m`
-                          : `${fmt(value)} ${tempUnit}`,
-                        name,
-                      ]}
-                    />
-                    <ReferenceArea
-                      yAxisId="temp"
-                      y1={dangerThreshold}
-                      y2={tempMax}
-                      fill={COLOR.BAD}
-                      fillOpacity={0.1}
-                    />
-                    <ChartLegend />
-                    <Line
-                      yAxisId="torque"
-                      type="monotone"
-                      dataKey="torque"
-                      stroke={CHART_COLORS[3]}
-                      strokeWidth={2}
-                      dot={false}
-                      connectNulls={false}
-                      name={t('widget.motorHistory.torque', 'Torque')}
-                      hide={hiddenSeries?.isHidden('torque')}
-                    />
-                    <Line
-                      yAxisId="temp"
-                      type="monotone"
-                      dataKey="temperature"
-                      stroke={CHART_COLORS[1]}
-                      strokeWidth={2}
-                      dot={false}
-                      connectNulls={false}
-                      name={t('widget.motorHistory.statorTemp', 'Stator')}
-                      hide={hiddenSeries?.isHidden('temperature')}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              )}
-            </EmbeddedChart>
-            </div>
-            <div className="mt-1 shrink-0 text-xs text-[var(--text-muted)]">
-              {t(
-                'widget.motorHistory.dangerThreshold',
-                'Danger zone above {{value}} {{unit}}',
-                { value: fmt(dangerThreshold, 0), unit: tempUnit },
-              )}
-            </div>
+      <InstrumentPresentation family="line" headline={headline} icon={<Cog />}
+        instrument={historyChart} details={<Caption>{dangerStatus}</Caption>}>
+        <div className="flex h-full min-h-0 min-w-0 flex-col">
+          <div className="flex min-w-0 shrink-0 items-end justify-between gap-3">
+            {headline}
+            <span className="pb-1 text-end text-xs text-[var(--text-muted)]">{dangerStatus}</span>
           </div>
-        )}
-      </div>
+          {historyChart}
+        </div>
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

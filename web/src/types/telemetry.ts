@@ -1,4 +1,63 @@
 import type { SignalHistoryPoint } from '@/api/types';
+import { knownNumber } from '@/api/dataState';
+
+export interface TelemetryRateSample {
+  /** Browser fetch time, not the vehicle's signal observation time. */
+  timestamp: number;
+  value: number | null;
+}
+
+export interface MqttStatusData extends Omit<TelemetryStatus, 'vehicles'> {
+  vehicles?: VehicleTelemetry[] | null;
+  sessionSamples?: TelemetryRateSample[];
+}
+
+export interface MqttWidgetStats {
+  totalMessages: number | null;
+  messagesPerSec: number | null;
+  lastMessage: string | null;
+}
+
+export function deriveMqttStats(vehicles: VehicleTelemetry[] | null | undefined): MqttWidgetStats {
+  let totalMessages: number | null = vehicles != null && vehicles.length === 0 ? 0 : null;
+  let messagesPerSec: number | null = vehicles != null && vehicles.length === 0 ? 0 : null;
+  let countsComplete = true;
+  let ratesComplete = true;
+  let lastMessage: string | null = null;
+  let lastMessageMs = -Infinity;
+  for (const vehicle of vehicles ?? []) {
+    const count = knownNumber(vehicle.signalCount ?? vehicle.signal_count);
+    const rate = knownNumber(vehicle.signalsPerSecond ?? vehicle.signals_per_second);
+    countsComplete &&= count != null;
+    ratesComplete &&= rate != null;
+    if (count != null) totalMessages = (totalMessages ?? 0) + count;
+    if (rate != null) messagesPerSec = (messagesPerSec ?? 0) + rate;
+    const received = vehicle.lastReceived ?? vehicle.last_received;
+    if (received) {
+      const timestamp = Date.parse(received);
+      if (Number.isFinite(timestamp) && timestamp > lastMessageMs) {
+        lastMessageMs = timestamp;
+        lastMessage = received;
+      }
+    }
+  }
+  return {
+    totalMessages: countsComplete ? totalMessages : null,
+    messagesPerSec: ratesComplete ? messagesPerSec : null,
+    lastMessage,
+  };
+}
+
+export function appendTelemetryRateSample(
+  previous: readonly TelemetryRateSample[],
+  vehicles: VehicleTelemetry[] | null | undefined,
+  timestamp: number,
+): TelemetryRateSample[] {
+  return [
+    ...previous.filter(point => point.timestamp > timestamp - 900_000 && point.timestamp < timestamp).slice(-179),
+    { timestamp, value: deriveMqttStats(vehicles).messagesPerSec },
+  ];
+}
 
 export interface SignalPoint {
   timestamp: string;

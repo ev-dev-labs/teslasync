@@ -15,6 +15,8 @@ import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { cn } from '@/lib/cn';
+import { useTimelineStyles } from './designPacks/useTimelineStyles';
 
 export type Urgency = 'overdue' | 'soon' | 'good';
 
@@ -43,6 +45,7 @@ function knownForecastCount(value: unknown): number | null {
 }
 
 export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
+  const timeline = useTimelineStyles();
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const [forecastOpen, setForecastOpen] = useState(false);
   const { t } = useTranslation('dashboard');
@@ -133,7 +136,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
             : 'neutral' as const;
       const distance = item.intervalKm == null ? null : `${fmtNumber(toDistanceDisplay(item.intervalKm))} ${distanceUnit}`;
       const interval = item.intervalMonths != null && distance
-        ? item.intervalMonths >= 12
+        ? item.intervalMonths > 12 && item.intervalMonths % 12 === 0
           ? `${t('widget.maintenance.every', 'Every')} ${fmtInt(item.intervalMonths / 12)} ${t('widget.maintenance.years', 'years')} · ${distance}`
           : `${t('widget.maintenance.every', 'Every')} ${fmtInt(item.intervalMonths)} ${t('widget.maintenance.monthsShort', 'mo')} · ${distance}`
         : distance
@@ -144,12 +147,8 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
       let remaining: string | null = null;
       if (evidence?.km_remaining != null && Number.isFinite(evidence.km_remaining)) {
         remaining = `${fmtNumber(toDistanceDisplay(evidence.km_remaining))} ${distanceUnit}`;
-      } else if (evidence?.due_date) {
+      } else if (evidence?.due_date && Number.isFinite(Date.parse(evidence.due_date))) {
         remaining = formatRelativeDays(evidence.due_date);
-      } else if (item.intervalKm != null) {
-        remaining = `${fmtNumber(toDistanceDisplay(item.intervalKm))} ${distanceUnit}`;
-      } else if (item.intervalMonths != null) {
-        remaining = `${fmtInt(item.intervalMonths)} ${t('widget.maintenance.monthsShort', 'mo')}`;
       }
       return {
         id: item.id || index,
@@ -227,7 +226,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
       <WidgetShell
         {...shellProps}
       >
-        <div className="h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]">
+        <div data-timeline-appearance={timeline?.appearance} className={cn('h-full flex flex-col items-center justify-center gap-1.5 min-h-[44px]', timeline?.row)}>
           <SourceContent
             state={maintenanceTrust.fatalError ? 'error' : !maintenanceTrust.hasData && maintLoading ? 'loading' : 'ready'}
             label={t('widget.maintenance.title', 'Maintenance')}
@@ -265,7 +264,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
       icon={<Wrench className="h-3.5 w-3.5 text-amber-400" />}
       {...shellProps}
     >
-      <div className="h-full flex min-h-0 flex-col overflow-y-auto">
+      <div data-timeline-appearance={timeline?.appearance} className="h-full flex min-h-0 flex-col overflow-y-auto">
         <section data-testid="dashboard-maintenance-forecast-brief" className="mb-2 border-b border-[var(--border-subtle)] py-2">
           <Caption className="mb-2 block">{t('widget.maintenance.forecastStatus', 'Maintenance forecast summary')}</Caption>
           <div className="grid grid-cols-3 gap-2">
@@ -318,6 +317,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           retainedMessage={t('widget.maintenance.itemsRetained', 'Previously loaded maintenance intervals remain visible while they refresh.')}
         >
           <WidgetDetailCard
+            presentation="timeline"
             entries={upcomingEntries}
             emptyMessage={t('widget.maintenance.noData', 'No maintenance data')}
             emptyIcon={<Wrench className="h-5 w-5" />}
@@ -335,9 +335,9 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           retainedMessage={t('widget.maintenance.recordsRetained', 'Previously loaded service records remain visible while they refresh.')}
         >
           {lastServiceEntries.length > 0 ? (
-            <ul aria-label={t('widget.maintenance.recentService', 'Recent service')} className="m-0 list-none space-y-2 p-0">
+            <ul aria-label={t('widget.maintenance.recentService', 'Recent service')} className={cn('m-0 list-none space-y-2 p-0', timeline?.feed)}>
               {recentRecords.slice(0, 3).map((rec, index) => (
-                <li key={rec.itemId || index} className="border-b border-[var(--border-subtle)] py-2 last:border-b-0">
+                <li key={rec.itemId || index} className={cn('border-b border-[var(--border-subtle)] py-2 last:border-b-0', timeline?.row)}>
                   <span className="block text-sm font-medium text-[var(--text-primary)]">{items.find((entry) => entry.id === rec.itemId)?.name ?? rec.itemId ?? '—'}</span>
                   <span className="block text-xs text-[var(--text-muted)]">{rec.notes ?? '—'}</span>
                   <span className="block text-xs text-[var(--text-muted)]">{rec.date ? formatDate(rec.date) : '—'}</span>

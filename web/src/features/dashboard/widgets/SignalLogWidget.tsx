@@ -14,6 +14,9 @@ import type { SignalObservation } from '@/types/signals';
 import type { VehicleTelemetry } from '@/types/telemetry';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { EmptyState } from '@/components/feedback';
+import { cn } from '@/lib/cn';
+import TimelinePresentation from './designPacks/TimelinePresentation';
+import { useTimelineStyles } from './designPacks/useTimelineStyles';
 
 /**
  * Render a single observation's value for the feed subtitle.
@@ -70,6 +73,7 @@ function CompactView({
 // ── Main widget ──────────────────────────────────────────────────────
 
 export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
+  const timeline = useTimelineStyles();
   const { t } = useTranslation('dashboard');
   const { formatTime } = useDateFormat();
   const { data: vehicles } = useVehicles();
@@ -154,7 +158,7 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
       actions={!isCompact ? pauseAction : undefined}
     >
       {isCompact ? (
-        <CompactView rate={rate} t={t} />
+        <TimelinePresentation compact><CompactView rate={rate} t={t} /></TimelinePresentation>
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto">
           {displayItems.length === 0 ? (
@@ -164,7 +168,7 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
               className="py-4"
             />
           ) : (
-            <ul aria-label={t('widget.eventFeed.label', 'Event feed')} className="divide-y divide-[var(--border-subtle)] font-mono">
+            <ul data-timeline-appearance={timeline?.appearance} aria-label={t('widget.eventFeed.label', 'Event feed')} className={cn('divide-y divide-[var(--border-subtle)] font-mono', timeline?.feed)}>
               {[...displayItems]
                 .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                 .slice(0, 20)
@@ -174,7 +178,7 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
                     ? '—'
                     : formatTime(parsed);
                   return (
-                    <li key={item.id} className="grid min-h-9 grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-2 py-1.5 text-xs">
+                    <li key={item.id} className={cn('grid min-h-9 grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-2 py-1.5 text-xs', timeline?.row)}>
                       <span className="tabular-nums text-[var(--text-muted)]">{timeLabel}</span>
                       <span className="truncate text-[var(--text-primary)]" title={item.title}>{item.title}</span>
                       <span className="max-w-24 truncate text-end font-semibold tabular-nums text-[var(--text-primary)]" title={item.subtitle}>

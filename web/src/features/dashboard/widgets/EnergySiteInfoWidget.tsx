@@ -6,12 +6,13 @@ import { Skeleton } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 
-import { WidgetDetailCard, type DetailEntry } from './shared';
+import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import StatusPresentation from './designPacks/StatusPresentation';
 
-export default function EnergySiteInfoWidget(_props: WidgetProps) {
+export default function EnergySiteInfoWidget({ size }: WidgetProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatPower, formatEnergy } = useUnits();
@@ -123,6 +124,15 @@ export default function EnergySiteInfoWidget(_props: WidgetProps) {
     // Installation timezone and calendar labels stay out of this card.
   }
 
+  const details = <WidgetDetailCard
+    entries={entries}
+    emptyMessage={
+      !hasSites
+        ? t('widget.energySiteInfo.noSite', 'No Tesla energy site linked')
+        : t('widget.energySiteInfo.noData', 'No site info available')
+    }
+    emptyIcon={<Home className="h-5 w-5" />}
+  />;
   return (
     <WidgetShell
       title={t('widget.energySiteInfo.title', 'Energy site')}
@@ -136,17 +146,11 @@ export default function EnergySiteInfoWidget(_props: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <div className="h-full min-w-0">
-        <WidgetDetailCard
-          entries={entries}
-          emptyMessage={
-            !hasSites
-              ? t('widget.energySiteInfo.noSite', 'No Tesla energy site linked')
-              : t('widget.energySiteInfo.noData', 'No site info available')
-          }
-          emptyIcon={<Home className="h-5 w-5" />}
-        />
-      </div>
+      <StatusPresentation compact={size.cols <= 1}
+        headline={<WidgetBigNumber value={operationModeLabel} label={t('widget.energySiteInfo.operationMode', 'Operating mode')} animated={false} />}
+        icon={<Home className="size-6" aria-hidden="true" />} details={details}>
+        <div className="h-full min-w-0">{details}</div>
+      </StatusPresentation>
     </WidgetShell>
   );
 }

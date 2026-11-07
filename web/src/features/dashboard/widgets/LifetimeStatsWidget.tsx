@@ -13,6 +13,8 @@ import { knownNumber } from '@/api/dataState';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber, WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
+import StatusPresentation from './designPacks/StatusPresentation';
+import StatStatusPresentation from './designPacks/StatStatusPresentation';
 
 export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
@@ -91,18 +93,21 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
   };
 
   if (isCompact) {
+    const headline = <WidgetBigNumber
+      value={displayDistance == null ? null : fmtInt(displayDistance)}
+      unit={distanceUnit}
+      label={t('widget.lifetimeStats.totalDistance', 'Total distance')}
+      subtitle={t('widget.lifetimeStats.lifetime', 'lifetime')}
+      align="start"
+    />;
     return (
       <WidgetShell
         {...shellProps}
       >
         {data != null ? (
-          <WidgetBigNumber
-            value={displayDistance == null ? null : fmtInt(displayDistance)}
-            unit={distanceUnit}
-            label={t('widget.lifetimeStats.totalDistance', 'Total distance')}
-            subtitle={t('widget.lifetimeStats.lifetime', "lifetime")}
-            align="start"
-          />
+          <StatusPresentation compact headline={headline} icon={<Trophy className="size-6" aria-hidden="true" />} details={null}>
+            {headline}
+          </StatusPresentation>
         ) : (
           <EmptyState
             variant="informational"
@@ -121,7 +126,9 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
       {...shellProps}
     >
       {data != null ? (
-        <WidgetStatGrid stats={stats} cols={3} />
+        <StatStatusPresentation stats={stats} cols={3} icon={<Trophy className="size-6" aria-hidden="true" />}>
+          <WidgetStatGrid stats={stats} cols={3} />
+        </StatStatusPresentation>
       ) : (
         <EmptyState
           variant="informational"

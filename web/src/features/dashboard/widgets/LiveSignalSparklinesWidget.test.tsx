@@ -420,7 +420,7 @@ describe('LiveSignalSparklinesWidget — vehicle resolution', () => {
 });
 
 describe('LiveSignalSparklinesWidget — independent source trust', () => {
-  it('preserves raw history while plotting only finite numbers in source order, including zero', async () => {
+  it('preserves raw history and finite readings without joining across invalid source samples', async () => {
     AVAILABLE = ['BatteryLevel'];
     LIVE = { BatteryLevel: { value: 0, timestamp: '2026-07-01T03:00:00Z' } };
     const data = [null, {}, ...points(0, '100', true, Number.NaN, 2, null, -1, false, Number.POSITIVE_INFINITY, 4)];
@@ -433,13 +433,16 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
 
     const sparkline = await screen.findByRole('img', { name: 'Battery Level trend' });
     const row = signalRow('Battery Level');
-    const coordinates = sparkline.querySelector('polyline')?.getAttribute('points');
+    const reading = screen.getByText('Battery Level').parentElement;
     expect(within(row).getByText('0.0%' )).toBeInTheDocument();
-    expect(within(row).queryByText('—')).not.toBeInTheDocument();
+    expect(reading?.textContent).not.toContain('—');
     expect(within(row).getByRole('img', { name: 'Trending up' })).toBeInTheDocument();
-    expect(coordinates?.split(' ')).toHaveLength(4);
-    expect(coordinates?.split(' ').map((point) => Number(point.split(',')[1]))).toEqual([16, 8, 20, 0]);
-    expect(coordinates).toMatch(/^0,16 .* 80,0$/);
+    await waitFor(() => expect(sparkline.querySelectorAll('.recharts-line-dot')).toHaveLength(4));
+    const dots = Array.from(sparkline.querySelectorAll('.recharts-line-dot'));
+    expect(dots.map(dot => Number(dot.getAttribute('cy')))).toEqual([16, 8, 20, 0]);
+    expect(Number(dots[0].getAttribute('cx'))).toBeGreaterThan(0);
+    expect(Number(dots[3].getAttribute('cx'))).toBe(80);
+    expect(sparkline.querySelector('.recharts-line-curve')?.getAttribute('d')?.match(/M/g)).toHaveLength(4);
     expect(queryClient.getQueryData(['signal-history', 1, 'BatteryLevel', 1])).toEqual({ data });
     expect(sourceCallCount('history')).toBe(1);
     expect(container.textContent).not.toMatch(/NaN|Infinity|undefined/);
@@ -651,13 +654,15 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
     const battery = signalRow('Battery Level');
     const speed = signalRow('Vehicle Speed');
     expect(within(battery).getByText('0.0%' )).toBeInTheDocument();
-    expect(within(battery).queryByText('—')).not.toBeInTheDocument();
+    expect(screen.getByText('Battery Level').parentElement?.textContent).not.toContain('—');
     expect(within(speed).getByText('—')).toBeInTheDocument();
     expect(within(speed).queryByText('0.0%' )).not.toBeInTheDocument();
     expect(within(speed).getByRole('img', { name: 'Trending down' })).toBeInTheDocument();
     if (hasHistory) {
-      await within(battery).findByRole('img', { name: 'Battery Level trend' });
-      expectHistory();
+      const plot = await within(battery).findByRole('img', { name: 'Battery Level trend' });
+      await waitFor(() => expect(plot.querySelectorAll('.recharts-line-dot')).toHaveLength(4));
+      expect(Number(plot.querySelector('.recharts-line-dot')?.getAttribute('cx'))).toBeGreaterThan(0);
+      expect(within(battery).getByRole('img', { name: 'Trending up' })).toBeInTheDocument();
     } else {
       await waitFor(() => expect(within(battery).getByText('no data')).toBeInTheDocument());
       expect(within(battery).queryByRole('img', { name: 'Battery Level trend' })).not.toBeInTheDocument();

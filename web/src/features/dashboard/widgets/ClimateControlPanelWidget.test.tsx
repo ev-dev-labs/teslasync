@@ -217,6 +217,6 @@ describe('ClimateControlPanelWidget — After card layout', () => {
     setQuery({ data: undefined });
     renderWidget(FULL, 42);
     expect(climateMock).toHaveBeenCalledWith(42, 5000);
-    expect(screen.getByRole('status')).toHaveTextContent('No climate data');
+    expect(screen.getByText('No climate data')).toBeVisible();
   });
 });

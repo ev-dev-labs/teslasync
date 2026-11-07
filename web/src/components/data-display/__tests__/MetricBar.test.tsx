@@ -124,6 +124,38 @@ describe('MetricBar defaults and formatting', () => {
 })
 
 describe('MetricBar compact passive presentation', () => {
+  it('reuses fractional segmented cells without changing prepared labels, source scale or accessibility', () => {
+    render(<MetricBar value={2.25} max={10} color="#22c55e" label="Coverage"
+      ariaLabel="Battery coverage remaining" sublabel="Prepared source context" fill="segmented" />)
+    const bar = screen.getByRole('progressbar', { name: 'Battery coverage remaining' })
+    expect(bar).toHaveAttribute('aria-valuenow', '2.25')
+    expect(bar).toHaveAttribute('aria-valuemax', '10')
+    expect(screen.getByText('Coverage')).toBeInTheDocument()
+    expect(screen.getByText('Prepared source context')).toBeInTheDocument()
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument()
+    const track = bar.querySelector('[data-metric-track]')!
+    const cells = Array.from(track.firstElementChild!.children).map(cell => cell.firstElementChild as HTMLElement)
+    expect(cells).toHaveLength(20)
+    expect(cells[3].style.width).toBe('100%')
+    expect(cells[4].style.width).toBe('50%')
+    expect(cells[5].style.width).toBe('0%')
+    expect(state.fill).not.toHaveBeenCalled()
+  })
+
+  it.each([0, null, Number.NaN])('keeps segmented zero and unknown observations distinct: %s', value => {
+    render(<MetricBar value={value} max={100} color="#22c55e" label="Coverage" fill="segmented" />)
+    const bar = screen.getByRole('progressbar', { name: 'Coverage' })
+    if (value === 0) {
+      expect(bar).toHaveAttribute('aria-valuenow', '0')
+      expect(bar).not.toHaveAttribute('aria-valuetext')
+    } else {
+      expect(bar).not.toHaveAttribute('aria-valuenow')
+      expect(bar).toHaveAttribute('aria-valuetext', 'No reading')
+      expect(screen.queryByText('0.00')).not.toBeInTheDocument()
+    }
+    expect(state.fill).not.toHaveBeenCalled()
+  })
+
   it('renders only a slim track with an independent accessible name', () => {
     const { container } = render(
       <MetricBar value={50} max={100} color="#22c55e" ariaLabel="Playback progress"

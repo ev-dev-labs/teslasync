@@ -9,12 +9,13 @@ import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
-import { WidgetFlowDiagram, type FlowNode, type FlowArrow } from './shared';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { WidgetBigNumber, WidgetFlowDiagram, type FlowNode, type FlowArrow } from './shared';
 import type { WidgetProps } from './types';
 
 const REFRESH_INTERVAL = 5_000;
 
-export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
+export default function EnergyFlowWidget({ vehicleId, config, size }: WidgetProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
@@ -34,8 +35,10 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
   const isRegen = power != null && power < 0;
   const absPower = power == null ? null : Math.abs(power);
   const isCharging = (!verified || verified.includes('is_charging')) && (state?.is_charging ?? false);
-  const chargerPower = verified && !verified.includes('charger_power') ? null : knownNumber(state?.charger_power);
-  const batteryLevel = verified && !verified.includes('battery_level') ? null : knownNumber(state?.battery_level);
+  const measuredChargerPower = verified && !verified.includes('charger_power') ? null : knownNumber(state?.charger_power);
+  const chargerPower = measuredChargerPower != null && measuredChargerPower >= 0 ? measuredChargerPower : null;
+  const measuredBatteryLevel = verified && !verified.includes('battery_level') ? null : knownNumber(state?.battery_level);
+  const batteryLevel = measuredBatteryLevel != null && measuredBatteryLevel >= 0 && measuredBatteryLevel <= 100 ? measuredBatteryLevel : null;
   const loading = isLoading || (vehiclesLoading && !id);
   const queryError = error ?? (!id ? vehiclesError : null);
   const dataState = useDataState({
@@ -57,7 +60,7 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
     result.push({
       id: 'charger',
       label: t('widget.wallConnector.title', 'Wall connector'),
-      value: chargerPower ?? 0,
+      value: chargerPower,
       formattedValue: '',
       icon: <Plug className="h-2.5 w-2.5" />,
       position: 'left',
@@ -67,7 +70,7 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
       {
         id: 'battery',
         label: t('widget.battery', 'Battery'),
-        value: batteryLevel ?? 0,
+        value: batteryLevel,
         formattedValue: batteryLevel == null ? '—' : `${fmtInt(batteryLevel)}%`,
         icon: <BatteryCharging className="h-2.5 w-2.5" />,
         position: 'center',
@@ -80,8 +83,8 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
             ? t('widget.regenerating', 'Regenerating')
             : power == null
               ? t('hero.unknownStatus', 'Unknown')
-                : `${t('widget.car', 'Car')} (${t('widget.energyFlowAnimated.idle', 'Idle')})`,
-        value: absPower ?? 0,
+              : `${t('widget.car', 'Car')} (${t('widget.energyFlowAnimated.idle', 'Idle')})`,
+        value: absPower,
         formattedValue: '',
         icon: <Car className="h-2.5 w-2.5" />,
         position: 'right',
@@ -96,14 +99,14 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
       {
         from: 'battery',
         to: 'motor',
-        value: isConsuming ? absPower ?? 0 : 0,
+        value: power == null ? null : isConsuming ? absPower : 0,
         active: isConsuming,
         label: isConsuming ? formatPower(absPower, { precision: 1 }) : undefined,
       },
       {
         from: 'motor',
         to: 'battery',
-        value: isRegen ? absPower ?? 0 : 0,
+        value: power == null ? null : isRegen ? absPower : 0,
         active: isRegen,
         label: isRegen ? formatPower(absPower, { precision: 1 }) : undefined,
       },
@@ -113,7 +116,7 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
       result.push({
         from: 'charger',
         to: 'battery',
-        value: chargerPower ?? 0,
+        value: chargerPower,
         active: chargerPower != null && chargerPower > 0,
         label: chargerPower != null && chargerPower > 0 ? formatPower(chargerPower * 1000, { precision: 1 }) : undefined,
         color: 'text-emerald-400',
@@ -122,6 +125,28 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
 
     return result;
   }, [absPower, isConsuming, isRegen, isCharging, chargerPower, formatPower]);
+
+  const primaryNode = nodes.find(node => node.id === (isCharging ? 'charger' : 'motor'));
+  const primaryArrow = arrows.find(arrow => isCharging ? arrow.from === 'charger' : arrow.active);
+  // Reuse the original, caller-formatted link reading, including its source units.
+  const primaryValue = primaryArrow?.label
+    ?? ((isCharging ? chargerPower : power) === 0 ? formatPower(0, { precision: 1 }) : null);
+  const body = state ? (
+    <div className="widget-flow-frame flex h-full min-h-0 w-full items-center" data-motion-suppressed={!stateData?.live || undefined}>
+      <WidgetFlowDiagram
+        nodes={nodes}
+        arrows={arrows}
+        ariaLabel={`${t('widget.energyFlow', 'Energy flow')}: ${nodes.map((node) => `${node.label} ${node.formattedValue}`).join(', ')}; ${arrows.filter((arrow) => arrow.active).map((arrow) => `${nodes.find((node) => node.id === arrow.from)?.label} → ${nodes.find((node) => node.id === arrow.to)?.label}${arrow.label ? ` ${arrow.label}` : ''}`).join(', ')}`}
+        emptyMessage={t('widget.noEnergyData', 'No energy data available')}
+      />
+    </div>
+  ) : (
+    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+      icon={<Activity className="h-5 w-5" />}
+      message={t('widget.noEnergyData', 'No energy data available')}
+      className="py-4"
+    />
+  );
 
   return (
     <WidgetShell
@@ -138,22 +163,11 @@ export default function EnergyFlowWidget({ vehicleId, config }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      {state ? (
-        <div className="widget-flow-frame flex h-full min-h-0 w-full items-center" data-motion-suppressed={!stateData?.live || undefined}>
-          <WidgetFlowDiagram
-            nodes={nodes}
-            arrows={arrows}
-            ariaLabel={`${t('widget.energyFlow', 'Energy flow')}: ${nodes.map((node) => `${node.label} ${node.formattedValue}`).join(', ')}; ${arrows.filter((arrow) => arrow.active).map((arrow) => `${nodes.find((node) => node.id === arrow.from)?.label} → ${nodes.find((node) => node.id === arrow.to)?.label}${arrow.label ? ` ${arrow.label}` : ''}`).join(', ')}`}
-            emptyMessage={t('widget.noEnergyData', 'No energy data available')}
-          />
-        </div>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Activity className="h-5 w-5" />}
-          message={t('widget.noEnergyData', 'No energy data available')}
-          className="py-4"
-        />
-      )}
+      <InstrumentPresentation family="flow" compact={size.cols === 1 || size.rows === 1}
+        headline={state ? <WidgetBigNumber value={primaryValue} label={primaryNode?.label} animated={false} /> : undefined}
+        icon={state ? <Activity /> : undefined} instrument={body}>
+        {body}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

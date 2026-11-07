@@ -117,7 +117,7 @@ export function normalizeEnvelope(raw: RawSignalEnvelope | null | undefined): Si
   if (!raw) {
     return { kind: 'unknown', value: null, ts: '' }
   }
-  const kind = normalizeSignalKind(raw.kind)
+  const kind = normalizeSignalKind(raw.kind, raw.value)
   return {
     kind,
     value: coerceValue(raw.value, kind),

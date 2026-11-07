@@ -9,6 +9,7 @@ import { convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { isFiniteNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -78,6 +79,15 @@ export default function DriveScoreWidget(_props: WidgetProps) {
   // A 0 score is unreachable by a real drive, so it only ever means "no drives
   // to score". Surface the empty state instead of a misleading red 0/100 gauge.
   const hasScore = efficiency != null && efficiency > 0;
+  const headline = (
+    <WidgetBigNumber
+      value={hasScore ? fmtNumber(score, 0) : null}
+      unit="/100"
+      subtitle={hasScore ? `${fmtNumber(toEfficiencyDisplay(efficiency, isMiles), 0)} ${efficiencyUnit} ${t('widget.driveEfficiencyChart.avg', 'Avg')}` : undefined}
+      animated={false}
+      align="start"
+    />
+  );
 
   const handleRefresh = useCallback(() => {
     void refetch();
@@ -94,15 +104,16 @@ export default function DriveScoreWidget(_props: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
+      <InstrumentPresentation family="ring" headline={headline}
+        reading={{ value: hasScore ? score : null, max: 100, label: t('widget.driveScoreGauge.title', 'Drive score'), color: scoreColor(score) }}
+        icon={<TrendingUp />} details={!hasScore ? (
+          <EmptyState variant="informational" icon={<TrendingUp className="size-5" />}
+            message={t('widget.noScore', 'No drive score yet')}
+            description={t('widget.noScoreDescription', 'Complete a drive with measured energy and distance to calculate an efficiency score.')} />
+        ) : undefined}>
       {hasScore ? (
         <div className="flex h-full min-w-0 flex-col items-start justify-center">
-          <WidgetBigNumber
-            value={fmtNumber(score, 0)}
-            unit="/100"
-            subtitle={`${fmtNumber(toEfficiencyDisplay(efficiency, isMiles), 0)} ${efficiencyUnit} ${t('widget.driveEfficiencyChart.avg', 'Avg')}`}
-            animated={false}
-            align="start"
-          />
+          {headline}
         </div>
       ) : (
         // no-action: the score is generated automatically after a qualifying drive.
@@ -116,6 +127,7 @@ export default function DriveScoreWidget(_props: WidgetProps) {
           className="py-4"
         />
       )}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

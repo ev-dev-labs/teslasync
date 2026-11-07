@@ -170,7 +170,7 @@ async function openPage(
   return mocks;
 }
 
-async function reviewDrawer(page: Page, brief: Locator, width: number, scopes: readonly string[] = []) {
+async function reviewDrawer(page: Page, brief: Locator, scopes: readonly string[] = []) {
   await brief.scrollIntoViewIfNeeded();
   await expect(brief).toHaveAttribute('data-operational-brief', 'true');
   const items = brief.locator('[data-operational-metric]');
@@ -395,7 +395,7 @@ for (const theme of ['light', 'dark'] as const) {
         for (const band of contract.bands) {
           const briefs = page.getByTestId(band.id);
           await expect(briefs).toHaveCount(band.instances ?? 1);
-          for (const brief of await briefs.all()) await reviewDrawer(page, brief, width, scopes.get(band.id) ?? []);
+          for (const brief of await briefs.all()) await reviewDrawer(page, brief, scopes.get(band.id) ?? []);
         }
         await expectNoHorizontalOverflow(page);
         await expectNoRuntimeFailures(diagnostics);
@@ -422,7 +422,7 @@ for (const theme of ['light', 'dark'] as const) {
         // Review drawer, never visible missing metrics (evidence-bank
         // preservation contract): the observed zero above must stand alone.
         await expect(metric(brief, missing)).toHaveCount(0);
-        await reviewDrawer(page, brief, width);
+        await reviewDrawer(page, brief);
         await expectNoHorizontalOverflow(page);
         await expectNoRuntimeFailures(diagnostics);
         await assertMockApiComplete(page, mocks);
@@ -452,7 +452,7 @@ for (const theme of ['light', 'dark'] as const) {
           await reading(page.getByTestId('climate-systems-stats'), 'climate-systems-stats-0', '—', 'missing');
           await expect(page.getByTestId('climate-efficiency-stats')).toHaveAttribute('data-operational-brief', 'true');
         }
-        await reviewDrawer(page, page.getByTestId(contract.bands.find(band => !band.instances)!.id), width);
+        await reviewDrawer(page, page.getByTestId(contract.bands.find(band => !band.instances)!.id));
         await expectNoHorizontalOverflow(page);
         await expectNoRuntimeFailures(diagnostics);
         await assertMockApiComplete(page, mocks);
@@ -494,7 +494,7 @@ for (const theme of ['light', 'dark'] as const) {
       await waitForHarnessReady(page, mocks);
       await reading(page.getByTestId('preconditioning-drive-source-summary'), 'overlap', '0');
       await reading(page.getByTestId('preconditioning-evidence'), 'classified-departures', '0');
-      await reviewDrawer(page, page.getByTestId('preconditioning-drive-source-summary'), width);
+      await reviewDrawer(page, page.getByTestId('preconditioning-drive-source-summary'));
       await assertMockApiComplete(page, mocks);
     });
 
@@ -518,7 +518,7 @@ for (const theme of ['light', 'dark'] as const) {
         nodes.map(node => ({ state: node.getAttribute('data-value-state'), value: node.querySelector('[data-operational-value]')?.textContent })))).toEqual(before);
       await expect(page.getByTestId('climate-efficiency-stats').locator('xpath=..'))
         .not.toHaveAttribute('data-source-retained', 'true');
-      await reviewDrawer(page, brief, width);
+      await reviewDrawer(page, brief);
       await expectNoHorizontalOverflow(page);
       await assertMockApiComplete(page, mocks);
     });

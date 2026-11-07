@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Route, ArrowUpRight } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
-import { Caption, Text } from '@/components/ui';
+import { Caption, IconButton, Text } from '@/components/ui';
 import { isFiniteNumber } from '@/lib/numberFormat';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDashboardDriveHistory } from '@/api/hooks/useDriving';
@@ -11,7 +11,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { formatDurationMinutes } from '@/lib/dateConvert';
 import { convertDistanceFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
-import { IconButton } from '@/components/ui/IconButton';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { WidgetBigNumber } from './shared';
 import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
@@ -57,6 +57,79 @@ export default function RecentDrivesListWidget({ vehicleId, size, config }: Widg
   const trust = useDataState({
     data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch,
   }, { provenance: 'historical' });
+  const rows = items.map((d) => {
+    const distance = knownNumber(d.distance_m);
+    const duration = knownNumber(d.duration_s);
+    const dist = distance == null ? null : convertDistanceFromSI(distance, unitPrefs.distance);
+    const distanceLabel = dist == null ? '—' : `${fmtNumber(dist, 0)} ${unitPrefs.distance}`;
+    const relativeDay = formatRelativeDays(d.start_ts);
+    const dateLabel = relativeDay === 'Today' || relativeDay === 'Yesterday'
+      ? `${relativeDay} ${formatTime(d.start_ts)}`
+      : `${formatWeekdayName(d.start_ts)} ${formatTime(d.start_ts)}`;
+    const durationLabel = duration == null
+      ? null
+      : duration < 60
+        ? t('widget.recentDrivesSubMinute', '<1m')
+        : formatDurationMinutes(duration / 60, { subMinuteLabel: '<1m' });
+    const energy = knownNumber(d.energy_used_wh);
+    const efficiencyWhPerKm = energy != null && distance != null && distance > 0
+      ? energy / (distance / 1000)
+      : null;
+    const efficiencyLabel = efficiencyWhPerKm != null
+      ? `${fmtNumber(convertEfficiencyFromSI(efficiencyWhPerKm, unitPrefs.distance), 0)} Wh/${unitPrefs.distance}`
+      : null;
+    const startAddress = d.start_address?.trim();
+    const endAddress = d.end_address?.trim();
+    const routeLabel = startAddress || endAddress
+      ? `${startAddress || '—'} → ${endAddress || '—'}`
+      : t('activity.timeline.item.drive', 'Drive');
+
+    return { id: d.id, distanceLabel, dateLabel, durationLabel, efficiencyLabel, routeLabel };
+  });
+  const latest = rows[0];
+  const content = rows.length > 0 ? (
+    <ul className="space-y-1.5 overflow-y-auto h-full">
+      {rows.map(({ id: driveId, distanceLabel, dateLabel, durationLabel, efficiencyLabel, routeLabel }) => (
+        <li key={driveId}>
+          <Link
+            to={`/drives/${driveId}`}
+            aria-label={`${t('widget.recentDrivesListDrive', 'Drive')}: ${distanceLabel}, ${dateLabel}`}
+            className="group block rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)]"
+          >
+            <div className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-start ${dashboardTokens.density.rowGap} ${dashboardTokens.density.rowPadding} rounded-lg hover:bg-[var(--surface-hover)] ${dashboardTokens.motion.transition}`}>
+              <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--text-secondary)]" />
+              <div className="min-w-0">
+                <Text variant="bodySm" className="block min-w-0 font-medium [overflow-wrap:anywhere]">
+                  {routeLabel}
+                </Text>
+                <Caption className="mt-0.5 block tabular-nums">
+                  {[dateLabel, durationLabel].filter((value): value is string => value != null).join(' · ')}
+                </Caption>
+              </div>
+              <div className="text-end">
+                <WidgetBigNumber
+                  value={distanceLabel}
+                  size="secondary"
+                  animated={false}
+                />
+                {efficiencyLabel && (
+                  <Caption className="mt-0.5 block tabular-nums text-[var(--text-muted)]">
+                    {efficiencyLabel}
+                  </Caption>
+                )}
+              </div>
+            </div>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+      icon={<Route className="h-5 w-5" aria-hidden="true" />}
+      message={t('widget.noDrivesList', 'No recent drives recorded')}
+      className="py-4"
+    />
+  );
 
   return (
     <WidgetShell
@@ -75,77 +148,23 @@ export default function RecentDrivesListWidget({ vehicleId, size, config }: Widg
           label={t('widget.viewAll', 'View all')} aria-label={t('widget.viewAll', 'View all')} />
       }
     >
-      {items.length > 0 ? (
-        <ul className="space-y-1.5 overflow-y-auto h-full">
-          {items.map((d) => {
-            const distance = knownNumber(d.distance_m);
-            const duration = knownNumber(d.duration_s);
-            const dist = distance == null ? null : convertDistanceFromSI(distance, unitPrefs.distance);
-            const distanceLabel = dist == null ? '—' : `${fmtNumber(dist, 0)} ${unitPrefs.distance}`;
-            const relativeDay = formatRelativeDays(d.start_ts);
-            const dateLabel = relativeDay === 'Today' || relativeDay === 'Yesterday'
-              ? `${relativeDay} ${formatTime(d.start_ts)}`
-              : `${formatWeekdayName(d.start_ts)} ${formatTime(d.start_ts)}`;
-            const durationLabel = duration == null
-              ? null
-              : duration < 60
-                ? t('widget.recentDrivesSubMinute', '<1m')
-                : formatDurationMinutes(duration / 60, { subMinuteLabel: '<1m' });
-            const energy = knownNumber(d.energy_used_wh);
-            const efficiencyWhPerKm = energy != null && distance != null && distance > 0
-              ? energy / (distance / 1000)
-              : null;
-            const efficiencyLabel = efficiencyWhPerKm != null
-              ? `${fmtNumber(convertEfficiencyFromSI(efficiencyWhPerKm, unitPrefs.distance), 0)} Wh/${unitPrefs.distance}`
-              : null;
-            const startAddress = d.start_address?.trim();
-            const endAddress = d.end_address?.trim();
-            const routeLabel = startAddress || endAddress
-              ? `${startAddress || '—'} → ${endAddress || '—'}`
-              : t('activity.timeline.item.drive', 'Drive');
-
-            return (
-              <li key={d.id}>
-                <Link
-                  to={`/drives/${d.id}`}
-                  aria-label={`${t('widget.recentDrivesListDrive', 'Drive')}: ${distanceLabel}, ${dateLabel}`}
-                  className="group block rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)]"
-                >
-                  <div className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-start ${dashboardTokens.density.rowGap} ${dashboardTokens.density.rowPadding} rounded-lg hover:bg-[var(--surface-hover)] ${dashboardTokens.motion.transition}`}>
-                    <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--text-secondary)]" />
-                    <div className="min-w-0">
-                      <Text variant="bodySm" className="block min-w-0 font-medium [overflow-wrap:anywhere]">
-                        {startAddress || endAddress ? `${startAddress || '—'} → ${endAddress || '—'}` : routeLabel}
-                      </Text>
-                      <Caption className="mt-0.5 block tabular-nums">
-                        {[dateLabel, durationLabel].filter((value): value is string => value != null).join(' · ')}
-                      </Caption>
-                    </div>
-                    <div className="text-end">
-                      <WidgetBigNumber
-                        value={distanceLabel}
-                        size="secondary"
-                        animated={false}
-                      />
-                      {efficiencyLabel && (
-                        <Caption className="mt-0.5 block tabular-nums text-[var(--text-muted)]">
-                          {efficiencyLabel}
-                        </Caption>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Route className="h-5 w-5" aria-hidden="true" />}
-          message={t('widget.noDrivesList', 'No recent drives recorded')}
-          className="py-4"
-        />
-      )}
+      <InstrumentPresentation
+        family="list"
+        compact={size.rows === 1}
+        headline={latest ? (
+          <WidgetBigNumber value={latest.distanceLabel} label={latest.routeLabel}
+            subtitle={latest.dateLabel} animated={false} />
+        ) : undefined}
+        icon={latest ? <Route aria-hidden="true" /> : undefined}
+        instrument={content}
+        details={latest ? (
+          <Caption className="block tabular-nums">
+            {t('widget.recentDrivesList', 'Recent drives')}: {fmtNumber(rows.length, 0)}
+          </Caption>
+        ) : undefined}
+      >
+        {content}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

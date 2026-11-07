@@ -199,6 +199,9 @@ func (h *EventHub) BroadcastSignalChangeWithContext(ctx context.Context, vehicle
 	if meta, ok := protomodel.SignalsByName[field]; ok && meta != nil {
 		kind = meta.ValueKind
 	}
+	if _, ok := val.Raw.(bool); ok && kind == protomodel.ValueKindEnum {
+		kind = protomodel.ValueKindBool
+	}
 	h.BroadcastWithContext(ctx, "signal_change", SignalChangeEvent{
 		StreamID:  h.streamID,
 		Sequence:  h.signalSequence.Add(1),

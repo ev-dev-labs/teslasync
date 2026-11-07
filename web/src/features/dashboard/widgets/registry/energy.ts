@@ -114,4 +114,17 @@ export const ENERGY_WIDGETS: WidgetDef[] = [
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('../EnergyStatsWidget')),
   },
+  {
+    id: 'new-powershare',
+    name: 'Powershare',
+    description: 'Last reported transfer state and raw observations with unverified units clearly identified',
+    nameKey: 'widgets.catalog.new-powershare.name',
+    descriptionKey: 'widgets.catalog.new-powershare.description',
+    icon: Home,
+    category: 'energy',
+    defaultSize: { cols: 2, rows: 4 },
+    minSize: { cols: 1, rows: 4 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../PowershareWidget')),
+  },
 ];

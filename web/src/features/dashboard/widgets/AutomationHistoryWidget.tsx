@@ -12,6 +12,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useDateLabels } from '@/hooks/useDateLabels';
 import { cn } from '@/lib/cn';
+import { useTimelineStyles } from './designPacks/useTimelineStyles';
 
 type TranslateFn = (key: string, fallback: string) => string;
 
@@ -47,6 +48,7 @@ export function automationStatusLabel(status: AutomationHistoryStatus | null | u
 // ── Main widget ──────────────────────────────────────────────────────
 
 export default function AutomationHistoryWidget({ size }: WidgetProps) {
+  const timeline = useTimelineStyles();
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatDateTime, formatTime } = useDateFormat();
@@ -110,7 +112,7 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
           className="py-4"
         />
       ) : (
-        <div className="flex-1 min-h-0 overflow-y-auto" role="list" aria-label={t('widget.automationHistory', 'Automation history')}>
+        <div data-timeline-appearance={timeline?.appearance} className={cn('flex-1 min-h-0 overflow-y-auto', timeline?.feed)} role="list" aria-label={t('widget.automationHistory', 'Automation history')}>
           {rows.map((entry, index) => (
             <div
               key={entry.id ?? `${entry.triggered_at ?? 'unknown'}-${index}`}
@@ -118,6 +120,7 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
               className={cn(
                 'grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 border-b border-[var(--border-subtle)] py-2 first:pt-0 last:border-b-0',
                 'md:grid-cols-[minmax(0,1fr)_auto_auto]',
+                timeline?.row,
               )}
             >
               <div className="min-w-0">

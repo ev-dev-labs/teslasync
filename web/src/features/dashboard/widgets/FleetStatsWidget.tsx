@@ -10,13 +10,15 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetStatGrid, type StatGridItem } from './shared';
+import { Car } from 'lucide-react';
+import StatStatusPresentation from './designPacks/StatStatusPresentation';
 
 /** 1 mile = 1.609344 km exactly — restates Wh/km efficiency as Wh/mi. */
 const KM_PER_MILE = 1.609344;
 /** SI prefix: 1 km = 1000 m. Used to rebuild metres from the derived-SI km field. */
 const METERS_PER_KM = 1000;
 
-export default function FleetStatsWidget({ config }: WidgetProps) {
+export default function FleetStatsWidget({ size, config }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const vehiclesQuery = useVehicles();
@@ -96,7 +98,9 @@ export default function FleetStatsWidget({ config }: WidgetProps) {
       onRefresh={refresh}
     >
       <section aria-label={t('widget.fleetStats.summary.title', 'Fleet operating totals')} data-testid="fleet-stats">
-        <WidgetStatGrid stats={stats} cols={2} maxPerRow={2} />
+        <StatStatusPresentation stats={stats} cols={2} maxPerRow={2} compact={size.cols <= 1} icon={<Car className="size-6" aria-hidden="true" />}>
+          <WidgetStatGrid stats={stats} cols={2} maxPerRow={2} />
+        </StatStatusPresentation>
       </section>
     </WidgetShell>
   );

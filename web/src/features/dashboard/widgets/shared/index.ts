@@ -10,3 +10,4 @@ export { WidgetRankedList, type RankedItem } from './WidgetRankedList';
 export { WidgetStatGrid, type StatGridItem, type WidgetStatGridProps } from './WidgetStatGrid';
 export { WidgetStatusGrid, type StatusCell, type WidgetStatusGridProps } from './WidgetStatusGrid';
 export { WidgetTipCards, type TipItem } from './WidgetTipCards';
+export { SignalObservation } from './SignalObservation';

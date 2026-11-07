@@ -1,9 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Eye, EyeOff, MapPin } from 'lucide-react';
 import { CircleMarker } from '@/components/maps';
+import { Button, Caption, Icon, Text } from '@/components/ui';
 import { useVehiclePositions, useVehicles } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
 import { WidgetMapView } from './shared';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
 import type { WidgetProps } from './types';
 import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -82,6 +86,8 @@ export function intensityColor(intensity: number): string {
 
 export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const packId = usePackPresentation();
+  const [locationsHidden, setLocationsHidden] = useState(false);
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
@@ -103,7 +109,7 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
     const endMs = Date.parse(endInstantExclusive);
     if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return items;
     return items.filter((position) => {
-      const timestamp = position.ts;
+      const timestamp = position?.ts;
       if (!timestamp) return true;
       const timestampMs = Date.parse(timestamp);
       return !Number.isFinite(timestampMs) || (timestampMs >= startMs && timestampMs < endMs);
@@ -126,6 +132,9 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
 
   const center = useMemo<[number, number]>(() => centroid(clusters) ?? [0, 0], [clusters]);
   const isEmpty = clusters.length === 0;
+  const hasUnknownTimestamps = safePositions.some(
+    position => !position?.ts || !Number.isFinite(Date.parse(position.ts)),
+  );
 
   const shellProps = {
     title: t('widget.positionHeatmap.title', 'Position heatmap'),
@@ -139,33 +148,109 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
     isStale,
     isError,
     onRefresh: () => refetch(),
+    // Keep an explicit privacy choice when recovering to Classic.
+    actions: packId !== 'classic' || locationsHidden ? (
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-11 w-11 p-0 md:h-9 md:w-9"
+        aria-label={locationsHidden
+          ? t('dashboardWidgets.maps.positionHeatmap.showLocations', 'Show locations')
+          : t('dashboardWidgets.maps.positionHeatmap.hideLocations', 'Hide locations')}
+        aria-pressed={locationsHidden}
+        onClick={() => setLocationsHidden(hidden => !hidden)}
+        icon={<Icon icon={locationsHidden ? Eye : EyeOff} size="md" />}
+      />
+    ) : undefined,
+  };
+
+  const presentMap = (map: ReactNode) => {
+    const visibleMap = locationsHidden ? (
+      <div
+        role="region"
+        aria-label={t('widget.positionHeatmap.title', 'Position heatmap')}
+        className="flex min-h-40 items-center justify-center p-4"
+      >
+        <Caption>{t('dashboardWidgets.maps.positionHeatmap.locationsHidden', 'Locations hidden on this screen')}</Caption>
+      </div>
+    ) : map;
+
+    return (
+      <InstrumentPresentation
+        family="map"
+        compact={isCompact}
+        icon={<Icon icon={MapPin} size="lg" />}
+        headline={(
+          <div className="min-w-0">
+            <Text as="div" variant="subhead">{t('dashboardWidgets.maps.positionHeatmap.density', 'Position density')}</Text>
+            <Caption>{t('dashboardWidgets.maps.positionHeatmap.visitedAreas', 'Visited areas')}</Caption>
+          </div>
+        )}
+        context={<Caption>{t('dashboardWidgets.maps.positionHeatmap.history', 'Historical GPS samples')}</Caption>}
+        instrument={visibleMap}
+        details={(
+          <div className="space-y-2">
+            <div
+              role="group"
+              aria-label={t('dashboardWidgets.maps.positionHeatmap.densityScale', 'Relative sample density')}
+              className="flex flex-wrap items-center gap-2"
+            >
+              <Caption>{t('dashboardWidgets.maps.positionHeatmap.lowDensity', 'Low density')}</Caption>
+              <span aria-hidden="true" className="flex items-center gap-2">
+                {[0, 0.5, 1].map(intensity => (
+                  <span
+                    key={intensity}
+                    className="size-3 rounded-full"
+                    style={{ backgroundColor: intensityColor(intensity) }}
+                  />
+                ))}
+              </span>
+              <Caption>{t('dashboardWidgets.maps.positionHeatmap.highDensity', 'High density')}</Caption>
+            </div>
+            <Caption as="p">
+              {t('dashboardWidgets.maps.positionHeatmap.sampleScope', 'Density uses returned GPS samples, not visit counts. The selected range filters only those samples.')}
+            </Caption>
+            {hasUnknownTimestamps && (
+              <Caption as="p">
+                {t('dashboardWidgets.maps.positionHeatmap.unknownTimestamps', 'Samples without valid timestamps may fall outside the selected range.')}
+              </Caption>
+            )}
+          </div>
+        )}
+      >
+        {visibleMap}
+      </InstrumentPresentation>
+    );
   };
 
   // ─── Compact layout (1-col) ───
   if (isCompact) {
     return (
       <WidgetShell {...shellProps} noPadding>
-        <WidgetMapView
-          center={center}
-          zoom={11}
-          compact
-          isEmpty={isEmpty}
-          emptyMessage={t('widget.positionHeatmap.noData', 'No position data')}
-        >
-          {/* marker-cluster:no heatmap — density visualization where intensity is encoded by circle radius and fill colour; clustering would collapse the spatial-density signal that is the entire purpose of this widget. */}
-          {clusters.map((c, i) => (
-            <CircleMarker
-              key={i}
-              center={[c.lat, c.lon]}
-              radius={4 + c.intensity * 6}
-              pathOptions={{
-                color: 'transparent',
-                fillColor: intensityColor(c.intensity),
-                fillOpacity: 0.4 + c.intensity * 0.5,
-              }}
-            />
-          ))}
-        </WidgetMapView>
+        {presentMap(
+          <WidgetMapView
+            center={center}
+            zoom={11}
+            compact
+            isEmpty={isEmpty}
+            emptyMessage={t('widget.positionHeatmap.noData', 'No position data')}
+          >
+            {/* marker-cluster:no heatmap — density visualization where intensity is encoded by circle radius and fill colour; clustering would collapse the spatial-density signal that is the entire purpose of this widget. */}
+            {clusters.map((c, i) => (
+              <CircleMarker
+                key={i}
+                center={[c.lat, c.lon]}
+                radius={4 + c.intensity * 6}
+                pathOptions={{
+                  color: 'transparent',
+                  fillColor: intensityColor(c.intensity),
+                  fillOpacity: 0.4 + c.intensity * 0.5,
+                }}
+              />
+            ))}
+          </WidgetMapView>,
+        )}
       </WidgetShell>
     );
   }
@@ -176,26 +261,28 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
       noPadding
       {...shellProps}
     >
-      <WidgetMapView
-        center={center}
-        zoom={isWide ? 12 : 11}
-        isEmpty={isEmpty}
-        emptyMessage={t('widget.positionHeatmap.noData', 'No position data')}
-      >
-        {/* marker-cluster:no heatmap — density visualization where intensity is encoded by circle radius and fill colour; clustering would collapse the spatial-density signal that is the entire purpose of this widget. */}
-        {clusters.map((c, i) => (
-          <CircleMarker
-            key={i}
-            center={[c.lat, c.lon]}
-            radius={6 + c.intensity * (isWide ? 14 : 10)}
-            pathOptions={{
-              color: 'transparent',
-              fillColor: intensityColor(c.intensity),
-              fillOpacity: 0.35 + c.intensity * 0.55,
-            }}
-          />
-        ))}
-      </WidgetMapView>
+      {presentMap(
+        <WidgetMapView
+          center={center}
+          zoom={isWide ? 12 : 11}
+          isEmpty={isEmpty}
+          emptyMessage={t('widget.positionHeatmap.noData', 'No position data')}
+        >
+          {/* marker-cluster:no heatmap — density visualization where intensity is encoded by circle radius and fill colour; clustering would collapse the spatial-density signal that is the entire purpose of this widget. */}
+          {clusters.map((c, i) => (
+            <CircleMarker
+              key={i}
+              center={[c.lat, c.lon]}
+              radius={6 + c.intensity * (isWide ? 14 : 10)}
+              pathOptions={{
+                color: 'transparent',
+                fillColor: intensityColor(c.intensity),
+                fillOpacity: 0.35 + c.intensity * 0.55,
+              }}
+            />
+          ))}
+        </WidgetMapView>,
+      )}
     </WidgetShell>
   );
 }

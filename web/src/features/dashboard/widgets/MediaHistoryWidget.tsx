@@ -13,6 +13,7 @@ import { cleanNil } from '@/lib/cleanNil';
 import { safeArray } from '@/lib/safeArray';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useDateLabels } from '@/hooks/useDateLabels';
+import TimelinePresentation from './designPacks/TimelinePresentation';
 
 // ── Compact layout (1×2) ─────────────────────────────────────────────
 
@@ -131,11 +132,13 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
     >
       {isCompact ? (
         lastTrack ? (
+          <TimelinePresentation compact>
           <CompactView
             title={cleanNil(lastTrack.now_playing_title) ?? '—'}
             artist={cleanNil(lastTrack.now_playing_artist) ?? '—'}
             t={t}
           />
+          </TimelinePresentation>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<ListMusic className="h-5 w-5" />}
@@ -146,6 +149,7 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto">
           <WidgetDetailCard
+            presentation="timeline"
             entries={entries.slice(0, 10)}
             compact={false}
             emptyMessage={t('widget.noMediaPlayed', 'No tracks played')}

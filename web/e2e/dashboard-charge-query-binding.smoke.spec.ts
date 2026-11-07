@@ -151,13 +151,15 @@ test.beforeAll(async ({ browser }, testInfo) => {
       if (!match || !match.component.hookChainComplete) throw new Error('Incomplete source-component hook evidence');
       const list = match.component.hooks.find(hook =>
         JSON.stringify(hook.queryKey) === JSON.stringify(['charging-sessions', 'vehicle', '7']));
+      const widgetId = widget.component.closestWidgetId;
+      if (!widgetId) throw new Error('Missing native source widget boundary identity');
       const binding: CatalogueChargeQueryBinding = {
-        widgetId: widget.component.closestWidgetId, boundaryReached: widget.component.boundaryReached,
+        widgetId, boundaryReached: widget.component.boundaryReached,
         componentDepth: match.component.depth, vehiclePropType: match.component.vehicleIdType,
         vehicleProp: match.component.vehicleId, hookIndex: match.hook.index,
         queryKey: match.hook.queryKey, status: match.hook.status, data: match.hook.data,
         detailList: kind === 'detail' && list ? {
-          widgetId: widget.component.closestWidgetId, componentDepth: match.component.depth,
+          widgetId, componentDepth: match.component.depth,
           queryKey: list.queryKey, status: list.status, data: list.data,
         } : undefined,
       };

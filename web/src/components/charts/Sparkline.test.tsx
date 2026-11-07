@@ -53,6 +53,63 @@ describe('Sparkline — geometry mapping', () => {
     expect(linePoints(container)).toBe('0,30 100,0')
   })
 
+  describe('Sparkline — timestamped observations', () => {
+    it('uses elapsed time instead of uniformly spacing irregular observations', () => {
+      const { container } = render(<Sparkline width={100} height={30} samples={[
+        { timestamp: 0, value: 0 }, { timestamp: 10, value: 5 }, { timestamp: 100, value: 10 },
+      ]} />)
+      expect(linePoints(container)).toBe('0,30 10,15 100,0')
+    })
+
+    it('breaks both line and fill at missing readings while preserving signed values and zero', () => {
+      const { container } = render(<Sparkline width={100} height={30} samples={[
+        { timestamp: 0, value: -10 }, { timestamp: 10, value: 0 },
+        { timestamp: 20, value: null },
+        { timestamp: 90, value: 0 }, { timestamp: 100, value: 10 },
+      ]} />)
+      const lines = [...container.querySelectorAll('polyline[fill="none"]')]
+      expect(lines.map(line => line.getAttribute('points'))).toEqual(['0,30 10,15', '90,15 100,0'])
+      const areas = [...container.querySelectorAll('polyline[stroke="none"]')]
+      expect(areas.map(area => area.getAttribute('points'))).toEqual([
+        '0,30 0,30 10,15 10,30', '90,30 90,15 100,0 100,30',
+      ])
+    })
+
+    it('does not connect across unknown timestamps or extrapolate isolated observations', () => {
+      const { container } = render(<Sparkline width={100} height={30} samples={[
+        { timestamp: 0, value: 0 }, { timestamp: Number.NaN, value: 5 }, { timestamp: 100, value: 10 },
+      ]} />)
+      expect(container.querySelector('polyline')).toBeNull()
+      expect([...container.querySelectorAll('circle')].map(point => point.getAttribute('cx'))).toEqual(['0', '100'])
+      expect(container.innerHTML).not.toContain('NaN')
+    })
+
+    it('does not invent a time interval for one observation or duplicate timestamps', () => {
+      const view = render(<Sparkline width={100} height={30} samples={[{ timestamp: 7, value: 0 }]} />)
+      expect(view.container.querySelector('polyline')).toBeNull()
+      expect(view.container.querySelector('circle')).toHaveAttribute('cx', '50')
+      view.rerender(<Sparkline width={100} height={30} samples={[
+        { timestamp: 7, value: 0 }, { timestamp: 7, value: 10 },
+      ]} />)
+      expect(linePoints(view.container)).toBe('50,30 50,0')
+    })
+
+    it('keeps the same geometry after an interval-unit conversion', () => {
+      const celsius = [{ timestamp: 0, value: -10 }, { timestamp: 10, value: 0 }, { timestamp: 100, value: 20 }]
+      const view = render(<Sparkline samples={celsius} />)
+      const before = linePoints(view.container)
+      view.rerender(<Sparkline samples={celsius.map(point => ({ ...point, value: point.value * 1.8 + 32 }))} />)
+      expect(linePoints(view.container)).toBe(before)
+    })
+
+    it('renders no measurement when every timed reading is invalid or absent', () => {
+      const { container } = render(<Sparkline samples={[
+        { timestamp: 0, value: null }, { timestamp: 1, value: Infinity }, { timestamp: NaN, value: 0 },
+      ]} />)
+      expect(container.querySelector('svg')).toBeNull()
+    })
+  })
+
   it('spreads intermediate samples evenly across the width', () => {
     const { container } = render(<Sparkline data={[0, 5, 10]} width={100} height={30} />)
     expect(linePoints(container)).toBe('0,30 50,15 100,0')

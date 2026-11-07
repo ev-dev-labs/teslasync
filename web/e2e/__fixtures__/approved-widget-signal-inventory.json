@@ -1,0 +1,5624 @@
+{
+  "schemaVersion": 1,
+  "approvedPlanSha256": "11cc8e4ad9bba5369cadaf68ddbac6ca71b0ca0721b7ada5e73dc871194f19b5",
+  "widgetIds": [
+    "vehicle-hero",
+    "vehicle-hero-card",
+    "vehicle-twin",
+    "digital-twin-mini",
+    "software-update-status",
+    "software-update-history",
+    "odometer-counter",
+    "drivetrain-health",
+    "motor-performance",
+    "motor-history",
+    "vehicle-specs",
+    "watch-summary",
+    "maintenance-tracker",
+    "warranty-status",
+    "subscriptions",
+    "vehicle-upgrades",
+    "battery-gauge",
+    "battery-radial-gauge",
+    "range-estimate",
+    "range-bar",
+    "battery-degradation-trend",
+    "energy-flow",
+    "projected-range",
+    "battery-cells",
+    "battery-degradation-forecast",
+    "battery-health-analytics",
+    "energy-flow-animated",
+    "vampire-drain",
+    "sleep-efficiency",
+    "solar-production",
+    "live-power-flow",
+    "energy-site-info",
+    "backup-history",
+    "power-flow-history",
+    "energy-stats",
+    "recent-drives",
+    "drive-score",
+    "recent-drives-list",
+    "drive-score-gauge",
+    "drive-efficiency-chart",
+    "speed-heatmap",
+    "driving-dynamics",
+    "speed-profile",
+    "regen-efficiency",
+    "route-efficiency",
+    "driving-coach",
+    "trip-summary",
+    "drive-telemetry",
+    "charge-status",
+    "charge-status-live",
+    "charge-history",
+    "charge-session-chart",
+    "charge-cost-tracker",
+    "charging-schedule",
+    "cost-forecast",
+    "charging-optimizer",
+    "wall-connector",
+    "charging-telemetry",
+    "supercharger-history",
+    "charge-plans",
+    "next-charge-decision",
+    "charging-session-detail",
+    "climate-status",
+    "climate-control-panel",
+    "weather-at-car",
+    "climate-history",
+    "tire-pressure-visual",
+    "tire-pressure-history",
+    "security-status",
+    "door-window-status",
+    "sentry-event-log",
+    "safety-features",
+    "safety-history",
+    "guard-mode",
+    "vehicle-access",
+    "command-quick-actions",
+    "command-history",
+    "media-now-playing",
+    "media-history",
+    "live-signals",
+    "live-signal-sparklines",
+    "signal-health",
+    "signal-catalog",
+    "signal-log",
+    "fleet-stats",
+    "fleet-stats-bar",
+    "weekly-summary-card",
+    "weekly-digest",
+    "fsd-weekly",
+    "monthly-mileage",
+    "lifetime-stats",
+    "mileage-stats",
+    "state-timeline",
+    "anomaly-detector",
+    "fsm-distribution",
+    "cost-breakdown",
+    "year-review",
+    "analytics-summary",
+    "recently-unlocked-achievements",
+    "alert-feed",
+    "notification-stats",
+    "automation-status",
+    "automation-history",
+    "onboarding-checklist",
+    "fleet-posture",
+    "uptime-monitor",
+    "mqtt-status",
+    "quick-nav",
+    "api-usage",
+    "system-health",
+    "telemetry-errors",
+    "audit-log",
+    "backup-monitor",
+    "export-status",
+    "version-info",
+    "dashboard-stats",
+    "location-map",
+    "location-favorites",
+    "geofence-status",
+    "destination-eta",
+    "position-heatmap",
+    "new-signal-explorer",
+    "new-axle-thermal",
+    "new-high-voltage",
+    "new-powershare",
+    "new-arrival-energy",
+    "new-cabin-comfort",
+    "new-charge-readiness",
+    "new-driver-assist",
+    "new-tire-warnings",
+    "new-signal-readiness",
+    "new-unit-context"
+  ],
+  "signalCoverage": [
+    {
+      "field": "AccessoryRail",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "AccessoryRail",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ACChargingEnergyIn",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ACChargingEnergyIn",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "charging_telemetry",
+            "column": "ac_charging_energy_in_wh",
+            "alsoSignalLog": true
+          }
+        }
+      ]
+    },
+    {
+      "field": "ACChargingPower",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ACChargingPower",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "charging_telemetry",
+            "column": "ac_charging_power_w",
+            "alsoSignalLog": true
+          }
+        }
+      ]
+    },
+    {
+      "field": "AutomaticBlindSpotCamera",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "AutomaticBlindSpotCamera",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "AutomaticEmergencyBrakingOff",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "AutomaticEmergencyBrakingOff",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "AutomaticEmergencyBrakingState",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "AutomaticEmergencyBrakingState",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "AutoSeatClimateLeft",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "AutoSeatClimateLeft",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "auto_seat_climate_left",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "AutoSeatClimateRight",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "AutoSeatClimateRight",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "auto_seat_climate_right",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "BatteryHeaterOn",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "BatteryHeaterOn",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "charging_telemetry",
+            "column": "battery_heater_on",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "BatteryLevel",
+      "semanticUnit": "Charge",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "BatteryLevel",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "BlindSpotCollisionWarningChime",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "BlindSpotCollisionWarningChime",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "BmsFullchargecomplete",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "BmsFullchargecomplete",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "BMSState",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "BMSState",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "BrakePedal",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "BrakePedal",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "drive_telemetry",
+            "column": "brake_pedal",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "BrakePedalPos",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "BrakePedalPos",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "drive_telemetry",
+            "column": "brake_pedal_pos_pct",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "BrickSocMinPercent",
+      "semanticUnit": "Charge",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "BrickSocMinPercent",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "BrickVoltageMax",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "BrickVoltageMax",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "BrickVoltageMin",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "BrickVoltageMin",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "Cabin12vPortKeepOn",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "Cabin12vPortKeepOn",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "Cabin48vPortKeepOn",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "Cabin48vPortKeepOn",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "CabinOverheatProtectionMode",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "CabinOverheatProtectionMode",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "cabin_overheat_protection_mode",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "CabinOverheatProtectionTemperatureLimit",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "CabinOverheatProtectionTemperatureLimit",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "cabin_overheat_protection_temperature_limit",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "CarType",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "CarType",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "CenterDisplay",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "CenterDisplay",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ChargeAmps",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ChargeAmps",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ChargeCurrentRequest",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ChargeCurrentRequest",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ChargeCurrentRequestMax",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ChargeCurrentRequestMax",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ChargeEnableRequest",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ChargeEnableRequest",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ChargeLimitSoc",
+      "semanticUnit": "Charge",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ChargeLimitSoc",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "charging_telemetry",
+            "column": "charge_limit_soc_pct",
+            "alsoSignalLog": true
+          }
+        }
+      ]
+    },
+    {
+      "field": "ChargePort",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ChargePort",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ChargePortColdWeatherMode",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ChargePortColdWeatherMode",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ChargePortDoorOpen",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ChargePortDoorOpen",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "charging_telemetry",
+            "column": "charge_port_door_open",
+            "alsoSignalLog": true
+          }
+        }
+      ]
+    },
+    {
+      "field": "ChargePortLatch",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ChargePortLatch",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "charging_telemetry",
+            "column": "charge_port_latch",
+            "alsoSignalLog": true
+          }
+        }
+      ]
+    },
+    {
+      "field": "ChargeRateMilePerHour",
+      "semanticUnit": "Distance",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ChargeRateMilePerHour",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ChargerPhases",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ChargerPhases",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "charging_telemetry",
+            "column": "charger_phases",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ChargerVoltage",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ChargerVoltage",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "charging_telemetry",
+            "column": "charger_voltage_v",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ChargeState",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ChargeState",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ChargingCableType",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ChargingCableType",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "charging_telemetry",
+            "column": "charging_cable_type",
+            "alsoSignalLog": true
+          }
+        }
+      ]
+    },
+    {
+      "field": "ClimateKeeperMode",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ClimateKeeperMode",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "climate_keeper_mode",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ClimateSeatCoolingFrontLeft",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ClimateSeatCoolingFrontLeft",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "climate_seat_cooling_front_left",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ClimateSeatCoolingFrontRight",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ClimateSeatCoolingFrontRight",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "climate_seat_cooling_front_right",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "CruiseFollowDistance",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "CruiseFollowDistance",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "CruiseSetSpeed",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "CruiseSetSpeed",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "drive_telemetry",
+            "column": "cruise_set_speed_mps",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "CurrentLimitMph",
+      "semanticUnit": "Distance",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "CurrentLimitMph",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DCChargingEnergyIn",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DCChargingEnergyIn",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "charging_telemetry",
+            "column": "dc_charging_energy_in_wh",
+            "alsoSignalLog": true
+          }
+        }
+      ]
+    },
+    {
+      "field": "DCChargingPower",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DCChargingPower",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "charging_telemetry",
+            "column": "dc_charging_power_w",
+            "alsoSignalLog": true
+          }
+        }
+      ]
+    },
+    {
+      "field": "DCDCEnable",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DCDCEnable",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DefrostForPreconditioning",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DefrostForPreconditioning",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "defrost_for_preconditioning",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DefrostMode",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DefrostMode",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "defrost_mode",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DestinationLocation",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DestinationLocationLatitude",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "DestinationLocationLongitude",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DestinationName",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DestinationName",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DetailedChargeState",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DetailedChargeState",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiAxleSpeedF",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiAxleSpeedF",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "front_axle_speed_rpm",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiAxleSpeedR",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiAxleSpeedR",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_axle_speed_rpm",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiAxleSpeedREL",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiAxleSpeedREL",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_left_axle_speed_rpm",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiAxleSpeedRER",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiAxleSpeedRER",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_right_axle_speed_rpm",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiHeatsinkTF",
+      "semanticUnit": "Temperature",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiHeatsinkTF",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "front_heatsink_c",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiHeatsinkTR",
+      "semanticUnit": "Temperature",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiHeatsinkTR",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_heatsink_c",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiHeatsinkTREL",
+      "semanticUnit": "Temperature",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiHeatsinkTREL",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_left_heatsink_c",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiHeatsinkTRER",
+      "semanticUnit": "Temperature",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiHeatsinkTRER",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_right_heatsink_c",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiInverterTF",
+      "semanticUnit": "Temperature",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiInverterTF",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "front_inverter_c",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiInverterTR",
+      "semanticUnit": "Temperature",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiInverterTR",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_inverter_c",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiInverterTREL",
+      "semanticUnit": "Temperature",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiInverterTREL",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_left_inverter_c",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiInverterTRER",
+      "semanticUnit": "Temperature",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiInverterTRER",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_right_inverter_c",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiMotorCurrentF",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiMotorCurrentF",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "front_motor_current_a",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiMotorCurrentR",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiMotorCurrentR",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_motor_current_a",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiMotorCurrentREL",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiMotorCurrentREL",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_left_motor_current_a",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiMotorCurrentRER",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiMotorCurrentRER",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_right_motor_current_a",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiSlaveTorqueCmd",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiSlaveTorqueCmd",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "torque_command_nm",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiStateF",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiStateF",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "front_state",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiStateR",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiStateR",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_state",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiStateREL",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiStateREL",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_left_state",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiStateRER",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiStateRER",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_right_state",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiStatorTempF",
+      "semanticUnit": "Temperature",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiStatorTempF",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "front_stator_c",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiStatorTempR",
+      "semanticUnit": "Temperature",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiStatorTempR",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_stator_c",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiStatorTempREL",
+      "semanticUnit": "Temperature",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiStatorTempREL",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_left_stator_c",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiStatorTempRER",
+      "semanticUnit": "Temperature",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiStatorTempRER",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_right_stator_c",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiTorqueActualF",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiTorqueActualF",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "front_torque_nm",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiTorqueActualR",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiTorqueActualR",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_torque_nm",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiTorqueActualREL",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiTorqueActualREL",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_left_torque_nm",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiTorqueActualRER",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiTorqueActualRER",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_right_torque_nm",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiTorquemotor",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiTorquemotor",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "torque_motor_nm",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiVBatF",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiVBatF",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "front_vbat_v",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiVBatR",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiVBatR",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_vbat_v",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiVBatREL",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiVBatREL",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_left_vbat_v",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DiVBatRER",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DiVBatRER",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "rear_right_vbat_v",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DoorState",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DoorStateDriverFront",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "DoorStateDriverRear",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "DoorStatePassengerFront",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "DoorStatePassengerRear",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "DoorStateFrontTrunk",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "DoorStateRearTrunk",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DriveRail",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DriveRail",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "drive_telemetry",
+            "column": "drive_rail",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DriverSeatBelt",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DriverSeatBelt",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "driver_seat_belt",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "DriverSeatOccupied",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "DriverSeatOccupied",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "driver_seat_occupied",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "EfficiencyPackage",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "EfficiencyPackage",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "EmergencyLaneDepartureAvoidance",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "EmergencyLaneDepartureAvoidance",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "EnergyRemaining",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "EnergyRemaining",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "EstBatteryRange",
+      "semanticUnit": "Distance",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "EstBatteryRange",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "EstimatedHoursToChargeTermination",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "EstimatedHoursToChargeTermination",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "EuropeVehicle",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "EuropeVehicle",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ExpectedEnergyPercentAtTripArrival",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ExpectedEnergyPercentAtTripArrival",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ExteriorColor",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ExteriorColor",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "FastChargerPresent",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "FastChargerPresent",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "FastChargerType",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "FastChargerType",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "charging_telemetry",
+            "column": "fast_charger_type",
+            "alsoSignalLog": true
+          }
+        }
+      ]
+    },
+    {
+      "field": "FdWindow",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "FdWindow",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ForwardCollisionWarning",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ForwardCollisionWarning",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "FpWindow",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "FpWindow",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "Gear",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 1,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "Gear",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "drive_telemetry",
+            "column": "gear",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "GpsAccuracyMeters",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "GpsAccuracyMeters",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "GpsHeading",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "GpsHeading",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "positions",
+            "column": "heading_deg",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "GpsState",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "GpsState",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "positions",
+            "column": "gps_state",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "GradeEstimatePercent",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "GradeEstimatePercent",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "GuestModeEnabled",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "GuestModeEnabled",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "GuestModeMobileAccessState",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "GuestModeMobileAccessState",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "HomelinkDeviceCount",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "HomelinkDeviceCount",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "HomelinkNearby",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "HomelinkNearby",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "HvacACEnabled",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "HvacACEnabled",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "hvac_ac_enabled",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "HvacAutoMode",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "HvacAutoMode",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "hvac_auto_mode",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "HvacFanSpeed",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "HvacFanSpeed",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "hvac_fan_speed",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "HvacFanStatus",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "HvacFanStatus",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "hvac_fan_status",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "HvacLeftTemperatureRequest",
+      "semanticUnit": "Temperature",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "HvacLeftTemperatureRequest",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "hvac_left_request_c",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "HvacPower",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "HvacPower",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "hvac_power",
+            "alsoSignalLog": true
+          }
+        }
+      ]
+    },
+    {
+      "field": "HvacRightTemperatureRequest",
+      "semanticUnit": "Temperature",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "HvacRightTemperatureRequest",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "hvac_right_request_c",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "HvacSteeringWheelHeatAuto",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "HvacSteeringWheelHeatAuto",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "hvac_steering_wheel_heat_auto",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "HvacSteeringWheelHeatLevel",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "HvacSteeringWheelHeatLevel",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "hvac_steering_wheel_heat_level",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "Hvil",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "Hvil",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "hvil_state",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "IdealBatteryRange",
+      "semanticUnit": "Distance",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "IdealBatteryRange",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "InsideTemp",
+      "semanticUnit": "Temperature",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "InsideTemp",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "inside_temp_c",
+            "alsoSignalLog": true
+          }
+        }
+      ]
+    },
+    {
+      "field": "IsolationResistance",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "IsolationResistance",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "motor_snapshot",
+            "column": "isolation_resistance_ohm",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "LaneDepartureAvoidance",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "LaneDepartureAvoidance",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "LateralAcceleration",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "LateralAcceleration",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "drive_telemetry",
+            "column": "lateral_acceleration_mps2",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "LifetimeDcChargeEnergyKwh",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "LifetimeDcChargeEnergyKwh",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "LifetimeEnergyChargedKwh",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "LifetimeEnergyChargedKwh",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "LifetimeEnergyGainedRegen",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "LifetimeEnergyGainedRegen",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "drive_telemetry",
+            "column": "lifetime_energy_gained_regen_wh",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "LifetimeEnergyUsed",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "LifetimeEnergyUsed",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "LifetimeEnergyUsedDrive",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "LifetimeEnergyUsedDrive",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "drive_telemetry",
+            "column": "lifetime_energy_used_drive_wh",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "LightsHazardsActive",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "LightsHazardsActive",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "LightsHighBeams",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "LightsHighBeams",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "LightsTurnSignal",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "LightsTurnSignal",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "LocatedAtFavorite",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "LocatedAtFavorite",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "LocatedAtHome",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "LocatedAtHome",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "LocatedAtWork",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "LocatedAtWork",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "Location",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "LocationLatitude",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "positions",
+            "column": "lat",
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "LocationLongitude",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "positions",
+            "column": "lng",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "Locked",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "Locked",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "security_event",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "LongitudinalAcceleration",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "LongitudinalAcceleration",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "drive_telemetry",
+            "column": "longitudinal_acceleration_mps2",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "MaxSpeedToReachDestinationMph",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "MaxSpeedToReachDestinationMph",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "MediaAudioVolume",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "MediaAudioVolume",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "media_snapshot",
+            "column": "volume_pct",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "MediaAudioVolumeIncrement",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "MediaAudioVolumeIncrement",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "media_snapshot",
+            "column": "volume_increment",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "MediaAudioVolumeMax",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "MediaAudioVolumeMax",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "media_snapshot",
+            "column": "volume_max",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "MediaNowPlayingAlbum",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "MediaNowPlayingAlbum",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "media_snapshot",
+            "column": "album",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "MediaNowPlayingArtist",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "MediaNowPlayingArtist",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "media_snapshot",
+            "column": "artist",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "MediaNowPlayingDuration",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "MediaNowPlayingDuration",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "media_snapshot",
+            "column": "duration_s",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "MediaNowPlayingElapsed",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "MediaNowPlayingElapsed",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "media_snapshot",
+            "column": "elapsed_s",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "MediaNowPlayingStation",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "MediaNowPlayingStation",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "media_snapshot",
+            "column": "station",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "MediaNowPlayingTitle",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "MediaNowPlayingTitle",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "media_snapshot",
+            "column": "track_name",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "MediaPlaybackSource",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "MediaPlaybackSource",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "media_snapshot",
+            "column": "source",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "MediaPlaybackStatus",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "MediaPlaybackStatus",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "media_snapshot",
+            "column": "play_status",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "MilesSinceReset",
+      "semanticUnit": "Distance",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "MilesSinceReset",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "MilesToArrival",
+      "semanticUnit": "Distance",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "MilesToArrival",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "MinutesToArrival",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "MinutesToArrival",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ModuleTempMax",
+      "semanticUnit": "Temperature",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ModuleTempMax",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ModuleTempMin",
+      "semanticUnit": "Temperature",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ModuleTempMin",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "NominalFullPackEnergyKwh",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "NominalFullPackEnergyKwh",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "NotEnoughPowerToHeat",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "NotEnoughPowerToHeat",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "NumBrickVoltageMax",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "NumBrickVoltageMax",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "NumBrickVoltageMin",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "NumBrickVoltageMin",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "NumModuleTempMax",
+      "semanticUnit": "Temperature",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "NumModuleTempMax",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "NumModuleTempMin",
+      "semanticUnit": "Temperature",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "NumModuleTempMin",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "Odometer",
+      "semanticUnit": "Distance",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "Odometer",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "OffroadLightbarPresent",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "OffroadLightbarPresent",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "OriginLocation",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "OriginLocationLatitude",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "OriginLocationLongitude",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "OutsideTemp",
+      "semanticUnit": "Temperature",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "OutsideTemp",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "outside_temp_c",
+            "alsoSignalLog": true
+          }
+        }
+      ]
+    },
+    {
+      "field": "PackCurrent",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "PackCurrent",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "PackVoltage",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "PackVoltage",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "PairedPhoneKeyAndKeyFobQty",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "PairedPhoneKeyAndKeyFobQty",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "PassengerSeatBelt",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "PassengerSeatBelt",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "passenger_seat_belt",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "PedalPosition",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "PedalPosition",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "drive_telemetry",
+            "column": "pedal_position_pct",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "PinToDriveEnabled",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "PinToDriveEnabled",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "PowershareHoursLeft",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "PowershareHoursLeft",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "PowershareInstantaneousPowerKW",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "PowershareInstantaneousPowerKW",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "PowershareStatus",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "PowershareStatus",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "PowershareStopReason",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "PowershareStopReason",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "PowershareType",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "PowershareType",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "PowerTransferStatus",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "PowerTransferStatus",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "PreconditioningEnabled",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "PreconditioningEnabled",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "RatedRange",
+      "semanticUnit": "Distance",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "RatedRange",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "RdWindow",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "RdWindow",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "RearDefrostEnabled",
+      "semanticUnit": "None",
+      "disposition": "not-routed",
+      "subscriptionPolicy": {
+        "desired": false,
+        "intervalSeconds": null,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "RearDefrostEnabled",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "drop",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "RearDisplayHvacEnabled",
+      "semanticUnit": "None",
+      "disposition": "not-routed",
+      "subscriptionPolicy": {
+        "desired": false,
+        "intervalSeconds": null,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "RearDisplayHvacEnabled",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "drop",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "RearSeatHeaters",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "RearSeatHeaters",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "rear_seat_heaters",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "RemoteStartActive",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "RemoteStartActive",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "RemoteStartEnabled",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "RemoteStartEnabled",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "RightHandDrive",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "RightHandDrive",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "RollingResistanceCoefficient",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "RollingResistanceCoefficient",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "RoofColor",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "RoofColor",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "RouteLastUpdated",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "RouteLastUpdated",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "RouteLine",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "RouteLine",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "RouteTrafficMinutesDelay",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "RouteTrafficMinutesDelay",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "RpWindow",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "RpWindow",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ScheduledChargingMode",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ScheduledChargingMode",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ScheduledChargingPending",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ScheduledChargingPending",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ScheduledChargingStartTime",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ScheduledChargingStartTime",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ScheduledDepartureTime",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ScheduledDepartureTime",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SeatHeaterLeft",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SeatHeaterLeft",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "seat_heater_left",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SeatHeaterRearCenter",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SeatHeaterRearCenter",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "seat_heater_rear_center",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SeatHeaterRearLeft",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SeatHeaterRearLeft",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "seat_heater_rear_left",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SeatHeaterRearRight",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SeatHeaterRearRight",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "seat_heater_rear_right",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SeatHeaterRight",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SeatHeaterRight",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "seat_heater_right",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SeatVentEnabled",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SeatVentEnabled",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "seat_vent_enabled",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SelfDrivingMilesSinceReset",
+      "semanticUnit": "Distance",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 1,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SelfDrivingMilesSinceReset",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SelfDrivingSoftwareVersion",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SelfDrivingSoftwareVersion",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SemiCruiseSpeedLimitMph",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SemiCruiseSpeedLimitMph",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SemiTrailerLatched",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SemiTrailerLatched",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SemiVehicleMassKg",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 5,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SemiVehicleMassKg",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SentryMode",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SentryMode",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "security_event",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ServiceMode",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ServiceMode",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "safety_snapshot",
+            "column": "service_mode",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "Setting24HourTime",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "Setting24HourTime",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SettingChargeUnit",
+      "semanticUnit": "Charge",
+      "disposition": "unit-context",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 1,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SettingChargeUnit",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "unit_history",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SettingDistanceUnit",
+      "semanticUnit": "Distance",
+      "disposition": "unit-context",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 1,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SettingDistanceUnit",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "unit_history",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SettingTemperatureUnit",
+      "semanticUnit": "Temperature",
+      "disposition": "unit-context",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 1,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SettingTemperatureUnit",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "unit_history",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SettingTirePressureUnit",
+      "semanticUnit": "Pressure",
+      "disposition": "unit-context",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 1,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SettingTirePressureUnit",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "unit_history",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "Soc",
+      "semanticUnit": "Charge",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "Soc",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SoftwareUpdateAvailable",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SoftwareUpdateAvailable",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SoftwareUpdateDownloadPercentComplete",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SoftwareUpdateDownloadPercentComplete",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SoftwareUpdateExpectedDurationMinutes",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SoftwareUpdateExpectedDurationMinutes",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SoftwareUpdateInProgress",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SoftwareUpdateInProgress",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SoftwareUpdateInstallationPercentComplete",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SoftwareUpdateInstallationPercentComplete",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SoftwareUpdateScheduledStartTime",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SoftwareUpdateScheduledStartTime",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SoftwareUpdateVersion",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SoftwareUpdateVersion",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SpeedLimitMode",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SpeedLimitMode",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SpeedLimitWarning",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SpeedLimitWarning",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SunroofInstalled",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SunroofInstalled",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "SuperchargerSessionTripPlanner",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "SuperchargerSessionTripPlanner",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "TimeToFullCharge",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 10,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "TimeToFullCharge",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "TonneauOpenPercent",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "TonneauOpenPercent",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "TonneauPosition",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "TonneauPosition",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "TonneauTentMode",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "TonneauTentMode",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "TpmsHardWarnings",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "TpmsHardWarningsFrontLeft",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsHardWarningsFrontRight",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsHardWarningsRearLeft",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsHardWarningsRearRight",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsHardWarningsSemiMiddleAxleLeft2",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsHardWarningsSemiMiddleAxleRight2",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsHardWarningsSemiRearAxleLeft",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsHardWarningsSemiRearAxleRight",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsHardWarningsSemiRearAxleLeft2",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsHardWarningsSemiRearAxleRight2",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "TpmsLastSeenPressureTimeFl",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "TpmsLastSeenPressureTimeFl",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "tire_pressure_snapshot",
+            "column": "front_left_last_seen_at",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "TpmsLastSeenPressureTimeFr",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "TpmsLastSeenPressureTimeFr",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "tire_pressure_snapshot",
+            "column": "front_right_last_seen_at",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "TpmsLastSeenPressureTimeRl",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "TpmsLastSeenPressureTimeRl",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "tire_pressure_snapshot",
+            "column": "rear_left_last_seen_at",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "TpmsLastSeenPressureTimeRr",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "TpmsLastSeenPressureTimeRr",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "tire_pressure_snapshot",
+            "column": "rear_right_last_seen_at",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "TpmsPressureFl",
+      "semanticUnit": "Pressure",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "TpmsPressureFl",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "tire_pressure_snapshot",
+            "column": "front_left_pa",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "TpmsPressureFr",
+      "semanticUnit": "Pressure",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "TpmsPressureFr",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "tire_pressure_snapshot",
+            "column": "front_right_pa",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "TpmsPressureRl",
+      "semanticUnit": "Pressure",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "TpmsPressureRl",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "tire_pressure_snapshot",
+            "column": "rear_left_pa",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "TpmsPressureRr",
+      "semanticUnit": "Pressure",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "TpmsPressureRr",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "tire_pressure_snapshot",
+            "column": "rear_right_pa",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "TpmsSoftWarnings",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "TpmsSoftWarningsFrontLeft",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsSoftWarningsFrontRight",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsSoftWarningsRearLeft",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsSoftWarningsRearRight",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsSoftWarningsSemiMiddleAxleLeft2",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsSoftWarningsSemiMiddleAxleRight2",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsSoftWarningsSemiRearAxleLeft",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsSoftWarningsSemiRearAxleRight",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsSoftWarningsSemiRearAxleLeft2",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        },
+        {
+          "field": "TpmsSoftWarningsSemiRearAxleRight2",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "Trim",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "Trim",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "ValetModeEnabled",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "ValetModeEnabled",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "security_event",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "VehicleName",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "VehicleName",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "VehicleSpeed",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 1,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "VehicleSpeed",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "drive_telemetry",
+            "column": "speed_mps",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "Version",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "Version",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "WheelType",
+      "semanticUnit": "None",
+      "disposition": "live-and-history",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 60,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "WheelType",
+          "historyAvailable": true,
+          "routing": {
+            "destination": "signal_log",
+            "column": null,
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    },
+    {
+      "field": "WiperHeatEnabled",
+      "semanticUnit": "None",
+      "disposition": "live",
+      "subscriptionPolicy": {
+        "desired": true,
+        "intervalSeconds": 30,
+        "appliedToVehicle": "unknown"
+      },
+      "children": [
+        {
+          "field": "WiperHeatEnabled",
+          "historyAvailable": false,
+          "routing": {
+            "destination": "climate_snapshot",
+            "column": "wiper_heat_enabled",
+            "alsoSignalLog": false
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -8,16 +8,13 @@ import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { WidgetBigNumber, WidgetStatGrid, WidgetFlowDiagram, type FlowNode, type FlowArrow } from './shared';
 import type { WidgetProps } from './types';
-
-/* ── Constants ── */
 
 const CYAN = 'text-[var(--semantic-info)]';
 const GREEN = 'text-[var(--semantic-success)]';
 const AMBER = 'text-[var(--semantic-warning)]';
-
-/* ── Main widget ────────────────────────────────────────────── */
 
 export default function EnergyFlowAnimatedWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
@@ -43,6 +40,7 @@ export default function EnergyFlowAnimatedWidget({ vehicleId, size, config }: Wi
     ...query,
     data: state ?? (loading || queryError || isError ? undefined : null),
     error: queryError,
+    dataUpdatedAt: stateData?.observedAt ?? dataUpdatedAt,
   }, {
     provenance: stateData?.live ? 'live' : 'cached',
     maxAgeMs: 120_000,
@@ -128,6 +126,35 @@ export default function EnergyFlowAnimatedWidget({ vehicleId, size, config }: Wi
     return result;
   }, [absPower, chargerPower, isConsuming, isRegen, isCharging, driveValue, chargerValue]);
 
+  const battery = <WidgetBigNumber value={batteryLevel == null ? null : `${fmtNumber(batteryLevel)}%`} align="center" />;
+  const suppressMotion = !stateData?.live || stateData.freshness !== 'fresh' || isStale || isError
+    || dataState.status === 'stale' || dataState.isRefreshBlocked
+    || dataState.ageMs == null || dataState.ageMs > 120_000;
+  const readings = <WidgetStatGrid compact stats={[
+    ...(isCharging ? [{ label: t('widget.energyFlowAnimated.charger', 'Charger'), value: chargerValue, icon: <Plug className="size-3.5" /> }] : []),
+    ...(!isCharging || isConsuming || isRegen ? [{ label: driveLabel, value: driveValue, icon: <Zap className="size-3.5" /> }] : []),
+  ]} />;
+  const body = state ? (
+    isCompact ? (
+      <div className="flex h-full min-w-0 flex-col gap-2">{battery}{readings}</div>
+    ) : (
+      <div className="widget-flow-frame flex h-full min-h-0 w-full items-center" data-motion-suppressed={suppressMotion || undefined}>
+        <WidgetFlowDiagram
+          nodes={nodes}
+          arrows={arrows}
+          ariaLabel={`${t('widget.energyFlowAnimated.title', 'Energy flow')}: ${nodes.map((node) => `${node.label} ${node.formattedValue}`).join(', ')}`}
+          emptyMessage={t('widget.energyFlowAnimated.noData', 'No energy data available')}
+        />
+      </div>
+    )
+  ) : (
+    <EmptyState /* no-action: transient empty state — no specific recovery action available */
+      icon={<Zap className="h-5 w-5" />}
+      message={t('widget.energyFlowAnimated.noData', 'No energy data available')}
+      className="py-4"
+    />
+  );
+
   return (
     <WidgetShell
       title={t('widget.energyFlowAnimated.title', 'Energy flow')}
@@ -143,32 +170,23 @@ export default function EnergyFlowAnimatedWidget({ vehicleId, size, config }: Wi
       isError={isError}
       onRefresh={handleRefresh}
     >
-      {state ? (
-        isCompact ? (
-          <div className="flex h-full min-w-0 flex-col gap-2">
-            <WidgetBigNumber value={batteryLevel == null ? null : `${fmtNumber(batteryLevel)}%`} align="center" />
-            <WidgetStatGrid compact stats={[
-              ...(isCharging ? [{ label: t('widget.energyFlowAnimated.charger', 'Charger'), value: chargerValue, icon: <Plug className="size-3.5" /> }] : []),
-              ...(!isCharging || isConsuming || isRegen ? [{ label: driveLabel, value: driveValue, icon: <Zap className="size-3.5" /> }] : []),
-            ]} />
-          </div>
-        ) : (
-          <div className="widget-flow-frame flex h-full min-h-0 w-full items-center" data-motion-suppressed={!stateData?.live || undefined}>
-            <WidgetFlowDiagram
-              nodes={nodes}
-              arrows={arrows}
-              ariaLabel={`${t('widget.energyFlowAnimated.title', 'Energy flow')}: ${nodes.map((node) => `${node.label} ${node.formattedValue}`).join(', ')}`}
-              emptyMessage={t('widget.energyFlowAnimated.noData', 'No energy data available')}
-            />
-          </div>
-        )
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Zap className="h-5 w-5" />}
-          message={t('widget.energyFlowAnimated.noData', 'No energy data available')}
-          className="py-4"
-        />
-      )}
+      <InstrumentPresentation
+        family="flow"
+        compact={isCompact}
+        icon={state ? <Zap /> : undefined}
+        headline={state ? isCompact ? battery : (
+          <WidgetBigNumber
+            value={isCharging ? chargerValue : driveValue}
+            label={t('dashboardWidgets.battery.energyFlowAnimated.vehicleFlow', 'Vehicle energy flow')}
+            badge={{ text: isCharging ? t('widget.charging', 'Charging') : driveLabel, variant: 'neutral' }}
+            animated={false}
+          />
+        ) : undefined}
+        instrument={state && isCompact ? undefined : body}
+        details={state && isCompact ? readings : undefined}
+      >
+        {body}
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

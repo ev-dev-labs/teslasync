@@ -32,9 +32,25 @@ import { safeArray } from '@/lib/safeArray';
 import { useDataState } from '@/hooks/useDataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useRangeState } from '@/hooks/useRangeState';
-import { WidgetChartSummary, type ChartSummaryStat } from './shared';
+import { Caption, Text } from '@/components/ui';
+import { EmptyState } from '@/components/feedback';
+import { WidgetBigNumber, WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
+import { usePackPresentation } from './designPacks/PackBoundary';
+import type { PackId } from './designPacks/types';
 import type { WidgetProps } from './types';
+
+const histogramRadii: Record<PackId, [number, number, number, number]> = {
+  classic: [4, 4, 0, 0],
+  v1: [7, 7, 3, 3],
+  v2: [8, 8, 4, 4],
+  v3: [6, 6, 2, 2],
+  v4: [6, 6, 0, 0],
+  v5: [4, 4, 0, 0],
+  v6: [10, 10, 2, 2],
+  v7: [2, 2, 0, 0],
+};
 
 interface ChartDatum extends ChartDataRow {
   bucket: string;
@@ -84,6 +100,7 @@ function parseBucketRange(bucket: string): [number, number] | null {
 export default function SpeedProfileWidget({ vehicleId, size, config }: WidgetProps) {
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
+  const packId = usePackPresentation();
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
@@ -228,6 +245,21 @@ export default function SpeedProfileWidget({ vehicleId, size, config }: WidgetPr
     if (!isFetching) void refetch();
   }, [isFetching, refetch]);
 
+  const headline = (
+    <WidgetBigNumber
+      label={t('widget.speedProfile.sweetSpot', 'Sweet spot')}
+      value={hasData ? sweetSpot?.replace(` ${unitPrefs.speed}`, '') : null}
+      unit={unitPrefs.speed}
+      animated={false}
+    />
+  );
+  const empty = (
+    <EmptyState /* no-action: the profile requires recorded speed samples; refresh is owned by WidgetShell */
+      icon={<Activity className="h-5 w-5" />}
+      message={t('widget.speedProfile.noData', 'No speed data')}
+    />
+  );
+
   if (isCompact) {
     return (
       <WidgetShell
@@ -241,17 +273,123 @@ export default function SpeedProfileWidget({ vehicleId, size, config }: WidgetPr
         isError={isError}
         onRefresh={handleRefresh}
       >
-        <WidgetChartSummary
+        <InstrumentPresentation
+          family="bars"
           compact
-          isEmpty={!hasData}
-          emptyMessage={t('widget.speedProfile.noData', 'No speed data')}
-          emptyIcon={<Activity className="h-5 w-5" />}
-          stats={stats}
-          chart={null}
-        />
+          headline={headline}
+          icon={<Activity />}
+          instrument={!hasData ? empty : undefined}
+        >
+          <WidgetChartSummary
+            compact
+            isEmpty={!hasData}
+            emptyMessage={t('widget.speedProfile.noData', 'No speed data')}
+            emptyIcon={<Activity className="h-5 w-5" />}
+            stats={stats}
+            chart={null}
+          />
+        </InstrumentPresentation>
       </WidgetShell>
     );
   }
+
+  const chart = (
+    <EmbeddedChart
+      className="h-full min-h-0"
+      title={t('widget.speedProfile.title', 'Speed profile')}
+      ariaLabel={t('widget.speedProfile.chartAria', 'Speed frequency and average power by speed range')}
+      data={chartData}
+      dataColumns={[
+        { key: 'bucket', label: `${t('widget.speedProfile.speedRange', 'Speed range')} (${unitPrefs.speed})` },
+        { key: 'frequency', label: t('widget.speedProfile.frequency', 'Frequency'), format: (value) => value == null ? '—' : `${fmtInt(Number(value))}%` },
+        { key: 'power', label: `${t('widget.speedProfile.averagePower', 'Average power')} (${unitPrefs.power ?? 'kW'})`, format: value => value == null ? '—' : fmtNumber(Number(value)) },
+      ]}
+      chartKey="dashboard-speed-profile"
+    >
+      {({ hiddenSeries }) => (
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={chartData} margin={chartMargin} {...chartAnimation}>
+            {chartGrid}
+            <XAxis
+              dataKey="bucket"
+              tick={isWide ? axisTick : axisTickSm}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              yAxisId="frequency"
+              tick={isWide ? axisTick : axisTickSm}
+              tickLine={false}
+              axisLine={false}
+              width={frequencyAxisWidthPx}
+              tickFormatter={(value: number) => `${fmtInt(value)}%`}
+            />
+            <YAxis
+              yAxisId="power"
+              orientation="right"
+              tick={isWide ? axisTick : axisTickSm}
+              width={powerAxisWidth}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(value: number) => fmtNumber(value, 0)}
+            />
+            <Tooltip
+              content={<ChartTooltip />}
+              formatter={(value: number, name: string | number) => name === t('widget.speedProfile.frequency', 'Frequency')
+                ? [`${fmtInt(value)}%`, name]
+                : [`${fmtNumber(value)} ${unitPrefs.power ?? 'kW'}`, name]}
+              cursor={{ fill: 'var(--surface-hover)' }}
+            />
+            <ChartLegend />
+            <Bar
+              yAxisId="frequency"
+              dataKey="frequency"
+              radius={histogramRadii[packId]}
+              maxBarSize={32}
+              name={t('widget.speedProfile.frequency', 'Frequency')}
+              hide={hiddenSeries?.isHidden('frequency')}
+            >
+              {chartData.map((datum) => (
+                <Cell
+                  key={`speed-${datum.sourceIndex}`}
+                  fill={datum.sourceIndex === sweetSpotSourceIndex ? palette.series[2] : palette.series[0]}
+                />
+              ))}
+            </Bar>
+            <Line
+              yAxisId="power"
+              dataKey="power"
+              name={`${t('widget.speedProfile.averagePower', 'Average power')} (${unitPrefs.power ?? 'kW'})`}
+              stroke={palette.series[1]}
+              strokeWidth={2}
+              dot={false}
+              connectNulls={false}
+              hide={hiddenSeries?.isHidden('power')}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      )}
+    </EmbeddedChart>
+  );
+  const sampleScope = t('widget.speedProfile.sampleScope', 'Observed speed samples · average power is not energy efficiency');
+  const details = (
+    <div className="min-w-0 space-y-3">
+      <Caption as="p">{sampleScope}</Caption>
+      <dl aria-label={t('widget.speedProfile.speedRange', 'Speed range')} className="min-w-0 divide-y divide-[var(--border-subtle)]">
+        {chartData.map((datum) => (
+          <div key={datum.sourceIndex} className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-2">
+            <Caption as="dt" className="min-w-0 break-words">{datum.bucket} {unitPrefs.speed}</Caption>
+            <Text as="dd" variant="bodySm" className="tabular-nums">
+              {t('widget.speedProfile.frequency', 'Frequency')}: {datum.frequency == null ? '—' : `${fmtInt(datum.frequency)}%`}
+            </Text>
+            <Caption as="dd" className="w-full tabular-nums">
+              {t('widget.speedProfile.averagePower', 'Average power')}: {datum.power == null ? '—' : `${fmtNumber(datum.power)} ${unitPrefs.power ?? 'kW'}`}
+            </Caption>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
 
   return (
     <WidgetShell
@@ -266,97 +404,28 @@ export default function SpeedProfileWidget({ vehicleId, size, config }: WidgetPr
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <WidgetChartSummary
-        isEmpty={!hasData}
-        emptyMessage={t('widget.speedProfile.noData', 'No speed data')}
-        emptyIcon={<Activity className="h-5 w-5" />}
-        stats={hasData ? [
-          {
-            label: t('widget.speedProfile.sweetSpot', 'Sweet spot'),
-            value: sweetSpot?.replace(` ${unitPrefs.speed}`, '') ?? '—',
-            unit: sweetSpot ? unitPrefs.speed : undefined,
-          },
-        ] : []}
-        xAxisLabel={t('widget.speedProfile.sampleScope', 'Observed speed samples · average power is not energy efficiency')}
-        chart={
-          <EmbeddedChart
-            className="h-full min-h-0"
-            title={t('widget.speedProfile.title', 'Speed profile')}
-            ariaLabel={t('widget.speedProfile.chartAria', 'Speed frequency and average power by speed range')}
-            data={chartData}
-            dataColumns={[
-              { key: 'bucket', label: `${t('widget.speedProfile.speedRange', 'Speed range')} (${unitPrefs.speed})` },
-              { key: 'frequency', label: t('widget.speedProfile.frequency', 'Frequency'), format: (value) => value == null ? '—' : `${fmtInt(Number(value))}%` },
-              { key: 'power', label: `${t('widget.speedProfile.averagePower', 'Average power')} (${unitPrefs.power ?? 'kW'})`, format: value => value == null ? '—' : fmtNumber(Number(value)) },
-            ]}
-            chartKey="dashboard-speed-profile"
-          >
-            {({ hiddenSeries }) => (
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={chartMargin} {...chartAnimation}>
-                {chartGrid}
-                <XAxis
-                  dataKey="bucket"
-                  tick={isWide ? axisTick : axisTickSm}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  yAxisId="frequency"
-                  tick={isWide ? axisTick : axisTickSm}
-                  tickLine={false}
-                  axisLine={false}
-                  width={frequencyAxisWidthPx}
-                  tickFormatter={(value: number) => `${fmtInt(value)}%`}
-                />
-                <YAxis
-                  yAxisId="power"
-                  orientation="right"
-                  tick={isWide ? axisTick : axisTickSm}
-                  width={powerAxisWidth}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value: number) => fmtNumber(value, 0)}
-                />
-                <Tooltip
-                  content={<ChartTooltip />}
-                  formatter={(value: number, name: string | number) => name === t('widget.speedProfile.frequency', 'Frequency')
-                    ? [`${fmtInt(value)}%`, name]
-                    : [`${fmtNumber(value)} ${unitPrefs.power ?? 'kW'}`, name]}
-                  cursor={{ fill: 'var(--surface-hover)' }}
-                />
-                <ChartLegend />
-                <Bar
-                  yAxisId="frequency"
-                  dataKey="frequency"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={32}
-                  name={t('widget.speedProfile.frequency', 'Frequency')}
-                  hide={hiddenSeries?.isHidden('frequency')}
-                >
-                  {chartData.map((datum) => (
-                    <Cell
-                      key={`speed-${datum.sourceIndex}`}
-                      fill={datum.sourceIndex === sweetSpotSourceIndex ? palette.series[2] : palette.series[0]}
-                    />
-                  ))}
-                </Bar>
-                <Line
-                  yAxisId="power"
-                  dataKey="power"
-                  name={`${t('widget.speedProfile.averagePower', 'Average power')} (${unitPrefs.power ?? 'kW'})`}
-                  stroke={palette.series[1]}
-                  strokeWidth={2}
-                  dot={false}
-                  connectNulls={false}
-                  hide={hiddenSeries?.isHidden('power')}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-            )}
-          </EmbeddedChart>
-        }
-      />
+      <InstrumentPresentation
+        family="bars"
+        headline={headline}
+        icon={<Activity />}
+        instrument={chartData.length > 0 ? <div className="h-52 min-w-0 @md:h-60">{chart}</div> : empty}
+        details={details}
+      >
+        <WidgetChartSummary
+          isEmpty={!hasData}
+          emptyMessage={t('widget.speedProfile.noData', 'No speed data')}
+          emptyIcon={<Activity className="h-5 w-5" />}
+          stats={hasData ? [
+            {
+              label: t('widget.speedProfile.sweetSpot', 'Sweet spot'),
+              value: sweetSpot?.replace(` ${unitPrefs.speed}`, '') ?? '—',
+              unit: sweetSpot ? unitPrefs.speed : undefined,
+            },
+          ] : []}
+          xAxisLabel={sampleScope}
+          chart={chart}
+        />
+      </InstrumentPresentation>
     </WidgetShell>
   );
 }

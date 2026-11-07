@@ -9,6 +9,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
 import { WidgetShell } from './WidgetShell';
+import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
 
@@ -88,6 +89,26 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
   }, [lastFailure, formatDateTime, t]);
 
   const isLoading = statsLoading && stats == null;
+  const headline = (
+    <WidgetBigNumber value={deliveryRate == null ? null : fmtNumber(deliveryRate, 1)} unit="%"
+      label={t('widget.notificationStats.deliveryRate', 'Delivery rate')} align={size.cols <= 1 ? 'center' : 'start'} />
+  );
+  const details = (
+    <>
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        {enabledChannels != null && enabledChannels > 0 && (
+          <Badge variant="neutral" size="sm">
+            {fmtInt(enabledChannels)} {t('widget.notificationStats.activeChannels', 'Active channels')}
+          </Badge>
+        )}
+      </div>
+      {lastFailureText && (
+        <span className="block min-w-0 truncate text-xs text-[var(--text-muted)] tabular-nums" title={lastFailureText}>
+          {lastFailureText}
+        </span>
+      )}
+    </>
+  );
 
   return (
     <WidgetShell
@@ -106,26 +127,14 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       ) : statsLoading && stats == null ? (
         <div className="min-h-[44px]" aria-label={t('common.loading', 'Loading...')} />
       ) : stats ? (
+        <InstrumentPresentation family="ring" compact={size.cols <= 1} headline={headline} details={details}
+          reading={{ value: deliveryRate, max: 100, label: t('widget.notificationStats.deliveryRate', 'Delivery rate'), unit: '%' }}
+          icon={<Bell />}>
         <div className="flex h-full min-h-[44px] flex-col justify-center gap-2">
-          <WidgetBigNumber
-            value={deliveryRate == null ? null : fmtNumber(deliveryRate, 1)}
-            unit="%"
-            label={t('widget.notificationStats.deliveryRate', 'Delivery rate')}
-            align={size.cols <= 1 ? 'center' : 'start'}
-          />
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            {enabledChannels != null && enabledChannels > 0 && (
-              <Badge variant="neutral" size="sm">
-                {fmtInt(enabledChannels)} {t('widget.notificationStats.activeChannels', 'Active channels')}
-              </Badge>
-            )}
-          </div>
-          {lastFailureText && (
-            <span className="min-w-0 truncate text-xs text-[var(--text-muted)] tabular-nums" title={lastFailureText}>
-              {lastFailureText}
-            </span>
-          )}
+          {headline}
+          {details}
         </div>
+        </InstrumentPresentation>
       ) : (
         <EmptyState
           variant="informational"

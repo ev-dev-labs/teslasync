@@ -62,6 +62,8 @@ vi.mock('@/components/charts', async () => {
       <div data-testid="bar-chart" data-json={JSON.stringify(data ?? [])}>{children}</div>
     ),
     Bar: ({ children }: { children?: ReactNode }) => <div data-testid="bar">{children}</div>,
+    LineChart: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+    Line: () => null,
     XAxis: () => <div />,
     YAxis: () => <div />,
     Tooltip: () => <div />,
@@ -71,6 +73,7 @@ vi.mock('@/components/charts', async () => {
     chartGrid: null,
     chartMargin: {},
     chartAnimation: {},
+    chartAnimationProps: () => ({}),
     axisTick: {},
     axisTickSm: {},
     useThemeChartPalette: () => ({ primary: '#2563eb', neutral: '#64748b' }),
