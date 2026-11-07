@@ -291,7 +291,7 @@ export async function assertCatalogueChargeHistory(page: Page, panel: Locator, w
     await expect(table.getByRole('columnheader')).toHaveText(['Charge history', 'kWh']);
     await expect(table.getByRole('row')).toHaveCount(2);
     await expect(table.getByRole('cell')).toHaveText([expectedDay, '42.00 kWh']);
-    await expect(panel.getByRole('img', { name: 'Energy added per recent charge session, in kilowatt-hours', exact: true })).toBeVisible();
+    await expect(panel.getByRole('img', { name: 'Energy added per recent charge session, in kWh', exact: true })).toBeVisible();
     const point = await tick.evaluate(node => {
       const svg = node.closest('svg');
       if (!svg) throw new Error('Date tick has no real SVG');

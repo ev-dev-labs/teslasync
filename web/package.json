@@ -182,6 +182,7 @@
     "postcss": "^8.5.23",
     "sharp": "0.35.5",
     "tailwindcss": "^3.4.1",
+    "terser": "^5.51.2",
     "typescript": "^5.4.2",
     "vite": "^6.4.4",
     "vite-plugin-pwa": "^1.2.0",

@@ -67,7 +67,7 @@ function entry(value: unknown, kind = 'ValueKindFloat', extra: Partial<VehicleLi
 }
 function snapshot(signals?: Record<string, unknown>, id = 7): VehicleLiveSignalsResponse {
   return { vehicle_id: id, at: new Date(NOW).toISOString(), signals: signals ?? {
-    DiStatorTempF: entry(60), DiStatorTempR: entry(65),
+    'DiStatorTempF': entry(60), DiStatorTempR: entry(65),
     DiInverterTF: entry(40), DiInverterTR: entry(45),
     DiTorqueActualF: entry(-32), DiTorqueActualR: entry(0),
     DiStateF: entry('Standby', 'ValueKindEnum'), DiStateR: entry('DriveInverterStateEnable', 'ValueKindEnum'),
@@ -213,7 +213,7 @@ describe('AxleThermalWidget production design packs', () => {
 
   it('preserves zero, negative torque and additional motor identity while converting SI only for display', async () => {
     live = snapshot({
-      DiStatorTempF: entry(0), DiStatorTempR: entry(-10), DiInverterTF: entry(0),
+      'DiStatorTempF': entry(0), DiStatorTempR: entry(-10), DiInverterTF: entry(0),
       DiTorqueActualF: entry(-240), DiStateF: entry(0, 'ValueKindEnum'),
       DiStatorTempREL: entry(0), DiStatorTempRER: entry(70),
     });
@@ -229,13 +229,13 @@ describe('AxleThermalWidget production design packs', () => {
     await waitFor(() => expect(row('DiStatorTempF').getByText(/^32(?:\.0+)?°F$/)).toBeInTheDocument());
     expect(row('DiStatorTempR').getByText(/^14(?:\.0+)?°F$/)).toBeInTheDocument();
     expect(row('DiTorqueActualF').getByText(/^-240(?:\.0+)? Nm$/)).toBeInTheDocument();
-    expect((live.signals?.DiStatorTempF as VehicleLiveSignal).value).toBe(0);
+    expect((live.signals?.['DiStatorTempF'] as VehicleLiveSignal).value).toBe(0);
     expect(requestCount('/signals/7/live')).toBe(1);
   });
 
   it('never promotes stale, future, untimed, invalid or legacy evidence into fresh/supported/active readings', async () => {
     live = snapshot({
-      DiStatorTempF: entry(60, 'ValueKindFloat', { ts: '' }),
+      'DiStatorTempF': entry(60, 'ValueKindFloat', { ts: '' }),
       DiStatorTempR: entry(65, 'ValueKindFloat', { ts: new Date(NOW + 1000).toISOString() }),
       DiInverterTF: entry(40, 'ValueKindFloat', { age_ms: -1 }),
       DiInverterTR: entry(45, 'ValueKindFloat', { source: 'l2' }),
