@@ -28,7 +28,9 @@ vi.mock('@/lib/broadcast', () => ({
 }));
 
 function identity(userId: string) {
-  auth.refetch.mockResolvedValue({ isSuccess: true, data: { userId, email: 'not-a-storage-key@example.test' } });
+  auth.mode.mockResolvedValue({
+    isSuccess: true, data: { mode: 'forward_auth', subject: userId },
+  });
 }
 
 async function mounted() {
@@ -48,7 +50,6 @@ describe('browser-profile widget pack preference', () => {
     window.localStorage.clear();
     vi.stubGlobal('crypto', webcrypto);
     identity('account-a');
-    auth.mode.mockResolvedValue({ isSuccess: true, data: { mode: 'forward_auth' } });
     auth.available = new Set(['classic']);
   });
   afterEach(() => {
@@ -59,17 +60,32 @@ describe('browser-profile widget pack preference', () => {
 
   it('does not expose a selection before authenticated identity is verified', async () => {
     let finish!: (value: unknown) => void;
-    auth.refetch.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    auth.mode.mockReturnValue(new Promise(resolve => { finish = resolve; }));
     const hook = renderHook(() => useWidgetDesignPack());
     expect(hook.result.current.isReady).toBe(false);
     act(() => expect(hook.result.current.setPackId('classic')).toBe(false));
-    await act(async () => finish({ isSuccess: false }));
+    await act(async () => finish({ isSuccess: true, data: { mode: 'forward_auth', subject: null } }));
     await waitFor(() => expect(hook.result.current.error).toMatch(/identity/));
     expect(window.localStorage.length).toBe(0);
   });
 
   it('supports server-confirmed open deployments without requesting a nonexistent account', async () => {
     auth.mode.mockResolvedValue({ isSuccess: true, data: { mode: 'open' } });
+    auth.refetch.mockClear();
+    auth.available.add('v4');
+    const hook = await mounted();
+    act(() => expect(hook.result.current.setPackId('v4')).toBe(true));
+    expect(auth.refetch).not.toHaveBeenCalled();
+    hook.unmount();
+    const again = await mounted();
+    expect(again.result.current.packId).toBe('v4');
+  });
+
+  it('uses the verified ForwardAuth subject without requiring JWT user claims', async () => {
+    auth.mode.mockResolvedValue({
+      isSuccess: true, data: { mode: 'forward_auth', subject: 'account-a' },
+    });
+    auth.refetch.mockResolvedValue({ isSuccess: false });
     auth.refetch.mockClear();
     auth.available.add('v4');
     const hook = await mounted();
@@ -89,6 +105,15 @@ describe('browser-profile widget pack preference', () => {
     expect(localStorage.length).toBe(0);
   });
 
+  it.each([undefined, null, '', '   '])('does not select or save a pack without a verified ForwardAuth subject: %s', async subject => {
+    auth.mode.mockResolvedValue({ isSuccess: true, data: { mode: 'forward_auth', subject } });
+    const hook = renderHook(() => useWidgetDesignPack());
+    await waitFor(() => expect(hook.result.current.error).toMatch(/identity/));
+    expect(hook.result.current.isReady).toBe(false);
+    expect(hook.result.current.setPackId('classic')).toBe(false);
+    expect(localStorage.length).toBe(0);
+  });
+
   it('keeps open-profile preferences separate from signed-in account preferences', async () => {
     auth.available.add('v4');
     const account = await mounted();
@@ -99,17 +124,17 @@ describe('browser-profile widget pack preference', () => {
     expect(open.result.current.packId).toBe('classic');
     act(() => open.result.current.setPackId('classic'));
     open.unmount();
-    auth.mode.mockResolvedValue({ isSuccess: true, data: { mode: 'forward_auth' } });
+    identity('account-a');
     const restored = await mounted();
     expect(restored.result.current.packId).toBe('v4');
   });
 
   it('does not revive a delayed identity response after logout', async () => {
     let finish!: (value: unknown) => void;
-    auth.refetch.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    auth.mode.mockReturnValue(new Promise(resolve => { finish = resolve; }));
     const hook = renderHook(() => useWidgetDesignPack());
     act(() => auth.listener?.({ type: 'auth.logout' }));
-    await act(async () => finish({ isSuccess: true, data: { userId: 'old-account' } }));
+    await act(async () => finish({ isSuccess: true, data: { mode: 'forward_auth', subject: 'old-account' } }));
     expect(hook.result.current.isReady).toBe(false);
     expect(hook.result.current.error).toMatch(/Sign in/);
     expect(window.localStorage.length).toBe(0);

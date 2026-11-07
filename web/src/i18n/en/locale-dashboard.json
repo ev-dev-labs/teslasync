@@ -3414,7 +3414,6 @@
         "success": "Export started"
       }
     },
-    "featureConfigRefreshed": "Feature config refreshed",
     "geofence": {
       "archive": {
         "success": "Place archived"
@@ -3477,7 +3476,6 @@
         "success": "Quiet hours window removed"
       }
     },
-    "regionRefreshed": "Region info refreshed",
     "savedViews": {
       "create": {
         "success": "Saved view created"
@@ -3519,11 +3517,6 @@
         "sync": {
           "success": "Vehicles synced"
         }
-      }
-    },
-    "user": {
-      "teslaProfile": {
-        "success": "Tesla profile refreshed"
       }
     },
     "vehicles": {

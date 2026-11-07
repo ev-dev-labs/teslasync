@@ -1,5 +1,45 @@
 import { expect, test } from '@playwright/test'
-import { assertMockApiComplete, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
+import { assertMockApiComplete, fulfillApiFixture, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
+
+test('ForwardAuth pack selection does not require JWT user context or expire a valid session', async ({ page }) => {
+  test.skip(process.env.E2E_MOCKS === '0', 'This regression requires synthetic ForwardAuth responses')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await seedBrowserState(page, 'dark', '/settings')
+  const api = await installApiMocks(page, 'populated', 'dark')
+  if (!api) throw new Error('Missing isolated ForwardAuth fixtures')
+  const failures: string[] = []
+  page.on('pageerror', error => failures.push(error.message))
+  await page.route('**/api/v1/system/auth-mode', route => fulfillApiFixture(route, api, {
+    json: {
+      mode: 'forward_auth', subject_header: 'X-authentik-username',
+      subject: 'synthetic-forward-auth-user', capabilities: {},
+    },
+  }))
+  await page.route('**/api/v1/auth/session', route => fulfillApiFixture(route, api, {
+    json: { mode: 'session', authenticated: true, expires_at: null, expires_in: null, renewable: true },
+  }))
+  await page.route('**/api/v1/users/me', route => fulfillApiFixture(route, api, {
+    status: 401, json: { error: { code: 'UNAUTHORIZED', message: 'missing user context' } },
+  }))
+  await page.goto('/settings#appearance')
+  await waitForHarnessReady(page, api)
+  const selector = page.locator('[aria-labelledby="settings-widget-design-packs"]')
+  await expect(selector.getByRole('button', { name: 'Use Owner pack', exact: true })).toBeEnabled()
+  await expect(page.getByTestId('session-expired-modal')).toHaveCount(0)
+  await selector.getByRole('button', { name: 'Use Owner pack', exact: true }).click()
+  await expect(selector.getByRole('button', { name: 'Owner active', exact: true })).toBeDisabled()
+  await page.reload()
+  await waitForHarnessReady(page, api)
+  await expect(selector.getByRole('button', { name: 'Owner active', exact: true })).toBeDisabled()
+  await expect(page.getByTestId('session-expired-modal')).toHaveCount(0)
+  await page.goto('/')
+  await waitForHarnessReady(page, api)
+  await expect(page.locator('[data-widget-id="e2e-quick-nav"]')).toBeVisible()
+  await expect(page.getByTestId('session-expired-modal')).toHaveCount(0)
+  expect(api.requests.filter(request => request.path === '/users/me')).toEqual([])
+  expect(failures).toEqual([])
+  await assertMockApiComplete(page, api)
+})
 
 for (const { width, theme, scale } of [320, 390, 768, 1024, 1280, 1440, 1920, 2560].flatMap(width =>
   (['dark', 'light'] as const).flatMap(theme => [1, 1.35].map(scale => ({ width, theme, scale }))))) {
