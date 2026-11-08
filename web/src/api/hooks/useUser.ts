@@ -3,7 +3,7 @@ import { request } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { STALE_TIMES } from '@/lib/constants';
 import { safeArray } from '@/lib/safeArray';
-import type { User } from '@/types/user';
+import type { User, VerifiedUserIdentity } from '@/types/user';
 import type { UserActivityEntry } from '@/types/admin';
 
 export const userKeys = {
@@ -19,7 +19,8 @@ export const userKeys = {
 export function useCurrentUser(enabled = true) {
   return useQuery({
     queryKey: userKeys.me,
-    queryFn: ({ signal }) => request<User>('/users/me', { signal }),
+    queryFn: ({ signal }) => request<{ data: VerifiedUserIdentity }>('/users/me', { signal }),
+    select: response => response.data,
     enabled,
     // Identity is near-static — like the Tesla feature-config it changes
     // rarely, so don't refetch it on every mount/focus. Brings this hook in

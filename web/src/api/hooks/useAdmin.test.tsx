@@ -29,7 +29,7 @@ vi.mock('@/api/client', async () => {
   };
 });
 
-import { ApiError, request, SudoCanceledError } from '@/api/client';
+import { ApiError, request, ActionCanceledError } from '@/api/client';
 import { ToastProvider } from '@/components/feedback/Toast';
 import {
   adminKeys,
@@ -345,12 +345,12 @@ describe('useDeleteApiKey', () => {
   });
 
   it('does not report a dismissed step-up dialog as a delete failure', async () => {
-    mockedRequest.mockRejectedValueOnce(new SudoCanceledError());
+    mockedRequest.mockRejectedValueOnce(new ActionCanceledError());
     const { wrapper } = makeWrapper();
     const { result } = renderHook(() => useDeleteApiKey(), { wrapper });
 
     await act(async () => {
-      await expect(result.current.mutateAsync('k1')).rejects.toBeInstanceOf(SudoCanceledError);
+      await expect(result.current.mutateAsync('k1')).rejects.toBeInstanceOf(ActionCanceledError);
     });
     expect(screen.queryByText('Failed to delete API key')).toBeNull();
   });
@@ -372,12 +372,12 @@ describe('useRevokeApiKey', () => {
   });
 
   it('does not report a dismissed step-up dialog as a revoke failure', async () => {
-    mockedRequest.mockRejectedValueOnce(new SudoCanceledError());
+    mockedRequest.mockRejectedValueOnce(new ActionCanceledError());
     const { wrapper } = makeWrapper();
     const { result } = renderHook(() => useRevokeApiKey(), { wrapper });
 
     await act(async () => {
-      await expect(result.current.mutateAsync('k2')).rejects.toBeInstanceOf(SudoCanceledError);
+      await expect(result.current.mutateAsync('k2')).rejects.toBeInstanceOf(ActionCanceledError);
     });
     expect(screen.queryByText('Failed to revoke API key')).toBeNull();
   });

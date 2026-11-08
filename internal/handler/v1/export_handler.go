@@ -5,8 +5,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"go.opentelemetry.io/otel"
 
 	"github.com/ev-dev-labs/teslasync/internal/app/exportsvc"
+	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/domain/export"
 	"github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
@@ -14,12 +16,13 @@ import (
 
 // ExportHandler handles export job HTTP endpoints.
 type ExportHandler struct {
-	svc *exportsvc.Service
+	svc        *exportsvc.Service
+	headerName string
 }
 
 // NewExportHandler wires export endpoints to the export service.
-func NewExportHandler(svc *exportsvc.Service) *ExportHandler {
-	return &ExportHandler{svc: svc}
+func NewExportHandler(svc *exportsvc.Service, headerName string) *ExportHandler {
+	return &ExportHandler{svc: svc, headerName: headerName}
 }
 
 func (h *ExportHandler) Register(r chi.Router) {
@@ -28,7 +31,10 @@ func (h *ExportHandler) Register(r chi.Router) {
 }
 
 func (h *ExportHandler) Create(w http.ResponseWriter, r *http.Request) {
-	claims, ok := middleware.UserFromContext(r.Context())
+	ctx, span := otel.Tracer("api").Start(r.Context(), "export.create")
+	defer span.End()
+	r = r.WithContext(ctx)
+	subject, ok := tsauth.RequestSubject(r, h.headerName)
 	if !ok {
 		httputil.RespondError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing user context")
 		return
@@ -36,13 +42,14 @@ func (h *ExportHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	req, err := httputil.DecodeAndValidate[createExportRequest](r)
 	if err != nil {
+		span.RecordError(err)
 		middleware.HandleError(w, err)
 		return
 	}
 
 	job := &export.ExportJob{
 		ID:        generateID(),
-		UserID:    claims.UserID,
+		UserID:    subject,
 		Format:    req.Format,
 		VehicleID: req.VehicleID,
 		DateFrom:  req.DateFrom,
@@ -50,6 +57,7 @@ func (h *ExportHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.Create(r.Context(), job); err != nil {
+		span.RecordError(err)
 		middleware.HandleError(w, err)
 		return
 	}
@@ -58,10 +66,14 @@ func (h *ExportHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ExportHandler) GetByID(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "export.get")
+	defer span.End()
+	r = r.WithContext(ctx)
 	id := chi.URLParam(r, "exportID")
 
 	job, err := h.svc.GetByID(r.Context(), id)
 	if err != nil {
+		span.RecordError(err)
 		middleware.HandleError(w, err)
 		return
 	}

@@ -12,7 +12,7 @@ import {
 import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui/runtime';
 import { useApiHealth, type ApiHealthStatus } from '@/api/hooks/useApiHealth';
 import { useExtendedSystemHealth } from '@/api/hooks/useAdmin';
-import { useRbacMatrix } from '@/api/hooks/useRbacMatrix';
+import { useAuthMode } from '@/api/hooks/useAuthMode';
 import { cn } from '@/lib/cn';
 import { Icon } from '@/components/ui/Icon';
 import { neonColorMap, severityTokens, typography } from '@/lib/tokens';
@@ -51,14 +51,8 @@ interface ConnectionPresentation {
   tone: string;
 }
 
-function hasAdminAccess(data: ReturnType<typeof useRbacMatrix>['data']): boolean {
-  if (!data || data.mode !== 'session') return false;
-  return (
-    data.my_roles.some((role) => role.toLowerCase() === 'admin') ||
-    Object.entries(data.effective_for_me).some(
-      ([permission, allowed]) => allowed && permission.startsWith('admin.'),
-    )
-  );
+function hasAdminAccess(data: ReturnType<typeof useAuthMode>['data']): boolean {
+  return data?.mode === 'forward_auth' && Boolean(data.subject?.trim());
 }
 
 function readNumber(
@@ -77,7 +71,7 @@ function AdminConnectionControl({
   presentation: ConnectionPresentation;
 }) {
   const { t } = useTranslation();
-  const rbac = useRbacMatrix();
+  const rbac = useAuthMode();
   const isAdmin = hasAdminAccess(rbac.data);
   const { open, toggle, close } = useStatusBarPopover('connection');
   const triggerRef = useRef<HTMLButtonElement | null>(null);

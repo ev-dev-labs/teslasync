@@ -132,7 +132,7 @@ describe('resilientFetch wire error normalization', () => {
     expect(eventSpy.mock.calls.map(([event]) => event.type)).toEqual(['teslasync:tesla-auth-expired'])
   })
 
-  it('retains ordinary nested 401 session expiry behavior', async () => {
+  it('hands browser authentication denial to the provider instead of a blocking modal', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({
       error: { code: 'SESSION_EXPIRED', message: 'sign in again' },
     }), { status: 401, headers: { 'Content-Type': 'application/json' } }))
@@ -140,7 +140,7 @@ describe('resilientFetch wire error normalization', () => {
     await expect(resilientFetch('/admin/check', { retries: 0 })).rejects.toMatchObject({
       name: 'ApiError', status: 401, code: 'SESSION_EXPIRED', message: 'sign in again',
     })
-    expect(eventSpy.mock.calls.map(([event]) => event.type)).toEqual(['teslasync:session-expired'])
+    expect(eventSpy.mock.calls.map(([event]) => event.type)).toEqual([])
   })
 
   it('retains nested circuit breaker metadata and typed waiting error', async () => {

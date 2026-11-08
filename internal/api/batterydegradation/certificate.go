@@ -76,10 +76,9 @@ func NewBatteryCertificate(health *batteryHealthResponse, now time.Time) *Batter
 	}
 }
 
-// DeriveCertKey derives the certificate HMAC key from the auth JWT secret
-// with a fixed domain separator.
-func DeriveCertKey(jwtSecret string) []byte {
-	sum := sha256.Sum256([]byte(batteryCertKeyDomain + jwtSecret))
+// DeriveCertKey retains the domain separator used by already-issued certificates.
+func DeriveCertKey(signingSecret string) []byte {
+	sum := sha256.Sum256([]byte(batteryCertKeyDomain + signingSecret))
 	return sum[:]
 }
 

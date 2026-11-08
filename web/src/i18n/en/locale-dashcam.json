@@ -836,11 +836,6 @@
       "statusUser": "Active — enabled manually on this device."
     }
   },
-  "rbac": {
-    "toasts": {
-      "saved": "RBAC matrix updated."
-    }
-  },
   "requiresAuth": {
     "title": "{{feature}} requires authentication mode"
   },

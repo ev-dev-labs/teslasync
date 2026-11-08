@@ -24,7 +24,7 @@
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { camelCaseKeys } from '@/lib/resilience';
-import { request, __resetSudoStateForTests } from '@/api/client';
+import { request, __resetActionConfirmationForTests } from '@/api/client';
 import type {
   Drive,
   DriveDetail,
@@ -89,7 +89,7 @@ function jsonResponse(body: unknown) {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
-  __resetSudoStateForTests();
+  __resetActionConfirmationForTests();
 });
 
 /* ── The producer itself ────────────────────────────────────────────────── */

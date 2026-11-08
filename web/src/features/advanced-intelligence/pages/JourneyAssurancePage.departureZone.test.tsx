@@ -268,8 +268,7 @@ describe('Journey departure display-zone contract', () => {
     expect(screen.getByText('Observed charge, not readiness proof.')).toBeVisible();
     expect(screen.getByText('Unknown weather is not zero degrees.')).toBeVisible();
     assertOperationalMetricUnavailable(screen.getByTestId('advanced-intelligence-journey-brief'), 'Energy required');
-    // request() forwards the rejected direct attempt to resilientFetch once.
-    expect(scenarioRequests()).toHaveLength(3);
-    expect(payload(2)).toEqual(payload(1));
+    // Failed mutations are terminal: retain the scenario without replay.
+    expect(scenarioRequests()).toHaveLength(2);
   });
 });

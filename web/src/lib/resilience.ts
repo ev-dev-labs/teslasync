@@ -103,29 +103,11 @@ function dedup<T>(key: string, fn: () => Promise<T>): Promise<T> {
   return p
 }
 
-// --- Auth Middleware Session Expiry Detection ---
-//
-// When the upstream ForwardAuth proxy (Authentik / Authelia / oauth2-
-// proxy / Cloudflare Access) reports the session has expired, we
-// navigate the top-level window to the IdP's documented sign-in entry
-// point — explicit handoff, never `window.location.reload()`.
-//
-// Why explicit nav, not reload:
-//   * In an installed PWA there is no address bar; the user can't see a
-//     reload "do" anything.
-//   * Behind a Service Worker that may match the navigation request from
-//     cache (the historical reason this code path looped on `/`), reload
-//     can be swallowed entirely.
-//   * Authentik's outpost expects an `rd=` (return-destination) query
-//     parameter so it can deep-link the user back to the page they were
-//     on after they sign in — reload loses that context.
-//
-// Default targets Authentik's proxy outpost at /outpost.goauthentik.io/start
-// (verified against authentik upstream source — internal/outpost/proxyv2).
-// Override per-deployment via window.__TESLASYNC_REAUTH_URL__ which the
-// helm chart's nginx configmap can inject for non-Authentik IdPs.
+// Browser authentication is owned by the operator's external provider.
+// A top-level request to the protected handoff endpoint lets that provider
+// complete its normal login flow without choosing a vendor-specific URL.
 
-const DEFAULT_REAUTH_URL = '/outpost.goauthentik.io/start'
+const DEFAULT_REAUTH_URL = '/api/v1/auth/browser-login'
 const RETURN_URL_KEY = 'teslasync-return-url'
 
 declare global {
@@ -138,7 +120,7 @@ declare global {
  * Resolves the IdP reauth entry-point URL.
  *
  * Returns the runtime override when nginx injected one, otherwise the
- * Authentik outpost default. An explicit empty-string override disables
+ * protected browser handoff default. An explicit empty-string override disables
  * the IdP handoff entirely and the SPA falls back to `window.location
  * .reload()` — only safe in dev or in installs where the SW is configured
  * to NOT swallow navigations to `/`.
@@ -147,7 +129,16 @@ export function getReauthUrl(): string | null {
   const override = window.__TESLASYNC_REAUTH_URL__
   if (typeof override === 'string') {
     const trimmed = override.trim()
-    return trimmed === '' ? null : trimmed
+    if (trimmed === '') return null
+    try {
+      const url = new URL(trimmed, window.location.origin)
+      if ((url.protocol === 'https:' || url.protocol === 'http:') && !url.username && !url.password) {
+        return trimmed
+      }
+    } catch {
+      // Invalid provider URLs must not become executable navigation targets.
+    }
+    return DEFAULT_REAUTH_URL
   }
   return DEFAULT_REAUTH_URL
 }
@@ -199,7 +190,10 @@ export function navigateToReauth(): void {
     window.location.reload()
     return
   }
-  const returnUrl = encodeURIComponent(window.location.href)
+  const destination = base === DEFAULT_REAUTH_URL
+    ? `${window.location.pathname}${window.location.search}${window.location.hash}`
+    : window.location.href
+  const returnUrl = encodeURIComponent(destination)
   const sep = base.includes('?') ? '&' : '?'
   window.location.assign(`${base}${sep}rd=${returnUrl}`)
 }
@@ -213,13 +207,8 @@ export function navigateToReauth(): void {
 //   * the `focus` event — when the user returns to the tab, give them
 //     an immediate retry path instead of waiting for the timeout.
 //
-// We deliberately do NOT reset on successful API responses, even though
-// it was tempting: /api/v1/auth/session always returns 200 (per
-// auth_session_handler.go contract) even when the response body says
-// the user is unauthenticated. Resetting on that would cause the latch
-// to flap and `navigateToReauth` to fire a second time, churning
-// Authentik's state-JWT cookie and breaking any in-flight OAuth
-// callback (state mismatch → "session ID mismatch" error).
+// Successful public API reads do not prove that a provider login completed;
+// resetting on them would churn parallel navigation and OAuth callbacks.
 let _authExpiredHandled = false
 let _authExpiredTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -254,7 +243,7 @@ function handleAuthExpired(): void {
 
 // --- Tesla Third-Party OAuth Grant Expiry Detection ---
 //
-// Distinct from the Authentik-session expiry path
+// Distinct from the external-provider recovery path
 // above. The Tesla third-party refresh token has a hard 8-week TTL; when
 // it expires, the backend signals { code: 'TESLA_TOKEN_EXPIRED' } in a
 // 401 body for any Tesla-backed call. Non-Tesla data continues to load
@@ -273,36 +262,24 @@ function dispatchTeslaAuthExpired(): void {
   document.dispatchEvent(new CustomEvent('teslasync:tesla-auth-expired'))
 }
 
-// --- ForwardAuth session expiry signal ---
-//
-// Dispatched by `resilientFetch` when a non-/auth/session request
-// returns 401 AND the structured-error code is NOT
-// `TESLA_TOKEN_EXPIRED` (that case stays on the dedicated Tesla
-// reauth banner). The {@link SessionExpiredModal} listens for this
-// event and hard-blocks the UI until the user clicks "Sign in again".
-//
-// IMPORTANT: do NOT fire this event for /auth/session itself. The
-// session-info endpoint is configured server-side to return 200 even
-// when unauthenticated; if it ever returns a 401 (e.g. proxy
-// misconfig), the polling SPA would dispatch the expired modal,
-// which on close re-poll the same endpoint, infinite-loop.
+// Rejected native keys use the reconnect UI, not browser-provider navigation.
 function dispatchSessionExpired(): void {
   if (typeof document === 'undefined') return
   document.dispatchEvent(new CustomEvent('teslasync:session-expired'))
 }
 
-/**
- * Conditionally dispatches the session-expired signal — only when
- * `path` is NOT the polling endpoint that powers the modal itself.
- * Centralised here so every 401 branch can share the loop guard
- * without re-deriving it.
- */
-function maybeDispatchSessionExpired(path: string): void {
-  // Normalise: client.ts always passes paths with a leading slash; be
-  // defensive in case a caller skipped that.
-  const normalised = path.startsWith('/') ? path : `/${path}`
-  if (normalised === '/auth/session') return
-  dispatchSessionExpired()
+/** Starts recovery without retrying the failed request or replaying a write. */
+export function notifyAuthenticationRequired(code?: string): void {
+  if (code === 'TESLA_TOKEN_EXPIRED') {
+    dispatchTeslaAuthExpired()
+    return
+  }
+  if (isRemoteMode()) dispatchSessionExpired()
+  else handleAuthExpired()
+}
+
+function maybeDispatchSessionExpired(_path: string): void {
+  notifyAuthenticationRequired()
 }
 
 // --- Resilient Fetch ---
@@ -360,7 +337,7 @@ export class ApiError extends Error {
    * the frontend can switch on error type without parsing strings.
    *
    * Used by {@link TeslaAuthExpiredError} to surface the dedicated
-   * reauth banner without conflating with the Authentik-session 401
+   * reauth banner without conflating with the external-provider 401
    * path.
    */
   code?: string
@@ -382,7 +359,7 @@ export class ApiError extends Error {
  * (b) suppress noisy retry behaviour while the {@link TeslaReauthBanner}
  * is asking the user to re-authorize.
  *
- * The Authentik-session 401 path stays on the plain {@link ApiError} +
+ * The external-provider 401 path stays on the plain {@link ApiError} +
  * `handleAuthExpired()` overlay. Tesla token expiry is a *partial*
  * failure — non-Tesla data continues to load normally.
  */
@@ -822,14 +799,12 @@ async function _doFetch<T>(
       if (res.ok && contentType.includes('text/html')) {
         // We asked for JSON from /api/v1 but got HTML — login page redirect
         maybeDispatchSessionExpired(path)
-        handleAuthExpired()
         throw new ApiError('Authentication session expired', 401)
       }
 
       if (res.status === 401 && !contentType.includes('application/json')) {
         // 401 from auth middleware (our API always returns JSON on 401)
         maybeDispatchSessionExpired(path)
-        handleAuthExpired()
         throw new ApiError('Authentication session expired', 401)
       }
 
@@ -855,9 +830,8 @@ async function _doFetch<T>(
         // user. Auto-refreshing the *Tesla OAuth token* (the previous
         // behaviour) does not help in either case and only generated 502
         // spam in open-mode installs that have no Tesla account linked.
-        // Surface the SessionExpiredModal directly so the user can sign in
-        // again. The /auth/session polling endpoint is excluded so the
-        // polling SPA never dispatches its own hard-block on itself.
+        // Hand browser navigation to the provider, or notify native key
+        // recovery. Never refresh Tesla authorization for a browser login.
         if (res.status === 401) {
           maybeDispatchSessionExpired(path)
         }
@@ -925,7 +899,7 @@ async function _doFetch<T>(
       // Skip the probe entirely if the caller has cancelled — the probe
       // would be wasted work and could trigger the auth-expired flow on a
       // page the user has already left.
-      if (err instanceof TypeError && !userSignal?.aborted && navigator.onLine) {
+      if (err instanceof TypeError && !userSignal?.aborted && navigator.onLine && !isRemoteMode()) {
         let probeUnreachable = false
         try {
           const probe = await fetch(`${getApiBase()}/api/v1/system/version`, {

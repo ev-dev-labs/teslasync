@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -89,7 +88,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
 	apiaudit "github.com/ev-dev-labs/teslasync/internal/api/audit"
 	apiauth "github.com/ev-dev-labs/teslasync/internal/api/auth"
-	apiauths "github.com/ev-dev-labs/teslasync/internal/api/authsession"
 	apiautomation "github.com/ev-dev-labs/teslasync/internal/api/automation"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apibattery "github.com/ev-dev-labs/teslasync/internal/api/battery"
@@ -158,7 +156,6 @@ import (
 	apiquiet "github.com/ev-dev-labs/teslasync/internal/api/quiethours"
 	apirangeproj "github.com/ev-dev-labs/teslasync/internal/api/rangeproj"
 	apiratelim "github.com/ev-dev-labs/teslasync/internal/api/ratelimit"
-	apirbac "github.com/ev-dev-labs/teslasync/internal/api/rbac"
 	apiregen "github.com/ev-dev-labs/teslasync/internal/api/regen"
 	apirouteeff "github.com/ev-dev-labs/teslasync/internal/api/routeeff"
 	apirul "github.com/ev-dev-labs/teslasync/internal/api/rul"
@@ -169,7 +166,6 @@ import (
 	apisecurity "github.com/ev-dev-labs/teslasync/internal/api/security"
 	apisegments "github.com/ev-dev-labs/teslasync/internal/api/segments"
 	apiserviceintelligence "github.com/ev-dev-labs/teslasync/internal/api/serviceintelligence"
-	apisess "github.com/ev-dev-labs/teslasync/internal/api/session"
 	apisettings "github.com/ev-dev-labs/teslasync/internal/api/settings"
 	apisetreset "github.com/ev-dev-labs/teslasync/internal/api/settingsreset"
 	apishare "github.com/ev-dev-labs/teslasync/internal/api/share"
@@ -199,7 +195,6 @@ import (
 	apitup "github.com/ev-dev-labs/teslasync/internal/api/teslauserprofile"
 	apitimemachine "github.com/ev-dev-labs/teslasync/internal/api/timemachine"
 	apitirepressure "github.com/ev-dev-labs/teslasync/internal/api/tirepressure"
-	apitotp "github.com/ev-dev-labs/teslasync/internal/api/totp"
 	apitrip "github.com/ev-dev-labs/teslasync/internal/api/trip"
 	apitripplanner "github.com/ev-dev-labs/teslasync/internal/api/tripplanner"
 	apitripsd "github.com/ev-dev-labs/teslasync/internal/api/tripsdetail"
@@ -265,7 +260,6 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
-	"github.com/pquerna/otp/totp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
@@ -414,6 +408,7 @@ import (
 	actioncenterhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
 	advancedintelligencehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/advancedintelligence"
 	analysishandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/analysis"
+	"github.com/ev-dev-labs/teslasync/internal/handler/v1/browserauth"
 	fleetstatehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/fleetstate"
 	ownershipintelhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/ownershipintel"
 	roadanomalyhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/roadanomaly"
@@ -483,7 +478,7 @@ type dataRepairRoutes interface {
 	DeleteDrive(http.ResponseWriter, *http.Request)
 }
 
-func mountDataRepairRoutes(r chi.Router, h dataRepairRoutes, sudo func(http.Handler) http.Handler) {
+func mountDataRepairRoutes(r chi.Router, h dataRepairRoutes) {
 	r.Route("/data-repair", func(r chi.Router) {
 		r.Use(httprate.LimitByIP(20, time.Minute))
 		r.Get("/stale-sessions", h.GetStaleSessions)
@@ -493,29 +488,30 @@ func mountDataRepairRoutes(r chi.Router, h dataRepairRoutes, sudo func(http.Hand
 		r.Get("/cases/{id}", h.GetCase)
 		r.Post("/cases/{id}/correction-preview", h.PreviewCaseCorrection)
 		r.Get("/quarantine", h.ListQuarantines)
-		r.With(httprate.LimitByIP(2, time.Minute), sudo).Post("/cases/scan", h.ScanCases)
-		r.With(sudo).Post("/cases/{id}/transition", h.TransitionCase)
-		r.With(sudo).Post("/cases/{id}/correction", h.ApplyCaseCorrection)
-		r.With(sudo).Put("/cases/{id}/assignment", h.AssignCase)
-		r.With(sudo).Post("/cases/{id}/comments", h.AddCaseComment)
-		r.With(sudo).Post("/cases/{id}/quarantine", h.QuarantineCase)
-		r.With(sudo).Post("/cases/bulk-transition", h.BulkTransitionCases)
-		r.With(sudo).Post("/quarantine/{id}/restore", h.RestoreQuarantine)
+		r.With(httprate.LimitByIP(2, time.Minute), tsauth.RequireNotImpersonating()).Post("/cases/scan", h.ScanCases)
+		r.With(tsauth.RequireNotImpersonating()).Post("/cases/{id}/transition", h.TransitionCase)
+		r.With(tsauth.RequireNotImpersonating()).Post("/cases/{id}/correction", h.ApplyCaseCorrection)
+		r.With(tsauth.RequireNotImpersonating()).Put("/cases/{id}/assignment", h.AssignCase)
+		r.With(tsauth.RequireNotImpersonating()).Post("/cases/{id}/comments", h.AddCaseComment)
+		r.With(tsauth.RequireNotImpersonating()).Post("/cases/{id}/quarantine", h.QuarantineCase)
+		r.With(tsauth.RequireNotImpersonating()).Post("/cases/bulk-transition", h.BulkTransitionCases)
+		r.With(tsauth.RequireNotImpersonating()).Post("/quarantine/{id}/restore", h.RestoreQuarantine)
 		r.Route("/charging/{id}", func(r chi.Router) {
-			r.With(sudo).Put("/", h.UpdateCharging)
+			r.With(tsauth.RequireNotImpersonating()).Put("/", h.UpdateCharging)
 			r.Post("/preview", h.PreviewCharging)
-			r.With(sudo).Post("/close", h.CloseCharging)
-			r.With(sudo).Delete("/", h.DeleteCharging)
+			r.With(tsauth.RequireNotImpersonating()).Post("/close", h.CloseCharging)
+			r.With(tsauth.RequireNotImpersonating()).Delete("/", h.DeleteCharging)
 		})
 		r.Route("/drive/{id}", func(r chi.Router) {
-			r.With(sudo).Put("/", h.UpdateDrive)
+			r.With(tsauth.RequireNotImpersonating()).Put("/", h.UpdateDrive)
 			r.Post("/preview", h.PreviewDrive)
-			r.With(sudo).Post("/close", h.CloseDrive)
-			r.With(sudo).Delete("/", h.DeleteDrive)
+			r.With(tsauth.RequireNotImpersonating()).Post("/close", h.CloseDrive)
+			r.With(tsauth.RequireNotImpersonating()).Delete("/", h.DeleteDrive)
 		})
 	})
 }
 
+// Older native clients may send X-Sudo-Token; accepting the header grants no authority.
 var nativeAppCORSHeaders = []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key", "X-Sudo-Token", "X-Teslasync-App"}
 
 // routerLiveSignalStore prefers the explicit reader dependency. Existing
@@ -746,47 +742,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		},
 	))
 	authHandler := apiauth.NewHandler(db, teslaClient, opt.Encryptor)
-	// Sudo step-up. Construct the in-memory
-	// token store and the reauth HTTP handler once and share them
-	// across the route table. The store is the source of truth for
-	// step-up authorisation; the middleware reads from it on every
-	// gated request, the handler writes to it on a successful
-	// /auth/reauth.
-	sudoCfg := LoadSudoConfig(cfg)
-	sudoStore := dbauth.NewSudoTokenStore(sudoCfg.TTL)
-	// wire the real RFC 6238 verifier so the
-	// shared TESLASYNC_SUDO_TOTP_SECRET path validates for real (and
-	// not just NULL-on-arrival as it did before). We pass a thin
-	// closure rather than a bare totp.Validate reference so any future
-	// switch to a non-default Validate variant (different period /
-	// digits / skew) only changes one line.
-	sudoTOTPVerifier := func(secret, code string) error {
-		if !totp.Validate(code, secret) {
-			return errors.New("invalid totp code")
-		}
-		return nil
-	}
-	sudoHandler := NewSudoHandler(sudoCfg, sudoStore, sudoTOTPVerifier)
-
-	// per-user TOTP enrollment. Owns its own
-	// pending/active tables; mints sudo tokens via the shared sudoStore
-	// so a successful per-user TOTP step-up is indistinguishable downstream
-	// from a successful password step-up.
-	totpRepo := dbauth.NewTOTPRepo(db)
-	totpHandler := apitotp.NewTOTPHandler(totpRepo, opt.Encryptor, sudoStore, cfg.Auth.ForwardAuthHeader)
-
-	// active sessions / device management.
-	// TeslaSync mints its OWN per-device cookie on the first
-	// authenticated request from a browser (auth.Middleware below)
-	// and persists the (subject, cookie hash) tuple here so the
-	// Settings page can list devices and revoke individual sessions
-	// without touching the upstream IdP. The repo's HMAC signing
-	// secret is freshly generated on every restart — desired
-	// semantics for a "local session" primitive; operators wanting
-	// cross-restart persistence already get it from the upstream IdP.
-	authSessionsRepo := dbauth.NewAuthSessionsRepo(db)
-	sessionHandler := apisess.NewSessionHandler(authSessionsRepo, cfg.Auth.ForwardAuthHeader)
-
 	// Auth-mode contract.
 	//
 	// The auth_subjects materialisation table is the single source
@@ -798,10 +753,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	//
 	// systemAuthModeHandler answers GET /system/auth-mode — the SPA's
 	// source of truth for "what mode am I in, and who am I". Mounted
-	// inside /system below; deliberately NOT sudo-gated and NOT
-	// wrapped in RequireSubjectMiddleware so it stays reachable in
-	// open mode AND when the upstream proxy strips the header on a
-	// specific request.
+	// inside the protected /system group. Its handler also supports
+	// open mode; configured browser identity is checked by the parent middleware.
 	authSubjectsRepo := dbauth.NewAuthSubjectsRepo(db)
 	subjectRecorder := tsauth.NewSubjectRecorder(apiauthmode.NewAuthSubjectsStore(authSubjectsRepo), tsauth.SubjectRecorderOptions{})
 	systemAuthModeHandler := apiauthmode.NewHandler(cfg.Auth.ForwardAuthHeader, cfg.Auth.ProviderHint)
@@ -865,8 +818,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// fans out across four repos (settings, alert_rules, geofences,
 	// notification_quiet_hours); construct it once + share between
 	// the export + import handlers so future repos can be added in a
-	// single place. Apply is sudo-gated by RequireSudo on the import
-	// route below; export is read-only and runs unguarded.
+	// single place. Import forbids impersonation; export is read-only.
 	settingsSerializer := settingsdb.NewSettingsSerializer(
 		settingsdb.NewSettingsRepo(db),
 		dbalert.NewAlertRuleRepo(db),
@@ -924,8 +876,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// hand-maintained catalog in internal/auth. The handler is
 	// auth-mode aware (501 AUTH_MODE_OPEN in open mode) and the PUT
 	// route is wrapped in RequireSudo below.
-	rolePermissionsRepo := dbauth.NewRolePermissionsRepo(db)
-	rbacHandler := apirbac.NewRBACHandler(rolePermissionsRepo, cfg.Auth.ForwardAuthHeader)
 
 	// admin impersonation. The store mints
 	// HMAC-signed cookies (15-min TTL) carrying the original-admin /
@@ -1082,7 +1032,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Server-signed resale battery certificate, verified publicly without auth.
 	batteryCertHandler := batterydegradation.NewCertificateHandlerFromBatteryHandler(
 		batteryDegradationHandler,
-		batterydegradation.NewCertSigner(batterydegradation.DeriveCertKey(cfg.Auth.JWTSecret)),
+		batterydegradation.NewCertSigner(batterydegradation.DeriveCertKey(cfg.BatteryCertificateSigningKey)),
 	)
 	batteryPassportHandler := batterypassport.NewBatteryPassportHandler(db)
 	carbonHandler := apicarbon.NewCarbonHandler(db)
@@ -2532,21 +2482,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		httprate.LimitByIP(50, 1*time.Minute),
 	).Post("/api/v1/web-errors", webErrorHandler.Ingest)
 
-	// Public: Auth session-info endpoint. The
-	// SPA polls this every 5 minutes so it can surface the
-	// SessionExpiringModal countdown ~60s before the upstream
-	// ForwardAuth cookie expires, and the SessionExpiredModal hard-
-	// block once it has expired. Mounted OUTSIDE the /api/v1
-	// ForwardAuth subrouter and ALWAYS returns 200 OK — if it returned
-	// 401 when unauthenticated the polling SPA would hit the same
-	// expired-session path that drove it here, infinite-looping the
-	// hard-expired modal. Per-IP rate limit is generous (60/min)
-	// because every SPA tab independently polls.
-	authSessionHandler := apiauths.NewHandler(cfg)
-	r.With(
-		httprate.LimitByIP(60, 1*time.Minute),
-	).Get("/api/v1/auth/session", authSessionHandler.Session)
-
 	// System state: single-row maintenance/degraded-mode
 	// banner state. Repo + handler + maintenance provider are constructed
 	// once here so the GET /system/health closure and the admin POST share
@@ -3257,24 +3192,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Subject recorder. MUST run AFTER
 		// ForwardAuthMiddleware (so the principal header is the
 		// authoritative one for this request) and BEFORE both the
-		// session tracker and the impersonation rewrite (so the
+		// impersonation rewrite (so the
 		// recorded subject is the *original* admin identity even
 		// during an active impersonation, matching the contract that
 		// auth_subjects materialises every distinct human operator
 		// who has touched the API). Open mode is a passthrough.
 		r.Use(tsauth.SubjectRecorderMiddleware(cfg.Auth.ForwardAuthHeader, subjectRecorder))
 
-		// Session tracker. MUST run AFTER
-		// ForwardAuthMiddleware so the principal header is guaranteed
-		// present. Mints + binds a TeslaSync-issued cookie on the first
-		// authenticated request, validates it on every subsequent one,
-		// and rejects revoked cookies with 401 + clear-cookie. Open mode
-		// (no FORWARD_AUTH_HEADER configured) is a passthrough.
-		r.Use(tsauth.Middleware(cfg.Auth.ForwardAuthHeader, authSessionsRepo, tsauth.SessionTrackerOptions{}))
-
 		// Impersonation middleware. MUST run
-		// AFTER the session tracker so the tracker pins the cookie to
-		// the actual admin identity (not the rewritten target). The
+		// AFTER subject recording, while the actual operator identity is
+		// still present. The
 		// middleware verifies the HMAC-signed impersonation cookie,
 		// re-binds it against the live admin subject, and rewrites the
 		// FORWARD_AUTH header to the impersonation target so all
@@ -3293,62 +3220,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/refresh", authHandler.Refresh)
 			r.Get("/status", authHandler.Status)
 			// destructive: revokes Tesla
-			// refresh token and clears credentials. Sudo gated.
+			// refresh token and clears credentials. Requires intent confirmation.
 			// Blocked during impersonation so
 			// an admin cannot accidentally disconnect the target's
 			// Tesla account; the original admin must end impersonation
 			// first.
-			r.With(tsauth.RequireNotImpersonating(), RequireSudo(sudoStore, sudoCfg)).Post("/disconnect", authHandler.Disconnect)
-			// Sudo step-up reauth. POST a
-			// password OR totp_code to mint a 5-minute X-Sudo-Token
-			// the SPA echoes on subsequent destructive requests. In
-			// open mode this returns 200 mode="open" without minting
-			// anything; the dialog falls back to typed-confirmation.
-			// Blocked during impersonation so
-			// no fresh sudo tokens can be minted under the target's
-			// rewritten principal. Existing tokens won't validate
-			// either (token subject != rewritten subject), so this is
-			// belt-and-suspenders.
-			r.With(tsauth.RequireNotImpersonating()).Post("/reauth", sudoHandler.Reauth)
-			// per-user TOTP enrollment.
-			// /totp GET status pill backing
-			// /totp/enroll POST start enrollment
-			// /totp/verify POST confirm enrollment
-			// /totp/sudo POST mint sudo token via per-user TOTP
-			// /totp DELETE revoke (sudo-gated)
-			// /totp/backup-codes/regenerate POST rotate backup codes (sudo-gated)
-			//
-			// The entire /totp subtree is
-			// blocked during impersonation. Enrollment, verification,
-			// and sudo-token mints all read the principal from the
-			// (rewritten) header and would otherwise act as the target.
-			r.Route("/totp", func(r chi.Router) {
-				r.Use(tsauth.RequireNotImpersonating())
-				r.Get("/", totpHandler.GetStatus)
-				r.Post("/enroll", totpHandler.Enroll)
-				r.Post("/verify", totpHandler.Verify)
-				r.Post("/sudo", totpHandler.VerifySudo)
-				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", totpHandler.Revoke)
-				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/backup-codes/regenerate", totpHandler.RegenerateBackupCodes)
-			})
-			// Active sessions / device
-			// management. List is read-only; both DELETE routes are
-			// sudo-gated (RequireSudo is a passthrough in open mode,
-			// so the handler's own AUTH_MODE_OPEN check is what
-			// guards the resource semantics there).
-			//
-			// DELETEs are blocked during
-			// impersonation so an admin cannot revoke the target's
-			// real sessions. List is allowed because it's read-only
-			// and reflects what the target sees, which is exactly the
-			// "see what they see" contract.
-			r.Route("/sessions", func(r chi.Router) {
-				r.Get("/", sessionHandler.List)
-				// `all-others` MUST be registered BEFORE `/{id}` so chi
-				// doesn't bind the literal as a UUID param.
-				r.With(tsauth.RequireNotImpersonating(), RequireSudo(sudoStore, sudoCfg)).Delete("/all-others", sessionHandler.RevokeAllOthers)
-				r.With(tsauth.RequireNotImpersonating(), RequireSudo(sudoStore, sudoCfg)).Delete("/{id}", sessionHandler.Revoke)
-			})
+			r.With(tsauth.RequireNotImpersonating()).Post("/disconnect", authHandler.Disconnect)
+			r.Get("/browser-login", browserauth.NewHandler().Login)
 		})
 
 		// Onboarding: first-run gate status.
@@ -3375,8 +3253,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Route("/{vehicleID}", func(r chi.Router) {
 				r.Get("/silence", vehicleHandler.Silence)
 				r.Get("/", vehicleHandler.Get)
-				// destructive: requires sudo.
-				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", vehicleHandler.Delete)
+				// Destructive: preserve the explicit impersonation restriction.
+				r.With(tsauth.RequireNotImpersonating()).Delete("/", vehicleHandler.Delete)
 				r.Get("/positions", vehicleHandler.Positions)
 				r.Get("/state", vehicleHandler.CurrentState)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/wake", vehicleHandler.Wake)
@@ -3467,14 +3345,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// matching every other vehicle-scoped POST. Panic is
 				// destructive (wakes the car, sounds horn, costs energy).
 				// Config writes may lock + enable Sentry. Both writes
-				// are sudo-gated + tightly rate-limited at 5/min.
+				// forbid impersonation and are tightly rate-limited at 5/min.
 				r.Route("/guard", func(r chi.Router) {
 					r.Get("/", guardHandler.Status)
 					r.Get("/config", guardHandler.Config)
-					r.With(httprate.LimitByIP(5, 1*time.Minute), RequireSudo(sudoStore, sudoCfg)).Post("/", guardHandler.SetConfig)
+					r.With(httprate.LimitByIP(5, 1*time.Minute), tsauth.RequireNotImpersonating()).Post("/", guardHandler.SetConfig)
 					r.Get("/events", guardHandler.Events)
 					r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/events/{eventID}/acknowledge", guardHandler.Acknowledge)
-					r.With(httprate.LimitByIP(5, 1*time.Minute), RequireSudo(sudoStore, sudoCfg)).Post("/panic", guardHandler.Panic)
+					r.With(httprate.LimitByIP(5, 1*time.Minute), tsauth.RequireNotImpersonating()).Post("/panic", guardHandler.Panic)
 				})
 
 				// FSM debug diagnostics
@@ -3716,23 +3594,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// settings sub-tree (NOT under /api/v1/ai/*) because
 			// users call it WHILE opting in (ai_mode='off' at the
 			// moment of the call); the /api/v1/ai/* sub-tree 404s
-			// in off mode by ADR-015 §I6. Auth-only — no sudo —
+			// in off mode by ADR-015 §I6. Provider-authenticated only,
 			// because the worst-case write the call enables is
 			// the same one /settings allows already.
 			r.Post("/settings/ai/validate-config", aisettingsvalidate.Handler(aiRegistry, aiSettingsReader{repo: aiSettingsRepo}))
 			// JSON bundle export + import.
-			// Export is read-only; import is sudo-gated because a
-			// large alert-rule replay or bulk geofence rewrite is a
-			// destructive action that should always carry a fresh
-			// credential. Both routes carry the parent rate limit.
+			// Export is read-only; import forbids impersonation.
+			// Both routes carry the parent rate limit.
 			r.Get("/settings/export", settingsExportHandler.Export)
-			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/settings/import", settingsImportHandler.Import)
-			// POST /settings/reset.
-			// Sudo-gated for the same reason as /settings/import: every
-			// reset is destructive (wipes alert rules, geofences, or
-			// the entire user-discoverable preference surface) and
-			// should always carry a fresh credential.
-			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/settings/reset", settingsResetHandler.Reset)
+			r.With(tsauth.RequireNotImpersonating()).Post("/settings/import", settingsImportHandler.Import)
+			// Destructive reset also forbids impersonation.
+			r.With(tsauth.RequireNotImpersonating()).Post("/settings/reset", settingsResetHandler.Reset)
 		})
 
 		// Named dashboard layout library.
@@ -3971,7 +3843,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Fleet operations owns its write throttles. Service-intelligence
 		// vehicle reads use the local normalized NHTSA catalog; bulk catalog
-		// imports require sudo and carry their own strict write throttle.
+		// imports forbid impersonation and carry their own strict write throttle.
 		apifleetops.MountRoutes(r, fleetOpsHandler)
 		apiserviceintelligence.Mount(r, serviceIntelligenceHandler)
 		r.Get(
@@ -3980,7 +3852,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		)
 		r.With(
 			httprate.LimitByIP(10, time.Hour),
-			RequireSudo(sudoStore, sudoCfg),
+			tsauth.RequireNotImpersonating(),
 		).Post(
 			"/admin/service-intelligence/communications/import",
 			communicationsAdminHandler.Import,
@@ -4411,13 +4283,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/health", ExtendedHealthCheck(db, health, bufferStats, maintenanceProvider))
 
 			// Auth-mode contract endpoint.
-			// Always reachable; deliberately NOT sudo-gated and NOT
-			// wrapped in RequireSubjectMiddleware because the SPA's
-			// session-monitor + RequiresAuth components rely on this
-			// endpoint to discover the deployment's mode and the
-			// current request's resolved subject — even when the
-			// upstream proxy stripped the header on this specific
-			// request. Per-IP rate-limited because the SPA polls it
+			// The SPA uses this to discover mode and verified identity.
+			// The parent ForwardAuth gate still applies in protected mode.
+			// Per-IP rate-limited because the SPA polls it
 			// at boot and on focus refresh.
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
 				Get("/auth-mode", systemAuthModeHandler.ServeHTTP)
@@ -4480,8 +4348,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 			// DLQ
 			// Inspector. List + per-entry GET are read-only and
-			// per-IP throttled at 60/min. Replay is gated by
-			// sudo-token (RequireSudo) AND by DLQ_REPLAY_ENABLED
+			// per-IP throttled at 60/min. Replay forbids impersonation
+			// and is gated by DLQ_REPLAY_ENABLED
 			// (cfg.Features.DLQReplayEnabled). Audit endpoints
 			// are read-only. The handler degrades to 503 when
 			// opt.DLQInspector or opt.DLQReplayAuditRepo is nil,
@@ -4503,12 +4371,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				Get("/dlq/{id}/audit", dlqHandler.Audit)
 			r.With(
 				httprate.LimitByIP(10, 1*time.Minute),
-				RequireSudo(sudoStore, sudoCfg),
+				tsauth.RequireNotImpersonating(),
 			).Post("/dlq/{id}/replay", dlqHandler.Replay)
 
 			// Feature
 			// Flags. List + GET + audit are read-only (60/min).
-			// PUT + DELETE are sudo-gated + audited via the
+			// PUT + DELETE forbid impersonation and are audited via the
 			// feature_flag_changes table; the dynamic
 			// internal/flags store invalidates other processes via
 			// Redis Pub/Sub. The handler degrades to 503 when
@@ -4529,11 +4397,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				Get("/flags/{key}/changes", flagsHandler.Changes)
 			r.With(
 				httprate.LimitByIP(20, 1*time.Minute),
-				RequireSudo(sudoStore, sudoCfg),
+				tsauth.RequireNotImpersonating(),
 			).Put("/flags/{key}", flagsHandler.Set)
 			r.With(
 				httprate.LimitByIP(20, 1*time.Minute),
-				RequireSudo(sudoStore, sudoCfg),
+				tsauth.RequireNotImpersonating(),
 			).Delete("/flags/{key}", flagsHandler.Delete)
 
 			//
@@ -4592,11 +4460,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// read-only observability routes + audit viewer + GDPR
 		// export download. Each backing repo can be nil; the
 		// handler returns 503 SUBSYSTEM_NOT_CONFIGURED instead of
-		// crashing. Sudo gating is intentionally NOT applied yet —
-		// the routes are read-only (or stream-only for GDPR
-		// download which is governed by the artifact's expires_at
-		// TTL); a future tightening will move them behind the
-		// sudoStore middleware once the page-builder UI is shipped.
+		// crashing. Routes are read-only; GDPR downloads also obey
+		// the artifact's expires_at TTL.
 		adminobsSvc := adminobssvc.New(adminobssvc.Options{
 			Rotation:      opt.RotationTracker,
 			SchemaPool:    db.Pool,
@@ -4680,9 +4545,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/", apiKeyHandler.List)
 			r.Post("/", apiKeyHandler.Create)
 			r.Route("/{id}", func(r chi.Router) {
-				// destructive: requires sudo.
-				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", apiKeyHandler.Delete)
-				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/revoke", apiKeyHandler.Revoke)
+				// Destructive key changes forbid impersonation.
+				r.With(tsauth.RequireNotImpersonating()).Delete("/", apiKeyHandler.Delete)
+				r.With(tsauth.RequireNotImpersonating()).Post("/revoke", apiKeyHandler.Revoke)
 			})
 		})
 
@@ -4737,26 +4602,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		})
 
-		// RBAC matrix admin endpoints.
-		// GET is unguarded so any authenticated caller can render
-		// the page; PUT is sudo-gated since it changes the
-		// authorisation matrix the install runs under. In open mode
-		// both endpoints return 501 AUTH_MODE_OPEN inside the
-		// handler before any DB work — the RequireSudo wrapper is a
-		// passthrough in open mode anyway.
-		r.Route("/admin/rbac", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(60, 1*time.Minute))
-			r.Get("/matrix", rbacHandler.GetMatrix)
-			r.With(RequireSudo(sudoStore, sudoCfg)).Put("/matrix", rbacHandler.UpsertMatrix)
-		})
-
 		// Admin impersonation endpoints.
 		// GET state + GET candidates are read-only and unguarded so
 		// the SPA can poll them to render the banner. POST start is
-		// sudo-gated AND blocked while already impersonating so a
-		// nested impersonation cannot be initiated. POST end is NOT
-		// sudo-gated — exiting impersonation should always succeed
-		// without a re-auth prompt — and is idempotent, so a
+		// blocked while already impersonating so a nested session
+		// cannot be initiated. POST end is idempotent and needs no
+		// intent confirmation, so a
 		// parallel-tab end click does not surface an error toast.
 		// In open mode every endpoint returns 501 AUTH_MODE_OPEN
 		// inside the handler.
@@ -4764,7 +4615,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Use(httprate.LimitByIP(30, 1*time.Minute))
 			r.Get("/", impersonationHandler.GetState)
 			r.Get("/candidates", impersonationHandler.Candidates)
-			r.With(tsauth.RequireNotImpersonating(), RequireSudo(sudoStore, sudoCfg)).Post("/", impersonationHandler.Start)
+			r.With(tsauth.RequireNotImpersonating()).Post("/", impersonationHandler.Start)
 			r.Post("/end", impersonationHandler.End)
 		})
 
@@ -4936,7 +4787,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Data Repair
-		mountDataRepairRoutes(r, dataRepairHandler, RequireSudo(sudoStore, sudoCfg))
+		mountDataRepairRoutes(r, dataRepairHandler)
 
 		// Backup & Restore
 		r.Route("/backup", func(r chi.Router) {
@@ -4944,8 +4795,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/configs", backupRestoreHandler.CreateConfig)
 			r.Get("/configs/{configID}", backupRestoreHandler.GetConfig)
 			r.Put("/configs/{configID}", backupRestoreHandler.UpdateConfig)
-			// destructive: requires sudo.
-			r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/configs/{configID}", backupRestoreHandler.DeleteConfig)
+			// Destructive backup deletion forbids impersonation.
+			r.With(tsauth.RequireNotImpersonating()).Delete("/configs/{configID}", backupRestoreHandler.DeleteConfig)
 			r.Post("/configs/{configID}/trigger", backupRestoreHandler.TriggerBackup)
 			r.Post("/quick", backupRestoreHandler.TriggerQuickBackup)
 			r.Get("/runs", backupRestoreHandler.ListRuns)
@@ -4972,9 +4823,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/export/jobs", func(r chi.Router) {
 			r.Post("/", exportJobHandler.SubmitJob)
 			r.Post("/account", exportJobHandler.SubmitAccountJob)
-			// destructive: a settings import
-			// can overwrite live config; gate on sudo.
-			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/import", exportJobHandler.SubmitImportJob)
+			// Destructive imports forbid impersonation.
+			r.With(tsauth.RequireNotImpersonating()).Post("/import", exportJobHandler.SubmitImportJob)
 			// Bulk operations — registered before
 			// /{jobID} so chi matches the static `/bulk` path first.
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", exportJobHandler.BulkUpdate)
@@ -5030,9 +4880,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Handlers
 		v1VehicleHandler := v1handlers.NewVehicleHandler(vehicleSvc)
 		v1ChargingHandler := v1handlers.NewChargingHandler(chargingSvc)
-		v1ExportHandler := v1handlers.NewExportHandler(exportSvc)
+		v1ExportHandler := v1handlers.NewExportHandler(exportSvc, cfg.Auth.ForwardAuthHeader)
 		v1DashboardHandler := v1handlers.NewDashboardHandler(dashboardSvc)
-		v1UserHandler := v1handlers.NewUserHandler()
+		v1UserHandler := v1handlers.NewUserHandler(cfg.Auth.ForwardAuthHeader)
 
 		// Register new routes (paths that DON'T exist in the legacy router above)
 		v1DashboardHandler.Register(r) // /dashboard/stats ╬ô├ç├╢ NEW
@@ -5052,7 +4902,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), AIHandlers{
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, AIHandlers{
 			Chatbot:                              aiChatbotHandler,
 			Digest:                               aiDigestHandler,
 			YIR:                                  aiYIRHandler,

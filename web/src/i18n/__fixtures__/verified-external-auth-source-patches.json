@@ -1,0 +1,306 @@
+[
+  {
+    "file": "web/src/components/layout/Layout.tsx",
+    "before": "2b77c52068714e5b19a837178ac453622ca2f9e51c9ab888976a725d8b4d40bc",
+    "after": "c4aae6a870d28f25c94d97526daea5a17bcd45c59a4248f4155d46d94626267d",
+    "hunks": [
+      {
+        "start": 9,
+        "old": [],
+        "new": [
+          "import { ActionConfirmationRoot } from '../feedback/ActionConfirmationRoot'"
+        ]
+      },
+      {
+        "start": 112,
+        "old": [
+          "const LazySessionExpiringModal = lazy(async () => {",
+          "  const module = await import('../feedback/SessionExpiringModal')",
+          "  return { default: module.SessionExpiringModal }",
+          "})",
+          "",
+          "const LazyReauthDialogRoot = lazy(async () => {",
+          "  const module = await import('../feedback/ReauthDialog')",
+          "  return { default: module.ReauthDialogRoot }",
+          "})",
+          ""
+        ],
+        "new": []
+      },
+      {
+        "start": 1457,
+        "old": [
+          "      {/* ForwardAuth session-expiry modals —",
+          "          SessionExpiringModal opens ~60s before the proxy cookie ages",
+          "          out (soft-dismissible countdown with unsaved-draft list).",
+          "          SessionExpiredModal hard-blocks the UI when the cookie has",
+          "          actually expired (or any API call returned 401), preserving",
+          "          the current URL so the user can resume after re-auth.",
+          "          Both are no-ops in open mode (no FORWARD_AUTH_HEADER). */}",
+          "      <Suspense fallback={null}><LazySessionExpiringModal /></Suspense>"
+        ],
+        "new": []
+      },
+      {
+        "start": 1458,
+        "old": [
+          "      <Suspense fallback={null}><LazyReauthDialogRoot /></Suspense>"
+        ],
+        "new": [
+          "      <ActionConfirmationRoot />"
+        ]
+      }
+    ],
+    "deletedSource": null
+  },
+  {
+    "file": "web/src/features/admin/components/operationalbrief-r-z/RbacOperationalBrief.tsx",
+    "before": "4c9b0c85f0185b5c3f52d43efa9c3f447ffc4fa7cd8fe615c83023f6f25c67e3",
+    "after": "dab22ea88d03dc737386c116617b907b14e778f9f2dcc6779115af68f7c5bab7",
+    "hunks": [
+      {
+        "start": 3,
+        "old": [
+          "import type { RbacMatrixSessionResponse } from '@/api/hooks/useRbacMatrix';"
+        ],
+        "new": [
+          "import type { RbacMatrixSessionResponse } from '@/api/types';"
+        ]
+      }
+    ],
+    "deletedSource": null
+  },
+  {
+    "file": "web/src/features/settings/components/SettingsExportImport.tsx",
+    "before": "402806e73ffd85afd59b351079f679172fe63facbee70173ddefc059a2310b4c",
+    "after": "54e1ab94ed0a0ca233abfe6df967196fef9a7d77ae34f286caff3564f5389e5d",
+    "hunks": [
+      {
+        "start": 41,
+        "old": [
+          "import { isApiError, SudoCanceledError } from '@/api/client';"
+        ],
+        "new": [
+          "import { isApiError, ActionCanceledError } from '@/api/client';"
+        ]
+      },
+      {
+        "start": 264,
+        "old": [
+          "      if (err instanceof SudoCanceledError) {"
+        ],
+        "new": [
+          "      if (err instanceof ActionCanceledError) {"
+        ]
+      }
+    ],
+    "deletedSource": null
+  },
+  {
+    "file": "web/src/features/settings/components/TOTPEnrollmentSection.tsx",
+    "before": "714f86af7ca7290250d0555059c48b6fd05fb262a4ad11b2b3758d567b0ac800",
+    "after": null,
+    "hunks": [],
+    "deletedSource": "/**\n * Composes the enrollment flow without persisting credentials.\n * Retained status stays visible, but mutations require capability and live\n * readiness, rechecked on submit. Only confirmed open mode hides controls.\n */\nimport { useEffect, useRef, useState, useSyncExternalStore } from 'react'\nimport { onlineManager, useQueryClient } from '@tanstack/react-query'\nimport { useTranslation } from 'react-i18next'\nimport { GlassPanel, ConfirmDialog, HelperText, Button } from '@/components/ui'\nimport { VisuallyHidden } from '@/components/a11y'\nimport { Skeleton, QueryError } from '@/components/feedback'\nimport { deriveDataState } from '@/api/dataState'\nimport { FadeIn } from '@/components/motion'\nimport { totpKeys, type TOTPStatus } from '@/api/hooks/useTOTP'\nimport {\n  useTotpEnrollmentFlow,\n  TotpStatusHero,\n  TotpEnrollModal,\n  TotpBackupCodesModal,\n  TotpOpenModeNotice,\n} from './twofactor'\n\ninterface TOTPEnrollmentSectionProps {\n  capability?: boolean\n  liveReady?: boolean\n}\n\nconst subscribeToOnline = (onChange: () => void) => onlineManager.subscribe(onChange)\nconst getOnlineSnapshot = () => onlineManager.isOnline()\n\nexport function TOTPEnrollmentSection({\n  capability = true,\n  liveReady = true,\n}: TOTPEnrollmentSectionProps = {}) {\n  const { t } = useTranslation('settings')\n  const queryClient = useQueryClient()\n  const flow = useTotpEnrollmentFlow()\n  const { status } = flow\n  const statusState = deriveDataState(status)\n  const online = useSyncExternalStore(subscribeToOnline, getOnlineSnapshot)\n  const readiness = useRef({ capability, liveReady })\n  readiness.current = { capability, liveReady }\n  const [submissionBlocked, setSubmissionBlocked] = useState(false)\n  const commandsReady = capability && liveReady && online\n    && status.isSuccess && status.fetchStatus === 'idle'\n    && status.data?.mode === 'session'\n  useEffect(() => {\n    if (commandsReady) setSubmissionBlocked(false)\n  }, [commandsReady, status.dataUpdatedAt])\n  const blockedMessage = t(\n    'totp.commands.blocked',\n    'Two-factor changes require available enrollment access and a successful live status check. Previously loaded settings remain visible. Retry the status check when access and the connection are ready.',\n  )\n  const guardCommand = (command: () => void | Promise<void>, expectedActivated: boolean) => () => {\n    // Read the cache at submission time too: a dialog may outlive its status read.\n    const current = queryClient.getQueryState<TOTPStatus>(totpKeys.status)\n    if (!readiness.current.capability || !readiness.current.liveReady\n      || !onlineManager.isOnline() || current?.status !== 'success'\n      || current.fetchStatus !== 'idle' || current.data?.mode !== 'session'\n      || (current.data.activated === true) !== expectedActivated) {\n      setSubmissionBlocked(true)\n      return\n    }\n    setSubmissionBlocked(false)\n    void command()\n  }\n\n  if (statusState.status === 'initial' && !statusState.isRefreshBlocked\n    && status.fetchStatus === 'fetching') {\n    return (\n      <FadeIn delay={0.05}>\n        <GlassPanel\n          role=\"status\"\n          aria-busy=\"true\"\n          aria-label={t('totp.loading', 'Loading two-factor settings…')}\n          className=\"flex items-center gap-4 p-4 sm:p-5\"\n        >\n          <Skeleton rounded className=\"h-11 w-11 shrink-0\" />\n          <div className=\"flex-1 space-y-2\">\n            <Skeleton className=\"h-5 w-48\" />\n            <Skeleton className=\"h-3 w-full max-w-md\" />\n            <VisuallyHidden>\n              {t('totp.loading', 'Loading two-factor settings…')}\n            </VisuallyHidden>\n          </div>\n        </GlassPanel>\n      </FadeIn>\n    )\n  }\n\n  if (statusState.fatalError) {\n    return (\n      <FadeIn delay={0.05}>\n        <GlassPanel className=\"p-4 sm:p-5\">\n          <QueryError error={statusState.fatalError} onRetry={() => void status.refetch()} />\n        </GlassPanel>\n      </FadeIn>\n    )\n  }\n\n  if (!status.data) {\n    return (\n      <FadeIn delay={0.05}>\n        <GlassPanel className=\"space-y-3 p-4 sm:p-5\" role=\"status\">\n          <HelperText>\n            {statusState.isRefreshBlocked\n              ? t('common:dataSources.status.paused', 'Refresh paused')\n              : t('totp.loading', 'Loading two-factor settings…')}\n          </HelperText>\n          <HelperText>{blockedMessage}</HelperText>\n          <Button variant=\"ghost\" onClick={() => void status.refetch()}>\n            {t('common:retry', 'Retry')}\n          </Button>\n        </GlassPanel>\n      </FadeIn>\n    )\n  }\n\n  if (status.data.mode === 'open') {\n    return (\n      <FadeIn delay={0.05}>\n        <TotpOpenModeNotice />\n      </FadeIn>\n    )\n  }\n\n  const sessionStatus = status.data\n  const activated = sessionStatus.activated === true\n  const lastUsedAt = activated ? sessionStatus.last_used_at : undefined\n  const backupRemaining = activated ? sessionStatus.backup_codes_remaining : 0\n\n  return (\n    <>\n      <FadeIn delay={0.05}>\n        {!commandsReady && (\n          <div className=\"space-y-2 pb-3\" role=\"status\" data-testid=\"totp-commands-blocked\">\n            <HelperText>{blockedMessage}</HelperText>\n            <Button variant=\"ghost\" onClick={() => void status.refetch()} disabled={status.isFetching}>\n              {t('common:retry', 'Retry')}\n            </Button>\n          </div>\n        )}\n        <fieldset disabled={!commandsReady} className=\"min-w-0\">\n          <TotpStatusHero\n            activated={activated}\n            lastUsedAt={lastUsedAt}\n            backupRemaining={backupRemaining}\n            enrolling={flow.enrolling}\n            regenerating={flow.regenerating}\n            onEnroll={guardCommand(flow.handleEnroll, false)}\n            onRegenerate={guardCommand(flow.handleRegenerate, true)}\n            onDisable={guardCommand(flow.openDisableConfirm, true)}\n          />\n        </fieldset>\n      </FadeIn>\n\n      <TotpEnrollModal\n        open={flow.dialogStep === 'enroll'}\n        enrollment={flow.enrollment}\n        code={flow.verifyCode}\n        error={!commandsReady || submissionBlocked ? blockedMessage : flow.verifyError}\n        verifying={flow.verifying}\n        onCodeChange={flow.changeVerifyCode}\n        onVerify={guardCommand(flow.handleVerify, false)}\n        onClose={flow.closeDialog}\n      />\n\n      <TotpBackupCodesModal\n        open={flow.dialogStep === 'backupCodes'}\n        codes={flow.revealedCodes}\n        onDownload={flow.downloadCodes}\n        onClose={flow.closeDialog}\n      />\n\n      <ConfirmDialog\n        open={flow.showDisableConfirm}\n        title={t('totp.disable.title', 'Disable two-factor authentication?')}\n        message={t(\n          'totp.disable.message',\n          'You will no longer be prompted for a TOTP code on the sudo step-up. Your backup codes will be invalidated.',\n        )}\n        confirmLabel={t('totp.disable.confirm', 'Disable')}\n        cancelLabel={t('totp.disable.cancel', 'Keep TOTP enabled')}\n        variant=\"danger\"\n        loading={flow.revoking}\n        confirmDisabled={!commandsReady}\n        details={!commandsReady || submissionBlocked ? <HelperText>{blockedMessage}</HelperText> : undefined}\n        requireTypedConfirmation=\"DISABLE\"\n        typedConfirmationLabel={flow.disableTypedLabel}\n        onConfirm={guardCommand(flow.handleConfirmDisable, true)}\n        onCancel={flow.closeDisableConfirm}\n      />\n    </>\n  )\n}\n\nexport default TOTPEnrollmentSection\n"
+  },
+  {
+    "file": "web/src/features/settings/components/sessions/SessionBreakdownPanel.tsx",
+    "before": "d4e37ae6df387f6036801d3afc79a77470ed8c399d7386017c8c7842f5c037a7",
+    "after": null,
+    "hunks": [],
+    "deletedSource": "import { type ReactNode } from 'react'\nimport { useTranslation } from 'react-i18next'\n\nimport { GlassPanel, PanelTitle } from '@/components/ui'\nimport { MetricBar } from '@/components/data-display'\nimport { Skeleton, EmptyState, QueryError } from '@/components/feedback'\nimport { useNumberFormatting } from '@/hooks/useNumberFormatting'\nimport { chartTokens, typography } from '@/lib/tokens'\n\nimport type { BreakdownItem } from './sessionStats'\n\ninterface SessionBreakdownPanelProps {\n  title: string\n  /** Decorative leading glyph — rendered aria-hidden. */\n  icon: ReactNode\n  items: BreakdownItem[]\n  /** Total sessions — the denominator for each bar. */\n  total: number\n  isLoading: boolean\n  isError: boolean\n  error?: unknown\n  onRetry?: () => void\n  emptyMessage: string\n  /** Offsets into the color-blind-safe series so sibling panels differ. */\n  colorOffset?: number\n}\n\n/**\n * One device-breakdown panel (by browser / platform / network). Fully\n * self-sufficient: renders its own skeleton, error, and empty states so the\n * page never has to gate the whole bento behind a single condition.\n */\nexport function SessionBreakdownPanel({\n  title,\n  icon,\n  items,\n  total,\n  isLoading,\n  isError,\n  error,\n  onRetry,\n  emptyMessage,\n  colorOffset = 0,\n}: SessionBreakdownPanelProps) {\n  const { t } = useTranslation()\n  const { fmtInt } = useNumberFormatting()\n  const series = chartTokens.series\n  const rows = items ?? []\n  const max = total > 0 ? total : 1\n\n  // Even when the caller flags an error without supplying an error object,\n  // surface a retryable failure card so the panel body never collapses to\n  // just its title — QueryError renders nothing for a falsy error.\n  const shownError =\n    isError && !error\n      ? new Error(t('account.sessions.breakdownError', 'Failed to load sessions'))\n      : error\n\n  return (\n    <GlassPanel className=\"p-4 sm:p-5\">\n      <PanelTitle className=\"mb-3 flex items-center gap-2\">\n        <span className={typography.color.muted} aria-hidden=\"true\">\n          {icon}\n        </span>\n        {title}\n      </PanelTitle>\n      {isLoading ? (\n        <Skeleton height={168} />\n      ) : isError ? (\n        <QueryError error={shownError} onRetry={onRetry} />\n      ) : rows.length === 0 ? (\n        <EmptyState\n          message={emptyMessage}\n          action={onRetry ? { label: t('common.retry', 'Retry'), onClick: onRetry } : undefined}\n        />\n      ) : (\n        <div className=\"space-y-3\">\n          {rows.map((row, i) => (\n            <MetricBar\n              key={row.key}\n              label={row.label}\n              value={row.count}\n              max={max}\n              color={series[(i + colorOffset) % series.length]}\n              sublabel={fmtInt(row.count)}\n            />\n          ))}\n        </div>\n      )}\n    </GlassPanel>\n  )\n}\n\nexport default SessionBreakdownPanel\n"
+  },
+  {
+    "file": "web/src/features/settings/components/sessions/SessionsOpenModeNotice.tsx",
+    "before": "6be9b17b80e19e7358697676b6fdebb72a688802737683b6ea7fcff7510a3bff",
+    "after": null,
+    "hunks": [],
+    "deletedSource": "import { useTranslation } from 'react-i18next'\nimport { ShieldAlert } from 'lucide-react'\n\nimport { GlassPanel } from '@/components/ui'\nimport { EmptyState } from '@/components/feedback'\n\n/**\n * Full-width placeholder shown when the backend reports AUTH_MODE_OPEN — the\n * install runs without a forward-auth header, so per-device sessions can't be\n * tracked. Mirrors the inline placeholder other security primitives render\n * until the `<RequiresAuth capability=\"session_list\">` wrapper ships.\n */\nexport function SessionsOpenModeNotice() {\n  const { t } = useTranslation('settings')\n\n  // Reused for both the visible EmptyState heading and the landmark region's\n  // accessible name so a screen-reader user navigating by region lands on a\n  // named notice rather than an anonymous \"region\". Mirrors the\n  // `role=\"region\" aria-labelledby={heading}` pattern the drive/charging\n  // detail panels use; EmptyState owns the heading so we label by value.\n  const title = t('account.sessions.openMode.title', 'Session tracking unavailable')\n\n  return (\n    <GlassPanel\n      className=\"p-4 sm:p-5\"\n      data-testid=\"active-sessions-open-mode\"\n      role=\"region\"\n      aria-label={title}\n    >\n      {/* no-action: the fix is a reverse-proxy configuration change (inject X-Forwarded-User) outside this SPA; there is no in-app control that can enable forward-auth mode. */}\n      <EmptyState\n        icon={<ShieldAlert className=\"h-8 w-8\" aria-hidden=\"true\" />}\n        title={title}\n        message={t(\n          'account.sessions.openMode.message',\n          'Active session tracking requires forward-auth mode. Configure your reverse proxy to inject X-Forwarded-User, then reload.',\n        )}\n      />\n    </GlassPanel>\n  )\n}\n\nexport default SessionsOpenModeNotice\n"
+  },
+  {
+    "file": "web/src/features/settings/components/sessions/SessionsTable.tsx",
+    "before": "3fcf3bec57fa27e4547ab0fd57cfef5350e56cf70cd046074e63293898117a43",
+    "after": null,
+    "hunks": [],
+    "deletedSource": "import { useCallback, useMemo } from 'react'\nimport { useTranslation } from 'react-i18next'\nimport { LogOut } from 'lucide-react'\n\nimport {\n  GlassPanel,\n  PanelTitle,\n  Badge,\n  Button,\n  DataTable,\n  Text,\n  type Column,\n} from '@/components/ui'\nimport { Skeleton, QueryError } from '@/components/feedback'\nimport { useDateFormat } from '@/hooks/useDateFormat'\nimport type { ActiveSession } from '@/api/types'\n\nimport { describeDevice } from './deviceLabel'\n\ninterface SessionsTableProps {\n  sessions: ActiveSession[]\n  /** Opens the per-row revoke confirmation for the given session. */\n  onRevoke: (session: ActiveSession) => void\n  /** Id of the session whose revoke mutation is in flight (disables its row). */\n  revokingId?: string | null\n  isLoading: boolean\n  isError: boolean\n  error?: unknown\n  onRetry?: () => void\n}\n\n/**\n * Detail band: the full list of active devices with a per-row \"Sign out\"\n * action. The current device is flagged and never gets a revoke button (you\n * can't sign yourself out here — that's what \"sign out all others\" is for).\n * Owns its own loading + error states; the empty state is handled by\n * `DataTable`'s `emptyMessage`.\n */\nexport function SessionsTable({\n  sessions,\n  onRevoke,\n  revokingId,\n  isLoading,\n  isError,\n  error,\n  onRetry,\n}: SessionsTableProps) {\n  const { t } = useTranslation('settings')\n  const { formatDateTime } = useDateFormat()\n\n  const columns = useMemo<Column<ActiveSession>[]>(\n    () => [\n      {\n        key: 'device',\n        filterValue: (row) => row.user_agent || null,\n        filterValueLabel: (_value, row) => describeDevice(row.user_agent),\n        header: t('account.sessions.columns.device', 'Device'),\n        render: (row) => (\n          <div className=\"flex items-center gap-2\">\n            <Text color=\"primary\">{describeDevice(row.user_agent)}</Text>\n            {row.current ? (\n              <Badge\n                variant=\"success\"\n                size=\"sm\"\n                data-testid={`active-sessions-current-pill-${row.id}`}\n              >\n                {t('account.sessions.current', 'This device')}\n              </Badge>\n            ) : null}\n          </div>\n        ),\n      },\n      {\n        key: 'ip',\n        filterValue: (row) => row.ip || null,\n        header: t('account.sessions.columns.ip', 'IP address'),\n        render: (row) => (\n          <Text color=\"secondary\" className=\"tabular-nums\">{row.ip || '—'}</Text>\n        ),\n      },\n      {\n        key: 'created_at',\n        filterValue: (row) => row.created_at ?? null,\n        filterValueLabel: (_value, row) => formatDateTime(row.created_at),\n        header: t('account.sessions.columns.createdAt', 'Signed in'),\n        render: (row) => (\n          <Text color=\"secondary\">{formatDateTime(row.created_at)}</Text>\n        ),\n      },\n      {\n        key: 'last_seen_at',\n        filterValue: (row) => row.last_seen_at ?? null,\n        filterValueLabel: (_value, row) => formatDateTime(row.last_seen_at),\n        header: t('account.sessions.columns.lastSeenAt', 'Last seen'),\n        render: (row) => (\n          <Text color=\"secondary\">{formatDateTime(row.last_seen_at)}</Text>\n        ),\n      },\n      {\n        key: 'actions',\n        header: '',\n        align: 'right',\n        render: (row) =>\n          row.current ? null : (\n            <Button\n              variant=\"ghost\"\n              size=\"sm\"\n              className=\"min-h-11 min-w-11 md:min-h-9\"\n              onClick={() => onRevoke(row)}\n              disabled={revokingId === row.id}\n              icon={<LogOut className=\"h-4 w-4\" aria-hidden=\"true\" />}\n              data-testid={`active-sessions-revoke-${row.id}`}\n              aria-label={t('account.sessions.row.revokeAria', 'Sign out {{device}}', {\n                device: describeDevice(row.user_agent),\n              })}\n            >\n              {t('account.sessions.row.revoke', 'Sign out')}\n            </Button>\n          ),\n      },\n    ],\n    [t, formatDateTime, onRevoke, revokingId],\n  )\n\n  // Stable identity so `DataTable`'s internal row-key/selection memos don't\n  // recompute on every parent render.\n  const keyExtractor = useCallback((row: ActiveSession) => row.id, [])\n\n  return (\n    <section className=\"min-w-0\" aria-label={t('account.sessions.tableAria', 'Active devices')}>\n      <GlassPanel className=\"min-w-0 p-4 sm:p-5\" data-testid=\"active-sessions-section\">\n        <PanelTitle className=\"mb-3\">\n          {t('account.sessions.tableTitle', 'Active devices')}\n        </PanelTitle>\n        {isLoading ? (\n          <Skeleton height={240} />\n        ) : isError ? (\n          <QueryError error={error} onRetry={onRetry} />\n        ) : (\n          <DataTable<ActiveSession>\n            tableId=\"settings:active-sessions\"\n            columns={columns}\n            name={t('account.sessions.tableAria', 'Active devices')}\n            data={sessions ?? []}\n            enableValueFilters\n            keyExtractor={keyExtractor}\n            emptyMessage={t('account.sessions.empty', 'No active sessions for this account.')}\n            pagination\n          />\n        )}\n      </GlassPanel>\n    </section>\n  )\n}\n\nexport default SessionsTable\n"
+  },
+  {
+    "file": "web/src/features/settings/components/twofactor/TotpBackupCodesModal.tsx",
+    "before": "2bd5678aeb767788da91791ddbcf9846de1b5a48c413ebad0db92e5e17dccccf",
+    "after": null,
+    "hunks": [],
+    "deletedSource": "/**\n * Backup-codes reveal modal — shown once after enroll or regenerate.\n *\n * The plain-text codes are surfaced a single time; this modal offers\n * copy + download before the user dismisses it. Presentational only —\n * the code list, download handler, and dismissal come from the flow.\n */\nimport { useMemo } from 'react'\nimport { useTranslation } from 'react-i18next'\nimport { Download } from 'lucide-react'\nimport { Modal, Button, Code, Text } from '@/components/ui'\nimport { EmptyState } from '@/components/feedback'\nimport { TotpCopyAction } from './TotpCopyAction'\n\ninterface TotpBackupCodesModalProps {\n  open: boolean\n  codes: string[] | null\n  onDownload: () => void\n  onClose: () => void\n}\n\nexport function TotpBackupCodesModal({ open, codes, onDownload, onClose }: TotpBackupCodesModalProps) {\n  const { t } = useTranslation('settings')\n\n  // Null-safe copy of the list so `.length`/`.map`/`.join` never touch a\n  // nullish value, and a stable clipboard payload that only changes when the\n  // codes do.\n  const list = useMemo(() => codes ?? [], [codes])\n  const clipboardText = useMemo(() => list.join('\\n'), [list])\n  const hasCodes = list.length > 0\n\n  return (\n    <Modal\n      open={open && codes != null}\n      onClose={onClose}\n      size=\"sm\"\n      title={t('totp.backupCodes.title', 'Save your backup codes')}\n      data-testid=\"totp-backup-modal\"\n    >\n      {codes != null ? (\n        <div className=\"space-y-4\">\n          {hasCodes ? (\n            <>\n              <Text variant=\"bodySm\" as=\"p\">\n                {t(\n                  'totp.backupCodes.warning',\n                  'These codes will not be shown again. Store them in a password manager. Each code can be used once if you lose access to your authenticator app.',\n                )}\n              </Text>\n              <ul\n                className=\"grid grid-cols-2 gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3\"\n                data-testid=\"totp-backup-list\"\n              >\n                {list.map((c, i) => (\n                  <li key={`${c}-${i}`}>\n                    <Code>{c}</Code>\n                  </li>\n                ))}\n              </ul>\n              <div className=\"flex flex-wrap items-center justify-end gap-2\">\n                {/* flow-cta: saving backup codes is this dialog’s task */}\n                <Button\n                  type=\"button\"\n                  variant=\"ghost\"\n                  wrapLabel\n                  onClick={onDownload}\n                  data-testid=\"totp-backup-download\"\n                >\n                  <Download className=\"mr-2 h-4 w-4\" aria-hidden=\"true\" />\n                  {t('totp.backupCodes.download', 'Download .txt')}\n                </Button>\n                <TotpCopyAction text={clipboardText} />\n                <Button type=\"button\" variant=\"primary\" wrapLabel onClick={onClose} data-testid=\"totp-backup-done\">\n                  {t('totp.backupCodes.done', 'I saved them')}\n                </Button>\n              </div>\n            </>\n          ) : (\n            // Degraded path: the enroll/regenerate response carried no codes.\n            // Never render an empty grid with a copy button that copies nothing\n            // — surface an actionable empty state and a way out instead.\n            <div className=\"space-y-4\" data-testid=\"totp-backup-empty\">\n              {/* no-action: the Close button below already gives a way out (dismiss and regenerate from two-factor settings). */}\n              <EmptyState\n                message={t(\n                  'totp.backupCodes.empty',\n                  'No backup codes were returned. Close this dialog and regenerate your codes from the two-factor settings.',\n                )}\n              />\n              <div className=\"flex justify-end\">\n                <Button\n                  type=\"button\"\n                  variant=\"primary\"\n                  onClick={onClose}\n                  data-testid=\"totp-backup-dismiss\"\n                >\n                  {t('totp.backupCodes.close', 'Close')}\n                </Button>\n              </div>\n            </div>\n          )}\n        </div>\n      ) : null}\n    </Modal>\n  )\n}\n\nexport default TotpBackupCodesModal\n"
+  },
+  {
+    "file": "web/src/features/settings/components/twofactor/TotpCompatibleApps.tsx",
+    "before": "72d4c89c488edd8c26c025520b0b230841700df729178d0ffc433f933ec1e83d",
+    "after": null,
+    "hunks": [],
+    "deletedSource": "/**\n * Compatible-apps panel.\n *\n * Reassurance that enrollment is client-agnostic — any RFC 6238 TOTP\n * app works. The names are proper nouns (brands), so they live in a\n * constant rather than the i18n catalog; the surrounding copy is\n * translated.\n */\nimport { useId } from 'react'\nimport { useTranslation } from 'react-i18next'\nimport { Smartphone } from 'lucide-react'\nimport { GlassPanel, IconBox, PanelTitle, Text, HelperText } from '@/components/ui'\n\n// Brand names — intentionally not translated (proper nouns).\nconst COMPATIBLE_APPS = [\n  'Google Authenticator',\n  '1Password',\n  'Bitwarden',\n  'Authy',\n  'Microsoft Authenticator',\n  'Ente Auth',\n] as const\n\nexport function TotpCompatibleApps() {\n  const { t } = useTranslation('settings')\n  // Stable id so the app list is named by the panel heading — assistive tech\n  // announces it as \"Compatible apps\" rather than an unlabeled group of items.\n  const titleId = useId()\n\n  // `|| '—'` guards against an empty/missing translation so the heading and\n  // subtitle never collapse to a blank line (and the list keeps its name).\n  const title = t('totp.apps.title', 'Compatible apps') || '—'\n  const subtitle = t('totp.apps.subtitle', 'Any RFC 6238 TOTP client works.') || '—'\n\n  return (\n    <GlassPanel className=\"h-full space-y-4 p-4 sm:p-5\">\n      <div className=\"flex items-center gap-3\">\n        <IconBox className=\"bg-[var(--surface-2)] text-[var(--text-secondary)] ring-[var(--border-default)]\">\n          <Smartphone className=\"h-5 w-5\" aria-hidden=\"true\" />\n        </IconBox>\n        <div>\n          <PanelTitle id={titleId}>{title}</PanelTitle>\n          <HelperText>{subtitle}</HelperText>\n        </div>\n      </div>\n      <ul aria-labelledby={titleId} className=\"grid grid-cols-1 gap-2 sm:grid-cols-2\">\n        {COMPATIBLE_APPS.map((name) => (\n          <li\n            key={name}\n            className=\"flex min-w-0 items-center gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2 ring-1 ring-[var(--border-subtle)]\"\n          >\n            <Smartphone className=\"h-4 w-4 shrink-0 text-[var(--text-secondary)]\" aria-hidden=\"true\" />\n            <Text as=\"span\" variant=\"body\" className=\"min-w-0 break-words\">\n              {name}\n            </Text>\n          </li>\n        ))}\n      </ul>\n    </GlassPanel>\n  )\n}\n\nexport default TotpCompatibleApps\n"
+  },
+  {
+    "file": "web/src/features/settings/components/twofactor/TotpCopyAction.tsx",
+    "before": "cb4a5a94d2df028341cc53b17c93c0fb91dc5078361d0b3d99be4875ebf0103e",
+    "after": null,
+    "hunks": [],
+    "deletedSource": "import { useEffect, useState } from 'react'\nimport { useTranslation } from 'react-i18next'\nimport { CopyButton, HelperText } from '@/components/ui'\n\ninterface TotpCopyActionProps {\n  text: string\n}\n\nexport function TotpCopyAction({ text }: TotpCopyActionProps) {\n  const { t } = useTranslation('settings')\n  const [copyFailed, setCopyFailed] = useState(false)\n\n  useEffect(() => {\n    setCopyFailed(false)\n  }, [text])\n\n  return (\n    <div className=\"min-w-0 max-w-full space-y-1\">\n      <CopyButton\n        text={text}\n        onCopy={() => setCopyFailed(false)}\n        onCopyError={() => setCopyFailed(true)}\n      />\n      {copyFailed && (\n        <HelperText role=\"status\" className=\"max-w-prose break-words\">\n          {t(\n            'totp.copy.manualHint',\n            'Clipboard unavailable. Select the displayed text and copy it manually.',\n          )}\n        </HelperText>\n      )}\n    </div>\n  )\n}\n"
+  },
+  {
+    "file": "web/src/features/settings/components/twofactor/TotpEnrollModal.tsx",
+    "before": "c7fe0492ff465da9bfe45102c2ddf0286ac8ef8e8a701b5f5c0490a3a70f4193",
+    "after": null,
+    "hunks": [],
+    "deletedSource": "/**\n * Enroll modal — QR + manual secret + 6-digit verify.\n *\n * Presentational only; the enrollment payload, code value, error, and\n * submit/cancel intent all come from `useTotpEnrollmentFlow`. Retains\n * the original `data-testid` hooks used by the section contract test.\n */\nimport { useTranslation } from 'react-i18next'\nimport { Modal, Button, Input, CodeBlock, Text, ErrorText } from '@/components/ui'\nimport type { TOTPEnrollment } from '@/api/types'\nimport { TotpCopyAction } from './TotpCopyAction'\n\ninterface TotpEnrollModalProps {\n  open: boolean\n  enrollment: TOTPEnrollment | null\n  code: string\n  error: string | null\n  verifying: boolean\n  onCodeChange: (value: string) => void\n  onVerify: () => void\n  onClose: () => void\n}\n\nexport function TotpEnrollModal({\n  open,\n  enrollment,\n  code,\n  error,\n  verifying,\n  onCodeChange,\n  onVerify,\n  onClose,\n}: TotpEnrollModalProps) {\n  const { t } = useTranslation('settings')\n\n  return (\n    <Modal\n      open={open && enrollment != null}\n      onClose={onClose}\n      size=\"sm\"\n      title={t('totp.modal.enrollTitle', 'Enable TOTP')}\n      data-testid=\"totp-enroll-modal\"\n    >\n      {enrollment != null ? (\n        <div className=\"space-y-4\">\n          <Text variant=\"bodySm\" as=\"p\">\n            {t(\n              'totp.modal.scanInstructions',\n              'Scan the QR code with your authenticator app, or enter the secret manually.',\n            )}\n          </Text>\n          <div className=\"flex justify-center\">\n            <img\n              src={enrollment.qr_data_uri}\n              alt={t('totp.modal.qrAlt', 'TOTP QR code')}\n              width={224}\n              height={224}\n              className=\"rounded-md border border-[var(--border-subtle)] bg-white p-2\"\n              data-testid=\"totp-qr\"\n            />\n          </div>\n          <CodeBlock\n            text={enrollment.secret}\n            ariaLabel={t('totp.modal.manualLabel', 'Manual entry secret')}\n            heading={<Text variant=\"label\">{t('totp.modal.manualLabel', 'Manual entry secret')}</Text>}\n            wrap\n            action={<TotpCopyAction text={enrollment.secret} />}\n          >\n              <span data-testid=\"totp-secret\">\n                {enrollment.secret}\n              </span>\n          </CodeBlock>\n          <Input\n            type=\"text\"\n            inputMode=\"numeric\"\n            pattern=\"[0-9]*\"\n            value={code}\n            onChange={(e) => onCodeChange(e.target.value)}\n            // Enter submits the code so keyboard users don't have to tab to\n            // the Verify button. Suppressed while a verify is in flight.\n            onKeyDown={(e) => {\n              if (e.key === 'Enter' && !verifying) {\n                e.preventDefault()\n                onVerify()\n              }\n            }}\n            label={t('totp.modal.codeLabel', 'Enter the 6-digit code from your app')}\n            autoFocus\n            data-testid=\"totp-verify-input\"\n            disabled={verifying}\n          />\n          {error ? <ErrorText data-testid=\"totp-verify-error\">{error}</ErrorText> : null}\n          <div className=\"flex flex-wrap items-center justify-end gap-2\">\n            <Button type=\"button\" variant=\"ghost\" wrapLabel onClick={onClose} disabled={verifying}>\n              {t('totp.modal.cancel', 'Cancel')}\n            </Button>\n            <Button\n              type=\"button\"\n              variant=\"primary\"\n              wrapLabel\n              onClick={onVerify}\n              loading={verifying}\n              data-testid=\"totp-verify-submit\"\n            >\n              {t('totp.modal.verify', 'Verify and activate')}\n            </Button>\n          </div>\n        </div>\n      ) : null}\n    </Modal>\n  )\n}\n\nexport default TotpEnrollModal\n"
+  },
+  {
+    "file": "web/src/features/settings/components/twofactor/TotpOpenModeNotice.tsx",
+    "before": "abe3c85f11b1bb75032a9a9db93bf5d09780a7aa1fe6a61888fa4832ccbbaad0",
+    "after": null,
+    "hunks": [],
+    "deletedSource": "/**\n * Open-mode placeholder for the two-factor page.\n *\n * Rendered when the backend reports `AUTH_MODE_OPEN` — per-user TOTP\n * needs forward-auth so no enroll/disable controls are offered here.\n * Mirrors the future `<RequiresAuth capability=\"totp_enrollment\">` gate.\n */\nimport { useTranslation } from 'react-i18next'\nimport { AlertTriangle } from 'lucide-react'\nimport { GlassPanel, IconBox, Heading, HelperText } from '@/components/ui'\n\nexport function TotpOpenModeNotice() {\n  const { t } = useTranslation('settings')\n  return (\n    <GlassPanel\n      // Polite live region: the parent swaps a loading spinner for this notice\n      // once the auth-mode query resolves. Without role=\"status\" that switch is\n      // silent for screen-reader users; with it the guidance is announced.\n      role=\"status\"\n      className=\"space-y-3 p-4 sm:p-5\"\n      data-testid=\"totp-section-open-mode\"\n    >\n      <div className=\"flex items-center gap-3\">\n        <IconBox color=\"amber\">\n          <AlertTriangle className=\"h-5 w-5\" aria-hidden=\"true\" />\n        </IconBox>\n        <Heading level=\"panel\">{t('totp.title', 'Two-factor authentication')}</Heading>\n      </div>\n      <HelperText>\n        {t(\n          'totp.openMode.message',\n          'Per-user TOTP requires forward-auth mode. Configure your reverse proxy to inject X-Forwarded-User then reload.',\n        )}\n      </HelperText>\n    </GlassPanel>\n  )\n}\n\nexport default TotpOpenModeNotice\n"
+  },
+  {
+    "file": "web/src/features/settings/components/twofactor/TotpRecoveryPanel.tsx",
+    "before": "232270fe7d8d4eb5ce3739ef07a0877e49a466253c450c6abfe4c09a8d63011b",
+    "after": null,
+    "hunks": [],
+    "deletedSource": "/**\n * Recovery & good-habits panel.\n *\n * Companion guidance for backup codes and day-to-day TOTP use. Static\n * and always visible so the safety advice is a stable part of the\n * bento rather than a transient toast.\n */\nimport { useId } from 'react'\nimport { useTranslation } from 'react-i18next'\nimport { LifeBuoy, KeyRound, ShieldCheck, Clock } from 'lucide-react'\nimport { GlassPanel, IconBox, PanelTitle, Text, HelperText } from '@/components/ui'\n\nexport function TotpRecoveryPanel() {\n  const { t } = useTranslation('settings')\n  // Stable id so the panel exposes itself as a region landmark named by its\n  // heading — a screen-reader jump target that disambiguates it from the\n  // sibling \"compatible apps\" panel sharing the same context band.\n  const titleId = useId()\n\n  // Stable semantic keys (not the translated copy) keep list identity intact\n  // across language switches and guard against key collisions.\n  const tips = [\n    {\n      key: 'single-use',\n      Icon: KeyRound,\n      text: t('totp.recovery.tip1', 'Each backup code works once — regenerate when you are running low.'),\n    },\n    {\n      key: 'store-safely',\n      Icon: ShieldCheck,\n      text: t(\n        'totp.recovery.tip2',\n        'Store codes in your password manager, not next to your authenticator app.',\n      ),\n    },\n    {\n      key: 'rotation',\n      Icon: Clock,\n      text: t('totp.recovery.tip3', 'Codes rotate every 30 seconds; if one is rejected, wait for the next.'),\n    },\n  ]\n\n  return (\n    <GlassPanel role=\"region\" aria-labelledby={titleId} className=\"h-full space-y-4 p-4 sm:p-5\">\n      <div className=\"flex items-center gap-3\">\n        <IconBox className=\"bg-[var(--surface-2)] text-[var(--text-secondary)] ring-[var(--border-default)]\">\n          <LifeBuoy className=\"h-5 w-5\" aria-hidden=\"true\" />\n        </IconBox>\n        <div>\n          <PanelTitle id={titleId}>{t('totp.recovery.title', 'Recovery & good habits')}</PanelTitle>\n          <HelperText>{t('totp.recovery.subtitle', 'Keep a way back in if you lose your phone.')}</HelperText>\n        </div>\n      </div>\n      <ul className=\"space-y-3\">\n        {tips.map(({ key, Icon, text }) => (\n          <li key={key} className=\"flex items-start gap-3\">\n            <Icon className=\"mt-0.5 h-4 w-4 shrink-0 text-[var(--text-secondary)]\" aria-hidden=\"true\" />\n            <Text variant=\"bodySm\" as=\"p\">\n              {text}\n            </Text>\n          </li>\n        ))}\n      </ul>\n    </GlassPanel>\n  )\n}\n\nexport default TotpRecoveryPanel\n"
+  },
+  {
+    "file": "web/src/features/settings/components/twofactor/TotpSetupGuide.tsx",
+    "before": "efd52194848aea0a921566abd4fafa37956622677d4e1e650d4f84ea718b661b",
+    "after": null,
+    "hunks": [],
+    "deletedSource": "/**\n * Setup guide — the \"how it works\" companion to the enrollment hero.\n *\n * Static, i18n-driven four-step walkthrough so the page teaches the\n * flow without the user opening the modal first. Purely informational;\n * always visible so it reads as a stable part of the bento.\n */\nimport { useId, useMemo } from 'react'\nimport { useTranslation } from 'react-i18next'\nimport { ListChecks } from 'lucide-react'\nimport { GlassPanel, IconBox, PanelTitle, HelperText } from '@/components/ui'\nimport { OrderedStepList } from '@/components/data-display'\n\nexport function TotpSetupGuide() {\n  const { t } = useTranslation('settings')\n  // Stable id so the step list is named by the panel heading — assistive tech\n  // announces the ordered list as \"How setup works\" instead of an unlabeled\n  // group of items.\n  const titleId = useId()\n\n  // Each step carries a stable `id` so the list key never collides — the\n  // `|| '—'` guards below can otherwise degrade every title to the same\n  // em-dash placeholder, which would duplicate a title-based React key.\n  const steps = useMemo(\n    () => [\n      {\n        id: 'step1',\n        title: t('totp.guide.step1.title', 'Install an authenticator app') || '—',\n        description:\n          t(\n            'totp.guide.step1.body',\n            'Use any RFC 6238 client — Google Authenticator, 1Password, Bitwarden or Authy.',\n          ) || '—',\n      },\n      {\n        id: 'step2',\n        title: t('totp.guide.step2.title', 'Scan the QR code') || '—',\n        description:\n          t(\n            'totp.guide.step2.body',\n            'Choose Enable TOTP, then scan the QR or paste the manual secret into your app.',\n          ) || '—',\n      },\n      {\n        id: 'step3',\n        title: t('totp.guide.step3.title', 'Verify a 6-digit code') || '—',\n        description:\n          t(\n            'totp.guide.step3.body',\n            'Enter the rotating code your app shows to confirm both devices are in sync.',\n          ) || '—',\n      },\n      {\n        id: 'step4',\n        title: t('totp.guide.step4.title', 'Store your backup codes') || '—',\n        description:\n          t(\n            'totp.guide.step4.body',\n            'Save the one-time codes somewhere safe — they recover access if you lose your app.',\n          ) || '—',\n      },\n    ],\n    [t],\n  )\n\n  // `|| '—'` keeps the heading + subtitle from collapsing to a blank line when\n  // a locale resolves either key to an empty string (the list keeps its name).\n  const title = t('totp.guide.title', 'How setup works') || '—'\n  const subtitle = t('totp.guide.subtitle', 'Four steps, about a minute.') || '—'\n\n  return (\n    <GlassPanel className=\"h-full space-y-4 p-4 sm:p-5\">\n      <div className=\"flex items-center gap-3\">\n        <IconBox className=\"bg-[var(--surface-2)] text-[var(--text-secondary)] ring-[var(--border-default)]\">\n          <ListChecks className=\"h-5 w-5\" aria-hidden=\"true\" />\n        </IconBox>\n        <div>\n          <PanelTitle id={titleId}>{title}</PanelTitle>\n          <HelperText>{subtitle}</HelperText>\n        </div>\n      </div>\n      <OrderedStepList aria-labelledby={titleId} steps={steps} />\n    </GlassPanel>\n  )\n}\n\nexport default TotpSetupGuide\n"
+  },
+  {
+    "file": "web/src/features/settings/components/twofactor/TotpStatusHero.tsx",
+    "before": "76e2b3ff43e560df2c9fc64a05bfcd732c48a7ae1cbef0f10fdaacc4ccb78a6f",
+    "after": null,
+    "hunks": [],
+    "deletedSource": "/**\n * Hero status panel — the primary surface of the two-factor page.\n *\n * Pure presentation: it reflects the current credential state and\n * forwards user intent (enroll / regenerate / disable) to callbacks\n * owned by `useTotpEnrollmentFlow`. Preserves the original\n * `data-testid` hooks so the section contract test is unaffected.\n */\nimport { useTranslation } from 'react-i18next'\nimport { ShieldCheck, KeyRound, RefreshCw, Trash2 } from 'lucide-react'\nimport { GlassPanel, IconBox, Button, Badge, Heading, Text, HelperText } from '@/components/ui'\nimport { useDateFormat } from '@/hooks/useDateFormat'\nimport { knownNumber } from '@/api/dataState'\n\ninterface TotpStatusHeroProps {\n  activated: boolean\n  lastUsedAt?: string\n  backupRemaining: number | null | undefined\n  enrolling: boolean\n  regenerating: boolean\n  onEnroll: () => void\n  onRegenerate: () => void\n  onDisable: () => void\n}\n\nexport function TotpStatusHero({\n  activated,\n  lastUsedAt,\n  backupRemaining,\n  enrolling,\n  regenerating,\n  onEnroll,\n  onRegenerate,\n  onDisable,\n}: TotpStatusHeroProps) {\n  const { t } = useTranslation('settings')\n  const { formatDateTime } = useDateFormat()\n\n  const knownBackupRemaining = knownNumber(backupRemaining)\n  const safeBackupRemaining = knownBackupRemaining != null\n    && Number.isSafeInteger(knownBackupRemaining)\n    && knownBackupRemaining >= 0\n    ? knownBackupRemaining\n    : t('common.dash', '—')\n  const hasLastUsed = typeof lastUsedAt === 'string'\n    && lastUsedAt.trim().length > 0\n    && Number.isFinite(Date.parse(lastUsedAt))\n\n  return (\n    <GlassPanel className=\"h-full space-y-5 p-4 sm:p-5\" data-testid=\"totp-section\">\n      <div className=\"flex flex-wrap items-start justify-between gap-4\">\n        <div className=\"flex min-w-0 flex-1 items-center gap-3\">\n          <IconBox color={activated ? 'green' : 'cyan'}>\n            <ShieldCheck className=\"h-5 w-5\" aria-hidden=\"true\" />\n          </IconBox>\n          <div className=\"min-w-0\">\n            <Heading level=\"panel\">{t('totp.title', 'Two-factor authentication')}</Heading>\n            <HelperText>\n              {t(\n                'totp.subtitle',\n                'TOTP codes from your authenticator app are required for the sudo step-up before destructive admin actions.',\n              )}\n            </HelperText>\n          </div>\n        </div>\n        <Badge variant={activated ? 'success' : 'neutral'} data-testid=\"totp-status-pill\">\n          {activated\n            ? t('totp.status.active', 'Active')\n            : t('totp.status.notEnrolled', 'Not enrolled')}\n        </Badge>\n      </div>\n\n      {activated ? (\n        <div className=\"space-y-4\">\n          <div className=\"grid grid-cols-1 gap-3 sm:grid-cols-2\">\n            <div className=\"space-y-0.5\">\n              <Text variant=\"label\">{t('totp.lastUsed.label', 'Last used')}</Text>\n              <Text variant=\"bodySm\" as=\"p\">\n                {hasLastUsed ? formatDateTime(lastUsedAt) : t('common.dash', '—')}\n              </Text>\n            </div>\n            <div className=\"space-y-0.5\">\n              <Text variant=\"label\">\n                {t('totp.backupCodesRemaining.label', 'Backup codes remaining')}\n              </Text>\n              <Text variant=\"bodySm\" as=\"p\" data-testid=\"totp-backup-remaining\">\n                {safeBackupRemaining}\n              </Text>\n            </div>\n          </div>\n          <div className=\"flex flex-wrap items-center gap-2\">\n            <Button\n              variant=\"ghost\"\n              wrapLabel\n              onClick={onRegenerate}\n              loading={regenerating}\n              data-testid=\"totp-regenerate\"\n            >\n              <RefreshCw className=\"mr-2 h-4 w-4\" aria-hidden=\"true\" />\n              {t('totp.actions.regenerate', 'Regenerate backup codes')}\n            </Button>\n            <Button variant=\"danger\" wrapLabel onClick={onDisable} data-testid=\"totp-disable\">\n              <Trash2 className=\"mr-2 h-4 w-4\" aria-hidden=\"true\" />\n              {t('totp.actions.disable', 'Disable')}\n            </Button>\n          </div>\n        </div>\n      ) : (\n        <div className=\"flex flex-wrap items-center gap-3\">\n          <Button\n            variant=\"primary\"\n            wrapLabel\n            onClick={onEnroll}\n            loading={enrolling}\n            data-testid=\"totp-enroll\"\n          >\n            <KeyRound className=\"mr-2 h-4 w-4\" aria-hidden=\"true\" />\n            {t('totp.actions.enroll', 'Enable TOTP')}\n          </Button>\n          <HelperText>\n            {t(\n              'totp.actions.enrollHint',\n              'Compatible with Google Authenticator, 1Password, Bitwarden, Authy and other RFC 6238 clients.',\n            )}\n          </HelperText>\n        </div>\n      )}\n    </GlassPanel>\n  )\n}\n\nexport default TotpStatusHero\n"
+  },
+  {
+    "file": "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.ts",
+    "before": "2170e9f55f4d93f6e8caae60ca45ea74b9532b6c20114530edc15c4ea45d91b6",
+    "after": null,
+    "hunks": [],
+    "deletedSource": "/**\n * TOTP enrollment flow controller.\n *\n * Owns the whole client-side state machine for the two-factor page:\n * the enroll → verify → backup-codes dialog progression, the disable\n * confirmation, and the copy/download of one-time backup codes. All\n * mutation wiring lives here so the presentational surfaces\n * (`TotpStatusHero`, `TotpEnrollModal`, `TotpBackupCodesModal`) stay\n * dumb and easy to test.\n *\n * Pending mutations retain their dialog until settlement. UI settlement\n * belongs to the captured query-client/auth-mode instance and attempt;\n * invalidating that ownership does not cancel the server operation.\n */\nimport { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'\nimport { useQueryClient } from '@tanstack/react-query'\nimport { useTranslation } from 'react-i18next'\nimport { isApiError } from '@/api/client'\nimport {\n  useTOTPStatus,\n  useTOTPEnroll,\n  useTOTPVerify,\n  useTOTPRevoke,\n  useTOTPRegenerateBackupCodes,\n  TOTP_INVALID_CODE,\n  TOTP_RATE_LIMITED_CODE,\n  TOTP_ENROLLMENT_EXPIRED_CODE,\n} from '@/api/hooks/useTOTP'\nimport type { TOTPEnrollment } from '@/api/types'\n\nexport type TotpDialogStep = 'enroll' | 'backupCodes' | 'closed'\ntype PendingAction = 'enroll' | 'verify' | 'revoke' | 'regenerate'\n\nexport function useTotpEnrollmentFlow() {\n  const { t } = useTranslation('settings')\n\n  const status = useTOTPStatus()\n  const queryClient = useQueryClient()\n  const enrollMut = useTOTPEnroll()\n  const verifyMut = useTOTPVerify()\n  const revokeMut = useTOTPRevoke()\n  const regenMut = useTOTPRegenerateBackupCodes()\n\n  const [dialogStep, setDialogStep] = useState<TotpDialogStep>('closed')\n  const [enrollment, setEnrollment] = useState<TOTPEnrollment | null>(null)\n  const [revealedCodes, setRevealedCodes] = useState<string[] | null>(null)\n  const [verifyCode, setVerifyCode] = useState('')\n  const [verifyError, setVerifyError] = useState<string | null>(null)\n  const [showDisableConfirm, setShowDisableConfirm] = useState(false)\n  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)\n  const instance = useRef<object | null>(null)\n  const pendingAttempt = useRef<object | null>(null)\n  const mode = status.data?.mode ?? 'session'\n\n  useLayoutEffect(() => {\n    instance.current = {}\n    pendingAttempt.current = null\n    setPendingAction(null)\n    setDialogStep('closed')\n    setEnrollment(null)\n    setRevealedCodes(null)\n    setVerifyCode('')\n    setVerifyError(null)\n    setShowDisableConfirm(false)\n    return () => {\n      // Invalidate UI ownership only; the server mutation is not aborted.\n      instance.current = null\n      pendingAttempt.current = null\n    }\n  }, [queryClient, mode])\n\n  const beginAttempt = useCallback((action: PendingAction) => {\n    if (!instance.current || pendingAttempt.current || mode === 'open') return null\n    const owner = instance.current\n    const attempt = {}\n    pendingAttempt.current = attempt\n    setPendingAction(action)\n    const isCurrent = () => instance.current === owner && pendingAttempt.current === attempt\n    return {\n      isCurrent,\n      settle: () => {\n        if (!isCurrent()) return\n        pendingAttempt.current = null\n        setPendingAction(null)\n      },\n    }\n  }, [mode])\n\n  const disableTypedLabel = useMemo(\n    () => t('totp.disable.typedLabel', 'Type DISABLE to confirm'),\n    [t],\n  )\n\n  const closeDialog = useCallback(() => {\n    if (pendingAttempt.current) return\n    setDialogStep('closed')\n    setEnrollment(null)\n    setRevealedCodes(null)\n    setVerifyCode('')\n    setVerifyError(null)\n  }, [])\n\n  const handleEnroll = useCallback(async () => {\n    const attempt = beginAttempt('enroll')\n    if (!attempt) return\n    try {\n      const result = await enrollMut.mutateAsync()\n      if (!attempt.isCurrent()) return\n      setEnrollment(result)\n      setVerifyCode('')\n      setVerifyError(null)\n      setDialogStep('enroll')\n    } catch {\n      // toast already surfaced by useTOTPEnroll's onError; the dialog\n      // stays closed and the section's pill is unchanged.\n    } finally {\n      attempt.settle()\n    }\n  }, [enrollMut, beginAttempt])\n\n  const handleVerify = useCallback(async () => {\n    if (pendingAttempt.current) return\n    setVerifyError(null)\n    const code = verifyCode.replace(/\\D/g, '')\n    if (code.length !== 6) {\n      setVerifyError(t('totp.errors.codeLength', 'Enter all 6 digits.'))\n      return\n    }\n    const attempt = beginAttempt('verify')\n    if (!attempt) return\n    try {\n      await verifyMut.mutateAsync({ code })\n      if (!attempt.isCurrent()) return\n      setRevealedCodes(enrollment?.backup_codes ?? [])\n      setDialogStep('backupCodes')\n    } catch (err) {\n      if (!attempt.isCurrent()) return\n      const errCode = isApiError(err) ? err.code : undefined\n      if (errCode === TOTP_INVALID_CODE) {\n        setVerifyError(t('totp.errors.invalidCode', 'Code did not match. Try the next one.'))\n      } else if (errCode === TOTP_RATE_LIMITED_CODE) {\n        setVerifyError(\n          t('totp.errors.rateLimited', 'Too many incorrect attempts. Try again in 15 minutes.'),\n        )\n      } else if (errCode === TOTP_ENROLLMENT_EXPIRED_CODE) {\n        setVerifyError(\n          t('totp.errors.enrollmentExpired', 'Enrollment expired. Close and start over.'),\n        )\n      } else {\n        setVerifyError(\n          err instanceof Error\n            ? err.message\n            : t('totp.errors.verifyGeneric', 'Verification failed.'),\n        )\n      }\n    } finally {\n      attempt.settle()\n    }\n  }, [enrollment, verifyCode, verifyMut, t, beginAttempt])\n\n  const handleConfirmDisable = useCallback(async () => {\n    const attempt = beginAttempt('revoke')\n    if (!attempt) return\n    try {\n      await revokeMut.mutateAsync()\n    } catch {\n      // toast already surfaced; dialog closes via finally below.\n    } finally {\n      if (attempt.isCurrent()) setShowDisableConfirm(false)\n      attempt.settle()\n    }\n  }, [revokeMut, beginAttempt])\n\n  const handleRegenerate = useCallback(async () => {\n    const attempt = beginAttempt('regenerate')\n    if (!attempt) return\n    try {\n      const result = await regenMut.mutateAsync()\n      if (!attempt.isCurrent()) return\n      // Mirror handleVerify's `?? []` guard: a malformed response missing\n      // `backup_codes` must still leave `revealedCodes` a real array so the\n      // state stays `string[] | null` (never `undefined`) and the\n      // backup-codes modal — which only opens when `codes != null` — still\n      // surfaces rather than silently vanishing after a successful regen.\n      setRevealedCodes(result.backup_codes ?? [])\n      setEnrollment(null)\n      setDialogStep('backupCodes')\n    } catch {\n      // toast already surfaced; nothing else to do.\n    } finally {\n      attempt.settle()\n    }\n  }, [regenMut, beginAttempt])\n\n  const downloadCodes = useCallback(() => {\n    if (!revealedCodes || revealedCodes.length === 0) return\n    const header = t(\n      'totp.backupCodes.fileHeader',\n      '# TeslaSync TOTP backup codes — keep secret.',\n    )\n    const body = `${header}\\n\\n${revealedCodes.join('\\n')}\\n`\n    const blob = new Blob([body], { type: 'text/plain' })\n    const url = URL.createObjectURL(blob)\n    const a = document.createElement('a')\n    a.href = url\n    a.download = 'teslasync-totp-backup-codes.txt'\n    document.body.appendChild(a)\n    a.click()\n    document.body.removeChild(a)\n    URL.revokeObjectURL(url)\n  }, [revealedCodes, t])\n\n  const openDisableConfirm = useCallback(() => {\n    if (!pendingAttempt.current) setShowDisableConfirm(true)\n  }, [])\n  const closeDisableConfirm = useCallback(() => {\n    if (!pendingAttempt.current) setShowDisableConfirm(false)\n  }, [])\n  const changeVerifyCode = useCallback(\n    (raw: string) => {\n      if (!pendingAttempt.current) setVerifyCode(raw.replace(/\\D/g, '').slice(0, 6))\n    },\n    [],\n  )\n\n  return {\n    status,\n    dialogStep,\n    enrollment,\n    revealedCodes,\n    verifyCode,\n    verifyError,\n    showDisableConfirm,\n    disableTypedLabel,\n    enrolling: pendingAction === 'enroll',\n    verifying: pendingAction === 'verify',\n    regenerating: pendingAction === 'regenerate',\n    revoking: pendingAction === 'revoke',\n    handleEnroll,\n    handleVerify,\n    handleConfirmDisable,\n    handleRegenerate,\n    downloadCodes,\n    closeDialog,\n    openDisableConfirm,\n    closeDisableConfirm,\n    changeVerifyCode,\n  }\n}\n"
+  },
+  {
+    "file": "web/src/features/settings/searchIndex.ts",
+    "before": "5888ee58b0725e16c09678e6a3ad2593c138c5a48a069eea0db5d598a785b6f6",
+    "after": "0ede1e3f5923e33c28c00ba29bd5470b6fb3e2a03bb52f6bed3e164490031283",
+    "hunks": [
+      {
+        "start": 448,
+        "old": [
+          "    // ── Security (TOTP) ─────────────────────────────────────────────"
+        ],
+        "new": [
+          "    // Provider-owned security settings."
+        ]
+      },
+      {
+        "start": 453,
+        "old": [
+          "      title: t('search.entries.security.totpEnroll.title', 'Enable two-factor authentication'),"
+        ],
+        "new": [
+          "      title: t('search.entries.security.totpEnroll.title', 'Provider-managed MFA'),"
+        ]
+      },
+      {
+        "start": 456,
+        "old": [
+          "        'Set up TOTP from your authenticator app to protect destructive admin actions.',"
+        ],
+        "new": [
+          "        'Manage second factors in your authentication provider, not inside TeslaSync.',"
+        ]
+      },
+      {
+        "start": 458,
+        "old": [
+          "      keywords: ['totp', '2fa', 'mfa', 'authenticator', 'security', 'sudo', 'step-up'],"
+        ],
+        "new": [
+          "      keywords: ['totp', '2fa', 'mfa', 'authenticator', 'security', 'provider'],"
+        ]
+      },
+      {
+        "start": 464,
+        "old": [
+          "      title: t('search.entries.security.totpBackupCodes.title', 'TOTP backup codes'),"
+        ],
+        "new": [
+          "      title: t('search.entries.security.totpBackupCodes.title', 'Provider recovery codes'),"
+        ]
+      },
+      {
+        "start": 467,
+        "old": [
+          "        'Regenerate or download the backup codes used when you lose access to your authenticator.',"
+        ],
+        "new": [
+          "        'Your authentication provider owns recovery codes and account recovery.',"
+        ]
+      },
+      {
+        "start": 475,
+        "old": [
+          "      title: t('search.entries.security.totpDisable.title', 'Disable two-factor authentication'),"
+        ],
+        "new": [
+          "      title: t('search.entries.security.totpDisable.title', 'Provider security policy'),"
+        ]
+      },
+      {
+        "start": 478,
+        "old": [
+          "        'Remove the TOTP credential and revoke all backup codes for the current subject.',"
+        ],
+        "new": [
+          "        'Change MFA policy and credentials in the external authentication service.',"
+        ]
+      },
+      {
+        "start": 487,
+        "old": [
+          "      title: t('search.entries.security.sessionsList.title', 'Active sessions'),"
+        ],
+        "new": [
+          "      title: t('search.entries.security.sessionsList.title', 'Provider device sessions'),"
+        ]
+      },
+      {
+        "start": 490,
+        "old": [
+          "        'See which browsers and devices are currently signed in to TeslaSync and revoke individual sessions.',"
+        ],
+        "new": [
+          "        'View and revoke signed-in browser sessions in your authentication service.',"
+        ]
+      },
+      {
+        "start": 498,
+        "old": [
+          "      title: t('search.entries.security.sessionsRevokeAll.title', 'Sign out all other devices'),"
+        ],
+        "new": [
+          "      title: t('search.entries.security.sessionsRevokeAll.title', 'Provider sign-out controls'),"
+        ]
+      },
+      {
+        "start": 501,
+        "old": [
+          "        'Revoke every TeslaSync session except the current browser. Useful after a lost laptop or shared computer.',"
+        ],
+        "new": [
+          "        'Use the external provider to sign out devices; TeslaSync does not issue browser sessions.',"
+        ]
+      }
+    ],
+    "deletedSource": null
+  }
+]

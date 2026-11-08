@@ -108,7 +108,7 @@ export function useDryRunImport() {
 /**
  * Mutation hook for the apply path. SUDO interception is handled
  * transparently by the shared `request()` client; on user-cancel the
- * mutation rejects with `SudoCanceledError` (re-exported from
+ * mutation rejects with `ActionCanceledError` (re-exported from
  * `@/api/client`) which the page handles as a non-error.
  */
 export function useApplyImport() {

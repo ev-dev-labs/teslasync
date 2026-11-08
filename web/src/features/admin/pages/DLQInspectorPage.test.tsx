@@ -102,7 +102,7 @@ vi.mock('framer-motion', () => {
 });
 
 // ── API client: mock only `request`; keep the real ApiError / isApiError /
-//    SudoCanceledError so error classification and QueryError branch honestly.
+//    ActionCanceledError so error classification and QueryError branch honestly.
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
   return { ...actual, request: vi.fn() };

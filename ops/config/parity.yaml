@@ -50,6 +50,7 @@ secret_patterns:
   - "_API_KEY$"
   - "^ENCRYPTION_KEY$"
   - "PRIVATE_KEY$"
+  - "SIGNING_KEY$"
   - "^AUTH_JWT_SECRET$"
 
 # Names that look like credentials but are not.
@@ -72,13 +73,10 @@ exemptions: []
 #     os.Getenv anywhere in internal/ or cmd/.
 baseline:
   missing_in_compose:
-    - AUTH_ENABLED
-    - AUTH_JWT_SECRET
     - DATABASE_CONN_MAX_IDLE_TIME
     - DATABASE_CONN_MAX_LIFETIME
     - DATABASE_MIGRATIONS
     - ENVIRONMENT
-    - FORWARD_AUTH_HEADER
     - GAS_PRICE_API_KEY
     - GAS_PRICE_ENABLED
     - GAS_PRICE_POLL_INTERVAL
@@ -104,7 +102,6 @@ baseline:
     - WORKER_SLEEP_POLL_MULT
     - WORKER_STREAMING
   missing_in_helm:
-    - AUTH_ENABLED
     - DATABASE_CONN_MAX_IDLE_TIME
     - DATABASE_CONN_MAX_LIFETIME
     - DATABASE_MIGRATIONS

@@ -4,7 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   OFFICIAL_NHTSA_COMMUNICATION_ARTIFACTS,
-  SudoCanceledError,
+  ActionCanceledError,
 } from '@/api/hooks/useServiceIntelligence';
 import { ApiError } from '@/lib/resilience';
 import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
@@ -288,7 +288,7 @@ describe('ServiceIntelligencePage bounded behavior closure', () => {
     }
     expect(screen.getByRole('button', { name: 'Import official NHTSA artifact for 2010–2014' }))
       .toHaveAttribute('aria-busy', 'true');
-    hooks.importCatalog.mockReturnValue({ mutate, isPending: false, error: new SudoCanceledError() });
+    hooks.importCatalog.mockReturnValue({ mutate, isPending: false, error: new ActionCanceledError() });
     view.refresh();
     expect(screen.queryByText('Catalog import failed')).not.toBeInTheDocument();
     expect(screen.queryByText('Reauthentication cancelled by user')).not.toBeInTheDocument();

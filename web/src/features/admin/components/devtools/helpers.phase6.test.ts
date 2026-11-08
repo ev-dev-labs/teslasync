@@ -47,7 +47,7 @@ vi.mock('@/components/ui', () => ({
   Badge: ({ children }: { children: ReactNode }) => createElement('span', null, children),
 }))
 
-import { request, SudoCanceledError } from '@/api/client'
+import { request, ActionCanceledError } from '@/api/client'
 import { apiFetch, describeCron, getNextCronRuns, getRelativeTime, isValidCron } from './helpers'
 import { CronParserTool } from './tools/CronParser'
 import { TimestampTool } from './tools/TimestampTool'
@@ -102,7 +102,7 @@ describe('phase6 helper request contract', () => {
 
   it.each([
     new Error('synthetic upstream failure'),
-    new SudoCanceledError(),
+    new ActionCanceledError(),
     new DOMException('cancelled', 'AbortError'),
     'synthetic non-Error rejection',
   ])('propagates the original rejected value, including cancellation: %s', async error => {
@@ -138,7 +138,7 @@ describe('phase6 helper request contract', () => {
       onSuccess,
     })
     try {
-      for (const failure of [new Error('synthetic upload failure'), new SudoCanceledError()]) {
+      for (const failure of [new Error('synthetic upload failure'), new ActionCanceledError()]) {
         requestMock.mockRejectedValueOnce(failure)
         await expect(mutation.mutate(undefined)).rejects.toBe(failure)
         expect(onSuccess).not.toHaveBeenCalled()
@@ -275,7 +275,7 @@ describe('phase6 rejected request consumers', () => {
 
   it.each([
     new Error('synthetic backend failure'),
-    new SudoCanceledError(),
+    new ActionCanceledError(),
     new DOMException('synthetic cancellation', 'AbortError'),
     'synthetic string rejection',
   ])('shows failure rather than success after a backend rejection: %s', async error => {

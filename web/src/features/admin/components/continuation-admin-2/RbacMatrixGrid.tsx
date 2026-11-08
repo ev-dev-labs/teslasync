@@ -4,7 +4,7 @@ import { ShieldCheck } from 'lucide-react';
 import { Checkbox, Table, Text, Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
-import type { RbacMatrixSessionResponse, RbacRole } from '@/api/hooks/useRbacMatrix';
+import type { RbacMatrixSessionResponse, RbacRole } from '@/api/types';
 import { permsByCategory, type MatrixDraft } from './rbacPresentation';
 
 interface MatrixCellProps {

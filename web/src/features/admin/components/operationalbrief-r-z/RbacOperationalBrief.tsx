@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { OperationalBrief, type StatMetric } from '@/components/data-display';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import type { RbacMatrixSessionResponse } from '@/api/hooks/useRbacMatrix';
+import type { RbacMatrixSessionResponse } from '@/api/types';
 import { countGrants, permsByCategory } from '../continuation-admin-2/rbacPresentation';
 import { briefSource, type BriefSource } from './briefSource';
 

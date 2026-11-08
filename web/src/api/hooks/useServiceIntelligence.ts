@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { request, SudoCanceledError } from '../client';
+import { request, ActionCanceledError } from '../client';
 import { queryPolicy } from '../queryPolicy';
 import { scopedPath } from '../scope';
 import { STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 
-export { SudoCanceledError };
+export { ActionCanceledError };
 
 export type ServiceIntelligenceSourceStatus = 'available' | 'stale' | 'unavailable';
 export type ServiceIntelligenceApplicability =
@@ -331,7 +331,7 @@ export function useImportCommunicationsCatalog() {
       );
     },
     onError: (importError) => {
-      if (importError instanceof SudoCanceledError) return;
+      if (importError instanceof ActionCanceledError) return;
       error(
         importError,
         'serviceIntelligence.catalog.importError',

@@ -42,7 +42,7 @@ vi.mock('./_toastHelpers', () => ({
   useMutationToast: () => ({ success: successToast, error: errorToast }),
 }));
 
-import { request, ApiError, __resetSudoStateForTests } from '@/api/client';
+import { request, ApiError, __resetActionConfirmationForTests } from '@/api/client';
 import { createQueryClient } from '@/api/queryClient';
 import {
   OperationalModeWriteError,
@@ -166,7 +166,7 @@ describe('userKeys', () => {
 
 describe('useCurrentUser', () => {
   it('GETs /users/me, threads the AbortSignal, and surfaces the user', async () => {
-    mockedRequest.mockResolvedValueOnce(userFixture);
+    mockedRequest.mockResolvedValueOnce({ data: { id: 'verified-provider-owner' } });
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useCurrentUser(), { wrapper: Wrapper });
 
@@ -176,7 +176,7 @@ describe('useCurrentUser', () => {
     expect(url).toBe('/users/me');
     expect(opts).toHaveProperty('signal');
     expect(opts.signal).toBeInstanceOf(AbortSignal);
-    expect(result.current.data?.displayName).toBe('Nikola');
+    expect(result.current.data).toEqual({ id: 'verified-provider-owner' });
   });
 
   it('surfaces request failures as isError', async () => {
@@ -551,7 +551,7 @@ describe('useRefreshTeslaProfile guarded transport', () => {
   beforeEach(async () => {
     const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
     vi.mocked(request).mockImplementation(actual.request);
-    __resetSudoStateForTests();
+    __resetActionConfirmationForTests();
     fetchMock.mockReset();
     fetchMock.mockRejectedValue(new Error('Unexpected mocked transport call'));
     vi.stubGlobal('fetch', fetchMock);
@@ -561,7 +561,7 @@ describe('useRefreshTeslaProfile guarded transport', () => {
   afterEach(() => {
     cleanup();
     for (const client of clients.splice(0)) client.clear();
-    __resetSudoStateForTests();
+    __resetActionConfirmationForTests();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     window.history.replaceState({}, '', originalUrl);
@@ -758,7 +758,7 @@ describe.each([
   beforeEach(async () => {
     const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
     vi.mocked(request).mockImplementation(actual.request);
-    __resetSudoStateForTests();
+    __resetActionConfirmationForTests();
     fetchMock.mockReset();
     fetchMock.mockRejectedValue(new Error('Unexpected mocked transport call'));
     vi.stubGlobal('fetch', fetchMock);
@@ -768,7 +768,7 @@ describe.each([
   afterEach(() => {
     cleanup();
     for (const client of clients.splice(0)) client.clear();
-    __resetSudoStateForTests();
+    __resetActionConfirmationForTests();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     window.history.replaceState({}, '', originalUrl);

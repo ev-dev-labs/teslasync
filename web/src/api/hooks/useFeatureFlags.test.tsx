@@ -7,7 +7,7 @@
 //
 // Network is mocked at the `request` boundary (the repo convention — see
 // useAlerts.test.tsx / useExports.test.tsx). The client mock preserves the
-// real `SudoCanceledError` via importActual so the `instanceof` guard in the
+// real `ActionCanceledError` via importActual so the `instanceof` guard in the
 // mutation `onError` handlers narrows against the exact class the source
 // throws. The toast bridge is mocked so we can assert on i18n keys +
 // interpolation vars without mounting a ToastProvider / i18n context.
@@ -17,7 +17,7 @@ import type { ReactNode } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// Keep the real client exports (notably SudoCanceledError) and swap only the
+// Keep the real client exports (notably ActionCanceledError) and swap only the
 // HTTP entry point for a spy.
 vi.mock('../client', async () => {
   const actual = await vi.importActual<typeof import('../client')>('../client');
@@ -36,7 +36,7 @@ vi.mock('./_toastHelpers', () => ({
   useMutationToast: () => ({ success: toastSuccess, warning: toastWarning, error: toastError }),
 }));
 
-import { request, SudoCanceledError } from '../client';
+import { request, ActionCanceledError } from '../client';
 import * as flagsModule from './useFeatureFlags';
 import {
   featureFlagKeys,
@@ -45,7 +45,7 @@ import {
   useFlagChanges,
   useSetFlag,
   useDeleteFlag,
-  SudoCanceledError as ReexportedSudoCanceledError,
+  ActionCanceledError as ReexportedActionCanceledError,
 } from './useFeatureFlags';
 import type {
   FeatureFlagsListResponse,
@@ -118,11 +118,11 @@ describe('useFeatureFlags module surface', () => {
     expect(typeof featureFlagKeys).toBe('object');
   });
 
-  it('re-exports SudoCanceledError as the exact class from the client', () => {
+  it('re-exports ActionCanceledError as the exact class from the client', () => {
     // A broken re-export shows up here as `undefined`, not just at tsc time.
-    expect(ReexportedSudoCanceledError).toBe(SudoCanceledError);
-    expect(flagsModule.SudoCanceledError).toBe(SudoCanceledError);
-    expect(new ReexportedSudoCanceledError()).toBeInstanceOf(Error);
+    expect(ReexportedActionCanceledError).toBe(ActionCanceledError);
+    expect(flagsModule.ActionCanceledError).toBe(ActionCanceledError);
+    expect(new ReexportedActionCanceledError()).toBeInstanceOf(Error);
   });
 });
 
@@ -340,8 +340,8 @@ describe('useSetFlag', () => {
     expect(toastSuccess).not.toHaveBeenCalled();
   });
 
-  it('swallows a SudoCanceledError without any toast', async () => {
-    mockedRequest.mockRejectedValueOnce(new SudoCanceledError());
+  it('swallows a ActionCanceledError without any toast', async () => {
+    mockedRequest.mockRejectedValueOnce(new ActionCanceledError());
     const { result } = renderHook(() => useSetFlag(), { wrapper: wrapperFor(makeClient()) });
 
     await act(async () => {
@@ -443,8 +443,8 @@ describe('useDeleteFlag', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['system', 'flags'] });
   });
 
-  it('swallows a SudoCanceledError without any toast', async () => {
-    mockedRequest.mockRejectedValueOnce(new SudoCanceledError());
+  it('swallows a ActionCanceledError without any toast', async () => {
+    mockedRequest.mockRejectedValueOnce(new ActionCanceledError());
     const { result } = renderHook(() => useDeleteFlag(), { wrapper: wrapperFor(makeClient()) });
 
     await act(async () => {

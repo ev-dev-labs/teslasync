@@ -47,7 +47,7 @@ vi.mock('@/components/feedback/Toast', async () => {
   return { ...actual, useToast: () => toast, useOptionalToast: () => toast };
 });
 
-import { SudoCanceledError } from '@/api/client';
+import { ActionCanceledError } from '@/api/client';
 import { SettingsExportImport } from './SettingsExportImport';
 
 function deferred<T>() {
@@ -236,7 +236,7 @@ describe('phase6 import generation ownership', () => {
     expect(successMock).toHaveBeenCalledTimes(1);
   });
 
-  it.each([new Error('old apply'), new SudoCanceledError('old sudo cancelled')])(
+  it.each([new Error('old apply'), new ActionCanceledError('old sudo cancelled')])(
     'ignores a superseded apply rejection without changing the newer session: %s',
     async (error) => {
       const oldApply = deferred<SettingsImportResult>();
@@ -291,7 +291,7 @@ describe('phase6 import generation ownership', () => {
 
 describe('phase6 preserved import recovery and sections', () => {
   it.each([
-    new SudoCanceledError('User cancelled'),
+    new ActionCanceledError('User cancelled'),
     new Error('temporary apply failure'),
   ])('preserves the preview and permits retry after %s', async (error) => {
     mount();

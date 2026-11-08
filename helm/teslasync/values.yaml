@@ -1014,12 +1014,6 @@ gasPrice:
   apiKey: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Authentication (optional — leave jwtSecret empty to disable)
-# ─────────────────────────────────────────────────────────────────────────────
-auth:
-  jwtSecret: ""
-
-# ─────────────────────────────────────────────────────────────────────────────
 # Web Push (VAPID) — Phase 40 / Prompt 52
 #
 # Generate a one-time keypair (offline) with:
@@ -1034,6 +1028,11 @@ auth:
 # Rotating these keys invalidates EVERY existing browser subscription —
 # never auto-generate them; pin them once and back them up with the rest
 # of the deployment's secrets.
+certificates:
+  # Independent battery-certificate integrity key; empty keeps the existing default.
+  # Reuse the previous auth.jwtSecret value to preserve issued certificates.
+  signingKey: ""
+
 webPush:
   # -- VAPID public key (base64url, ~88 chars). Non-secret — exposed via
   # GET /api/v1/push/public-key for browsers to call PushManager.subscribe().

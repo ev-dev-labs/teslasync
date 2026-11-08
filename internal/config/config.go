@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -45,30 +46,31 @@ type Config struct {
 	// vitals, error reporter) gates its POSTs on the user's stored
 	// consent. When false, all reporting flows unchanged and the
 	// banner never renders.
-	RequireCookieConsent bool
-	Database             DatabaseConfig
-	Tesla                TeslaConfig
-	MQTT                 MQTTConfig
-	Worker               WorkerConfig
-	Redis                RedisConfig
-	Auth                 AuthConfig
-	Retention            RetentionConfig
-	FleetTelemetry       FleetTelemetryConfig
-	MongoDB              MongoDBConfig
-	GasPrice             GasPriceConfig
-	OpenTelemetry        OpenTelemetryConfig
-	Profiling            ProfilingConfig
-	SLO                  SLOConfig
-	DataQuality          DataQualityConfig
-	Synthetic            SyntheticConfig
-	HomeAssistant        HomeAssistantConfig
-	GoogleMaps           GoogleMapsConfig
-	AzureMaps            AzureMapsConfig
-	APILogs              APILogsConfig
-	WebPush              WebPushConfig
-	System               SystemConfig
-	GitHub               GitHubConfig
-	Physics              PhysicsConfig
+	RequireCookieConsent         bool
+	Database                     DatabaseConfig
+	Tesla                        TeslaConfig
+	MQTT                         MQTTConfig
+	Worker                       WorkerConfig
+	Redis                        RedisConfig
+	Auth                         AuthConfig
+	BatteryCertificateSigningKey string `json:"-"`
+	Retention                    RetentionConfig
+	FleetTelemetry               FleetTelemetryConfig
+	MongoDB                      MongoDBConfig
+	GasPrice                     GasPriceConfig
+	OpenTelemetry                OpenTelemetryConfig
+	Profiling                    ProfilingConfig
+	SLO                          SLOConfig
+	DataQuality                  DataQualityConfig
+	Synthetic                    SyntheticConfig
+	HomeAssistant                HomeAssistantConfig
+	GoogleMaps                   GoogleMapsConfig
+	AzureMaps                    AzureMapsConfig
+	APILogs                      APILogsConfig
+	WebPush                      WebPushConfig
+	System                       SystemConfig
+	GitHub                       GitHubConfig
+	Physics                      PhysicsConfig
 
 	// Operator-toggled behaviors that should not require a code change.
 	Features FeaturesConfig
@@ -419,8 +421,6 @@ func (r RedisConfig) Addr() string {
 }
 
 type AuthConfig struct {
-	Enabled           bool
-	JWTSecret         string
 	ForwardAuthHeader string // Header set by reverse proxy auth (e.g. X-Forwarded-User)
 	// ProviderHint is operator-supplied free text surfaced verbatim by
 	// the /system/auth-mode endpoint. The SPA renders it as informative
@@ -452,7 +452,7 @@ type RetentionConfig struct {
 //
 // SECURITY: Do not log the returned Config struct directly — it contains
 // sensitive fields (Database.Password, Tesla.ClientSecret, MQTT.Password,
-// Redis.Password, Auth.JWTSecret). If diagnostic logging is needed, redact
+// Redis.Password, BatteryCertificateSigningKey). If diagnostic logging is needed, redact
 // these fields first or log only non-sensitive values.
 func Load() (*Config, error) {
 	cfg := &Config{
@@ -528,11 +528,11 @@ func Load() (*Config, error) {
 		},
 
 		Auth: AuthConfig{
-			Enabled:           envBool("AUTH_ENABLED", false),
-			JWTSecret:         envStr("AUTH_JWT_SECRET", ""),
-			ForwardAuthHeader: envStr("FORWARD_AUTH_HEADER", ""),
+			ForwardAuthHeader: strings.TrimSpace(envStr("FORWARD_AUTH_HEADER", "")),
 			ProviderHint:      envStr("TESLASYNC_AUTH_PROVIDER_HINT", ""),
 		},
+		// Legacy input preserves issued certificate signatures; it never enables browser JWT authentication.
+		BatteryCertificateSigningKey: envStr("TESLASYNC_BATTERY_CERTIFICATE_SIGNING_KEY", envStr("AUTH_JWT_SECRET", "")),
 
 		Retention: RetentionConfig{
 			DataRetentionDays:                  envInt("DATA_RETENTION_DAYS", 0),

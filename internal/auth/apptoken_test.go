@@ -3,7 +3,6 @@ package auth
 import (
 	"net/http"
 	"net/http/httptest"
-	"sync/atomic"
 	"testing"
 )
 
@@ -23,32 +22,16 @@ func TestAppTokenSubjectRoundTrip(t *testing.T) {
 	}
 }
 
-func TestSessionTrackerSkipsPATRequests(t *testing.T) {
+func TestVerifiedNativeSubjectWithoutBrowserIdentity(t *testing.T) {
 	t.Parallel()
 
-	store := newFakeStore()
-	mw := Middleware(testHeader, store, SessionTrackerOptions{})
-
-	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusTeapot)
-	})
-
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/vehicles", nil)
-	req.Header.Set(testHeader, "alice@example.com")
-	// No session cookie AND an app-token flag: without the skip this mints a
-	// session row on every request.
 	req = req.WithContext(WithAppTokenSubject(req.Context(), "alice@example.com"))
-
-	rec := httptest.NewRecorder()
-	mw(next).ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusTeapot {
-		t.Fatalf("got status %d, want passthrough to next handler", rec.Code)
+	if subject, ok := RequestSubject(req, ""); !ok || subject != "alice@example.com" {
+		t.Fatalf("verified native subject lost in open browser mode: %q, %v", subject, ok)
 	}
-	if calls := atomic.LoadInt32(&store.createCalls); calls != 0 {
-		t.Fatalf("minted %d session rows for an app-token request, want 0", calls)
-	}
-	if setCookie := rec.Header().Get("Set-Cookie"); setCookie != "" {
-		t.Fatalf("set session cookie %q for an app-token request, want none", setCookie)
+	req.Header.Set("X-Forwarded-User", "target")
+	if subject, ok := RequestSubject(req, "X-Forwarded-User"); !ok || subject != "target" {
+		t.Fatalf("current verified forwarded identity must take precedence: %q, %v", subject, ok)
 	}
 }

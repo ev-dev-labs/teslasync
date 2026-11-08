@@ -21,7 +21,7 @@
  *
  * Toasts are surfaced for both success ("X sections reset") and
  * failure (handled by `useMutationToast` in the hook). On
- * SudoCanceledError we no-op silently — the user already saw the
+ * ActionCanceledError we no-op silently — the user already saw the
  * dialog and decided not to proceed.
  */
 
@@ -55,7 +55,7 @@ import { useToast } from '@/components/feedback/Toast';
 import {
   useResetSection,
   useResetAllSettings,
-  SudoCanceledError,
+  ActionCanceledError,
   type SettingsResetResult,
 } from '@/api/hooks/useSettingsReset';
 
@@ -277,7 +277,7 @@ export function ResetSection() {
       // Non-cancel errors are toasted by useMutationToast inside
       // the hook. We only need to swallow the cancel here so the
       // dialog closes cleanly without an error toast.
-      if (!(e instanceof SudoCanceledError)) {
+      if (!(e instanceof ActionCanceledError)) {
         console.warn('[ResetSection] section reset failed', e);
       }
     } finally {
@@ -290,7 +290,7 @@ export function ResetSection() {
       const result = await allMut.mutateAsync();
       announceSuccess(result, 'All settings reset');
     } catch (e) {
-      if (!(e instanceof SudoCanceledError)) {
+      if (!(e instanceof ActionCanceledError)) {
         console.warn('[ResetSection] all-reset failed', e);
       }
     } finally {

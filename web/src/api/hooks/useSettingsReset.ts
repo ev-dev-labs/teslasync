@@ -17,15 +17,15 @@
 // SUDO_REQUIRED the cached interceptor opens the existing
 // <ReauthDialog>, replays the request with the resulting step-up
 // token, and returns the result transparently. On user-cancel the
-// mutation rejects with SudoCanceledError (re-exported below) which
+// mutation rejects with ActionCanceledError (re-exported below) which
 // the page handles as a non-error.
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { request, SudoCanceledError } from '../client';
+import { request, ActionCanceledError } from '../client';
 import { useMutationToast } from './_toastHelpers';
 
-export { SudoCanceledError };
+export { ActionCanceledError };
 
 /**
  * Stable query keys for the reset feature. There's no read-side
@@ -108,7 +108,7 @@ export function useResetSection(section: string) {
       qc.invalidateQueries();
     },
     onError: (e) => {
-      if (e instanceof SudoCanceledError) return;
+      if (e instanceof ActionCanceledError) return;
       error(e, 'toast.settings.reset.error', 'Failed to reset section');
     },
   });
@@ -138,7 +138,7 @@ export function useResetAllSettings() {
       qc.invalidateQueries();
     },
     onError: (e) => {
-      if (e instanceof SudoCanceledError) return;
+      if (e instanceof ActionCanceledError) return;
       error(e, 'toast.settings.reset.allError', 'Failed to reset all settings');
     },
   });

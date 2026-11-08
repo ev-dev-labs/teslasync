@@ -24,11 +24,10 @@ import '../../../i18n';
 // Controllable stand-in for the /healthz poll so we can exercise each status
 // branch synchronously without any real fetch.
 let healthMock: ApiHealthState;
-let rbacMock: {
+let authMock: {
   data?: {
-    mode: 'session';
-    my_roles: string[];
-    effective_for_me: Record<string, boolean>;
+    mode: 'forward_auth' | 'open';
+    subject?: string;
   };
 };
 let diagnosticsMock: {
@@ -46,8 +45,8 @@ vi.mock('@/api/hooks/useApiHealth', async () => {
   return { ...actual, useApiHealth: () => healthMock };
 });
 
-vi.mock('@/api/hooks/useRbacMatrix', () => ({
-  useRbacMatrix: () => rbacMock,
+vi.mock('@/api/hooks/useAuthMode', () => ({
+  useAuthMode: () => authMock,
 }));
 
 vi.mock('@/api/hooks/useAdmin', () => ({
@@ -81,7 +80,7 @@ function getDot(link: HTMLElement): HTMLElement {
 describe('ConnectionSegment', () => {
   beforeEach(() => {
     cleanup();
-    rbacMock = { data: undefined };
+    authMock = { data: undefined };
     diagnosticsMock = { data: undefined, isError: false };
   });
 
@@ -185,12 +184,10 @@ describe('ConnectionSegment', () => {
     expect(link.textContent).toBe('API');
   });
 
-  it('keeps direct system-status navigation for non-admin users', () => {
-    rbacMock = {
+  it('keeps direct system-status navigation without a verified identity', () => {
+    authMock = {
       data: {
-        mode: 'session',
-        my_roles: ['user'],
-        effective_for_me: { 'fleet.read': true },
+        mode: 'forward_auth',
       },
     };
     renderSegment(
@@ -202,12 +199,11 @@ describe('ConnectionSegment', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('opens existing health diagnostics only for admins', () => {
-    rbacMock = {
+  it('opens existing health diagnostics for every verified provider operator', () => {
+    authMock = {
       data: {
-        mode: 'session',
-        my_roles: ['admin'],
-        effective_for_me: { 'admin.audit': true },
+        mode: 'forward_auth',
+        subject: 'provider-operator',
       },
     };
     diagnosticsMock = {
@@ -252,8 +248,8 @@ describe('ConnectionSegment', () => {
   });
 
   it('keeps retained diagnostics visible alongside a refresh failure warning', () => {
-    rbacMock = {
-      data: { mode: 'session', my_roles: ['admin'], effective_for_me: {} },
+    authMock = {
+      data: { mode: 'forward_auth', subject: 'provider-operator' },
     };
     diagnosticsMock = {
       data: {
@@ -278,8 +274,8 @@ describe('ConnectionSegment', () => {
   });
 
   it('does not turn incomplete queue measurements into a measured zero', () => {
-    rbacMock = {
-      data: { mode: 'session', my_roles: ['admin'], effective_for_me: {} },
+    authMock = {
+      data: { mode: 'forward_auth', subject: 'provider-operator' },
     };
     diagnosticsMock = {
       data: {
@@ -298,8 +294,8 @@ describe('ConnectionSegment', () => {
   });
 
   it('preserves failure-only diagnostics and reachable recovery navigation', () => {
-    rbacMock = {
-      data: { mode: 'session', my_roles: ['admin'], effective_for_me: {} },
+    authMock = {
+      data: { mode: 'forward_auth', subject: 'provider-operator' },
     };
     diagnosticsMock = { isError: true };
     renderSegment(
@@ -314,8 +310,8 @@ describe('ConnectionSegment', () => {
   });
 
   it('closes diagnostics with Escape and restores the native trigger focus', () => {
-    rbacMock = {
-      data: { mode: 'session', my_roles: ['admin'], effective_for_me: {} },
+    authMock = {
+      data: { mode: 'forward_auth', subject: 'provider-operator' },
     };
     renderSegment(
       { status: 'unknown', latencyMs: null, lastCheckedAt: null },
@@ -366,11 +362,11 @@ describe('ConnectionSegment', () => {
   it.each([
     { access: 'unresolved', display: 'text', iconOnly: false, roles: undefined },
     { access: 'unresolved', display: 'icon-only', iconOnly: true, roles: undefined },
-    { access: 'non-admin', display: 'text', iconOnly: false, roles: ['user'] },
-    { access: 'non-admin', display: 'icon-only', iconOnly: true, roles: ['user'] },
+    { access: 'missing identity', display: 'text', iconOnly: false, roles: ['user'] },
+    { access: 'missing identity', display: 'icon-only', iconOnly: true, roles: ['user'] },
   ])('allocates mobile minimums on the $access diagnostics fallback native $display link', ({ iconOnly, roles }) => {
-    rbacMock = roles
-      ? { data: { mode: 'session', my_roles: roles, effective_for_me: { 'fleet.read': true } } }
+    authMock = roles
+      ? { data: { mode: 'forward_auth' } }
       : { data: undefined };
     renderSegment(
       { status: 'ok', latencyMs: 42, lastCheckedAt: AT },
@@ -407,9 +403,9 @@ describe('ConnectionSegment', () => {
     { access: 'role', display: 'icon-only', iconOnly: true, roles: ['admin'], permissions: {} },
     { access: 'permission', display: 'text', iconOnly: false, roles: ['user'], permissions: { 'admin.audit': true } },
     { access: 'permission', display: 'icon-only', iconOnly: true, roles: ['user'], permissions: { 'admin.audit': true } },
-  ])('allocates mobile minimums on the admin $access native $display button and restores md density', ({ iconOnly, roles, permissions }) => {
-    rbacMock = {
-      data: { mode: 'session', my_roles: roles, effective_for_me: permissions },
+  ])('allocates mobile minimums on the operator $access native $display button and restores md density', ({ iconOnly, roles }) => {
+    authMock = {
+      data: { mode: 'forward_auth', subject: roles[0] },
     };
     renderSegment(
       { status: 'ok', latencyMs: 42, lastCheckedAt: AT },

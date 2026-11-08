@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { ShieldCheck, UserCircle } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { Badge, Caption, HelperText } from '@/components/ui';
-import type { RbacMatrixSessionResponse } from '@/api/hooks/useRbacMatrix';
+import type { RbacMatrixSessionResponse } from '@/api/types';
 
 function EffectivePill({ payload }: { payload: RbacMatrixSessionResponse }) {
   const { t } = useTranslation();

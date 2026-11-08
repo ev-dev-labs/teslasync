@@ -3741,10 +3741,8 @@ export type AuthMode = 'open' | 'forward_auth'
 /**
  * Per-feature gate the SPA uses to decide whether to mount an
  * auth-coupled section or replace it with the inline <RequiresAuth>
- * placeholder. Every field is `false` in open mode and `true` in
- * forward-auth mode (the per-feature *preconditions* live inside
- * each feature's own handler — this matrix only reports whether
- * the deployment's auth mode allows the feature to exist at all).
+ * placeholder. Retired local MFA, session, step-up and RBAC capabilities
+ * remain false. Impersonation requires a configured upstream identity.
  *
  * Keep these keys in lock-step with `internal/api.AuthModeCapabilities`
  * — drift here silently disables the corresponding section.
@@ -3760,6 +3758,8 @@ export interface AuthModeCapabilities {
 /** Envelope returned by `GET /api/v1/system/auth-mode`. */
 export interface AuthModeResponse {
   mode: AuthMode
+  authentication_owner?: 'external_provider' | 'none'
+  access_policy?: 'all_proxy_users_are_operators' | 'unrestricted'
   /** Header name TeslaSync reads (e.g. "X-Forwarded-User"). Omitted in open mode. */
   subject_header?: string
   /**
@@ -3771,7 +3771,7 @@ export interface AuthModeResponse {
   /**
    * Operator-supplied free text — typically the upstream IdP's
    * brand name. The SPA renders this verbatim in the
-   * <RequiresAuth> empty state and the session-timeout banner;
+   * provider guidance and identity-dependent empty states;
    * it is NEVER used as a routing key.
    */
   provider_hint?: string

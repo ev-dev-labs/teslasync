@@ -19,7 +19,7 @@
 // Keycloak, …) or about the value's internal structure. The subject
 // is treated as an opaque identifier — comparison is exact (no case
 // folding, no domain stripping) so the cross-table join with
-// auth_subjects, auth_sessions, audit_logs and the future RBAC layer
+// auth_subjects, preferences and audit_logs
 // stays consistent.
 package auth
 
@@ -31,8 +31,7 @@ import (
 
 // AuthModeOpenCode is the canonical machine-readable signal returned
 // when an endpoint cannot operate without a configured upstream
-// identity provider. The frontend's hooks (useAuthMode, useTOTP,
-// useSessions, useImpersonation, useRbacMatrix) all match this exact
+// identity provider. The frontend's identity-dependent hooks match this exact
 // string to decide whether to render the inline "feature requires
 // authentication" placeholder.
 //
@@ -63,6 +62,7 @@ const MissingIdentityCode = "MISSING_IDENTITY"
 // Use [IsOpenMode] when you need to disambiguate — bare bool checks
 // against the second return alone conflate the two states.
 func SubjectFromRequest(r *http.Request, headerName string) (subject string, present bool) {
+	headerName = strings.TrimSpace(headerName)
 	if headerName == "" {
 		return "", false
 	}
@@ -76,11 +76,22 @@ func SubjectFromRequest(r *http.Request, headerName string) (subject string, pre
 	return subject, true
 }
 
-// IsOpenMode reports whether headerName disables identity entirely.
-// Exposed as a tiny helper so callers can read at the abstraction
-// level "are we in open mode" without comparing strings inline.
+// RequestSubject includes native credentials already verified by AppTokenAuth.
+func RequestSubject(r *http.Request, headerName string) (string, bool) {
+	if subject, ok := SubjectFromRequest(r, headerName); ok {
+		return subject, true
+	}
+	if r == nil {
+		return "", false
+	}
+	subject, ok := AppTokenSubjectFromContext(r.Context())
+	subject = strings.TrimSpace(subject)
+	return subject, ok && subject != ""
+}
+
+// IsOpenMode reports whether the external browser identity header is disabled.
 func IsOpenMode(headerName string) bool {
-	return headerName == ""
+	return strings.TrimSpace(headerName) == ""
 }
 
 // RequireSubjectMiddleware refuses to admit requests that lack a

@@ -20,7 +20,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../client', () => ({
   request: mocks.request,
-  SudoCanceledError: class SudoCanceledError extends Error {},
+  ActionCanceledError: class ActionCanceledError extends Error {},
 }));
 vi.mock('./_toastHelpers', () => ({
   useMutationToast: () => ({ success: mocks.success, error: mocks.error }),
@@ -33,7 +33,7 @@ import {
   useDLQEntry,
   useDLQAudit,
   useDLQReplay,
-  SudoCanceledError,
+  ActionCanceledError,
 } from './useDLQ';
 
 const ID = '0123456789abcdef0123456789abcdef';
@@ -356,8 +356,8 @@ describe('DLQ string ID contract', () => {
   });
 
   it.each([
-    { name: 'sudo_cancel', failure: new SudoCanceledError(), silent: true },
-    { name: 'sudo_subclass', failure: new (class extends SudoCanceledError {})(), silent: true },
+    { name: 'sudo_cancel', failure: new ActionCanceledError(), silent: true },
+    { name: 'sudo_subclass', failure: new (class extends ActionCanceledError {})(), silent: true },
     { name: 'disabled_403', failure: Object.assign(new Error('disabled'), { status: 403 }), silent: true },
     { name: 'not_found_404', failure: Object.assign(new Error('missing'), { status: 404 }), silent: false },
     { name: 'rate_limit_429', failure: Object.assign(new Error('limited'), { status: 429 }), silent: false },

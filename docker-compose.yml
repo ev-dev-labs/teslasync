@@ -16,8 +16,13 @@ services:
     container_name: teslasync-api
     restart: unless-stopped
     ports:
-      - "${TESLASYNC_PORT:-8080}:8080"
+      # Browser access goes through the protected web/proxy entry point.
+      - "127.0.0.1:${TESLASYNC_PORT:-8080}:8080"
     environment:
+      - FORWARD_AUTH_HEADER=${FORWARD_AUTH_HEADER:-}
+      - TESLASYNC_AUTH_PROVIDER_HINT=${TESLASYNC_AUTH_PROVIDER_HINT:-}
+      # Legacy certificate signing migration input, not browser authentication.
+      - AUTH_JWT_SECRET=${AUTH_JWT_SECRET:-}
       - TESLASYNC_PORT=8080
       # OPS-09: isolated drain listener serving the preStop hook
       # (POST/GET /internal/flush). Deliberately NOT published to the
@@ -170,6 +175,8 @@ services:
       # presentation-only. Default empty: SPA falls back to a
       # generic "your authentication provider" string.
       - TESLASYNC_AUTH_PROVIDER_HINT=${TESLASYNC_AUTH_PROVIDER_HINT:-}
+      # Certificate integrity key; never used for browser authentication.
+      - TESLASYNC_BATTERY_CERTIFICATE_SIGNING_KEY=${TESLASYNC_BATTERY_CERTIFICATE_SIGNING_KEY:-${AUTH_JWT_SECRET:-}}
       # Cookie / GDPR consent banner — Phase 46 / Prompt 70.
       # Default OFF: self-hosted single-user installs do not need a
       # consent banner. Flip to "true" on multi-user fleet

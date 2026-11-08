@@ -302,7 +302,7 @@ func TestGuardConfigMountedRouteContract(t *testing.T) {
 	for _, route := range []string{
 		`r.Get("/", guardHandler.Status)`,
 		`r.Get("/config", guardHandler.Config)`,
-		`r.With(httprate.LimitByIP(5, 1*time.Minute), RequireSudo(sudoStore, sudoCfg)).Post("/", guardHandler.SetConfig)`,
+		`r.With(httprate.LimitByIP(5, 1*time.Minute), tsauth.RequireNotImpersonating()).Post("/", guardHandler.SetConfig)`,
 		`r.Get("/events", guardHandler.Events)`,
 	} {
 		if !strings.Contains(block, route) {
@@ -313,7 +313,7 @@ func TestGuardConfigMountedRouteContract(t *testing.T) {
 
 // Exercise the real handler behind method/path/handler registrations read
 // from router.go, not an independently invented POST registration. Only DB,
-// command and API policy boundaries are fake. Production auth/sudo middleware
+// command and API policy boundaries are fake. Production authentication middleware
 // is not executed in this isolated test; its registration is pinned above.
 func TestGuardConfigProductionMethodDispatch(t *testing.T) {
 	routes := productionGuardRoutes(t)

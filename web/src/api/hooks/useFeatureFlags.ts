@@ -16,12 +16,12 @@
  * Sudo handling is fully delegated to the shared `request` interceptor
  * `SUDO_REQUIRED` 401s reopen the mounted ReauthDialog and the mutation
  * resolves transparently on a successful step-up. User-cancel resolves as
- * SudoCanceledError and is swallowed silently in onError.
+ * ActionCanceledError and is swallowed silently in onError.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { request, SudoCanceledError } from '../client';
+import { request, ActionCanceledError } from '../client';
 import { INTERVALS, STALE_TIMES, PAGINATION } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import type {
@@ -33,7 +33,7 @@ import type {
   FeatureFlagValue,
 } from '@/types/admin-diagnostics';
 
-export { SudoCanceledError };
+export { ActionCanceledError };
 
 export const featureFlagKeys = {
   list: ['system', 'flags', 'list'] as const,
@@ -132,7 +132,7 @@ export function useSetFlag() {
       });
     },
     onError: (err) => {
-      if (err instanceof SudoCanceledError) return;
+      if (err instanceof ActionCanceledError) return;
       error(err, 'admin.flags.toast.saveError', 'Failed to save flag');
     },
   });
@@ -193,7 +193,7 @@ export function useDeleteFlag() {
       });
     },
     onError: (err) => {
-      if (err instanceof SudoCanceledError) return;
+      if (err instanceof ActionCanceledError) return;
       // The registry may have changed even when audit persistence failed.
       qc.invalidateQueries({ queryKey: ['system', 'flags'] });
       error(err, 'admin.flags.toast.deleteError', 'Failed to delete flag');

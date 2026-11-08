@@ -446,26 +446,26 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       keywords: ['confetti', 'sound', 'achievement', 'unlock'],
     },
 
-    // ── Security (TOTP) ─────────────────────────────────────────────
+    // Provider-owned security settings.
     {
       id: 'security.totp.enroll',
       href: '/account/2fa',
       section: 'security',
-      title: t('search.entries.security.totpEnroll.title', 'Enable two-factor authentication'),
+      title: t('search.entries.security.totpEnroll.title', 'Provider-managed MFA'),
       description: t(
         'search.entries.security.totpEnroll.desc',
-        'Set up TOTP from your authenticator app to protect destructive admin actions.',
+        'Manage second factors in your authentication provider, not inside TeslaSync.',
       ),
-      keywords: ['totp', '2fa', 'mfa', 'authenticator', 'security', 'sudo', 'step-up'],
+      keywords: ['totp', '2fa', 'mfa', 'authenticator', 'security', 'provider'],
     },
     {
       id: 'security.totp.backupCodes',
       href: '/account/2fa',
       section: 'security',
-      title: t('search.entries.security.totpBackupCodes.title', 'TOTP backup codes'),
+      title: t('search.entries.security.totpBackupCodes.title', 'Provider recovery codes'),
       description: t(
         'search.entries.security.totpBackupCodes.desc',
-        'Regenerate or download the backup codes used when you lose access to your authenticator.',
+        'Your authentication provider owns recovery codes and account recovery.',
       ),
       keywords: ['backup', 'recovery', 'codes', 'totp', '2fa'],
     },
@@ -473,10 +473,10 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       id: 'security.totp.disable',
       href: '/account/2fa',
       section: 'security',
-      title: t('search.entries.security.totpDisable.title', 'Disable two-factor authentication'),
+      title: t('search.entries.security.totpDisable.title', 'Provider security policy'),
       description: t(
         'search.entries.security.totpDisable.desc',
-        'Remove the TOTP credential and revoke all backup codes for the current subject.',
+        'Change MFA policy and credentials in the external authentication service.',
       ),
       keywords: ['disable', 'remove', 'totp', '2fa', 'unenroll'],
     },
@@ -485,10 +485,10 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       id: 'security.sessions.list',
       href: '/account/sessions',
       section: 'security',
-      title: t('search.entries.security.sessionsList.title', 'Active sessions'),
+      title: t('search.entries.security.sessionsList.title', 'Provider device sessions'),
       description: t(
         'search.entries.security.sessionsList.desc',
-        'See which browsers and devices are currently signed in to TeslaSync and revoke individual sessions.',
+        'View and revoke signed-in browser sessions in your authentication service.',
       ),
       keywords: ['session', 'device', 'browser', 'sign out', 'logout', 'revoke', 'cookie'],
     },
@@ -496,10 +496,10 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       id: 'security.sessions.revokeAll',
       href: '/account/sessions',
       section: 'security',
-      title: t('search.entries.security.sessionsRevokeAll.title', 'Sign out all other devices'),
+      title: t('search.entries.security.sessionsRevokeAll.title', 'Provider sign-out controls'),
       description: t(
         'search.entries.security.sessionsRevokeAll.desc',
-        'Revoke every TeslaSync session except the current browser. Useful after a lost laptop or shared computer.',
+        'Use the external provider to sign out devices; TeslaSync does not issue browser sessions.',
       ),
       keywords: ['logout', 'revoke', 'session', 'everywhere', 'all devices', 'security'],
     },

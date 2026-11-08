@@ -22,7 +22,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { request, SudoCanceledError } from '../client';
+import { request, ActionCanceledError } from '../client';
 import { INTERVALS, STALE_TIMES, PAGINATION } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import type {
@@ -32,7 +32,7 @@ import type {
   DLQReplayResponse,
 } from '@/types/admin-diagnostics';
 
-export { SudoCanceledError };
+export { ActionCanceledError };
 
 // DLQReplayAuditRepo.Recent caps this endpoint at 500, unlike general pagination.
 // Exported so tests assert against the documented cap instead of a magic number.
@@ -144,7 +144,7 @@ export function useDLQAudit(
  * Replay a single DLQ entry (sudo-gated). Toast handling is split:
  *
  *   • Success path                → green success toast
- *   • SudoCanceledError (user X'd ReauthDialog) → silent, no toast
+ *   • ActionCanceledError (user X'd ReauthDialog) → silent, no toast
  *   • status === 403              → caller surfaces a "replay disabled"
  *                                    banner instead of a toast (env flag,
  *                                    not transient)
@@ -173,7 +173,7 @@ export function useDLQReplay() {
       });
     },
     onError: (err) => {
-      if (err instanceof SudoCanceledError) return;
+      if (err instanceof ActionCanceledError) return;
       // Disabled (403) is handled as a banner by the page, not a toast,
       // because the operator needs to read a longer remediation message
       // than the toast surface affords.

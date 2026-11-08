@@ -283,8 +283,8 @@ vi.mock('../feedback/ImpersonationBanner', () => ({ ImpersonationBanner: () => n
 vi.mock('../feedback/TopProgress', () => ({ TopProgress: () => null }))
 vi.mock('../feedback/SessionExpiringModal', () => ({ SessionExpiringModal: () => null }))
 vi.mock('../feedback/SessionExpiredModal', () => ({ SessionExpiredModal: () => null }))
-vi.mock('../feedback/ReauthDialog', () => ({
-  ReauthDialogRoot: () => <div data-testid="reauth-root" />,
+vi.mock('../feedback/ActionConfirmationRoot', () => ({
+  ActionConfirmationRoot: () => <div data-testid="reauth-root" />,
 }))
 vi.mock('../feedback/GotoIndicator', () => ({ GotoIndicator: () => null }))
 vi.mock('../feedback/KeyboardShortcutsModal', () => ({ KeyboardShortcutsModal: () => null }))

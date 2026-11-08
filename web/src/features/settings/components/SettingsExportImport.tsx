@@ -39,7 +39,7 @@ import {
   Input,
 } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { isApiError, SudoCanceledError } from '@/api/client';
+import { isApiError, ActionCanceledError } from '@/api/client';
 import { useToast } from '@/components/feedback/Toast';
 import {
   useExportSettings,
@@ -262,7 +262,7 @@ export function SettingsExportImport() {
         }),
       );
     } catch (err) {
-      if (err instanceof SudoCanceledError) {
+      if (err instanceof ActionCanceledError) {
         // User cancelled the step-up — treat as a non-error and keep
         // the dry-run preview visible so they can retry.
         return;

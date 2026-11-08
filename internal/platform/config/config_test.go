@@ -31,9 +31,6 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.Redis.Enabled {
 		t.Error("expected Redis disabled by default")
 	}
-	if cfg.Auth.Enabled {
-		t.Error("expected Auth disabled by default")
-	}
 	if cfg.LogLevel != "info" {
 		t.Errorf("expected default log level 'info', got %q", cfg.LogLevel)
 	}
@@ -112,12 +109,12 @@ func TestValidation_MinConnsExceedsMaxConns(t *testing.T) {
 	}
 }
 
-func TestValidation_AuthEnabledNoSecret(t *testing.T) {
+func TestLoad_DoesNotRequireRetiredBrowserJWTSecret(t *testing.T) {
 	t.Setenv("AUTH_ENABLED", "true")
 	t.Setenv("AUTH_JWT_SECRET", "")
 	_, err := Load()
-	if err == nil {
-		t.Error("expected error when auth enabled but no secret set")
+	if err != nil {
+		t.Fatalf("retired browser JWT settings must not prevent startup: %v", err)
 	}
 }
 

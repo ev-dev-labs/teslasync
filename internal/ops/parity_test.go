@@ -279,18 +279,19 @@ func TestValidateParity_SecretInConfigMapAlwaysFails(t *testing.T) {
 
 func TestParityManifest_IsSecret(t *testing.T) {
 	m := &ParityManifest{
-		SecretPatterns:     []string{"(^|_)(PASSWORD|SECRET|TOKEN)$", "_API_KEY$", "PRIVATE_KEY$"},
+		SecretPatterns:     []string{"(^|_)(PASSWORD|SECRET|TOKEN)$", "_API_KEY$", "PRIVATE_KEY$", "SIGNING_KEY$"},
 		NonSecretOverrides: []string{"TESLA_CLIENT_ID", "TESLASYNC_VAPID_PUBLIC_KEY"},
 	}
 	tests := map[string]bool{
-		"DATABASE_PASS":               false,
-		"MQTT_PASSWORD":               true,
-		"AUTH_JWT_SECRET":             true,
-		"GOOGLE_MAPS_API_KEY":         true,
-		"TESLASYNC_VAPID_PRIVATE_KEY": true,
-		"TESLASYNC_VAPID_PUBLIC_KEY":  false,
-		"TESLA_CLIENT_ID":             false,
-		"TESLASYNC_PORT":              false,
+		"DATABASE_PASS":   false,
+		"MQTT_PASSWORD":   true,
+		"AUTH_JWT_SECRET": true, // Certificate-signing migration input, never browser authentication.
+		"TESLASYNC_BATTERY_CERTIFICATE_SIGNING_KEY": true,
+		"GOOGLE_MAPS_API_KEY":                       true,
+		"TESLASYNC_VAPID_PRIVATE_KEY":               true,
+		"TESLASYNC_VAPID_PUBLIC_KEY":                false,
+		"TESLA_CLIENT_ID":                           false,
+		"TESLASYNC_PORT":                            false,
 	}
 	for name, want := range tests {
 		if got := m.IsSecret(name); got != want {

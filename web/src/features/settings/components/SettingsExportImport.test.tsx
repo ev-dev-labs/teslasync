@@ -50,7 +50,7 @@ vi.mock('react-i18next', async () => {
   }
 })
 
-import { request, SudoCanceledError } from '@/api/client'
+import { request, ActionCanceledError } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { SettingsExportImport } from './SettingsExportImport'
 import { SETTINGS_BUNDLE_SCHEMA_VERSION } from '@/lib/settingsImportSchema'
@@ -248,7 +248,7 @@ describe('SettingsExportImport — import apply', () => {
     }
     mockedRequest
       .mockResolvedValueOnce(previewResult)
-      .mockRejectedValueOnce(new SudoCanceledError('User cancelled'))
+      .mockRejectedValueOnce(new ActionCanceledError('User cancelled'))
 
     renderSection()
     const file = new File([JSON.stringify(validBundle)], 'bundle.json', {
