@@ -23,12 +23,31 @@
  * side-effect module would be a no-op against the singleton module graph.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { renderHook } from '@testing-library/react'
+import { render, renderHook, screen, waitFor } from '@testing-library/react'
+import { createElement } from 'react'
+import { motion } from '@/components/motion'
 import { createInstance } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { useSettings } from '@/hooks/useSettings'
 import { useTimezone } from '@/lib/timezone'
 import { _resetAuthExpiredLatch } from '@/lib/resilience'
+
+describe('test-setup — real motion context', () => {
+  it('animates bare motion content to visibility and preserves the renderer on rerender', async () => {
+    const { rerender } = render(createElement(motion.div, {
+      initial: { opacity: 0 },
+      animate: { opacity: 1 },
+      transition: { duration: 0 },
+    }, 'Motion content'))
+    await waitFor(() => expect(screen.getByText('Motion content')).toBeVisible())
+    rerender(createElement(motion.div, {
+      initial: { opacity: 0 },
+      animate: { opacity: 1 },
+      transition: { duration: 0 },
+    }, 'Updated motion content'))
+    expect(screen.getByText('Updated motion content')).toBeVisible()
+  })
+})
 
 describe('test-setup — plural fallback parity', () => {
   it.each([0, 1, 2])('matches i18next fallback signatures for count=%s', async count => {
