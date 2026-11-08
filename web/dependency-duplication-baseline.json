@@ -5,10 +5,14 @@
     "A newly duplicated package, or a new version of a listed one, fails the gate even",
     "when the totals do not move.",
     "`--update-baseline` only lowers/prunes; growing it requires the explicit",
-    "`--accept-new-duplicates` flag in the same command."
+    "`--accept-new-duplicates` flag in the same command.",
+    "ESLint 9 and espree 10 require eslint-visitor-keys 4.2.1; eslint-utils and",
+    "typescript-eslint still require the incompatible 3.x and 5.x ranges.",
+    "Only that required tooling version is added; eliminated glob and type-fest",
+    "duplications are removed rather than retained as future allowances."
   ],
-  "totalDuplicatedPackages": 26,
-  "totalExtraCopies": 29,
+  "totalDuplicatedPackages": 24,
+  "totalExtraCopies": 28,
   "observed": [
     {
       "name": "@types/unist",
@@ -85,6 +89,7 @@
       "name": "eslint-visitor-keys",
       "versions": [
         "3.4.3",
+        "4.2.1",
         "5.0.1"
       ]
     },
@@ -93,13 +98,6 @@
       "versions": [
         "2.0.2",
         "3.0.3"
-      ]
-    },
-    {
-      "name": "glob",
-      "versions": [
-        "11.1.0",
-        "7.2.3"
       ]
     },
     {
@@ -179,13 +177,6 @@
       "versions": [
         "0.6.1",
         "0.8.0"
-      ]
-    },
-    {
-      "name": "type-fest",
-      "versions": [
-        "0.16.0",
-        "0.20.2"
       ]
     },
     {
