@@ -29,8 +29,9 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	u, err := url.Parse(target)
 	if err != nil || u.Hostname() != "" || u.IsAbs() || u.Host != "" ||
-		!strings.HasPrefix(target, "/") || strings.HasPrefix(target, "//") || !strings.HasPrefix(u.Path, "/") ||
-		strings.HasPrefix(u.Path, "//") || strings.Contains(target+u.Path, "\\") ||
+		!strings.HasPrefix(target, "/") || strings.HasPrefix(target, "//") || strings.HasPrefix(target, "/\\") ||
+		!strings.HasPrefix(u.Path, "/") || strings.HasPrefix(u.Path, "//") || strings.HasPrefix(u.Path, "/\\") ||
+		strings.Contains(target+u.Path, "\\") ||
 		strings.ContainsFunc(target+u.Path, unicode.IsControl) ||
 		path.Clean(u.Path) == "/api/v1/auth/browser-login" {
 		span.RecordError(fmt.Errorf("invalid browser return path"))
