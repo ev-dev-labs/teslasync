@@ -679,13 +679,16 @@ jobs:
           node-version: '26'
 
       - name: Build bundled web UI
+        shell: pwsh
         env:
           VITE_APP_VERSION: ${{ needs.version.outputs.version }}
           VITE_GIT_SHA: ${{ github.sha }}
           VITE_RELEASE_BUILD: '1'
         run: |
-          npm ci --prefix web
+          npm ci --prefix web --legacy-peer-deps
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run build --prefix web
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build Windows packages
         shell: pwsh
@@ -741,7 +744,7 @@ jobs:
           VITE_GIT_SHA: ${{ github.sha }}
           VITE_RELEASE_BUILD: '1'
         run: |
-          npm ci --prefix web
+          npm ci --prefix web --legacy-peer-deps
           npm run build --prefix web
 
       - name: Build debug-signed test APK
