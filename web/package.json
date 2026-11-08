@@ -195,6 +195,7 @@
     "react-grid-layout": {
       "fast-equals": "^5.4.0"
     },
+    "react-is": "$react",
     "lodash": "^4.18.0",
     "protobufjs": "^8.4.1"
   },
