@@ -55,6 +55,7 @@ export function ActionConfirmationRoot() {
     <ConfirmDialog
       key={active.id}
       open
+      aboveNotifications
       title={t('actionConfirmation.title', 'Confirm sensitive action')}
       message={t('actionConfirmation.body', 'This action can change or remove data. Your authentication provider handles sign-in; TeslaSync only asks you to confirm your intent.')}
       details={<Code>{active.path}</Code>}

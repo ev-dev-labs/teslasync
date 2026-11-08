@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test'
-import type { ActiveSessionsResponse, AppSettings, TOTPStatus, VersionInfo } from '../../src/api/types'
+import type { ActiveSessionsResponse, AppSettings, AuthModeResponse, VersionInfo } from '../../src/api/types'
 import type { AiUsageByFeatureResponse, AiUsageRecentResponse, AiUsageToday } from '../../src/api/hooks/useAiUsage'
 import type { FleetApiInfo, PublicKeyStatus } from '../../src/api/hooks/useFleetSetup'
 import type { OnboardingStatus } from '../../src/api/hooks/useOnboarding'
@@ -65,10 +65,17 @@ export const accountSessions: ActiveSessionsResponse = {
   ],
 }
 
-export const protectedCredential: TOTPStatus = {
-  mode: 'session',
-  activated: true,
-  backup_codes_remaining: 0,
+export const providerPolicy: AuthModeResponse = {
+  mode: 'forward_auth',
+  authentication_owner: 'external_provider',
+  access_policy: 'all_proxy_users_are_operators',
+  subject_header: 'X-Forwarded-User',
+  subject: 'synthetic-operator',
+  provider_hint: 'Synthetic identity provider',
+  capabilities: {
+    step_up_reauth: false, totp_enrollment: false, session_list: false,
+    impersonation: true, rbac: false,
+  },
 }
 
 export const deploymentVersion: VersionInfo = {
@@ -110,8 +117,7 @@ export const completeOnboarding: OnboardingStatus = {
 
 interface FixtureOptions {
   settings?: SettingsWire
-  sessions?: ActiveSessionsResponse
-  totp?: TOTPStatus | Omit<Extract<TOTPStatus, { mode: 'session' }>, 'backup_codes_remaining'>
+  authMode?: AuthModeResponse
   version?: VersionInfo
   fleet?: boolean
   publicKey?: PublicKeyStatus
@@ -119,10 +125,9 @@ interface FixtureOptions {
   usage?: AiUsageToday
   usageState?: 'available' | 'unavailable'
   settingsState?: 'available' | 'unavailable'
-  sessionsState?: 'available' | 'unavailable' | 'open'
+  authModeState?: 'available' | 'unavailable' | 'open'
   publicKeyState?: 'available' | 'unavailable'
   holdPublicKey?: boolean
-  forwardAuth?: boolean
 }
 
 export async function installSettingsFixtures(
@@ -148,7 +153,7 @@ export async function installSettingsFixtures(
     usage: options.usage ?? usageToday,
     usageState: options.usageState ?? 'available',
     settingsState: options.settingsState ?? 'available',
-    sessionsState: options.sessionsState ?? 'available',
+    authModeState: options.authModeState ?? 'available',
     publicKeyState: options.publicKeyState ?? 'available',
   }
   const json = async (endpoint: string, body: () => unknown, status: () => number = () => 200) => {
@@ -166,26 +171,17 @@ export async function installSettingsFixtures(
   () => state.settingsState === 'unavailable' ? 503 : 200)
   await json('/onboarding/status', () => completeOnboarding)
   await json('/system/version', () => options.version ?? deploymentVersion)
-  if (options.forwardAuth) {
-    // The revoke flow requires a forward-auth deployment with session
-    // capabilities; the default harness answers open mode (writes blocked).
-    await json('/system/auth-mode', () => ({
-      mode: 'forward_auth',
-      subject_header: 'X-Forwarded-User',
-      subject: 'synthetic-operator',
-      capabilities: {
-        step_up_reauth: true, totp_enrollment: true, session_list: true,
-        impersonation: false, rbac: false,
-      },
-    }))
+  if (options.authMode || options.authModeState) {
+    await json('/system/auth-mode', () => state.authModeState === 'unavailable'
+      ? { error: 'Synthetic authentication policy unavailable' }
+      : state.authModeState === 'open'
+        ? {
+          mode: 'open', authentication_owner: 'none', access_policy: 'unrestricted',
+          capabilities: { ...providerPolicy.capabilities, impersonation: false },
+        }
+        : options.authMode ?? providerPolicy,
+    () => state.authModeState === 'unavailable' ? 501 : 200)
   }
-  await json('/auth/sessions', () => state.sessionsState === 'open'
-    ? { error: 'Synthetic open-mode fixture', code: 'AUTH_MODE_OPEN' }
-    : state.sessionsState === 'unavailable'
-      ? { error: 'Synthetic session source unavailable' }
-      : options.sessions ?? accountSessions,
-  () => state.sessionsState === 'open' ? 501 : state.sessionsState === 'unavailable' ? 503 : 200)
-  await json('/auth/totp', () => options.totp ?? protectedCredential)
   await json('/ai/usage/today', () => state.usageState === 'unavailable'
     ? { error: 'Synthetic daily audit unavailable' } : state.usage,
   () => state.usageState === 'unavailable' ? 503 : 200)

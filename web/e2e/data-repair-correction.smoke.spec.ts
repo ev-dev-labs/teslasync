@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { RepairCase, RepairCaseCorrectionPreview } from '../src/api/hooks/useDataRepair'
 import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
+import { confirmSensitiveAction } from './actionConfirmation'
 
 for (const theme of ['light', 'dark'] as const) {
   for (const width of [390, 1280]) {
@@ -32,6 +33,7 @@ for (const theme of ['light', 'dark'] as const) {
       const cases = new Map<number, RepairCase>([[301, duration], [302, energy], [303, boundary]])
       const writes: unknown[] = []
       const previews: unknown[] = []
+      let transitions = 0
       const hash = 'a'.repeat(64)
       await page.route('**/api/v1/data-repair/cases**', async route => {
         const request = route.request()
@@ -49,6 +51,7 @@ for (const theme of ['light', 'dark'] as const) {
           return
         }
         if (current && url.pathname.endsWith('/transition')) {
+          transitions += 1
           const body = request.postDataJSON()
           expect(body).toMatchObject({ status: 'in_review', expected_updated_at: current.updated_at })
           const next = { ...current, status: 'in_review' as const, updated_at: '2026-08-25T10:00:00Z' }
@@ -116,7 +119,10 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(drawer.getByRole('button', { name: 'Resolve case' }))
         .toHaveAttribute('title', 'Record a manual resolution; this does not change session data.')
       await drawer.getByRole('button', { name: 'Begin review' }).click()
+      expect(transitions).toBe(0)
+      await confirmSensitiveAction(page, '/data-repair/cases/301/transition')
       await expect(drawer.getByText('In review', { exact: true })).toBeVisible()
+      expect(transitions).toBe(1)
       await drawer.getByRole('button', { name: 'Review correction' }).click()
       let confirm = page.getByRole('dialog', { name: 'Apply this correction?' })
       await expect(confirm.getByText(/900 s.*1920 s/)).toBeVisible()
@@ -126,6 +132,8 @@ for (const theme of ['light', 'dark'] as const) {
       await drawer.getByRole('button', { name: 'Review correction' }).click()
       confirm = page.getByRole('dialog', { name: 'Apply this correction?' })
       await confirm.getByRole('button', { name: 'Apply correction' }).click()
+      expect(writes).toHaveLength(0)
+      await confirmSensitiveAction(page, '/data-repair/cases/301/correction')
       await expect(drawer.getByText('A reviewed correction was applied to this finding.')).toBeVisible()
       await drawer.getByRole('button', { name: 'Close', exact: true }).click()
       await expect(page.getByRole('button', { name: 'Review case 301' })).toHaveCount(0)
@@ -141,6 +149,8 @@ for (const theme of ['light', 'dark'] as const) {
       await confirm.getByRole('button', { name: 'Cancel' }).click({ trial: true, timeout: 1500 })
       await page.screenshot({ path: testInfo.outputPath('energy-preview.png'), animations: 'disabled' })
       await confirm.getByRole('button', { name: 'Apply correction' }).click()
+      expect(writes).toHaveLength(1)
+      await confirmSensitiveAction(page, '/data-repair/cases/302/correction')
       await expect(drawer.getByText('A reviewed correction was applied to this finding.')).toBeVisible()
       await drawer.getByRole('button', { name: 'Close', exact: true }).click()
 
@@ -152,6 +162,8 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(confirm.getByText(/2026-08-25T08:32:00Z.*2026-08-25T09:30:45Z/)).toBeVisible()
       await page.screenshot({ path: testInfo.outputPath('boundary-preview.png'), animations: 'disabled' })
       await confirm.getByRole('button', { name: 'Apply correction' }).click()
+      expect(writes).toHaveLength(2)
+      await confirmSensitiveAction(page, '/data-repair/cases/303/correction')
       await expect(drawer.getByText('A reviewed correction was applied to this finding.')).toBeVisible()
       expect(previews).toHaveLength(4)
       expect(writes).toHaveLength(3)

@@ -6,6 +6,7 @@ const policy = {
   authentication_owner: 'external_provider', access_policy: 'all_proxy_users_are_operators',
   capabilities: { step_up_reauth: false, totp_enrollment: false, session_list: false, impersonation: true, rbac: false },
 };
+const retiredBrowserAuth = /^\/(?:api\/v1\/)?(?:auth\/(?:reauth|totp|sessions?)(?:\/|$)|admin\/rbac\/matrix$)/;
 
 test.describe('external browser authentication', () => {
   test.skip(process.env.E2E_MOCKS === '0', 'Synthetic gateway regression cases');
@@ -28,8 +29,7 @@ test.describe('external browser authentication', () => {
           await expect(page.getByRole('heading', { name: 'Access policy', exact: true })).toBeVisible();
           await expect(page.getByText('synthetic-provider-owner', { exact: true })).toBeVisible();
           await expect(page.getByTestId('session-expired-modal')).toHaveCount(0);
-          expect(api.requests.filter(request => /^\/auth\/(?:session|sessions|totp|reauth)(?:\/|$)/.test(request.path)
-            || request.path === '/admin/rbac/matrix')).toEqual([]);
+          expect(api.requests.filter(request => retiredBrowserAuth.test(request.path))).toEqual([]);
           expect(errors).toEqual([]);
           expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
           await page.screenshot({ path: testInfo.outputPath('provider-guidance.png'), fullPage: true });
@@ -77,8 +77,8 @@ test.describe('external browser authentication', () => {
     await expect(confirm.getByRole('button', { name: 'Confirm', exact: true })).toBeEnabled();
     await confirm.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(confirm).toHaveCount(0);
-    expect(api.requests.filter(request => request.path === '/settings/reset'
-      || request.path === '/auth/reauth' || request.path.startsWith('/auth/totp/'))).toEqual([]);
+    expect(api.requests.filter(request => /^\/(?:api\/v1\/)?settings\/reset$/.test(request.path)
+      || retiredBrowserAuth.test(request.path))).toEqual([]);
     await assertMockApiComplete(page, api);
   });
 
@@ -97,7 +97,6 @@ test.describe('external browser authentication', () => {
     await expect(page).toHaveURL(/\/api\/v1\/auth\/browser-login\?rd=/);
     await expect(page.getByRole('heading', { name: 'Provider sign-in' })).toBeVisible();
     expect(new URL(page.url()).searchParams.get('rd')).toBe('/settings');
-    expect(api.requests.filter(request => request.path === '/auth/reauth'
-      || request.path.startsWith('/auth/totp/'))).toEqual([]);
+    expect(api.requests.filter(request => retiredBrowserAuth.test(request.path))).toEqual([]);
   });
 });
