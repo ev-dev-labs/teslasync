@@ -30,10 +30,7 @@
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import globPkg from 'glob';
-
-// glob v7 exposes `sync()`; v10+ exposes `globSync`. Support both.
-const globSync = globPkg.globSync ?? globPkg.sync;
+import { globSync } from 'glob';
 
 const ROOT = path.resolve(process.cwd(), 'src');
 const FILE_GLOB = '**/*.{ts,tsx}';

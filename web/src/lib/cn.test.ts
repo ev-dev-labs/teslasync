@@ -1045,7 +1045,8 @@ describe('cn — tailwind-merge conflict resolution (last wins)', () => {
 
   it('applies conflict resolution across conditional / falsy-pruned inputs', () => {
     const useLargePadding = true
-    const result = cn('p-2', useLargePadding && 'p-8', false && 'p-0')
+    const useNoPadding = false
+    const result = cn('p-2', useLargePadding && 'p-8', useNoPadding && 'p-0')
     expect(result).toBe('p-8')
   })
 

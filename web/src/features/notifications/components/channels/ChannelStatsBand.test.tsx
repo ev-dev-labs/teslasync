@@ -42,7 +42,7 @@ import {
 } from '@/test/operationalBriefAssertions';
 
 vi.mock('framer-motion', () => ({
-  motion: new Proxy(
+  m: new Proxy(
     {},
     {
       get: () => (props: Record<string, unknown>) => {

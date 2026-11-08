@@ -621,7 +621,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
           className={cn(
             INPUT_BASE,
             'text-ellipsis',
-            icon && 'ps-10',
+            Boolean(icon) && 'ps-10',
             (showClear || !noChevron || loading) && (selectOnly ? 'pe-9' : 'pe-16'),
             inputClassName,
           )}

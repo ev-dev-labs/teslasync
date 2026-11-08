@@ -244,6 +244,9 @@ describe('Journey departure display-zone contract', () => {
     // DOM fault injects a nonempty invalid date to exercise the finite-Date guard.
     departureInput().type = 'text';
     fireEvent.change(departureInput(), { target: { value: 'not-a-date' } });
+    // React 19 restores the declarative type on commit; re-inject the DOM fault.
+    departureInput().type = 'text';
+    departureInput().value = 'not-a-date';
     expect(scenarioForm().checkValidity()).toBe(true);
     fireEvent.submit(scenarioForm());
     expect(scenarioRequests()).toHaveLength(0);

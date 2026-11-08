@@ -8,7 +8,7 @@ const LazyCommandPalette = lazy(async () => {
 
 export interface CommandPaletteHostProps {
   onOpen?: () => void
-  returnFocusFallbackRef?: RefObject<HTMLElement>
+  returnFocusFallbackRef?: RefObject<HTMLElement | null>
   onPin?: (path: string) => void
   onUnpin?: (path: string) => void
 }

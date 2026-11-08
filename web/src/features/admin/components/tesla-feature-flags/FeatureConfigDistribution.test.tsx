@@ -41,7 +41,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { type ComponentProps, type ReactNode } from 'react';
 
 vi.mock('framer-motion', () => ({
-  motion: new Proxy(
+  m: new Proxy(
     {},
     {
       get: () => (props: Record<string, unknown>) => {

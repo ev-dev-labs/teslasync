@@ -5,6 +5,7 @@ export { RouteTransition } from './RouteTransition';
 export type { RouteTransitionProps } from './RouteTransition';
 export { StaggerContainer } from './StaggerContainer';
 export { StaggerItem } from './StaggerItem';
+export { MotionProvider } from './MotionProvider';
 export {
   ambientFrames,
   ambientLoop,
@@ -12,4 +13,4 @@ export {
 } from './ambient';
 
 // Re-export framer-motion primitives for advanced use cases (story slides, custom transitions)
-export { AnimatePresence, motion } from 'framer-motion';
+export { AnimatePresence, m as motion } from 'framer-motion';

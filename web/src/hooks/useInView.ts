@@ -32,7 +32,7 @@ export interface UseInViewOptions {
 
 export function useInView<T extends Element = HTMLDivElement>(
   options: UseInViewOptions = {},
-): { ref: RefObject<T>; inView: boolean } {
+): { ref: RefObject<T | null>; inView: boolean } {
   const {
     rootMargin = '200px',
     threshold = 0,

@@ -60,7 +60,7 @@ function filterDomProps(props: Record<string, unknown>) {
   return rest;
 }
 vi.mock('framer-motion', () => ({
-  motion: {
+  m: {
     div: ({ children, ...props }: Record<string, unknown> & { children?: ReactNode }) => (
       <div {...filterDomProps(props)}>{children}</div>
     ),

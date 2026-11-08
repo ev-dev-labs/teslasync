@@ -314,7 +314,7 @@ interface CommandPaletteProps {
   /** Used by the lazy host so the invocation that loaded the chunk is not lost. */
   initialOpen?: boolean
   /** Live visible shell control when opening intentionally hides the original invoker. */
-  returnFocusFallbackRef?: RefObject<HTMLElement>
+  returnFocusFallbackRef?: RefObject<HTMLElement | null>
   onPin?: (path: string) => void
   onUnpin?: (path: string) => void
 }

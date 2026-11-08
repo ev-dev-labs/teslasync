@@ -21,7 +21,7 @@ import '@/i18n';
 // the bars are synchronous + deterministic under jsdom (mirrors the shared
 // MetricBar unit test).
 vi.mock('framer-motion', () => ({
-  motion: new Proxy(
+  m: new Proxy(
     {},
     {
       get:

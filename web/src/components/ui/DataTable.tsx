@@ -1745,7 +1745,7 @@ export function DataTable<T>({
                         : undefined
                     }
                   >
-                    <div className={cn('flex gap-1', col.headerAction && 'flex-col',
+                    <div className={cn('flex gap-1', Boolean(col.headerAction) && 'flex-col',
                       col.align === 'right' && (col.headerAction ? 'items-end' : 'justify-end'),
                       col.align === 'center' && (col.headerAction ? 'items-center' : 'justify-center'))}>
                     <div className={cn('flex items-center gap-1',

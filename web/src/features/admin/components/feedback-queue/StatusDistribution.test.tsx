@@ -29,7 +29,7 @@ import { render, screen, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
 vi.mock('framer-motion', () => ({
-  motion: new Proxy(
+  m: new Proxy(
     {},
     {
       get: () => (props: Record<string, unknown>) => {

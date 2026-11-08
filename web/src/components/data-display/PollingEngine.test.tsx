@@ -53,7 +53,7 @@ vi.mock('react-i18next', () => ({
 // attributes (className / style / aria-* / data-*), dropping the animation
 // props so React does not warn and no infinite loop is scheduled.
 vi.mock('framer-motion', () => ({
-  motion: {
+  m: {
     div: ({ children, className, style, ...rest }: Record<string, unknown> & { children?: ReactNode; className?: string; style?: Record<string, unknown> }) => {
       const domProps: Record<string, unknown> = {}
       for (const [k, v] of Object.entries(rest)) {

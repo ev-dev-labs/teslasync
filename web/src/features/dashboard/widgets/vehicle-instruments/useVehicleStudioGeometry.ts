@@ -2,7 +2,7 @@ import { useEffect, useState, type RefObject } from 'react';
 
 const INITIAL_GEOMETRY = { ground: 177, front: 90, rear: 480, unitX: 1, unitY: 1 };
 
-export function useVehicleStudioGeometry(studioRef: RefObject<HTMLDivElement>) {
+export function useVehicleStudioGeometry(studioRef: RefObject<HTMLDivElement | null>) {
   const [geometry, setGeometry] = useState(INITIAL_GEOMETRY);
 
   useEffect(() => {

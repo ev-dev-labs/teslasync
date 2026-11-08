@@ -411,7 +411,8 @@ describe('DataRepairPage', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Apply repair' }));
 
     expect(
-      await screen.findByText('no durable evidence currently supports repairing this drive'),
+      await within(screen.getByTestId('repair-suggestion-drive-42'))
+        .findByText('no durable evidence currently supports repairing this drive'),
     ).toBeInTheDocument();
     // Not removed, not marked applied.
     expect(screen.getByTestId('repair-suggestion-drive-42')).toBeInTheDocument();

@@ -95,7 +95,7 @@ vi.mock('framer-motion', () => {
     },
   );
   return {
-    motion: motionProxy,
+    m: motionProxy,
     AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
     useReducedMotion: () => true,
   };
@@ -478,7 +478,7 @@ describe('DLQInspectorPage — list error handling', () => {
     expect(screen.getByText('Enabled')).toBeInTheDocument();
     expect(screen.queryByText('DLQ replay is disabled')).toBeNull();
     expect(screen.queryByText('Server error')).toBeNull();
-    expect(screen.getByText('Data may be stale')).toBeInTheDocument();
+    expect(await screen.findByText('Data may be stale')).toBeInTheDocument();
     expect(screen.getByTestId('dlq-summary')).toHaveAttribute('data-retained', 'true');
     expect(mockedRequest.mock.calls.some(call => String(call[0]).endsWith('/replay'))).toBe(false);
   });

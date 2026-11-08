@@ -40,7 +40,7 @@ vi.mock('@/hooks/useRealtimeEvents', () => ({
 // Stub framer-motion so FadeIn renders eagerly (no IntersectionObserver
 // dance in jsdom).
 vi.mock('framer-motion', () => ({
-  motion: new Proxy(
+  m: new Proxy(
     {},
     {
       get: () => (props: Record<string, unknown>) => {

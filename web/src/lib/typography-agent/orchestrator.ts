@@ -1,7 +1,7 @@
 import type { TypographySpec, VerificationResult } from './types';
 import { TypographyHarmonizer } from './harmonizer';
 import { TypographyActuator } from './actuator';
-import { TypographyVerifier } from './verifier';
+import type { TypographyVerifier } from './verifier';
 
 /** localStorage key following the repo's `teslasync-*` convention. */
 export const TYPOGRAPHY_SPEC_STORAGE_KEY = 'teslasync-typography-spec';
@@ -35,14 +35,15 @@ export interface AgentLoopDeps {
  */
 export class TypographyAgentLoop {
   private harmonizer: TypographyHarmonizer;
-  private verifier: TypographyVerifier;
+  private verifier: TypographyVerifier | undefined;
+  private verifierLoad: Promise<TypographyVerifier> | undefined;
   private spec: TypographySpec;
   private subscribers = new Set<SpecSubscriber>();
 
   constructor(initialSpec: TypographySpec = DEFAULT_TYPOGRAPHY_SPEC, deps: AgentLoopDeps = {}) {
     this.spec = { ...initialSpec };
     this.harmonizer = deps.harmonizer ?? new TypographyHarmonizer();
-    this.verifier = deps.verifier ?? new TypographyVerifier();
+    this.verifier = deps.verifier;
   }
 
   /**
@@ -54,12 +55,14 @@ export class TypographyAgentLoop {
 
     TypographyActuator.applyTokens(this.harmonizer.compileTokens(this.spec));
 
-    let verification = await this.verifier.evaluate(this.spec);
+    const appliedSpec = this.spec;
+    const verifier = this.verifier ?? await this.loadVerifier();
+    let verification = await verifier.evaluate(appliedSpec);
 
     if (!verification.passed) {
-      this.spec = this.verifier.heal(this.spec, verification);
+      this.spec = verifier.heal(this.spec, verification);
       TypographyActuator.applyTokens(this.harmonizer.compileTokens(this.spec));
-      verification = await this.verifier.evaluate(this.spec);
+      verification = await verifier.evaluate(this.spec);
     }
 
     this.subscribers.forEach((cb) => cb(this.spec, verification));
@@ -71,7 +74,9 @@ export class TypographyAgentLoop {
   /** Re-applies the current spec without changes (mount / tab-sync path). */
   public async refresh(): Promise<VerificationResult> {
     TypographyActuator.applyTokens(this.harmonizer.compileTokens(this.spec));
-    const verification = await this.verifier.evaluate(this.spec);
+    const appliedSpec = this.spec;
+    const verifier = this.verifier ?? await this.loadVerifier();
+    const verification = await verifier.evaluate(appliedSpec);
     this.subscribers.forEach((cb) => cb(this.spec, verification));
     return verification;
   }
@@ -79,6 +84,16 @@ export class TypographyAgentLoop {
   public subscribe(cb: SpecSubscriber): () => void {
     this.subscribers.add(cb);
     return () => this.subscribers.delete(cb);
+  }
+
+  private loadVerifier(): Promise<TypographyVerifier> {
+    this.verifierLoad ??= import('./verifier')
+      .then(({ TypographyVerifier }) => this.verifier ??= new TypographyVerifier())
+      .catch(error => {
+        this.verifierLoad = undefined;
+        throw error;
+      });
+    return this.verifierLoad;
   }
 
   public get currentSpec(): TypographySpec {

@@ -121,7 +121,7 @@ describe('Label', () => {
     expect(callback).toHaveBeenLastCalledWith(screen.getByText('Name'));
     expect(ref.current).toBeNull();
     unmount();
-    expect(callback).toHaveBeenLastCalledWith(null);
+    expect(callback.mock.lastCall?.[0]).toBeNull();
   });
 
   it('preserves a localized required accessible name and external helper association', () => {

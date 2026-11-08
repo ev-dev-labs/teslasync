@@ -33,7 +33,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import type { NotificationLog } from '@/api/types';
 
 vi.mock('framer-motion', () => ({
-  motion: new Proxy(
+  m: new Proxy(
     {},
     {
       get: () => (props: Record<string, unknown>) => {

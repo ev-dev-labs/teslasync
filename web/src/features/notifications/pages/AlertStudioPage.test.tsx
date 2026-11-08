@@ -23,7 +23,7 @@ import type { Vehicle } from '@/types/vehicle';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { NavigationGuardProvider, GuardedLink } from '@/components/feedback';
 vi.mock('framer-motion', () => ({
-  motion: new Proxy(
+  m: new Proxy(
     {},
     {
       get: () => (props: Record<string, unknown>) => {

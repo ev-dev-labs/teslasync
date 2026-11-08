@@ -44,6 +44,9 @@ const appSource = readFileSync(join(srcRoot, 'App.tsx'), 'utf8')
 /** Components mounted in main.tsx's render tree. */
 const MAIN_GLOBAL_MOUNTS: Record<string, string> = {
   ErrorBoundary: 'Root render-error trap. Must wrap everything.',
+  MotionProvider:
+    'Shared animation context required by every motion primitive. Basic animation '
+    + 'is synchronous; full drag/layout features load separately without delaying content.',
   Suspense: 'Loads the native-only server picker before any API providers mount.',
   Spinner: 'Loading state while the native server picker chunk loads.',
   NativeConnectPage: 'Native first-run server picker; no API providers mount until a server is selected.',

@@ -33,7 +33,7 @@ import userEvent from '@testing-library/user-event';
 import type { ComponentProps, ReactNode } from 'react';
 
 vi.mock('framer-motion', () => ({
-  motion: new Proxy(
+  m: new Proxy(
     {},
     {
       get: () => (props: Record<string, unknown>) => {

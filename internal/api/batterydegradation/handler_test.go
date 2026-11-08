@@ -233,7 +233,7 @@ func TestPredictionFitAndCrossingContract(t *testing.T) {
 					t.Fatalf("invalid fit presented as evidence: %s", wire)
 				}
 			} else {
-				if tt.sign == 0 && p.SlopePerYear != 0 || tt.sign == 1 && p.SlopePerYear <= 0 || tt.sign == -1 && p.SlopePerYear >= 0 {
+				if tt.sign == 0 && math.Abs(p.SlopePerYear) > 1e-12 || tt.sign == 1 && p.SlopePerYear <= 0 || tt.sign == -1 && p.SlopePerYear >= 0 {
 					t.Fatalf("signed slope lost: %v", p.SlopePerYear)
 				}
 				if result.RatePerMonth != -p.SlopePerYear/12 {

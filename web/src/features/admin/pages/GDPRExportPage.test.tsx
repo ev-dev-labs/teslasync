@@ -90,7 +90,7 @@ vi.mock('framer-motion', () => {
     },
   );
   return {
-    motion: motionProxy,
+    m: motionProxy,
     AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
     useReducedMotion: () => true,
   };
@@ -452,7 +452,7 @@ describe('GDPRExportPage — url + refresh wiring', () => {
     expect(screen.getByText(ART_A)).toBeInTheDocument();
     expect(screen.getByText('Artifact details')).toBeInTheDocument();
     expect(screen.getByText('Lifecycle')).toBeInTheDocument();
-    expect(screen.getByText('Data may be stale')).toBeInTheDocument();
+    expect(await screen.findByText('Data may be stale')).toBeInTheDocument();
     expect(screen.queryByText('Feature not supported')).toBeNull();
     expectManifestMetadata(artifactManifest);
     wire({ [ART_A]: () => Promise.resolve(artifactManifest) });

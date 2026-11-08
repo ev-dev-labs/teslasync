@@ -33,7 +33,7 @@ vi.mock('@/hooks/useSettings', () => ({
 // a plain <div> so content is in the DOM synchronously and we never touch
 // window.matchMedia (unavailable in jsdom).
 vi.mock('framer-motion', () => ({
-  motion: new Proxy(
+  m: new Proxy(
     {},
     {
       get:

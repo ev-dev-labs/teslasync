@@ -28,34 +28,25 @@ const ruleModule = requireFn(rulePath) as { default?: import('eslint').Rule.Rule
 // export depending on the loader; tolerate both shapes.
 const rule = (ruleModule.default ?? (ruleModule as unknown as import('eslint').Rule.RuleModule));
 
-const linter = new Linter();
-// `linter.verify`'s flat-config code path in ESLint 8 silently
-// ignores `languageOptions.parser` for many in-tree parsers; the
-// legacy `defineParser` + `parser: '<name>'` shape is the supported
-// way to drive a TypeScript parser through `Linter.verify` directly.
-linter.defineParser('@typescript-eslint/parser', tsParser as unknown as Linter.ParserModule);
+const linter = new Linter({ cwd: path.parse(here).root });
 
 function lint(filename: string, code: string) {
   return linter.verify(
     code,
-    {
-      parser: '@typescript-eslint/parser',
-      parserOptions: {
+    [{
+      files: ['**/*.{js,jsx,ts,tsx}'],
+      languageOptions: {
+        parser: tsParser,
         ecmaVersion: 2022,
         sourceType: 'module',
-        ecmaFeatures: { jsx: true },
+        parserOptions: { ecmaFeatures: { jsx: true } },
       },
-      plugins: ['teslasync'] as unknown as string[],
+      plugins: { teslasync: { rules: { 'ai-component-must-be-wrapped': rule } } },
       rules: { 'teslasync/ai-component-must-be-wrapped': 'error' },
-    } as unknown as Linter.Config,
+    }],
     { filename },
   );
 }
-
-// Register the rule under the `teslasync` plugin namespace so the
-// rules-key form above resolves it. `defineRule` is the legacy
-// counterpart to flat config's `plugins` map.
-linter.defineRule('teslasync/ai-component-must-be-wrapped', rule);
 
 describe('teslasync/ai-component-must-be-wrapped — valid cases', () => {
   it('feature-path file with inline withAiFeature default export', () => {

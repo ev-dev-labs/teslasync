@@ -74,7 +74,7 @@ export function useKioskMode(
   } = usePresentationMode();
   const isKiosk = mode === 'kiosk';
 
-  const rotateTimer = useRef<ReturnType<typeof setInterval>>();
+  const rotateTimer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   // Sanitize dashboardIds against actual dashboards. Both inputs are guarded
   // before any array method runs: `dashboards` can arrive undefined before the

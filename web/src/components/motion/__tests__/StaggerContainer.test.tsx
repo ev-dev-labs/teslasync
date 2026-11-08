@@ -15,7 +15,7 @@ const { reducedMotionMock, variantsSpy } = vi.hoisted(() => ({
 }))
 
 vi.mock('framer-motion', () => ({
-  motion: {
+  m: {
     div: ({ children, variants, initial, animate, className, ...rest }: any) => {
       variantsSpy(variants)
       return (

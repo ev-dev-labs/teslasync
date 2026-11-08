@@ -588,8 +588,17 @@
   {
     "file": "web/src/components/ui/CommandPalette.tsx",
     "before": "6eec7c2991ac49d916e044c165deca8552e11622e5d11fc15b38dd8121d62e33",
-    "after": "02d6cf7376f743d94cb7c3925c84493ad312bdb6cb30065f78da71db19951fe5",
+    "after": "01cc6f55adc614f92a398bfc323bbf5de4a38109eaea5148537f5b67ab2ac3c2",
     "hunks": [
+      {
+        "start": 317,
+        "old": [
+          "  returnFocusFallbackRef?: RefObject<HTMLElement>"
+        ],
+        "new": [
+          "  returnFocusFallbackRef?: RefObject<HTMLElement | null>"
+        ]
+      },
       {
         "start": 1498,
         "old": [
@@ -1379,6 +1388,56 @@
         ],
         "new": [
           "          activeClass=\"text-status-info\""
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/layout/ThemeQuickSwitcherPopover.tsx",
+    "before": "415fb2970c2a21085cf8aaf8f0bab7f348521f96b4b1dd2d816704a230a66871",
+    "after": "f76e1004c435cac0df83a4e478ef7b22f2a54afac7801844fdb33bdc9f8bac09",
+    "hunks": [
+      {
+        "start": 17,
+        "old": [
+          "  popoverRef: RefObject<HTMLDivElement>",
+          "  triggerRef: RefObject<HTMLButtonElement>"
+        ],
+        "new": [
+          "  popoverRef: RefObject<HTMLDivElement | null>",
+          "  triggerRef: RefObject<HTMLButtonElement | null>"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/ai/AIFeatureCard.tsx",
+    "before": "f1e5d2db44dcb81540068c17891f74399694740a22b90080c064002bebc52016",
+    "after": "1afd7d5ed1c43e91b6697d5dd45339514c79fb8f0dc9480e17808d46699296aa",
+    "hunks": [
+      {
+        "start": 56,
+        "old": [
+          "import type { ReactNode } from 'react'"
+        ],
+        "new": [
+          "import type { JSX, ReactNode } from 'react'"
+        ]
+      }
+    ]
+  },
+  {
+    "file": "web/src/components/ai/AiOutputPanel.tsx",
+    "before": "5d42e4de227de2f0e0b70b9a3d1b0e3f3aa7dae41d6444bd76dc5bcaf13843cb",
+    "after": "6145e0cdf64eb876343836f1734be80f10ea54916beaf90b0ebf54e9eef85a4c",
+    "hunks": [
+      {
+        "start": 31,
+        "old": [
+          "import type { ReactNode } from 'react'"
+        ],
+        "new": [
+          "import type { JSX, ReactNode } from 'react'"
         ]
       }
     ]

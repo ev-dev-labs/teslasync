@@ -108,7 +108,7 @@
   {
     "file": "web/src/components/ui/DataTable.tsx",
     "before": "b1a798be3d4da3edfa52db2669573dc2907acd3d85b84948e745e6a51f7c614b",
-    "after": "ec1ee47be0a8ab77b8247faf3586e7f2833475768c34126fdb10ffb9ebfcd5dc",
+    "after": "b7e794d68cb32abfb098a67f759e8ed4dad0bbc849963a6c0618148ca39ecf8f",
     "deletedSource": null,
     "hunks": [
       {
@@ -145,11 +145,9 @@
         ]
       },
       {
-        "start": 193,
+        "start": 195,
         "old": [],
         "new": [
-          "}",
-          "",
           "export interface DataTableRowGrouping<T> {",
           "  key: (row: T) => string",
           "  label: (key: string) => string",
@@ -161,7 +159,9 @@
           "  /** Controls placed in the corresponding visible columns of each group row. */",
           "  actionColumns?: Readonly<Record<string, (key: string, rows: T[]) => ReactNode>>",
           "  autoExpand?: boolean",
-          "  resetKey?: string"
+          "  resetKey?: string",
+          "}",
+          ""
         ]
       },
       {
@@ -628,7 +628,7 @@
           "                    <div className={cn('flex items-center gap-1', col.align === 'right' && 'justify-end', col.align === 'center' && 'justify-center')}>"
         ],
         "new": [
-          "                    <div className={cn('flex gap-1', col.headerAction && 'flex-col',",
+          "                    <div className={cn('flex gap-1', Boolean(col.headerAction) && 'flex-col',",
           "                      col.align === 'right' && (col.headerAction ? 'items-end' : 'justify-end'),",
           "                      col.align === 'center' && (col.headerAction ? 'items-center' : 'justify-center'))}>",
           "                    <div className={cn('flex items-center gap-1',",

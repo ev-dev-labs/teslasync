@@ -380,7 +380,7 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap,
     minify: 'terser',
-    terserOptions: { maxWorkers: 2 },
+    terserOptions: { maxWorkers: 2, compress: { passes: 2 } },
     modulePreload: {
       resolveDependencies: (_filename, dependencies) => canonicalPreloadDependencies(dependencies),
     },
@@ -421,9 +421,9 @@ export default defineConfig({
         chunkFileNames: ({ name }) =>
           /^(vendor-|locale-)/.test(name) ? 'assets/[name]-[hash].js' : 'assets/[hash].js',
         manualChunks: {
-          // Motion already belongs to the static shell closure. Sharing React's
-          // chunk removes cross-chunk exports and shares compression, not imports.
-          'vendor-react': ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query', 'i18next', 'react-i18next', 'framer-motion'],
+          // React 19 has a separate client entry. Keep its runtime together,
+          // but let route-only motion helpers stay with their importers.
+          'vendor-react': ['react', 'react-dom', 'react-dom/client', 'react-router-dom', '@tanstack/react-query', 'i18next', 'react-i18next'],
           'vendor-charts': ['recharts'],
           'vendor-map': ['leaflet', 'react-leaflet'],
           // lucide-react is deliberately NOT force-grouped. Naming it here

@@ -4,7 +4,7 @@ import { ToastProvider, useToast } from './Toast'
 
 // Mock framer-motion to render children immediately without animations
 vi.mock('framer-motion', () => ({
-  motion: {
+  m: {
     div: ({ children, ...props }: any) => <div {...filterDomProps(props)}>{children}</div>,
   },
   AnimatePresence: ({ children }: any) => <>{children}</>,
@@ -35,7 +35,7 @@ function ToastTrigger({ type, title, message, duration: _duration }: {
   )
 }
 
-function _ToastTriggerWithDuration({ duration }: { duration: number }) {
+function ToastTriggerWithDuration({ duration }: { duration: number }) {
   const toast = useToast()
   return (
     <button onClick={() => toast.toast({ type: 'info', title: 'timed', duration })}>
@@ -109,7 +109,7 @@ describe('Toast', () => {
   })
 
   it('cancels pending dismissal timers when its provider unmounts', () => {
-    const view = renderWithProvider(<_ToastTriggerWithDuration duration={60_000} />)
+    const view = renderWithProvider(<ToastTriggerWithDuration duration={60_000} />)
     const initialTimers = vi.getTimerCount()
     fireEvent.click(screen.getByText('fire'))
     expect(screen.getByText('timed')).toBeInTheDocument()
@@ -139,7 +139,7 @@ describe('Toast', () => {
   })
 
   it('does not schedule a dismissal for persistent toasts', () => {
-    renderWithProvider(<_ToastTriggerWithDuration duration={0} />)
+    renderWithProvider(<ToastTriggerWithDuration duration={0} />)
     const initialTimers = vi.getTimerCount()
     fireEvent.click(screen.getByText('fire'))
     expect(vi.getTimerCount()).toBe(initialTimers)

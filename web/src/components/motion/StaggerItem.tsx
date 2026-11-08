@@ -1,4 +1,4 @@
-import { motion, type Variants } from 'framer-motion'
+import { m as motion, type Variants } from 'framer-motion'
 import { type ReactNode, useMemo } from 'react'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 

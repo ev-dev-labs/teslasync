@@ -37,9 +37,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
-import globPkg from 'glob';
-
-const globSync = globPkg.globSync ?? globPkg.sync;
+import { globSync } from 'glob';
 
 const ROOT = path.resolve(process.cwd(), 'src');
 const FILES_GLOB = '**/*.tsx';
