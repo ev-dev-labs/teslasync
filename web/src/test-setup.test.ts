@@ -24,7 +24,7 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 import { render, renderHook, screen, waitFor } from '@testing-library/react'
-import { createElement } from 'react'
+import { createElement, Fragment, StrictMode, useEffect } from 'react'
 import { motion } from '@/components/motion'
 import { createInstance } from 'i18next'
 import { useTranslation } from 'react-i18next'
@@ -33,6 +33,25 @@ import { useTimezone } from '@/lib/timezone'
 import { _resetAuthExpiredLatch } from '@/lib/resilience'
 
 describe('test-setup — real motion context', () => {
+  it.each([false, true])('preserves root effect replay with StrictMode=%s', strict => {
+    const mounted = vi.fn()
+    const cleanedUp = vi.fn()
+    function EffectProbe() {
+      useEffect(() => {
+        mounted()
+        return cleanedUp
+      }, [mounted, cleanedUp])
+      return null
+    }
+    const root = strict ? StrictMode : Fragment
+    const view = render(createElement(root, null, createElement(EffectProbe)))
+    expect(mounted).toHaveBeenCalledTimes(strict ? 2 : 1)
+    view.rerender(createElement(root, null, createElement(EffectProbe)))
+    expect(mounted).toHaveBeenCalledTimes(strict ? 2 : 1)
+    view.unmount()
+    expect(cleanedUp).toHaveBeenCalledTimes(strict ? 2 : 1)
+  })
+
   it('animates bare motion content to visibility and preserves the renderer on rerender', async () => {
     const { rerender } = render(createElement(motion.div, {
       initial: { opacity: 0 },

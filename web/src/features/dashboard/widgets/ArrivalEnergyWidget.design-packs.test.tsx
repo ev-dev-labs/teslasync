@@ -142,7 +142,7 @@ describe.each(Object.entries(PACK_APPEARANCES))('arrival energy %s / %s', (pack,
     const { container } = mount(pack, COMPACT);
     await waitFor(() => expect(container.querySelector('[data-widget-family="map"]'))
       .toHaveAttribute('data-widget-appearance', appearance));
-    expect(await screen.findByText('Destination coordinates are unknown.')).toBeVisible();
+    await waitFor(() => expect(screen.getByText('Destination coordinates are unknown.')).toBeVisible());
     await expectArrivalCharge(container, 'Unknown');
     for (const label of ['ETA', 'Remaining', 'Traffic delay']) expect(screen.getByText(label)).toBeVisible();
     expect(screen.getByText('Current route evidence is unavailable; the arrival forecast is unknown.')).toBeVisible();

@@ -13,7 +13,7 @@ vi.mock('react-i18next', () => createReactI18nextMock({ language: 'en' }))
 // separately exercise deferred feature loading; isolated UI tests load it now.
 vi.mock('@testing-library/react', async importOriginal => {
   const actual = await importOriginal<typeof import('@testing-library/react')>()
-  const { createElement } = await vi.importActual<typeof import('react')>('react')
+  const { createElement, isValidElement, StrictMode } = await vi.importActual<typeof import('react')>('react')
   const { LazyMotion, domMax } = await vi.importActual<typeof import('framer-motion')>('framer-motion')
   return {
     ...actual,
@@ -23,7 +23,10 @@ vi.mock('@testing-library/react', async importOriginal => {
         return createElement(LazyMotion, { features: domMax },
           Wrapper ? createElement(Wrapper, null, children) : children)
       }
-      return actual.render(ui, { ...options, wrapper: TestMotionRoot })
+      // React 19 replays mount effects only when StrictMode owns the root.
+      const reactStrictMode = options?.reactStrictMode ??
+        (isValidElement(ui) && ui.type === StrictMode ? true : undefined)
+      return actual.render(ui, { ...options, reactStrictMode, wrapper: TestMotionRoot })
     },
   }
 })
