@@ -76,26 +76,26 @@ history; a fresh installation will not have months of trends on day one.
 ## See it in action
 
 <p align="center">
-  <img src="docs/public/screenshots/automation-builder.png" width="1000" alt="TeslaSync automation builder with optional Helix natural-language drafting" />
+  <img src="docs/public/screenshots/dashboard.png" width="1000" alt="TeslaSync dashboard with redesigned vehicle, battery, energy, driving, and security widgets" />
   <br>
-  <em>Build automations visually, with optional Helix assistance.</em>
+  <em>Your vehicle, battery, energy, and driving insights in one customizable workspace.</em>
 </p>
 
 <details>
-<summary><strong>Explore the interface: dashboard and diagnostics</strong></summary>
+<summary><strong>Explore the interface: vehicles and charging</strong></summary>
 
-### A workspace for your vehicles
+### Follow your vehicles
 
-![TeslaSync dashboard with customizable widgets and vehicle navigation](docs/public/screenshots/dashboard.png)
+![TeslaSync vehicle overview with fleet readings and vehicle navigation](docs/public/screenshots/vehicles.png)
 
-### Investigate signals and anomalies
+### Review charging history
 
-![TeslaSync anomaly detection interface with optional Helix explanations](docs/public/screenshots/anomaly-detection.png)
+![TeslaSync charging history with the shared date-range control and charging analysis](docs/public/screenshots/charging.png)
 
 </details>
 
-These are interface previews from a test installation, not a live demo or
-evidence of vehicle health. Screenshots may differ from the current version.
+These screenshots show the current interface with synthetic test data, not a
+live demo or evidence of vehicle health.
 
 ## Why self-host?
 
@@ -165,11 +165,12 @@ docker compose ps
 
 Open **http://localhost:3000**, or the port you configured.
 
-> **Local trial is not a public deployment.** The default Compose setup can run
-> without application authentication, and published ports may be reachable from
-> other machines. Use a trusted, firewalled environment for a trial. Before
-> exposing the application, configure authentication, TLS, strong secrets,
-> token encryption, and backups. See the [security policy](SECURITY.md) and
+> **Local trial is not a public deployment.** Compose binds the web and API
+> ports to `127.0.0.1` by default. TeslaSync does not provide a built-in browser
+> login: place it behind your chosen authentication gateway before remote
+> exposure, and configure trusted identity forwarding, TLS, strong secrets,
+> token encryption, and backups. Native clients can continue using API keys.
+> See the [security policy](SECURITY.md) and
 > [deployment guide](docs/deployment/docker.md).
 
 ### 3. Connect your Tesla
