@@ -207,7 +207,7 @@ describe('Journey assurance scoped modernization', () => {
     assertOperationalBriefDisclosure(screen.getByTestId('advanced-intelligence-journey-brief'), 'Retained result');
     expect(scenario().textContent).toBe(before);
     expect(screen.getByLabelText(/Route distance/)).toHaveValue(500000);
-    expect(screen.getByText('observed charge')).toBeVisible();
+    await waitFor(() => expect(screen.getByText('observed charge')).toBeVisible());
     expect(screen.getAllByText(/No live charger reservations\./).length).toBeGreaterThan(0);
     expect(state.run.mock.calls[1][0]).toMatchObject({ route_distance_m: 500000, reserve_target_pct: 30 });
     expect(runButton()).toBeEnabled();
