@@ -218,8 +218,8 @@ test.describe('released driving N–Z OperationalBrief source contracts', () => 
         await plan.click();
         expect(await brief.locator('[data-operational-value]').allTextContents()).toEqual(publication);
         expect(await cost.locator('[data-operational-value]').allTextContents()).toEqual(costPublication);
-        // Initial plan + failed recompute + the resilient client's one retry.
-        expect(context.fixtures.planRequests).toBe(3);
+        // Initial plan + failed recompute; POST requests must not be replayed.
+        expect(context.fixtures.planRequests).toBe(2);
         await review(page, brief, 'Trip summary',
           'Deterministic trip-plan response using the submitted route, battery level, and preferences.',
           ['Cached · refresh failed']);

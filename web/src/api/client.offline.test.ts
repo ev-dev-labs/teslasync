@@ -26,7 +26,7 @@ vi.mock('../lib/resilience', async () => {
   }
 })
 
-import { request, __resetSudoStateForTests } from './client'
+import { request, __resetActionConfirmationForTests } from './client'
 import { isOfflineWriteRejectedError } from './offlineCache'
 
 let fetchMock: ReturnType<typeof vi.spyOn>
@@ -52,7 +52,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 describe('request() — offline destructive-write prohibition', () => {
   beforeEach(() => {
-    __resetSudoStateForTests()
+    __resetActionConfirmationForTests()
     resilientFetchMock.mockReset()
     fetchMock = vi.spyOn(globalThis, 'fetch') as ReturnType<typeof vi.spyOn>
     fetchMock.mockResolvedValue(jsonResponse({ ok: true }))
@@ -123,7 +123,7 @@ describe('request() — offline destructive-write prohibition', () => {
 
 describe('request() — AbortSignal threading for superseded scopes', () => {
   beforeEach(() => {
-    __resetSudoStateForTests()
+    __resetActionConfirmationForTests()
     resilientFetchMock.mockReset()
     fetchMock = vi.spyOn(globalThis, 'fetch') as ReturnType<typeof vi.spyOn>
   })

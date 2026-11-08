@@ -5,16 +5,9 @@
  *
  * Single source of truth for "what authentication mode is this
  * deployment running in, and who is the current request's principal".
- * Every auth-coupled feature (TOTP enrollment, session list,
- * impersonation, RBAC matrix, step-up reauth, …) gates its UI on the
- * capability flags returned here, so that:
- *
- *   1. In open mode (no FORWARD_AUTH_HEADER configured), every
- *      affected section renders the inline <RequiresAuth>
- *      placeholder instead of issuing a doomed request that 501s.
- *   2. In forward-auth mode, sections mount as normal — the
- *      capability bools default to `true`, but each feature still
- *      enforces its own per-request preconditions server-side.
+ * Browser credentials and session policy belong to the external provider.
+ * Retired local MFA, browser-session, step-up and RBAC capabilities are false.
+ * Verified identity remains available for preferences and impersonation.
  *
  * The endpoint is cheap (no DB / no Redis) and rarely changes — it
  * is fixed at deployment time. We therefore use a long staleTime
@@ -49,10 +42,8 @@ export const authModeKeys = {
 export const AUTH_MODE_STALE_MS = 5 * 60_000
 
 /**
- * Status query. Always succeeds (the contract endpoint is designed
- * to never 4xx/5xx — see internal/api/system_auth_mode_handler.go).
- * Surfaces ApiError on transport-level failures so consumers can
- * render a generic offline state.
+ * Status query. The handler is cheap, but its protected transport can fail;
+ * callers must distinguish unavailable policy from confirmed open mode.
  */
 export function useAuthMode() {
   return useQuery<AuthModeResponse, ApiError>({

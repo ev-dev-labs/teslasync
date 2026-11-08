@@ -8,6 +8,7 @@ import notificationCopyChanges from './verified-notification-copy.json'
 import { readFleetCurrentSource } from './verified-fleet-source-contract'
 import { restoreVerifiedThemeSource } from './verified-theme-source-contract'
 import { catalogBeforeWidgetImplementation } from './verified-widget-implementation-contract'
+import externalAuthCopy from './__fixtures__/verified-external-auth-copy.json'
 
 // These exact files passed the key/default/interpolation/count audit before generation.
 // Keep all historical assertions for producers outside this explicit checkpoint set.
@@ -110,7 +111,19 @@ const themePresetAdditions = {
 
 /** Assert exact new copy before projecting it out of unchanged historical fingerprints. */
 export function catalogBeforeDashboardPolish<T extends Record<string, unknown>>(catalog: T): T {
-  const previous = catalogBeforeWidgetImplementation(catalog)
+  const beforeExternalAuth = structuredClone(catalog)
+  for (const [namespace, expected] of Object.entries(externalAuthCopy.added)) {
+    expect(beforeExternalAuth[namespace], namespace).toEqual(expected)
+    delete beforeExternalAuth[namespace]
+  }
+  for (const change of externalAuthCopy.changed) {
+    let parent: Record<string, unknown> = beforeExternalAuth
+    for (const part of change.path.slice(0, -1)) parent = parent[part] as Record<string, unknown>
+    const leaf = change.path[change.path.length - 1]
+    expect(parent[leaf], change.path.join('.')).toBe(change.current)
+    parent[leaf] = change.previous
+  }
+  const previous = catalogBeforeWidgetImplementation(beforeExternalAuth)
   const theme = previous.theme as Record<string, unknown>
   expect(theme.presets, 'theme.presets').toEqual(themePresetAdditions)
   delete theme.presets

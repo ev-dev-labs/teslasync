@@ -38,7 +38,7 @@ vi.mock('@/api/client', async () => {
 import {
   ApiError,
   request,
-  SudoCanceledError as ClientSudoCanceledError,
+  ActionCanceledError as ClientActionCanceledError,
 } from '@/api/client';
 import { PAGINATION } from '@/lib/constants';
 import {
@@ -49,7 +49,7 @@ import {
   useDLQEntry,
   useDLQAudit,
   useDLQReplay,
-  SudoCanceledError,
+  ActionCanceledError,
 } from './useDLQ';
 import type {
   DLQEntrySummary,
@@ -174,10 +174,10 @@ describe('dlqKeys', () => {
   });
 });
 
-describe('SudoCanceledError re-export', () => {
+describe('ActionCanceledError re-export', () => {
   it('re-exports the client class identity so instanceof checks agree', () => {
-    expect(SudoCanceledError).toBe(ClientSudoCanceledError);
-    expect(new SudoCanceledError()).toBeInstanceOf(ClientSudoCanceledError);
+    expect(ActionCanceledError).toBe(ClientActionCanceledError);
+    expect(new ActionCanceledError()).toBeInstanceOf(ClientActionCanceledError);
   });
 });
 
@@ -381,13 +381,13 @@ describe('useDLQReplay', () => {
   });
 
   it('stays silent (no toast) when the user cancels the sudo reauth dialog', async () => {
-    mockedRequest.mockRejectedValueOnce(new SudoCanceledError());
+    mockedRequest.mockRejectedValueOnce(new ActionCanceledError());
     const { wrapper } = makeWrapper();
     const { result } = renderHook(() => useDLQReplay(), { wrapper });
 
     await act(async () => {
       await expect(result.current.mutateAsync({ id: ENTRY_ID })).rejects.toBeInstanceOf(
-        SudoCanceledError,
+        ActionCanceledError,
       );
     });
 

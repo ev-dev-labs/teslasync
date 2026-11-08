@@ -1,4 +1,4 @@
-import type { RbacPermission } from '@/api/hooks/useRbacMatrix';
+import type { RbacPermission } from '@/api/types';
 
 export interface MatrixDraft {
   cells: Record<string, Record<string, boolean>>;

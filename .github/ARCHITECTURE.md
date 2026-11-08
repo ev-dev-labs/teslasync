@@ -405,10 +405,17 @@ RULES:
   ✅ SSE /api/v1/events uses same ForwardAuth (no separate JWT)
   ✅ Nginx must explicitly forward the auth header to backend
   ✅ Webhook + share endpoints use token-based auth (exempt from ForwardAuth)
+  ✅ The external provider owns browser login, passwords, MFA and session expiry
+  ✅ Every user admitted by that provider is a trusted operator; restrict entry upstream
+  ✅ Personal preferences use verified identity; native/API keys keep their own scopes
+  ✅ Destructive UI actions confirm intent without an application password or MFA token
+  ✅ /api/v1/auth/browser-login is a protected, uncached top-level handoff with local return paths
+  ✅ Strip client-supplied identity headers and prevent direct backend bypass
 
   ❌ NEVER add Authentik-specific code
   ❌ NEVER add internal JWT validation for SSE
   ❌ NEVER hardcode auth provider URLs
+  ❌ NEVER reintroduce app-issued browser sessions, internal MFA enrollment or a local role matrix
 ```
 
 ### ADR-006: Mutation UX Feedback

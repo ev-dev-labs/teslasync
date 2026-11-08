@@ -46,9 +46,8 @@ import (
 )
 
 // ImpersonationCookieName is the cookie TeslaSync sets when an admin
-// starts an impersonation session. Distinct from
-// [SessionCookieName] so the proxy can co-route both cookies and
-// neither overwrites the other on its set/clear cycle.
+// starts an impersonation session. This short-lived inspection cookie
+// does not authenticate a browser or replace the external provider session.
 const ImpersonationCookieName = "teslasync_impersonate"
 
 // ImpersonationTTL is how long an impersonation cookie remains valid.
@@ -279,9 +278,8 @@ func subtleConstantTimeStringEq(a, b string) int {
 //     a shared browser).
 //
 // The middleware MUST be mounted AFTER [ForwardAuthMiddleware] (so
-// the principal header is guaranteed present) AND AFTER [Middleware]
-// (the session tracker), so the tracker pins to the admin's actual
-// identity rather than the impersonation target.
+// the principal header is guaranteed present), after recording the actual
+// operator identity and before handlers see the rewritten target.
 //
 // In open mode (headerName == "") OR when store is nil, the
 // middleware is a passthrough — there is no per-user identity to bind

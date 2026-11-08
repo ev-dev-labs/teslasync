@@ -1014,10 +1014,12 @@ gasPrice:
   apiKey: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Authentication (optional — leave jwtSecret empty to disable)
+# Battery certificate signing
 # ─────────────────────────────────────────────────────────────────────────────
-auth:
-  jwtSecret: ""
+certificates:
+  # -- Independent battery-certificate integrity key; empty keeps the existing default.
+  # Reuse the previous auth.jwtSecret value to preserve issued certificates.
+  signingKey: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Web Push (VAPID) — Phase 40 / Prompt 52

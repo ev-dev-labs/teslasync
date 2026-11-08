@@ -4,7 +4,7 @@
  * Mocks `request` from @/api/client so we can assert the SPA hits the
  * correct endpoints with the correct payloads on each user action,
  * including the schema_version validation, dry-run preview, and
- * apply-with-step-up paths.
+ * apply-with-intent-confirmation paths.
  *
  * Lives next to the component (NOT in __tests__/) so the prompt's
  * allowed-files regex (substring match on `features/settings/`) keeps
@@ -50,7 +50,7 @@ vi.mock('react-i18next', async () => {
   }
 })
 
-import { request, SudoCanceledError } from '@/api/client'
+import { request, ActionCanceledError } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { SettingsExportImport } from './SettingsExportImport'
 import { SETTINGS_BUNDLE_SCHEMA_VERSION } from '@/lib/settingsImportSchema'
@@ -120,6 +120,36 @@ describe('SettingsExportImport — export', () => {
 })
 
 describe('SettingsExportImport — import dry-run', () => {
+  it('keeps the selected file and renders a read-only import preview through the real client', async () => {
+    const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
+    mockedRequest.mockImplementationOnce(actual.request)
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        dry_run: true,
+        sections: { settings: { added: 0, updated: 1, skipped: 0 } },
+      }), { headers: { 'Content-Type': 'application/json' } }),
+    )
+    try {
+      renderSection()
+      fireEvent.change(screen.getByTestId('settings-import-file-input'), {
+        target: {
+          files: [new File([JSON.stringify(validBundle)], 'bundle.json', {
+            type: 'application/json',
+          })],
+        },
+      })
+      await waitFor(() => {
+        expect(screen.getByTestId('settings-import-preview')).toBeInTheDocument()
+      })
+      expect(screen.queryByTestId('settings-import-error')).not.toBeInTheDocument()
+      expect(screen.getByTestId('settings-import-apply')).toBeEnabled()
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(JSON.parse(fetchMock.mock.calls[0][1]?.body as string).dry_run).toBe(true)
+    } finally {
+      fetchMock.mockRestore()
+    }
+  })
+
   it('rejects bundles with unknown sections without calling the backend', async () => {
     renderSection()
     const file = new File(
@@ -239,7 +269,7 @@ describe('SettingsExportImport — import apply', () => {
     )
   })
 
-  it('keeps the preview visible when the user cancels the step-up', async () => {
+  it('keeps the preview visible when the user cancels intent confirmation', async () => {
     const previewResult = {
       dry_run: true,
       sections: {
@@ -248,7 +278,7 @@ describe('SettingsExportImport — import apply', () => {
     }
     mockedRequest
       .mockResolvedValueOnce(previewResult)
-      .mockRejectedValueOnce(new SudoCanceledError('User cancelled'))
+      .mockRejectedValueOnce(new ActionCanceledError('User cancelled'))
 
     renderSection()
     const file = new File([JSON.stringify(validBundle)], 'bundle.json', {

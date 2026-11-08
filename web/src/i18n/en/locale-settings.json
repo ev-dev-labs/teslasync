@@ -528,6 +528,24 @@
       "run": "Approve"
     }
   },
+  "externalAuth": {
+    "title": "Authentication and access",
+    "subtitle": "Your authentication service owns browser sign-in, MFA and sessions.",
+    "identityTitle": "Connection identity",
+    "native": "This app uses a server access key. Browser authentication and provider sessions do not control that key.",
+    "provider": "External authentication provider",
+    "open": "Open mode: no browser authentication is configured. Restrict network access before exposing this installation.",
+    "unknown": "The server authentication policy is not available yet.",
+    "noIdentity": "No verified user identity was supplied for this request.",
+    "refresh": "Refresh identity",
+    "securityTitle": "Sign-in, MFA and device sessions",
+    "securityBody": "Manage your password, second factors, recovery codes and signed-in devices in your authentication service. TeslaSync does not create passwords, enroll MFA, issue browser sessions or revoke provider sessions.",
+    "securityHelp": "Open your authentication service directly to manage these settings. Its normal session policy applies; sensitive TeslaSync actions ask for confirmation, not another password.",
+    "checkSignIn": "Check provider sign-in",
+    "accessTitle": "Access policy",
+    "accessBody": "Everyone admitted by your browser authentication provider is a trusted operator with full application access. Limit who can enter at your proxy or authentication service; there is no separate TeslaSync role matrix.",
+    "connections": "Personal preferences remain separate by verified identity. Native and automation access keys keep their own scopes. Tesla account authorization, share tokens, webhook credentials and operation safeguards remain independent."
+  },
   "fleetSetup": {
     "title": "Fleet setup",
     "brief": {
@@ -919,115 +937,6 @@
     "loading": "Loading source",
     "retained": "Retained source",
     "unavailable": "Source unavailable"
-  },
-  "totp": {
-    "disable": {
-      "typedLabel": "Type DISABLE to confirm",
-      "title": "Disable two-factor authentication?",
-      "confirm": "Disable",
-      "cancel": "Keep TOTP enabled",
-      "message": "You will no longer be prompted for a TOTP code on the sudo step-up. Your backup codes will be invalidated."
-    },
-    "errors": {
-      "codeLength": "Enter all 6 digits.",
-      "invalidCode": "Code did not match. Try the next one.",
-      "verifyGeneric": "Verification failed.",
-      "rateLimited": "Too many incorrect attempts. Try again in 15 minutes.",
-      "enrollmentExpired": "Enrollment expired. Close and start over."
-    },
-    "loading": "Loading two-factor settings…",
-    "title": "Two-factor authentication",
-    "status": {
-      "active": "Active",
-      "notEnrolled": "Not enrolled"
-    },
-    "lastUsed": {
-      "label": "Last used",
-      "never": "Never"
-    },
-    "backupCodesRemaining": {
-      "label": "Backup codes remaining"
-    },
-    "actions": {
-      "regenerate": "Regenerate backup codes",
-      "disable": "Disable",
-      "enroll": "Enable TOTP",
-      "enrollHint": "Compatible with Google Authenticator, 1Password, Bitwarden, Authy and other RFC 6238 clients."
-    },
-    "modal": {
-      "enrollTitle": "Enable TOTP",
-      "qrAlt": "TOTP QR code",
-      "manualLabel": "Manual entry secret",
-      "codeLabel": "Enter the 6-digit code from your app",
-      "cancel": "Cancel",
-      "verify": "Verify and activate",
-      "scanInstructions": "Scan the QR code with your authenticator app, or enter the secret manually."
-    },
-    "backupCodes": {
-      "title": "Save your backup codes",
-      "download": "Download .txt",
-      "done": "I saved them",
-      "warning": "These codes will not be shown again. Store them in a password manager. Each code can be used once if you lose access to your authenticator app.",
-      "close": "Close",
-      "fileHeader": "# TeslaSync TOTP backup codes — keep secret.",
-      "empty": "No backup codes were returned. Close this dialog and regenerate your codes from the two-factor settings."
-    },
-    "brief": {
-      "description": "Protection status, last verification and remaining recovery codes for this account. Enrollment and recovery controls remain unchanged.",
-      "scope": "Latest credential status · last verification is a recorded event, not a date-range total",
-      "source": "Account two-factor status",
-      "title": "Two-factor overview"
-    },
-    "kpi": {
-      "aria": "Two-factor status summary",
-      "lastVerified": "Last verified",
-      "method": "Method",
-      "methodStandard": "RFC 6238",
-      "methodValue": "TOTP",
-      "protection": "Protection",
-      "unavailable": "Unavailable"
-    },
-    "copy": {
-      "manualHint": "Clipboard unavailable. Select the displayed text and copy it manually."
-    },
-    "openMode": {
-      "message": "Per-user TOTP requires forward-auth mode. Configure your reverse proxy to inject X-Forwarded-User then reload."
-    },
-    "subtitle": "TOTP codes from your authenticator app are required for the sudo step-up before destructive admin actions.",
-    "apps": {
-      "title": "Compatible apps",
-      "subtitle": "Any RFC 6238 TOTP client works."
-    },
-    "recovery": {
-      "tip1": "Each backup code works once — regenerate when you are running low.",
-      "tip2": "Store codes in your password manager, not next to your authenticator app.",
-      "tip3": "Codes rotate every 30 seconds; if one is rejected, wait for the next.",
-      "title": "Recovery & good habits",
-      "subtitle": "Keep a way back in if you lose your phone."
-    },
-    "guide": {
-      "step1": {
-        "title": "Install an authenticator app",
-        "body": "Use any RFC 6238 client — Google Authenticator, 1Password, Bitwarden or Authy."
-      },
-      "step2": {
-        "title": "Scan the QR code",
-        "body": "Choose Enable TOTP, then scan the QR or paste the manual secret into your app."
-      },
-      "step3": {
-        "title": "Verify a 6-digit code",
-        "body": "Enter the rotating code your app shows to confirm both devices are in sync."
-      },
-      "step4": {
-        "title": "Store your backup codes",
-        "body": "Save the one-time codes somewhere safe — they recover access if you lose your app."
-      },
-      "title": "How setup works",
-      "subtitle": "Four steps, about a minute."
-    },
-    "commands": {
-      "blocked": "Two-factor changes require available enrollment access and a successful live status check. Previously loaded settings remain visible. Retry the status check when access and the connection are ready."
-    }
   },
   "typography": {
     "familyHint": "Focus or hover to preview a font, then select it to use it everywhere.",
@@ -2900,11 +2809,6 @@
       "title": "Learn per-vehicle range model"
     }
   },
-  "rbac": {
-    "toasts": {
-      "saved": "RBAC matrix updated."
-    }
-  },
   "recentPages": {
     "clearBody": "Wipe the list of pages used by the status bar and the recent section in the command palette.",
     "clearButton": "Clear recent pages",
@@ -3176,24 +3080,24 @@
       },
       "security": {
         "sessionsList": {
-          "desc": "See which browsers and devices are currently signed in to TeslaSync and revoke individual sessions.",
-          "title": "Active sessions"
+          "desc": "View and revoke signed-in browser sessions in your authentication service.",
+          "title": "Provider device sessions"
         },
         "sessionsRevokeAll": {
-          "desc": "Revoke every TeslaSync session except the current browser. Useful after a lost laptop or shared computer.",
-          "title": "Sign out all other devices"
+          "desc": "Use the external provider to sign out devices; TeslaSync does not issue browser sessions.",
+          "title": "Provider sign-out controls"
         },
         "totpBackupCodes": {
-          "desc": "Regenerate or download the backup codes used when you lose access to your authenticator.",
-          "title": "TOTP backup codes"
+          "desc": "Your authentication provider owns recovery codes and account recovery.",
+          "title": "Provider recovery codes"
         },
         "totpDisable": {
-          "desc": "Remove the TOTP credential and revoke all backup codes for the current subject.",
-          "title": "Disable two-factor authentication"
+          "desc": "Change MFA policy and credentials in the external authentication service.",
+          "title": "Provider security policy"
         },
         "totpEnroll": {
-          "desc": "Set up TOTP from your authenticator app to protect destructive admin actions.",
-          "title": "Enable two-factor authentication"
+          "desc": "Manage second factors in your authentication provider, not inside TeslaSync.",
+          "title": "Provider-managed MFA"
         }
       },
       "tesla": {
@@ -3295,13 +3199,6 @@
       "placeholder": "Search settings…"
     },
     "title": "Settings",
-    "totp": {
-      "toasts": {
-        "backupRegenerated": "Backup codes regenerated.",
-        "disabled": "TOTP disabled.",
-        "verified": "TOTP enabled. Save your backup codes!"
-      }
-    },
     "tours": {
       "body": "Re-run the guided walkthroughs that introduce major sections.",
       "label": "Product tours",
@@ -3342,12 +3239,6 @@
       "subtitle": "Connected harmonic runtime",
       "title": "Typography agent",
       "verified": "Harmony verified"
-    }
-  },
-  "settingsSessions": {
-    "toasts": {
-      "revoked": "Session signed out.",
-      "revokedAllOthersCountUnknown": "Other sessions signed out. The number of signed-out devices is unavailable."
     }
   },
   "sharing": {

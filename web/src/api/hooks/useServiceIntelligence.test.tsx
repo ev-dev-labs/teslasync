@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { request } from '../client';
 import {
   OFFICIAL_NHTSA_COMMUNICATION_ARTIFACTS,
-  SudoCanceledError,
+  ActionCanceledError,
   serviceIntelligenceKeys,
   useCommunicationsCatalogStatus,
   useImportCommunicationsCatalog,
@@ -250,7 +250,7 @@ describe('useServiceIntelligence', () => {
   });
 
   it('keeps a cancelled shared sudo challenge silent', async () => {
-    mockedRequest.mockRejectedValue(new SudoCanceledError());
+    mockedRequest.mockRejectedValue(new ActionCanceledError());
     const { Wrapper } = makeHarness();
     const { result } = renderHook(() => useImportCommunicationsCatalog(), {
       wrapper: Wrapper,
@@ -258,7 +258,7 @@ describe('useServiceIntelligence', () => {
 
     await expect(
       result.current.mutateAsync(OFFICIAL_NHTSA_COMMUNICATION_ARTIFACTS[0].url),
-    ).rejects.toBeInstanceOf(SudoCanceledError);
+    ).rejects.toBeInstanceOf(ActionCanceledError);
     expect(toastMocks.error).not.toHaveBeenCalled();
     expect(toastMocks.success).not.toHaveBeenCalled();
   });

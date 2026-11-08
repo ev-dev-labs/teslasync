@@ -322,8 +322,8 @@ const Settings = lazy(routeLoaders.Settings)
 const SafetySettingsPage = lazy(routeLoaders.SafetySettingsPage)
 const FleetSetupPage = lazy(routeLoaders.FleetSetupPage)
 // Account-level security pages promoted out of Settings (Phase-50 split):
-//   /account/2fa       — Two-factor authentication enrollment / disable
-//   /account/sessions  — Active browser/device sessions + revoke
+//   /account/2fa       — External provider MFA guidance
+//   /account/sessions  — External provider device-session guidance
 //   /account/privacy   — Recently viewed pages + cookies / analytics consent
 const TwoFactorAuth = lazy(() => import('./features/settings/pages/TwoFactorAuthPage'))
 const ActiveSessions = lazy(() => import('./features/settings/pages/ActiveSessionsPage'))

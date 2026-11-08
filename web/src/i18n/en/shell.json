@@ -94,6 +94,11 @@
       "title": "Your session is no longer valid"
     }
   },
+  "actionConfirmation": {
+    "title": "Confirm sensitive action",
+    "body": "This action can change or remove data. Your authentication provider handles sign-in; TeslaSync only asks you to confirm your intent.",
+    "type": "Type CONFIRM to continue"
+  },
   "alerts": {
     "tabFlash": "(!) Alert — ",
     "toast": {
@@ -1577,7 +1582,6 @@
     "banner": "Too many requests — pausing for {{n}}s",
     "retry": "Retry now"
   },
-  "rbac": {},
   "recentPages": {
     "justNow": "Just now",
     "shortDay": "d",
@@ -1929,11 +1933,6 @@
       "body": "The server rejected your app access token. Reconnect with a valid key.",
       "reconnect": "Reconnect",
       "title": "App connection expired"
-    },
-    "expired": {
-      "body": "For your security, your session has timed out. Sign in again to pick up where you left off.",
-      "signIn": "Sign in again",
-      "title": "Session expired"
     }
   },
   "shortcuts": {

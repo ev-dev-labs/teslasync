@@ -54,18 +54,23 @@ func TestSubjectFromRequest_ForwardAuthMissingHeader(t *testing.T) {
 func TestSubjectFromRequest_HappyPath(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/x", nil)
 	r.Header.Set("X-Forwarded-User", "  alice  ")
-	sub, ok := SubjectFromRequest(r, "X-Forwarded-User")
-	if !ok {
-		t.Fatalf("header set must report ok=true")
-	}
-	if sub != "alice" {
-		t.Fatalf("subject must be trimmed; got %q", sub)
+	for _, header := range []string{"X-Forwarded-User", " X-Forwarded-User \t"} {
+		sub, ok := SubjectFromRequest(r, header)
+		if !ok {
+			t.Fatalf("header %q set must report ok=true", header)
+		}
+		if sub != "alice" {
+			t.Fatalf("subject must be trimmed; got %q", sub)
+		}
 	}
 }
 
 func TestIsOpenMode(t *testing.T) {
 	if !IsOpenMode("") {
 		t.Fatal(`IsOpenMode("") = false; want true`)
+	}
+	if !IsOpenMode(" \t ") {
+		t.Fatal("Whitespace-only identity header must be open mode")
 	}
 	if IsOpenMode("X-Forwarded-User") {
 		t.Fatal(`IsOpenMode("X-Forwarded-User") = true; want false`)

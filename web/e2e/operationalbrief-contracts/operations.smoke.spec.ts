@@ -1,6 +1,7 @@
 import { expect, test, type Download, type Locator, type Page } from '@playwright/test';
 import { ROUTE_REGISTRY } from '../../src/lib/routeRegistry';
 import { closeTableToolbarControls, openTableToolbarControls } from '../tableToolbarControls';
+import { confirmSensitiveAction } from '../actionConfirmation';
 import {
   assertMockApiComplete,
   expectThemeApplied,
@@ -376,6 +377,8 @@ for (const theme of ['light', 'dark'] as const) {
         await expect.poll(async () => (await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n')).toBe(claimReport.body.replace(/\r\n/g, '\n'));
         await expect(page.getByRole('button', { name: 'Open service evidence pack', exact: true })).toBeEnabled();
         await page.getByRole('button', { name: 'Import official NHTSA artifact for 2025–2026', exact: true }).click();
+        expect(fixture.importedArtifacts).toEqual([]);
+        await confirmSensitiveAction(page, '/admin/service-intelligence/communications/import');
         await expect.poll(() => fixture.importedArtifacts).toEqual([catalogReport.latest_successful!.artifact_url]);
         await expect(page.getByText('Latest import failed', { exact: true })).toHaveCount(0);
         await expectMetric(catalog, 'normalized-tesla-records', '321');

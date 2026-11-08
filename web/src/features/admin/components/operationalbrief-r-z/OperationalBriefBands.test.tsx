@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import type { RbacMatrixSessionResponse } from '@/api/hooks/useRbacMatrix';
+import type { RbacMatrixSessionResponse } from '@/api/types';
 import type { QueueStatusResponse, RateLimitStatusResponse } from '@/api/types';
 import { useRateLimitStatus } from '@/api/hooks/useSystem';
 import { useQueueStatus } from '@/api/hooks/useSystemQueues';

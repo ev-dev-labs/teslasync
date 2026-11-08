@@ -221,24 +221,24 @@
       },
       "security": {
         "totpEnroll": {
-          "title": "Enable two-factor authentication",
-          "desc": "Set up TOTP from your authenticator app to protect destructive admin actions."
+          "title": "Provider-managed MFA",
+          "desc": "Manage second factors in your authentication provider, not inside TeslaSync."
         },
         "totpBackupCodes": {
-          "title": "TOTP backup codes",
-          "desc": "Regenerate or download the backup codes used when you lose access to your authenticator."
+          "title": "Provider recovery codes",
+          "desc": "Your authentication provider owns recovery codes and account recovery."
         },
         "totpDisable": {
-          "title": "Disable two-factor authentication",
-          "desc": "Remove the TOTP credential and revoke all backup codes for the current subject."
+          "title": "Provider security policy",
+          "desc": "Change MFA policy and credentials in the external authentication service."
         },
         "sessionsList": {
-          "title": "Active sessions",
-          "desc": "See which browsers and devices are currently signed in to TeslaSync and revoke individual sessions."
+          "title": "Provider device sessions",
+          "desc": "View and revoke signed-in browser sessions in your authentication service."
         },
         "sessionsRevokeAll": {
-          "title": "Sign out all other devices",
-          "desc": "Revoke every TeslaSync session except the current browser. Useful after a lost laptop or shared computer."
+          "title": "Provider sign-out controls",
+          "desc": "Use the external provider to sign out devices; TeslaSync does not issue browser sessions."
         }
       },
       "advanced": {

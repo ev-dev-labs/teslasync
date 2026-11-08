@@ -1473,11 +1473,6 @@
       "title": "Learn per-vehicle range model"
     }
   },
-  "rbac": {
-    "toasts": {
-      "saved": "RBAC matrix updated."
-    }
-  },
   "requiresAuth": {
     "title": "{{feature}} requires authentication mode"
   },

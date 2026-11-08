@@ -128,7 +128,6 @@ func mountAIRoutes(
 	g *guard.Guard,
 	registry *provider.Registry,
 	settingsRepo *settingsdb.SettingsRepo,
-	sudoMW func(http.Handler) http.Handler,
 	h AIHandlers,
 ) {
 	r.Route("/ai", func(r chi.Router) {
@@ -1289,11 +1288,11 @@ func mountAIRoutes(
 		r.Post("/trips/plan/draft", g.Wrap("trip-planner-llm-agent", tripPlannerLLMHandler))
 
 		// ai-provider-health (Phase-50 / F1, slice 0002).
-		// Ops-only diagnostic. Triple-gated:
-		//   guard.Wrap (mode + feature toggle) → RequireSudo → handler.
+		// Ops diagnostic behind external authentication and
+		// guard.Wrap (mode + feature toggle).
 		// Returns 404 in off mode (ADR-015 §I6 + §I9 — provider
 		// info MUST NOT leak when AI is disabled).
-		r.With(sudoMW).Get("/_internal/health",
+		r.Get("/_internal/health",
 			g.Wrap("ai-provider-health", newAIInternalHealthHandler(registry)))
 	})
 }

@@ -3,9 +3,9 @@ import { act, cleanup, renderHook } from '@testing-library/react';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  __resetSudoStateForTests,
-  registerSudoChallengeProvider,
-  SudoCanceledError,
+  __resetActionConfirmationForTests,
+  registerActionConfirmationProvider,
+  ActionCanceledError,
 } from '../client';
 import { OfflineWriteRejectedError } from '../offlineCache';
 import { __flushQueryBroadcastForTests } from '@/lib/queryBroadcast';
@@ -47,7 +47,7 @@ function json(body: unknown, status = 200) {
 }
 
 beforeEach(() => {
-  __resetSudoStateForTests();
+  __resetActionConfirmationForTests();
   success.mockReset();
   error.mockReset();
   onlineManager.setOnline(true);
@@ -57,7 +57,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   __flushQueryBroadcastForTests();
-  __resetSudoStateForTests();
+  __resetActionConfirmationForTests();
   vi.restoreAllMocks();
   onlineManager.setOnline(true);
   window.history.replaceState(null, '', '/');
@@ -69,7 +69,7 @@ describe.each(actions)('auth recovery $path', ({ hook, path }) => {
     onlineManager.setOnline(false);
     const fetch = vi.spyOn(globalThis, 'fetch');
     const challenge = vi.fn();
-    registerSudoChallengeProvider(challenge);
+    registerActionConfirmationProvider(challenge);
     const { result, qc } = setup(() => hook());
     const invalidate = vi.spyOn(qc, 'invalidateQueries');
 
@@ -90,29 +90,32 @@ describe.each(actions)('auth recovery $path', ({ hook, path }) => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('preserves online recovery in historical views and the sudo replay', async () => {
+  it('preserves online Tesla recovery in historical views without credential replay', async () => {
     window.history.replaceState(null, '', '/settings?as_of=2026-10-01T00:00:00Z');
     const payload = path === '/auth/url' ? { auth_url: 'https://auth.tesla.com/recovery' } : undefined;
     const fetch = vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(json({ error: 'Step up required', code: 'SUDO_REQUIRED' }, 401))
       .mockResolvedValueOnce(payload ? json(payload) : new Response(null, { status: 204 }));
-    const challenge = vi.fn().mockResolvedValue({ mode: 'session', token: 'test-sudo-token' });
-    registerSudoChallengeProvider(challenge);
+    const challenge = vi.fn().mockResolvedValue(undefined);
+    registerActionConfirmationProvider(challenge);
     const { result, qc } = setup(() => hook());
     const invalidate = vi.spyOn(qc, 'invalidateQueries');
 
     await act(async () => {
       // directRequest exposes camelCase aliases alongside the snake_case
-      // wire keys, so the replayed payload carries authUrl too.
+      // wire keys.
       const expected = payload ? { ...payload, authUrl: payload.auth_url } : payload;
       await expect(result.current.mutateAsync()).resolves.toEqual(expected);
     });
-    expect(challenge).toHaveBeenCalledExactlyOnceWith(path);
-    expect(fetch).toHaveBeenCalledTimes(2);
-    const [url, options] = fetch.mock.calls[1]!;
+    if (path === '/auth/disconnect') {
+      expect(challenge).toHaveBeenCalledExactlyOnceWith(path, undefined);
+    } else {
+      expect(challenge).not.toHaveBeenCalled();
+    }
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const [url, options] = fetch.mock.calls[0]!;
     expect(url).toBe(`/api/v1${path}`);
     expect(options?.method).toBe('POST');
-    expect(new Headers(options?.headers).get('X-Sudo-Token')).toBe('test-sudo-token');
+    expect(new Headers(options?.headers).has('X-Sudo-Token')).toBe(false);
     expect(success).toHaveBeenCalledTimes(1);
     expect(error).not.toHaveBeenCalled();
     if (path !== '/auth/url') {
@@ -120,20 +123,29 @@ describe.each(actions)('auth recovery $path', ({ hook, path }) => {
     }
   });
 
-  it('does not retry a cancelled sudo challenge even with retry-enabled defaults', async () => {
+  it('never retries denied recovery or a declined disconnect with retry-enabled defaults', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValue(json({ error: 'Step up required', code: 'SUDO_REQUIRED' }, 401));
-    const cancelled = new SudoCanceledError();
+    const cancelled = new ActionCanceledError();
     const challenge = vi.fn().mockRejectedValue(cancelled);
-    registerSudoChallengeProvider(challenge);
+    registerActionConfirmationProvider(challenge);
     const { result, qc } = setup(() => hook());
     const invalidate = vi.spyOn(qc, 'invalidateQueries');
 
     await act(async () => {
-      await expect(result.current.mutateAsync()).rejects.toBe(cancelled);
+      if (path === '/auth/disconnect') {
+        await expect(result.current.mutateAsync()).rejects.toBe(cancelled);
+      } else {
+        await expect(result.current.mutateAsync()).rejects.toMatchObject({ status: 401 });
+      }
     });
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(challenge).toHaveBeenCalledExactlyOnceWith(path);
+    if (path === '/auth/disconnect') {
+      expect(fetch).not.toHaveBeenCalled();
+      expect(challenge).toHaveBeenCalledExactlyOnceWith(path, undefined);
+    } else {
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(challenge).not.toHaveBeenCalled();
+    }
     expect(error).toHaveBeenCalledTimes(1);
     expect(success).not.toHaveBeenCalled();
     expect(invalidate).not.toHaveBeenCalled();

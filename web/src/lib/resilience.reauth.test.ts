@@ -62,6 +62,10 @@ beforeEach(() => {
     writable: true,
     value: {
       href: 'https://teslasync.example/drives/42',
+      origin: 'https://teslasync.example',
+      pathname: '/drives/42',
+      search: '',
+      hash: '',
       assign: assignSpy,
       reload: reloadSpy,
     },
@@ -133,7 +137,22 @@ describe('navigateToReauth — identity transition', () => {
       'https://teslasync.example/drives/42',
     )
     expect(assignSpy.mock.calls[0][0]).toContain(
-      `rd=${encodeURIComponent('https://teslasync.example/drives/42')}`,
+      `/api/v1/auth/browser-login?rd=${encodeURIComponent('/drives/42')}`,
+    )
+  })
+
+  it.each([
+    'javascript:alert(1)',
+    'data:text/html,<h1>Not a provider</h1>',
+    'https://synthetic-user:synthetic-password@login.example',
+  ])('rejects an unsafe provider override %s and uses the protected handoff', async (override) => {
+    const { getReauthUrl, navigateToReauth } = await loadResilience()
+    ;(window as { __TESLASYNC_REAUTH_URL__?: string }).__TESLASYNC_REAUTH_URL__ = override
+
+    expect(getReauthUrl()).toBe('/api/v1/auth/browser-login')
+    navigateToReauth()
+    expect(assignSpy).toHaveBeenCalledWith(
+      `/api/v1/auth/browser-login?rd=${encodeURIComponent('/drives/42')}`,
     )
   })
 
@@ -160,6 +179,23 @@ describe('navigateToReauth — identity transition', () => {
 })
 
 describe('resilientFetch — network failures are not expired sessions', () => {
+  it('retains the native access key without an anonymous provider probe when the server cannot connect', async () => {
+    setServerConnection('https://synthetic-server.example', 'ts_synthetic_key')
+    const { resilientFetch } = await loadResilience()
+    const networkError = new TypeError('Failed to fetch')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockRejectedValue(networkError)
+
+    try {
+      await expect(resilientFetch('/vehicles', { retries: 0 })).rejects.toBe(networkError)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(getAccessToken()).toBe('ts_synthetic_key')
+      expect(assignSpy).not.toHaveBeenCalled()
+      expect(purgeMock).not.toHaveBeenCalled()
+    } finally {
+      fetchMock.mockRestore()
+    }
+  })
+
   it('does not sign out when both the API request and its auth probe cannot connect', async () => {
     const { resilientFetch, getConnectionStatus } = await loadResilience()
     const networkError = new TypeError('Failed to fetch')

@@ -10,6 +10,7 @@ import runtimeManifest from './en/runtime-manifest.json'
 import usageManifest from './en/usage-manifest.json'
 import shell from './en/shell.json'
 import { copyOwnerAdditions, drivesEmptyAddition, featureOwnedAdditions } from './excluded-feature-owned-producers.test'
+import externalAuthCopy from './__fixtures__/verified-external-auth-copy.json'
 
 const catalog = catalogBeforeDashboardPolish(currentCatalog)
 
@@ -125,6 +126,10 @@ function nested(resource: unknown, key: string): unknown {
     value && typeof value === 'object' ? (value as Json)[segment] : undefined, resource)
 }
 
+function shippingValue(key: string, previous: string): string {
+  return externalAuthCopy.changed.find(change => change.path.join('.') === key)?.current ?? previous
+}
+
 function leaves(resource: Json, prefix = ''): [string, unknown][] {
   return Object.entries(resource).flatMap(([key, value]) => {
     const path = prefix ? `${prefix}.${key}` : key
@@ -138,7 +143,7 @@ beforeAll(async () => {
   await english.init({
     lng: 'en',
     fallbackLng: 'en',
-    resources: { en: { translation: catalog } },
+    resources: { en: { translation: currentCatalog } },
     interpolation: { escapeValue: false },
   })
 })
@@ -157,17 +162,18 @@ describe('exact81 feature-owned consistent producer defaults', () => {
     expect(english.exists(key)).toBe(true)
     const result = english.t(key, { skipInterpolation: true, returnObjects: true })
     expect(typeof result).toBe('string')
-    expect(result).toBe(value)
+    expect(result).toBe(shippingValue(key, value))
     const resources = [shell, ...Object.values(generated).map(module => module.default)]
-    expect(resources.some(resource => nested(resource, key) === value)).toBe(true)
+    expect(resources.some(resource => nested(resource, key) === shippingValue(key, value))).toBe(true)
   })
 
   it.each(additions)('interpolates all producer placeholders for %s using installed i18next', (key, value) => {
+    const shipping = shippingValue(key, value)
     const options: Record<string, string | number> = {}
-    for (const match of value.matchAll(/\{\{(\w+)\}\}/g)) {
+    for (const match of shipping.matchAll(/\{\{(\w+)\}\}/g)) {
       options[match[1]] = match[1] === 'count' ? 2 : `<${match[1]}>`
     }
-    const expected = value.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(options[name]))
+    const expected = shipping.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(options[name]))
     expect(english.t(key, { ...options, returnObjects: true })).toBe(expected)
   })
 

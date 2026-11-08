@@ -1,0 +1,39 @@
+{
+  "added": {
+    "actionConfirmation": {
+      "title": "Confirm sensitive action",
+      "body": "This action can change or remove data. Your authentication provider handles sign-in; TeslaSync only asks you to confirm your intent.",
+      "type": "Type CONFIRM to continue"
+    },
+    "externalAuth": {
+      "title": "Authentication and access",
+      "subtitle": "Your authentication service owns browser sign-in, MFA and sessions.",
+      "identityTitle": "Connection identity",
+      "native": "This app uses a server access key. Browser authentication and provider sessions do not control that key.",
+      "provider": "External authentication provider",
+      "open": "Open mode: no browser authentication is configured. Restrict network access before exposing this installation.",
+      "unknown": "The server authentication policy is not available yet.",
+      "noIdentity": "No verified user identity was supplied for this request.",
+      "refresh": "Refresh identity",
+      "securityTitle": "Sign-in, MFA and device sessions",
+      "securityBody": "Manage your password, second factors, recovery codes and signed-in devices in your authentication service. TeslaSync does not create passwords, enroll MFA, issue browser sessions or revoke provider sessions.",
+      "securityHelp": "Open your authentication service directly to manage these settings. Its normal session policy applies; sensitive TeslaSync actions ask for confirmation, not another password.",
+      "checkSignIn": "Check provider sign-in",
+      "accessTitle": "Access policy",
+      "accessBody": "Everyone admitted by your browser authentication provider is a trusted operator with full application access. Limit who can enter at your proxy or authentication service; there is no separate TeslaSync role matrix.",
+      "connections": "Personal preferences remain separate by verified identity. Native and automation access keys keep their own scopes. Tesla account authorization, share tokens, webhook credentials and operation safeguards remain independent."
+    }
+  },
+  "changed": [
+    {"path": ["search", "entries", "security", "totpEnroll", "title"], "current": "Provider-managed MFA", "previous": "Enable two-factor authentication"},
+    {"path": ["search", "entries", "security", "totpEnroll", "desc"], "current": "Manage second factors in your authentication provider, not inside TeslaSync.", "previous": "Set up TOTP from your authenticator app to protect destructive admin actions."},
+    {"path": ["search", "entries", "security", "totpBackupCodes", "title"], "current": "Provider recovery codes", "previous": "TOTP backup codes"},
+    {"path": ["search", "entries", "security", "totpBackupCodes", "desc"], "current": "Your authentication provider owns recovery codes and account recovery.", "previous": "Regenerate or download the backup codes used when you lose access to your authenticator."},
+    {"path": ["search", "entries", "security", "totpDisable", "title"], "current": "Provider security policy", "previous": "Disable two-factor authentication"},
+    {"path": ["search", "entries", "security", "totpDisable", "desc"], "current": "Change MFA policy and credentials in the external authentication service.", "previous": "Remove the TOTP credential and revoke all backup codes for the current subject."},
+    {"path": ["search", "entries", "security", "sessionsList", "title"], "current": "Provider device sessions", "previous": "Active sessions"},
+    {"path": ["search", "entries", "security", "sessionsList", "desc"], "current": "View and revoke signed-in browser sessions in your authentication service.", "previous": "See which browsers and devices are currently signed in to TeslaSync and revoke individual sessions."},
+    {"path": ["search", "entries", "security", "sessionsRevokeAll", "title"], "current": "Provider sign-out controls", "previous": "Sign out all other devices"},
+    {"path": ["search", "entries", "security", "sessionsRevokeAll", "desc"], "current": "Use the external provider to sign out devices; TeslaSync does not issue browser sessions.", "previous": "Revoke every TeslaSync session except the current browser. Useful after a lost laptop or shared computer."}
+  ]
+}

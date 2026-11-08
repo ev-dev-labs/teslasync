@@ -1,6 +1,5 @@
-// Package auth holds repository types for the authentication aggregate:
-// sessions, subjects, sudo elevation tokens, TOTP enrollment + credentials,
-// generic tokens, and role-permission matrix rows.
+// Package auth stores verified upstream subject observations and encrypted
+// Tesla OAuth tokens. It does not store or issue application browser credentials.
 //
 // Per ADR-011, this bounded-context subpackage keeps auth repositories out of
 // the parent internal/database package. Callers import it as `dbauth` to

@@ -2,7 +2,7 @@
 //
 // Covers EVERY runtime export of ./useSettingsReset:
 //   - settingsResetKeys       — the stable, `as const` query-key namespace.
-//   - SudoCanceledError       — the re-export used by <ResetSection> to tell
+//   - ActionCanceledError       — the re-export used by <ResetSection> to tell
 //                               "user dismissed the reauth dialog" apart from a
 //                               genuine failure.
 //   - useResetSection         — POST /settings/reset { section }, receipt
@@ -16,7 +16,7 @@
 // by the typed fixtures below.
 //
 // Network is mocked at the `../client` boundary (the repo convention) while the
-// real SudoCanceledError is preserved via vi.importActual so the hook's
+// real ActionCanceledError is preserved via vi.importActual so the hook's
 // `instanceof` discrimination runs against genuine error instances. The toast
 // bridge is stubbed so we can assert the exact i18n key + fallback each branch
 // picks without mounting a ToastProvider.
@@ -39,7 +39,7 @@ vi.mock('../client', async () => {
   return { ...actual, request: vi.fn() };
 });
 
-import { request, SudoCanceledError } from '../client';
+import { request, ActionCanceledError } from '../client';
 import {
   settingsResetKeys,
   useResetSection,
@@ -112,15 +112,15 @@ describe('settingsResetKeys', () => {
 });
 
 // ---------------------------------------------------------------------------
-// SudoCanceledError (re-export)
+// ActionCanceledError (re-export)
 // ---------------------------------------------------------------------------
 
-describe('SudoCanceledError re-export', () => {
-  it('is a real Error subclass carrying the SudoCanceledError name', () => {
-    const err = new SudoCanceledError('nope');
+describe('ActionCanceledError re-export', () => {
+  it('is a real Error subclass carrying the ActionCanceledError name', () => {
+    const err = new ActionCanceledError('nope');
     expect(err).toBeInstanceOf(Error);
-    expect(err).toBeInstanceOf(SudoCanceledError);
-    expect(err.name).toBe('SudoCanceledError');
+    expect(err).toBeInstanceOf(ActionCanceledError);
+    expect(err.name).toBe('ActionCanceledError');
     expect(err.message).toBe('nope');
   });
 });
@@ -205,12 +205,12 @@ describe('useResetSection', () => {
     expect(invalidateSpy).not.toHaveBeenCalled();
   });
 
-  it('stays silent on a SudoCanceledError — the user already declined the dialog', async () => {
-    mockedRequest.mockRejectedValueOnce(new SudoCanceledError());
+  it('stays silent on a ActionCanceledError — the user already declined the dialog', async () => {
+    mockedRequest.mockRejectedValueOnce(new ActionCanceledError());
     const { Wrapper } = makeWrapper();
 
     const { result } = renderHook(() => useResetSection('automations'), { wrapper: Wrapper });
-    await expect(result.current.mutateAsync()).rejects.toBeInstanceOf(SudoCanceledError);
+    await expect(result.current.mutateAsync()).rejects.toBeInstanceOf(ActionCanceledError);
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(errorToast).not.toHaveBeenCalled();
@@ -266,12 +266,12 @@ describe('useResetAllSettings', () => {
     );
   });
 
-  it('stays silent on a SudoCanceledError instead of toasting an error', async () => {
-    mockedRequest.mockRejectedValueOnce(new SudoCanceledError('cancelled'));
+  it('stays silent on a ActionCanceledError instead of toasting an error', async () => {
+    mockedRequest.mockRejectedValueOnce(new ActionCanceledError('cancelled'));
     const { Wrapper } = makeWrapper();
 
     const { result } = renderHook(() => useResetAllSettings(), { wrapper: Wrapper });
-    await expect(result.current.mutateAsync()).rejects.toBeInstanceOf(SudoCanceledError);
+    await expect(result.current.mutateAsync()).rejects.toBeInstanceOf(ActionCanceledError);
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(errorToast).not.toHaveBeenCalled();

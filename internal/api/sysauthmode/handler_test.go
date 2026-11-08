@@ -73,8 +73,8 @@ func TestSystemAuthMode_ForwardAuthMissingHeader(t *testing.T) {
 	if body.Subject != nil {
 		t.Fatalf("subject: got %v, want nil when header missing", *body.Subject)
 	}
-	if !body.Capabilities.StepUpReauth {
-		t.Fatalf("capabilities.step_up_reauth must be true in forward-auth mode")
+	if body.Capabilities.StepUpReauth {
+		t.Fatalf("TeslaSync must not advertise browser credential step-up")
 	}
 }
 
@@ -102,11 +102,14 @@ func TestSystemAuthMode_ForwardAuthHeaderPresent(t *testing.T) {
 	if body.ProviderHint != "authentik" {
 		t.Fatalf("provider_hint: got %q, want authentik", body.ProviderHint)
 	}
-	if !body.Capabilities.TOTPEnrollment ||
-		!body.Capabilities.SessionList ||
+	if body.Capabilities.TOTPEnrollment ||
+		body.Capabilities.SessionList ||
 		!body.Capabilities.Impersonation ||
-		!body.Capabilities.RBAC {
-		t.Fatalf("capabilities: forward-auth must enable everything; got %+v", body.Capabilities)
+		body.Capabilities.RBAC {
+		t.Fatalf("provider must own MFA, browser sessions and access policy; got %+v", body.Capabilities)
+	}
+	if body.AuthenticationOwner != "external_provider" || body.AccessPolicy != "all_proxy_users_are_operators" {
+		t.Fatalf("unexpected authentication ownership: %+v", body)
 	}
 }
 

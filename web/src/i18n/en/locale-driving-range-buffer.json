@@ -798,11 +798,6 @@
       "wed": "Wed"
     }
   },
-  "rbac": {
-    "toasts": {
-      "saved": "RBAC matrix updated."
-    }
-  },
   "replay": {
     "elevation": {
       "aria": "Elevation profile chart — no data available yet",

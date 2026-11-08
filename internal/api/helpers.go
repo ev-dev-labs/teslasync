@@ -32,12 +32,6 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	httpx.WriteError(w, status, msg)
 }
 
-// writeErrorCode is a transitional wrapper around httpx.WriteErrorCode.
-// See writeJSON for the broader transitional plan.
-func writeErrorCode(w http.ResponseWriter, status int, msg, code string) {
-	httpx.WriteErrorCode(w, status, msg, code)
-}
-
 // writeTeslaTokenExpired drained to zero callers by R2d batch 8 (carves
 // drained all token-issuing handlers into resource subpackages, which call
 // httpx.WriteTeslaTokenExpired directly). Wrapper deleted per the carve

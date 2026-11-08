@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
@@ -27,9 +28,8 @@ func DefaultRateLimitConfig() RateLimitConfig {
 		RequestsPerWindow: 1000,
 		Window:            1 * time.Minute,
 		KeyFunc: func(r *http.Request) string {
-			// Use user from context if available, otherwise remote addr
-			if claims, ok := UserFromContext(r.Context()); ok {
-				return claims.UserID
+			if subject, ok := tsauth.AppTokenSubjectFromContext(r.Context()); ok {
+				return subject
 			}
 			return r.RemoteAddr
 		},

@@ -8,7 +8,7 @@ import {
   useImportCommunicationsCatalog,
   useServiceIntelligence,
   useWarrantyOutlook,
-  SudoCanceledError,
+  ActionCanceledError,
   type OfficialNHTSACommunicationsArtifactURL,
 } from '@/api/hooks/useServiceIntelligence';
 import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
@@ -137,7 +137,7 @@ export default function ServiceIntelligencePage() {
             catalogImport.isPending ? (catalogImport.variables ?? null) : null
           }
           importError={
-            catalogImport.error instanceof SudoCanceledError ? null : catalogImport.error
+            catalogImport.error instanceof ActionCanceledError ? null : catalogImport.error
           }
           onRetry={retryCatalog}
           onImport={importCatalog}

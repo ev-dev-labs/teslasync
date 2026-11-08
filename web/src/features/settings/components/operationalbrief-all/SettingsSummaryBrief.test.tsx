@@ -16,8 +16,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { SettingsSummaryBrief } from './SettingsSummaryBrief'
-import { SessionsSummaryCards } from '../sessions/SessionsSummaryCards'
-import { TotpKpiBand } from '../twofactor/TotpKpiBand'
 import { FleetSetupKpiBand } from '../fleet-setup/FleetSetupKpiBand'
 
 vi.mock('@/hooks/useUnits', () => ({
@@ -153,41 +151,6 @@ describe('settings summaries use the real compact Brief and raw bridge', () => {
     expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true')
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0)
     expect(screen.getByText('Count')).toBeInTheDocument()
-  })
-
-  it('retains session counts, relative/absolute activity and current-device context in the drawer', () => {
-    const { container } = render(<MemoryRouter><SessionsSummaryCards total={2} otherCount={1}
-      current={{ id: 'this', current: true, ip: '192.0.2.1',
-        user_agent: 'Mozilla/5.0 Chrome/120.0 Windows NT 10.0', created_at: '2026-10-01T00:00:00Z',
-        last_seen_at: '2026-10-06T12:00:00Z' }}
-      lastActive="2026-10-06T12:00:00Z" isLoading={false} isError={false} retained /></MemoryRouter>)
-    expect(container.querySelector('[data-operational-metric="sessions-total"]')).toHaveAttribute('data-value-state', 'value')
-    expect(container.querySelector('[data-operational-metric="sessions-other"]')).toHaveTextContent('1')
-    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
-    const drawer = screen.getByRole('dialog')
-    expect(within(drawer).getByText('192.0.2.1')).toBeInTheDocument()
-    expect(within(drawer).getByText('date:2026-10-06T12:00:00Z')).toBeInTheDocument()
-    expect(within(drawer).getByText('relative:2026-10-06T12:00:00Z')).toBeInTheDocument()
-  })
-
-  it('does not turn an unavailable session list into a successful empty list', () => {
-    const { container } = render(<SessionsSummaryCards total={0} otherCount={0} current={null}
-      lastActive={null} sourceAvailable={false} isLoading={false} isError={false} />)
-    for (const label of ['Active sessions', 'This device', 'Other devices', 'Last active']) {
-      assertOperationalMetricUnavailable(container, label)
-    }
-    expectHiddenCount(container, '4 empty fields are hidden.')
-    expect(screen.queryByText('0')).toBeNull()
-  })
-
-  it('keeps exhausted recovery codes measured and preserves RFC context without credential actions', () => {
-    const { container } = render(<TotpKpiBand data={{ mode: 'session', activated: true, backup_codes_remaining: 0 }}
-      isLoading={false} retained />)
-    expect(container.querySelector('[data-operational-metric="totp-backup"]')).toHaveAttribute('data-value-state', 'value')
-    expect(container.querySelector('[data-operational-metric="totp-backup"] [data-operational-value]')).toHaveTextContent('0')
-    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
-    expect(within(screen.getByRole('dialog')).getByText('RFC 6238')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Enable two-factor' })).toBeNull()
   })
 
   it('keeps resolved Fleet sources while an independent source is still loading', () => {

@@ -8,8 +8,7 @@ export const getAuthURL = () => request<{ auth_url: string; state: string }>('/a
 
 /**
  * Disconnects the Tesla account: revokes the stored refresh token and clears
- * saved credentials on the backend. Destructive and sudo-gated — the client's
- * step-up reauth interceptor may prompt for a fresh credential, and the returned
- * promise rejects with `SudoCanceledError` if the user dismisses that prompt.
+ * saved credentials on the backend. The client confirms intent before sending;
+ * cancellation rejects with `ActionCanceledError` without requesting a password.
  */
 export const disconnectAuth = () => request<{ status: string }>('/auth/disconnect', { method: 'POST' })

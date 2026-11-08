@@ -2,7 +2,7 @@ import { createElement, type ReactNode } from 'react';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { __resetSudoStateForTests, ApiError, registerSudoChallengeProvider } from '../client';
+import { __resetActionConfirmationForTests, ApiError, registerActionConfirmationProvider } from '../client';
 import { OperationalModeWriteError } from '@/lib/operationalMode';
 import {
   useGuardConfig, useGuardEvents, useGuardPanic, useSetGuardConfig,
@@ -45,7 +45,7 @@ function json(body: unknown, status = 200) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  __resetSudoStateForTests();
+  __resetActionConfirmationForTests();
   onlineManager.setOnline(true);
   window.history.replaceState(null, '', '/');
 });
@@ -54,7 +54,7 @@ afterEach(() => {
   cleanup();
   clients.splice(0).forEach(client => client.clear());
   onlineManager.setOnline(true);
-  __resetSudoStateForTests();
+  __resetActionConfirmationForTests();
   vi.restoreAllMocks();
   window.history.replaceState(null, '', '/');
 });
@@ -209,6 +209,9 @@ describe('Guard retained source outcomes through the actual request transport', 
 });
 
 describe('Guard actual write transport boundaries', () => {
+  beforeEach(() => {
+    registerActionConfirmationProvider(async () => {});
+  });
   it.each(['panic', 'config', 'acknowledge'] as const)(
     '%s rejects HTTP 502 without announcing success or replaying the write',
     async kind => {
@@ -258,15 +261,16 @@ describe('Guard actual write transport boundaries', () => {
     expect(toast.success).not.toHaveBeenCalled();
   });
 
-  it('keeps sudo reauthentication fail-closed without a mounted challenge provider', async () => {
+  it('fails closed before networking without a mounted confirmation provider', async () => {
+    __resetActionConfirmationForTests();
     const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
       json({ error: 'Reauthentication required', code: 'SUDO_REQUIRED' }, 401),
     );
     const { result } = renderHook(() => useGuardPanic(), { wrapper: wrapper() });
     await act(async () => {
-      await expect(result.current.mutateAsync(42)).rejects.toMatchObject({ name: 'SudoCanceledError' });
+      await expect(result.current.mutateAsync(42)).rejects.toMatchObject({ name: 'ActionCanceledError' });
     });
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
   });
 
@@ -294,21 +298,16 @@ describe('Guard actual write transport boundaries', () => {
     expect(toast.error).toHaveBeenCalledTimes(1);
   });
 
-  it('preserves the explicit sudo challenge and credentialed attempt', async () => {
-    const challenge = vi.fn().mockResolvedValue({
-      mode: 'session', token: 'guard-test-sudo',
-      expiresAt: new Date(Date.now() + 60_000).toISOString(),
-    });
-    registerSudoChallengeProvider(challenge);
+  it('confirms intent before the single command without issuing credentials', async () => {
+    const challenge = vi.fn().mockResolvedValue(undefined);
+    registerActionConfirmationProvider(challenge);
     const fetch = vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(json({ error: 'Reauthentication required', code: 'SUDO_REQUIRED' }, 401))
       .mockResolvedValueOnce(json({ vehicle_id: 42, vin: 'fixture', results: [] }));
     const { result } = renderHook(() => useGuardPanic(), { wrapper: wrapper() });
     await act(async () => { await result.current.mutateAsync(42); });
-    expect(challenge).toHaveBeenCalledWith('/vehicles/42/guard/panic');
-    expect(fetch).toHaveBeenCalledTimes(2);
-    expect(new Headers(fetch.mock.calls[1]?.[1]?.headers).get('X-Sudo-Token'))
-      .toBe('guard-test-sudo');
+    expect(challenge).toHaveBeenCalledWith('/vehicles/42/guard/panic', undefined);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).has('X-Sudo-Token')).toBe(false);
     expect(toast.success).toHaveBeenCalledTimes(1);
   });
 });

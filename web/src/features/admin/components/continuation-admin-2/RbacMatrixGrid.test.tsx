@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import type { RbacMatrixSessionResponse } from '@/api/hooks/useRbacMatrix';
+import type { RbacMatrixSessionResponse } from '@/api/types';
 import { RbacMatrixGrid } from './RbacMatrixGrid';
 import { snapshotToDraft } from './rbacPresentation';
 

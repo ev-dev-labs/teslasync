@@ -81,7 +81,6 @@ const LIVE_ONLY_MUTATIONS = {
     'useDeleteGeofenceRate',
     'useApplyGeofenceRate',
   ],
-  'hooks/useRbacMatrix.ts': ['useUpsertRbacCells'],
   'hooks/useRedisSignals.ts': [
     'usePurgeRedisSignals',
     'usePurgeAllRedisSignals',
@@ -257,7 +256,6 @@ const MODE_INDEPENDENT_MUTATIONS = {
     'useDeleteSavedView',
     'useSetDefaultSavedView',
   ],
-  'hooks/useSessions.ts': ['useRevokeSession', 'useRevokeAllOtherSessions'],
   'hooks/useSettings.ts': [
     'useSaveSettings',
     'useAuthURL',
@@ -282,19 +280,11 @@ const MODE_INDEPENDENT_MUTATIONS = {
   // for a live guard to protect.
   'hooks/useSupport.ts': ['useSubmitProblemReport'],
   'hooks/useSystemDiagnostic.ts': ['useRunDiagnostic'],
-  'hooks/useTOTP.ts': [
-    'useTOTPEnroll',
-    'useTOTPVerify',
-    'useTOTPStepUp',
-    'useTOTPRevoke',
-    'useTOTPRegenerateBackupCodes',
-  ],
   'hooks/useTelemetry.ts': [
     'useRefreshFleetTelemetryErrorVINs',
     'useRefreshFleetTelemetryErrors',
   ],
   'hooks/useUser.ts': [
-    'useUpdateUser',
     'useRefreshTeslaFeatureConfig',
     'useRefreshTeslaRegion',
     'useRefreshTeslaOrders',

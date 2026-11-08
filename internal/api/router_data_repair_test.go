@@ -95,14 +95,11 @@ func (f *dataRepairRouteFake) DeleteDrive(w http.ResponseWriter, _ *http.Request
 // surface — a renamed handler method fails the build here, not in production.
 var _ dataRepairRoutes = (*datarepair.DataRepairHandler)(nil)
 
-// passthroughSudo stands in for RequireSudo so the routing assertions are not
-// entangled with step-up auth; the guard itself is asserted separately below.
-func passthroughSudo(next http.Handler) http.Handler { return next }
-
-func newDataRepairTestRouter(h dataRepairRoutes, sudo func(http.Handler) http.Handler) chi.Router {
+func newDataRepairTestRouter(h dataRepairRoutes) chi.Router {
 	router := chi.NewRouter()
 	router.Route("/api/v1", func(r chi.Router) {
-		mountDataRepairRoutes(r, h, sudo)
+		r.Use(ForwardAuthMiddleware("X-Forwarded-User"))
+		mountDataRepairRoutes(r, h)
 	})
 	return router
 }
@@ -145,9 +142,11 @@ func TestDataRepairRoutes(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			handler := &dataRepairRouteFake{}
-			router := newDataRepairTestRouter(handler, passthroughSudo)
+			router := newDataRepairTestRouter(handler)
 
 			req := httptest.NewRequest(tt.method, tt.path, nil)
+			req.Header.Set("X-Forwarded-User", "operator")
+			req.AddCookie(&http.Cookie{Name: "teslasync_session", Value: "retired-local-session"})
 			rec := httptest.NewRecorder()
 			router.ServeHTTP(rec, req)
 
@@ -161,16 +160,7 @@ func TestDataRepairRoutes(t *testing.T) {
 	}
 }
 
-func TestDataRepairRoutes_ReadsAreUnguardedAndWritesAreSudoGated(t *testing.T) {
-	// A sudo middleware that refuses everything. All GETs and the two
-	// read-only previews must still be reachable while every mutation is
-	// intercepted before it reaches its handler.
-	denyAll := func(http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusForbidden)
-		})
-	}
-
+func TestDataRepairRoutes_AllRequestsRequireProviderIdentity(t *testing.T) {
 	reads := []struct {
 		method string
 		path   string
@@ -188,16 +178,16 @@ func TestDataRepairRoutes_ReadsAreUnguardedAndWritesAreSudoGated(t *testing.T) {
 	}
 	for _, r := range reads {
 		handler := &dataRepairRouteFake{}
-		router := newDataRepairTestRouter(handler, denyAll)
+		router := newDataRepairTestRouter(handler)
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, httptest.NewRequest(r.method, r.path, nil))
 
-		if rec.Code != http.StatusNoContent {
-			t.Errorf("%s %s: status = %d, want 204 (read-only diagnosis must not be sudo-gated)",
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s: status = %d, want 401 without provider identity",
 				r.method, r.path, rec.Code)
 		}
-		if handler.operation != r.want {
-			t.Errorf("%s %s: operation = %q, want %q", r.method, r.path, handler.operation, r.want)
+		if handler.operation != "" {
+			t.Errorf("%s %s: reached handler without provider identity", r.method, r.path)
 		}
 	}
 
@@ -222,16 +212,16 @@ func TestDataRepairRoutes_ReadsAreUnguardedAndWritesAreSudoGated(t *testing.T) {
 	}
 	for _, wr := range writes {
 		handler := &dataRepairRouteFake{}
-		router := newDataRepairTestRouter(handler, denyAll)
+		router := newDataRepairTestRouter(handler)
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, httptest.NewRequest(wr.method, wr.path, nil))
 
-		if rec.Code != http.StatusForbidden {
-			t.Errorf("%s %s: status = %d, want 403 (mutations must be sudo-gated)",
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s: status = %d, want 401 without provider identity",
 				wr.method, wr.path, rec.Code)
 		}
 		if handler.operation != "" {
-			t.Errorf("%s %s: reached handler %q despite the sudo gate",
+			t.Errorf("%s %s: reached handler %q without provider identity",
 				wr.method, wr.path, handler.operation)
 		}
 	}
@@ -254,9 +244,11 @@ func TestDataRepairRoutes_RejectsIncorrectResourcePluralization(t *testing.T) {
 	}
 	for _, tt := range tests {
 		handler := &dataRepairRouteFake{}
-		router := newDataRepairTestRouter(handler, passthroughSudo)
+		router := newDataRepairTestRouter(handler)
 		rec := httptest.NewRecorder()
-		router.ServeHTTP(rec, httptest.NewRequest(tt.method, tt.path, nil))
+		req := httptest.NewRequest(tt.method, tt.path, nil)
+		req.Header.Set("X-Forwarded-User", "operator")
+		router.ServeHTTP(rec, req)
 
 		if rec.Code != http.StatusNotFound {
 			t.Errorf("%s %s: status = %d, want 404", tt.method, tt.path, rec.Code)

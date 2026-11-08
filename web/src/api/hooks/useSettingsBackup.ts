@@ -8,12 +8,9 @@
 //   • useDryRunImport    → POST /settings/import { dry_run: true }
 //   • useApplyImport     → POST /settings/import { dry_run: false }
 //
-// Apply runs through the standard `request()` client which already
-// understands SUDO_REQUIRED — when the backend's RequireSudo middleware
-// rejects with 401+SUDO_REQUIRED the cached interceptor opens the
-// existing <ReauthDialog>, replays the request with the resulting
-// step-up token, and returns the result transparently. No bespoke
-// step-up plumbing here.
+// The shared `request()` client confirms apply intent before transport.
+// Preview is read-only and requires no confirmation. Cancelled actions send
+// nothing, and failed mutations are terminal rather than automatically replayed.
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -84,9 +81,8 @@ export interface ImportArgs {
 /**
  * Mutation hook for the dry-run preview. Returns the per-section
  * {added, updated, skipped} summary the page renders in collapsible
- * panels. Does NOT trip the SUDO interceptor in practice because
- * dry-run only reads — the route is still gated so the cached step-up
- * token is reused for the subsequent apply, avoiding a double-prompt.
+ * panels. Dry-run only reads and does not require intent confirmation;
+ * the subsequent apply is confirmed separately before transport.
  */
 export function useDryRunImport() {
   const qc = useQueryClient();
@@ -106,10 +102,10 @@ export function useDryRunImport() {
 }
 
 /**
- * Mutation hook for the apply path. SUDO interception is handled
- * transparently by the shared `request()` client; on user-cancel the
- * mutation rejects with `SudoCanceledError` (re-exported from
- * `@/api/client`) which the page handles as a non-error.
+ * Mutation hook for the apply path. The shared `request()` client confirms
+ * intent before transport and never automatically replays a failed apply.
+ * Cancellation rejects with `ActionCanceledError` (re-exported from
+ * `@/api/client`), which the page handles as a non-error.
  */
 export function useApplyImport() {
   const qc = useQueryClient();

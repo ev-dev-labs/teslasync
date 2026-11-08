@@ -58,17 +58,43 @@ Every private `/api/v1` route passes through ForwardAuth, then:
    open-mode local development permits only loopback origins;
 2. a 120 unsafe-request-per-authenticated-principal-per-minute backstop
    (transport peer fallback captured before `RealIP`);
-3. existing lower per-route limits and sudo/typed-confirmation controls.
+3. existing lower per-route limits, impersonation restrictions and typed intent confirmations.
 
 The middleware allows headerless API clients, but rejects browser requests
 with a mismatched `Origin` or `Sec-Fetch-Site: cross-site`. Public health,
 RUM, web-error, share, and webhook routes are deliberately outside this route
 group and retain their explicit token/signature/body/rate-limit controls.
 
-ForwardAuth remains the only production identity provider integration. Do not
-put session or sudo tokens in browser storage. TeslaSync's own session and
-impersonation cookies are `HttpOnly`, `SameSite=Lax`, and `Secure` when the
-request was observed through TLS.
+The external provider owns browser login, passwords, MFA and session expiry.
+Every user admitted upstream is a trusted operator: restrict application access
+in that provider, not a TeslaSync role matrix. TeslaSync does not issue browser
+sessions or store browser passwords/MFA secrets. Native/API credentials keep
+their scope and expiry checks; Tesla OAuth remains independent. Impersonation
+cookies are `HttpOnly`, `SameSite=Lax`, and `Secure` when observed through TLS.
+
+Set `FORWARD_AUTH_HEADER` (Helm: `config.forwardAuthHeader`) to the trusted
+identity header from your gateway. The gateway must strip client-supplied
+identity headers and inject only its verified identity. Protect both static
+pages and `/api/v1` at the external edge, including SSE and
+`/api/v1/auth/browser-login`; do not expose the backend around that edge.
+Compose publishes both API and web on loopback only; container-based gateways
+should reach them on the private network. Empty identity configuration remains open
+development mode, not production authentication.
+
+Configure API authentication failures as HTTP 401 rather than CORS-blocked
+cross-origin login redirects. The browser then navigates to the uncached,
+protected `/api/v1/auth/browser-login`, where the gateway performs its ordinary
+login/MFA flow before TeslaSync returns to a validated local path. JSON calls
+that receive login HTML also initiate recovery. Failed mutations are never
+automatically replayed. `web.reauthUrl` remains an optional provider-specific
+entry URL; the default requires no vendor-specific outpost path.
+
+For battery certificate signature continuity, set
+`TESLASYNC_BATTERY_CERTIFICATE_SIGNING_KEY` (Helm: `certificates.signingKey`) to
+the previous signing value. `AUTH_JWT_SECRET` and supplied legacy
+`auth.jwtSecret` chart values are migration inputs for certificates only;
+neither enables application browser authentication. Historical local MFA,
+session and permission tables are left intact but no longer used.
 
 The web proxy preserves the browser `Host` (including a non-default port) for
 direct Compose traffic, but strips browser-provided `X-Forwarded-For`,

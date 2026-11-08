@@ -6,12 +6,12 @@ import {
 } from '../mockApi'
 import { expectDialogsInsideViewport, expectNoHorizontalOverflow } from '../qualityAssertions'
 import {
-  accountSessions,
   deploymentVersion,
   expectSettingsReadOnly,
   fleetApiInfo,
   installSettingsFixtures,
   publicKey,
+  providerPolicy,
   savedSettings,
   usageToday,
   zeroUsage,
@@ -119,6 +119,16 @@ async function selectCategory(page: Page, width: number, id: string, label: RegE
   }
 }
 
+async function expectProviderGuidance(page: Page, api: Awaited<ReturnType<typeof installSettingsFixtures>>['api']) {
+  for (const name of ['Connection identity', 'Sign-in, MFA and device sessions', 'Access policy']) {
+    await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
+  }
+  await expect(page.getByText(/there is no separate TeslaSync role matrix/)).toBeVisible()
+  await expect(page.getByRole('button', { name: /enroll|revoke session|sign out all other|save permissions/i })).toHaveCount(0)
+  expect(api.requests.filter(({ path }) =>
+    /^\/(?:api\/v1\/)?(?:auth\/(?:reauth|totp|sessions?)(?:\/|$)|admin\/rbac\/matrix$)/.test(path))).toEqual([])
+}
+
 const layouts = [320, 1440].flatMap(width =>
   (['dark', 'light'] as const).map(theme => ({ width, theme })))
 
@@ -213,50 +223,38 @@ for (const { width, theme } of layouts) {
     await assertMockApiComplete(page, api)
   })
 
-  test(`sessions retain counts, device and network context and separate sign-out controls at ${suffix}`, async ({ page }) => {
+  test(`provider sessions retain verified identity and keyboard refresh without local device controls at ${suffix}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
-    const { api } = await installSettingsFixtures(page, theme, '/account/sessions', { sessions: accountSessions, forwardAuth: true })
+    const { api } = await installSettingsFixtures(page, theme, '/account/sessions', { authMode: providerPolicy })
     await page.goto('/account/sessions', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, api)
     await expectThemeApplied(page, theme)
-    const brief = page.getByTestId('sessions-summary')
-    await expectBrief(brief, 4)
-    await expectValue(brief, 'sessions-total', '2')
-    await expectValue(brief, 'sessions-other', '1')
-    await expectValue(brief, 'sessions-current', 'Chrome · Windows')
-    await expect(metric(brief, 'sessions-last')).toHaveAttribute('data-value-state', 'value')
-    await reviewWithKeyboard(page, brief, 'Session overview', 'Account session list',
-      { texts: ['Source available', '192.0.2.10', 'not a historical activity range'] })
-    await expect(page.getByRole('heading', { name: 'Device breakdown', exact: true })).toBeVisible()
-    await expect(page.getByRole('table')).toBeVisible()
-    await page.getByTestId('active-sessions-revoke-all-others').click()
-    const confirmation = page.getByRole('dialog', { name: 'Sign out all other devices?', exact: true })
-    await expect(confirmation).toBeVisible()
-    await expect(confirmation.locator('[data-operational-brief]')).toHaveCount(0)
-    await expectDialogsInsideViewport(page)
-    await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click()
-    await expectValue(brief, 'sessions-total', '2')
+    await expectProviderGuidance(page, api)
+    await expect(page.getByText(providerPolicy.subject!, { exact: true })).toBeVisible()
+    await expect(page.getByText(providerPolicy.provider_hint!, { exact: true })).toBeVisible()
+    const before = api.requests.filter(request => request.path.endsWith('/system/auth-mode')).length
+    const refresh = page.getByRole('button', { name: 'Refresh identity', exact: true })
+    await refresh.focus()
+    await page.keyboard.press('Enter')
+    await expect.poll(() => api.requests.filter(request => request.path.endsWith('/system/auth-mode')).length).toBeGreaterThan(before)
+    await waitForHarnessReady(page, api)
+    await expectProviderGuidance(page, api)
     await expectNoHorizontalOverflow(page)
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
 
-  test(`TOTP measured zero recovery codes keep credential and RFC detail at ${suffix}`, async ({ page }) => {
+  test(`MFA provider guidance keeps recovery management outside the app at ${suffix}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
-    const { api } = await installSettingsFixtures(page, theme, '/account/2fa')
+    const { api } = await installSettingsFixtures(page, theme, '/account/2fa', { authMode: providerPolicy })
     await page.goto('/account/2fa', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, api)
     await expectThemeApplied(page, theme)
-    const brief = page.getByTestId('totp-summary')
-    await expectBrief(brief, 3)
-    await expectValue(brief, 'totp-status', 'Active')
-    await expectMissing(brief, 'totp-lastUsed')
-    await expectValue(brief, 'totp-backup', '0')
-    await expectValue(brief, 'totp-method', 'TOTP')
-    await reviewWithKeyboard(page, brief, 'Two-factor overview', 'Account two-factor status',
-      { texts: ['Source available', 'RFC 6238'], hidden: 1 })
-    await expect(page.getByRole('region', { name: 'Manage two-factor authentication', exact: true })).toBeVisible()
-    await expect(page.getByRole('region', { name: 'Two-factor apps and recovery', exact: true })).toBeVisible()
+    await expectProviderGuidance(page, api)
+    await expect(page.getByText(/Manage your password, second factors, recovery codes and signed-in devices in your authentication service/)).toBeVisible()
+    await expect(page.getByText(/TeslaSync does not create passwords, enroll MFA, issue browser sessions or revoke provider sessions/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Check provider sign-in', exact: true })).toBeVisible()
+    await expect(page.getByRole('main').getByRole('textbox')).toHaveCount(0)
     await expectNoHorizontalOverflow(page)
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
@@ -417,36 +415,28 @@ for (const theme of ['dark', 'light'] as const) {
     await assertMockApiComplete(page, api)
   })
 
-  test(`empty session list is measured zero and not a missing source in ${theme}`, async ({ page }) => {
+  test(`provider identity absence never invents a local session list in ${theme}`, async ({ page }) => {
     const { api } = await installSettingsFixtures(page, theme, '/account/sessions', {
-      sessions: { mode: 'session', sessions: [] },
+      authMode: { ...providerPolicy, subject: undefined },
     })
     await page.goto('/account/sessions', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, api)
-    const brief = page.getByTestId('sessions-summary')
-    await expectBrief(brief, 4)
-    await expectValue(brief, 'sessions-total', '0')
-    await expectValue(brief, 'sessions-other', '0')
-    await expect(page.getByTestId('active-sessions-revoke-all-others')).toHaveCount(0)
-    await reviewWithKeyboard(page, brief, 'Session overview', 'Account session list',
-      { texts: ['Source available'] })
+    await expectProviderGuidance(page, api)
+    await expect(page.getByText('No verified user identity was supplied for this request.', { exact: true })).toBeVisible()
+    await expect(page.getByRole('main').getByRole('table')).toHaveCount(0)
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
 
-  test(`missing TOTP backup count is unknown even when credential protection is active in ${theme}`, async ({ page }) => {
+  test(`MFA open-mode policy never advertises local enrollment or provider sign-in in ${theme}`, async ({ page }) => {
     const { api } = await installSettingsFixtures(page, theme, '/account/2fa', {
-      totp: { mode: 'session', activated: true },
+      authModeState: 'open',
     })
     await page.goto('/account/2fa', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, api)
-    const brief = page.getByTestId('totp-summary')
-    await expectValue(brief, 'totp-status', 'Active')
-    await expectMissing(brief, 'totp-lastUsed')
-    await expectMissing(brief, 'totp-backup')
-    await expectValue(brief, 'totp-method', 'TOTP')
-    await reviewWithKeyboard(page, brief, 'Two-factor overview', 'Account two-factor status',
-      { texts: ['Source available'], hidden: 2 })
+    await expectProviderGuidance(page, api)
+    await expect(page.getByText(/Open mode: no browser authentication is configured/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Check provider sign-in', exact: true })).toHaveCount(0)
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
@@ -512,41 +502,33 @@ for (const theme of ['dark', 'light'] as const) {
     await assertMockApiComplete(page, api)
   })
 
-  test(`sessions missing source remains unknown and actual Retry restores counts in ${theme}`, async ({ page }) => {
+  test(`unavailable provider authentication policy keeps all panels and real refresh restores identity in ${theme}`, async ({ page }) => {
     test.setTimeout(120_000)
     await page.setViewportSize({ width: 320, height: 900 })
     const { api, state } = await installSettingsFixtures(page, theme, '/account/sessions', {
-      sessionsState: 'unavailable',
+      authModeState: 'unavailable',
     })
     await page.goto('/account/sessions', { waitUntil: 'domcontentloaded' })
-    const brief = page.getByTestId('sessions-summary')
     await waitForHarnessReady(page, api)
-    await expectMissing(brief, 'sessions-total')
-    await expectMissing(brief, 'sessions-other')
-    await expectMissing(brief, 'sessions-current')
-    await expectMissing(brief, 'sessions-last')
-    await reviewWithKeyboard(page, brief, 'Session overview', 'Account session list',
-      { texts: ['Source unavailable', 'No metric values are available yet.'] })
-    state.sessionsState = 'available'
-    await page.getByRole('region', { name: 'Session summary', exact: true })
-      .getByRole('button', { name: 'Retry', exact: true }).click()
-    await expectValue(brief, 'sessions-total', '2')
-    await expectValue(brief, 'sessions-other', '1')
-    await reviewWithKeyboard(page, brief, 'Session overview', 'Account session list',
-      { texts: ['Source available'] })
+    await expectProviderGuidance(page, api)
+    await expect(page.getByText('The server authentication policy is not available yet.', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Check provider sign-in', exact: true })).toHaveCount(0)
+    state.authModeState = 'available'
+    await page.getByRole('button', { name: 'Refresh identity', exact: true }).click()
+    await expect(page.getByText(providerPolicy.subject!, { exact: true })).toBeVisible()
+    await expectProviderGuidance(page, api)
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)
   })
 
-  test(`open-mode sessions retain the authentication notice rather than fabricate a zero summary in ${theme}`, async ({ page }) => {
+  test(`open-mode provider sessions retain the network warning without fabricating devices in ${theme}`, async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 900 })
-    const { api } = await installSettingsFixtures(page, theme, '/account/sessions', { sessionsState: 'open' })
+    const { api } = await installSettingsFixtures(page, theme, '/account/sessions', { authModeState: 'open' })
     await page.goto('/account/sessions', { waitUntil: 'domcontentloaded' })
     await waitForHarnessReady(page, api)
-    await expect(page.getByTestId('active-sessions-open-mode')).toContainText('Session tracking unavailable')
-    await expect(page.getByTestId('active-sessions-open-mode')).toContainText('X-Forwarded-User')
-    await expect(page.getByTestId('sessions-summary')).toHaveCount(0)
-    await expect(page.getByTestId('active-sessions-revoke-all-others')).toHaveCount(0)
+    await expectProviderGuidance(page, api)
+    await expect(page.getByText(/Restrict network access before exposing this installation/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Check provider sign-in', exact: true })).toHaveCount(0)
     await expectNoHorizontalOverflow(page)
     expectSettingsReadOnly(api)
     await assertMockApiComplete(page, api)

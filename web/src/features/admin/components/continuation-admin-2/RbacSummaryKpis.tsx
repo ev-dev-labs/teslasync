@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { CheckCheck, KeyRound, Layers, ShieldCheck, UserCircle, Users } from 'lucide-react';
 import { MetricCard } from '@/components/data-display';
-import type { RbacMatrixSessionResponse } from '@/api/hooks/useRbacMatrix';
+import type { RbacMatrixSessionResponse } from '@/api/types';
 import { countGrants, permsByCategory } from './rbacPresentation';
 
 export function RbacSummaryKpis({ payload }: { payload: RbacMatrixSessionResponse }) {

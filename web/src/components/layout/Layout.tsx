@@ -7,6 +7,7 @@ import { MaintenanceBanner } from '../feedback/MaintenanceBanner'
 import { ImpersonationBanner } from '../feedback/ImpersonationBanner'
 import { TopProgress } from '../feedback/TopProgress'
 import { SessionExpiredModal } from '../feedback/SessionExpiredModal'
+import { ActionConfirmationRoot } from '../feedback/ActionConfirmationRoot'
 import { AnnouncerRegion } from '@/components/a11y'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -107,16 +108,6 @@ const LazyFeedbackModal = lazy(async () => {
 const LazyChangelogModal = lazy(async () => {
   const module = await import('../feedback/ChangelogModal')
   return { default: module.ChangelogModal }
-})
-
-const LazySessionExpiringModal = lazy(async () => {
-  const module = await import('../feedback/SessionExpiringModal')
-  return { default: module.SessionExpiringModal }
-})
-
-const LazyReauthDialogRoot = lazy(async () => {
-  const module = await import('../feedback/ReauthDialog')
-  return { default: module.ReauthDialogRoot }
 })
 
 const LazyGotoIndicator = lazy(async () => {
@@ -1464,16 +1455,8 @@ export default function Layout() {
           where Tesla-backed calls 401 but non-Tesla data still loads. */}
       {presentation.mode === 'standard' && <TeslaReauthBanner />}
 
-      {/* ForwardAuth session-expiry modals —
-          SessionExpiringModal opens ~60s before the proxy cookie ages
-          out (soft-dismissible countdown with unsaved-draft list).
-          SessionExpiredModal hard-blocks the UI when the cookie has
-          actually expired (or any API call returned 401), preserving
-          the current URL so the user can resume after re-auth.
-          Both are no-ops in open mode (no FORWARD_AUTH_HEADER). */}
-      <Suspense fallback={null}><LazySessionExpiringModal /></Suspense>
       <SessionExpiredModal />
-      <Suspense fallback={null}><LazyReauthDialogRoot /></Suspense>
+      <ActionConfirmationRoot />
 
       {/* Keyboard shortcut overlays */}
       <GlobalShortcuts />

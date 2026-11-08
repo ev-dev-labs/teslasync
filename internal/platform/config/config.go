@@ -18,7 +18,6 @@ type Config struct {
 	Redis          RedisConfig          `envPrefix:"REDIS_"`
 	Tesla          TeslaConfig          `envPrefix:"TESLA_"`
 	MQTT           MQTTConfig           `envPrefix:"MQTT_"`
-	Auth           AuthConfig           `envPrefix:"AUTH_"`
 	Features       FeatureFlags         `envPrefix:"FEATURE_"`
 	OpenTelemetry  OpenTelemetryConfig  `envPrefix:"OTEL_"`
 	FleetTelemetry FleetTelemetryConfig `envPrefix:"FLEET_TELEMETRY_"`
@@ -102,12 +101,6 @@ type MQTTConfig struct {
 // BrokerURL returns the MQTT broker URL.
 func (m MQTTConfig) BrokerURL() string {
 	return fmt.Sprintf("tcp://%s:%d", m.Host, m.Port)
-}
-
-// AuthConfig holds authentication settings.
-type AuthConfig struct {
-	Enabled   bool   `env:"ENABLED" envDefault:"false"`
-	JWTSecret string `env:"JWT_SECRET" envDefault:""`
 }
 
 // FeatureFlags controls optional feature toggles.
@@ -204,9 +197,6 @@ func (c *Config) validate() error {
 	}
 	if c.Database.MinConns > c.Database.MaxConns {
 		return fmt.Errorf("database min_conns (%d) must not exceed max_conns (%d)", c.Database.MinConns, c.Database.MaxConns)
-	}
-	if c.Auth.Enabled && c.Auth.JWTSecret == "" {
-		return fmt.Errorf("auth is enabled but JWT_SECRET is not set")
 	}
 	if c.Redis.Enabled && c.Redis.Port < 1 {
 		return fmt.Errorf("redis is enabled but port is invalid: %d", c.Redis.Port)

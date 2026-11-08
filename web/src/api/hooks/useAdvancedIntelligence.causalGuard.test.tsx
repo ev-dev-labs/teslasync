@@ -10,10 +10,9 @@ import {
 } from '@/lib/operationalMode';
 import {
   ApiError,
-  __resetSudoStateForTests,
-  registerSudoChallengeProvider,
-  setCachedSudoToken,
-  SudoCanceledError,
+  __resetActionConfirmationForTests,
+  registerActionConfirmationProvider,
+  ActionCanceledError,
 } from '../client';
 import { advancedIntelligenceKeys, useCreateCausalExperiment } from './useAdvancedIntelligence';
 
@@ -167,7 +166,7 @@ async function rejectMutation(fixture: Fixture, body = payload): Promise<unknown
 }
 
 beforeEach(() => {
-  __resetSudoStateForTests();
+  __resetActionConfirmationForTests();
   toast.success.mockReset();
   toast.error.mockReset();
   setMode(true);
@@ -178,7 +177,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   for (const client of clients.splice(0)) client.clear();
-  __resetSudoStateForTests();
+  __resetActionConfirmationForTests();
   vi.restoreAllMocks();
   if (originalOnline) Object.defineProperty(window.navigator, 'onLine', originalOnline);
   else Reflect.deleteProperty(window.navigator, 'onLine');
@@ -227,9 +226,8 @@ describe('useCreateCausalExperiment real causal live write guard', () => {
     { caseName: 'offline historical as_of', online: false, asOf: '2026-01-05T00:00:00Z', mode: 'as_of' },
   ] as const)('$caseName rejects before POST or SUDO and retains cache and exact guard error', async ({ online, asOf, mode }) => {
     setMode(online, asOf);
-    setCachedSudoToken({ token: 'synthetic-cached-sudo', expiresAtMs: Date.now() + 60_000 });
     const challenge = vi.fn();
-    registerSudoChallengeProvider(challenge);
+    registerActionConfirmationProvider(challenge);
     const fixture = setup();
     expect(readOperationalModeFromEnvironment()).toMatchObject({ mode, online, isReadOnly: true });
     const error = await rejectMutation(fixture);
@@ -266,11 +264,8 @@ describe('useCreateCausalExperiment real causal live write guard', () => {
     const error = await rejectMutation(fixture, body);
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ status: 422, code: 'CONFIRMATION_REQUIRED', message: 'Confirmation required' });
-    // Preserve the existing direct request followed by normal resilient fallback.
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expectPost(0, body);
-    // resilientFetch preserves supplied headers instead of adding its JSON default.
-    expectPost(1, body, null);
     expect(body.confirmed).toBe(false);
   });
 
@@ -283,45 +278,41 @@ describe('useCreateCausalExperiment real causal live write guard', () => {
     expectPost(0);
   });
 
-  it('live SUDO challenge replays identical POST body with token and invalidates only after success', async () => {
+  it('live authentication denial retains reads without issuing credentials or replaying POST', async () => {
     const fixture = setup();
     fetchMock.mockResolvedValueOnce(jsonResponse({ error: 'Step-up required', code: 'SUDO_REQUIRED' }, 401));
     const challenge = vi.fn(async () => {
       expectRetainedWithoutSuccess(fixture);
       return { mode: 'session' as const, token: 'synthetic-sudo', expiresAt: new Date(Date.now() + 60_000).toISOString() };
     });
-    registerSudoChallengeProvider(challenge);
-    await act(async () => { await fixture.result.current.mutateAsync(payload); });
-    expect(challenge).toHaveBeenCalledExactlyOnceWith('/advanced-intelligence/causal-experiments');
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    registerActionConfirmationProvider(challenge);
+    expect(await rejectMutation(fixture)).toMatchObject({ status: 401 });
+    expect(challenge).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expectPost(0);
-    expectPost(1);
     expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).has('X-Sudo-Token')).toBe(false);
-    expect(new Headers(fetchMock.mock.calls[1]?.[1]?.headers).get('X-Sudo-Token')).toBe('synthetic-sudo');
-    expectSuccess(fixture);
   });
 
-  it('live cached SUDO token is preserved without challenge or request body changes', async () => {
-    setCachedSudoToken({ token: 'synthetic-cached-sudo', expiresAtMs: Date.now() + 60_000 });
+  it('live ordinary creation does not invent a credential challenge or alter the body', async () => {
     const challenge = vi.fn();
-    registerSudoChallengeProvider(challenge);
+    registerActionConfirmationProvider(challenge);
     const fixture = setup();
     await act(async () => { await fixture.result.current.mutateAsync(payload); });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expectPost(0);
-    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get('X-Sudo-Token')).toBe('synthetic-cached-sudo');
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get('X-Sudo-Token')).toBeNull();
     expect(challenge).not.toHaveBeenCalled();
     expectSuccess(fixture);
   });
 
-  it('live canceled SUDO retains original error without replay POST or success invalidation', async () => {
+  it('retired credential challenge codes never trigger local credential issuance', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ error: 'Step-up required', code: 'SUDO_REQUIRED' }, 401));
-    const canceled = new SudoCanceledError('Synthetic cancellation');
+    const canceled = new ActionCanceledError('Synthetic cancellation');
     const challenge = vi.fn(async () => { throw canceled; });
-    registerSudoChallengeProvider(challenge);
+    registerActionConfirmationProvider(challenge);
     const fixture = setup();
-    expect(await rejectMutation(fixture)).toBe(canceled);
-    expect(challenge).toHaveBeenCalledExactlyOnceWith('/advanced-intelligence/causal-experiments');
+    expect(await rejectMutation(fixture)).toMatchObject({ status: 401, code: 'SUDO_REQUIRED' });
+    expect(challenge).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expectPost(0);
   });

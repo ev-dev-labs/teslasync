@@ -32,11 +32,13 @@ const (
 // API surface; the camelCaseKeys transformer on the frontend exposes
 // both forms.
 type AuthModeResponse struct {
-	Mode          string               `json:"mode"`
-	SubjectHeader string               `json:"subject_header,omitempty"`
-	Subject       *string              `json:"subject,omitempty"`
-	ProviderHint  string               `json:"provider_hint,omitempty"`
-	Capabilities  AuthModeCapabilities `json:"capabilities"`
+	Mode                string               `json:"mode"`
+	SubjectHeader       string               `json:"subject_header,omitempty"`
+	Subject             *string              `json:"subject,omitempty"`
+	ProviderHint        string               `json:"provider_hint,omitempty"`
+	AuthenticationOwner string               `json:"authentication_owner"`
+	AccessPolicy        string               `json:"access_policy"`
+	Capabilities        AuthModeCapabilities `json:"capabilities"`
 }
 
 // AuthModeCapabilities is the per-feature gate the SPA uses to decide
@@ -85,12 +87,16 @@ func NewHandler(headerName, providerHint string) *Handler {
 // would force every consumer to invent its own fallback.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resp := AuthModeResponse{
-		ProviderHint: h.providerHint,
-		Capabilities: AuthModeCapabilities{},
+		ProviderHint:        h.providerHint,
+		AuthenticationOwner: "external_provider",
+		AccessPolicy:        "all_proxy_users_are_operators",
+		Capabilities:        AuthModeCapabilities{},
 	}
 
 	if tsauth.IsOpenMode(h.headerName) {
 		resp.Mode = AuthModeOpen
+		resp.AuthenticationOwner = "none"
+		resp.AccessPolicy = "unrestricted"
 		// Open mode: every auth-coupled capability is unavailable.
 		// We deliberately leave Capabilities at the zero value
 		// rather than spelling each field out so a future addition
@@ -129,11 +135,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // preconditions.
 func forwardAuthCapabilities() AuthModeCapabilities {
 	return AuthModeCapabilities{
-		StepUpReauth:   true,
-		TOTPEnrollment: true,
-		SessionList:    true,
-		Impersonation:  true,
-		RBAC:           true,
+		Impersonation: true,
 	}
 }
 
