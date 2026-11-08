@@ -51,22 +51,6 @@ vi.mock('../../widgets/registry', async (importOriginal) => {
   };
 });
 
-// Header controls now mount with the shared shell. Keep a real shell and inert
-// body so chrome assertions exercise that integration without data requests.
-vi.mock('../../widgets/registry', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../widgets/registry')>();
-  const { WidgetShell } = await import('../../widgets/WidgetShell');
-  const definitions = new Map(actual.WIDGET_REGISTRY.map(def => [def.id, {
-    ...def, component: () => <WidgetShell title={def.name}><div>Widget content</div></WidgetShell>,
-  }]));
-  return {
-    ...actual,
-    getWidgetDef: (id: string) => {
-      return definitions.get(id);
-    },
-  };
-});
-
 // Two real registry widgets — their bodies are lazy, so only the def
 // metadata (name, defaultSize) is used synchronously in these tests.
 const W1_ID = 'vehicle-hero';
