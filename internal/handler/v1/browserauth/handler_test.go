@@ -14,11 +14,24 @@ func TestBrowserLoginReturnNavigation(t *testing.T) {
 	}{
 		{"default", "", "/", http.StatusSeeOther},
 		{"deep link", "/settings?tab=appearance#packs", "/settings?tab=appearance#packs", http.StatusSeeOther},
+		{"encoded local path separator", "/drives%2F42", "/drives%2F42", http.StatusSeeOther},
+		{"double encoded separator remains local", "/%252Fother.example/", "/%252Fother.example/", http.StatusSeeOther},
+		{"empty query delimiter", "/settings?", "/settings?", http.StatusSeeOther},
+		{"external-looking query value", "/settings?next=https%3A%2F%2Fother.example%2F", "/settings?next=https%3A%2F%2Fother.example%2F", http.StatusSeeOther},
+		{"external-looking fragment", "/settings#https://other.example/", "/settings#https://other.example/", http.StatusSeeOther},
+		{"fragment path segments stay in fragment", "/safe#/../api/v1/auth/browser-login", "/safe#/../api/v1/auth/browser-login", http.StatusSeeOther},
 		{"foreign origin", "https://other.example/", "", http.StatusBadRequest},
 		{"scheme relative", "//other.example/", "", http.StatusBadRequest},
+		{"authority without hostname", "//:443/settings", "", http.StatusBadRequest},
+		{"foreign authority with userinfo", "//synthetic-user@other.example/settings", "", http.StatusBadRequest},
+		{"userinfo authority without hostname", "//synthetic-user@/settings", "", http.StatusBadRequest},
 		{"encoded scheme relative", "/%2Fother.example/", "", http.StatusBadRequest},
+		{"lowercase encoded scheme relative", "/%2fother.example/", "", http.StatusBadRequest},
+		{"encoded leading root separator", "%2Fsettings", "", http.StatusBadRequest},
 		{"backslash", "/\\other.example/", "", http.StatusBadRequest},
 		{"encoded backslash", "/%5Cother.example/", "", http.StatusBadRequest},
+		{"lowercase encoded backslash", "/%5cother.example/", "", http.StatusBadRequest},
+		{"malformed escape", "/%zz", "", http.StatusBadRequest},
 		{"script", "javascript:alert(1)", "", http.StatusBadRequest},
 		{"redirect loop", "/api/v1/auth/browser-login/", "", http.StatusBadRequest},
 		{"normalized redirect loop", "/api/v1/auth/./browser-login", "", http.StatusBadRequest},
@@ -27,6 +40,7 @@ func TestBrowserLoginReturnNavigation(t *testing.T) {
 		{"encoded null", "/%00", "", http.StatusBadRequest},
 		{"encoded tab", "/%09", "", http.StatusBadRequest},
 		{"encoded delete", "/%7F", "", http.StatusBadRequest},
+		{"encoded unicode control", "/%C2%85settings", "", http.StatusBadRequest},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			query := url.Values{"rd": {tc.target}}

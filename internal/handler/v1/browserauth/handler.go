@@ -28,7 +28,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		target = "/"
 	}
 	u, err := url.Parse(target)
-	if err != nil || u.IsAbs() || u.Host != "" || !strings.HasPrefix(u.Path, "/") ||
+	if err != nil || u.Hostname() != "" || u.IsAbs() || u.Host != "" ||
+		!strings.HasPrefix(target, "/") || strings.HasPrefix(target, "//") || !strings.HasPrefix(u.Path, "/") ||
 		strings.HasPrefix(u.Path, "//") || strings.Contains(target+u.Path, "\\") ||
 		strings.ContainsFunc(target+u.Path, unicode.IsControl) ||
 		path.Clean(u.Path) == "/api/v1/auth/browser-login" {
@@ -37,5 +38,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	http.Redirect(w, r, u.String(), http.StatusSeeOther)
+	// http.Redirect cleans fragment text as path segments; preserve the validated URL.
+	w.Header().Set("Location", u.String())
+	w.WriteHeader(http.StatusSeeOther)
 }
