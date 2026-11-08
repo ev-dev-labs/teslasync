@@ -31,7 +31,7 @@ require (
 	github.com/rs/zerolog v1.35.1
 	github.com/sony/gobreaker v0.5.0
 	github.com/teslamotors/fleet-telemetry v0.10.0
-	go.mongodb.org/mongo-driver/v2 v2.5.0
+	go.mongodb.org/mongo-driver/v2 v2.9.3
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0
 	go.opentelemetry.io/otel v1.45.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.45.0
