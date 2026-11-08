@@ -103,7 +103,6 @@ func (m MQTTConfig) BrokerURL() string {
 	return fmt.Sprintf("tcp://%s:%d", m.Host, m.Port)
 }
 
-// AuthConfig holds authentication settings.
 // FeatureFlags controls optional feature toggles.
 type FeatureFlags struct {
 	EnableExportWorker       bool `env:"EXPORT_WORKER" envDefault:"true"`

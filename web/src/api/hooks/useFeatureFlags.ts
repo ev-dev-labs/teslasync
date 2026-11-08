@@ -10,13 +10,12 @@
  *   GET /system/flags/changes → FeatureFlagChangesResponse
  *   GET /system/flags/{key} → FeatureFlagEntry
  *   GET /system/flags/{key}/changes → FeatureFlagChangesResponse
- *   PUT /system/flags/{key} → FeatureFlagWriteResponse (sudo)
- *   DELETE /system/flags/{key}?reason=… → FeatureFlagWriteResponse (sudo)
+ *   PUT /system/flags/{key} → FeatureFlagWriteResponse (intent confirmation)
+ *   DELETE /system/flags/{key}?reason=… → FeatureFlagWriteResponse (intent confirmation)
  *
- * Sudo handling is fully delegated to the shared `request` interceptor
- * `SUDO_REQUIRED` 401s reopen the mounted ReauthDialog and the mutation
- * resolves transparently on a successful step-up. User-cancel resolves as
- * ActionCanceledError and is swallowed silently in onError.
+ * The shared `request` client requires typed intent before transport.
+ * Cancellation rejects with ActionCanceledError and is silent in onError.
+ * Provider authentication failures are terminal; mutations are never replayed.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -98,7 +97,7 @@ export function useFlagChanges(
 }
 
 /**
- * Create or update a single flag (sudo-gated). The mutation invalidates
+ * Create or update a single flag (intent-confirmed). The mutation invalidates
  * both the list and the per-flag change feed so the table + audit panel
  * re-render with the new value and the matching audit row.
  */
@@ -165,7 +164,7 @@ export function assertFeatureFlagDeleteResult(
 }
 
 /**
- * Delete a single flag (sudo-gated). `reason` is required by the
+ * Delete a single flag (intent-confirmed). `reason` is required by the
  * backend audit. Only a confirmed, audited outcome resolves the mutation.
  */
 export function useDeleteFlag() {

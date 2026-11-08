@@ -16,11 +16,10 @@ services:
     container_name: teslasync-api
     restart: unless-stopped
     ports:
-      # Browser access goes through the protected web/proxy entry point.
+      # External access must go through the trusted authentication gateway.
       - "127.0.0.1:${TESLASYNC_PORT:-8080}:8080"
     environment:
       - FORWARD_AUTH_HEADER=${FORWARD_AUTH_HEADER:-}
-      - TESLASYNC_AUTH_PROVIDER_HINT=${TESLASYNC_AUTH_PROVIDER_HINT:-}
       # Legacy certificate signing migration input, not browser authentication.
       - AUTH_JWT_SECRET=${AUTH_JWT_SECRET:-}
       - TESLASYNC_PORT=8080
@@ -252,7 +251,8 @@ services:
     container_name: teslasync-web
     restart: unless-stopped
     ports:
-      - "${WEB_PORT:-3000}:80"
+      # Do not expose this unauthenticated proxy around the trusted gateway.
+      - "127.0.0.1:${WEB_PORT:-3000}:80"
     depends_on:
       teslasync-api:
         condition: service_healthy

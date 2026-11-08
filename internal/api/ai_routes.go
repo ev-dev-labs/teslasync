@@ -1288,8 +1288,8 @@ func mountAIRoutes(
 		r.Post("/trips/plan/draft", g.Wrap("trip-planner-llm-agent", tripPlannerLLMHandler))
 
 		// ai-provider-health (Phase-50 / F1, slice 0002).
-		// Ops-only diagnostic. Triple-gated:
-		//   guard.Wrap (mode + feature toggle) → RequireSudo → handler.
+		// Ops diagnostic behind external authentication and
+		// guard.Wrap (mode + feature toggle).
 		// Returns 404 in off mode (ADR-015 §I6 + §I9 — provider
 		// info MUST NOT leak when AI is disabled).
 		r.Get("/_internal/health",

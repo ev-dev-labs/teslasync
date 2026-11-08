@@ -3,7 +3,7 @@ import { request } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { STALE_TIMES } from '@/lib/constants';
 import { safeArray } from '@/lib/safeArray';
-import type { User, VerifiedUserIdentity } from '@/types/user';
+import type { VerifiedUserIdentity } from '@/types/user';
 import type { UserActivityEntry } from '@/types/admin';
 
 export const userKeys = {
@@ -26,20 +26,6 @@ export function useCurrentUser(enabled = true) {
     // rarely, so don't refetch it on every mount/focus. Brings this hook in
     // line with the explicit staleTime every other query in this module sets.
     staleTime: STALE_TIMES.EXTENDED,
-  });
-}
-
-export function useUpdateUser() {
-  const queryClient = useQueryClient();
-  const { success, error } = useMutationToast();
-  return useMutation({
-    mutationFn: (data: { displayName: string }) =>
-      request<User>('/users/me', { method: 'PUT', body: JSON.stringify(data) }),
-    onSuccess: (data) => {
-      queryClient.setQueryData(userKeys.me, data);
-      success('toast.user.update.success', 'Profile updated');
-    },
-    onError: (err) => error(err, 'toast.user.update.error', 'Failed to update profile'),
   });
 }
 

@@ -183,7 +183,7 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
 
   const originalBase = getApiBase()
   const originalIdentity = authHeaders(headers).get('Authorization')
-  const needsConfirmation = requiresActionConfirmation(fetchOptions.method, normalisedPath)
+  const needsConfirmation = requiresActionConfirmation(fetchOptions.method, normalisedPath, fetchOptions.body)
   if (needsConfirmation) {
     await confirmAction(normalisedPath, fetchOptions.signal)
     assertDocumentActive()

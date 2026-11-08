@@ -101,6 +101,31 @@ describe('provider-owned authentication and action confirmation', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('sends read-only import previews without mounting a confirmation dialog', async () => {
+    await expect(request('/settings/import', {
+      method: 'POST',
+      body: JSON.stringify({ dry_run: true, bundle: {} }),
+    })).resolves.toMatchObject({ deleted_id: 'key' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    JSON.stringify({ dry_run: false }),
+    '{}',
+    JSON.stringify({ dry_run: 'true' }),
+    'null',
+    'invalid JSON',
+  ])('requires confirmation for a non-preview import body %s', async body => {
+    await expect(request('/settings/import', { method: 'POST', body }))
+      .rejects.toBeInstanceOf(ActionCanceledError);
+    expect(fetchMock).not.toHaveBeenCalled();
+    const confirm = vi.fn(async () => {});
+    registerActionConfirmationProvider(confirm);
+    await request('/settings/import', { method: 'POST', body });
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('does not replay a denied sensitive action', async () => {
     registerActionConfirmationProvider(async () => {});
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: 'denied', code: 'FORBIDDEN' }), { status: 403 }));

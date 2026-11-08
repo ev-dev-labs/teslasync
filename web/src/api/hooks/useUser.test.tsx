@@ -6,8 +6,6 @@
 //   - useCurrentUser / useMyRecentActivity — request() URL, AbortSignal
 //     threading, snake_case query params, safeArray coercion, and a faithful
 //     ApiError (503) surfacing path.
-//   - useUpdateUser — PUT method + camelCase body (matches the Go
-//     `json:"displayName"` tag), optimistic cache write, success/error toast.
 //   - the four Tesla envelope queries (feature-config, region, orders,
 //     profile) — exact GET paths + envelope passthrough.
 //   - the four refresh mutations — POST path, cache invalidation, and
@@ -52,7 +50,6 @@ import {
 import {
   userKeys,
   useCurrentUser,
-  useUpdateUser,
   useMyRecentActivity,
   useTeslaFeatureConfig,
   useRefreshTeslaFeatureConfig,
@@ -66,7 +63,6 @@ import {
   type TeslaOrder,
   type TeslaUserProfile,
 } from './useUser';
-import type { User } from '@/types/user';
 import type { UserActivityEntry } from '@/types/admin';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
@@ -87,15 +83,6 @@ function makeWrapper(client?: QueryClient) {
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
-
-const userFixture: User = {
-  id: 'u-1',
-  email: 'driver@example.com',
-  displayName: 'Nikola',
-  avatarUrl: undefined,
-  createdAt: '2025-01-01T00:00:00Z',
-  updatedAt: '2025-01-02T00:00:00Z',
-};
 
 const activityFixture: UserActivityEntry = {
   id: 42,
@@ -187,48 +174,6 @@ describe('useCurrentUser', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(Error);
     expect((result.current.error as Error).message).toBe('boom');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// useUpdateUser
-// ---------------------------------------------------------------------------
-
-describe('useUpdateUser', () => {
-  it('PUTs /users/me with a camelCase displayName body, writes the cache, and toasts success', async () => {
-    mockedRequest.mockResolvedValueOnce(userFixture);
-    const { Wrapper, qc } = makeWrapper();
-    const { result } = renderHook(() => useUpdateUser(), { wrapper: Wrapper });
-
-    const updated = await result.current.mutateAsync({ displayName: 'Nikola' });
-    expect(updated).toEqual(userFixture);
-
-    const [url, opts] = mockedRequest.mock.calls[0];
-    expect(url).toBe('/users/me');
-    expect(opts.method).toBe('PUT');
-    // Body key MUST stay camelCase to match the Go `json:"displayName"` tag.
-    expect(JSON.parse(opts.body as string)).toEqual({ displayName: 'Nikola' });
-
-    // onSuccess primes the /users/me cache so consumers don't flash stale data.
-    expect(qc.getQueryData(userKeys.me)).toEqual(userFixture);
-    expect(successToast).toHaveBeenCalledWith('toast.user.update.success', 'Profile updated');
-    expect(errorToast).not.toHaveBeenCalled();
-  });
-
-  it('toasts the error and rejects when the update fails', async () => {
-    mockedRequest.mockRejectedValueOnce(new Error('nope'));
-    const { Wrapper, qc } = makeWrapper();
-    const { result } = renderHook(() => useUpdateUser(), { wrapper: Wrapper });
-
-    await expect(result.current.mutateAsync({ displayName: 'x' })).rejects.toThrow('nope');
-    expect(errorToast).toHaveBeenCalledWith(
-      expect.any(Error),
-      'toast.user.update.error',
-      'Failed to update profile',
-    );
-    expect(successToast).not.toHaveBeenCalled();
-    // Failed update must NOT overwrite the identity cache.
-    expect(qc.getQueryData(userKeys.me)).toBeUndefined();
   });
 });
 

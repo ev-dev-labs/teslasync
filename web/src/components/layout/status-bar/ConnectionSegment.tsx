@@ -71,8 +71,8 @@ function AdminConnectionControl({
   presentation: ConnectionPresentation;
 }) {
   const { t } = useTranslation();
-  const rbac = useAuthMode();
-  const isAdmin = hasAdminAccess(rbac.data);
+  const authMode = useAuthMode();
+  const isAdmin = hasAdminAccess(authMode.data);
   const { open, toggle, close } = useStatusBarPopover('connection');
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const health = useExtendedSystemHealth({ enabled: isAdmin && open });

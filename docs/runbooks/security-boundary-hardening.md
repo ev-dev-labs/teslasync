@@ -77,8 +77,8 @@ identity header from your gateway. The gateway must strip client-supplied
 identity headers and inject only its verified identity. Protect both static
 pages and `/api/v1` at the external edge, including SSE and
 `/api/v1/auth/browser-login`; do not expose the backend around that edge.
-Compose publishes the API on loopback only; container-based gateways should
-reach it on the private network. Empty identity configuration remains open
+Compose publishes both API and web on loopback only; container-based gateways
+should reach them on the private network. Empty identity configuration remains open
 development mode, not production authentication.
 
 Configure API authentication failures as HTTP 401 rather than CORS-blocked

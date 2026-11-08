@@ -20,7 +20,11 @@ export function __resetActionConfirmationForTests(): void {
   provider = null;
 }
 
-export function requiresActionConfirmation(method: string | undefined, path: string): boolean {
+export function requiresActionConfirmation(
+  method: string | undefined,
+  path: string,
+  body?: RequestInit['body'],
+): boolean {
   const verb = (method ?? 'GET').toUpperCase();
   const pathname = path.split('?')[0].replace(/\/$/, '');
   if (verb === 'DELETE') {
@@ -28,6 +32,17 @@ export function requiresActionConfirmation(method: string | undefined, path: str
       || pathname.startsWith('/data-repair/');
   }
   if (verb === 'GET' || verb === 'HEAD' || verb === 'OPTIONS') return false;
+  // Preview and apply share this endpoint; only an explicit JSON dry-run is read-only.
+  if (verb === 'POST' && pathname === '/settings/import') {
+    if (typeof body !== 'string') return true;
+    try {
+      const payload: unknown = JSON.parse(body);
+      return !(payload !== null && typeof payload === 'object' &&
+        'dry_run' in payload && Object.prototype.hasOwnProperty.call(payload, 'dry_run') && payload.dry_run === true);
+    } catch {
+      return true;
+    }
+  }
   return /^\/(?:auth\/disconnect|settings\/(?:import|reset)|export\/jobs\/import|api-keys\/[^/]+\/revoke|system\/(?:flags\/[^/]+|dlq\/[^/]+\/replay)|admin\/(?:impersonate|service-intelligence\/communications\/import))$/.test(pathname)
     || /^\/vehicles\/[^/]+\/guard(?:\/(?:config|panic))?$/.test(pathname)
     || (pathname.startsWith('/data-repair/')

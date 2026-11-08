@@ -285,7 +285,6 @@ const MODE_INDEPENDENT_MUTATIONS = {
     'useRefreshFleetTelemetryErrors',
   ],
   'hooks/useUser.ts': [
-    'useUpdateUser',
     'useRefreshTeslaFeatureConfig',
     'useRefreshTeslaRegion',
     'useRefreshTeslaOrders',

@@ -12,13 +12,10 @@
 // individually would be incomplete and brittle; a global flush is
 // honest about what just happened.
 
-// The shared `request` client transparently handles SUDO_REQUIRED
-// when the backend's RequireSudo middleware rejects with 401 +
-// SUDO_REQUIRED the cached interceptor opens the existing
-// <ReauthDialog>, replays the request with the resulting step-up
-// token, and returns the result transparently. On user-cancel the
-// mutation rejects with ActionCanceledError (re-exported below) which
-// the page handles as a non-error.
+// The shared `request` client confirms typed intent before transport.
+// Cancellation rejects with ActionCanceledError (re-exported below),
+// which the page handles as a non-error. Failed mutations are terminal
+// and never automatically replayed.
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -118,7 +115,7 @@ export function useResetSection(section: string) {
  * Mutation hook for the global "Reset ALL settings" Danger zone.
  *
  * Sends an empty body which the backend interprets as "reset every
- * whitelisted section". Same SUDO interception + cache flush
+ * whitelisted section". Same intent confirmation + cache flush
  * semantics as useResetSection.
  */
 export function useResetAllSettings() {
