@@ -1,6 +1,6 @@
 # TeslaSync privacy policy
 
-**Effective date:** September 28, 2026
+**Effective date:** November 9, 2026
 
 This policy describes the TeslaSync application distributed by the TeslaSync
 project, including its Windows desktop app, mobile apps, and web interface.
@@ -15,10 +15,13 @@ practices before connecting.
 
 - **Server connection:** The app saves the server address on your device so it
   can reconnect. If your server requires App sign-in, the access key you enter
-  is held in the app's session storage and sent to that server as a bearer
-  credential. The key is not saved to persistent local storage; you may need
-  to enter it again after restarting the app. You can change or forget the
-  address under **Settings → Server**.
+  is sent to that server as a bearer credential. Android saves the connection
+  encrypted with an Android Keystore key so it can reconnect after restarting;
+  Android bridge logging, app backup and device transfer are disabled.
+  Other clients hold the key only in session storage and may require it again
+  after restarting. No client stores the key in browser localStorage.
+  **Settings → Server → Disconnect** forgets the connection, including the
+  Android saved credentials and encryption key.
 - **Vehicle and account data:** When you connect to a server, the app requests
   and displays information that server makes available, potentially including
   vehicle identifiers, location and trip history, charging, energy use,

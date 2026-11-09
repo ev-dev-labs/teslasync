@@ -196,10 +196,12 @@ security boundary.
 - Admin → API Keys → **App sign-in** binds a key to your login
   (forward-auth mode only; open servers need no keys).
 - The app sends the key as `Authorization: Bearer`. The server
-  validates it, acts as you, and skips cookie-session minting. Generic
-  shells keep the key in `sessionStorage`, not `localStorage`: it is
-  cleared when the app session ends. Re-enter it after restarting the
-  app, even if the server address remains saved.
+  validates it, acts as you, and skips cookie-session minting. Android
+  encrypts the connection with an Android Keystore key and restores it
+  before startup, so it survives app restarts. Settings → Server →
+  Disconnect deletes the saved connection; a rejected key is not restored.
+  Other shells keep the key in `sessionStorage` and require it again when
+  the app session ends. No client stores its key in `localStorage`.
 - Keys never mint other keys; revoke/delete per key applies instantly.
 - Device keys (no subject, for watches) keep working exactly as
   before and are rejected as app credentials.

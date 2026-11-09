@@ -17,6 +17,7 @@ import { clearServerConnection, getServerBaseUrl, isRemoteMode } from '@/lib/ser
 export function ServerSection() {
   const { t } = useTranslation()
   const [disconnectError, setDisconnectError] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
   const remote = isRemoteMode()
   const current = remote
     ? getServerBaseUrl()
@@ -28,12 +29,16 @@ export function ServerSection() {
     window.location.href = '/connect'
   }
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
+    setDisconnectError(false)
+    setDisconnecting(true)
     try {
-      clearServerConnection()
+      await clearServerConnection()
       window.location.href = '/'
     } catch {
       setDisconnectError(true)
+    } finally {
+      setDisconnecting(false)
     }
   }
 
@@ -57,11 +62,11 @@ export function ServerSection() {
         </ErrorText>
       )}
       <div className="flex flex-wrap gap-2">
-        <Button variant="secondary" size="sm" onClick={handleChange}>
+        <Button variant="secondary" size="sm" onClick={handleChange} disabled={disconnecting}>
           {t('serverConnect.settings.change', 'Change server')}
         </Button>
         {remote && (
-          <Button variant="danger" size="sm" onClick={handleDisconnect} title={t('serverConnect.settings.disconnectHint', 'Forget this server and go back to the browser default.')}>
+          <Button variant="danger" size="sm" onClick={handleDisconnect} loading={disconnecting} title={t('serverConnect.settings.disconnectHint', 'Forget this server and go back to the browser default.')}>
             {t('serverConnect.settings.disconnect', 'Disconnect')}
           </Button>
         )}

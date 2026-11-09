@@ -98,7 +98,7 @@ export default function ConnectPage() {
         setError(t('serverConnect.connect.errorTokenRequired', 'This server needs an access token — paste one to continue.'))
         return
       }
-      setServerConnection(normalized.url, token.trim() === '' ? null : token)
+      await setServerConnection(normalized.url, token.trim() === '' ? null : token)
       // A picked server changes the origin of every query, stream, and
       // cached payload — reboot onto it instead of hot-swapping.
       window.location.href = '/'

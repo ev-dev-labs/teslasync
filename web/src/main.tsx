@@ -18,16 +18,12 @@ import ReloadPrompt from './components/feedback/ReloadPrompt'
 import { SelectedVehicleProvider } from './store/selectedVehicle'
 import { OperationalModeProvider } from './hooks/useOperationalMode'
 import { installGlobalErrorReporting, reportFrontendError } from './lib/errorReporter'
-import { isNativeShell, needsServerSetup } from './lib/serverConnection'
+import { isAndroidShell, isNativeShell, needsServerSetup, restoreServerConnection } from './lib/serverConnection'
 import App from './App'
 import './i18n'
 import './index.css'
 
 const NativeConnectPage = React.lazy(() => import('./features/server/ConnectPage'))
-const standaloneNativeConnect = isNativeShell() && needsServerSetup()
-if (standaloneNativeConnect && window.location.pathname !== '/connect') {
-  window.history.replaceState(null, '', '/connect')
-}
 
 // ── RUM bootstrap (Phase 44 / Prompt 0060) ────────────────────────────────────
 // OpenTelemetry and Zone.js are intentionally loaded outside the entry chunk.
@@ -118,102 +114,115 @@ queryClient.getQueryCache().subscribe((event) => {
   }
 })
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <MotionProvider>
-      {standaloneNativeConnect ? (
-        <BrowserRouter>
-          <React.Suspense
-            fallback={<div className="flex min-h-dvh items-center justify-center"><Spinner /></div>}
-          >
-            <NativeConnectPage />
-          </React.Suspense>
-        </BrowserRouter>
-      ) : (
-        <QueryClientProvider client={queryClient}>
-          {/* Phase-40 / Prompt 69: rebroadcast cross-tab queryInvalidate
-              messages into this tab's QueryClient. Mounted directly under
-              QueryClientProvider so useQueryClient() resolves. */}
-          <QueryBroadcastBridge />
-          {/* Phase-45 / Prompt 06: keep module-level formatter globals
-              (numberFormat locale + precision) in sync with the persisted
-              settings even on pages that never call useSettings() and after
-              cross-tab settings broadcasts. */}
-          <FormatterPrefsBridge />
+function mountApplication() {
+  const standaloneNativeConnect = isNativeShell() && needsServerSetup()
+  if (standaloneNativeConnect && window.location.pathname !== '/connect') {
+    window.history.replaceState(null, '', '/connect')
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <MotionProvider>
+        {standaloneNativeConnect ? (
           <BrowserRouter>
-            {/* Phase-45 / Prompt 16: in-app unsaved-changes guard. Intercepts
-                <GuardedLink> / <GuardedNavLink> clicks and browser back/forward
-                navigation when any registered useNavigationGuard reports a
-                dirty form. Coexists with useDirtyForm's beforeunload listener
-                (tab close / reload / external links). MUST live inside
-                <BrowserRouter> so useNavigate / useLocation resolve. */}
-            <NavigationGuardProvider>
-              <ThemeProvider>
-                <FontProvider>
-                  <SelectedVehicleProvider>
-                    <ToastProvider>
-                      <OperationalModeProvider>
-                        <TypographyAgentProvider>
-                          <App />
-                        </TypographyAgentProvider>
-                        <ReloadPrompt />
-                        {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
-                            with a transient toast + confetti. Mounted alongside the
-                            standard toast stack so the SSE subscription is global. */}
-                        <AchievementUnlockListener />
-                      </OperationalModeProvider>
-                    </ToastProvider>
-                  </SelectedVehicleProvider>
-                </FontProvider>
-              </ThemeProvider>
-            </NavigationGuardProvider>
+            <React.Suspense
+              fallback={<div className="flex min-h-dvh items-center justify-center"><Spinner /></div>}
+            >
+              <NativeConnectPage />
+            </React.Suspense>
           </BrowserRouter>
-        </QueryClientProvider>
-      )}
-      </MotionProvider>
-    </ErrorBoundary>
-  </React.StrictMode>,
-)
+        ) : (
+          <QueryClientProvider client={queryClient}>
+            {/* Phase-40 / Prompt 69: rebroadcast cross-tab queryInvalidate
+                messages into this tab's QueryClient. Mounted directly under
+                QueryClientProvider so useQueryClient() resolves. */}
+            <QueryBroadcastBridge />
+            {/* Phase-45 / Prompt 06: keep module-level formatter globals
+                (numberFormat locale + precision) in sync with the persisted
+                settings even on pages that never call useSettings() and after
+                cross-tab settings broadcasts. */}
+            <FormatterPrefsBridge />
+            <BrowserRouter>
+              {/* Phase-45 / Prompt 16: in-app unsaved-changes guard. Intercepts
+                  <GuardedLink> / <GuardedNavLink> clicks and browser back/forward
+                  navigation when any registered useNavigationGuard reports a
+                  dirty form. Coexists with useDirtyForm's beforeunload listener
+                  (tab close / reload / external links). MUST live inside
+                  <BrowserRouter> so useNavigate / useLocation resolve. */}
+              <NavigationGuardProvider>
+                <ThemeProvider>
+                  <FontProvider>
+                    <SelectedVehicleProvider>
+                      <ToastProvider>
+                        <OperationalModeProvider>
+                          <TypographyAgentProvider>
+                            <App />
+                          </TypographyAgentProvider>
+                          <ReloadPrompt />
+                          {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
+                              with a transient toast + confetti. Mounted alongside the
+                              standard toast stack so the SSE subscription is global. */}
+                          <AchievementUnlockListener />
+                        </OperationalModeProvider>
+                      </ToastProvider>
+                    </SelectedVehicleProvider>
+                  </FontProvider>
+                </ThemeProvider>
+              </NavigationGuardProvider>
+            </BrowserRouter>
+          </QueryClientProvider>
+        )}
+        </MotionProvider>
+      </ErrorBoundary>
+    </React.StrictMode>,
+  )
 
-// The splash is an inline no-FOUC surface, not a network loading gate. Dismiss
-// it after React has had two animation frames to commit and paint the shell;
-// waiting for window.load would keep it visible behind slow fonts or images.
-window.requestAnimationFrame(() => {
+  // Keep the splash until native credential restoration and the first paint.
   window.requestAnimationFrame(() => {
-    const splash = document.getElementById('splash')
-    if (!splash) return
-    splash.classList.add('fade-out')
-    window.setTimeout(() => splash.remove(), 200)
+    window.requestAnimationFrame(() => {
+      const splash = document.getElementById('splash')
+      if (!splash) return
+      splash.classList.add('fade-out')
+      window.setTimeout(() => splash.remove(), 200)
+    })
   })
-})
 
-// ── Web Vitals reporting (Phase 40 / Prompt 35, Phase 45 / Prompt 12) ──────
-// Lazy-loaded so it never blocks first paint. In production, ship metrics to
-// the backend (`POST /api/v1/web-vitals`) where they're aggregated as
-// Prometheus histograms. In dev we log to the console — production reporting
-// would be noisy from HMR reloads and unhelpful before the bundle is final.
-if (import.meta.env.PROD && !standaloneNativeConnect) {
-  void import('./lib/webVitalsReporter')
-    .then(({ startWebVitalsReporter }) => {
-      startWebVitalsReporter()
-    })
-    .catch(() => {
-      // Telemetry must never break the app; swallow load failures silently.
-    })
+  // ── Web Vitals reporting (Phase 40 / Prompt 35, Phase 45 / Prompt 12) ──────
+  // Lazy-loaded so it never blocks first paint. In production, ship metrics to
+  // the backend (`POST /api/v1/web-vitals`) where they're aggregated as
+  // Prometheus histograms. In dev we log to the console — production reporting
+  // would be noisy from HMR reloads and unhelpful before the bundle is final.
+  if (import.meta.env.PROD && !standaloneNativeConnect) {
+    void import('./lib/webVitalsReporter')
+      .then(({ startWebVitalsReporter }) => {
+        startWebVitalsReporter()
+      })
+      .catch(() => {
+        // Telemetry must never break the app; swallow load failures silently.
+      })
+  } else {
+    void import('web-vitals')
+      .then(({ onCLS, onINP, onLCP, onFCP, onTTFB }) => {
+        const report = (m: { name: string; value: number; id: string; rating?: string }) => {
+          console.debug('[web-vitals]', m.name, Math.round(m.value), m.rating ?? '', m.id)
+        }
+        onCLS(report)
+        onINP(report)
+        onLCP(report)
+        onFCP(report)
+        onTTFB(report)
+      })
+      .catch((err) => {
+        console.warn('[web-vitals] failed to load:', err)
+      })
+  }
+}
+
+if (isAndroidShell()) {
+  void restoreServerConnection()
+    .catch(() => console.warn('Could not restore native connection storage'))
+    .then(mountApplication)
 } else {
-  void import('web-vitals')
-    .then(({ onCLS, onINP, onLCP, onFCP, onTTFB }) => {
-      const report = (m: { name: string; value: number; id: string; rating?: string }) => {
-        console.debug('[web-vitals]', m.name, Math.round(m.value), m.rating ?? '', m.id)
-      }
-      onCLS(report)
-      onINP(report)
-      onLCP(report)
-      onFCP(report)
-      onTTFB(report)
-    })
-    .catch((err) => {
-      console.warn('[web-vitals] failed to load:', err)
-    })
+  mountApplication()
 }
