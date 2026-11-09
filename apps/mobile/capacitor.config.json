@@ -2,6 +2,7 @@
   "appId": "com.teslasync.app",
   "appName": "TeslaSync",
   "webDir": "../../web/dist",
+  "loggingBehavior": "none",
   "backgroundColor": "#0b0d12",
   "android": {
     "allowMixedContent": false

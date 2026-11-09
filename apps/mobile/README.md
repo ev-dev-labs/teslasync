@@ -73,9 +73,14 @@ adb shell am start -n com.teslasync.app/.MainActivity
 - Login is the server's own: open-mode servers need just the address;
   forward-auth servers need an API key with **App sign-in** checked
   (Admin → API Keys on the server).
-- The WebView stores the server address in localStorage and the API key
-  in sessionStorage, **not** the OS keychain. Android backup and device transfer of app
-  data are disabled to reduce token exposure; anyone with access to
+- The WebView stores the server address in localStorage, never the API key.
+  Android encrypts the saved connection using an Android Keystore key and
+  restores it before the UI starts, so closing/reopening the app does not
+  require signing in again. Disconnecting deletes the saved connection and
+  its encryption key; rejected credentials are not restored.
+  iOS still keeps its API key in sessionStorage for the current app session.
+  Android bridge logging, backup and device transfer of app data are disabled
+  to reduce token exposure; anyone with access to
   the unlocked app can still use its key. Use a dedicated revocable
   app key and revoke it immediately if the device is lost.
 - Set your own unique Android application ID and iOS bundle

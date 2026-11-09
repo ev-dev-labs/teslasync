@@ -10,10 +10,26 @@ import {
   needsServerSetup,
   normalizeServerUrl,
   probeServer,
+  restoreServerConnection,
   serverStreamUrl,
   serverCredentials,
   setServerConnection,
 } from './serverConnection'
+
+function mockAndroidStorage() {
+  let connection: { url: string; token: string | null } | null = null
+  const storage = {
+    save: vi.fn(async (value: { url: string; token: string | null }) => { connection = value }),
+    load: vi.fn(async () => connection ?? {}),
+    clear: vi.fn(async () => { connection = null }),
+  }
+  vi.stubGlobal('Capacitor', {
+    isNativePlatform: () => true,
+    getPlatform: () => 'android',
+    Plugins: { ServerConnection: storage },
+  })
+  return storage
+}
 
 beforeEach(() => {
   window.localStorage.clear()
@@ -79,6 +95,17 @@ describe('stored connection', () => {
     expect(window.localStorage.getItem('teslasync-access-token')).toBeNull()
   })
 
+  it('saves Android credentials to native storage before accepting the connection', async () => {
+    const storage = mockAndroidStorage()
+
+    await setServerConnection('https://srv.example.com', 'ts_test_secret')
+
+    expect(storage.save).toHaveBeenCalledWith({ url: 'https://srv.example.com', token: 'ts_test_secret' })
+    expect(getServerBaseUrl()).toBe('https://srv.example.com')
+    expect(getAccessToken()).toBe('ts_test_secret')
+    expect(window.localStorage.getItem('teslasync-access-token')).toBeNull()
+  })
+
   it('stores a URL without a token', () => {
     setServerConnection('http://192.168.1.5:4000', null)
     expect(isRemoteMode()).toBe(true)
@@ -115,6 +142,106 @@ describe('stored connection', () => {
   it('treats a corrupt stored value as same-origin', () => {
     window.localStorage.setItem('teslasync-server-base-url', '::not a url::')
     expect(getServerBaseUrl()).toBe('')
+  })
+})
+
+describe('Android connection restoration', () => {
+  it('restores the key and skips setup after a cold app session starts', async () => {
+    mockAndroidStorage()
+    await setServerConnection('https://srv.example.com', ' ts_test_secret ')
+    window.sessionStorage.clear()
+    expect(getAccessToken()).toBeNull()
+    expect(needsServerSetup()).toBe(true)
+
+    await restoreServerConnection()
+
+    expect(getServerBaseUrl()).toBe('https://srv.example.com')
+    expect(authHeaders().get('Authorization')).toBe('Bearer ts_test_secret')
+    expect(needsServerSetup()).toBe(false)
+    expect(window.localStorage.getItem('teslasync-access-token')).toBeNull()
+  })
+
+  it('never restores a key against a different saved server', async () => {
+    mockAndroidStorage()
+    await setServerConnection('https://srv.example.com', 'ts_test_secret')
+    window.sessionStorage.clear()
+    window.localStorage.setItem('teslasync-server-base-url', 'https://other.example.com')
+
+    await restoreServerConnection()
+
+    expect(getAccessToken()).toBeNull()
+    expect(needsServerSetup()).toBe(true)
+  })
+
+  it('does not accept a connection when the secure save fails', async () => {
+    const storage = mockAndroidStorage()
+    storage.save.mockRejectedValue(new Error('Keystore unavailable'))
+
+    await expect(setServerConnection('https://srv.example.com', 'ts_test_secret')).rejects.toThrow('Keystore unavailable')
+
+    expect(getServerBaseUrl()).toBe('')
+    expect(getAccessToken()).toBeNull()
+    expect(needsServerSetup()).toBe(true)
+  })
+
+  it('keeps setup reachable when secure storage cannot be read', async () => {
+    const storage = mockAndroidStorage()
+    await setServerConnection('https://srv.example.com', 'ts_test_secret')
+    window.sessionStorage.clear()
+    storage.load.mockRejectedValue(new Error('Keystore unavailable'))
+
+    await expect(restoreServerConnection()).rejects.toThrow('Keystore unavailable')
+
+    expect(getServerBaseUrl()).toBe('https://srv.example.com')
+    expect(getAccessToken()).toBeNull()
+    expect(needsServerSetup()).toBe(true)
+  })
+
+  it('does not restore rejected credentials even when native deletion fails', async () => {
+    const storage = mockAndroidStorage()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await setServerConnection('https://srv.example.com', 'ts_test_secret')
+    storage.clear.mockRejectedValue(new Error('Keystore unavailable'))
+
+    clearAccessToken()
+    await restoreServerConnection()
+
+    expect(storage.load).not.toHaveBeenCalled()
+    expect(getAccessToken()).toBeNull()
+    expect(needsServerSetup()).toBe(true)
+    await vi.waitFor(() => expect(warn).toHaveBeenCalledWith('Could not clear native connection storage'))
+  })
+
+  it('removes native credentials on disconnect and does not restore them on restart', async () => {
+    const storage = mockAndroidStorage()
+    await setServerConnection('https://srv.example.com', 'ts_test_secret')
+
+    await clearServerConnection()
+    window.sessionStorage.clear()
+    await restoreServerConnection()
+
+    expect(storage.clear).toHaveBeenCalledOnce()
+    expect(getServerBaseUrl()).toBe('')
+    expect(getAccessToken()).toBeNull()
+    expect(needsServerSetup()).toBe(true)
+  })
+
+  it.each(['ios', 'web'])('keeps %s credentials session-only', async (platform) => {
+    const storage = mockAndroidStorage()
+    vi.stubGlobal('Capacitor', {
+      isNativePlatform: () => platform !== 'web',
+      getPlatform: () => platform,
+      Plugins: { ServerConnection: storage },
+    })
+    await setServerConnection('https://srv.example.com', 'ts_test_secret')
+    window.sessionStorage.clear()
+
+    await restoreServerConnection()
+
+    expect(storage.save).not.toHaveBeenCalled()
+    expect(storage.load).not.toHaveBeenCalled()
+    expect(getAccessToken()).toBeNull()
+    expect(window.localStorage.getItem('teslasync-access-token')).toBeNull()
   })
 })
 

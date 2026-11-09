@@ -6,10 +6,11 @@
  * The installed PWA and the per-domain wrappers are served by the server
  * itself, so same-origin API calls just work. The generic native shells
  * (Capacitor, Electron) bundle the UI with no server origin — the user
- * picks their server URL (plus a session-scoped personal access token when
- * that server runs forward-auth mode) and every API/SSE call is routed there.
+ * picks their server URL and access token, and every API/SSE call is routed
+ * there. Android restores the token from Keystore-backed native storage;
+ * other clients keep tokens scoped to the current session.
  *
- * Pure module: browser storage + URL parsing only. It must stay importable
+ * Storage and URL parsing only. It must stay importable
  * from `lib/resilience.ts`, so it imports nothing from the API layer.
  */
 
@@ -19,6 +20,7 @@ import { stripCredentialHeadersForDemo } from './demoMode'
 const SERVER_URL_KEY = 'teslasync-server-base-url'
 const ACCESS_TOKEN_KEY = 'teslasync-access-token'
 const TOKEN_REQUIRED_KEY = 'teslasync-server-token-required'
+const NATIVE_CONNECTION_KEY = 'teslasync-native-connection'
 const APP_INSTALLATION_KEY = 'teslasync-app-installation-id'
 const APP_HEADER = 'X-Teslasync-App'
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
@@ -105,7 +107,7 @@ export function serverCredentials(): RequestCredentials {
   return isRemoteMode() ? 'omit' : 'include'
 }
 
-/** Session-scoped access token; never persisted to localStorage. */
+/** Active session token, hydrated from native storage on Android startup. */
 export function getAccessToken(): string | null {
   try {
     const raw = (window.sessionStorage.getItem(ACCESS_TOKEN_KEY) ?? '').trim()
@@ -120,33 +122,80 @@ export function getAccessToken(): string | null {
  * (see {@link normalizeServerUrl}) — anything else throws. Saving
  * requires a full reload to take effect (see `ConnectPage`).
  */
-export function setServerConnection(url: string, token: string | null): void {
+export function setServerConnection(url: string, token: string | null): void | Promise<void> {
   const result = normalizeServerUrl(url)
   if (!result.accepted || result.url !== url) {
     throw new Error('setServerConnection: URL must be a normalised origin')
   }
-  if (token != null && token.trim() !== '') {
-    window.sessionStorage.setItem(ACCESS_TOKEN_KEY, token.trim())
-    window.localStorage.setItem(TOKEN_REQUIRED_KEY, '1')
-  } else {
-    window.sessionStorage.removeItem(ACCESS_TOKEN_KEY)
-    window.localStorage.removeItem(TOKEN_REQUIRED_KEY)
+  const trimmedToken = token?.trim() || null
+  const saveSession = () => {
+    if (trimmedToken !== null) {
+      window.sessionStorage.setItem(ACCESS_TOKEN_KEY, trimmedToken)
+      window.localStorage.setItem(TOKEN_REQUIRED_KEY, '1')
+    } else {
+      window.sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+      window.localStorage.removeItem(TOKEN_REQUIRED_KEY)
+    }
+    window.localStorage.removeItem(ACCESS_TOKEN_KEY)
+    window.localStorage.setItem(SERVER_URL_KEY, result.url)
+    if (isAndroidShell() && trimmedToken !== null) {
+      window.localStorage.setItem(NATIVE_CONNECTION_KEY, '1')
+    } else {
+      window.localStorage.removeItem(NATIVE_CONNECTION_KEY)
+    }
   }
-  window.localStorage.removeItem(ACCESS_TOKEN_KEY)
-  window.localStorage.setItem(SERVER_URL_KEY, result.url)
+  if (isAndroidShell()) {
+    return import('./nativeServerConnection')
+      .then(({ nativeConnectionStorage }) => nativeConnectionStorage().save({ url, token: trimmedToken }))
+      .then(saveSession)
+  }
+  saveSession()
 }
 
 /** Forget the picked server and token (same-origin from the next reload). */
-export function clearServerConnection(): void {
-  window.localStorage.removeItem(SERVER_URL_KEY)
-  window.localStorage.removeItem(TOKEN_REQUIRED_KEY)
-  window.localStorage.removeItem(ACCESS_TOKEN_KEY)
-  window.sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+export function clearServerConnection(): void | Promise<void> {
+  window.localStorage.removeItem(NATIVE_CONNECTION_KEY)
+  const clearSession = () => {
+    window.localStorage.removeItem(SERVER_URL_KEY)
+    window.localStorage.removeItem(TOKEN_REQUIRED_KEY)
+    window.localStorage.removeItem(ACCESS_TOKEN_KEY)
+    window.sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+  }
+  if (isAndroidShell()) {
+    return import('./nativeServerConnection')
+      .then(({ nativeConnectionStorage }) => nativeConnectionStorage().clear())
+      .then(clearSession)
+  }
+  clearSession()
 }
 
 /** Discard a rejected app token without forgetting the server address. */
 export function clearAccessToken(): void {
   window.sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+  // Disable restoration synchronously: navigation can interrupt native cleanup.
+  window.localStorage.removeItem(NATIVE_CONNECTION_KEY)
+  if (isAndroidShell()) {
+    void import('./nativeServerConnection')
+      .then(({ nativeConnectionStorage }) => nativeConnectionStorage().clear())
+      .catch(() => console.warn('Could not clear native connection storage'))
+  }
+}
+
+export function isAndroidShell(): boolean {
+  const capacitor = (window as Window & {
+    Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string }
+  }).Capacitor
+  return capacitor?.isNativePlatform?.() === true && capacitor.getPlatform?.() === 'android'
+}
+
+/** Complete before rendering providers or deciding whether setup is needed. */
+export async function restoreServerConnection(): Promise<void> {
+  if (!isAndroidShell() || window.localStorage.getItem(NATIVE_CONNECTION_KEY) !== '1') return
+  const { nativeConnectionStorage } = await import('./nativeServerConnection')
+  const saved = await nativeConnectionStorage().load()
+  if (saved.url !== getServerBaseUrl() || typeof saved.token !== 'string' || saved.token.trim() === '') return
+  if (window.localStorage.getItem(NATIVE_CONNECTION_KEY) !== '1') return
+  window.sessionStorage.setItem(ACCESS_TOKEN_KEY, saved.token.trim())
 }
 
 /**

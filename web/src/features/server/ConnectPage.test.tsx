@@ -273,4 +273,63 @@ describe('ConnectPage', () => {
     expect(token).not.toHaveAttribute('aria-invalid')
     expect(window.location.href).toBe('http://localhost/connect')
   })
+
+  it('waits for Android secure storage before reloading the saved connection', async () => {
+    let finishSave: () => void = () => { throw new Error('Save not started') }
+    const save = vi.fn(() => new Promise<void>((resolve) => { finishSave = resolve }))
+    vi.stubGlobal('Capacitor', {
+      isNativePlatform: () => true,
+      getPlatform: () => 'android',
+      Plugins: { ServerConnection: { save, load: vi.fn(), clear: vi.fn() } },
+    })
+    mockProbe('forward_auth')
+    renderPage()
+    fireEvent.change(screen.getByRole('textbox', { name: 'Server address' }), {
+      target: { value: 'https://srv.example.com' },
+    })
+    fireEvent.change(screen.getByLabelText('Access token (optional)'), {
+      target: { value: 'ts_test_secret' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
+
+    await waitFor(() => expect(save).toHaveBeenCalledOnce())
+    expect(window.location.href).toBe('http://localhost/connect')
+    expect(window.localStorage.getItem('teslasync-server-base-url')).toBeNull()
+    expect(screen.getByRole('button', { name: /Connecting/i })).toBeDisabled()
+
+    finishSave()
+
+    await waitFor(() => expect(window.location.href).toBe('/'))
+    expect(window.sessionStorage.getItem('teslasync-access-token')).toBe('ts_test_secret')
+    expect(window.localStorage.getItem('teslasync-access-token')).toBeNull()
+  })
+
+  it('retains editable credentials and reports an Android secure-save failure', async () => {
+    vi.stubGlobal('Capacitor', {
+      isNativePlatform: () => true,
+      getPlatform: () => 'android',
+      Plugins: {
+        ServerConnection: {
+          save: vi.fn().mockRejectedValue(new Error('Keystore unavailable')),
+          load: vi.fn(),
+          clear: vi.fn(),
+        },
+      },
+    })
+    mockProbe('forward_auth')
+    renderPage()
+    fireEvent.change(screen.getByRole('textbox', { name: 'Server address' }), {
+      target: { value: 'https://srv.example.com' },
+    })
+    fireEvent.change(screen.getByLabelText('Access token (optional)'), {
+      target: { value: 'ts_test_secret' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Could not save this connection/i)
+    expect(screen.getByLabelText('Access token (optional)')).toHaveValue('ts_test_secret')
+    expect(screen.getByRole('button', { name: /^connect$/i })).toBeEnabled()
+    expect(window.location.href).toBe('http://localhost/connect')
+    expect(window.localStorage.getItem('teslasync-server-base-url')).toBeNull()
+  })
 })
