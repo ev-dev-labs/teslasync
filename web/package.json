@@ -177,7 +177,7 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.5.7",
-    "glob": "^11.1.0",
+    "glob": "^14.0.4",
     "js-yaml": "^4.3.2",
     "jsdom": "^30.0.1",
     "postcss": "^8.5.23",
