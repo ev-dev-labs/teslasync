@@ -81,7 +81,7 @@ function filterMotionProps(props: Record<string, unknown>): Record<string, unkno
 }
 
 vi.mock('framer-motion', () => ({
-  motion: new Proxy(
+  m: new Proxy(
     {},
     {
       get:

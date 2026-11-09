@@ -113,7 +113,7 @@ vi.mock('@/components/ai', () => ({
 // Deterministic FadeIn/motion — render children eagerly, no IntersectionObserver
 // dance or async animation frames.
 vi.mock('framer-motion', () => ({
-  motion: new Proxy(
+  m: new Proxy(
     {},
     {
       get:

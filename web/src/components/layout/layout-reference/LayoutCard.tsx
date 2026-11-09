@@ -49,7 +49,7 @@ export function LayoutCard({ title, icon, description, actions, summary, header,
             crushing the title when the actions row is wide. Floor the title
             so it wraps to its own line instead of collapsing. */}
         <div className="min-w-[min(100%,12rem)] flex-1 space-y-1">
-          <Heading id={titleId ?? `${id}-title`} level="panel" data-card-title className={cn('break-words', icon && 'flex items-center gap-2')}>
+          <Heading id={titleId ?? `${id}-title`} level="panel" data-card-title className={cn('break-words', Boolean(icon) && 'flex items-center gap-2')}>
             {icon ? <><span className="shrink-0">{icon}</span><span className="min-w-0 break-words">{title}</span></> : title}
           </Heading>
           {description && <CardDescription title={title} description={description} boundaryRef={cardRef} />}

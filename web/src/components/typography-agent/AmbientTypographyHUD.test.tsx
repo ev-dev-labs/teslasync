@@ -1,6 +1,8 @@
 import { render, screen, fireEvent, act, waitFor, within } from '@testing-library/react';
 import { TypographyAgentProvider, __resetTypographyAgentForTests } from './TypographyAgentProvider';
 import { TypographyActuator } from '@/lib/typography-agent/actuator';
+import { TypographyVerifier } from '@/lib/typography-agent/verifier';
+import * as errorReporter from '@/lib/errorReporter';
 
 function renderHUD() {
   return render(
@@ -41,6 +43,23 @@ describe('AmbientTypographyHUD', () => {
       toggleHotkey('metaKey');
     });
     expect(screen.queryByLabelText('Typography agent controller')).toBeNull();
+  });
+
+  it('keeps content and applied typography available when background verification fails', async () => {
+    const failure = new Error('Synthetic verifier failure');
+    const evaluate = vi.spyOn(TypographyVerifier.prototype, 'evaluate').mockRejectedValueOnce(failure);
+    const report = vi.spyOn(errorReporter, 'reportFrontendError').mockImplementation(() => {});
+    try {
+      renderHUD();
+      expect(document.documentElement.style.getPropertyValue('--type-size-base')).not.toBe('');
+      await waitFor(() => {
+        expect(report).toHaveBeenCalledWith(failure, 'react');
+      });
+      expect(screen.getByText('app content')).toBeVisible();
+    } finally {
+      evaluate.mockRestore();
+      report.mockRestore();
+    }
   });
 
   it('dispatches ratio changes through the shared agent store', async () => {

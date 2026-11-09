@@ -41,7 +41,7 @@ vi.mock('react-i18next', () => {
 
 // ── framer-motion: inert ──
 vi.mock('framer-motion', () => ({
-  motion: new Proxy(
+  m: new Proxy(
     {},
     {
       get:

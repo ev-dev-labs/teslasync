@@ -23,7 +23,7 @@ vi.mock('react-i18next', () => ({
 // Hide the framer-motion machinery so the test focuses on behaviour, not animation.
 vi.mock('framer-motion', () => {
   return {
-    motion: new Proxy({}, {
+    m: new Proxy({}, {
       get: () => (props: Record<string, unknown>) => React.createElement('div', props, props.children as React.ReactNode),
     }),
     AnimatePresence: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),

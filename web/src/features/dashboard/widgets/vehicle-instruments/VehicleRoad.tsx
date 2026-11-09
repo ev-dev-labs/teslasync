@@ -3,7 +3,7 @@ import { cn } from '@/lib/cn';
 import { useVehicleStudioGeometry } from './useVehicleStudioGeometry';
 
 interface VehicleRoadProps {
-  studioRef: RefObject<HTMLDivElement>;
+  studioRef: RefObject<HTMLDivElement | null>;
   driving: boolean;
   lightsOn: boolean;
 }

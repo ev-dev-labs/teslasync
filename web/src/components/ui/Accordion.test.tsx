@@ -64,7 +64,7 @@ vi.mock('framer-motion', async () => {
       typeof prop === 'string' && prop !== 'then' ? makeMotion(prop) : undefined,
   })
   return {
-    motion,
+    m: motion,
     AnimatePresence: ({ children }: { children?: React.ReactNode }) =>
       React.createElement(React.Fragment, null, children),
     useReducedMotion: () => false,

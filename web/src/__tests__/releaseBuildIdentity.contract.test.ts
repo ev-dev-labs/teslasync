@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import yaml from 'js-yaml'
 import { describe, expect, it } from 'vitest'
 import {
   DEV_MARKER,
@@ -192,6 +193,21 @@ describe('release build identity — source configuration', () => {
   it('the checked-in Dockerfile + release workflow satisfy the contract', () => {
     expect(auditReleaseSources({ dockerfile, workflow: releaseWorkflow, compose })).toEqual([])
   })
+
+  it.each(['windows-apps', 'android-app'])(
+    '%s installs the bundled UI with the same locked peer policy as Docker',
+    (job) => {
+      const workflow = yaml.load(releaseWorkflow) as {
+        jobs: Record<string, { steps: Array<{ name?: string; run?: string }> }>
+      }
+      const script = workflow.jobs[job].steps
+        .find(step => step.name === 'Build bundled web UI')?.run ?? ''
+      const install = script.match(/^\s*npm ci[^\r\n]*/m)?.[0] ?? ''
+      expect(install).toMatch(/--prefix\s+web\b/)
+      expect(install.includes('--legacy-peer-deps'))
+        .toBe(/npm ci[^\r\n;]*--legacy-peer-deps/.test(dockerfile))
+    },
+  )
 
   it('vite.config.ts resolves the identity through the shared module', () => {
     expect(viteConfig).toContain("from './scripts/buildIdentity.mjs'")

@@ -465,7 +465,7 @@ describe('MapOverviewPage — full render', () => {
     expect(await screen.findByText('At home')).toBeInTheDocument()
     expect(screen.getByText('At work')).toBeInTheDocument()
     expect(screen.getByText('HomeLink nearby')).toBeInTheDocument()
-    expect(screen.getByText('Odometer')).toBeInTheDocument()
+    expect(await screen.findByText('Odometer')).toBeInTheDocument()
 
     // located_at_home=true → Yes, located_at_work=false → No.
     expect(screen.getAllByText('Yes').length).toBeGreaterThanOrEqual(1)
@@ -857,8 +857,8 @@ describe('MapOverviewPage modernization preservation', () => {
     install({ location: makeLocation({ homelink_nearby: value }) })
     renderPage()
     const label = await screen.findByText('HomeLink nearby')
-    expect(within(label.parentElement!).getByText(expected)).toBeInTheDocument()
-    expect(screen.getByTestId('map-marker')).toBeInTheDocument()
+    expect(await within(label.parentElement!).findByText(expected)).toBeInTheDocument()
+    expect(await screen.findByTestId('map-marker')).toBeInTheDocument()
   })
 
   it('labels durable GPS history as historical and resolved emptiness as unavailable', async () => {

@@ -9,7 +9,7 @@ import { useEffect } from 'react'
 // pattern (see hooks/__tests__/useMotionPreference.test.ts).
 const reducedMotionMock = vi.fn<() => boolean | null>(() => false)
 vi.mock('framer-motion', () => ({
-  motion: {
+  m: {
     div: ({ children, transition, initial: _i, animate: _a, exit: _e, ...rest }: any) => (
       <div data-duration={transition?.duration} {...filterDomProps(rest)}>
         {children}

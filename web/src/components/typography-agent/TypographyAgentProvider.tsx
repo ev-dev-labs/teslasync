@@ -20,6 +20,7 @@ import type {
 import { broadcast, useBroadcast } from '@/lib/broadcast';
 import { TOPICS } from '@/lib/broadcastTopics';
 import { useSettings } from '@/hooks/useSettings';
+import { reportFrontendError } from '@/lib/errorReporter';
 
 // The HUD pulls route-only UI primitives (Select, Slider, GlassPanel) that
 // must stay out of the entry chunk (CLEAN-06): only the token subscription
@@ -101,6 +102,10 @@ export function TypographyAgentProvider({ children }: { children: ReactNode }) {
   );
   const seededDensity = useRef(false);
   const settings = useSettings();
+  const reportVerificationFailure = useCallback((error: unknown) => {
+    setVerification(null);
+    reportFrontendError(error, 'react');
+  }, []);
 
   const dispatch = useCallback(
     async (patch: Partial<TypographySpec>): Promise<VerificationResult> => {
@@ -118,8 +123,8 @@ export function TypographyAgentProvider({ children }: { children: ReactNode }) {
   }), [agent]);
 
   useEffect(() => {
-    void agent.refresh();
-  }, [agent]);
+    void agent.refresh().catch(reportVerificationFailure);
+  }, [agent, reportVerificationFailure]);
 
   // Seed the agent density from workspace settings until the user picks
   // their own in the HUD or Settings (persisted spec always wins).
@@ -132,8 +137,8 @@ export function TypographyAgentProvider({ children }: { children: ReactNode }) {
     const density = (settings as { density?: string } | undefined)?.density;
     if (!density) return;
     seededDensity.current = true;
-    void agent.dispatch({ density: mapWorkspaceDensity(density) });
-  }, [agent, settings]);
+    void agent.dispatch({ density: mapWorkspaceDensity(density) }).catch(reportVerificationFailure);
+  }, [agent, settings, reportVerificationFailure]);
 
   // Peer tabs: a hint means "reload + re-apply", never trust a payload.
   useBroadcast(
@@ -141,9 +146,9 @@ export function TypographyAgentProvider({ children }: { children: ReactNode }) {
       (msg) => {
         if (msg.type !== TOPICS.TYPOGRAPHY_SPEC_CHANGED) return;
         const persisted = TypographyAgentLoop.loadPersisted();
-        if (persisted) void agent.dispatch(persisted);
+        if (persisted) void agent.dispatch(persisted).catch(reportVerificationFailure);
       },
-      [agent],
+      [agent, reportVerificationFailure],
     ),
   );
 

@@ -10,7 +10,7 @@ const reducedMotionMock = vi.fn<() => boolean | null>(() => false)
 let lastMotionProps: { initial: unknown; animate: unknown; transition: any; className: unknown } | null = null
 
 vi.mock('framer-motion', () => ({
-  motion: {
+  m: {
     div: ({ children, initial, animate, transition, className, ...rest }: any) => {
       lastMotionProps = { initial, animate, transition, className }
       return (

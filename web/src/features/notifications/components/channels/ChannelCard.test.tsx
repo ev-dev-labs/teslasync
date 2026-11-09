@@ -94,7 +94,7 @@ vi.mock('framer-motion', () => {
     return out;
   };
   return {
-    motion: new Proxy(
+    m: new Proxy(
       {},
       {
         get: () => (props: Record<string, unknown>) => {

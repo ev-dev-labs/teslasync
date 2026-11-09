@@ -1,6 +1,7 @@
 // Static busy feedback while AiOutputPanel waits for the first SSE delta.
 // Labels and skeletons remain visible in every motion/bandwidth mode.
 
+import type { JSX } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { HelixMark } from '@/components/branding/HelixMark'

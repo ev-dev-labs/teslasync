@@ -17,7 +17,7 @@ import { useCallback, useEffect, useRef, type RefObject } from 'react'
 export function useInfiniteScroll(
   onLoadMore: () => void,
   hasMore: boolean,
-): RefObject<HTMLDivElement> {
+): RefObject<HTMLDivElement | null> {
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   const handleObserver = useCallback(

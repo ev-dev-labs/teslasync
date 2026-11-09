@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next'
+import type { JSX } from 'react'
 import { BatteryCharging, Bell, BellRing, Car, Compass, MapPin, MapPinned, Route, Search, Workflow } from 'lucide-react'
 import type { SearchHit, SearchHitType } from '@/api/types'
 

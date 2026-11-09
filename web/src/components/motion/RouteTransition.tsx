@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { m as motion } from 'framer-motion'
 import { type ReactNode, useRef } from 'react'
 import { matchPath, useLocation } from 'react-router-dom'
 import { useMotionPreference } from '@/hooks/useMotionPreference'

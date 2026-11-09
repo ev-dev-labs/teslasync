@@ -96,7 +96,7 @@ vi.mock('@/hooks/useSelectedVehicle', async (importOriginal) => {
 vi.mock('framer-motion', () => {
   const tagCache = new Map<string, React.FC<Record<string, unknown>>>();
   return {
-    motion: new Proxy(
+    m: new Proxy(
       {},
       {
         get: (_target, key) => {

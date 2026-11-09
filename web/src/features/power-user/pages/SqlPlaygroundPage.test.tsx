@@ -329,11 +329,13 @@ describe('SqlPlaygroundPage', () => {
     expect(within(dialog).getByText('Clear the editor?')).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
 
-    await waitFor(() => expect(editor.value).toBe(''));
+    await waitFor(() => {
+      expect(editor.value).toBe('');
+      expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+    });
     expect(
       screen.queryByTestId('power-sql-run-message'),
     ).not.toBeInTheDocument();
-    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
   });
 
   it('editing the query after a Run dismisses the now-stale run guidance', async () => {
@@ -428,8 +430,10 @@ describe('SqlPlaygroundPage page-owned modernization', () => {
     expect(within(dialog).getByText('Clear the editor?')).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
 
-    await waitFor(() => expect(getEditor()).toHaveValue(''));
-    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+    await waitFor(() => {
+      expect(getEditor()).toHaveValue('');
+      expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+    });
     expect(clear).toBeDisabled();
     expect(writeText).not.toHaveBeenCalled();
     expect(screen.queryByTestId('power-sql-run-message')).not.toBeInTheDocument();

@@ -89,7 +89,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 
 // FadeIn renders eagerly (no IntersectionObserver / matchMedia dance).
 vi.mock('framer-motion', () => ({
-  motion: new Proxy(
+  m: new Proxy(
     {},
     {
       get: () => ({ children, className }: { children?: ReactNode; className?: string }) => (

@@ -14,8 +14,8 @@ const ThemePicker = lazy(async () => {
 
 interface ThemeQuickSwitcherPopoverProps {
   coords: { top: number; bottom?: number; left?: number; right?: number }
-  popoverRef: RefObject<HTMLDivElement>
-  triggerRef: RefObject<HTMLButtonElement>
+  popoverRef: RefObject<HTMLDivElement | null>
+  triggerRef: RefObject<HTMLButtonElement | null>
   onClose: () => void
   onCustomize: () => void
 }

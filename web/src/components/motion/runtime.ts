@@ -1,3 +1,3 @@
 export { RouteTransition } from './RouteTransition';
 export type { RouteTransitionProps } from './RouteTransition';
-export { AnimatePresence, motion } from 'framer-motion';
+export { AnimatePresence, m as motion } from 'framer-motion';

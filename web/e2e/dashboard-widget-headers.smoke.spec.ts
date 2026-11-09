@@ -40,7 +40,6 @@ for (const width of [375,768,1280,1920]) for (const theme of ['light','dark'] as
   expect(edit.map(row=>row.right)).toEqual(view.map(row=>row.right));
  });
 }
-
 for (const width of [375, 1440]) for (const theme of ['light', 'dark'] as const) {
  test(`charge-session caption and legend padding ${width} ${theme}`, async ({ page }, testInfo) => {
   test.setTimeout(120000);

@@ -20,7 +20,7 @@ vi.mock('framer-motion', () => {
   >();
 
   return {
-    motion: new Proxy(
+    m: new Proxy(
       {},
       {
         get: (_target, key) => {

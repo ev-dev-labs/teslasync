@@ -9,6 +9,28 @@ import {
 
 vi.mock('react-i18next', () => createReactI18nextMock({ language: 'en' }))
 
+// Bare renders need the same real motion context as the shell. Provider tests
+// separately exercise deferred feature loading; isolated UI tests load it now.
+vi.mock('@testing-library/react', async importOriginal => {
+  const actual = await importOriginal<typeof import('@testing-library/react')>()
+  const { createElement, isValidElement, StrictMode } = await vi.importActual<typeof import('react')>('react')
+  const { LazyMotion, domMax } = await vi.importActual<typeof import('framer-motion')>('framer-motion')
+  return {
+    ...actual,
+    render: (ui: import('react').ReactNode, options?: import('@testing-library/react').RenderOptions) => {
+      const Wrapper = options?.wrapper
+      function TestMotionRoot({ children }: { children: import('react').ReactNode }) {
+        return createElement(LazyMotion, { features: domMax },
+          Wrapper ? createElement(Wrapper, null, children) : children)
+      }
+      // React 19 replays mount effects only when StrictMode owns the root.
+      const reactStrictMode = options?.reactStrictMode ??
+        (isValidElement(ui) && ui.type === StrictMode ? true : undefined)
+      return actual.render(ui, { ...options, reactStrictMode, wrapper: TestMotionRoot })
+    },
+  }
+})
+
 // Global default mock for useSettings. Many components reach for it
 // transitively via useDateFormat / useUnits / useFormatting; without a
 // stub these components fail with "No QueryClient set" inside jsdom

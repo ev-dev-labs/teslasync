@@ -57,7 +57,7 @@ vi.mock('@/hooks/useSettings', () => ({
 // Keep framer-motion deterministic in jsdom — eager render
 // with no IntersectionObserver dance.
 vi.mock('framer-motion', () => ({
-  motion: new Proxy(
+  m: new Proxy(
     {},
     {
       get:

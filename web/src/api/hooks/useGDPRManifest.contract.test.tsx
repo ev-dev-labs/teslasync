@@ -162,7 +162,7 @@ describe('GDPR manifest contract', () => {
     expect(requestMock).not.toHaveBeenCalled();
     await act(async () => { await result.current.refetch(); });
     expect(requestMock).not.toHaveBeenCalled();
-    expect(result.current.isError).toBe(true);
+    await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.message).toBe('GDPR export artifact id is required');
   });
 
@@ -273,7 +273,7 @@ describe('GDPR manifest contract', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     requestMock.mockRejectedValue(error);
     await act(async () => { await result.current.refetch(); });
-    expect(result.current.isRefetchError).toBe(true);
+    await waitFor(() => expect(result.current.isRefetchError).toBe(true));
     expect(result.current.error).toBe(error);
     expect(result.current.data?.byte_count).toBe(0);
     expect(result.current.data?.sha256).toBe('a'.repeat(64));

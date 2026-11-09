@@ -133,7 +133,7 @@ vi.mock('framer-motion', () => {
     },
   );
   return {
-    motion: motionProxy,
+    m: motionProxy,
     AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
     useReducedMotion: () => typeof window.matchMedia === 'function'
       ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : true,

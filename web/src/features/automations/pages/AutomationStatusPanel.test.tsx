@@ -21,7 +21,7 @@ import { AutomationStatusPanel, type AutomationStatusStats } from './AutomationS
 import { deriveDataState } from '@/api/dataState';
 
 vi.mock('framer-motion', () => ({
-  motion: new Proxy(
+  m: new Proxy(
     {},
     {
       get:

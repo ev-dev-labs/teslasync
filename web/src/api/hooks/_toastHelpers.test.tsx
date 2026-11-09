@@ -61,7 +61,7 @@ function filterDomProps(props: Record<string, any>) {
   return rest;
 }
 vi.mock('framer-motion', () => ({
-  motion: {
+  m: {
     div: ({ children, ...props }: any) => <div {...filterDomProps(props)}>{children}</div>,
   },
   AnimatePresence: ({ children }: any) => <>{children}</>,

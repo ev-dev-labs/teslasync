@@ -33,7 +33,7 @@ export function useKeyboardShortcuts(): ShortcutState {
   const navigate = useNavigate();
   const [mode, setMode] = useState<ShortcutMode>('idle');
   const [showCheatSheet, setShowCheatSheet] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // Mirror `mode` into a ref so the singleton keydown listener always reads
   // the latest value. The effect deliberately does NOT depend on `mode`:
   // re-subscribing on every transition (the previous behaviour) ran the

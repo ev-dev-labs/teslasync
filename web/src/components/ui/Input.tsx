@@ -97,8 +97,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                 ? 'border-[var(--semantic-danger)]'
                 : 'enabled:hover:border-[var(--control-border-hover)] focus-visible:border-[var(--focus-ring)]',
               'disabled:cursor-not-allowed disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:opacity-100',
-              icon && 'ps-10',
-              suffix && 'pe-10',
+              Boolean(icon) && 'ps-10',
+              Boolean(suffix) && 'pe-10',
               className,
             )}
             aria-invalid={error ? 'true' : ariaInvalid}

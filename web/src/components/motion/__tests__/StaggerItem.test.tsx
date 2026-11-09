@@ -9,7 +9,7 @@ import { render, screen } from '@testing-library/react'
 // hooks/__tests__/useMotionPreference.test.ts).
 const reducedMotionMock = vi.fn<() => boolean | null>(() => false)
 vi.mock('framer-motion', () => ({
-  motion: {
+  m: {
     div: ({ children, variants, className }: any) => (
       <div
         data-testid="stagger-item"

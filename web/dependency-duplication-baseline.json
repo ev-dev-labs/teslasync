@@ -5,10 +5,16 @@
     "A newly duplicated package, or a new version of a listed one, fails the gate even",
     "when the totals do not move.",
     "`--update-baseline` only lowers/prunes; growing it requires the explicit",
-    "`--accept-new-duplicates` flag in the same command."
+    "`--accept-new-duplicates` flag in the same command.",
+    "ESLint 9 and espree 10 require eslint-visitor-keys 4.2.1; eslint-utils and",
+    "typescript-eslint still require the incompatible 3.x and 5.x ranges.",
+    "Only that required tooling version is added; eliminated glob and type-fest",
+    "duplications are removed rather than retained as future allowances.",
+    "react-is follows the React version to recognize current element symbols;",
+    "its eliminated 16/17/18 duplication is pruned, not retained as an allowance."
   ],
-  "totalDuplicatedPackages": 26,
-  "totalExtraCopies": 29,
+  "totalDuplicatedPackages": 23,
+  "totalExtraCopies": 26,
   "observed": [
     {
       "name": "@types/unist",
@@ -85,6 +91,7 @@
       "name": "eslint-visitor-keys",
       "versions": [
         "3.4.3",
+        "4.2.1",
         "5.0.1"
       ]
     },
@@ -93,13 +100,6 @@
       "versions": [
         "2.0.2",
         "3.0.3"
-      ]
-    },
-    {
-      "name": "glob",
-      "versions": [
-        "11.1.0",
-        "7.2.3"
       ]
     },
     {
@@ -160,14 +160,6 @@
       ]
     },
     {
-      "name": "react-is",
-      "versions": [
-        "16.13.1",
-        "17.0.2",
-        "18.3.1"
-      ]
-    },
-    {
       "name": "semver",
       "versions": [
         "6.3.1",
@@ -179,13 +171,6 @@
       "versions": [
         "0.6.1",
         "0.8.0"
-      ]
-    },
-    {
-      "name": "type-fest",
-      "versions": [
-        "0.16.0",
-        "0.20.2"
       ]
     },
     {

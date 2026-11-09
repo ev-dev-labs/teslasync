@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { NavigationGuardProvider, GuardedLink } from '@/components/feedback'
@@ -163,12 +163,19 @@ describe('AlertRuleEditor source closure mounted preservation', () => {
     expect(within(filters).getByRole('button', { name: /^Battery\s*\(/ })).toHaveAttribute('aria-pressed', 'true')
     const batteryTemplates = ruleTemplates.filter(template => template.category === 'Battery').length
     expect(screen.getByText(`${batteryTemplates} of ${totalTemplates} templates`)).toHaveAttribute('role', 'status')
-    fireEvent.change(screen.getByRole('searchbox', { name: 'Search templates' }), { target: { value: 'no match source closure' } })
-    // The canonical SearchInput commits after its debounce, not on change.
-    expect(await screen.findByText(`0 of ${totalTemplates} templates`)).toHaveAttribute('role', 'status')
-    expect(screen.getByText('No templates found')).toBeInTheDocument()
-    fireEvent.change(screen.getByRole('searchbox', { name: 'Search templates' }), { target: { value: 'Battery Low' } })
-    expect(await screen.findByText(`2 of ${totalTemplates} templates`)).toHaveAttribute('role', 'status')
+    // Drive the real SearchInput debounce without racing the wall-clock query timeout.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Search templates' }), { target: { value: 'no match source closure' } })
+      await act(async () => { await vi.advanceTimersByTimeAsync(250) })
+      expect(screen.getByText(`0 of ${totalTemplates} templates`)).toHaveAttribute('role', 'status')
+      expect(screen.getByText('No templates found')).toBeInTheDocument()
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Search templates' }), { target: { value: 'Battery Low' } })
+      await act(async () => { await vi.advanceTimersByTimeAsync(250) })
+      expect(screen.getByText(`2 of ${totalTemplates} templates`)).toHaveAttribute('role', 'status')
+    } finally {
+      vi.useRealTimers()
+    }
     expect(screen.getAllByRole('button', { name: /^Use template Battery Low \(/ })).toHaveLength(2)
     expect(screen.getByRole('button', { name: 'Use template Battery Low (< 30%)' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Use template Battery Low (< 20%)' }))

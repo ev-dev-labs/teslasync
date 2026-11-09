@@ -129,6 +129,30 @@ beforeEach(() => {
   mocks.vehicles.mockReturnValue({ data: [{ id: 7 }], refetch: mocks.refetchVehicles });
 });
 
+it.each([false, true])('registers grouped currency and month axes in the real chart (line=%s)', async asLine => {
+  const charts = await vi.importActual<typeof import('@/components/charts')>('@/components/charts');
+  const Chart = asLine ? charts.LineChart : charts.BarChart;
+  const Series = asLine ? charts.Line : charts.Bar;
+  const { container } = render(
+    <Chart width={360} height={240} data={[
+      { month: 'Jan', cost: 100 },
+      { month: 'Feb', cost: 120 },
+    ]}>
+      <>
+        <charts.XAxis dataKey="month" />
+        <charts.YAxis tickFormatter={value => `$${value}`} />
+      </>
+      <Series dataKey="cost" isAnimationActive={false} />
+    </Chart>,
+  );
+  await waitFor(() => expect(container.querySelectorAll(
+    '.recharts-yAxis .recharts-cartesian-axis-tick-value',
+  ).length).toBeGreaterThan(2));
+  expect(container.querySelector('.recharts-yAxis')).toHaveTextContent('$');
+  expect(container.querySelector('.recharts-xAxis')).toHaveTextContent('Jan');
+  expect(container.querySelector('.recharts-xAxis')).toHaveTextContent('Feb');
+});
+
 describe.each(packs)('cost forecast %s (%s)', (packId) => {
   it('composes the real headline, periods, forecast plot, accessible samples and refresh action', async () => {
     const { container } = await mount(packId);

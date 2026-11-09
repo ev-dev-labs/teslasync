@@ -72,7 +72,7 @@ const { applyDraft } = vi.hoisted(() => ({
 vi.mock('framer-motion', () => {
   const cache = new Map<string, React.FC<Record<string, unknown>>>();
   return {
-    motion: new Proxy(
+    m: new Proxy(
       {},
       {
         get: (_target, key: string) => {
