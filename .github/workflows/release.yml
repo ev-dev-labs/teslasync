@@ -755,7 +755,7 @@ jobs:
           set -euo pipefail
           npm ci --prefix apps/mobile
           (cd apps/mobile && npx cap sync android)
-          (cd apps/mobile/android && bash gradlew assembleDebug assembleDebugAndroidTest \
+          (cd apps/mobile/android && bash gradlew assembleDebug :app:assembleDebugAndroidTest \
             "-PreleaseVersionName=$VERSION" "-PreleaseVersionCode=$VERSION_CODE")
           mkdir -p release-assets
           cp apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk \

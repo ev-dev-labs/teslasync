@@ -470,7 +470,7 @@ describe('CommandPalette frame', () => {
       expect(backdrop).toHaveStyle({ opacity: '1' })
     }
     await waitFor(() => expect(screen.getByRole('combobox')).toHaveFocus())
-    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Escape' })
+    await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 })
