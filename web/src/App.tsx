@@ -12,7 +12,6 @@ import { ServerGate } from '@/features/server/ServerGate'
 import { NativeDeepLinks } from '@/features/server/NativeDeepLinks'
 import { DemoModeBanner } from '@/components/feedback/DemoModeBanner'
 import { DensityApplier } from '@/components/ui/DensityApplier'
-import { AppDesignBridge } from '@/components/ui/AppDesignBridge'
 import { ContextMenuRoot } from '@/components/ui/ContextMenu'
 import { RouteAnnouncer, RouteFocusManager } from '@/components/a11y'
 import { recordPageView, resolvePageLabel } from '@/lib/recentPages'
@@ -27,6 +26,11 @@ import {
 const TaskOnboardingHost = lazy(async () => {
   const module = await import('@/features/onboarding/components/TaskOnboardingHost')
   return { default: module.TaskOnboardingHost }
+})
+
+const AppDesignBridge = lazy(async () => {
+  const module = await import('./components/ui/AppDesignBridge')
+  return { default: module.AppDesignBridge }
 })
 
 // Dashboard
@@ -571,7 +575,7 @@ export default function App() {
           <SafeRoute name="SharedLibraryReference"><SharedLibraryReference /></SafeRoute>
         </main>
       } />}
-      <Route path="/" element={<><AppDesignBridge /><Layout /></>}>
+      <Route path="/" element={<><Suspense fallback={null}><AppDesignBridge /></Suspense><Layout /></>}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
         <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
         {MobileGridReference && <Route path="dev/grid-states" element={<SafeRoute name="MobileGridReference"><MobileGridReference /></SafeRoute>} />}
