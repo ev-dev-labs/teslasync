@@ -13,10 +13,11 @@
     "build:web": "npm --prefix ../../web run build"
   },
   "devDependencies": {
-    "electron": "^44.9.0",
+    "electron": "^44.9.1",
     "electron-builder": "^26.15.3"
   },
   "overrides": {
-    "@electron/get": "^5.1.0"
+    "@electron/get": "^5.1.0",
+    "minimatch@>=7.0.0 <11.0.1": "^11.0.5"
   }
 }

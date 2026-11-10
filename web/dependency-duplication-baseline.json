@@ -11,7 +11,9 @@
     "Only that required tooling version is added; eliminated glob and type-fest",
     "duplications are removed rather than retained as future allowances.",
     "react-is follows the React version to recognize current element symbols;",
-    "its eliminated 16/17/18 duplication is pruned, not retained as an allowance."
+    "its eliminated 16/17/18 duplication is pruned, not retained as an allowance.",
+    "Patched minimatch 11.0.5 replaces vulnerable 10.2.6 without adding copies;",
+    "10.2.6 is removed so its reintroduction is not pre-authorised."
   ],
   "totalDuplicatedPackages": 23,
   "totalExtraCopies": 26,
@@ -140,7 +142,7 @@
     {
       "name": "minimatch",
       "versions": [
-        "10.2.6",
+        "11.0.5",
         "3.1.5",
         "5.1.9"
       ]
