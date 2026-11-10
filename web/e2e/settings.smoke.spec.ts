@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { createHash } from 'node:crypto'
 import { assertMockApiComplete, fulfillApiFixture, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
 
 test('ForwardAuth pack selection does not require JWT user context or expire a valid session', async ({ page }) => {
@@ -9,10 +10,21 @@ test('ForwardAuth pack selection does not require JWT user context or expire a v
   if (!api) throw new Error('Missing isolated ForwardAuth fixtures')
   const failures: string[] = []
   page.on('pageerror', error => failures.push(error.message))
+  const subject = 'synthetic-forward-auth-user'
+  const preference = {
+    pack_id: 'classic',
+    scope: createHash('sha256').update(`forward_auth:${subject}`).digest('hex'),
+  }
+  await page.route('**/api/v1/settings/widget-design-pack', async route => {
+    if (route.request().method() === 'PUT') {
+      preference.pack_id = (route.request().postDataJSON() as { pack_id: string }).pack_id
+    }
+    await fulfillApiFixture(route, api, { json: preference })
+  })
   await page.route('**/api/v1/system/auth-mode', route => fulfillApiFixture(route, api, {
     json: {
       mode: 'forward_auth', subject_header: 'X-authentik-username',
-      subject: 'synthetic-forward-auth-user', capabilities: {},
+      subject, capabilities: {},
     },
   }))
   await page.route('**/api/v1/auth/session', route => fulfillApiFixture(route, api, {
@@ -28,6 +40,7 @@ test('ForwardAuth pack selection does not require JWT user context or expire a v
   await expect(page.getByTestId('session-expired-modal')).toHaveCount(0)
   await selector.getByRole('button', { name: 'Use Owner pack', exact: true }).click()
   await expect(selector.getByRole('button', { name: 'Owner active', exact: true })).toBeDisabled()
+  expect(preference.pack_id).toBe('v4')
   await page.reload()
   await waitForHarnessReady(page, api)
   await expect(selector.getByRole('button', { name: 'Owner active', exact: true })).toBeDisabled()
