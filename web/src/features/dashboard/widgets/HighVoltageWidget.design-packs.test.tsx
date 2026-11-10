@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { VehicleLiveSignalsResponse } from '@/api/hooks/useTelemetry';
 import { PackBoundary } from './designPacks/PackBoundary';
-import type { PackId } from './designPacks/types';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 import type { WidgetProps } from './types';
 import HighVoltageWidget from './HighVoltageWidget';
 
@@ -28,10 +28,8 @@ vi.mock('@/hooks/useDateFormat', () => {
 
 const NOW = Date.parse('2026-11-07T02:00:00Z');
 const OBSERVED = '2026-11-07T01:59:55Z';
-const PACKS = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const PACKS = PACK_IDS.filter((pack): pack is Exclude<PackId, 'classic'> => pack !== 'classic')
+  .map(pack => [pack, PACK_APPEARANCES[pack]] as const);
 const VALUES = {
   PackVoltage: 384, PackCurrent: -12, IsolationResistance: 1_200_000,
   Hvil: 'OK', BMSState: 'Charge', DCDCEnable: true,
@@ -77,6 +75,9 @@ function expectSections() {
   expect(within(configuration).getAllByText('Unknown')).toHaveLength(3);
   expect(screen.getByText(/not an inspection, alarm, or proof of electrical safety/)).toBeInTheDocument();
   expect(screen.getByText(/not cell readings or the vehicle’s module layout/)).toBeInTheDocument();
+  expect(screen.getByText('Signed current is shown as reported; direction is not inferred.')).toBeInTheDocument();
+  expect(screen.getByText(/Isolation resistance and HV interlock have no established signal-log history/)).toBeInTheDocument();
+  expect(screen.getByText(/Server intent and routing are not vehicle configuration, support, or delivery receipts/)).toBeInTheDocument();
   expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
 }
@@ -131,7 +132,7 @@ describe('HighVoltageWidget design packs', () => {
     expect(requestMock.mock.calls.every(([path]) => path === '/signals/7/live')).toBe(true);
   });
 
-  it('switches Classic and all seven compact/full appearances without another data controller', async () => {
+  it('switches Classic and every compact/full appearance without another data controller', async () => {
     const view = render(tree('classic'));
     await screen.findAllByText('Fresh observation');
     await settled();
@@ -164,14 +165,15 @@ describe('HighVoltageWidget design packs', () => {
     expect(row('Hvil').queryByText('OK')).not.toBeInTheDocument();
   });
 
-  it('preserves measured zero and false while rejecting nonfinite, negative and fabricated enum readings', async () => {
+  it.each(PACKS)('%s preserves measured zero and false while rejecting nonfinite, negative and fabricated enum readings', async (pack, appearance) => {
     live.signals = {
       PackVoltage: sample(0, 'ValueKindFloat'), PackCurrent: sample(Number.NaN, 'ValueKindFloat'),
       IsolationResistance: sample(-1, 'ValueKindFloat'), Hvil: sample('Closed', 'ValueKindEnum'),
       BMSState: sample('Available', 'ValueKindEnum'), DCDCEnable: sample(false, 'ValueKindBool'),
     };
-    const view = render(tree('v7'));
-    await presentation(view.container, 'pixel');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
+    expectSections();
     expect(row('PackVoltage').getByText(/^0(?:\.0+)? V$/)).toBeInTheDocument();
     expect(row('PackVoltage').getByText('Fresh observation')).toBeInTheDocument();
     expect(row('DCDCEnable').getByText('No')).toBeInTheDocument();
@@ -183,7 +185,7 @@ describe('HighVoltageWidget design packs', () => {
     expect(screen.queryByText(/NaN|Infinity|Healthy|Safe/)).not.toBeInTheDocument();
   });
 
-  it('does not equate missing, future, stale, malformed-age or unclassified evidence with fresh data', async () => {
+  it.each(PACKS)('%s does not equate missing, future, stale, malformed-age or unclassified evidence with fresh data', async (pack, appearance) => {
     live.signals = {
       PackVoltage: sample(384, 'ValueKindFloat', { ts: '' }),
       PackCurrent: sample(-12, 'ValueKindFloat', { ts: '2026-11-07T01:00:00Z', source: 'stale' }),
@@ -192,8 +194,8 @@ describe('HighVoltageWidget design packs', () => {
       BMSState: sample('Drive', 'ValueKindEnum', { source: 'unknown' }),
       DCDCEnable: true,
     };
-    const view = render(tree('v3'));
-    await presentation(view.container, 'precision');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expectSections();
     expect(row('PackVoltage').getByText('Observation time unknown')).toBeInTheDocument();
     expect(row('PackVoltage').getByText('Freshness unknown')).toBeInTheDocument();
@@ -207,9 +209,9 @@ describe('HighVoltageWidget design packs', () => {
     expect(view.container.querySelector('.widget-big-number')).toHaveTextContent('—');
   });
 
-  it('retains observations on refresh failure and recovers using the same real action', async () => {
-    const view = render(tree('v4'));
-    await presentation(view.container, 'owner');
+  it.each(PACKS)('%s retains observations on refresh failure and recovers using the same real action', async (pack, appearance) => {
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     fail = true;
     fireEvent.click(screen.getByRole('button', { name: 'Refresh high-voltage signals' }));
     await screen.findByTestId('stale-refresh-warning');
@@ -224,10 +226,10 @@ describe('HighVoltageWidget design packs', () => {
     expect(screen.getAllByText('Fresh observation')).toHaveLength(6);
   });
 
-  it('preserves the source shells during first failure and retries the failed source', async () => {
+  it.each(PACKS)('%s preserves the source shells during first failure and retries the failed source', async (pack, appearance) => {
     fail = true;
-    const view = render(tree('v2'));
-    await presentation(view.container, 'elevated');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expectSections();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     expect(screen.queryByText('Fresh observation')).not.toBeInTheDocument();
@@ -237,15 +239,15 @@ describe('HighVoltageWidget design packs', () => {
     await settled();
   });
 
-  it('keeps source-shaped loading rows and disables duplicate refresh while in flight', async () => {
+  it.each(PACKS)('%s keeps source-shaped loading rows and disables duplicate refresh while in flight', async (pack, appearance) => {
     let resolve: ((response: VehicleLiveSignalsResponse) => void) | undefined;
     requestMock.mockImplementationOnce(() => new Promise<VehicleLiveSignalsResponse>(done => { resolve = done; }));
-    const view = render(tree('v5'));
+    const view = render(tree(pack));
     await waitFor(() => expect(view.container.querySelector('[data-widget-family="pack-map"]'))
-      .toHaveAttribute('data-widget-appearance', 'iconic'));
+      .toHaveAttribute('data-widget-appearance', appearance));
     expectSections();
     expect(screen.getByRole('button', { name: 'Refresh high-voltage signals' })).toBeDisabled();
-    expect(view.container.querySelector('[data-widget-pack="v5"]')).toHaveAttribute('aria-busy', 'true');
+    expect(view.container.querySelector(`[data-widget-pack="${pack}"]`)).toHaveAttribute('aria-busy', 'true');
     expect(row('PackCurrent').queryByText(/^-12(?:\.0+)? A$/)).not.toBeInTheDocument();
     await act(async () => { resolve?.(live); });
     await waitFor(() => expect(screen.getAllByText('Fresh observation')).toHaveLength(6));
@@ -253,24 +255,24 @@ describe('HighVoltageWidget design packs', () => {
     await settled();
   });
 
-  it('does not choose another vehicle and uses the widget configuration when no vehicle prop exists', async () => {
-    const view = render(tree('v1', { vehicleId: undefined }));
-    await presentation(view.container, 'studio');
+  it.each(PACKS)('%s does not choose another vehicle and uses the widget configuration when no vehicle prop exists', async (pack, appearance) => {
+    const view = render(tree(pack, { vehicleId: undefined }));
+    await presentation(view.container, appearance);
     expectSections();
     expect(screen.getByText('Select a vehicle to inspect high-voltage telemetry.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh high-voltage signals' })).toBeDisabled();
     expect(requestMock).not.toHaveBeenCalled();
     live = { ...live, vehicle_id: 9 };
-    view.rerender(tree('v1', { vehicleId: undefined, config: { vehicleId: 9 } }));
+    view.rerender(tree(pack, { vehicleId: undefined, config: { vehicleId: 9 } }));
     await waitFor(() => expect(screen.getAllByText('Fresh observation')).toHaveLength(6));
     expect(requestMock).toHaveBeenCalledWith('/signals/9/live', expect.anything());
     await settled();
   });
 
-  it('does not display another vehicle’s response', async () => {
+  it.each(PACKS)('%s does not display another vehicle’s response', async (pack, appearance) => {
     live = { ...live, vehicle_id: 9 };
-    const view = render(tree('v6'));
-    await presentation(view.container, 'expressive');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expectSections();
     expect(screen.getByText('No valid timestamped high-voltage observations for this vehicle.')).toBeInTheDocument();
     expect(screen.getAllByText('Observation time unknown')).toHaveLength(6);
@@ -278,13 +280,13 @@ describe('HighVoltageWidget design packs', () => {
     expect(screen.queryByText('Fresh observation')).not.toBeInTheDocument();
   });
 
-  it('does not use snapshot assembly time as an observation or coerce a malformed typed number', async () => {
+  it.each(PACKS)('%s does not use snapshot assembly time as an observation or coerce a malformed typed number', async (pack, appearance) => {
     live.signals = {
       PackVoltage: sample(384, 'ValueKindFloat', { ts: '' }),
       PackCurrent: sample('0', 'ValueKindFloat'), IsolationResistance: sample(Number.POSITIVE_INFINITY, 'ValueKindFloat'),
     };
-    const view = render(tree('v1'));
-    await presentation(view.container, 'studio');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expectSections();
     expect(row('PackVoltage').getByText('Observation time unknown')).toBeInTheDocument();
     expect(row('PackVoltage').getByText('Freshness unknown')).toBeInTheDocument();

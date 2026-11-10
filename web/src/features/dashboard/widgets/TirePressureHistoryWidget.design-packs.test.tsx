@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom';
 import * as settingsHook from '@/hooks/useSettings';
 import { PackBoundary } from './designPacks/PackBoundary';
-import { PACK_APPEARANCES, type PackId } from './designPacks/types';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 import TirePressureHistoryWidget from './TirePressureHistoryWidget';
 
 const { historyMock, vehiclesMock, refetch } = vi.hoisted(() => ({
@@ -46,6 +46,10 @@ const samples: Sample[] = [
   { created_at: '2026-11-01T12:00:00.000Z', frontLeft: 279_000, frontRight: 284_000, rearLeft: 289_000, rearRight: 294_000 },
   { created_at: '2026-11-04T12:00:00.000Z', frontLeft: null, frontRight: null, rearLeft: null, rearRight: null },
 ];
+
+const packCases = PACK_IDS
+  .filter((packId): packId is Exclude<PackId, 'classic'> => packId !== 'classic')
+  .map(packId => [packId, PACK_APPEARANCES[packId]] as const);
 
 function makeQuery(data: Sample[] | undefined, overrides: {
   isLoading?: boolean;
@@ -109,9 +113,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe.each(Object.entries(PACK_APPEARANCES))('tire pressure history %s / %s', (packId, appearance) => {
+describe.each(packCases)('tire pressure history %s / %s', (packId, appearance) => {
   it('retains the four original series, every sample and gap, scoped history, timestamps and refresh', async () => {
-    const { container } = await mountPack(packId as PackId, appearance);
+    const { container } = await mountPack(packId, appearance);
 
     expect(screen.getByTitle('Tire pressure history')).toBeInTheDocument();
     expect(metric('Front-left pressure').getByText('2.80')).toBeInTheDocument();
@@ -165,7 +169,7 @@ describe.each(Object.entries(PACK_APPEARANCES))('tire pressure history %s / %s',
       rearLeft: Number.NaN,
       rearRight: Number.POSITIVE_INFINITY,
     }]));
-    await mountPack(packId as PackId, appearance, 1);
+    await mountPack(packId, appearance, 1);
 
     expect(metric('Front-left pressure').getByText('—')).toBeInTheDocument();
     expect(metric('FR').getByText('0.00')).toBeInTheDocument();
@@ -195,10 +199,10 @@ it.each([1, 2, 3])('keeps Classic as the unchanged default at %i columns', cols 
   }
 });
 
-it('retains source data and refresh behavior across all seven selections and return to Classic', async () => {
+it('retains source data and refresh behavior across every pack selection and return to Classic', async () => {
   const view = render(widget('classic', 3));
-  for (const [packId, appearance] of Object.entries(PACK_APPEARANCES)) {
-    view.rerender(widget(packId as PackId, 3));
+  for (const [packId, appearance] of packCases) {
+    view.rerender(widget(packId, 3));
     await waitFor(() => expect(view.container.querySelector(`[data-widget-appearance="${appearance}"]`)).not.toBeNull());
     expect(metric('Front-left pressure').getByText('2.80')).toBeInTheDocument();
     expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(4);
@@ -211,87 +215,89 @@ it('retains source data and refresh behavior across all seven selections and ret
   expect(refetch).toHaveBeenCalledTimes(1);
 });
 
-it.each([1, 2])('keeps an honest empty source visible at %i columns', async cols => {
-  historyMock.mockReturnValue(makeQuery([]));
-  await mountPack('v4', 'owner', cols);
-  expect(screen.getByText('No tire pressure history')).toBeInTheDocument();
-  expect(metric('Front-left pressure').getByText('—')).toBeInTheDocument();
-  expect(screen.getAllByText('Not reported')).toHaveLength(4);
-  expect(screen.getByText('Recommended')).toBeInTheDocument();
-  expect(screen.getByText('Unavailable')).toBeInTheDocument();
-  expect(screen.queryByRole('table')).not.toBeInTheDocument();
-});
-
-it('keeps last-reported corner timestamps honest when a newer row is missing that corner', async () => {
-  historyMock.mockReturnValue(makeQuery([
-    { ...samples[1], frontRight: null },
-    { ...samples[0], frontLeft: null },
-  ]));
-  await mountPack('v3', 'precision');
-  const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1);
-  const earlier = within(rows[0]).getAllByRole('cell')[0].textContent;
-  const newer = within(rows[1]).getAllByRole('cell')[0].textContent;
-  expect(metric('Front-left pressure').getByText('2.79')).toBeInTheDocument();
-  expect(metric('Front-left pressure').getByText(`Last reported ${earlier}`)).toBeInTheDocument();
-  expect(metric('FR').getByText(`Last reported ${newer}`)).toBeInTheDocument();
-});
-
-it('retains history and its warning on a failed refresh, and disables an in-flight refresh', async () => {
-  historyMock.mockReturnValue(makeQuery(samples, { isError: true, error: new Error('Refresh failed') }));
-  const view = await mountPack('v7', 'pixel');
-  expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
-  expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-  expect(metric('Front-left pressure').getByText('2.80')).toBeInTheDocument();
-  expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(4);
-
-  historyMock.mockReturnValue(makeQuery(samples, { isFetching: true }));
-  view.rerender(widget('v7'));
-  expect(screen.getByRole('button', { name: /refresh data/i })).toBeDisabled();
-  expect(metric('Front-left pressure').getByText('2.80')).toBeInTheDocument();
-});
-
-it('preserves loading and fatal-error recovery without manufacturing source data', async () => {
-  historyMock.mockReturnValue(makeQuery(undefined, { isLoading: true, isPending: true, isFetching: true }));
-  const view = render(widget('v2'));
-  expect(view.container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
-  expect(view.container.querySelector('[data-widget-appearance]')).toBeNull();
-  expect(screen.queryByText('0.00')).not.toBeInTheDocument();
-
-  historyMock.mockReturnValue(makeQuery(undefined, { isError: true, error: new Error('History failed') }));
-  view.rerender(widget('v2'));
-  expect(view.container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
-  expect(screen.queryByRole('table')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /refresh data/i }));
-  expect(refetch).toHaveBeenCalledTimes(1);
-
-  historyMock.mockReturnValue(makeQuery(samples));
-  view.rerender(widget('v2'));
-  await waitFor(() => expect(view.container.querySelector('[data-widget-appearance="elevated"]')).not.toBeNull());
-  expect(metric('Front-left pressure').getByText('2.80')).toBeInTheDocument();
-});
-
-it('uses the existing Pa-to-display converter for psi in the headline, every series and the compact summary', async () => {
-  const current = settingsHook.useSettings();
-  const settings = vi.spyOn(settingsHook, 'useSettings').mockReturnValue({
-    ...current,
-    settings: { ...current.settings, unit_of_pressure: 'psi' },
-  });
-  try {
-    const view = await mountPack('v5', 'iconic');
-    expect(metric('Front-left pressure').getByText('40.61')).toBeInTheDocument();
-    expect(metric('Front-left pressure').getByText('psi')).toBeInTheDocument();
-    expect(within(screen.getByRole('table')).getAllByRole('columnheader').map(cell => cell.textContent))
-      .toEqual(['Time', 'FL (psi)', 'FR (psi)', 'RL (psi)', 'RR (psi)']);
-    const lastRow = within(screen.getByRole('table')).getAllByRole('row')[3];
-    const pressures = within(lastRow).getAllByRole('cell').slice(1).map(cell => Number(cell.textContent));
-    expect(pressures[0]).toBeCloseTo(40.61, 2);
-    expect(pressures[1]).toBeCloseTo(41.34, 2);
-    expect(pressures[2]).toBeCloseTo(42.06, 2);
-    expect(pressures[3]).toBeCloseTo(42.79, 2);
-    view.rerender(widget('v5', 1));
-    expect(metric('Front-left pressure').getByText('40.61')).toBeInTheDocument();
+describe.each(packCases)('tire pressure history %s / %s source states', (packId, appearance) => {
+  it.each([1, 2])('keeps an honest empty source visible at %i columns', async cols => {
+    historyMock.mockReturnValue(makeQuery([]));
+    await mountPack(packId, appearance, cols);
+    expect(screen.getByText('No tire pressure history')).toBeInTheDocument();
+    expect(metric('Front-left pressure').getByText('—')).toBeInTheDocument();
+    expect(screen.getAllByText('Not reported')).toHaveLength(4);
+    expect(screen.getByText('Recommended')).toBeInTheDocument();
+    expect(screen.getByText('Unavailable')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
-  } finally {
-    settings.mockRestore();
-  }
+  });
+
+  it('keeps last-reported corner timestamps honest when a newer row is missing that corner', async () => {
+    historyMock.mockReturnValue(makeQuery([
+      { ...samples[1], frontRight: null },
+      { ...samples[0], frontLeft: null },
+    ]));
+    await mountPack(packId, appearance);
+    const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1);
+    const earlier = within(rows[0]).getAllByRole('cell')[0].textContent;
+    const newer = within(rows[1]).getAllByRole('cell')[0].textContent;
+    expect(metric('Front-left pressure').getByText('2.79')).toBeInTheDocument();
+    expect(metric('Front-left pressure').getByText(`Last reported ${earlier}`)).toBeInTheDocument();
+    expect(metric('FR').getByText(`Last reported ${newer}`)).toBeInTheDocument();
+  });
+
+  it('retains history and its warning on a failed refresh, and disables an in-flight refresh', async () => {
+    historyMock.mockReturnValue(makeQuery(samples, { isError: true, error: new Error('Refresh failed') }));
+    const view = await mountPack(packId, appearance);
+    expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(metric('Front-left pressure').getByText('2.80')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(4);
+
+    historyMock.mockReturnValue(makeQuery(samples, { isFetching: true }));
+    view.rerender(widget(packId));
+    expect(screen.getByRole('button', { name: /refresh data/i })).toBeDisabled();
+    expect(metric('Front-left pressure').getByText('2.80')).toBeInTheDocument();
+  });
+
+  it('preserves loading and fatal-error recovery without manufacturing source data', async () => {
+    historyMock.mockReturnValue(makeQuery(undefined, { isLoading: true, isPending: true, isFetching: true }));
+    const view = render(widget(packId));
+    expect(view.container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+    expect(view.container.querySelector('[data-widget-appearance]')).toBeNull();
+    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
+
+    historyMock.mockReturnValue(makeQuery(undefined, { isError: true, error: new Error('History failed') }));
+    view.rerender(widget(packId));
+    expect(view.container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /refresh data/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    historyMock.mockReturnValue(makeQuery(samples));
+    view.rerender(widget(packId));
+    await waitFor(() => expect(view.container.querySelector(`[data-widget-appearance="${appearance}"]`)).not.toBeNull());
+    expect(metric('Front-left pressure').getByText('2.80')).toBeInTheDocument();
+  });
+
+  it('uses the existing Pa-to-display converter for psi in the headline, every series and the compact summary', async () => {
+    const current = settingsHook.useSettings();
+    const settings = vi.spyOn(settingsHook, 'useSettings').mockReturnValue({
+      ...current,
+      settings: { ...current.settings, unit_of_pressure: 'psi' },
+    });
+    try {
+      const view = await mountPack(packId, appearance);
+      expect(metric('Front-left pressure').getByText('40.61')).toBeInTheDocument();
+      expect(metric('Front-left pressure').getByText('psi')).toBeInTheDocument();
+      expect(within(screen.getByRole('table')).getAllByRole('columnheader').map(cell => cell.textContent))
+        .toEqual(['Time', 'FL (psi)', 'FR (psi)', 'RL (psi)', 'RR (psi)']);
+      const lastRow = within(screen.getByRole('table')).getAllByRole('row')[3];
+      const pressures = within(lastRow).getAllByRole('cell').slice(1).map(cell => Number(cell.textContent));
+      expect(pressures[0]).toBeCloseTo(40.61, 2);
+      expect(pressures[1]).toBeCloseTo(41.34, 2);
+      expect(pressures[2]).toBeCloseTo(42.06, 2);
+      expect(pressures[3]).toBeCloseTo(42.79, 2);
+      view.rerender(widget(packId, 1));
+      expect(metric('Front-left pressure').getByText('40.61')).toBeInTheDocument();
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    } finally {
+      settings.mockRestore();
+    }
+  });
 });

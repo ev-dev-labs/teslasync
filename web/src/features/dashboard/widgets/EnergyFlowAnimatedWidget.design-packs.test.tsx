@@ -233,17 +233,17 @@ it('preserves full/compact branches and configured/fallback vehicle scope across
   expect(sources.state).toHaveBeenLastCalledWith(42, { refetchInterval: 5_000 });
 });
 
-it('distinguishes measured zero from invalid and missing readings without inventing motion', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s distinguishes measured zero from invalid and missing readings without inventing motion', async (pack, appearance) => {
   sources.state.mockReturnValue(stateQuery({ power: 0, is_charging: false, battery_level: 0 }));
-  const view = render(tree('v7'));
-  await expectPack(view.container, 'pixel');
+  const view = render(tree(pack));
+  await expectPack(view.container, appearance);
   expect(screen.getByText('0.00 kW')).toBeInTheDocument();
   expect(screen.getByText('0.00%')).toBeInTheDocument();
   expect(screen.getAllByText('Standby')).toHaveLength(2);
   expect(activeDirections()).toEqual([]);
 
   sources.state.mockReturnValue(stateQuery({ power: Number.NaN, battery_level: null, is_charging: false }));
-  view.rerender(tree('v7'));
+  view.rerender(tree(pack));
   expect(screen.getAllByText('Unknown')).toHaveLength(2);
   expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
   expect(screen.queryByText('0.00 kW')).not.toBeInTheDocument();
@@ -252,11 +252,11 @@ it('distinguishes measured zero from invalid and missing readings without invent
   expect(activeDirections()).toEqual([]);
 });
 
-it('does not animate an old observation just because its HTTP poll completed recently', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s does not animate an old observation just because its HTTP poll completed recently', async (pack, appearance) => {
   const observedAt = Date.now() - 180_000;
   sources.state.mockReturnValue(stateQuery({}, { observedAt }, { dataUpdatedAt: Date.now() }));
-  const { container } = render(tree('v1'));
-  await expectPack(container, 'studio');
+  const { container } = render(tree(pack));
+  await expectPack(container, appearance);
 
   expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'stale');
   expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -265,10 +265,10 @@ it('does not animate an old observation just because its HTTP poll completed rec
   expect(diagram().closest('.widget-flow-frame')).toHaveAttribute('data-motion-suppressed', 'true');
 });
 
-it('retains discovery/loading/error source shells and recovers into the requested presentation', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s retains discovery/loading/error source shells and recovers into the requested presentation', async (pack, appearance) => {
   sources.vehicles.mockReturnValue(query<Array<{ id: number }>>(undefined, { isLoading: true }));
   sources.state.mockReturnValue(query<StatePayload>(undefined, { dataUpdatedAt: 0 }));
-  const view = render(tree('v3'));
+  const view = render(tree(pack));
   expect(sources.state).toHaveBeenLastCalledWith(0, { refetchInterval: 5_000 });
   expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
   expect(screen.queryByText('No energy data available')).not.toBeInTheDocument();
@@ -278,14 +278,14 @@ it('retains discovery/loading/error source shells and recovers into the requeste
   sources.state.mockReturnValue(query<StatePayload>(undefined, {
     isError: true, error: new Error('Synthetic initial failure'), dataUpdatedAt: 0,
   }));
-  view.rerender(tree('v3'));
+  view.rerender(tree(pack));
   expect(screen.getByText("Can't reach server")).toBeInTheDocument();
   expect(screen.queryByText('No energy data available')).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Energy flow' })).toBeInTheDocument();
 
   sources.state.mockReturnValue(stateQuery());
-  view.rerender(tree('v3'));
-  await expectPack(view.container, 'precision');
+  view.rerender(tree(pack));
+  await expectPack(view.container, appearance);
   expect(diagram()).toBeInTheDocument();
   expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
 });

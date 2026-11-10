@@ -27,9 +27,12 @@
  *     disabled (undefined id) query when no vehicle exists.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import type { DataStateSource } from '@/api/dataState';
 import type { ChargePlan, RatePlanInfo } from '@/types/charging';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS } from './designPacks/types';
 
 // ── i18n stub: return the English fallback (2nd arg) or the key. ──
 vi.mock('react-i18next', () => ({
@@ -148,8 +151,7 @@ const mockPlans = useChargePlans as unknown as ReturnType<typeof vi.fn>;
 const mockRates = useRatePlans as unknown as ReturnType<typeof vi.fn>;
 const mockVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 
- 
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: DataStateSource<unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -190,8 +192,11 @@ const STANDARD = { cols: 2, rows: 4 };
 const COMPACT = { cols: 1, rows: 2 };
 
 function setup(
-   
-  opts: { plans?: any; rates?: any; vehicles?: any } = {},
+  opts: {
+    plans?: DataStateSource<unknown>;
+    rates?: DataStateSource<unknown>;
+    vehicles?: DataStateSource<unknown>;
+  } = {},
 ) {
   mockVehicles.mockReturnValue(opts.vehicles ?? makeQuery({ data: [{ id: 42 }] }));
   mockPlans.mockReturnValue(opts.plans ?? makeQuery({ data: [] }));
@@ -511,5 +516,211 @@ describe('ChargePlansWidget', () => {
     expect(screen.getByText('70.00%')).toBeInTheDocument();
     expect(screen.queryByText('100%')).not.toBeInTheDocument();
     expect(screen.queryByText('completed')).not.toBeInTheDocument();
+  });
+});
+
+describe.each(PACK_IDS)('ChargePlansWidget presentation %s', (packId) => {
+  function renderPack(size = STANDARD, vehicleId: number | undefined = 42) {
+    return render(<ChargePlansWidget vehicleId={vehicleId} size={size} />, {
+      wrapper: ({ children }) => (
+        <MemoryRouter>
+          <PackBoundary requestedPackId={packId}>{children}</PackBoundary>
+        </MemoryRouter>
+      ),
+    });
+  }
+
+  async function expectTimeline(container: HTMLElement, count: number) {
+    await waitFor(() => {
+      expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+      const presentations = container.querySelectorAll('[data-timeline-appearance]');
+      expect(presentations).toHaveLength(packId === 'classic' ? 0 : count);
+      if (packId !== 'classic') {
+        presentations.forEach(presentation => {
+          expect(presentation).toHaveAttribute('data-timeline-appearance', PACK_APPEARANCES[packId]);
+        });
+      }
+    });
+  }
+
+  it('uses the timeline family for every plan and rate detail without changing vehicle selection or refresh', async () => {
+    const refetchPlans = vi.fn();
+    const refetchRates = vi.fn();
+    setup({
+      plans: makeQuery({
+        data: [makePlan({ status: 'completed', target_soc: 100 }), makePlan({ id: 2, vehicle_id: 99 })],
+        refetch: refetchPlans,
+      }),
+      rates: makeQuery({ data: [RATE], refetch: refetchRates }),
+    });
+    const { container } = renderPack(STANDARD, 99);
+    await expectTimeline(container, 3);
+
+    expect(screen.getByRole('heading', { name: 'Charge plans' })).toBeInTheDocument();
+    expect(screen.getByText('Off-Peak Saver')).toBeInTheDocument();
+    expect(screen.getByText('Scheduled')).toBeInTheDocument();
+    for (const value of ['85.00%', '08:00', '2026-06-01 02:00', '2026-06-01 06:30', '42.50 kWh', '$5.10', '$4.10', 'saved', 'PG&E', 'EV2-A', 'ev2a']) {
+      expect(screen.getByText(value)).toBeInTheDocument();
+    }
+    expect(screen.queryByText('100.00%')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-data-state="ok"]')).toBeInTheDocument();
+    expect(mockPlans).toHaveBeenCalledWith(99);
+
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(refetchPlans).toHaveBeenCalledOnce();
+    expect(refetchRates).toHaveBeenCalledOnce();
+  });
+
+  it('preserves the compact hero and existing short-card detail limit when resized', async () => {
+    setup({ plans: makeQuery({ data: [makePlan()] }), rates: makeQuery({ data: [RATE] }) });
+    const view = renderPack(COMPACT);
+    await expectTimeline(view.container, 1);
+    expect(screen.getByText('85.00%')).toBeInTheDocument();
+    expect(screen.getByText('08:00')).toBeInTheDocument();
+    expect(screen.queryByText('EV2-A')).not.toBeInTheDocument();
+
+    view.rerender(<ChargePlansWidget vehicleId={42} size={{ cols: 2, rows: 3 }} />);
+    await expectTimeline(view.container, 3);
+    expect(screen.getByText('2026-06-01 06:30')).toBeInTheDocument();
+    expect(screen.getByText('42.50 kWh')).toBeInTheDocument();
+    expect(screen.getByText('$5.10')).toBeInTheDocument();
+    expect(screen.getByText('EV2-A')).toBeInTheDocument();
+    expect(screen.queryByText('Savings')).not.toBeInTheDocument();
+
+    view.rerender(<ChargePlansWidget vehicleId={42} size={STANDARD} />);
+    await expectTimeline(view.container, 3);
+    expect(screen.getByText('Savings')).toBeInTheDocument();
+    expect(screen.getByText('$4.10')).toBeInTheDocument();
+  });
+
+  it('retains plan and rate values with a refresh warning and the original refresh command', async () => {
+    const refetchPlans = vi.fn();
+    const refetchRates = vi.fn();
+    setup({
+      plans: makeQuery({
+        data: [makePlan()],
+        isError: true,
+        error: new Error('refresh failed'),
+        refetch: refetchPlans,
+      }),
+      rates: makeQuery({ data: [RATE], refetch: refetchRates }),
+    });
+    const { container } = renderPack();
+    await expectTimeline(container, 3);
+    expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('85.00%')).toBeInTheDocument();
+    expect(screen.getByText('42.50 kWh')).toBeInTheDocument();
+    expect(screen.getByText('EV2-A')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(refetchPlans).toHaveBeenCalledOnce();
+    expect(refetchRates).toHaveBeenCalledOnce();
+  });
+
+  it('keeps independent sources visible during partial failures and loading with source-specific retries', async () => {
+    const refetchPlans = vi.fn();
+    const refetchRates = vi.fn();
+    setup({
+      plans: makeQuery({ data: [makePlan()], refetch: refetchPlans }),
+      rates: makeQuery({ isError: true, error: new Error('rates failed'), refetch: refetchRates }),
+    });
+    const view = renderPack();
+    await expectTimeline(view.container, 2);
+    expect(view.container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(screen.getByText('42.50 kWh')).toBeInTheDocument();
+    const failure = screen.getByText('Unable to load rate plans').closest('[role="alert"]');
+    expect(failure).not.toBeNull();
+    fireEvent.click(within(failure as HTMLElement).getByRole('button', { name: 'Retry' }));
+    expect(refetchRates).toHaveBeenCalledOnce();
+    expect(refetchPlans).not.toHaveBeenCalled();
+
+    setup({
+      plans: makeQuery({ isLoading: true }),
+      rates: makeQuery({ data: [RATE] }),
+    });
+    view.rerender(<ChargePlansWidget vehicleId={42} size={STANDARD} />);
+    await expectTimeline(view.container, 1);
+    expect(screen.getByText('EV2-A')).toBeInTheDocument();
+    expect(view.container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
+    expect(screen.queryByText('No charge plans')).not.toBeInTheDocument();
+
+    setup({
+      plans: makeQuery({ isError: true, error: new Error('plans failed'), refetch: refetchPlans }),
+      rates: makeQuery({ data: [RATE] }),
+    });
+    view.rerender(<ChargePlansWidget vehicleId={42} size={STANDARD} />);
+    await expectTimeline(view.container, 1);
+    expect(screen.getByText('EV2-A')).toBeInTheDocument();
+    const plansFailure = screen.getByText('Unable to load charge plans').closest('[role="alert"]');
+    expect(plansFailure).not.toBeNull();
+    fireEvent.click(within(plansFailure as HTMLElement).getByRole('button', { name: 'Retry' }));
+    expect(refetchPlans).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    { name: 'missing', target_soc: null, estimated_kwh: null, estimated_cost: null },
+    { name: 'non-finite', target_soc: NaN, estimated_kwh: Infinity, estimated_cost: NaN },
+  ])('distinguishes $name numbers and invalid dates from known zeroes', async ({ target_soc, estimated_kwh, estimated_cost }) => {
+    setup({
+      plans: makeQuery({ data: [makePlan({
+        target_soc: target_soc as number,
+        estimated_kwh,
+        estimated_cost,
+        depart_by: 'invalid',
+        scheduled_start: 'invalid',
+        scheduled_end: 'invalid',
+        status: 'vendor-paused',
+        savings: 0,
+      })] }),
+      rates: makeQuery({ data: [RATE] }),
+    });
+    const view = renderPack();
+    await expectTimeline(view.container, 3);
+    expect(screen.getByText('vendor-paused')).toBeInTheDocument();
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(6);
+    expect(screen.queryByText(/NaN|Infinity|— —|0\.00%|0\.00 kWh|\$0\.00/)).not.toBeInTheDocument();
+
+    setup({
+      plans: makeQuery({ data: [makePlan({ target_soc: 0, estimated_kwh: 0, estimated_cost: 0, savings: 0 })] }),
+      rates: makeQuery({ data: [RATE] }),
+    });
+    view.rerender(<ChargePlansWidget vehicleId={42} size={STANDARD} />);
+    await expectTimeline(view.container, 3);
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
+    expect(screen.getByText('$0.00')).toBeInTheDocument();
+    expect(screen.queryByText('Savings')).not.toBeInTheDocument();
+  });
+
+  it('preserves first-load, fatal-retry and empty states without inventing plan values', () => {
+    const refetchPlans = vi.fn();
+    const refetchRates = vi.fn();
+    setup({
+      plans: makeQuery({ isLoading: true }),
+      rates: makeQuery({ isLoading: true }),
+    });
+    const view = renderPack();
+    expect(view.container.querySelector('[data-data-state="initial"]')).toBeInTheDocument();
+    expect(view.container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+    expect(screen.queryByText('No charge plans')).not.toBeInTheDocument();
+
+    setup({
+      plans: makeQuery({ isError: true, error: new Error('plans failed'), refetch: refetchPlans }),
+      rates: makeQuery({ isError: true, error: new Error('rates failed'), refetch: refetchRates }),
+    });
+    view.rerender(<ChargePlansWidget vehicleId={42} size={STANDARD} />);
+    expect(view.container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetchPlans).toHaveBeenCalledOnce();
+    expect(refetchRates).toHaveBeenCalledOnce();
+
+    setup();
+    view.rerender(<ChargePlansWidget vehicleId={42} size={STANDARD} />);
+    expect(view.container.querySelector('[data-data-state="unavailable"]')).toBeInTheDocument();
+    expect(screen.getByText('No charge plans')).toBeInTheDocument();
+    expect(screen.getByText('No rate plans')).toBeInTheDocument();
+    expect(screen.getByText('No charge plans or rate data')).toBeInTheDocument();
+    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
   });
 });

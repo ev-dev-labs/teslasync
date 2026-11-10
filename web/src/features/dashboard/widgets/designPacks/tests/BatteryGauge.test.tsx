@@ -10,11 +10,15 @@ import OwnerBatteryGauge from '../packs/owner/BatteryGauge';
 import IconicBatteryGauge from '../packs/iconic/BatteryGauge';
 import ExpressiveBatteryGauge from '../packs/expressive/BatteryGauge';
 import PixelBatteryGauge from '../packs/pixel/BatteryGauge';
+import ExperimentalBatteryGauge from '../packs/experimental/BatteryGauge';
+import { PackBoundary } from '../PackBoundary';
+import { EXPERIMENTAL_PACK_IDS } from '../types';
 
 const presentations: ReadonlyArray<[string, ComponentType<BatteryGaugePresentationProps>]> = [
   ['v1', StudioBatteryGauge], ['v2', ElevatedBatteryGauge], ['v3', PrecisionBatteryGauge],
   ['v4', OwnerBatteryGauge], ['v5', IconicBatteryGauge], ['v6', ExpressiveBatteryGauge],
   ['v7', PixelBatteryGauge],
+  ...EXPERIMENTAL_PACK_IDS.map(id => [id, ExperimentalBatteryGauge] as [string, ComponentType<BatteryGaugePresentationProps>]),
 ];
 
 const sections: BatteryGaugePresentationProps = {
@@ -28,7 +32,7 @@ const sections: BatteryGaugePresentationProps = {
 
 describe.each(presentations)('battery gauge %s', (id, Presentation) => {
   it('keeps verified zero, status, marker, range and pack in the presentation', () => {
-    const { container } = render(<Presentation {...sections} />);
+    const { container } = render(<PackBoundary requestedPackId={id}><Presentation {...sections} /></PackBoundary>);
     const root = container.querySelector(`[data-battery-gauge-pack="${id}"]`);
     expect(root).not.toBeNull();
     const view = within(root as HTMLElement);
@@ -42,14 +46,14 @@ describe.each(presentations)('battery gauge %s', (id, Presentation) => {
 
   it('keeps the refresh action when the battery observation is missing', () => {
     const refresh = vi.fn();
-    const { container } = render(<Presentation
+    const { container } = render(<PackBoundary requestedPackId={id}><Presentation
       {...sections}
       level={null}
       headline={<div>No battery data <Button onClick={refresh}>Refresh</Button></div>}
       pack={null}
       meter={null}
       details={null}
-    />);
+    /></PackBoundary>);
     const view = within(container.querySelector(`[data-battery-gauge-pack="${id}"]`) as HTMLElement);
     expect(view.getByText(/No battery data/)).toBeInTheDocument();
     expect(view.queryByRole('meter')).not.toBeInTheDocument();

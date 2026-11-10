@@ -52,10 +52,6 @@ function section(container: HTMLElement, name: string): HTMLElement {
   if (!element) throw new Error(`Missing arrival section: ${name}`);
   return element;
 }
-async function expectArrivalCharge(container: HTMLElement, value: string) {
-  await waitFor(() => expect(section(container, 'arrival-charge')
-    .querySelector('.widget-big-number > div > span')?.textContent).toBe(value));
-}
 function mount(pack: string, size = FULL, props: Partial<WidgetProps> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   clients.push(client);
@@ -98,6 +94,15 @@ afterEach(() => {
 });
 
 describe.each(Object.entries(PACK_APPEARANCES))('arrival energy %s / %s', (pack, appearance) => {
+  async function expectArrivalCharge(container: HTMLElement, value: string) {
+    await waitFor(() => {
+      expect(container.querySelector('[data-widget-family="map"]'))
+        .toHaveAttribute('data-widget-appearance', appearance);
+      expect(section(container, 'arrival-charge')
+        .querySelector('.widget-big-number > div > span')?.textContent).toBe(value);
+    });
+  }
+
   it('keeps the real route, SI distance, every section and refresh through Classic transitions', async () => {
     const compact = ['v2', 'v4', 'v6'].includes(pack);
     const view = mount(pack, compact ? COMPACT : FULL);
@@ -153,119 +158,123 @@ describe.each(Object.entries(PACK_APPEARANCES))('arrival energy %s / %s', (pack,
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     expect(calls('/signals/7/live')).toBe(1);
   });
-});
+  it('preserves actual zero charge, zero ETA and zero traffic while rejecting invalid distance and coordinates', async () => {
+    signals.ExpectedEnergyPercentAtTripArrival = reported(0);
+    signals.MinutesToArrival = reported(0);
+    signals.RouteTrafficMinutesDelay = reported(0);
+    signals.MilesToArrival = reported(-1);
+    signals.DestinationLocationLongitude = reported(null);
+    const { container } = mount(pack);
+    await expectArrivalCharge(container, '0.00');
+    expect(screen.getAllByText('0.00 min')).toHaveLength(2);
+    expect(screen.getByText('Destination coordinates are unknown.')).toBeVisible();
+    expect(screen.queryByText(/-\s*1.*km/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('destination-pin')).not.toBeInTheDocument();
+  });
 
-it('preserves actual zero charge, zero ETA and zero traffic while rejecting invalid distance and coordinates', async () => {
-  signals.ExpectedEnergyPercentAtTripArrival = reported(0);
-  signals.MinutesToArrival = reported(0);
-  signals.RouteTrafficMinutesDelay = reported(0);
-  signals.MilesToArrival = reported(-1);
-  signals.DestinationLocationLongitude = reported(null);
-  const { container } = mount('v7');
-  await expectArrivalCharge(container, '0.00');
-  expect(screen.getAllByText('0.00 min')).toHaveLength(2);
-  expect(screen.getByText('Destination coordinates are unknown.')).toBeVisible();
-  expect(screen.queryByText(/-\s*1.*km/)).not.toBeInTheDocument();
-  expect(screen.queryByTestId('destination-pin')).not.toBeInTheDocument();
-});
+  it.each([
+    ['stale reading', { source: 'stale', age_ms: 130_000 }],
+    ['untracked source', { source: 'unknown' }],
+    ['missing observation', { ts: '' }],
+    ['future observation', { ts: new Date(Date.now() + 86_400_000).toISOString() }],
+  ] satisfies Array<[string, Partial<VehicleLiveSignal>]>)('does not present a current forecast for %s', async (_, patch) => {
+    signals.ExpectedEnergyPercentAtTripArrival = { ...signals.ExpectedEnergyPercentAtTripArrival, ...patch };
+    const { container } = mount(pack);
+    await expectArrivalCharge(container, 'Unknown');
+    expect(screen.getByText('A current arrival charge estimate is unavailable.')).toBeVisible();
+    expect(screen.getByText('Last reported arrival charge: 65.00%')).toBeVisible();
+    expect(screen.getByText(/12\.00\s*km/)).toBeVisible();
+  });
 
-it.each([
-  ['stale reading', { source: 'stale', age_ms: 130_000 }],
-  ['untracked source', { source: 'unknown' }],
-  ['missing observation', { ts: '' }],
-  ['future observation', { ts: new Date(Date.now() + 86_400_000).toISOString() }],
-] satisfies Array<[string, Partial<VehicleLiveSignal>]>)('does not present a current forecast for %s', async (_, patch) => {
-  signals.ExpectedEnergyPercentAtTripArrival = { ...signals.ExpectedEnergyPercentAtTripArrival, ...patch };
-  const { container } = mount('v3');
-  await expectArrivalCharge(container, 'Unknown');
-  expect(screen.getByText('A current arrival charge estimate is unavailable.')).toBeVisible();
-  expect(screen.getByText('Last reported arrival charge: 65.00%')).toBeVisible();
-  expect(screen.getByText(/12\.00\s*km/)).toBeVisible();
-});
+  it('requires route evidence even when a fresh arrival percentage exists', async () => {
+    delete signals.DestinationName;
+    delete signals.DestinationLocationLatitude;
+    delete signals.DestinationLocationLongitude;
+    const { container } = mount(pack);
+    await expectArrivalCharge(container, 'Unknown');
+    expect(screen.getByText('Current route evidence is unavailable; the arrival forecast is unknown.')).toBeVisible();
+    expect(screen.getByText('Last reported arrival charge: 65.00%')).toBeVisible();
+  });
 
-it('requires route evidence even when a fresh arrival percentage exists', async () => {
-  delete signals.DestinationName;
-  delete signals.DestinationLocationLatitude;
-  delete signals.DestinationLocationLongitude;
-  const { container } = mount('v1');
-  await expectArrivalCharge(container, 'Unknown');
-  expect(screen.getByText('Current route evidence is unavailable; the arrival forecast is unknown.')).toBeVisible();
-  expect(screen.getByText('Last reported arrival charge: 65.00%')).toBeVisible();
-});
+  it('retains route details and map on refresh failure, without calling the retained estimate current', async () => {
+    const view = mount(pack);
+    await expectArrivalCharge(view.container, '65.00');
+    failure = true;
+    await act(async () => { await view.client.refetchQueries({ queryKey: ['live-signals', 7] }); });
+    expect(await screen.findByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
+    await expectArrivalCharge(view.container, 'Unknown');
+    expect(screen.getByText('Last reported arrival charge: 65.00%')).toBeVisible();
+    expect(screen.getByTestId('destination-pin')).toBeVisible();
+    expect(screen.getByText(/12\.00\s*km/)).toBeVisible();
+    failure = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh arrival estimates' }));
+    await expectArrivalCharge(view.container, '65.00');
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
+  });
 
-it('retains route details and map on refresh failure, without calling the retained estimate current', async () => {
-  const view = mount('v4');
-  await expectArrivalCharge(view.container, '65.00');
-  failure = true;
-  await act(async () => { await view.client.refetchQueries({ queryKey: ['live-signals', 7] }); });
-  expect(await screen.findByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
-  await expectArrivalCharge(view.container, 'Unknown');
-  expect(screen.getByText('Last reported arrival charge: 65.00%')).toBeVisible();
-  expect(screen.getByTestId('destination-pin')).toBeVisible();
-  expect(screen.getByText(/12\.00\s*km/)).toBeVisible();
-  failure = false;
-  fireEvent.click(screen.getByRole('button', { name: 'Refresh arrival estimates' }));
-  await expectArrivalCharge(view.container, '65.00');
-  await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
-});
+  it('keeps forecast, map and all metric shells visible on initial failure and recovers through the source retry', async () => {
+    failure = true;
+    const { container } = mount(pack);
+    await waitFor(() => expect(container.querySelector('[data-widget-family="map"]')).toHaveAttribute('data-widget-appearance', appearance));
+    await screen.findByRole('alert');
+    for (const name of ['arrival-charge', 'destination-map', 'route-details']) expect(section(container, name)).toBeVisible();
+    expect(screen.getByText('ETA')).toBeVisible();
+    const attempts = calls('/signals/7/live');
+    failure = false;
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    });
+    expect(calls('/signals/7/live')).toBe(attempts + 1);
+    await expectArrivalCharge(container, '65.00');
+  });
 
-it('keeps forecast, map and all metric shells visible on initial failure and recovers through the source retry', async () => {
-  failure = true;
-  const { container } = mount('v2');
-  await waitFor(() => expect(container.querySelector('[data-widget-family="map"]')).toHaveAttribute('data-widget-appearance', 'elevated'));
-  const alert = await screen.findByRole('alert');
-  for (const name of ['arrival-charge', 'destination-map', 'route-details']) expect(section(container, name)).toBeVisible();
-  expect(screen.getByText('ETA')).toBeVisible();
-  failure = false;
-  fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }));
-  await expectArrivalCharge(container, '65.00');
-});
+  it('keeps named sections mounted and disables refresh during the initial request', async () => {
+    let resolve: ((response: unknown) => void) | undefined;
+    api.request.mockImplementation(path => path === '/vehicles'
+      ? Promise.resolve(vehicles)
+      : new Promise(response => { resolve = response; }));
+    const view = mount(pack);
+    await waitFor(() => expect(view.container.querySelector('[data-widget-family="map"]')).toHaveAttribute('data-widget-appearance', appearance));
+    expect(screen.getByText('Expected charge on arrival')).toBeVisible();
+    for (const name of ['arrival-charge', 'destination-map', 'route-details']) expect(section(view.container, name)).toBeVisible();
+    for (const label of ['ETA', 'Remaining', 'Traffic delay']) expect(screen.getByText(label)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Refresh arrival estimates' })).toBeDisabled();
+    expect(screen.queryByTestId('destination-pin')).not.toBeInTheDocument();
+    await act(async () => { resolve?.({ vehicle_id: 7, signals }); });
+    await expectArrivalCharge(view.container, '65.00');
+  });
 
-it('keeps named sections mounted and disables refresh during the initial request', async () => {
-  let resolve: ((response: unknown) => void) | undefined;
-  api.request.mockImplementation(path => path === '/vehicles'
-    ? Promise.resolve(vehicles)
-    : new Promise(response => { resolve = response; }));
-  const view = mount('v6');
-  await waitFor(() => expect(view.container.querySelector('[data-widget-family="map"]')).toHaveAttribute('data-widget-appearance', 'expressive'));
-  expect(screen.getByText('Expected charge on arrival')).toBeVisible();
-  for (const name of ['arrival-charge', 'destination-map', 'route-details']) expect(section(view.container, name)).toBeVisible();
-  for (const label of ['ETA', 'Remaining', 'Traffic delay']) expect(screen.getByText(label)).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Refresh arrival estimates' })).toBeDisabled();
-  expect(screen.queryByTestId('destination-pin')).not.toBeInTheDocument();
-  await act(async () => { resolve?.({ vehicle_id: 7, signals }); });
-  await expectArrivalCharge(view.container, '65.00');
-});
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, -1, 101, '65'])('rejects invalid arrival percentage %s instead of fabricating a scale', async value => {
+    signals.ExpectedEnergyPercentAtTripArrival = { ...reported(value), kind: 'ValueKindFloat' };
+    const { container } = mount(pack);
+    await expectArrivalCharge(container, 'Unknown');
+    expect(screen.getByText('A current arrival charge estimate is unavailable.')).toBeVisible();
+    expect(screen.getByText('Last reported arrival charge: Unknown')).toBeVisible();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    expect(screen.getByTestId('destination-pin')).toBeVisible();
+  });
 
-it.each([Number.NaN, Number.POSITIVE_INFINITY, -1, 101, '65'])('rejects invalid arrival percentage %s instead of fabricating a scale', async value => {
-  signals.ExpectedEnergyPercentAtTripArrival = { ...reported(value), kind: 'ValueKindFloat' };
-  const { container } = mount('v7');
-  await expectArrivalCharge(container, 'Unknown');
-  expect(screen.getByText('A current arrival charge estimate is unavailable.')).toBeVisible();
-  expect(screen.getByText('Last reported arrival charge: Unknown')).toBeVisible();
-  expect(screen.queryByRole('meter')).not.toBeInTheDocument();
-  expect(screen.getByTestId('destination-pin')).toBeVisible();
-});
+  it('uses the selected vehicle over configuration, then configuration over fleet discovery', async () => {
+    const selected = mount(pack, FULL, { vehicleId: 7, config: { vehicleId: 8 } });
+    await expectArrivalCharge(selected.container, '65.00');
+    expect(calls('/signals/7/live')).toBe(1);
+    expect(calls('/signals/8/live')).toBe(0);
+    selected.unmount();
+    const configured = mount(pack, FULL, { vehicleId: undefined, config: { vehicleId: 8 } });
+    await expectArrivalCharge(configured.container, '65.00');
+    expect(calls('/signals/8/live')).toBe(1);
+  });
 
-it('uses the selected vehicle over configuration, then configuration over fleet discovery', async () => {
-  const selected = mount('classic', FULL, { vehicleId: 7, config: { vehicleId: 8 } });
-  await expectArrivalCharge(selected.container, '65.00');
-  expect(calls('/signals/7/live')).toBe(1);
-  expect(calls('/signals/8/live')).toBe(0);
-  selected.unmount();
-  const configured = mount('classic', FULL, { vehicleId: undefined, config: { vehicleId: 8 } });
-  await expectArrivalCharge(configured.container, '65.00');
-  expect(calls('/signals/8/live')).toBe(1);
-});
-
-it('does not request signals for a missing or invalid vehicle, and still exposes every section', async () => {
-  vehicles = [];
-  const view = mount('v5', COMPACT, { vehicleId: undefined });
-  await expectArrivalCharge(view.container, 'Unknown');
-  expect(screen.getByText('Select a vehicle to view arrival estimates.')).toBeVisible();
-  expect(api.request.mock.calls.some(([path]) => path.startsWith('/signals/'))).toBe(false);
-  view.unmount();
-  mount('classic', FULL, { vehicleId: -1 });
-  expect(screen.getByRole('button', { name: 'Refresh arrival estimates' })).toBeDisabled();
-  expect(api.request.mock.calls.some(([path]) => path.startsWith('/signals/'))).toBe(false);
+  it('does not request signals for a missing or invalid vehicle, and still exposes every section', async () => {
+    vehicles = [];
+    const view = mount(pack, COMPACT, { vehicleId: undefined });
+    await expectArrivalCharge(view.container, 'Unknown');
+    expect(screen.getByText('Select a vehicle to view arrival estimates.')).toBeVisible();
+    expect(api.request.mock.calls.some(([path]) => path.startsWith('/signals/'))).toBe(false);
+    view.unmount();
+    const invalid = mount(pack, FULL, { vehicleId: -1 });
+    await expectArrivalCharge(invalid.container, 'Unknown');
+    expect(screen.getByRole('button', { name: 'Refresh arrival estimates' })).toBeDisabled();
+    expect(api.request.mock.calls.some(([path]) => path.startsWith('/signals/'))).toBe(false);
+  });
 });

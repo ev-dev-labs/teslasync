@@ -3437,15 +3437,27 @@
     "widgetDesignPacks": {
       "active": "Active",
       "activeNamed": "{{name}} active",
+      "allIntensities": "All intensities",
+      "allStyles": "All styles ({{count}})",
+      "balanced": "Balanced",
       "battery": "Battery",
+      "bold": "Bold",
       "close": "Close preview",
       "commands": "Commands",
+      "designStyle": "Design style",
+      "extreme": "Extreme",
       "history": "History",
       "inertCommands": "Preview commands are disabled.",
+      "intensity": "Design intensity",
       "loading": "Loading preview...",
+      "mild": "Mild",
+      "noMatchingPacks": "No packs match these style and intensity filters.",
+      "packCount_one": "{{count}} pack shown",
+      "packCount_other": "{{count}} packs shown",
       "preview": "Preview",
       "previewError": "The preview could not load. Retry, or close the preview without changing your selection.",
       "previewNamed": "Preview {{name}}",
+      "resetFilters": "Show all designs",
       "retry": "Retry preview",
       "retryPreference": "Retry preference",
       "sampleBattery": "Sample battery level",
@@ -3457,17 +3469,20 @@
       "sampleParked": "Parked",
       "sampleUnlock": "Unlock",
       "sampleVehicle": "Sample vehicle",
-      "saveError": "Your previous selection is unchanged. Check your server connection and browser storage, then retry.",
-      "saved": "{{name}} saved for this browser profile.",
+      "saveError": "Your last confirmed selection remains visible. Check your server connection and external-provider session, then retry.",
       "saving": "Saving...",
-      "scope": "Applies to dashboards in this browser profile on this server. Signed-in accounts have separate selections. Other appearance settings and saved layouts stay unchanged.",
+      "scope": "Saved on this TeslaSync server for your verified external-provider identity and restored on other machines. Deployments without login share one server selection. Other appearance settings and saved layouts stay unchanged.",
       "status": "Status",
+      "styleGeometric": "Bold & Geometric ({{count}})",
+      "styleMinimal": "Minimal & Editorial ({{count}})",
+      "styleSoft": "Soft & Atmospheric ({{count}})",
+      "styleTechnical": "Technical & Instrumental ({{count}})",
       "synthetic": "Synthetic examples only. Preview does not connect to a vehicle, change preferences or send commands.",
       "title": "Widget design packs",
       "use": "Use pack",
       "useNamed": "Use {{name}} pack",
       "vehicle": "Vehicle",
-      "verifying": "Verifying your browser preference..."
+      "verifying": "Verifying your identity and loading the saved selection..."
     }
   },
   "timeMachine": {
@@ -3642,6 +3657,9 @@
         "sync": {
           "success": "Vehicles synced"
         }
+      },
+      "widgetDesignPack": {
+        "success": "Widget design pack saved across machines on this server"
       }
     },
     "syncFailed": "Vehicle sync failed",

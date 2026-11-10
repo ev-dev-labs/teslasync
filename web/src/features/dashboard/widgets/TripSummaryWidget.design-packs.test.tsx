@@ -61,6 +61,7 @@ vi.mock('react-i18next', async () => ({
 
 const fullSize: WidgetSize = { cols: 2, rows: 2 };
 const compactSize: WidgetSize = { cols: 1, rows: 1 };
+const packPresentations = Object.entries(PACK_APPEARANCES);
 const tripLabel = 'Home → A complete destination name that must remain readable';
 
 function trip(overrides: Partial<TripFixture> = {}): TripFixture {
@@ -130,7 +131,7 @@ beforeEach(() => {
   mocks.trips.mockReturnValue(query());
 });
 
-describe.each(Object.entries(PACK_APPEARANCES))('Trip Summary %s / %s', (packId, appearance) => {
+describe.each(packPresentations)('Trip Summary %s / %s', (packId, appearance) => {
   it('preserves the latest trip, SI metrics, semantic icon and refresh in full and compact layouts', async () => {
     const view = render(tree(packId));
     const body = await presentation(view.container, appearance);
@@ -193,24 +194,24 @@ it.each([undefined, 'classic', 'retired-pack'])('preserves the original Classic 
 
 it('preserves the controller and refresh when switching packs and returning to Classic', async () => {
   const view = render(tree('classic'));
-  view.rerender(tree('v1'));
-  expectSummary(await presentation(view.container, 'studio'));
-  view.rerender(tree('v7'));
-  expectSummary(await presentation(view.container, 'pixel'));
+  for (const [packId, appearance] of packPresentations) {
+    view.rerender(tree(packId));
+    expectSummary(await presentation(view.container, appearance));
+  }
   view.rerender(tree('classic'));
   expect(view.container.querySelector('[data-widget-family]')).toBeNull();
   expectSummary(screen.getByTestId('widget-body'));
-  expect(mocks.trips).toHaveBeenCalledTimes(4);
+  expect(mocks.trips).toHaveBeenCalledTimes(packPresentations.length + 2);
   fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
   expect(mocks.refetch).toHaveBeenCalledOnce();
 });
 
-it('converts real SI values to preferred units and preserves signed energy', async () => {
+it.each(packPresentations)('%s converts real SI values to preferred units and preserves signed energy', async (packId, appearance) => {
   mocks.distance = 'mi';
   mocks.energy = 'Wh';
   mocks.trips.mockReturnValue(query({ data: [trip({ total_energy_wh: -4200 })] }));
-  const { container } = render(tree('v4'));
-  const body = await presentation(container, 'owner');
+  const { container } = render(tree(packId));
+  const body = await presentation(container, appearance);
   expect(within(body).getByText('11')).toBeInTheDocument();
   expect(within(body).getByText('mi')).toBeInTheDocument();
   expect(within(body).getByText(/^-4,?200$/)).toBeInTheDocument();
@@ -218,43 +219,45 @@ it('converts real SI values to preferred units and preserves signed energy', asy
   expect(within(body).queryByText(/^(17|km|kWh)$/)).not.toBeInTheDocument();
 });
 
-it('retains the timestamp-derived duration fallback and complete trip label', async () => {
+it.each(packPresentations)('%s retains the timestamp-derived duration fallback and complete trip label', async (packId, appearance) => {
   mocks.trips.mockReturnValue(query({
     data: [trip({ total_duration_s: null, end_date: '2026-11-06T10:15:00Z' })],
   }));
-  const { container } = render(tree('v3'));
-  const body = await presentation(container, 'precision');
+  const { container } = render(tree(packId));
+  const body = await presentation(container, appearance);
   expect(within(body).getByText('Fri · 2h 15m')).toBeInTheDocument();
   expect(within(body).getByText(tripLabel)).toBeInTheDocument();
 });
 
-it.each(['refresh-error', 'paused', 'stale'] as const)('preserves historical data and source trust while %s', async (state) => {
-  mocks.trips.mockReturnValue(query({
-    error: state === 'refresh-error' ? new Error('synthetic refresh failure') : null,
-    isError: state === 'refresh-error',
-    isStale: true,
-    fetchStatus: state === 'paused' ? 'paused' : 'idle',
-  }));
-  const { container } = render(tree('v6'));
-  expectSummary(await presentation(container, 'expressive'));
-  expect(container.querySelector('[data-content-degraded="true"]')).not.toBeNull();
-  if (state !== 'stale') {
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
-  }
-  if (state === 'paused') {
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
-  }
-  fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
-  expect(mocks.refetch).toHaveBeenCalledOnce();
+describe.each(packPresentations)('Trip Summary %s source trust', (packId, appearance) => {
+  it.each(['refresh-error', 'paused', 'stale'] as const)('preserves historical data and source trust while %s', async (state) => {
+    mocks.trips.mockReturnValue(query({
+      error: state === 'refresh-error' ? new Error('synthetic refresh failure') : null,
+      isError: state === 'refresh-error',
+      isStale: true,
+      fetchStatus: state === 'paused' ? 'paused' : 'idle',
+    }));
+    const { container } = render(tree(packId));
+    expectSummary(await presentation(container, appearance));
+    expect(container.querySelector('[data-content-degraded="true"]')).not.toBeNull();
+    if (state !== 'stale') {
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
+    }
+    if (state === 'paused') {
+      expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    }
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(mocks.refetch).toHaveBeenCalledOnce();
+  });
 });
 
-it('keeps the loading/fatal-error shell honest and prevents concurrent refreshes', async () => {
+it.each(packPresentations)('%s keeps the loading/fatal-error shell honest and prevents concurrent refreshes', async (packId, appearance) => {
   mocks.trips.mockReturnValue(query({
     data: undefined, dataUpdatedAt: 0, isLoading: true, isPending: true, isFetching: true,
     fetchStatus: 'fetching',
   }));
-  const view = render(tree('v2'));
+  const view = render(tree(packId));
   expect(screen.getByRole('heading', { name: 'Trip summary' })).toBeInTheDocument();
   expect(view.container.querySelector('[aria-busy="true"]')).not.toBeNull();
   expect(screen.queryByText('No trips recorded yet')).not.toBeInTheDocument();
@@ -264,15 +267,15 @@ it('keeps the loading/fatal-error shell honest and prevents concurrent refreshes
   mocks.trips.mockReturnValue(query({
     data: undefined, dataUpdatedAt: 0, error: new Error('synthetic outage'), isError: true,
   }));
-  view.rerender(tree('v2'));
+  view.rerender(tree(packId));
   expect(screen.getByRole('alert')).toBeInTheDocument();
   expect(screen.queryByText('No trips recorded yet')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
   expect(mocks.refetch).toHaveBeenCalledOnce();
 
   mocks.trips.mockReturnValue(query({ isFetching: true, fetchStatus: 'fetching' }));
-  view.rerender(tree('v2'));
-  expectSummary(await presentation(view.container, 'elevated'));
+  view.rerender(tree(packId));
+  expectSummary(await presentation(view.container, appearance));
   fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
   expect(mocks.refetch).toHaveBeenCalledOnce();
 });

@@ -77,6 +77,7 @@ function source<T>(data: T | undefined, overrides: Partial<DataStateSource<T>> =
 }
 
 const clients: QueryClient[] = [];
+const packCases = Object.entries(PACK_APPEARANCES) as Array<[Exclude<PackId, 'classic'>, string]>;
 
 function renderWidget(packId?: unknown, props: Partial<WidgetProps> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -130,7 +131,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe.each(Object.entries(PACK_APPEARANCES) as Array<[Exclude<PackId, 'classic'>, string]>)(
+describe.each(packCases)(
   'Cost breakdown — %s / %s',
   packId => {
     it('composes the real lifetime headline, monthly bars, estimated savings and refresh action', async () => {
@@ -144,6 +145,8 @@ describe.each(Object.entries(PACK_APPEARANCES) as Array<[Exclude<PackId, 'classi
       expect(screen.getByText('Period')).toBeInTheDocument();
       expect(screen.getAllByText('Lifetime').length).toBeGreaterThan(0);
       expect(screen.getByText('Gas comparison is estimated.')).toBeInTheDocument();
+      expect(screen.getByLabelText('Historical')).toHaveAttribute('data-provenance', 'historical');
+      expect(screen.getByLabelText('Estimated')).toHaveAttribute('data-provenance', 'inferred');
       expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'ok');
       expect(container.querySelector('.recharts-bar')).not.toBeNull();
       expect(container.querySelector('.recharts-pie')).toBeNull();
@@ -175,12 +178,14 @@ describe.each(Object.entries(PACK_APPEARANCES) as Array<[Exclude<PackId, 'classi
       expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     });
 
-    it('keeps unknown and signed monthly observations distinct from measured zero', async () => {
+    it('keeps unknown, invalid and signed monthly observations distinct from measured zero', async () => {
       api.cost.mockReturnValue(source(costData({
         total_charging_cost: null,
         total_savings: -15,
         monthly_breakdown: [
           { month: 'Unmeasured', ev_cost: null },
+          { month: 'Invalid', ev_cost: Number.NaN },
+          { month: 'Overflow', ev_cost: Number.POSITIVE_INFINITY },
           { month: '2026-10', ev_cost: -5 },
           { month: '2026-11', ev_cost: 0 },
         ],
@@ -193,7 +198,8 @@ describe.each(Object.entries(PACK_APPEARANCES) as Array<[Exclude<PackId, 'classi
       expect(container.querySelector('.widget-big-number')).toHaveTextContent('—');
       expect(screen.getByText('$-15.00')).toBeInTheDocument();
       expect(monthlyRows()).toEqual([
-        ['Unmeasured', '—'], ['2026-10', '$-5.00'], ['2026-11', '$0.00'],
+        ['Unmeasured', '—'], ['Invalid', '—'], ['Overflow', '—'],
+        ['2026-10', '$-5.00'], ['2026-11', '$0.00'],
       ]);
       expect(container.querySelector('.recharts-bar')).not.toBeNull();
       expect(screen.queryByRole('meter')).not.toBeInTheDocument();
@@ -254,34 +260,37 @@ it('keeps the configured vehicle, recent-six-month window and source readings ac
   const expectedRows = monthlyRows();
   expect(expectedRows).toHaveLength(6);
   expect(expectedRows[0]).toEqual(['2026-03', '$3.00']);
-  selectPack('v4');
-  await expectPack(container, 'v4');
-  expect(monthlyRows()).toEqual(expectedRows);
-  selectPack('v7');
-  await expectPack(container, 'v7');
-  expect(monthlyRows()).toEqual(expectedRows);
+  for (const [packId] of packCases) {
+    selectPack(packId);
+    await expectPack(container, packId);
+    expect(monthlyRows()).toEqual(expectedRows);
+    expect(screen.getByText('$110.00')).toBeInTheDocument();
+  }
   selectPack('classic');
   expect(container.querySelector('.recharts-pie')).not.toBeNull();
   expect(screen.getByText('$110.00')).toBeInTheDocument();
   expect(api.cost.mock.calls.every(([id]) => id === '77')).toBe(true);
 });
 
-it('retains the source plot and amounts after a refresh fails, with a working shared retry', async () => {
+it.each(packCases)('retains the source plot and amounts after a refresh fails in %s, with a working shared retry', async packId => {
   api.cost.mockReturnValue(source(costData(), {
     isError: true, isStale: true, error: new Error('Refresh failed'),
   }));
-  const { container } = renderWidget('v3');
-  await expectPack(container, 'v3');
+  const { container } = renderWidget(packId);
+  await expectPack(container, packId);
   expect(screen.getByText('$110.00')).toBeInTheDocument();
+  expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'stale');
+  expect(screen.getByLabelText('Historical')).toHaveAttribute('data-provenance', 'historical');
+  expect(screen.getByLabelText('Estimated')).toHaveAttribute('data-provenance', 'inferred');
   expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   expect(monthlyRows()).toEqual([['2026-10', '$70.00'], ['2026-11', '$40.00']]);
   fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
   expect(api.refresh).toHaveBeenCalledOnce();
 });
 
-it('uses the shell loading and fatal-error paths rather than inventing readings', () => {
+it.each(packCases)('uses the shell loading and fatal-error paths in %s rather than inventing readings', packId => {
   api.cost.mockReturnValue(source<CostReading>(undefined, { isLoading: true, isPending: true }));
-  const { container, selectPack } = renderWidget('v2');
+  const { container, selectPack } = renderWidget(packId);
   expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'initial');
   expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
   expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
@@ -290,7 +299,7 @@ it('uses the shell loading and fatal-error paths rather than inventing readings'
   api.cost.mockReturnValue(source<CostReading>(undefined, {
     isError: true, error: new Error('Cost source unavailable'),
   }));
-  selectPack('v2');
+  selectPack(packId);
   expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'initialFailure');
   expect(screen.queryByText('No cost data')).not.toBeInTheDocument();
   expect(screen.queryByText('$0.00')).not.toBeInTheDocument();

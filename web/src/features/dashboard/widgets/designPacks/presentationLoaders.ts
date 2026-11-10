@@ -1,4 +1,10 @@
+import { experimentalLayouts } from './experimentalLayouts';
+
+const experimentalBattery = () => import('./packs/experimental/BatteryGauge');
+const experimentalVehicle = () => import('./packs/experimental/VehicleHero');
+
 export const batteryGaugePresentations = {
+  ...experimentalLayouts(() => experimentalBattery),
   v1: () => import('./packs/studio/BatteryGauge'),
   v2: () => import('./packs/elevated/BatteryGauge'),
   v3: () => import('./packs/precision/BatteryGauge'),
@@ -9,6 +15,7 @@ export const batteryGaugePresentations = {
 } as const;
 
 export const vehicleHeroPresentations = {
+  ...experimentalLayouts(() => experimentalVehicle),
   v1: () => import('./packs/studio/VehicleHero'),
   v2: () => import('./packs/elevated/VehicleHero'),
   v3: () => import('./packs/precision/VehicleHero'),

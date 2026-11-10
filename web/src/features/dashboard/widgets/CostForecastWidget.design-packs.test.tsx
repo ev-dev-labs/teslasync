@@ -226,12 +226,12 @@ describe.each(packs)('cost forecast %s (%s)', (packId) => {
   });
 });
 
-it('keeps an active tooltip mounted during background query updates', async () => {
+it.each(packs)('keeps an active tooltip mounted during background query updates in %s', async packId => {
   mocks.renderTooltip = true;
-  const view = await mount('v4');
+  const view = await mount(packId);
   await waitFor(() => expect(mocks.tooltipMounted).toHaveBeenCalledOnce());
   mocks.forecast.mockReturnValue(query({ isFetching: true }));
-  view.rerender(widget('v4'));
+  view.rerender(widget(packId));
   await waitFor(() => expect(view.container).toHaveTextContent('$270.00'));
   expect(screen.getByTestId('mounted-forecast-tooltip')).toBeInTheDocument();
   expect(mocks.tooltipMounted).toHaveBeenCalledOnce();
@@ -252,7 +252,7 @@ it('preserves Classic and unknown-ID recovery, including its original solid/dash
   expect(view.container.querySelector('[data-widget-family]')).toBeNull();
 });
 
-it('switches all seven real PackBoundary selections without changing source scope or losing Classic recovery', async () => {
+it('switches all registered PackBoundary selections without changing source scope or losing Classic recovery', async () => {
   const view = render(widget('classic', 3));
   for (const [packId, appearance] of packs) {
     view.rerender(widget(packId, 3));
@@ -267,12 +267,12 @@ it('switches all seven real PackBoundary selections without changing source scop
   expect(mocks.refetch).not.toHaveBeenCalled();
 });
 
-it('retains readings and the last-success timestamp during failed background refreshes', async () => {
+it.each(packs)('retains readings and the last-success timestamp during failed background refreshes in %s', async packId => {
   const updatedAt = Date.now() - 60_000;
   mocks.forecast.mockReturnValue(query({
     error: new Error('refresh unavailable'), isError: true, isStale: true, dataUpdatedAt: updatedAt,
   }));
-  const { container } = await mount('v4');
+  const { container } = await mount(packId);
   expect(screen.getByText('$270.00')).toBeInTheDocument();
   expect(screen.getByTestId('forecast-line-chart')).toBeInTheDocument();
   expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent(
@@ -282,61 +282,63 @@ it('retains readings and the last-success timestamp during failed background ref
   expect(screen.getByRole('button', { name: /^Refresh data/ })).toHaveAccessibleName(/1m ago/);
 });
 
-it('preserves source failure and loading shells instead of calling either an empty forecast', () => {
+it.each(packs)('preserves source failure and loading shells instead of calling either an empty forecast in %s', packId => {
   mocks.forecast.mockReturnValue(query({ data: undefined, error: new Error('source unavailable'), isError: true }));
-  const view = render(widget('v2'));
+  const view = render(widget(packId));
   expect(screen.getByRole('alert')).toBeInTheDocument();
   expect(screen.queryByText('No forecast data')).not.toBeInTheDocument();
   mocks.forecast.mockReturnValue(query({ data: undefined, isLoading: true, isFetching: true }));
-  view.rerender(widget('v2'));
+  view.rerender(widget(packId));
   expect(view.container.querySelector('[aria-busy="true"]')).not.toBeNull();
   expect(screen.queryByTestId('forecast-line-chart')).not.toBeInTheDocument();
   expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
 });
 
-it('preserves signed costs and a valid zero total without normalizing either into missing data', async () => {
+it.each(packs)('preserves signed costs and a valid zero total without normalizing either into missing data in %s', async packId => {
   mocks.forecast.mockReturnValue(query({ data: {
     historical: [{ month: 'January', cost: -20 }], forecast: [{ month: 'February', cost: 0 }],
   } }));
-  await mount('v7');
+  await mount(packId);
   expect(screen.getAllByText('$0.00').length).toBeGreaterThan(0);
   expect(lineRows().map(row => row.cost)).toEqual([-20, 0]);
   expect(screen.getByText('$-20.00')).toBeInTheDocument();
 });
 
-it('keeps the existing six-period chart window and does not fabricate a total for absent forecast rows', async () => {
+it.each(packs)('keeps the six-period chart window and an unknown total for absent forecast rows in %s', async packId => {
   mocks.forecast.mockReturnValue(query({ data: {
     historical: Array.from({ length: 8 }, (_, index) => ({ month: `Month ${index}`, cost: index })),
     forecast: [],
   } }));
-  const { container } = await mount('v3');
+  const { container } = await mount(packId);
   expect(lineRows().map(row => row.cost)).toEqual([2, 3, 4, 5, 6, 7]);
   expect(container.querySelector('.widget-big-number')).toHaveTextContent('—');
 });
 
-it('degrades malformed arrays and invalid costs without crashing a presentation or inventing a reading', async () => {
+it.each(packs)('degrades malformed arrays and invalid costs without inventing a reading in %s', async packId => {
   mocks.forecast.mockReturnValue(query({ data: {
     historical: 'invalid', forecast: [null, { month: 'April', cost: Number.POSITIVE_INFINITY }],
   } }));
-  const { container } = await mount('v5');
+  const { container } = await mount(packId);
   expect(container.querySelector('.widget-big-number')).toHaveTextContent('—');
   expect(lineRows().map(row => row.cost)).toEqual([null]);
   expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
 });
 
-it('recovers vehicle discovery independently when no vehicle can be resolved', async () => {
+it.each(packs)('recovers vehicle discovery independently when no vehicle can be resolved in %s', async packId => {
   mocks.vehicles.mockReturnValue({ data: [], refetch: mocks.refetchVehicles });
   mocks.forecast.mockReturnValue(query({ data: null, dataUpdatedAt: 0 }));
-  const view = render(widget('v1', 1, null));
-  await waitFor(() => expect(view.container.querySelector('[data-widget-appearance="studio"]')).not.toBeNull());
+  const view = render(widget(packId, 1, null));
+  await waitFor(() => expect(view.container.querySelector(
+    `[data-widget-appearance="${PACK_APPEARANCES[packId]}"]`,
+  )).not.toBeNull());
   expect(mocks.forecast).toHaveBeenCalledWith(null, 6, 'America/New_York');
   fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
   expect(mocks.refetchVehicles).toHaveBeenCalledOnce();
   expect(mocks.refetch).not.toHaveBeenCalled();
 });
 
-it('formats a single source-correct tooltip at the actual/forecast join instead of duplicating its anchor', async () => {
-  await mount('v6');
+it.each(packs)('formats a single source-correct tooltip at the actual/forecast join in %s', async packId => {
+  await mount(packId);
   interface TooltipInput {
     active: boolean;
     label: string;

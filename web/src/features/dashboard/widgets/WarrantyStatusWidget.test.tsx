@@ -33,6 +33,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { WidgetSize } from './types';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -121,10 +123,12 @@ function makeResult(over: Partial<QueryResult> = {}): QueryResult {
   };
 }
 
-function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }) {
+function renderWidget(packId: PackId, size: WidgetSize = { cols: 2, rows: 2 }) {
   return render(
     <MemoryRouter>
-      <WarrantyStatusWidget size={size} vehicleId={7} />
+      <PackBoundary requestedPackId={packId}>
+        <WarrantyStatusWidget size={size} vehicleId={7} />
+      </PackBoundary>
     </MemoryRouter>,
   );
 }
@@ -251,10 +255,10 @@ describe('statusLabel', () => {
 
 // ── Widget render states ─────────────────────────────────────────────────────
 
-describe('WarrantyStatusWidget — states', () => {
+describe.each(PACK_IDS)('WarrantyStatusWidget — states (%s)', (packId) => {
   it('renders a loading skeleton while the query is pending', () => {
     warrantyMock.mockReturnValue(makeResult({ isLoading: true, data: undefined }));
-    const { container } = renderWidget();
+    const { container } = renderWidget(packId);
     expect(warrantyVehicleIdMock).toHaveBeenCalledWith('7');
     expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Warranty status')).toBeInTheDocument();
@@ -263,7 +267,7 @@ describe('WarrantyStatusWidget — states', () => {
 
   it('shows the empty state when no warranty blob has landed', () => {
     warrantyMock.mockReturnValue(makeResult({ data: undefined }));
-    renderWidget();
+    renderWidget(packId);
     expect(screen.getByText('No warranty data')).toBeInTheDocument();
     expect(screen.getByText('Mileage limit')).toBeInTheDocument();
     expect(screen.getByText('Unknown')).toBeInTheDocument();
@@ -273,7 +277,7 @@ describe('WarrantyStatusWidget — states', () => {
     warrantyMock.mockReturnValue(
       makeResult({ isError: true, dataUpdatedAt: 0, data: undefined }),
     );
-    const { container } = renderWidget();
+    const { container } = renderWidget(packId);
     expect(container.querySelector('[class*="bg-[var(--semantic-danger)]"]')).not.toBeNull();
     expect(screen.getAllByRole('button', { name: /refresh/i }).length).toBeGreaterThan(0);
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
@@ -282,12 +286,12 @@ describe('WarrantyStatusWidget — states', () => {
 
 // ── Standard layout + the miles→meters conversion fix ────────────────────────
 
-describe('WarrantyStatusWidget — standard layout', () => {
+describe.each(PACK_IDS)('WarrantyStatusWidget — standard layout (%s)', (packId) => {
   it('rejects invalid dates and unknown coverage without an active claim', () => {
     warrantyMock.mockReturnValue(makeResult({
       data: envelope({ warranty_expiry_date: 'invalid', corrosion: true, corrosion_expiry_date: 'also-invalid' }),
     }));
-    expect(() => renderWidget()).not.toThrow();
+    expect(() => renderWidget(packId)).not.toThrow();
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
     expect(screen.queryByText('Covered')).not.toBeInTheDocument();
     expect(screen.getAllByText('Unknown')).toHaveLength(2);
@@ -297,14 +301,14 @@ describe('WarrantyStatusWidget — standard layout', () => {
     warrantyMock.mockReturnValue(makeResult({
       data: envelope({ warranty_expiry_date: future(100), mileage_limit_mi: 50_000, current_mileage_mi: 50_000 }),
     }));
-    renderWidget();
+    renderWidget(packId);
     expect(screen.getByText('Expired')).toBeInTheDocument();
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
   });
 
   it('keeps cached warranty details on a transient refresh failure', () => {
     warrantyMock.mockReturnValue(makeResult({ data: envelope({ warranty_expiry_date: future(100) }), isError: true }));
-    const { container } = renderWidget();
+    const { container } = renderWidget(packId);
     expect(screen.getByText('Active')).toBeInTheDocument();
     expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
   });
@@ -319,17 +323,33 @@ describe('WarrantyStatusWidget — standard layout', () => {
 
   it('renders the title, an Active badge, days remaining and the expiry date', () => {
     warrantyMock.mockReturnValue(makeResult({ data: populated() }));
-    renderWidget();
+    const { container } = renderWidget(packId);
     expect(screen.getByText('Warranty status')).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
     expect(screen.getAllByText('100')).toHaveLength(2);
     expect(screen.getByText('formatted-date')).toBeInTheDocument();
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+    const timeline = container.querySelector('[data-timeline-appearance]');
+    if (packId === 'classic') {
+      expect(timeline).toBeNull();
+    } else {
+      expect(timeline).toHaveAttribute('data-timeline-appearance', PACK_APPEARANCES[packId]);
+    }
   });
 
-  it('converts MILES warranty mileage to the mi display unit (regression: not ~31 mi)', () => {
+  const mileageSources = [
+    { source: 'miles', mileage: { mileage_limit_mi: 50_000, current_mileage_mi: 20_000 } },
+    { source: 'SI meters', mileage: { mileage_limit_m: 80_467_200, current_mileage_m: 32_186_880 } },
+  ];
+
+  it.each(mileageSources)('converts $source warranty mileage to the mi display unit (regression: not ~31 mi)', ({ mileage }) => {
     unitsMock.mockReturnValue({ unitPrefs: { distance: 'mi' } });
-    warrantyMock.mockReturnValue(makeResult({ data: populated() }));
-    renderWidget();
+    warrantyMock.mockReturnValue(makeResult({ data: envelope({
+      warranty_expiry_date: future(100),
+      warranty_start_date: past(200),
+      ...mileage,
+    }) }));
+    renderWidget(packId);
     // 50,000 mi limit, 20,000 mi current, 30,000 mi remaining.
     expect(screen.getByText('50,000.00 mi')).toBeInTheDocument();
     expect(screen.getByText('20,000.00 mi')).toBeInTheDocument();
@@ -338,10 +358,14 @@ describe('WarrantyStatusWidget — standard layout', () => {
     expect(screen.queryByText('31 mi')).toBeNull();
   });
 
-  it('converts the same MILES mileage into km when that is the display unit', () => {
+  it.each(mileageSources)('converts $source warranty mileage into km when that is the display unit', ({ mileage }) => {
     unitsMock.mockReturnValue({ unitPrefs: { distance: 'km' } });
-    warrantyMock.mockReturnValue(makeResult({ data: populated() }));
-    renderWidget();
+    warrantyMock.mockReturnValue(makeResult({ data: envelope({
+      warranty_expiry_date: future(100),
+      warranty_start_date: past(200),
+      ...mileage,
+    }) }));
+    renderWidget(packId);
     // One mile is exactly 1.609344 kilometres.
     expect(screen.getByText('80,467.20 km')).toBeInTheDocument();
     expect(screen.getByText('32,186.88 km')).toBeInTheDocument();
@@ -360,7 +384,7 @@ describe('WarrantyStatusWidget — standard layout', () => {
         }),
       }),
     );
-    renderWidget();
+    renderWidget(packId);
     expect(screen.getByText('Basic')).toBeInTheDocument();
     expect(screen.getByText('Battery/drive unit')).toBeInTheDocument();
     expect(screen.getByText('Corrosion')).toBeInTheDocument();
@@ -375,7 +399,7 @@ describe('WarrantyStatusWidget — standard layout', () => {
   it('refetches when the freshness control is activated', () => {
     const refetch = vi.fn();
     warrantyMock.mockReturnValue(makeResult({ data: populated(), refetch }));
-    renderWidget();
+    renderWidget(packId);
     fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -383,32 +407,59 @@ describe('WarrantyStatusWidget — standard layout', () => {
 
 // ── Compact layout ───────────────────────────────────────────────────────────
 
-describe('WarrantyStatusWidget — compact layout', () => {
+describe.each(PACK_IDS)('WarrantyStatusWidget — compact layout (%s)', (packId) => {
   it('renders the days-left hero, Active badge and panel title', () => {
     warrantyMock.mockReturnValue(
       makeResult({ data: envelope({ warranty_expiry_date: future(100) }) }),
     );
-    renderWidget({ cols: 1, rows: 2 });
+    const { container } = renderWidget(packId, { cols: 1, rows: 2 });
     expect(screen.getByText('100')).toBeInTheDocument();
     expect(screen.getByText('days left')).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Warranty status', level: 3 })).toBeInTheDocument();
+    if (packId !== 'classic') {
+      expect(container.querySelector('[data-timeline-appearance]')).toHaveAttribute(
+        'data-timeline-appearance', PACK_APPEARANCES[packId],
+      );
+    }
   });
 
   it('shows the empty state in the compact variant when no data has landed', () => {
     warrantyMock.mockReturnValue(makeResult({ data: undefined }));
-    renderWidget({ cols: 1, rows: 2 });
+    renderWidget(packId, { cols: 1, rows: 2 });
     expect(screen.getByText('No warranty data')).toBeInTheDocument();
     expect(screen.getByText('days left')).toBeInTheDocument();
     expect(screen.getByText('Unknown')).toBeInTheDocument();
   });
 
-  it('flags an expired warranty (past expiry date) as Expired', () => {
+  it.each([0, 10])('flags a warranty expired %i days ago as Expired', (daysAgo) => {
     warrantyMock.mockReturnValue(
-      makeResult({ data: envelope({ warranty_expiry_date: past(10) }) }),
+      makeResult({ data: envelope({ warranty_expiry_date: past(daysAgo) }) }),
     );
-    renderWidget({ cols: 1, rows: 2 });
+    renderWidget(packId, { cols: 1, rows: 2 });
     expect(screen.getByText('Expired')).toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument(); // days floored at 0
+  });
+
+  it.each([
+    { name: 'known zero mileage', mileage: 0, limit: 80_000, status: 'Active', days: '100' },
+    { name: 'zero mileage limit', mileage: 0, limit: 0, status: 'Expired', days: '0' },
+    { name: 'unknown mileage', mileage: null, limit: 80_000, status: 'Unknown', days: null },
+    { name: 'invalid mileage', mileage: NaN, limit: 80_000, status: 'Unknown', days: null },
+  ])('preserves $name without fabricating coverage', ({ mileage, limit, status, days }) => {
+    warrantyMock.mockReturnValue(makeResult({ data: envelope({
+      warranty_expiry_date: future(100),
+      mileage_limit_m: limit,
+      current_mileage_m: mileage,
+    }) }));
+    renderWidget(packId, { cols: 1, rows: 2 });
+    expect(screen.getByText(status)).toBeInTheDocument();
+    if (days == null) {
+      expect(screen.queryByText('100')).not.toBeInTheDocument();
+      expect(screen.queryByText('0')).not.toBeInTheDocument();
+      expect(screen.queryByText('Active')).not.toBeInTheDocument();
+    } else {
+      expect(screen.getByText(days)).toBeInTheDocument();
+    }
   });
 });

@@ -8,7 +8,7 @@ import type { Vehicle } from '@/types/vehicle';
 import { BADGE_VARIANTS } from '@/components/ui';
 import type { WidgetProps } from './types';
 import { PackBoundary } from './designPacks/PackBoundary';
-import type { PackId } from './designPacks/types';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 import DigitalTwinMiniWidget from './DigitalTwinMiniWidget';
 
 const { requestMock } = vi.hoisted(() => ({
@@ -44,10 +44,9 @@ vi.mock('@/hooks/useDateFormat', () => ({
 
 const NOW = Date.parse('2026-11-07T02:25:00Z');
 const OBSERVED = '2026-11-07T02:24:50Z';
-const PACKS = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const PACKS = PACK_IDS
+  .filter((pack): pack is Exclude<PackId, 'classic'> => pack !== 'classic')
+  .map(pack => [pack, PACK_APPEARANCES[pack]] as const);
 const PATHS = ['/vehicles', '/vehicles/17/state', '/security/latest?vehicle_id=17', '/charging-telemetry/latest?vehicle_id=17'];
 let client: QueryClient;
 let vehicles: Vehicle[];
@@ -183,7 +182,7 @@ describe('DigitalTwinMiniWidget production design packs', () => {
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 
-  it('switches Classic, all seven packs and cramped/full sizes without duplicating source subscriptions', async () => {
+  it('switches Classic, all supported packs and cramped/full sizes without duplicating source subscriptions', async () => {
     const view = render(tree());
     await screen.findByRole('img', { name: 'Digital twin' });
     await settled();
@@ -215,10 +214,10 @@ describe('DigitalTwinMiniWidget production design packs', () => {
     expect(requestMock).toHaveBeenCalledTimes(requests);
   });
 
-  it('preserves the empty source shell and unknown lock in Pixel without fabricated vehicle art', async () => {
+  it.each(PACKS)('%s preserves the empty source shell and unknown lock without fabricated vehicle art', async (pack, appearance) => {
     vehicles = [];
-    const view = render(tree('v7'));
-    await presentation(view.container, 'pixel');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expect(screen.getByText('No vehicle data')).toBeInTheDocument();
     expect(cell('Lock')).toHaveTextContent('Unknown');
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
@@ -226,10 +225,10 @@ describe('DigitalTwinMiniWidget production design packs', () => {
     expect(requestMock.mock.calls.map(([path]) => path)).toEqual(['/vehicles']);
   });
 
-  it('only reports closed openings when every window and cabin door is known closed', async () => {
+  it.each(PACKS)('%s only reports closed openings when every window and cabin door is known closed', async (pack, appearance) => {
     security = { ...security!, door_state: 'ClosedAll' };
-    const view = render(tree('v6'));
-    await presentation(view.container, 'expressive');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expect(cell('Windows')).toHaveTextContent('Closed');
     expect(cell('Doors')).toHaveTextContent('Closed');
 
@@ -242,24 +241,68 @@ describe('DigitalTwinMiniWidget production design packs', () => {
     expect(cell('Doors')).toHaveAttribute('data-status', 'unknown');
   });
 
-  it('keeps the loading shell without flashing empty or fabricated readings before discovery resolves', async () => {
+  it.each(PACKS)('%s keeps the loading shell without flashing empty or fabricated readings before discovery resolves', async (pack, appearance) => {
     let release: ((value: Vehicle[]) => void) | undefined;
     requestMock.mockImplementationOnce(() => new Promise<Vehicle[]>(resolve => { release = resolve; }));
-    const view = render(tree('v1'));
-    expect(view.container.querySelector('[data-widget-pack="v1"]')).toHaveAttribute('aria-busy', 'true');
+    const view = render(tree(pack));
+    expect(view.container.querySelector(`[data-widget-pack="${pack}"]`)).toHaveAttribute('aria-busy', 'true');
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
     if (!release) throw new Error('Vehicle discovery did not start');
     const resolve = release;
     await act(async () => { resolve(vehicles); });
-    await presentation(view.container, 'studio');
+    await presentation(view.container, appearance);
     expect(twin()).toBeInTheDocument();
   });
 
-  it('retains the actual twin and measured overlays after refresh failure, with warning and recovery', async () => {
-    const view = render(tree('v4'));
-    await presentation(view.container, 'owner');
+  it.each(PACKS)('%s preserves verified activity without inventing motion from zero, invalid or untrusted readings', async (pack, appearance) => {
+    const drivingState: RawStateResponse = {
+      vehicle: { id: 17, state: 'online' }, position: { speed: 12 },
+      live: true, observed_at: OBSERVED, freshness: 'fresh', verified_fields: ['speed'],
+    };
+    state = drivingState;
+    security = { ...security!, lights_high_beams: true };
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
+    expect(view.container.querySelector('[data-vehicle-studio]')).toHaveAttribute('data-activity', 'driving');
+    expect(screen.getByTestId('vehicle-road-motion')).toBeInTheDocument();
+    expect(view.container.querySelector('[data-vehicle-road-lighting]')).toBeInTheDocument();
+
+    const untrustedStates: RawStateResponse[] = [
+      { ...drivingState, position: { speed: 0 } },
+      { ...drivingState, position: { speed: Number.NaN } },
+      { ...drivingState, observed_at: 'invalid-observation' },
+      { ...drivingState, freshness: 'stale' },
+      { ...drivingState, verified_fields: [] },
+      { ...drivingState, is_charging: true, verified_fields: ['speed', 'is_charging'] },
+    ];
+    for (const reading of untrustedStates) {
+      state = reading;
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+      await settled();
+      await waitFor(() => expect(view.container.querySelector('[data-vehicle-studio]')).toHaveAttribute('data-activity', 'static'));
+      expect(screen.queryByTestId('vehicle-road-motion')).not.toBeInTheDocument();
+      expect(view.container.querySelector('[data-vehicle-road-lighting]')).not.toBeInTheDocument();
+      expect(twin()).toBeInTheDocument();
+      expect(screen.getByText('Locked')).toBeInTheDocument();
+    }
+
+    state = drivingState;
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+    await waitFor(() => expect(screen.getByTestId('vehicle-road-motion')).toBeInTheDocument());
+    await settled();
+  });
+
+  it.each(PACKS)('%s retains the actual twin and measured overlays after refresh failure, with warning and recovery', async (pack, appearance) => {
+    state = {
+      vehicle: { id: 17, state: 'online' }, position: { speed: 12 },
+      live: true, observed_at: OBSERVED, freshness: 'fresh', verified_fields: ['speed'],
+    };
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
+    expect(screen.getByTestId('vehicle-road-motion')).toBeInTheDocument();
     const imageUrl = photo().getAttribute('src');
+    failedPaths.add(PATHS[1]);
     failedPaths.add(PATHS[2]);
     fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     await waitFor(() => expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-data-state', 'stale'));
@@ -269,16 +312,18 @@ describe('DigitalTwinMiniWidget production design packs', () => {
     expect(screen.getByText('Locked')).toBeInTheDocument();
     expect(twin().querySelector('svg.lucide-shield')).toBeInTheDocument();
     expect(cell('Windows')).toHaveTextContent('Closed');
+    expect(screen.queryByTestId('vehicle-road-motion')).not.toBeInTheDocument();
 
     failedPaths.clear();
     fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
     expect(twin()).toBeInTheDocument();
+    expect(screen.getByTestId('vehicle-road-motion')).toBeInTheDocument();
   });
 
-  it('does not mask initial telemetry failures with vehicle metadata, and retries the original sources', async () => {
+  it.each(PACKS)('%s does not mask initial telemetry failures with vehicle metadata, and retries the original sources', async (pack, appearance) => {
     failedPaths = new Set(PATHS.slice(1));
-    const view = render(tree('v3'));
+    const view = render(tree(pack));
     const alert = await screen.findByRole('alert');
     expect(view.container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
@@ -286,7 +331,7 @@ describe('DigitalTwinMiniWidget production design packs', () => {
 
     failedPaths.clear();
     fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }));
-    await presentation(view.container, 'precision');
+    await presentation(view.container, appearance);
     expect(twin()).toBeInTheDocument();
     expect(cell('Windows')).toHaveTextContent('Closed');
   });

@@ -162,15 +162,15 @@ it('uses the original Classic compact recovery for an unknown pack', () => {
   expect(screen.queryByText('Efficiency')).not.toBeInTheDocument();
 });
 
-it('retains the selected vehicle and all tips with a nonblocking warning after a failed refresh', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s retains the selected vehicle and all tips with a nonblocking warning after a failed refresh', async (packId, appearance) => {
   useDrivingCoachMock.mockReturnValue({
     ...queryResult(),
     error: new Error('Coach refresh failed'),
     isError: true,
     isStale: true,
   });
-  const { container } = render(widget('v4', { cols: 2, rows: 2 }, 9));
-  await expectPresentation(container, 'owner');
+  const { container } = render(widget(packId, { cols: 2, rows: 2 }, 9));
+  await expectPresentation(container, appearance);
   expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
   expect(screen.getByText('Smooth acceleration')).toBeVisible();
   expect(screen.getByText('Compare recent drives')).toBeVisible();
@@ -181,19 +181,19 @@ it('retains the selected vehicle and all tips with a nonblocking warning after a
   expect(refetch).toHaveBeenCalledOnce();
 });
 
-it('shows missing coach data honestly in a compact production presentation', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s shows missing coach data honestly in a compact production presentation', async (packId, appearance) => {
   useDrivingCoachMock.mockReturnValue({ ...queryResult(), data: undefined, dataUpdatedAt: 0 });
-  const { container } = render(widget('v7', { cols: 1, rows: 1 }));
-  await expectPresentation(container, 'pixel');
+  const { container } = render(widget(packId, { cols: 1, rows: 1 }));
+  await expectPresentation(container, appearance);
   expect(screen.getByText('No tips available')).toBeVisible();
   expect(screen.queryByText('0')).not.toBeInTheDocument();
   expect(screen.queryByText('Suggestion')).not.toBeInTheDocument();
 });
 
-it('retains the recommendations but prevents a second refresh while a request is in flight', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s retains the recommendations but prevents a second refresh while a request is in flight', async (packId, appearance) => {
   useDrivingCoachMock.mockReturnValue({ ...queryResult(), isFetching: true });
-  const { container } = render(widget('v6'));
-  await expectPresentation(container, 'expressive');
+  const { container } = render(widget(packId));
+  await expectPresentation(container, appearance);
   expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
   expect(screen.getByText('Smooth acceleration')).toBeVisible();
   expect(screen.getByText('Compare recent drives')).toBeVisible();
@@ -203,9 +203,9 @@ it('retains the recommendations but prevents a second refresh while a request is
   expect(refetch).not.toHaveBeenCalled();
 });
 
-it('keeps the source shell busy during initial loading and exposes retry on fatal failure', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s keeps the source shell busy during initial loading and exposes retry on fatal failure', async (packId) => {
   useDrivingCoachMock.mockReturnValue({ ...queryResult(), data: undefined, isLoading: true, dataUpdatedAt: 0 });
-  const view = render(widget('v2'));
+  const view = render(widget(packId));
   expect(view.container.querySelector('[aria-busy="true"]')).not.toBeNull();
   expect(screen.getByRole('heading', { name: 'Driving coach', level: 3 })).toBeVisible();
   expect(screen.queryByText('Smooth acceleration')).not.toBeInTheDocument();
@@ -217,7 +217,7 @@ it('keeps the source shell busy during initial loading and exposes retry on fata
     isError: true,
     dataUpdatedAt: 0,
   });
-  view.rerender(widget('v2'));
+  view.rerender(widget(packId));
   expect(await screen.findByText("Can't reach server")).toBeVisible();
   expect(screen.queryByText('Suggestion')).not.toBeInTheDocument();
   expect(screen.queryByText('Smooth acceleration')).not.toBeInTheDocument();

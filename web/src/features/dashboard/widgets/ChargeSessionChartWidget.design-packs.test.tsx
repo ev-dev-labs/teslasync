@@ -206,10 +206,10 @@ describe('charge-session-chart production packs', () => {
     expect(view.container.querySelector('[data-role="widget-header-title"]')).toHaveAccessibleName('Charge Session Chart');
   });
 
-  it('does not present a partial charger-type subtotal as a complete energy measurement', async () => {
+  it.each(packs)('%s does not present a partial charger-type subtotal as a complete energy measurement', async (packId, appearance) => {
     routeSessions([{ ...sessions[0], id: 5, total_energy_added_wh: null }, sessions[0]]);
-    const view = renderWidget('v2');
-    await waitForAppearance(view.container, 'elevated');
+    const view = renderWidget(packId);
+    await waitForAppearance(view.container, appearance);
     const details = screen.getByText('Energy by charger type').parentElement!;
     const acSummary = within(details).getByText('Home / AC').parentElement;
     expect(acSummary).toHaveTextContent('—');
@@ -221,10 +221,10 @@ describe('charge-session-chart production packs', () => {
     ]);
   });
 
-  it('does not replace an unknown latest session with an older known reading', async () => {
+  it.each(packs)('%s does not replace an unknown latest session with an older known reading', async (packId, appearance) => {
     routeSessions([{ ...sessions[0], total_energy_added_wh: Number.NaN, charger_type: null }, sessions[2]]);
-    const view = renderWidget('v3');
-    await waitForAppearance(view.container, 'precision');
+    const view = renderWidget(packId);
+    await waitForAppearance(view.container, appearance);
     const latest = screen.getByText('Latest session').closest('.widget-big-number');
     expect(latest).toHaveTextContent('—');
     expect(latest).not.toHaveTextContent(fmtNumber(-1.5));
@@ -236,7 +236,7 @@ describe('charge-session-chart production packs', () => {
     ]);
   });
 
-  it('switches all seven packs on one data controller and recovers the original Classic body', async () => {
+  it('switches all packs on one data controller and recovers the original Classic body', async () => {
     const view = renderWidget();
     await screen.findByRole('img', { name: 'Bar chart of energy added per charge session' });
     expect(screen.queryByText('Latest session')).not.toBeInTheDocument();
@@ -257,16 +257,16 @@ describe('charge-session-chart production packs', () => {
     expect(chargingCalls()).toHaveLength(1);
   });
 
-  it('retains the active pack, source gaps, plot and refresh control after a failed refresh', async () => {
-    const view = renderWidget('v4');
-    await waitForAppearance(view.container, 'owner');
+  it.each(packs)('%s retains the active pack, source gaps, plot and refresh control after a failed refresh', async (packId, appearance) => {
+    const view = renderWidget(packId);
+    await waitForAppearance(view.container, appearance);
     const originalData = plot.chart.data;
     mockRequest.mockImplementation((path: string) => path.startsWith('/charging')
       ? Promise.reject(new Error('synthetic refresh failure')) : Promise.resolve([]));
     fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
     expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'stale');
-    expect(view.container.querySelector('[data-widget-appearance="owner"]')).toBeInTheDocument();
+    expect(view.container.querySelector(`[data-widget-appearance="${appearance}"]`)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Bar chart of energy added per charge session' })).toBeInTheDocument();
     expect(plot.chart.data).toEqual(originalData);
     expect(screen.getByText('Latest session')).toBeInTheDocument();

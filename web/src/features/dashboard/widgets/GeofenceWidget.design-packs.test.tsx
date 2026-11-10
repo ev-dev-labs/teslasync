@@ -258,166 +258,183 @@ it.each([full, compact])('preserves Classic and unknown-ID recovery at $cols col
   expect(mocks.fenceRefetch).toHaveBeenCalledOnce();
 });
 
-it('preserves the short full-width list branch without adding a map', async () => {
-  const { container } = renderWidget('v3', short);
-  await appearance(container, 'precision');
-  expect(within(configuredList(container)).getAllByRole('term')).toHaveLength(3);
-  expect(screen.queryByTestId('leaflet-map')).not.toBeInTheDocument();
-});
+describe.each(packs)('geofence-status states %s / %s', (packId, name) => {
+  it('preserves the short full-width list branch without adding a map', async () => {
+    const { container } = renderWidget(packId, short);
+    await appearance(container, name);
+    expect(within(configuredList(container)).getAllByRole('term')).toHaveLength(3);
+    expect(screen.queryByTestId('leaflet-map')).not.toBeInTheDocument();
+  });
 
-it.each([full, compact])('preserves the outside/no-zone distinction at $cols columns', async size => {
-  mocks.fences.mockReturnValue(query([fences[1]], { refetch: mocks.fenceRefetch }));
-  const { container } = renderWidget('v4', size);
-  await appearance(container, 'owner');
-  expect(screen.getByText('No zone')).toBeInTheDocument();
-  expect(screen.queryByText('Inside')).not.toBeInTheDocument();
-  if (size.cols > 1) {
-    expect(within(configuredList(container)).getByText('Outside')).toBeInTheDocument();
-  } else {
-    expect(screen.queryByText('Work')).not.toBeInTheDocument();
-  }
-});
+  it.each([full, compact])('preserves the outside/no-zone distinction at $cols columns', async size => {
+    mocks.fences.mockReturnValue(query([fences[1]], { refetch: mocks.fenceRefetch }));
+    const { container } = renderWidget(packId, size);
+    await appearance(container, name);
+    expect(screen.getByText('No zone')).toBeInTheDocument();
+    expect(screen.queryByText('Inside')).not.toBeInTheDocument();
+    if (size.cols > 1) {
+      expect(within(configuredList(container)).getByText('Outside')).toBeInTheDocument();
+    } else {
+      expect(screen.queryByText('Work')).not.toBeInTheDocument();
+    }
+  });
 
-it.each([
-  ['nonfinite position', { latitude: Number.NaN, longitude }],
-  ['null island', { latitude: 0, longitude: 0 }],
-  ['out-of-range position', { latitude: 91, longitude }],
-  ['absent latitude', { latitude: null, longitude }],
-] as const)('does not manufacture a map or membership from %s', async (_label, state) => {
-  mocks.state.mockReturnValue(query(stateFixture({ state }), { refetch: mocks.stateRefetch }));
-  const { container } = renderWidget('v5');
-  await appearance(container, 'iconic');
-  expect(within(configuredList(container)).getByText('Home')).toBeInTheDocument();
-  expect(screen.queryByTestId('leaflet-map')).not.toBeInTheDocument();
-  expect(screen.queryByText('Inside')).not.toBeInTheDocument();
-  expect(screen.queryByText('Outside')).not.toBeInTheDocument();
-});
-
-it('keeps invalid fence geometry unknown while retaining the actual vehicle position', async () => {
-  mocks.fences.mockReturnValue(query([
-    fence({ id: 'bad-radius', name: 'Unknown radius', radius: Number.NaN }),
-    fence({ id: 'bad-center', name: 'Unknown center', longitude: Number.POSITIVE_INFINITY }),
-  ], { refetch: mocks.fenceRefetch }));
-  const { container } = renderWidget('v6');
-  await appearance(container, 'expressive');
-  const list = within(configuredList(container));
-  expect(list.getByText('Unknown radius')).toBeInTheDocument();
-  expect(list.getByText('Unknown center')).toBeInTheDocument();
-  expect(list.getAllByText('—')).toHaveLength(2);
-  expect(screen.getByTestId('vehicle-marker')).toBeInTheDocument();
-  expect(screen.queryByTestId('fence-circle')).not.toBeInTheDocument();
-  expect(screen.queryByText('Inside')).not.toBeInTheDocument();
-  expect(screen.queryByText('Outside')).not.toBeInTheDocument();
-  expect(screen.queryByText('No zone')).not.toBeInTheDocument();
-});
-
-it.each([
-  ['unverified fields', () => ({ verifiedFields: [] })],
-  ['unknown freshness', () => ({ freshness: 'unknown', observedAt: null })],
-  ['historical source', () => ({ live: false })],
-  ['old observation', () => ({ observedAt: Date.now() - 180_000 })],
-  ['future observation', () => ({ observedAt: Date.now() + 180_000 })],
-] satisfies Array<[string, () => Partial<StateFixture>]>)('does not promote %s to confirmed membership', async (_label, overrides) => {
-  mocks.state.mockReturnValue(query(stateFixture(overrides()), { refetch: mocks.stateRefetch }));
-  const { container } = renderWidget('v7');
-  await appearance(container, 'pixel');
-  expect(screen.getByText('Current membership is unconfirmed')).toBeInTheDocument();
-  expect(within(configuredList(container)).getByText('Inside')).toHaveClass('text-[var(--text-secondary)]');
-  expect(screen.getAllByTestId('fence-circle').every(circle => circle.getAttribute('data-color') === CHART_NEUTRAL)).toBe(true);
-});
-
-it.each(['state', 'fences', 'paused', 'stale'] as const)('retains map and membership during %s degradation without success styling', async source => {
-  if (source === 'fences') {
-    mocks.fences.mockReturnValue(query(fences, {
-      isError: true, error: new Error('Fence refresh failed'), refetch: mocks.fenceRefetch,
-    }));
-  } else {
-    mocks.state.mockReturnValue(query(stateFixture(), {
-      isError: source === 'state', error: source === 'state' ? new Error('Position refresh failed') : null,
-      fetchStatus: source === 'paused' ? 'paused' : 'idle', isStale: source === 'stale',
-      refetch: mocks.stateRefetch,
-    }));
-  }
-  const { container } = renderWidget('v2');
-  await appearance(container, 'elevated');
-  expect(within(configuredList(container)).getByText('Inside')).toHaveClass('text-[var(--text-secondary)]');
-  expect(screen.getAllByTestId('fence-circle')).toHaveLength(3);
-  expect(screen.getAllByTestId('fence-circle').every(circle => circle.getAttribute('data-color') === CHART_NEUTRAL)).toBe(true);
-  expect(screen.getByText('Current membership is unconfirmed')).toBeInTheDocument();
-  if (source !== 'stale') expect(screen.getAllByTestId('stale-refresh-warning').length).toBeGreaterThan(0);
-  fireEvent.click(screen.getByRole('button', { name: /^Refresh data/ }));
-  expect(mocks.stateRefetch).toHaveBeenCalledOnce();
-  expect(mocks.fenceRefetch).toHaveBeenCalledOnce();
-});
-
-it.each(['state', 'fences'] as const)('keeps the independent source usable with a source-specific %s retry', async source => {
-  if (source === 'state') {
-    mocks.state.mockReturnValue(query<StateFixture>(undefined, {
-      isError: true, error: new Error('Position unavailable'), refetch: mocks.stateRefetch,
-    }));
-  } else {
-    mocks.fences.mockReturnValue(query<Geofence[]>(undefined, {
-      isError: true, error: new Error('Configuration unavailable'), refetch: mocks.fenceRefetch,
-    }));
-  }
-  const { container } = renderWidget('v1');
-  await appearance(container, 'studio');
-  expect(screen.getByRole('alert')).toBeInTheDocument();
-  expect(screen.queryByText('No geofences configured')).not.toBeInTheDocument();
-  if (source === 'state') {
+  it.each([
+    ['nonfinite position', { latitude: Number.NaN, longitude }],
+    ['null island', { latitude: 0, longitude: 0 }],
+    ['out-of-range position', { latitude: 91, longitude }],
+    ['absent latitude', { latitude: null, longitude }],
+  ] as const)('does not manufacture a map or membership from %s', async (_label, state) => {
+    mocks.state.mockReturnValue(query(stateFixture({ state }), { refetch: mocks.stateRefetch }));
+    const { container } = renderWidget(packId);
+    await appearance(container, name);
     expect(within(configuredList(container)).getByText('Home')).toBeInTheDocument();
+    expect(screen.queryByTestId('leaflet-map')).not.toBeInTheDocument();
     expect(screen.queryByText('Inside')).not.toBeInTheDocument();
     expect(screen.queryByText('Outside')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('leaflet-map')).not.toBeInTheDocument();
-  } else {
+  });
+
+  it.each([
+    { latitude: 0, longitude },
+    { latitude, longitude: 0 },
+  ])('preserves zero-radius membership at $latitude, $longitude', async state => {
+    mocks.state.mockReturnValue(query(stateFixture({ state }), { refetch: mocks.stateRefetch }));
+    mocks.fences.mockReturnValue(query([fence({ ...state, radius: 0 })], { refetch: mocks.fenceRefetch }));
+    const { container } = renderWidget(packId);
+    await appearance(container, name);
+    expect(within(configuredList(container)).getByText('Inside')).toHaveClass('text-[var(--semantic-success)]');
+    expect(screen.getByTestId('vehicle-marker')).toHaveAttribute('data-position', JSON.stringify([state.latitude, state.longitude]));
+    expect(screen.getByTestId('fence-circle')).toHaveAttribute('data-radius', '0');
+    expect(screen.getByTestId('fence-circle')).toHaveAttribute('data-color', CHART_SEMANTIC.vehicle.online);
+    expect(screen.queryByText('Current membership is unconfirmed')).not.toBeInTheDocument();
+  });
+
+  it('keeps invalid fence geometry unknown while retaining the actual vehicle position', async () => {
+    mocks.fences.mockReturnValue(query([
+      fence({ id: 'bad-radius', name: 'Unknown radius', radius: Number.NaN }),
+      fence({ id: 'bad-center', name: 'Unknown center', longitude: Number.POSITIVE_INFINITY }),
+    ], { refetch: mocks.fenceRefetch }));
+    const { container } = renderWidget(packId);
+    await appearance(container, name);
+    const list = within(configuredList(container));
+    expect(list.getByText('Unknown radius')).toBeInTheDocument();
+    expect(list.getByText('Unknown center')).toBeInTheDocument();
+    expect(list.getAllByText('—')).toHaveLength(2);
     expect(screen.getByTestId('vehicle-marker')).toBeInTheDocument();
     expect(screen.queryByTestId('fence-circle')).not.toBeInTheDocument();
-  }
-  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-  expect(mocks.stateRefetch).toHaveBeenCalledTimes(source === 'state' ? 1 : 0);
-  expect(mocks.fenceRefetch).toHaveBeenCalledTimes(source === 'fences' ? 1 : 0);
-});
+    expect(screen.queryByText('Inside')).not.toBeInTheDocument();
+    expect(screen.queryByText('Outside')).not.toBeInTheDocument();
+    expect(screen.queryByText('No zone')).not.toBeInTheDocument();
+  });
 
-it('keeps an unresolved configuration unknown instead of reporting an empty configuration', async () => {
-  mocks.fences.mockReturnValue(query<Geofence[]>(undefined, { refetch: mocks.fenceRefetch }));
-  const { container } = renderWidget('v4');
-  await appearance(container, 'owner');
-  expect(screen.getByText('Geofence configuration unavailable')).toBeInTheDocument();
-  expect(screen.queryByText('No geofences configured')).not.toBeInTheDocument();
-  expect(screen.getByTestId('vehicle-marker')).toBeInTheDocument();
-  expect(screen.queryByText('Outside')).not.toBeInTheDocument();
-});
+  it.each([
+    ['unverified fields', () => ({ verifiedFields: [] })],
+    ['unknown freshness', () => ({ freshness: 'unknown', observedAt: null })],
+    ['historical source', () => ({ live: false })],
+    ['old observation', () => ({ observedAt: Date.now() - 180_000 })],
+    ['future observation', () => ({ observedAt: Date.now() + 180_000 })],
+  ] satisfies Array<[string, () => Partial<StateFixture>]>)('does not promote %s to confirmed membership', async (_label, overrides) => {
+    mocks.state.mockReturnValue(query(stateFixture(overrides()), { refetch: mocks.stateRefetch }));
+    const { container } = renderWidget(packId);
+    await appearance(container, name);
+    expect(screen.getByText('Current membership is unconfirmed')).toBeInTheDocument();
+    expect(within(configuredList(container)).getByText('Inside')).toHaveClass('text-[var(--text-secondary)]');
+    expect(screen.getAllByTestId('fence-circle').every(circle => circle.getAttribute('data-color') === CHART_NEUTRAL)).toBe(true);
+  });
 
-it('keeps the map visible while the independent configuration is loading', async () => {
-  mocks.fences.mockReturnValue(query<Geofence[]>(undefined, {
-    isPending: true, isLoading: true, isFetching: true, refetch: mocks.fenceRefetch,
-  }));
-  const { container } = renderWidget('v6');
-  await appearance(container, 'expressive');
-  expect(screen.getByTestId('vehicle-marker')).toBeInTheDocument();
-  expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
-  expect(screen.queryByText('No geofences configured')).not.toBeInTheDocument();
-});
+  it.each(['state', 'fences', 'paused', 'stale'] as const)('retains map and membership during %s degradation without success styling', async source => {
+    if (source === 'fences') {
+      mocks.fences.mockReturnValue(query(fences, {
+        isError: true, error: new Error('Fence refresh failed'), refetch: mocks.fenceRefetch,
+      }));
+    } else {
+      mocks.state.mockReturnValue(query(stateFixture(), {
+        isError: source === 'state', error: source === 'state' ? new Error('Position refresh failed') : null,
+        fetchStatus: source === 'paused' ? 'paused' : 'idle', isStale: source === 'stale',
+        refetch: mocks.stateRefetch,
+      }));
+    }
+    const { container } = renderWidget(packId);
+    await appearance(container, name);
+    expect(within(configuredList(container)).getByText('Inside')).toHaveClass('text-[var(--text-secondary)]');
+    expect(screen.getAllByTestId('fence-circle')).toHaveLength(3);
+    expect(screen.getAllByTestId('fence-circle').every(circle => circle.getAttribute('data-color') === CHART_NEUTRAL)).toBe(true);
+    expect(screen.getByText('Current membership is unconfirmed')).toBeInTheDocument();
+    if (source !== 'stale') expect(screen.getAllByTestId('stale-refresh-warning').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/ }));
+    expect(mocks.stateRefetch).toHaveBeenCalledOnce();
+    expect(mocks.fenceRefetch).toHaveBeenCalledOnce();
+  });
 
-it('keeps the initial-loading shell without fabricated observations', () => {
-  mocks.state.mockReturnValue(query<StateFixture>(undefined, { isPending: true, isLoading: true }));
-  mocks.fences.mockReturnValue(query<Geofence[]>(undefined, { isPending: true, isLoading: true }));
-  const { container } = renderWidget('v5');
-  expect(screen.getByRole('heading', { name: 'Geofence status' })).toBeInTheDocument();
-  expect(container.querySelector('[data-data-state="initial"][aria-busy="true"]')).toBeInTheDocument();
-  expect(screen.queryByText('Home')).not.toBeInTheDocument();
-  expect(screen.queryByText('No geofences configured')).not.toBeInTheDocument();
-  expect(screen.queryByTestId('leaflet-map')).not.toBeInTheDocument();
-});
+  it.each(['state', 'fences'] as const)('keeps the independent source usable with a source-specific %s retry', async source => {
+    if (source === 'state') {
+      mocks.state.mockReturnValue(query<StateFixture>(undefined, {
+        isError: true, error: new Error('Position unavailable'), refetch: mocks.stateRefetch,
+      }));
+    } else {
+      mocks.fences.mockReturnValue(query<Geofence[]>(undefined, {
+        isError: true, error: new Error('Configuration unavailable'), refetch: mocks.fenceRefetch,
+      }));
+    }
+    const { container } = renderWidget(packId);
+    await appearance(container, name);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No geofences configured')).not.toBeInTheDocument();
+    if (source === 'state') {
+      expect(within(configuredList(container)).getByText('Home')).toBeInTheDocument();
+      expect(screen.queryByText('Inside')).not.toBeInTheDocument();
+      expect(screen.queryByText('Outside')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('leaflet-map')).not.toBeInTheDocument();
+    } else {
+      expect(screen.getByTestId('vehicle-marker')).toBeInTheDocument();
+      expect(screen.queryByTestId('fence-circle')).not.toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(mocks.stateRefetch).toHaveBeenCalledTimes(source === 'state' ? 1 : 0);
+    expect(mocks.fenceRefetch).toHaveBeenCalledTimes(source === 'fences' ? 1 : 0);
+  });
 
-it('does not start a second refresh while either contributing query is in flight', async () => {
-  mocks.fences.mockReturnValue(query(fences, { isFetching: true, refetch: mocks.fenceRefetch }));
-  const { container } = renderWidget('v3');
-  await appearance(container, 'precision');
-  const refresh = screen.getByRole('button', { name: /^Refresh data/ });
-  expect(refresh).toBeDisabled();
-  fireEvent.click(refresh);
-  expect(mocks.stateRefetch).not.toHaveBeenCalled();
-  expect(mocks.fenceRefetch).not.toHaveBeenCalled();
-  expect(within(configuredList(container)).getByText('Home')).toBeInTheDocument();
+  it('keeps an unresolved configuration unknown instead of reporting an empty configuration', async () => {
+    mocks.fences.mockReturnValue(query<Geofence[]>(undefined, { refetch: mocks.fenceRefetch }));
+    const { container } = renderWidget(packId);
+    await appearance(container, name);
+    expect(screen.getByText('Geofence configuration unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('No geofences configured')).not.toBeInTheDocument();
+    expect(screen.getByTestId('vehicle-marker')).toBeInTheDocument();
+    expect(screen.queryByText('Outside')).not.toBeInTheDocument();
+  });
+
+  it('keeps the map visible while the independent configuration is loading', async () => {
+    mocks.fences.mockReturnValue(query<Geofence[]>(undefined, {
+      isPending: true, isLoading: true, isFetching: true, refetch: mocks.fenceRefetch,
+    }));
+    const { container } = renderWidget(packId);
+    await appearance(container, name);
+    expect(screen.getByTestId('vehicle-marker')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
+    expect(screen.queryByText('No geofences configured')).not.toBeInTheDocument();
+  });
+
+  it('keeps the initial-loading shell without fabricated observations', () => {
+    mocks.state.mockReturnValue(query<StateFixture>(undefined, { isPending: true, isLoading: true }));
+    mocks.fences.mockReturnValue(query<Geofence[]>(undefined, { isPending: true, isLoading: true }));
+    const { container } = renderWidget(packId);
+    expect(screen.getByRole('heading', { name: 'Geofence status' })).toBeInTheDocument();
+    expect(container.querySelector('[data-data-state="initial"][aria-busy="true"]')).toBeInTheDocument();
+    expect(screen.queryByText('Home')).not.toBeInTheDocument();
+    expect(screen.queryByText('No geofences configured')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('leaflet-map')).not.toBeInTheDocument();
+  });
+
+  it('does not start a second refresh while either contributing query is in flight', async () => {
+    mocks.fences.mockReturnValue(query(fences, { isFetching: true, refetch: mocks.fenceRefetch }));
+    const { container } = renderWidget(packId);
+    await appearance(container, name);
+    const refresh = screen.getByRole('button', { name: /^Refresh data/ });
+    expect(refresh).toBeDisabled();
+    fireEvent.click(refresh);
+    expect(mocks.stateRefetch).not.toHaveBeenCalled();
+    expect(mocks.fenceRefetch).not.toHaveBeenCalled();
+    expect(within(configuredList(container)).getByText('Home')).toBeInTheDocument();
+  });
 });

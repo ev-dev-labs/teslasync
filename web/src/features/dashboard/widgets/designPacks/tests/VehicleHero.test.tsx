@@ -9,11 +9,15 @@ import OwnerVehicleHero from '../packs/owner/VehicleHero';
 import IconicVehicleHero from '../packs/iconic/VehicleHero';
 import ExpressiveVehicleHero from '../packs/expressive/VehicleHero';
 import PixelVehicleHero from '../packs/pixel/VehicleHero';
+import ExperimentalVehicleHero from '../packs/experimental/VehicleHero';
+import { PackBoundary } from '../PackBoundary';
+import { EXPERIMENTAL_PACK_IDS } from '../types';
 
 const presentations: ReadonlyArray<[string, ComponentType<VehicleHeroPresentationProps>]> = [
   ['v1', StudioVehicleHero], ['v2', ElevatedVehicleHero], ['v3', PrecisionVehicleHero],
   ['v4', OwnerVehicleHero], ['v5', IconicVehicleHero], ['v6', ExpressiveVehicleHero],
   ['v7', PixelVehicleHero],
+  ...EXPERIMENTAL_PACK_IDS.map(id => [id, ExperimentalVehicleHero] as [string, ComponentType<VehicleHeroPresentationProps>]),
 ];
 
 const sections: VehicleHeroPresentationProps['sections'] = {
@@ -26,7 +30,7 @@ const sections: VehicleHeroPresentationProps['sections'] = {
 
 describe.each(presentations)('vehicle hero %s', (id, Presentation) => {
   it('preserves every section and the exact zero/unknown distinction', () => {
-    const { container } = render(<Presentation sections={sections} />);
+    const { container } = render(<PackBoundary requestedPackId={id}><Presentation sections={sections} /></PackBoundary>);
     const root = container.querySelector(`[data-vehicle-hero-pack="${id}"]`);
     expect(root).not.toBeNull();
     const view = within(root as HTMLElement);

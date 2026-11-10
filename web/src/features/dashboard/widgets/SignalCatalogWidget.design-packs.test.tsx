@@ -6,6 +6,7 @@ import type { SignalObservation, SignalsCatalogResponse } from '@/types/signals'
 import { Text } from '@/components/ui';
 import SignalCatalogWidget from './SignalCatalogWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
 import type { WidgetSize } from './types';
 
 type QueryFixture<T> = DataStateSource<T> & {
@@ -40,10 +41,7 @@ vi.mock('@/hooks/useMotionPreference', () => ({
   useMotionPreference: () => ({ reduce: true, durationMs: 0 }),
 }));
 
-const packs = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const packs = Object.entries(PACK_APPEARANCES);
 const full: WidgetSize = { cols: 2, rows: 4 };
 const compact: WidgetSize = { cols: 1, rows: 1 };
 const timestamp = '2026-11-06T08:30:15Z';
@@ -191,7 +189,7 @@ describe('SignalCatalogWidget production design packs', () => {
     expect(screen.getByText(note)).toBeInTheDocument();
   });
 
-  it('keeps Classic as the default/recovery and preserves search state through all seven pack changes', async () => {
+  it('keeps Classic as the default/recovery and preserves search state through every pack change', async () => {
     const view = render(tree());
     expect(view.container.querySelector('[data-widget-pack="classic"]')).not.toBeNull();
     expect(view.container.querySelector('[data-widget-family]')).toBeNull();
@@ -219,12 +217,12 @@ describe('SignalCatalogWidget production design packs', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 
-  it('keeps unknown samples and catalog aggregates distinct, with an independent observation retry', async () => {
+  it.each(packs)('%s keeps unknown samples and catalog aggregates distinct, with an independent observation retry in %s', async (packId, appearance) => {
     mocks.observations.mockReturnValue(query<SignalObservation[]>(undefined, mocks.retryObservations, {
       status: 'error', isError: true, error: new Error('synthetic sample outage'),
     }));
-    const view = render(tree('v4'));
-    const selected = await presentation(view.container, 'owner');
+    const view = render(tree(packId));
+    const selected = await presentation(view.container, appearance);
     const list = within(selected).getByRole('list');
     expect(screen.getByText('Signal observations unavailable')).toBeInTheDocument();
     expect(signalRow(list, 'Soc').getByTitle('Observations in fetched sample')).toHaveTextContent('—');
@@ -234,37 +232,48 @@ describe('SignalCatalogWidget production design packs', () => {
     expect(mocks.retryObservations).toHaveBeenCalledOnce();
     expect(mocks.retryCatalog).not.toHaveBeenCalled();
 
+    mocks.catalog.mockReturnValue(query({
+      ...catalog,
+      signals: catalog.signals.map((signal, index) => index === 0
+        ? { ...signal, sample_count_total: 0, vehicle_count: 0 }
+        : signal),
+    }, mocks.retryCatalog));
     mocks.observations.mockReturnValue(query([], mocks.retryObservations));
-    view.rerender(tree('v4'));
-    expect(signalRow(screen.getByRole('list'), 'Soc').getByTitle('Observations in fetched sample')).toHaveTextContent('0');
+    view.rerender(tree(packId));
+    const recovered = signalRow(screen.getByRole('list'), 'Soc');
+    expect(recovered.getByTitle('Observations in fetched sample')).toHaveTextContent('0');
+    expect(recovered.getByText(/Total observations: 0/)).toHaveTextContent('Vehicles observed: 0');
+    expect(signalRow(screen.getByRole('list'), 'VehicleSpeed').getByText(/Total observations: —/)).toHaveTextContent('Vehicles observed: —');
     expect(screen.queryByText('Signal observations unavailable')).not.toBeInTheDocument();
   });
 
-  it.each(['refresh-error', 'paused'] as const)('retains real catalog rows and samples during %s without claiming source recovery', async (condition) => {
-    const error = condition === 'refresh-error' ? new Error('synthetic background outage') : null;
-    const overrides = {
-      error, isError: error != null,
-      fetchStatus: condition === 'paused' ? 'paused' as const : 'idle' as const,
-    };
-    mocks.catalog.mockReturnValue(query(catalog, mocks.retryCatalog, overrides));
-    mocks.observations.mockReturnValue(query([observation('Soc', 68)], mocks.retryObservations, overrides));
-    const { container } = render(tree('v7'));
-    const selected = await presentation(container, 'pixel');
-    expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getByText('Previously loaded signal observations remain visible while this source recovers.')).toBeInTheDocument();
-    expect(signalRow(within(selected).getByRole('list'), 'Soc').getByTitle('Observations in fetched sample')).toHaveTextContent('1');
-    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(mocks.retryObservations).toHaveBeenCalledOnce();
-    expect(mocks.retryCatalog).not.toHaveBeenCalled();
+  describe.each(packs)('%s retained source trust in %s', (packId, appearance) => {
+    it.each(['refresh-error', 'paused'] as const)('retains real catalog rows and samples during %s without claiming source recovery', async (condition) => {
+      const error = condition === 'refresh-error' ? new Error('synthetic background outage') : null;
+      const overrides = {
+        error, isError: error != null,
+        fetchStatus: condition === 'paused' ? 'paused' as const : 'idle' as const,
+      };
+      mocks.catalog.mockReturnValue(query(catalog, mocks.retryCatalog, overrides));
+      mocks.observations.mockReturnValue(query([observation('Soc', 68)], mocks.retryObservations, overrides));
+      const { container } = render(tree(packId));
+      const selected = await presentation(container, appearance);
+      expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(screen.getByText('Previously loaded signal observations remain visible while this source recovers.')).toBeInTheDocument();
+      expect(signalRow(within(selected).getByRole('list'), 'Soc').getByTitle('Observations in fetched sample')).toHaveTextContent('1');
+      expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(mocks.retryObservations).toHaveBeenCalledOnce();
+      expect(mocks.retryCatalog).not.toHaveBeenCalled();
+    });
   });
 
-  it('keeps loading and fatal catalog failure honest even when observations are available', async () => {
+  it.each(packs)('%s keeps loading and fatal catalog failure honest even when observations are available in %s', async (packId) => {
     mocks.catalog.mockReturnValue(query<SignalsCatalogResponse>(undefined, mocks.retryCatalog, {
       status: 'pending', isLoading: true, isPending: true, dataUpdatedAt: 0,
     }));
-    const view = render(tree('v1'));
+    const view = render(tree(packId));
     expect(screen.getByRole('heading', { name: 'Signal catalog' })).toBeInTheDocument();
     expect(view.container.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(screen.queryByText('No signals in catalog')).not.toBeInTheDocument();
@@ -273,7 +282,7 @@ describe('SignalCatalogWidget production design packs', () => {
     mocks.catalog.mockReturnValue(query<SignalsCatalogResponse>(undefined, mocks.retryCatalog, {
       status: 'error', isError: true, error: new Error('synthetic catalog outage'), dataUpdatedAt: 0,
     }));
-    view.rerender(tree('v1'));
+    view.rerender(tree(packId));
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(view.container.querySelector('[data-data-state="initialFailure"]')).not.toBeNull();
     expect(view.container.querySelector('[data-widget-family="list"] [role="list"]')).not.toBeInTheDocument();

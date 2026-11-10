@@ -6,7 +6,7 @@ import type { SignalHistoryPoint, SignalValue } from '@/api/types';
 import type { VehicleLiveSignal, VehicleLiveSignalsResponse } from '@/api/hooks/useTelemetry';
 import type { SignalHistoryResponse } from '@/types/telemetry';
 import type { WidgetConfig } from './types';
-import type { PackId } from './designPacks/types';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 import { PackBoundary } from './designPacks/PackBoundary';
 import DriverAssistWidget from './DriverAssistWidget';
 
@@ -40,10 +40,8 @@ vi.mock('@/hooks/useDateFormat', () => {
 
 const NOW = Date.parse('2026-11-07T02:00:00Z');
 const OBSERVED = '2026-11-07T01:59:50Z';
-const PACKS = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const PACKS = PACK_IDS.filter((pack): pack is Exclude<PackId, 'classic'> => pack !== 'classic')
+  .map(pack => [pack, PACK_APPEARANCES[pack]] as const);
 const SETTINGS = 'Reported settings';
 const HISTORY = 'Reported changes and samples';
 const LABELS = [
@@ -194,7 +192,7 @@ describe('DriverAssistWidget design packs', () => {
     expect(screen.getByRole('combobox', { name: 'History setting' })).toBeEnabled();
   });
 
-  it('keeps Classic and selection intact across all seven presentations without remounting data readers', async () => {
+  it('keeps Classic and selection intact across all presentations without remounting data readers', async () => {
     const view = render(tree('classic', 1));
     await screen.findByText('Disabled → Enabled');
     await settled();
@@ -216,110 +214,113 @@ describe('DriverAssistWidget design packs', () => {
     expect(requestMock).toHaveBeenCalledTimes(count);
   });
 
-  it.each([
-    ['explicit false', envelope(false), 'Enabled', 'Fresh observation'],
-    ['explicit true', envelope(true), 'Disabled', 'Fresh observation'],
-    ['stale timestamp', envelope(false, 'ValueKindBool', { ts: '2026-11-07T01:00:00Z' }), 'Enabled', 'Stale observation'],
-    ['old source age', envelope(false, 'ValueKindBool', { age_ms: 180_000 }), 'Enabled', 'Stale observation'],
-    ['historical fallback', envelope(false, 'ValueKindBool', { source: 'log' }), 'Enabled', 'Historical fallback'],
-    ['unknown source', envelope(false, 'ValueKindBool', { source: 'unknown' }), 'Enabled', 'Freshness unknown'],
-    ['future timestamp', envelope(false, 'ValueKindBool', { ts: '2026-11-08T02:00:00Z' }), 'Enabled', 'Freshness unknown'],
-    ['invalid age', envelope(false, 'ValueKindBool', { age_ms: -1 }), 'Enabled', 'Freshness unknown'],
-    ['wrong kind', envelope(false, 'ValueKindEnum'), 'Unknown', 'Freshness unknown'],
-    ['wrong value', envelope('false'), 'Unknown', 'Freshness unknown'],
-    ['legacy scalar', false, 'Unknown', 'Freshness unknown'],
-    ['missing', null, 'Unknown', 'Freshness unknown'],
-  ] as const)('does not turn %s evidence into unproved success or a zero', async (_name, value, expected, trust) => {
-    live = { signals: { AutomaticEmergencyBrakingOff: value } };
-    const view = render(tree('v7'));
-    await presentation(view.container, 'pixel');
-    expect(settingRow('Emergency braking').getByText(expected)).toBeInTheDocument();
-    expect(settingRow('Emergency braking').getByText(trust)).toBeInTheDocument();
-    expect(settingRow('Reported emergency braking state').getByText('Unknown')).toBeInTheDocument();
-  });
+  describe.each(PACKS)('%s source states', (pack, appearance) => {
+    it.each([
+      ['explicit false', envelope(false), 'Enabled', 'Fresh observation'],
+      ['explicit true', envelope(true), 'Disabled', 'Fresh observation'],
+      ['stale timestamp', envelope(false, 'ValueKindBool', { ts: '2026-11-07T01:00:00Z' }), 'Enabled', 'Stale observation'],
+      ['old source age', envelope(false, 'ValueKindBool', { age_ms: 180_000 }), 'Enabled', 'Stale observation'],
+      ['historical fallback', envelope(false, 'ValueKindBool', { source: 'log' }), 'Enabled', 'Historical fallback'],
+      ['unknown source', envelope(false, 'ValueKindBool', { source: 'unknown' }), 'Enabled', 'Freshness unknown'],
+      ['future timestamp', envelope(false, 'ValueKindBool', { ts: '2026-11-08T02:00:00Z' }), 'Enabled', 'Freshness unknown'],
+      ['invalid age', envelope(false, 'ValueKindBool', { age_ms: -1 }), 'Enabled', 'Freshness unknown'],
+      ['wrong kind', envelope(false, 'ValueKindEnum'), 'Unknown', 'Freshness unknown'],
+      ['wrong value', envelope('false'), 'Unknown', 'Freshness unknown'],
+      ['legacy scalar', false, 'Unknown', 'Freshness unknown'],
+      ['missing', null, 'Unknown', 'Freshness unknown'],
+    ] as const)('does not turn %s evidence into unproved success or a zero', async (_name, value, expected, trust) => {
+      live = { signals: { AutomaticEmergencyBrakingOff: value } };
+      const view = render(tree(pack));
+      await presentation(view.container, appearance);
+      expect(settingRow('Emergency braking').getByText(expected)).toBeInTheDocument();
+      expect(settingRow('Emergency braking').getByText(trust)).toBeInTheDocument();
+      expect(settingRow('Reported emergency braking state').getByText('Unknown')).toBeInTheDocument();
+    });
 
-  it('rejects unknown enum, numeric-zero enum and invalid follow-distance values without inventing activation', async () => {
-    live = { signals: {
-      LaneDepartureAvoidance: envelope('Unknown', 'ValueKindEnum'),
-      AutomaticEmergencyBrakingState: envelope(0, 'ValueKindEnum'),
-      CruiseFollowDistance: envelope('0', 'ValueKindEnum'),
-    } };
-    const view = render(tree('v3'));
-    await presentation(view.container, 'precision');
-    for (const label of ['Lane departure', 'Reported emergency braking state', 'Follow distance']) {
-      expect(settingRow(label).getByText('Unknown')).toBeInTheDocument();
-      expect(settingRow(label).getByText('Freshness unknown')).toBeInTheDocument();
-    }
-  });
+    it('rejects unknown enum, numeric-zero enum and invalid follow-distance values without inventing activation', async () => {
+      live = { signals: {
+        LaneDepartureAvoidance: envelope('Unknown', 'ValueKindEnum'),
+        AutomaticEmergencyBrakingState: envelope(0, 'ValueKindEnum'),
+        CruiseFollowDistance: envelope('0', 'ValueKindEnum'),
+      } };
+      const view = render(tree(pack));
+      await presentation(view.container, appearance);
+      for (const label of ['Lane departure', 'Reported emergency braking state', 'Follow distance']) {
+        expect(settingRow(label).getByText('Unknown')).toBeInTheDocument();
+        expect(settingRow(label).getByText('Freshness unknown')).toBeInTheDocument();
+      }
+    });
 
-  it('retains both source payloads after failed refresh and recovers independently', async () => {
-    const view = render(tree('v4'));
-    await presentation(view.container, 'owner');
-    failures.add('/signals/7/live');
-    failures.add('/signals/7/AutomaticEmergencyBrakingOff/history');
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh driver-assistance evidence' }));
-    await waitFor(() => expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.')).toHaveLength(2));
-    await settled();
-    expect(settingRow('Emergency braking').getByText('Enabled')).toBeInTheDocument();
-    expect(settingRow('Emergency braking').getByText('Retained snapshot')).toBeInTheDocument();
-    expect(within(screen.getByRole('list', { name: HISTORY })).getAllByRole('listitem')).toHaveLength(5);
-    failures.delete('/signals/7/live');
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh driver-assistance evidence' }));
-    await waitFor(() => expect(settingRow('Emergency braking').getByText('Fresh observation')).toBeInTheDocument());
-    await settled();
-    expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.')).toHaveLength(1);
-    failures.clear();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh driver-assistance evidence' }));
-    await waitFor(() => expect(screen.queryByText('Previously loaded data remains visible while affected sources recover.')).not.toBeInTheDocument());
-  });
-
-  it.each([
-    ['/signals/7/live', 'Reported settings could not be loaded.', HISTORY],
-    ['/signals/7/AutomaticEmergencyBrakingOff/history', 'Signal history could not be loaded.', SETTINGS],
-  ])('isolates an initial failure of %s without hiding the independent source', async (path, message, other) => {
-    failures.add(path);
-    const view = render(tree('v5'));
-    await presentation(view.container, 'iconic');
-    expect(screen.getByText(message)).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: SETTINGS })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: HISTORY })).toBeInTheDocument();
-    if (other === HISTORY) expect(screen.getByText('Disabled → Enabled')).toBeInTheDocument();
-    else {
+    it('retains both source payloads after failed refresh and recovers independently', async () => {
+      const view = render(tree(pack));
+      await presentation(view.container, appearance);
+      failures.add('/signals/7/live');
+      failures.add('/signals/7/AutomaticEmergencyBrakingOff/history');
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh driver-assistance evidence' }));
+      await waitFor(() => expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.')).toHaveLength(2));
+      await settled();
       expect(settingRow('Emergency braking').getByText('Enabled')).toBeInTheDocument();
+      expect(settingRow('Emergency braking').getByText('Retained snapshot')).toBeInTheDocument();
+      expect(within(screen.getByRole('list', { name: HISTORY })).getAllByRole('listitem')).toHaveLength(5);
+      failures.delete('/signals/7/live');
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh driver-assistance evidence' }));
+      await waitFor(() => expect(settingRow('Emergency braking').getByText('Fresh observation')).toBeInTheDocument());
+      await settled();
+      expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.')).toHaveLength(1);
+      failures.clear();
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh driver-assistance evidence' }));
+      await waitFor(() => expect(screen.queryByText('Previously loaded data remains visible while affected sources recover.')).not.toBeInTheDocument());
+    });
+
+    it.each([
+      ['/signals/7/live', 'Reported settings could not be loaded.', HISTORY],
+      ['/signals/7/AutomaticEmergencyBrakingOff/history', 'Signal history could not be loaded.', SETTINGS],
+    ])('isolates an initial failure of %s without hiding the independent source', async (path, message, other) => {
+      failures.add(path);
+      const view = render(tree(pack));
+      await presentation(view.container, appearance);
+      expect(screen.getByText(message)).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: SETTINGS })).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: HISTORY })).toBeInTheDocument();
+      if (other === HISTORY) expect(screen.getByText('Disabled → Enabled')).toBeInTheDocument();
+      else {
+        expect(settingRow('Emergency braking').getByText('Enabled')).toBeInTheDocument();
+        expect(screen.getByText('Recorded sample count is unknown until history loads.')).toBeInTheDocument();
+      }
+      expect(screen.getByRole('combobox', { name: 'History setting' })).toBeEnabled();
+    });
+
+    it('keeps both shells and the settings selector visible during initial loading', async () => {
+      let resolveLive: ((value: VehicleLiveSignalsResponse) => void) | undefined;
+      let resolveHistory: ((value: SignalHistoryResponse) => void) | undefined;
+      const pendingLive = new Promise<VehicleLiveSignalsResponse>(resolve => { resolveLive = resolve; });
+      const pendingHistory = new Promise<SignalHistoryResponse>(resolve => { resolveHistory = resolve; });
+      requestMock.mockImplementation(path => path === '/vehicles' ? Promise.resolve([])
+        : path.endsWith('/live') ? pendingLive : pendingHistory);
+      const view = render(tree(pack));
+      await waitFor(() => expect(view.container.querySelector('[data-widget-family="status"]'))
+        .toHaveAttribute('data-widget-appearance', appearance));
+      expect(screen.getByRole('status', { name: `Loading ${SETTINGS}` })).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: `Loading ${HISTORY}` })).toBeInTheDocument();
       expect(screen.getByText('Recorded sample count is unknown until history loads.')).toBeInTheDocument();
-    }
-    expect(screen.getByRole('combobox', { name: 'History setting' })).toBeEnabled();
-  });
+      expect(screen.getByRole('combobox', { name: 'History setting' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Refresh driver-assistance evidence' })).toBeDisabled();
+      await act(async () => { resolveLive?.(live); resolveHistory?.(history('AutomaticEmergencyBrakingOff')); });
+      await settled();
+      expect(settingRow('Emergency braking').getByText('Enabled')).toBeInTheDocument();
+    });
 
-  it('keeps both shells and the settings selector visible during initial loading', async () => {
-    let resolveLive: ((value: VehicleLiveSignalsResponse) => void) | undefined;
-    let resolveHistory: ((value: SignalHistoryResponse) => void) | undefined;
-    const pendingLive = new Promise<VehicleLiveSignalsResponse>(resolve => { resolveLive = resolve; });
-    const pendingHistory = new Promise<SignalHistoryResponse>(resolve => { resolveHistory = resolve; });
-    requestMock.mockImplementation(path => path === '/vehicles' ? Promise.resolve([])
-      : path.endsWith('/live') ? pendingLive : pendingHistory);
-    const view = render(tree('v6'));
-    await waitFor(() => expect(view.container.querySelector('[data-widget-appearance="expressive"]')).toBeInTheDocument());
-    expect(screen.getByRole('status', { name: `Loading ${SETTINGS}` })).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: `Loading ${HISTORY}` })).toBeInTheDocument();
-    expect(screen.getByText('Recorded sample count is unknown until history loads.')).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'History setting' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Refresh driver-assistance evidence' })).toBeDisabled();
-    await act(async () => { resolveLive?.(live); resolveHistory?.(history('AutomaticEmergencyBrakingOff')); });
-    await settled();
-    expect(settingRow('Emergency braking').getByText('Enabled')).toBeInTheDocument();
-  });
-
-  it('uses the pinned vehicle configuration and never invents a fallback for an invalid explicit vehicle', async () => {
-    const view = render(tree('v2', 2, null, { vehicleId: 42 }));
-    await presentation(view.container, 'elevated');
-    expect(requestMock.mock.calls.some(([path]) => path === '/signals/42/live')).toBe(true);
-    expect(historyRequests('AutomaticEmergencyBrakingOff', 42)).toHaveLength(1);
-    const count = requestMock.mock.calls.length;
-    view.rerender(tree('v2', 1, 0, { vehicleId: 42 }));
-    await settled();
-    expect(screen.getAllByText('Select a vehicle to inspect reported driver-assistance settings.')).toHaveLength(2);
-    expect(screen.getByRole('region', { name: HISTORY })).toBeInTheDocument();
-    expect(requestMock).toHaveBeenCalledTimes(count);
+    it('uses the pinned vehicle configuration and never invents a fallback for an invalid explicit vehicle', async () => {
+      const view = render(tree(pack, 2, null, { vehicleId: 42 }));
+      await presentation(view.container, appearance);
+      expect(requestMock.mock.calls.some(([path]) => path === '/signals/42/live')).toBe(true);
+      expect(historyRequests('AutomaticEmergencyBrakingOff', 42)).toHaveLength(1);
+      const count = requestMock.mock.calls.length;
+      view.rerender(tree(pack, 1, 0, { vehicleId: 42 }));
+      await settled();
+      expect(screen.getAllByText('Select a vehicle to inspect reported driver-assistance settings.')).toHaveLength(2);
+      expect(screen.getByRole('region', { name: HISTORY })).toBeInTheDocument();
+      expect(requestMock).toHaveBeenCalledTimes(count);
+    });
   });
 });

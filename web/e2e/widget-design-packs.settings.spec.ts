@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { assertMockApiComplete, closeMockApiFixtures, waitForHarnessReady } from './mockApi';
-import { installPackReview, packNames, preferenceKey } from './widget-design-packs.mock';
+import { installPackReview, packNames } from './widget-design-packs.mock';
 import type { PackId } from '../src/features/dashboard/widgets/designPacks/types';
 
 const reviewDirectory = fileURLToPath(new URL('../test-results/widget-design-packs/settings-review/', import.meta.url));
@@ -12,7 +12,7 @@ test.afterAll(async () => { await closeMockApiFixtures(); });
 
 for (const theme of ['dark', 'light'] as const) {
   for (const width of [1440, 390]) {
-    test(`Settings previews and browser-profile selection at ${width}px in ${theme}`, async ({ page }) => {
+    test(`Settings previews and server-backed selection at ${width}px in ${theme}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 1000 });
       const failures: string[] = [];
       page.on('pageerror', error => failures.push(error.message));
@@ -35,7 +35,7 @@ for (const theme of ['dark', 'light'] as const) {
           cardTop: card.getBoundingClientRect().top, stageHeight: stage.height,
           buttons: buttons.map(button => ({ top: button.top, height: button.height })) };
       }));
-      expect(geometry).toHaveLength(8);
+      expect(geometry).toHaveLength(27);
       for (const card of geometry) {
         expect(card.stageHeight).toBe(192);
         expect(card.overflow).toBe(false);
@@ -49,6 +49,29 @@ for (const theme of ['dark', 'light'] as const) {
       for (const name of Object.values(packNames).filter(name => name !== 'Classic')) {
         await expect(selector.getByRole('button', { name: `Use ${name} pack`, exact: true })).toBeEnabled();
       }
+      const style = selector.getByRole('combobox', { name: 'Design style', exact: true });
+      const intensity = selector.getByRole('combobox', { name: 'Design intensity', exact: true });
+      await expect(style.getByRole('option')).toHaveText([
+        'All styles (27)', 'Minimal & Editorial (6)', 'Soft & Atmospheric (5)',
+        'Technical & Instrumental (9)', 'Bold & Geometric (7)',
+      ]);
+      await style.selectOption('technical');
+      await intensity.selectOption('balanced');
+      await expect(selector.getByRole('button', { name: 'Preview Studio', exact: true })).toBeVisible();
+      await intensity.selectOption('extreme');
+      await expect(selector.getByRole('button', { name: /^Preview / })).toHaveCount(1);
+      await expect(selector.getByRole('button', { name: 'Preview Cyberdeck', exact: true })).toBeVisible();
+      await selector.screenshot({ path: `${reviewDirectory}${theme}-${width}-style-filter.png`, animations: 'disabled' });
+      await style.selectOption('geometric');
+      await expect(selector.getByRole('button', { name: /^Preview / })).toHaveCount(2);
+      await style.selectOption('minimal');
+      await expect(intensity).toHaveValue('extreme');
+      await expect(intensity).toBeEnabled();
+      await expect(selector.getByText('No packs match these style and intensity filters.', { exact: true })).toBeVisible();
+      await selector.getByRole('button', { name: 'Show all designs', exact: true }).click();
+      await expect(style).toHaveValue('all');
+      await expect(intensity).toHaveValue('all');
+      await expect(selector.getByRole('button', { name: /^Preview / })).toHaveCount(27);
       await selector.scrollIntoViewIfNeeded();
       await selector.screenshot({ path: `${reviewDirectory}${theme}-${width}-selector.png`, animations: 'disabled' });
       const before = await page.evaluate(() => Object.fromEntries(Object.entries(localStorage)));
@@ -57,12 +80,13 @@ for (const theme of ['dark', 'light'] as const) {
         const opener = selector.getByRole('button', { name: `Preview ${name}`, exact: true });
         await opener.click();
         const dialog = page.getByRole('dialog', { name: `Preview ${name}`, exact: true });
-        await expect(dialog.locator('[data-widget-pack-preview]')).toHaveAttribute('data-widget-pack', packId);
+        await expect(dialog.locator('[data-widget-pack-preview]')).toHaveAttribute('data-widget-pack-preview', packId);
         await expect(dialog.getByText('Loading preview...', { exact: true })).toHaveCount(0);
         for (const heading of ['Vehicle', 'Battery', 'History', 'Status', 'Commands']) {
           const panel = dialog.locator('[data-widget-pack-preview] > div > [data-surface-variant="standalone"]')
             .filter({ has: page.getByRole('heading', { name: heading, exact: true }) });
           await expect(panel).toBeVisible();
+          await expect(panel).toHaveAttribute('data-widget-pack', packId);
           expect(await panel.evaluate(element => element.scrollWidth > element.clientWidth + 2),
             `${packId}/${heading} horizontal overflow`).toBe(false);
           await panel.screenshot({
@@ -85,11 +109,9 @@ for (const theme of ['dark', 'light'] as const) {
       await selector.getByRole('button', { name: 'Use Owner pack', exact: true }).click();
       await expect(selector.getByRole('button', { name: 'Owner active', exact: true })).toBeDisabled();
       const after = await page.evaluate(() => Object.fromEntries(Object.entries(localStorage)));
-      expect(JSON.parse(after[preferenceKey])).toEqual({ version: 1, packId: 'v4' });
-      const { [preferenceKey]: beforePack, ...beforeOther } = before;
-      const { [preferenceKey]: afterPack, ...afterOther } = after;
-      expect(beforePack).not.toEqual(afterPack);
-      expect(afterOther).toEqual(beforeOther);
+      expect(await page.evaluate(async () =>
+        (await fetch('/api/v1/settings/widget-design-pack')).json())).toMatchObject({ pack_id: 'v4' });
+      expect(after).toEqual(before);
       await page.reload();
       if (width < 1024) {
         await page.getByRole('combobox', { name: 'Settings categories', exact: true }).selectOption('appearance');

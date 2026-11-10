@@ -39,9 +39,11 @@ import { WidgetShell } from './WidgetShell';
 import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { usePackPresentation } from './designPacks/PackBoundary';
 import type { PackId } from './designPacks/types';
+import { EXPERIMENTAL_BAR_RADII } from './designPacks/experimentalLayouts';
 import type { WidgetProps } from './types';
 
 const histogramRadii: Record<PackId, [number, number, number, number]> = {
+  ...EXPERIMENTAL_BAR_RADII,
   classic: [4, 4, 0, 0],
   v1: [7, 7, 3, 3],
   v2: [8, 8, 4, 4],

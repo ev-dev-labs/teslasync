@@ -321,6 +321,10 @@
         "success": "Settings saved",
         "error": "Failed to save settings"
       },
+      "widgetDesignPack": {
+        "success": "Widget design pack saved across machines on this server",
+        "error": "Failed to save widget design pack"
+      },
       "ai": {
         "save": {
           "success": "Helix settings saved",

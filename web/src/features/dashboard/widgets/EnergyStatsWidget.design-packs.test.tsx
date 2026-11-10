@@ -5,6 +5,7 @@ import type { DailyEnergy, EnergyStats } from '@/types/energy';
 import type { UnitPref } from '@/lib/unitConversion';
 import EnergyStatsWidget from './EnergyStatsWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
 import type { WidgetProps } from './types';
 
 type EnergyFixture = Omit<EnergyStats,
@@ -40,15 +41,7 @@ vi.mock('@/api/hooks/useEnergy', () => ({ useEnergyStats: sources.energy }));
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: sources.vehicles }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: sources.units }));
 
-const productionPacks = [
-  ['v1', 'studio'],
-  ['v2', 'elevated'],
-  ['v3', 'precision'],
-  ['v4', 'owner'],
-  ['v5', 'iconic'],
-  ['v6', 'expressive'],
-  ['v7', 'pixel'],
-] as const;
+const presentationPacks = Object.entries(PACK_APPEARANCES);
 
 const unitPrefs: UnitPref = {
   distance: 'km',
@@ -136,7 +129,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe.each(productionPacks)('Energy stats %s (%s)', (pack, appearance) => {
+describe.each(presentationPacks)('Energy stats %s (%s)', (pack, appearance) => {
   it('keeps the real daily chart, all metrics, estimate disclosure and retained-data refresh', async () => {
     const query = makeQuery(stats(), {
       error: new Error('Synthetic background refresh failure'),
@@ -180,8 +173,9 @@ describe.each(productionPacks)('Energy stats %s (%s)', (pack, appearance) => {
   });
 
   it('preserves the compact single-headline branch', async () => {
-    const { container } = render(widgetTree(pack, { vehicleId: 7, size: { cols: 1, rows: 2 } }));
-    await expectAppearance(container, appearance);
+    const props = { vehicleId: 7, size: { cols: 1, rows: 2 } };
+    const view = render(widgetTree(pack, props));
+    await expectAppearance(view.container, appearance);
     expect(screen.getByText('Total used')).toBeInTheDocument();
     expect(screen.getByText('12.0')).toBeInTheDocument();
     expect(screen.getByText('kWh')).toBeInTheDocument();
@@ -190,17 +184,26 @@ describe.each(productionPacks)('Energy stats %s (%s)', (pack, appearance) => {
     expect(screen.queryByText('CO₂ saved')).not.toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.queryByRole('img', { name: 'Daily driving energy usage' })).not.toBeInTheDocument();
+
+    sources.energy.mockReturnValue(makeQuery<EnergyFixture>(undefined, { dataUpdatedAt: 0 }));
+    view.rerender(widgetTree(pack, props));
+    await expectAppearance(view.container, appearance);
+    expect(screen.getByText('No energy data available')).toBeInTheDocument();
+    expect(screen.getByText('Total used')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
   });
 
   it('retains unknown sections, chart gaps, measured zero and signed samples without fabricating a scale', async () => {
     sources.energy.mockReturnValue(makeQuery(stats({
       total_energy_used_wh: null,
-      total_energy_charged_wh: null,
+      total_energy_charged_wh: Number.POSITIVE_INFINITY,
       avg_efficiency_wh_per_m: Number.NaN,
-      co2_saved_kg: null,
+      co2_saved_kg: Number.NEGATIVE_INFINITY,
       daily_breakdown: [
         day('2026-11-05', 5_000), day('2026-11-06', null),
         day('2026-11-07', 0), day('2026-11-08', -1_000),
+        day('2026-11-09', Number.NaN), day('2026-11-10', Number.POSITIVE_INFINITY),
       ],
     })));
     const view = render(widgetTree(pack));
@@ -208,8 +211,27 @@ describe.each(productionPacks)('Energy stats %s (%s)', (pack, appearance) => {
     expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'partial');
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
     expect(screen.queryByText('NaN')).not.toBeInTheDocument();
-    expect(chartRows()).toEqual([['Nov 5', '5'], ['Nov 6', '—'], ['Nov 7', '0'], ['Nov 8', '-1']]);
+    expect(screen.queryByText(/Infinity/)).not.toBeInTheDocument();
+    expect(chartRows()).toEqual([
+      ['Nov 5', '5'], ['Nov 6', '—'], ['Nov 7', '0'], ['Nov 8', '-1'],
+      ['Nov 9', '—'], ['Nov 10', '—'],
+    ]);
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+
+    sources.energy.mockReturnValue(makeQuery(stats({
+      total_energy_used_wh: 0,
+      total_energy_charged_wh: 0,
+      avg_efficiency_wh_per_m: 0,
+      co2_saved_kg: 0,
+      daily_breakdown: [day('2026-11-07', 0)],
+    })));
+    view.rerender(widgetTree(pack));
+    await expectAppearance(view.container, appearance);
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'ok');
+    expect(screen.getAllByText('0.0')).toHaveLength(2);
+    expect(screen.getByText('0 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('0.00')).toBeInTheDocument();
+    expect(chartRows()).toEqual([['Nov 7', '0']]);
 
     sources.energy.mockReturnValue(makeQuery<EnergyFixture>(undefined, { dataUpdatedAt: 0 }));
     view.rerender(widgetTree(pack));
@@ -237,7 +259,7 @@ it.each(['classic', 'retired-pack'])('preserves the original Classic body and re
 
 it('changes presentation without multiplying charts and converts every sample at the display boundary', async () => {
   const view = render(widgetTree('classic'));
-  for (const [pack, appearance] of productionPacks) {
+  for (const [pack, appearance] of presentationPacks) {
     view.rerender(widgetTree(pack));
     await expectAppearance(view.container, appearance);
     expect(screen.getAllByRole('table')).toHaveLength(1);
@@ -246,31 +268,38 @@ it('changes presentation without multiplying charts and converts every sample at
   sources.units.mockReturnValue({
     unitPrefs: { ...unitPrefs, energy: 'Wh', distance: 'mi', speed: 'mph' },
   });
-  view.rerender(widgetTree('v7'));
-  expect(screen.getByText('12,000')).toBeInTheDocument();
-  expect(screen.getByText('193 Wh/mi')).toBeInTheDocument();
-  expect(screen.getByRole('columnheader', { name: 'Daily usage (Wh)' })).toBeInTheDocument();
-  expect(chartRows()).toEqual([['Nov 5', '5000'], ['Nov 6', '7000']]);
+  for (const [pack, appearance] of presentationPacks) {
+    view.rerender(widgetTree(pack));
+    await expectAppearance(view.container, appearance);
+    expect(screen.getByText('12,000')).toBeInTheDocument();
+    expect(screen.getByText('15,000.0')).toBeInTheDocument();
+    expect(screen.getByText('193 Wh/mi')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Daily usage (Wh)' })).toBeInTheDocument();
+    expect(chartRows()).toEqual([['Nov 5', '5000'], ['Nov 6', '7000']]);
+  }
 
   view.rerender(widgetTree('classic'));
   expect(view.container.querySelector('[data-widget-appearance]')).toBeNull();
   expect(screen.getByText('12,000')).toBeInTheDocument();
 });
 
-it('keeps configured vehicle selection and the first-vehicle fallback through pack changes', async () => {
-  const view = render(widgetTree('v4', { config: { vehicleId: 9 } }));
-  await expectAppearance(view.container, 'owner');
+it.each(presentationPacks)('keeps vehicle selection and fallback in %s', async (pack, appearance) => {
+  const view = render(widgetTree(pack, { config: { vehicleId: 9 } }));
+  await expectAppearance(view.container, appearance);
   expect(sources.energy).toHaveBeenLastCalledWith('9');
-  view.rerender(widgetTree('v7', {}));
-  await expectAppearance(view.container, 'pixel');
+  view.rerender(widgetTree(pack, { vehicleId: 7, config: { vehicleId: 9 } }));
+  await expectAppearance(view.container, appearance);
+  expect(sources.energy).toHaveBeenLastCalledWith('7');
+  view.rerender(widgetTree(pack, {}));
+  await expectAppearance(view.container, appearance);
   expect(sources.energy).toHaveBeenLastCalledWith('42');
 });
 
-it('retains the source shell through initial loading, fatal failure and recovery', async () => {
+it.each(presentationPacks)('retains loading, fatal failure and recovery in %s', async (pack, appearance) => {
   sources.energy.mockReturnValue(makeQuery<EnergyFixture>(undefined, {
     isLoading: true, isPending: true, isFetching: true, fetchStatus: 'fetching', dataUpdatedAt: 0,
   }));
-  const view = render(widgetTree('v3'));
+  const view = render(widgetTree(pack));
   expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'initial');
   expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
   expect(screen.queryByText('12.0')).not.toBeInTheDocument();
@@ -279,15 +308,15 @@ it('retains the source shell through initial loading, fatal failure and recovery
     error: new Error('Synthetic initial failure'), isError: true, dataUpdatedAt: 0,
   });
   sources.energy.mockReturnValue(failed);
-  view.rerender(widgetTree('v3'));
+  view.rerender(widgetTree(pack));
   expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'initialFailure');
   expect(view.container.querySelector('[data-widget-appearance]')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
   expect(failed.refetch).toHaveBeenCalledOnce();
 
   sources.energy.mockReturnValue(makeQuery(stats()));
-  view.rerender(widgetTree('v3'));
-  await expectAppearance(view.container, 'precision');
+  view.rerender(widgetTree(pack));
+  await expectAppearance(view.container, appearance);
   expect(screen.getByText('12.0')).toBeInTheDocument();
   expect(chartRows()).toHaveLength(2);
 });

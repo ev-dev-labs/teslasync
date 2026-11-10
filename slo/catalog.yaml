@@ -14,6 +14,16 @@
 version: 1
 
 slos:
+  - name: widget_design_preference_availability
+    description: "Durable subject-scoped widget design reads and writes must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/settings/widget-design-pack\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/settings/widget-design-pack\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: platform
+    tags: [http, settings]
+
   - name: browser_auth_handoff_availability
     description: "Provider-authenticated browser return navigation must avoid server errors."
     sli:

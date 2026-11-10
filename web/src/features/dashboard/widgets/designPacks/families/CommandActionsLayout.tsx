@@ -2,8 +2,10 @@ import { cloneElement } from 'react';
 import { cn } from '@/lib/cn';
 import type { PackAppearance } from '../types';
 import type { CommandActionsPresentationProps } from './Actions.types';
+import { experimentalLayouts, isExperimentalAppearance } from '../experimentalLayouts';
 
 const layouts: Record<PackAppearance, string> = {
+  ...experimentalLayouts(({ actions }) => actions),
   studio: 'grid-cols-3 gap-3 [&>button]:min-h-20',
   elevated: 'grid-cols-2 gap-3 [&>button]:flex-row [&>button]:justify-start [&>button]:rounded-xl [&>button]:px-3',
   precision: 'grid-cols-2 gap-2 @md:grid-cols-3 [&>button]:min-h-14 [&>button]:flex-row',
@@ -23,7 +25,11 @@ const pixelIcons: Record<string, string> = {
 
 export default function CommandActionsLayout({ appearance, compact, actions }: CommandActionsPresentationProps) {
   return (
-    <div data-actions-appearance={appearance} className={cn('grid min-w-0', compact ? 'h-full grid-cols-3 items-center gap-1.5' : layouts[appearance])}>
+    <div data-actions-appearance={appearance} className={cn(
+      'grid min-w-0',
+      compact && !isExperimentalAppearance(appearance) ? 'h-full grid-cols-3 items-center gap-1.5' : layouts[appearance],
+      compact && isExperimentalAppearance(appearance) && 'gap-2 [&>button]:min-h-11',
+    )}>
       {actions.map(action => appearance === 'pixel' && !action.busy && pixelIcons[action.id]
         ? cloneElement(action.button, {
             key: action.id,

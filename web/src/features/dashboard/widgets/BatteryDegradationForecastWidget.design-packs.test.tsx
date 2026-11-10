@@ -9,7 +9,7 @@ import type { DegradationData } from '@/types/energy';
 import { patchMatchMedia } from '@/test/setup';
 import BatteryDegradationForecastWidget from './BatteryDegradationForecastWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
-import { PACK_APPEARANCES } from './designPacks/types';
+import { PACK_APPEARANCES, PACK_IDS } from './designPacks/types';
 import type { WidgetSize } from './types';
 
 vi.mock('@/api/hooks/useEnergy', async importOriginal => ({
@@ -176,6 +176,7 @@ describe.each(Object.entries(PACK_APPEARANCES))('battery forecast %s (%s)', (pac
 
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const dialog = screen.getByRole('dialog');
+    expect(dialog.querySelector('[data-provenance="inferred"]')).toHaveTextContent('Estimated');
     expect(dialog.querySelector('[data-drawer-header]')).toHaveTextContent('does not establish continuous recording coverage');
     fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -261,16 +262,21 @@ it('keeps Classic as default/recovery and returns to the same complete source af
   expectOriginalSamples();
 });
 
-it('retains the actual chart and all model outputs after a cached refresh failure', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('retains the actual chart and all model outputs after a cached refresh failure in %s', async (packId, name) => {
   mockDegradation.mockReturnValue(result(forecast(), { isError: true, error: new Error('refresh failed'), isStale: true }));
-  const { container } = render(tree('v7'));
-  await appearance(container, 'pixel');
+  const { container } = render(tree(packId));
+  await appearance(container, name);
   expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   expect(screen.getByText('Oct 2036')).toBeInTheDocument();
   expect(screen.getByText('Most sessions use AC')).toBeInTheDocument();
   expect(screen.getByText('Keep daily charge below 80% when practical')).toBeInTheDocument();
   expectOriginalSamples();
+  fireEvent.click(within(screen.getByTestId('dashboard-battery-forecast-brief')).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  expect(dialog).toHaveTextContent('Retained readings');
+  expect(dialog.querySelector('[data-provenance="inferred"]')).toHaveAttribute('data-data-status', 'stale');
+  fireEvent.keyDown(dialog, { key: 'Escape' });
 });
 
 it('preserves the real chart legend selection and accessible samples when changing appearance', async () => {
@@ -282,8 +288,13 @@ it('preserves the real chart legend selection and accessible samples when changi
   expect(view.container.querySelector('.recharts-line-curve[stroke-dasharray="5 4"]')).not.toBeInTheDocument();
   expectOriginalSamples();
 
-  view.rerender(tree('v4'));
-  await appearance(view.container, 'owner');
+  for (const [packId, name] of Object.entries(PACK_APPEARANCES)) {
+    view.rerender(tree(packId));
+    await appearance(view.container, name);
+    expect(screen.getByRole('button', { name: 'Forecast' })).toHaveAttribute('aria-pressed', 'true');
+    expect(view.container.querySelector('.recharts-line-curve[stroke-dasharray="5 4"]')).not.toBeInTheDocument();
+    expectOriginalSamples();
+  }
   const retainedToggle = screen.getByRole('button', { name: 'Forecast' });
   expect(retainedToggle).toHaveAttribute('aria-pressed', 'true');
   fireEvent.click(retainedToggle);
@@ -294,25 +305,25 @@ it('preserves the real chart legend selection and accessible samples when changi
 });
 
 it('preserves a measured zero in every pack and the original signed monthly rate', async () => {
-  mockDegradation.mockReturnValue(result(forecast({ current_health_pct: 0, degradation_rate_pct_per_month: 0 })));
   const view = render(tree('classic'));
   for (const [packId, name] of Object.entries(PACK_APPEARANCES)) {
+    mockDegradation.mockReturnValue(result(forecast({ current_health_pct: 0, degradation_rate_pct_per_month: 0 })));
     view.rerender(tree(packId));
     await appearance(view.container, name);
     const brief = screen.getByTestId('dashboard-battery-forecast-brief');
     expect(brief).toHaveTextContent('0%');
     expect(brief).toHaveTextContent('0.00%/mo');
+    mockDegradation.mockReturnValue(result(forecast({ current_health_pct: 0, degradation_rate_pct_per_month: -0.02 })));
+    view.rerender(tree(packId));
+    expect(screen.getByTestId('dashboard-battery-forecast-brief')).toHaveTextContent('-0.02%/mo');
   }
-  mockDegradation.mockReturnValue(result(forecast({ degradation_rate_pct_per_month: -0.02 })));
-  view.rerender(tree('v7'));
-  expect(screen.getByTestId('dashboard-battery-forecast-brief')).toHaveTextContent('-0.02%/mo');
 });
 
-it('keeps shell loading and fatal-error recovery instead of fabricating a forecast', () => {
+it.each(PACK_IDS)('keeps shell loading and fatal-error recovery instead of fabricating a forecast in %s', packId => {
   mockDegradation.mockReturnValue(result<DegradationData>(undefined, {
     isLoading: true, isFetching: true, isPending: true, dataUpdatedAt: 0,
   }));
-  const view = render(tree('v3'));
+  const view = render(tree(packId));
   expect(view.container.querySelector('[aria-busy="true"][data-data-state="initial"]')).toBeInTheDocument();
   expect(screen.queryByText('Projected 80% capacity')).not.toBeInTheDocument();
   expect(screen.queryByText('0%')).not.toBeInTheDocument();
@@ -320,7 +331,7 @@ it('keeps shell loading and fatal-error recovery instead of fabricating a foreca
   mockDegradation.mockReturnValue(result<DegradationData>(undefined, {
     isError: true, error: new Error('source unavailable'), dataUpdatedAt: 0,
   }));
-  view.rerender(tree('v3'));
+  view.rerender(tree(packId));
   expect(screen.getByRole('alert')).toBeInTheDocument();
   expect(screen.queryByText('Projected 80% capacity')).not.toBeInTheDocument();
   fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /retry/i }));

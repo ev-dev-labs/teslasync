@@ -35,11 +35,13 @@
  * because the error branch's <QueryError> uses `useNavigate`.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { BatteryHealthAnalytics } from '@/types/energy';
 import BatteryHealthAnalyticsWidget from './BatteryHealthAnalyticsWidget';
 import type { WidgetConfig } from './types';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 // jsdom lacks matchMedia; framer-motion's useReducedMotion (reached via
 // <FreshnessDot> → useMotionPreference) reads it during render. Install a
@@ -168,15 +170,40 @@ function makeQuery(overrides: Partial<QueryState> = {}): QueryState {
   };
 }
 
+function widgetElement(
+  size: { cols: number; rows: number } = { cols: 2, rows: 2 },
+  vehicleId?: number,
+  config?: WidgetConfig,
+  packId: PackId = 'classic',
+) {
+  return (
+    <MemoryRouter>
+      <PackBoundary requestedPackId={packId}>
+        <BatteryHealthAnalyticsWidget size={size} vehicleId={vehicleId} config={config} />
+      </PackBoundary>
+    </MemoryRouter>
+  );
+}
+
 function renderWidget(
   size: { cols: number; rows: number } = { cols: 2, rows: 2 },
   vehicleId?: number,
   config?: WidgetConfig,
+  packId: PackId = 'classic',
 ) {
-  return render(
-    <MemoryRouter>
-      <BatteryHealthAnalyticsWidget size={size} vehicleId={vehicleId} config={config} />
-    </MemoryRouter>,
+  return render(widgetElement(size, vehicleId, config, packId));
+}
+
+async function expectPack(container: HTMLElement, packId: PackId) {
+  expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+  if (packId === 'classic') {
+    expect(container.querySelector('[data-instrument-family]')).toBeNull();
+    return;
+  }
+  await waitFor(() =>
+    expect(container.querySelector('[data-instrument-family="ring"]')).toHaveAttribute(
+      'data-instrument-appearance', PACK_APPEARANCES[packId],
+    ),
   );
 }
 
@@ -478,5 +505,162 @@ describe('BatteryHealthAnalyticsWidget — graceful degradation on transient err
     // … and the freshness indicator retains its semantic error state.
     expect(container.querySelector('[class~="bg-[var(--semantic-danger)]"]')).toBeTruthy();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+  });
+});
+
+describe.each(PACK_IDS)('BatteryHealthAnalyticsWidget — %s acceptance', packId => {
+  it('switches presentation without losing source values, units, query scope or refresh actions', async () => {
+    const refetch = vi.fn();
+    const size = { cols: 2, rows: 2 };
+    const config: WidgetConfig = { timeRange: '24h' };
+    useVehiclesMock.mockReturnValue({ data: [{ id: 7 }] });
+    useBatteryHealthAnalyticsMock.mockReturnValue(makeQuery({
+      data: makeAnalytics({
+        current_soh: 92,
+        total_cycles: 12345,
+        avg_depth_of_discharge_pct: 43,
+        fast_charge_pct: 18,
+        temp_exposure_score: 88,
+      }),
+      refetch,
+    }));
+
+    const view = renderWidget(size, 42, config);
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+    view.rerender(widgetElement(size, 42, config, packId));
+    await expectPack(view.container, packId);
+
+    expect(screen.getByRole('heading', { name: 'Battery analytics', level: 3 })).toBeVisible();
+    for (const text of ['health', '92', 'Good', 'Cycles', '12,345', 'Discharge', '43', 'DC fast', '18', 'Temp score', '88', '/ 100']) {
+      expect(screen.getByText(text, { exact: true })).toBeVisible();
+    }
+    expect(screen.getAllByText('%', { exact: true })).toHaveLength(3);
+    expect(view.container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'ok');
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(useBatteryHealthAnalyticsMock).toHaveBeenLastCalledWith('42', undefined, '24h');
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+    expect(refetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the compact measured-zero hero and Poor assessment without adding a stat grid', async () => {
+    useBatteryHealthAnalyticsMock.mockReturnValue(makeQuery({ data: makeAnalytics() }));
+    const view = renderWidget({ cols: 1, rows: 1 }, 42, undefined, packId);
+    await expectPack(view.container, packId);
+
+    expect(screen.getByRole('heading', { name: 'Battery analytics', level: 3 })).toBeVisible();
+    expect(screen.getByText('health')).toBeVisible();
+    expect(screen.getByText('0', { exact: true })).toBeVisible();
+    expect(screen.getByText('%', { exact: true })).toBeVisible();
+    expect(screen.getByText('Poor')).toBeVisible();
+    expect(pillBadge().className).toContain('var(--semantic-danger)');
+    expect(screen.queryByText('Cycles')).not.toBeInTheDocument();
+    expect(screen.queryByText('Temp score')).not.toBeInTheDocument();
+  });
+
+  it('keeps nonfinite and unavailable observations unknown instead of reporting zero or a health assessment', async () => {
+    useBatteryHealthAnalyticsMock.mockReturnValue(makeQuery({
+      data: makeAnalytics({
+        current_soh: Number.NaN,
+        total_cycles: Number.POSITIVE_INFINITY,
+        avg_depth_of_discharge_pct: Number.NEGATIVE_INFINITY,
+        fast_charge_pct: Number.NaN,
+        temp_exposure_score: null,
+      }),
+    }));
+    const view = renderWidget({ cols: 2, rows: 2 }, 42, undefined, packId);
+    await expectPack(view.container, packId);
+
+    for (const label of ['health', 'Cycles', 'Discharge', 'DC fast', 'Temp score']) {
+      expect(screen.getByText(label)).toBeVisible();
+    }
+    expect(screen.getAllByText('—', { exact: true })).toHaveLength(5);
+    expect(screen.queryByText(/^(Good|Fair|Poor|0|NaN|Infinity|-Infinity)$/)).not.toBeInTheDocument();
+    expect(view.container.querySelector('[aria-valuenow]')).toBeNull();
+  });
+
+  it('preserves initial loading, fatal error, retry and empty recovery without inventing readings', async () => {
+    const refetch = vi.fn();
+    const size = { cols: 2, rows: 2 };
+    useBatteryHealthAnalyticsMock.mockReturnValue(makeQuery({ isLoading: true, refetch }));
+    const view = renderWidget(size, 42, undefined, packId);
+
+    expect(view.container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('heading', { name: 'Battery analytics', level: 3 })).toBeVisible();
+    expect(screen.queryByText('No battery health data')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cycles')).not.toBeInTheDocument();
+
+    useBatteryHealthAnalyticsMock.mockReturnValue(makeQuery({
+      error: new Error('analytics unavailable'), isError: true, refetch,
+    }));
+    view.rerender(widgetElement(size, 42, undefined, packId));
+    expect(view.container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(screen.queryByText('Cycles')).not.toBeInTheDocument();
+
+    useBatteryHealthAnalyticsMock.mockReturnValue(makeQuery({ refetch }));
+    view.rerender(widgetElement(size, 42, undefined, packId));
+    await expectPack(view.container, packId);
+    expect(screen.getByText('No battery health data')).toBeVisible();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    expect(screen.queryByText('Cycles')).not.toBeInTheDocument();
+    expect(screen.queryByText('0', { exact: true })).not.toBeInTheDocument();
+    expect(view.container.querySelector('[aria-valuenow]')).toBeNull();
+  });
+
+  it('retains cached readings and stale trust while a failed refresh is retried', async () => {
+    const refetch = vi.fn();
+    const size = { cols: 2, rows: 2 };
+    const retained = makeQuery({
+      data: makeAnalytics({ current_soh: 91, total_cycles: 640 }),
+      error: new Error('transient'),
+      isError: true,
+      isStale: true,
+      refetch,
+    });
+    useBatteryHealthAnalyticsMock.mockReturnValue(retained);
+    const view = renderWidget(size, 42, undefined, packId);
+    await expectPack(view.container, packId);
+
+    expect(view.container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'stale');
+    expect(screen.getByTestId('widget-body')).toHaveAttribute('data-content-degraded', 'true');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
+    expect(screen.getByText('91')).toBeVisible();
+    expect(screen.getByText('640')).toBeVisible();
+    expect(screen.getByText('Good')).toBeVisible();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /refresh.*error/i }));
+    expect(refetch).toHaveBeenCalledOnce();
+
+    useBatteryHealthAnalyticsMock.mockReturnValue({ ...retained, isFetching: true });
+    view.rerender(widgetElement(size, 42, undefined, packId));
+    const refreshControl = screen.getByRole('button', { name: /refresh/i });
+    expect(refreshControl).toBeDisabled();
+    expect(refreshControl).toHaveAttribute('aria-busy', 'true');
+    fireEvent.click(refreshControl);
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(screen.getByText('640')).toBeVisible();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
+  });
+
+  it('keeps battery-health assessment boundaries while the source updates in place', async () => {
+    const size = { cols: 2, rows: 2 };
+    useBatteryHealthAnalyticsMock.mockReturnValue(makeQuery({ data: makeAnalytics({ current_soh: 80 }) }));
+    const view = renderWidget(size, 42, undefined, packId);
+    await expectPack(view.container, packId);
+
+    for (const [soh, status, tone] of [
+      [80, 'Good', 'success'],
+      [79, 'Fair', 'warning'],
+      [50, 'Fair', 'warning'],
+      [49, 'Poor', 'danger'],
+    ] as const) {
+      useBatteryHealthAnalyticsMock.mockReturnValue(makeQuery({ data: makeAnalytics({ current_soh: soh }) }));
+      view.rerender(widgetElement(size, 42, undefined, packId));
+      expect(screen.getByText(String(soh), { exact: true })).toBeVisible();
+      expect(screen.getByText(status)).toBeVisible();
+      expect(pillBadge().className).toContain(`var(--semantic-${tone})`);
+    }
   });
 });

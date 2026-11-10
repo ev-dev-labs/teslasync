@@ -29,7 +29,7 @@ export async function writePackReviewGallery(
   img{display:block;width:100%;height:auto}a{display:block}h2{font-size:20px}a:focus-visible,select:focus-visible{outline:3px solid #38bdf8}
   .states{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.states img{max-width:600px}
   </style><header><h1>Widget implementation review</h1>
-  <p>Actual React renders with synthetic data. ${widgets.length} implemented controllers; ${widgets.length === 132 && captures.length === 4224
+  <p>Actual React renders with synthetic data. ${widgets.length} implemented controllers; ${widgets.length === 132 && captures.length === widgets.length * Object.keys(packNames).length * 4
     ? 'all 132 controllers are captured in this browser-review matrix; visual approval is still pending'
     : 'full 132-widget browser coverage is not complete'}. Existing vehicle imagery is preserved. This HTML is inert: no polling, SSE, storage writes or vehicle commands.</p>
   <label>Design<select id="pack">${Object.entries(packNames).filter(([id]) => id !== 'classic').map(([id, name]) => `<option value="${id}">${name}</option>`).join('')}</select></label>
@@ -43,6 +43,6 @@ export async function writePackReviewGallery(
   document.querySelectorAll('select').forEach(node=>node.addEventListener('change',update));update();
   </script></html>`);
   await writeFile(`${directory}captures.json`, JSON.stringify({
-    captures, expected: widgets.length * 8 * 4 + (includeStates ? 14 : 0), actual: captures.length,
+    captures, expected: widgets.length * Object.keys(packNames).length * 4 + (includeStates ? 14 : 0), actual: captures.length,
   }, null, 2));
 }

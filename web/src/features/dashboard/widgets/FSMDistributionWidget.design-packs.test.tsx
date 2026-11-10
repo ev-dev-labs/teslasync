@@ -168,13 +168,13 @@ it('retains Classic as the default, lazy-loading body and unknown-pack recovery'
   expect(screen.queryByText('Percentages are based on the returned states.')).not.toBeInTheDocument();
   expectTransitions(container);
 
-  selectPack('v4');
-  expect(container.querySelector('.recharts-pie')).not.toBeNull();
-  await expectPack(container, 'v4');
-  expect(chartRows()).toEqual(originalRows);
-  selectPack('v7');
-  await expectPack(container, 'v7');
-  expect(chartRows()).toEqual(originalRows);
+  for (const packId of packs) {
+    selectPack(packId);
+    expect(container.querySelector('.recharts-pie')).not.toBeNull();
+    await expectPack(container, packId);
+    expect(chartRows()).toEqual(originalRows);
+    expectTransitions(container);
+  }
   selectPack('unknown-pack');
   expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', 'classic');
   expect(container.querySelector('[data-instrument-appearance]')).toBeNull();
@@ -185,12 +185,12 @@ it('retains Classic as the default, lazy-loading body and unknown-pack recovery'
   expect(api.refreshTransitions).not.toHaveBeenCalled();
 });
 
-it('retains transition rows on refresh failure and retries that source independently', async () => {
+it.each(packs)('%s retains transition rows on refresh failure and retries that source independently', async packId => {
   api.transitions.mockReturnValue(queryResult(transitions, {
     isError: true, isStale: true, error: new Error('Transition refresh failed'), refetch: api.refreshTransitions,
   }));
-  const { container } = mount('v3');
-  await expectPack(container, 'v3');
+  const { container } = mount(packId);
+  await expectPack(container, packId);
   expectTransitions(container);
   expect(screen.getByText('Previously loaded transitions remain visible while they refresh.')).toBeVisible();
   expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -200,12 +200,12 @@ it('retains transition rows on refresh failure and retries that source independe
   expect(api.refreshStats).not.toHaveBeenCalled();
 });
 
-it('keeps transitions and a source-specific retry when the distribution source fails', async () => {
+it.each(packs)('%s keeps transitions and a source-specific retry when the distribution source fails', async packId => {
   api.stats.mockReturnValue(queryResult<FSMStats>(undefined, {
     isError: true, error: new Error('Stats unavailable'), refetch: api.refreshStats,
   }));
-  const { container } = mount('v5');
-  await expectPack(container, 'v5');
+  const { container } = mount(packId);
+  await expectPack(container, packId);
   expect(screen.getByText('State distribution could not be loaded.')).toBeVisible();
   expectTransitions(container);
   expect(screen.queryByText('0%')).not.toBeInTheDocument();
@@ -214,12 +214,12 @@ it('keeps transitions and a source-specific retry when the distribution source f
   expect(api.refreshTransitions).not.toHaveBeenCalled();
 });
 
-it('keeps the distribution when transitions fail and exposes an independent transition retry', async () => {
+it.each(packs)('%s keeps the distribution when transitions fail and exposes an independent transition retry', async packId => {
   api.transitions.mockReturnValue(queryResult<FSMTransitionResponse>(undefined, {
     isError: true, error: new Error('Transitions unavailable'), refetch: api.refreshTransitions,
   }));
-  const { container } = mount('v6');
-  await expectPack(container, 'v6');
+  const { container } = mount(packId);
+  await expectPack(container, packId);
   expect(screen.getByText('Recent transitions could not be loaded.')).toBeVisible();
   expect(chartRows()).toHaveLength(3);
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
@@ -227,21 +227,21 @@ it('keeps the distribution when transitions fail and exposes an independent tran
   expect(api.refreshStats).not.toHaveBeenCalled();
 });
 
-it('announces transition loading without claiming an empty history or hiding the donut', async () => {
+it.each(packs)('%s announces transition loading without claiming an empty history or hiding the donut', async packId => {
   api.transitions.mockReturnValue(queryResult<FSMTransitionResponse>(undefined, {
     isLoading: true, isPending: true, isFetching: true,
   }));
-  const { container } = mount('v2');
-  await expectPack(container, 'v2');
+  const { container } = mount(packId);
+  await expectPack(container, packId);
   expect(screen.getByRole('status', { name: 'Loading Recent transitions' })).toBeInTheDocument();
   expect(screen.queryByText('No recent transitions')).not.toBeInTheDocument();
   expect(chartRows()).toHaveLength(3);
 });
 
-it('keeps an empty compact presentation honest and resolves the original default vehicle', async () => {
+it.each(packs)('%s keeps an empty compact presentation honest and resolves the original default vehicle', async packId => {
   api.stats.mockReturnValue(queryResult<FSMStats>({ enabled: false, stats: {} }));
-  const { container } = mount('v7', 1, null);
-  await expectPack(container, 'v7');
+  const { container } = mount(packId, 1, null);
+  await expectPack(container, packId);
   expect(screen.getByText('No state data')).toBeVisible();
   expect(screen.queryByText('0%')).not.toBeInTheDocument();
   expect(screen.queryByRole('meter')).not.toBeInTheDocument();

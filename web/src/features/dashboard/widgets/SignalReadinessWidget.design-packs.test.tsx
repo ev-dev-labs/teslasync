@@ -7,6 +7,7 @@ import type { VehicleLiveSignalsResponse } from '@/api/hooks/useTelemetry';
 import { Text } from '@/components/ui';
 import SignalReadinessWidget from './SignalReadinessWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
 import type { WidgetProps } from './types';
 
 type QueryFixture<T> = DataStateSource<T> & { refetch: () => Promise<void> };
@@ -44,10 +45,7 @@ vi.mock('@/hooks/useMotionPreference', () => ({
 const NOW = Date.parse('2026-11-07T02:00:00Z');
 const RECENT = new Date(NOW - 10_000).toISOString();
 const OLD = new Date(NOW - 180_000).toISOString();
-const PACKS = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const PACKS = Object.entries(PACK_APPEARANCES);
 const SECTIONS = [
   'Repository signal catalog', 'Server subscription and routing',
   'Selected vehicle snapshot', 'Vehicle configuration evidence',
@@ -197,7 +195,7 @@ describe('SignalReadinessWidget production design packs', () => {
     expect(screen.getByText(NOTE)).toBeInTheDocument();
   });
 
-  it('does not infer vehicle support, freshness or receipts from desired routes or invalid values', async () => {
+  it.each(PACKS)('%s does not infer vehicle support, freshness or receipts from desired routes or invalid values in %s', async (pack, appearance) => {
     mocks.live.mockReturnValue(query(snapshot({
       Future: { kind: 'ValueKindFloat', value: 1, ts: new Date(NOW + 1000).toISOString(), source: 'l1' },
       Untimed: { kind: 'ValueKindBool', value: false, source: 'l1' },
@@ -208,8 +206,8 @@ describe('SignalReadinessWidget production design packs', () => {
       LogFallback: { kind: 'ValueKindFloat', value: 0, ts: RECENT, source: 'log' },
       InvalidAge: { kind: 'ValueKindFloat', value: 5, ts: RECENT, source: 'l1', age_ms: -1 },
     }), mocks.refreshLive));
-    const view = render(tree('v7'));
-    await presentation(view.container, 'pixel');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expect(metric('Observed in snapshot')).toHaveTextContent(/^3$/);
     expect(metric('Fresh observations')).toHaveTextContent(/^Unknown$/);
     expect(metric('Stale observations')).toHaveTextContent(/^Unknown$/);
@@ -219,12 +217,13 @@ describe('SignalReadinessWidget production design packs', () => {
     expect(screen.queryByRole('button', { name: /Up to date/i })).not.toBeInTheDocument();
   });
 
-  it.each(['error', 'paused'] as const)('retains observed evidence but never calls it fresh after a refresh is %s', async condition => {
+  it.each(PACKS.flatMap(([pack, appearance]) => (['error', 'paused'] as const)
+    .map(condition => [pack, appearance, condition] as const)))('%s retains observed evidence without calling it fresh in %s after refresh is %s', async (pack, appearance, condition) => {
     mocks.live.mockReturnValue(query(snapshot(), mocks.refreshLive, condition === 'error'
       ? { error: new Error('Refresh failed'), isError: true, isSuccess: false }
       : { fetchStatus: 'paused' }));
-    const view = render(tree('v4'));
-    await presentation(view.container, 'owner');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expect(metric('Observed in snapshot')).toHaveTextContent(/^4$/);
     expect(metric('Fresh observations')).toHaveTextContent(/^Unknown$/);
     expect(metric('Stale observations')).toHaveTextContent(/^Unknown$/);
@@ -237,15 +236,15 @@ describe('SignalReadinessWidget production design packs', () => {
     expect(metric('Desired by server')).toHaveTextContent(/^3$/);
   });
 
-  it('isolates initial failure and loading while keeping the other source sections useful', async () => {
+  it.each(PACKS)('%s isolates initial failure and loading while keeping the other source sections useful in %s', async (pack, appearance) => {
     mocks.catalog.mockReturnValue(query(undefined, mocks.refreshCatalog, {
       error: new Error('Catalog offline'), isError: true, isSuccess: false,
     }));
     mocks.live.mockReturnValue(query(undefined, mocks.refreshLive, {
       isPending: true, isLoading: true, isSuccess: false, fetchStatus: 'fetching',
     }));
-    const view = render(tree('v2'));
-    await presentation(view.container, 'elevated');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expect(screen.getByText('Signal catalog unavailable')).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Loading Selected vehicle snapshot' })).toBeInTheDocument();
     expect(metric('Desired by server')).toHaveTextContent(/^3$/);
@@ -256,21 +255,21 @@ describe('SignalReadinessWidget production design packs', () => {
     expect(mocks.refreshCatalog).toHaveBeenCalledOnce();
   });
 
-  it('honors explicit then configured then fallback vehicle scope and rejects mismatched payloads', async () => {
-    const view = render(tree('v3', { vehicleId: 9, config: { vehicleId: 8 } }));
-    await presentation(view.container, 'precision');
+  it.each(PACKS)('%s honors vehicle scope and rejects mismatched payloads in %s', async (pack, appearance) => {
+    const view = render(tree(pack, { vehicleId: 9, config: { vehicleId: 8 } }));
+    await presentation(view.container, appearance);
     expect(mocks.catalog).toHaveBeenLastCalledWith(9);
     expect(mocks.live).toHaveBeenLastCalledWith(9, { refetchInterval: 5_000 });
     expect(screen.getByText('No observed signal evidence is available for this vehicle.')).toBeInTheDocument();
     expect(screen.queryByText(RECENT)).not.toBeInTheDocument();
     expectUnknownConfiguration();
-    view.rerender(tree('v3', { config: { vehicleId: 8 } }));
+    view.rerender(tree(pack, { config: { vehicleId: 8 } }));
     expect(mocks.live).toHaveBeenLastCalledWith(8, { refetchInterval: 5_000 });
-    view.rerender(tree('v3'));
+    view.rerender(tree(pack));
     expect(mocks.live).toHaveBeenLastCalledWith(7, { refetchInterval: 5_000 });
     expect(metric('Fresh observations')).toHaveTextContent(/^2$/);
     mocks.vehicles.mockReturnValue(query([], mocks.refreshVehicles));
-    view.rerender(tree('v3'));
+    view.rerender(tree(pack));
     expect(mocks.live).toHaveBeenLastCalledWith(undefined, { refetchInterval: 5_000 });
     expect(screen.getByText('Select a vehicle to inspect signal readiness.')).toBeInTheDocument();
     expect(metric('Desired by server')).toHaveTextContent(/^3$/);

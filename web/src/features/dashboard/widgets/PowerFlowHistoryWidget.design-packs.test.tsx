@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TeslaEnergyLiveStatus, TeslaEnergySite } from '@/types/energy';
 import { PackBoundary } from './designPacks/PackBoundary';
-import { PACK_APPEARANCES, type PackId } from './designPacks/types';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 import type { WidgetSize } from './types';
 import PowerFlowHistoryWidget from './PowerFlowHistoryWidget';
 
@@ -236,8 +236,18 @@ describe.each(Object.entries(PACK_APPEARANCES) as [Exclude<PackId, 'classic'>, s
       expect(screen.queryByTestId('power-plot')).not.toBeInTheDocument();
     });
 
-    it('retains all-unknown observations as gaps and unknown summaries, not measured zero', async () => {
-      mocks.history.mockReturnValue(query([gap]));
+    it.each([
+      { state: 'unknown', observation: gap },
+      {
+        state: 'invalid',
+        observation: sample({
+          timestamp: gap.timestamp,
+          solar_power: Number.NaN, battery_power: Number.POSITIVE_INFINITY,
+          grid_power: Number.NEGATIVE_INFINITY, load_power: Number.NaN,
+        }),
+      },
+    ])('retains $state observations as gaps and unknown summaries, not measured zero', async ({ observation }) => {
+      mocks.history.mockReturnValue(query([observation]));
       const { container } = mount(id);
       await expectAppearance(container);
       expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'partial');
@@ -305,12 +315,16 @@ describe.each(Object.entries(PACK_APPEARANCES) as [Exclude<PackId, 'classic'>, s
   },
 );
 
-it('preserves measured zero samples and the wide branch without an invented meter', async () => {
+it.each(PACK_IDS)('preserves measured zero samples and the wide branch without an invented meter — %s', async packId => {
   mocks.history.mockReturnValue(query([sample({
     solar_power: 0, battery_power: 0, grid_power: 0, load_power: 0,
   })]));
-  const { container } = mount('v7', { cols: 3, rows: 4 });
-  await waitFor(() => expect(container.querySelector('[data-widget-appearance="pixel"]')).toBeInTheDocument());
+  const { container } = mount(packId, { cols: 3, rows: 4 });
+  if (packId !== 'classic') {
+    await waitFor(() => expect(container.querySelector(
+      `[data-widget-family="line"][data-widget-appearance="${PACK_APPEARANCES[packId]}"]`,
+    )).toBeInTheDocument());
+  }
   expect(screen.getAllByText('0.00')).toHaveLength(3);
   expect(screen.getByTestId('power-plot')).toBeInTheDocument();
   expect(screen.queryByText('No power flow data')).not.toBeInTheDocument();

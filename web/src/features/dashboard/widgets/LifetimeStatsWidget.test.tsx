@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -7,6 +7,8 @@ import { useLifetimeStats, type LifetimeStats } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import LifetimeStatsWidget from './LifetimeStatsWidget';
 import type { WidgetProps } from './types';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 const settingsState = vi.hoisted(() => ({ unitOfLength: 'km' as 'km' | 'mi' }));
 
@@ -105,15 +107,27 @@ function makeStats(over: Partial<LifetimeStats> = {}): LifetimeStats {
   };
 }
 
-function renderWidget(props: Partial<WidgetProps> = {}) {
+async function renderWidget(
+  props: Partial<WidgetProps> = {},
+  packId: PackId = 'classic',
+  expectPresentation = true,
+) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
-        <LifetimeStatsWidget size={{ cols: 2, rows: 2 }} {...props} />
+        <PackBoundary requestedPackId={packId}>
+          <LifetimeStatsWidget size={{ cols: 2, rows: 2 }} {...props} />
+        </PackBoundary>
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  if (packId !== 'classic' && expectPresentation) {
+    await waitFor(() => expect(
+      view.container.querySelector('[data-status-appearance]'),
+    ).toHaveAttribute('data-status-appearance', PACK_APPEARANCES[packId]));
+  }
+  return view;
 }
 
 beforeEach(() => {
@@ -134,14 +148,18 @@ beforeEach(() => {
   mockLifetime.mockReturnValue(makeQuery({ data: makeStats() }));
 });
 
-describe('LifetimeStatsWidget redesign', () => {
-  it.each([1, 2, 3])('keeps the heading at %i columns', (cols) => {
-    renderWidget({ size: { cols, rows: 2 } });
+describe.each(PACK_IDS)('LifetimeStatsWidget %s', (packId) => {
+  const renderPack = (props: Partial<WidgetProps> = {}, expectPresentation = true) =>
+    renderWidget(props, packId, expectPresentation);
+
+  it.each([1, 2, 3])('keeps the heading at %i columns', async (cols) => {
+    await renderPack({ size: { cols, rows: 2 } });
     expect(screen.getByRole('heading', { name: 'Lifetime stats' })).toBeInTheDocument();
   });
 
-  it('renders the five After-card values without a date or extra labels', () => {
-    renderWidget();
+  it('renders the five After-card values without a date or extra labels', async () => {
+    const view = await renderPack();
+    expect(view.container.querySelector('[data-data-state="ok"]')).not.toBeNull();
     expect(screen.getByText('Total distance')).toBeInTheDocument();
     expect(screen.getByText('50,000')).toBeInTheDocument();
     expect(screen.getByText('km')).toBeInTheDocument();
@@ -149,6 +167,7 @@ describe('LifetimeStatsWidget redesign', () => {
     expect(screen.getByText('2,914')).toBeInTheDocument();
     expect(screen.getByText('Total energy')).toBeInTheDocument();
     expect(screen.getByText('7,604')).toBeInTheDocument();
+    expect(screen.getByText('kWh')).toBeInTheDocument();
     expect(screen.getByText('CO₂ saved')).toBeInTheDocument();
     expect(screen.getByText('9.8')).toBeInTheDocument();
     expect(screen.getByText('t')).toBeInTheDocument();
@@ -159,21 +178,21 @@ describe('LifetimeStatsWidget redesign', () => {
     expect(screen.queryByText('Total cost')).not.toBeInTheDocument();
   });
 
-  it('uses the user distance unit for the existing SI distance source', () => {
+  it('uses the user distance unit for the existing SI distance source', async () => {
     settingsState.unitOfLength = 'mi';
-    renderWidget();
+    await renderPack();
     expect(screen.getByText('31,069')).toBeInTheDocument();
     expect(screen.getByText('mi')).toBeInTheDocument();
   });
 
-  it('renders one distance headline in compact mode', () => {
-    renderWidget({ size: { cols: 1, rows: 1 } });
+  it('renders one distance headline in compact mode', async () => {
+    await renderPack({ size: { cols: 1, rows: 1 } });
     expect(screen.getByText('50,000')).toBeInTheDocument();
     expect(screen.getByText('lifetime')).toBeInTheDocument();
     expect(screen.queryByText('Total drives')).not.toBeInTheDocument();
   });
 
-  it('keeps unknown values unknown and does not fabricate zeros', () => {
+  it('keeps unknown values unknown and does not fabricate zeros', async () => {
     mockLifetime.mockReturnValue(makeQuery({
       data: makeStats({
         total_distance_km: undefined as unknown as number,
@@ -183,54 +202,103 @@ describe('LifetimeStatsWidget redesign', () => {
         ownership_days: undefined as unknown as number,
       }),
     }));
-    renderWidget();
-    expect(screen.queryAllByText('—').length).toBeGreaterThanOrEqual(5);
+    await renderPack();
+    expect(screen.getAllByText('—')).toHaveLength(5);
     expect(screen.queryByText(/^0$/)).not.toBeInTheDocument();
   });
 
-  it('shows loading, empty, and initial error honestly', () => {
+  it('preserves measured zeros instead of treating them as missing', async () => {
+    mockLifetime.mockReturnValue(makeQuery({
+      data: makeStats({
+        total_distance_km: 0,
+        total_drives: 0,
+        total_energy_kwh: 0,
+        co2_offset_kg: 0,
+        ownership_days: 0,
+      }),
+    }));
+    await renderPack();
+    expect(screen.getAllByText('0')).toHaveLength(4);
+    expect(screen.getByText('0.0')).toBeInTheDocument();
+    for (const unit of ['km', 'kWh', 't', 'days']) {
+      expect(screen.getByText(unit)).toBeInTheDocument();
+    }
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+  });
+
+  it.each([NaN, Infinity, -Infinity])('keeps non-finite readings unknown (%s)', async (value) => {
+    mockLifetime.mockReturnValue(makeQuery({
+      data: makeStats({
+        total_distance_km: value,
+        total_drives: value,
+        total_energy_kwh: value,
+        co2_offset_kg: value,
+        ownership_days: value,
+      }),
+    }));
+    await renderPack();
+    expect(screen.getAllByText('—')).toHaveLength(5);
+    expect(screen.queryByText(/NaN|Infinity|^0$/)).not.toBeInTheDocument();
+  });
+
+  it('shows loading, empty, and initial error honestly', async () => {
     mockLifetime.mockReturnValue(makeQuery({ isLoading: true }));
-    const loading = renderWidget();
+    const loading = await renderPack({}, false);
+    expect(loading.container.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(loading.container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     loading.unmount();
 
     mockLifetime.mockReturnValue(makeQuery());
-    const empty = renderWidget();
+    const empty = await renderPack({}, false);
     expect(screen.getByText('No lifetime data')).toBeInTheDocument();
     empty.unmount();
 
     mockLifetime.mockReturnValue(makeQuery({ isError: true, error: new Error('boom') }));
-    renderWidget();
+    await renderPack({}, false);
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByText('No lifetime data')).not.toBeInTheDocument();
   });
 
-  it('retains cached values during a background refresh error', () => {
+  it('retains cached values during a background refresh error', async () => {
     mockLifetime.mockReturnValue(makeQuery({
       data: makeStats(),
       isError: true,
       error: new Error('boom'),
     }));
-    renderWidget();
+    const view = await renderPack();
     expect(screen.getByText('50,000')).toBeInTheDocument();
+    expect(screen.getByText('7,604')).toBeInTheDocument();
+    expect(view.container.querySelector('[data-data-state="stale"]')).not.toBeNull();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent(
+      'Previously loaded data remains visible while affected sources recover.',
+    );
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
   });
 
-  it('refreshes and resolves the selected or first vehicle', () => {
+  it('retains values and source trust while a background refresh is in flight', async () => {
+    mockLifetime.mockReturnValue(makeQuery({ data: makeStats(), isFetching: true }));
+    const view = await renderPack();
+    expect(view.container.querySelector('[data-data-state="ok"]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText('50,000')).toBeInTheDocument();
+    expect(screen.getByText('9.8')).toBeInTheDocument();
+    expect(screen.queryByText('No lifetime data')).not.toBeInTheDocument();
+  });
+
+  it('refreshes and resolves the selected or first vehicle', async () => {
     const refetch = vi.fn();
     mockLifetime.mockReturnValue(makeQuery({ data: makeStats(), refetch }));
-    renderWidget({ vehicleId: 7 });
+    await renderPack({ vehicleId: 7 });
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
     expect(mockLifetime).toHaveBeenCalledWith('7');
   });
 
-  it('falls back to the first vehicle and disables the query without one', () => {
+  it('falls back to the first vehicle and disables the query without one', async () => {
     mockVehicles.mockReturnValue({ data: [{ id: 42 }] });
-    renderWidget();
+    await renderPack();
     expect(mockLifetime).toHaveBeenCalledWith('42');
     mockVehicles.mockReturnValue({ data: [] });
-    renderWidget({ vehicleId: undefined });
+    await renderPack({ vehicleId: undefined });
     expect(mockLifetime).toHaveBeenCalledWith(undefined);
   });
 });

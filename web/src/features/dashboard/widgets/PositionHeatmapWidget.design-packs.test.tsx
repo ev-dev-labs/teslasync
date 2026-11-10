@@ -214,9 +214,9 @@ it.each(sizes)('preserves default Classic and unknown-ID recovery at $cols colum
   expectOriginalMap(size.cols);
 });
 
-it('preserves an explicit privacy choice through pack changes and Classic recovery', async () => {
-  const view = render(widget('v1'));
-  await appearance(view.container, 'studio');
+it.each(Object.entries(PACK_APPEARANCES))('preserves an explicit privacy choice from %s through pack changes and Classic recovery', async (packId, packAppearance) => {
+  const view = render(widget(packId));
+  await appearance(view.container, packAppearance);
   fireEvent.click(screen.getByRole('button', { name: 'Hide locations' }));
   view.rerender(widget('v4'));
   await appearance(view.container, 'owner');
@@ -230,7 +230,7 @@ it('preserves an explicit privacy choice through pack changes and Classic recove
   expect(refetch).not.toHaveBeenCalled();
 });
 
-it('filters both range boundaries, rejects bad coordinates and discloses unscoped timestamps', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s filters both range boundaries, rejects bad coordinates and discloses unscoped timestamps', async (packId, packAppearance) => {
   positionsMock.mockReturnValue(query({ data: [
     position(10, 20, '2026-10-01T00:00:00.000Z'),
     position(11, 21, '2026-10-22T23:59:59.999Z'),
@@ -241,8 +241,8 @@ it('filters both range boundaries, rejects bad coordinates and discloses unscope
     position(0, 0), position(91, 20), position(10, 181),
     position(Number.NaN, 20), position(10, Number.POSITIVE_INFINITY),
   ] }));
-  const view = render(widget('v3'));
-  await appearance(view.container, 'precision');
+  const view = render(widget(packId));
+  await appearance(view.container, packAppearance);
   expect(screen.getAllByTestId('density-point').map(marker => marker.getAttribute('data-center'))).toEqual([
     '[10,20]', '[11,21]', '[14,24]', '[15,25]',
   ]);
@@ -250,41 +250,43 @@ it('filters both range boundaries, rejects bad coordinates and discloses unscope
   expect(screen.queryByText('0')).not.toBeInTheDocument();
 });
 
-it('keeps the compact coarser-grid branch instead of silently adopting the full map clusters', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s keeps the compact coarser-grid branch instead of silently adopting the full map clusters', async (packId, packAppearance) => {
   positionsMock.mockReturnValue(query({ data: [position(10, 20), position(10.003, 20)] }));
-  const view = render(widget('v5', sizes[0]));
-  await appearance(view.container, 'iconic');
+  const view = render(widget(packId, sizes[0]));
+  await appearance(view.container, packAppearance);
   expect(screen.getAllByTestId('density-point')).toHaveLength(1);
   expect(screen.getByTestId('density-map')).toHaveAttribute('data-dragging', 'false');
-  view.rerender(widget('v5', sizes[1]));
-  await appearance(view.container, 'iconic');
+  view.rerender(widget(packId, sizes[1]));
+  await appearance(view.container, packAppearance);
   expect(screen.getAllByTestId('density-point')).toHaveLength(2);
   expect(screen.getByTestId('density-map')).toHaveAttribute('data-dragging', 'true');
 });
 
-it.each(['refresh-error', 'paused', 'stale'] as const)('retains the real map and its trust state during %s', async state => {
-  positionsMock.mockReturnValue(query({
-    isError: state === 'refresh-error',
-    error: state === 'refresh-error' ? new Error('Refresh failed') : null,
-    isStale: true,
-    fetchStatus: state === 'paused' ? 'paused' : 'idle',
-  }));
-  const view = render(widget('v6'));
-  await appearance(view.container, 'expressive');
-  expectOriginalMap(2);
-  expect(view.container.querySelector('[data-content-degraded="true"]')).toBeInTheDocument();
-  if (state !== 'stale') {
-    expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
-  }
-  expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
-  expect(refetch).toHaveBeenCalledOnce();
+describe.each(Object.entries(PACK_APPEARANCES))('%s retained position history', (packId, packAppearance) => {
+  it.each(['refresh-error', 'paused', 'stale'] as const)('retains the real map and its trust state during %s', async state => {
+    positionsMock.mockReturnValue(query({
+      isError: state === 'refresh-error',
+      error: state === 'refresh-error' ? new Error('Refresh failed') : null,
+      isStale: true,
+      fetchStatus: state === 'paused' ? 'paused' : 'idle',
+    }));
+    const view = render(widget(packId));
+    await appearance(view.container, packAppearance);
+    expectOriginalMap(2);
+    expect(view.container.querySelector('[data-content-degraded="true"]')).toBeInTheDocument();
+    if (state !== 'stale') {
+      expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
+    }
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
 });
 
-it('preserves the source shell while loading and on fatal failure, with retry rather than an empty success', () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s preserves the source shell while loading and on fatal failure, with retry rather than an empty success', packId => {
   positionsMock.mockReturnValue(query({ data: undefined, isLoading: true, isPending: true, dataUpdatedAt: 0 }));
-  const view = render(widget('v2'));
+  const view = render(widget(packId));
   expect(screen.getByRole('heading', { name: 'Position heatmap' })).toBeInTheDocument();
   expect(view.container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
   expect(screen.queryByText('No position data')).not.toBeInTheDocument();
@@ -292,7 +294,7 @@ it('preserves the source shell while loading and on fatal failure, with retry ra
   positionsMock.mockReturnValue(query({
     data: undefined, isError: true, error: new Error('Position source unavailable'), dataUpdatedAt: 0,
   }));
-  view.rerender(widget('v2'));
+  view.rerender(widget(packId));
   expect(screen.getByRole('heading', { name: 'Position heatmap' })).toBeInTheDocument();
   expect(screen.getByRole('alert')).toBeInTheDocument();
   expect(screen.queryByText('No position data')).not.toBeInTheDocument();
@@ -301,10 +303,10 @@ it('preserves the source shell while loading and on fatal failure, with retry ra
   expect(refetch).toHaveBeenCalledOnce();
 });
 
-it('does not refetch twice while refresh is already in flight', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s does not refetch twice while refresh is already in flight', async (packId, packAppearance) => {
   positionsMock.mockReturnValue(query({ isFetching: true }));
-  const view = render(widget('v7'));
-  await appearance(view.container, 'pixel');
+  const view = render(widget(packId));
+  await appearance(view.container, packAppearance);
   const refresh = screen.getByRole('button', { name: /^Refresh/i });
   expect(refresh).toBeDisabled();
   fireEvent.click(refresh);
@@ -312,10 +314,10 @@ it('does not refetch twice while refresh is already in flight', async () => {
   expectOriginalMap(2);
 });
 
-it('preserves light-theme map tiles without changing the historical density geometry', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s preserves light-theme map tiles without changing the historical density geometry', async (packId, packAppearance) => {
   document.documentElement.classList.add('light-mode');
-  const view = render(widget('v4'));
-  await appearance(view.container, 'owner');
+  const view = render(widget(packId));
+  await appearance(view.container, packAppearance);
   expect(screen.getByTestId('density-tiles')).toHaveAttribute('data-style', 'streets');
   expect(screen.getAllByTestId('density-point')).toHaveLength(2);
 });

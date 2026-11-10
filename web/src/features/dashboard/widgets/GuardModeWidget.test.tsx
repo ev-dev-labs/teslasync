@@ -46,10 +46,12 @@
  * branch's <QueryError> reach for react-router.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { GuardConfig, GuardEvent } from '@/api/hooks/useGuard';
 import GuardModeWidget from './GuardModeWidget';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 // jsdom lacks matchMedia; FreshnessDot → useMotionPreference (framer-motion's
 // useReducedMotion) reads it during render. Install a benign stub before any
@@ -181,7 +183,7 @@ interface QueryLike<T> {
   refetch: ReturnType<typeof vi.fn>;
 }
 
-function makeConfigQuery(overrides: Partial<QueryLike<GuardConfig>> = {}): QueryLike<GuardConfig> {
+function makeConfigQuery(overrides: Partial<QueryLike<GuardConfig | null>> = {}): QueryLike<GuardConfig | null> {
   return {
     data: undefined,
     isLoading: false,
@@ -209,15 +211,38 @@ function makeEventsQuery(overrides: Partial<QueryLike<GuardEvent[]>> = {}): Quer
   };
 }
 
+function widgetTree(
+  size: { cols: number; rows: number } = { cols: 2, rows: 2 },
+  vehicleId?: number,
+  packId: PackId = 'classic',
+) {
+  return (
+    <MemoryRouter>
+      <PackBoundary requestedPackId={packId}>
+        <GuardModeWidget size={size} vehicleId={vehicleId} />
+      </PackBoundary>
+    </MemoryRouter>
+  );
+}
+
 function renderWidget(
   size: { cols: number; rows: number } = { cols: 2, rows: 2 },
   vehicleId?: number,
+  packId: PackId = 'classic',
 ) {
-  return render(
-    <MemoryRouter>
-      <GuardModeWidget size={size} vehicleId={vehicleId} />
-    </MemoryRouter>,
-  );
+  return render(widgetTree(size, vehicleId, packId));
+}
+
+async function expectStatusAppearance(container: HTMLElement, packId: PackId) {
+  expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+  if (packId === 'classic') {
+    expect(container.querySelector('[data-status-appearance]')).toBeNull();
+  } else {
+    await waitFor(() => {
+      expect(container.querySelector('[data-status-appearance]'))
+        .toHaveAttribute('data-status-appearance', PACK_APPEARANCES[packId]);
+    });
+  }
 }
 
 beforeEach(() => {
@@ -511,4 +536,139 @@ describe('GuardModeWidget — graceful degradation on transient error', () => {
     // … and the freshness indicator is in its error state (semantic danger dot).
     expect(container.querySelector('[class~="bg-[var(--semantic-danger)]"]')).toBeTruthy();
   });
+});
+
+describe.each(PACK_IDS)('GuardModeWidget — %s acceptance', (packId) => {
+  it.each([
+    { events: undefined, count: '— events' },
+    { events: [], count: '0 events' },
+    { events: [makeEvent(), makeEvent({ id: 2 })], count: '2 events' },
+  ])('preserves compact status, auto-panic and $count without changing the command target', async ({ events, count }) => {
+    const mutate = vi.fn();
+    useGuardPanicMock.mockReturnValue({ mutate, isPending: false });
+    useGuardConfigMock.mockReturnValue(makeConfigQuery({ data: makeConfig({ enabled: false }) }));
+    useGuardEventsMock.mockReturnValue(makeEventsQuery({ data: events }));
+
+    const { container } = renderWidget({ cols: 1, rows: 2 }, 7, packId);
+    await expectStatusAppearance(container, packId);
+
+    expect(screen.getByText('Disarmed')).toBeInTheDocument();
+    expect(screen.getByText('Auto-panic: Off')).toBeInTheDocument();
+    expect(screen.getByText(count)).toBeInTheDocument();
+    expect(screen.queryByText('Protected')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Panic alarm' }));
+    expect(mutate).toHaveBeenCalledExactlyOnceWith(7);
+    expect(useGuardConfigMock).toHaveBeenCalledWith(7);
+    expect(useGuardEventsMock).toHaveBeenCalledWith(7);
+  });
+
+  it.each([
+    { eventType: 'sentry_triggered', label: 'Sentry triggered', acknowledgedAt: '2024-05-01T12:00:00Z', acknowledgement: 'Acknowledged' },
+    { eventType: 'hasOwnProperty', label: 'hasOwnProperty', acknowledgedAt: null, acknowledgement: 'Unacknowledged' },
+  ])('preserves standard status, $label evidence and both refresh sources', async ({ eventType, label, acknowledgedAt, acknowledgement }) => {
+    const configQuery = makeConfigQuery({ data: makeConfig({ auto_panic: true }) });
+    const eventsQuery = makeEventsQuery({
+      data: [makeEvent({ event_type: eventType, acknowledged_at: acknowledgedAt })],
+    });
+    useGuardConfigMock.mockReturnValue(configQuery);
+    useGuardEventsMock.mockReturnValue(eventsQuery);
+
+    const { container } = renderWidget({ cols: 2, rows: 4 }, 7, packId);
+    await expectStatusAppearance(container, packId);
+
+    expect(screen.getByText('Armed')).toBeInTheDocument();
+    expect(screen.getByText('Protected')).toBeInTheDocument();
+    expect(screen.getByText('Auto-panic: On')).toBeInTheDocument();
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.getByText(acknowledgement)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Panic alarm' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+    expect(configQuery.refetch).toHaveBeenCalledTimes(1);
+    expect(eventsQuery.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['loading', 'error', 'empty', 'retained'] as const)('keeps configuration visible during the event source %s state', async (state) => {
+    useGuardConfigMock.mockReturnValue(makeConfigQuery({ data: makeConfig() }));
+    useGuardEventsMock.mockReturnValue(makeEventsQuery({
+      data: state === 'empty' ? [] : state === 'retained' ? [makeEvent()] : undefined,
+      isLoading: state === 'loading',
+      isError: state === 'error' || state === 'retained',
+      error: state === 'error' || state === 'retained' ? new Error('events failed') : null,
+    }));
+
+    const { container } = renderWidget({ cols: 2, rows: 4 }, undefined, packId);
+    await expectStatusAppearance(container, packId);
+
+    expect(screen.getByText('Armed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Panic alarm' })).toBeEnabled();
+    if (state === 'loading') {
+      expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
+      expect(screen.queryByText('No guard events')).not.toBeInTheDocument();
+    } else if (state === 'error') {
+      expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+      expect(screen.queryByText('No guard events')).not.toBeInTheDocument();
+    } else if (state === 'empty') {
+      expect(screen.getByText('No guard events')).toBeInTheDocument();
+    } else {
+      expect(screen.getByText('Vehicle moved')).toBeInTheDocument();
+      expect(screen.getByText('Unacknowledged')).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
+      expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    }
+  });
+
+  it.each(['loading', 'error', 'empty'] as const)('retains independent history without a fabricated disarmed status when configuration is %s', (state) => {
+    useGuardConfigMock.mockReturnValue(makeConfigQuery({
+      data: state === 'empty' ? null : undefined,
+      isLoading: state === 'loading',
+      isError: state === 'error',
+      error: state === 'error' ? new Error('config failed') : null,
+    }));
+    useGuardEventsMock.mockReturnValue(makeEventsQuery({ data: [makeEvent()] }));
+
+    const { container } = renderWidget({ cols: 2, rows: 4 }, undefined, packId);
+
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+    expect(screen.getByText('Vehicle moved')).toBeInTheDocument();
+    expect(screen.queryByText('Disarmed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Protected')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Panic alarm' })).not.toBeInTheDocument();
+    if (state === 'loading') {
+      expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
+    } else if (state === 'error') {
+      expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    } else {
+      expect(screen.getByText('No guard data')).toBeInTheDocument();
+    }
+  });
+});
+
+it('preserves pending commands and retained source trust through every pack switch', async () => {
+  const mutate = vi.fn();
+  useGuardPanicMock.mockReturnValue({ mutate, isPending: true });
+  useGuardConfigMock.mockReturnValue(makeConfigQuery({
+    data: makeConfig({ enabled: false }), isError: true, error: new Error('refresh failed'),
+  }));
+  useGuardEventsMock.mockReturnValue(makeEventsQuery({
+    data: [makeEvent({ acknowledged_at: '2024-05-01T12:00:00Z' })],
+  }));
+  const size = { cols: 2, rows: 4 };
+  const view = renderWidget(size, 7);
+
+  for (const packId of PACK_IDS) {
+    view.rerender(widgetTree(size, 7, packId));
+    await expectStatusAppearance(view.container, packId);
+    expect(screen.getByText('Disarmed')).toBeInTheDocument();
+    expect(screen.getByText('Acknowledged')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
+    const pending = screen.getByRole('button', { name: 'Sending…' });
+    expect(pending).toBeDisabled();
+    fireEvent.click(pending);
+  }
+
+  expect(mutate).not.toHaveBeenCalled();
+  useGuardPanicMock.mockReturnValue({ mutate, isPending: false });
+  view.rerender(widgetTree(size, 7, 'classic'));
+  fireEvent.click(screen.getByRole('button', { name: 'Panic alarm' }));
+  expect(mutate).toHaveBeenCalledExactlyOnceWith(7);
 });

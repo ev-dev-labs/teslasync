@@ -1,0 +1,118 @@
+[
+  {
+    "path": "dashboard.designPacks.motorsport",
+    "current": { "name": "Motorsport", "description": "Race-board hierarchy, slanted readings and chart-led telemetry." }
+  },
+  {
+    "path": "dashboard.designPacks.blueprint",
+    "current": { "name": "Blueprint", "description": "Technical grids, measurement frames and schematic compositions." }
+  },
+  {
+    "path": "dashboard.designPacks.editorial",
+    "current": { "name": "Editorial", "description": "Serif readings, generous spacing and report-like separators." }
+  },
+  {
+    "path": "dashboard.designPacks.ambient",
+    "current": { "name": "Ambient", "description": "Soft contours, centered instruments and calm supporting details." }
+  },
+  {
+    "path": "dashboard.designPacks.terminal",
+    "current": { "name": "Terminal", "description": "Monospace rows, segmented instruments and explicit source evidence." }
+  },
+  {
+    "path": "dashboard.designPacks.atlas",
+    "current": { "name": "Atlas", "description": "Visual-first layouts with navigation-strip readings and field-guide details." }
+  },
+  {
+    "path": "dashboard.designPacks.analog",
+    "current": { "name": "Analog", "description": "Dial-led readings, inset instruments and mechanical framing." }
+  },
+  {
+    "path": "dashboard.designPacks.observatory",
+    "current": { "name": "Observatory", "description": "Orbit-like gauges, fine graph traces and observation callouts." }
+  },
+  {
+    "path": "dashboard.designPacks.bauhaus",
+    "current": { "name": "Bauhaus", "description": "Modular geometry, shaped metric blocks and strong dividing lines." }
+  },
+  {
+    "path": "dashboard.designPacks.quiet",
+    "current": { "name": "Quiet Form", "description": "A clear primary reading beside a quiet fact column and an unembellished visual." }
+  },
+  {
+    "path": "dashboard.designPacks.warm",
+    "current": { "name": "Warm Modern", "description": "Arched framing, relaxed serif readings and visual-first everyday observations." }
+  },
+  {
+    "path": "dashboard.designPacks.swiss",
+    "current": { "name": "Swiss Grid", "description": "Asymmetric hierarchy, disciplined alignment and precisely divided readings." }
+  },
+  {
+    "path": "dashboard.designPacks.material",
+    "current": { "name": "Material Play", "description": "Expressive shapes, tonal headline containers and independently grouped facts." }
+  },
+  {
+    "path": "dashboard.designPacks.glass",
+    "current": { "name": "Glass Current", "description": "Floating control islands above solid, readable data surfaces." }
+  },
+  {
+    "path": "dashboard.designPacks.deco",
+    "current": { "name": "Deco Grand", "description": "Symmetric framing, double rules, arched instruments and centered serif readings." }
+  },
+  {
+    "path": "dashboard.designPacks.kinetic",
+    "current": { "name": "Kinetic Type", "description": "Assertive type bands and evidence grids; energy from composition, not moving text." }
+  },
+  {
+    "path": "dashboard.designPacks.brutal",
+    "current": { "name": "Neo Brutal", "description": "Heavy outlines, hard offset shadows and exposed metric cells." }
+  },
+  {
+    "path": "dashboard.designPacks.cyber",
+    "current": { "name": "Cyberdeck", "description": "Technical brackets, scanline texture and visual-first console readings." }
+  },
+  {
+    "path": "dashboard.designPacks.memphis",
+    "current": { "name": "Memphis Pop", "description": "Dotted dividers, asymmetric rounded containers and playful patterned headers." }
+  },
+  {
+    "path": "toast.settings.widgetDesignPack",
+    "current": { "success": "Widget design pack saved across machines on this server", "error": "Failed to save widget design pack" }
+  },
+  {
+    "path": "theme.widgetDesignPacks.saved",
+    "current": "{{name}} saved across machines on this server.",
+    "previous": "{{name}} saved for this browser profile."
+  },
+  {
+    "path": "theme.widgetDesignPacks.scope",
+    "current": "Saved on this TeslaSync server for your verified external-provider identity and restored on other machines. Deployments without login share one server selection. Other appearance settings and saved layouts stay unchanged.",
+    "previous": "Applies to dashboards in this browser profile on this server. Signed-in accounts have separate selections. Other appearance settings and saved layouts stay unchanged."
+  },
+  {
+    "path": "theme.widgetDesignPacks.verifying",
+    "current": "Verifying your identity and loading the saved selection...",
+    "previous": "Verifying your browser preference..."
+  },
+  {
+    "path": "theme.widgetDesignPacks.saveError",
+    "current": "Your last confirmed selection remains visible. Check your server connection and external-provider session, then retry.",
+    "previous": "Your previous selection is unchanged. Check your server connection and browser storage, then retry."
+  },
+  { "path": "theme.widgetDesignPacks.designStyle", "current": "Design style" },
+  { "path": "theme.widgetDesignPacks.allStyles", "current": "All styles ({{count}})" },
+  { "path": "theme.widgetDesignPacks.styleMinimal", "current": "Minimal & Editorial ({{count}})" },
+  { "path": "theme.widgetDesignPacks.styleSoft", "current": "Soft & Atmospheric ({{count}})" },
+  { "path": "theme.widgetDesignPacks.styleTechnical", "current": "Technical & Instrumental ({{count}})" },
+  { "path": "theme.widgetDesignPacks.styleGeometric", "current": "Bold & Geometric ({{count}})" },
+  { "path": "theme.widgetDesignPacks.noMatchingPacks", "current": "No packs match these style and intensity filters." },
+  { "path": "theme.widgetDesignPacks.resetFilters", "current": "Show all designs" },
+  { "path": "theme.widgetDesignPacks.intensity", "current": "Design intensity" },
+  { "path": "theme.widgetDesignPacks.allIntensities", "current": "All intensities" },
+  { "path": "theme.widgetDesignPacks.mild", "current": "Mild" },
+  { "path": "theme.widgetDesignPacks.balanced", "current": "Balanced" },
+  { "path": "theme.widgetDesignPacks.bold", "current": "Bold" },
+  { "path": "theme.widgetDesignPacks.extreme", "current": "Extreme" },
+  { "path": "theme.widgetDesignPacks.packCount_one", "current": "{{count}} pack shown" },
+  { "path": "theme.widgetDesignPacks.packCount_other", "current": "{{count}} packs shown" }
+]

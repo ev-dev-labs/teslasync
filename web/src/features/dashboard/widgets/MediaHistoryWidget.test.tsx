@@ -42,7 +42,7 @@
  * dashboard tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -114,6 +114,8 @@ vi.mock('@/api/hooks/useVehicles', async () => {
 import MediaHistoryWidget from './MediaHistoryWidget';
 import type { WidgetSize } from './types';
 import type { MediaSnapshot } from '@/api/types';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 /* ── Fixtures ─────────────────────────────────────────────────────── */
 
@@ -182,12 +184,27 @@ function makeQuery(overrides: Partial<FakeQuery> = {}): FakeQuery {
   };
 }
 
-function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: number) {
-  return render(
+function widgetTree(size: WidgetSize, vehicleId?: number, packId: PackId = 'classic') {
+  return (
     <MemoryRouter>
-      <MediaHistoryWidget size={size} vehicleId={vehicleId} />
-    </MemoryRouter>,
+      <PackBoundary requestedPackId={packId}>
+        <MediaHistoryWidget size={size} vehicleId={vehicleId} />
+      </PackBoundary>
+    </MemoryRouter>
   );
+}
+
+function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: number, packId: PackId = 'classic') {
+  return render(widgetTree(size, vehicleId, packId));
+}
+
+async function expectTimeline(container: HTMLElement, packId: PackId) {
+  if (packId === 'classic') {
+    expect(container.querySelector('[data-timeline-appearance]')).not.toBeInTheDocument();
+    return;
+  }
+  await waitFor(() => expect(container.querySelector('[data-timeline-appearance]'))
+    .toHaveAttribute('data-timeline-appearance', PACK_APPEARANCES[packId]));
 }
 
 beforeEach(() => {
@@ -397,6 +414,132 @@ describe('MediaHistoryWidget', () => {
   it('scopes the query to the empty string (disabling it) when no vehicle exists', () => {
     vehiclesMock.mockReturnValue({ data: [] });
     renderWidget();
+    expect(mediaMock).toHaveBeenCalledWith('');
+  });
+});
+
+describe.each(PACK_IDS)('MediaHistoryWidget design pack %s', packId => {
+  const standard: WidgetSize = { cols: 2, rows: 2 };
+  const compact: WidgetSize = { cols: 1, rows: 2 };
+
+  it('uses the timeline family without losing track details, source identities or refresh', async () => {
+    const query = makeQuery({ data: ITEMS });
+    mediaMock.mockReturnValue(query);
+    const { container } = renderWidget(standard, 42, packId);
+    await expectTimeline(container, packId);
+
+    expect(screen.getByText('Media history')).toBeInTheDocument();
+    for (const [title, subtitle] of [
+      ['Bohemian Rhapsody', 'Queen · usb'],
+      ['Yesterday', 'The Beatles · bluetooth'],
+      ['Clocks', 'Coldplay · spotify'],
+    ]) {
+      expect(screen.getByText(title)).toBeInTheDocument();
+      expect(screen.getByText(subtitle)).toBeInTheDocument();
+    }
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'ok');
+    expect(screen.queryByText('Playing')).not.toBeInTheDocument();
+    expect(mediaMock).toHaveBeenCalledWith('42');
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+    expect(query.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps compact summaries and missing-title fallbacks in the selected family', async () => {
+    const view = renderWidget(compact, 7, packId);
+    await expectTimeline(view.container, packId);
+    expect(screen.getByText(`Bohemian Rhapsody ${EM} Queen`)).toBeInTheDocument();
+    expect(screen.queryByText('Queen · usb')).not.toBeInTheDocument();
+
+    mediaMock.mockReturnValue(makeQuery({ data: [{ id: 9, now_playing_title: 'Solo Track' }] }));
+    view.rerender(widgetTree(compact, 7, packId));
+    expect(screen.getByText('Solo Track')).toBeInTheDocument();
+    expect(screen.queryByText(`Solo Track ${EM} ${EM}`)).not.toBeInTheDocument();
+
+    mediaMock.mockReturnValue(makeQuery({ data: [{ id: 9, now_playing_title: '<nil>' }] }));
+    view.rerender(widgetTree(compact, 7, packId));
+    await expectTimeline(view.container, packId);
+    expect(screen.getByText('No tracks played')).toBeInTheDocument();
+    expect(screen.queryByText('<nil>')).not.toBeInTheDocument();
+  });
+
+  it('retains the timeline while refreshing and after refresh failure, with working recovery', async () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    mediaMock.mockReturnValue(makeQuery({ data: ITEMS, refetch }));
+    const view = renderWidget(standard, 7, packId);
+    await expectTimeline(view.container, packId);
+
+    mediaMock.mockReturnValue(makeQuery({ data: ITEMS, refetch, isFetching: true }));
+    view.rerender(widgetTree(standard, 7, packId));
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
+
+    mediaMock.mockReturnValue(makeQuery({
+      data: ITEMS, refetch, isError: true, isStale: true, error: new Error('refresh failed'),
+    }));
+    view.rerender(widgetTree(standard, 7, packId));
+    await expectTimeline(view.container, packId);
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'stale');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('Queen · usb')).toBeInTheDocument();
+    expect(screen.getByText('Coldplay · spotify')).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('distinguishes initial loading, fatal failure and genuinely empty history', () => {
+    mediaMock.mockReturnValue(makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 }));
+    const view = renderWidget(standard, 7, packId);
+    expect(view.container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
+    expect(screen.queryByText('No tracks played')).not.toBeInTheDocument();
+
+    const failed = makeQuery({ error: new Error('boom'), isError: true, dataUpdatedAt: 0 });
+    mediaMock.mockReturnValue(failed);
+    view.rerender(widgetTree(standard, 7, packId));
+    expect(screen.getByRole('alert')).toHaveTextContent("Can't reach server");
+    expect(screen.queryByText('No tracks played')).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /retry/i }));
+    expect(failed.refetch).toHaveBeenCalledTimes(1);
+
+    mediaMock.mockReturnValue(makeQuery({ data: [] }));
+    view.rerender(widgetTree(standard, 7, packId));
+    expect(screen.getByText('Media history')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('No tracks played');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    mediaMock.mockReturnValue(makeQuery({ data: null, dataUpdatedAt: 0 }));
+    view.rerender(widgetTree(compact, 7, packId));
+    expect(screen.getByRole('status')).toHaveTextContent('No tracks played');
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'unavailable');
+  });
+
+  it('preserves unknown fields and invalid dates without inventing timestamps or source labels', async () => {
+    mediaMock.mockReturnValue(makeQuery({
+      data: [
+        { id: 0 },
+        { id: 1, now_playing_title: 'Undated track', now_playing_artist: 'null', playback_source: 'bluetooth', created_at: 'invalid' },
+        { id: 2, now_playing_title: 'Valid Song', now_playing_artist: 'Real Artist', playback_source: 'usb', created_at: iso(5) },
+      ],
+    }));
+    const { container } = renderWidget(standard, 7, packId);
+    await expectTimeline(container, packId);
+    expect(screen.getByText('Valid Song')).toBeInTheDocument();
+    expect(screen.getByText('Real Artist · usb')).toBeInTheDocument();
+    expect(screen.getByText('Undated track')).toBeInTheDocument();
+    expect(screen.getByText('bluetooth')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.queryByText(/1970|Invalid Date|null/)).not.toBeInTheDocument();
+  });
+
+  it('retries failed vehicle discovery without refreshing the disabled history query', () => {
+    const refetch = vi.fn();
+    vehiclesMock.mockReturnValue({ data: undefined, isError: true, error: new Error('discovery failed'), refetch });
+    const query = makeQuery();
+    mediaMock.mockReturnValue(query);
+    renderWidget(standard, undefined, packId);
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /retry/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(query.refetch).not.toHaveBeenCalled();
     expect(mediaMock).toHaveBeenCalledWith('');
   });
 });

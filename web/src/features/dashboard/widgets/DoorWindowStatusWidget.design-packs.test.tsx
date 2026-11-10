@@ -5,6 +5,7 @@ import type { DataStateSource } from '@/api/dataState';
 import type { SecurityEvent } from '@/api/types';
 import DoorWindowStatusWidget from './DoorWindowStatusWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
 import type { WidgetSize } from './types';
 
 type QueryFixture<T> = DataStateSource<T> & { refetch: () => void };
@@ -35,10 +36,7 @@ vi.mock('@/hooks/useMotionPreference', () => ({
   useMotionPreference: () => ({ reduce: true, durationMs: 0 }),
 }));
 
-const packs = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const packs = Object.entries(PACK_APPEARANCES);
 const FULL: WidgetSize = { cols: 2, rows: 2 };
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
 const NOW = Date.parse('2026-11-07T02:25:00Z');
@@ -180,6 +178,12 @@ describe.each(packs)('Door and window status %s (%s)', (pack, appearance) => {
     expect(screen.queryByText('Open')).not.toBeInTheDocument();
     expect(view.container.querySelector('[data-status="ok"]')).toBeNull();
 
+    view.rerender(tree(pack, COMPACT));
+    expect(screen.getByText('Doors unknown')).toBeVisible();
+    expect(screen.getByText('Windows unknown')).toBeVisible();
+    expect(screen.queryByText('Doors ✓')).not.toBeInTheDocument();
+    expect(screen.queryByText('Windows ✓')).not.toBeInTheDocument();
+
     mocks.security.mockReturnValue(query<SecurityEvent | null>(null, mocks.refreshSecurity));
     view.rerender(tree(pack));
     expect(screen.getByText('No door/window data')).toBeVisible();
@@ -190,7 +194,7 @@ describe.each(packs)('Door and window status %s (%s)', (pack, appearance) => {
   });
 });
 
-it('preserves Classic default/recovery and refresh focus while changing all seven presentations', async () => {
+it('preserves Classic default/recovery and refresh focus while changing all presentations', async () => {
   const view = render(tree());
   expect(view.container.querySelector('[data-widget-pack="classic"]')).not.toBeNull();
   expect(view.container.querySelector('[data-widget-family]')).toBeNull();
@@ -224,79 +228,81 @@ it('preserves Classic default/recovery and refresh focus while changing all seve
   expect(mocks.refreshSecurity).toHaveBeenCalledOnce();
 });
 
-it.each(['error', 'paused'] as const)('retains all readings and source-age recovery after a refresh is %s', async condition => {
-  mocks.security.mockReturnValue(query(snapshot(), mocks.refreshSecurity, {
-    dataUpdatedAt: NOW - 60_000, isError: condition === 'error',
-    error: condition === 'error' ? new Error('Synthetic refresh failure') : null,
-    fetchStatus: condition === 'paused' ? 'paused' : 'idle',
-  }));
-  const view = render(tree('v7'));
-  await presentation(view.container, 'pixel');
-  expectReportedRows();
-  expect(view.container.querySelector('[data-data-state="stale"]')).not.toBeNull();
-  expect(view.container.querySelector('[data-motion-suppressed="true"]')).not.toBeNull();
-  expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
-  if (condition === 'error') {
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
-  }
-  expect(screen.getByText('LAST REPORTED')).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
-  expect(mocks.refreshSecurity).toHaveBeenCalledOnce();
-});
+describe.each(packs)('Door and window lifecycle %s (%s)', (pack, appearance) => {
+  it.each(['error', 'paused'] as const)('retains all readings and source-age recovery after a refresh is %s', async condition => {
+    mocks.security.mockReturnValue(query(snapshot(), mocks.refreshSecurity, {
+      dataUpdatedAt: NOW - 60_000, isError: condition === 'error',
+      error: condition === 'error' ? new Error('Synthetic refresh failure') : null,
+      fetchStatus: condition === 'paused' ? 'paused' : 'idle',
+    }));
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
+    expectReportedRows();
+    expect(view.container.querySelector('[data-data-state="stale"]')).not.toBeNull();
+    expect(view.container.querySelector('[data-motion-suppressed="true"]')).not.toBeNull();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
+    if (condition === 'error') {
+      expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
+    }
+    expect(screen.getByText('LAST REPORTED')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+    expect(mocks.refreshSecurity).toHaveBeenCalledOnce();
+  });
 
-it('preserves initial loading, fatal-error retry and recovery rather than fabricating closed states', async () => {
-  mocks.security.mockReturnValue(query<SecurityEvent | null>(undefined, mocks.refreshSecurity, {
-    isLoading: true, isPending: true, isFetching: true, isSuccess: false,
-  }));
-  const view = render(tree('v2'));
-  expect(view.container.querySelector('[aria-busy="true"]')).not.toBeNull();
-  expect(view.container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
-  expect(screen.queryByText('All closed')).not.toBeInTheDocument();
-  expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  it('preserves initial loading, fatal-error retry and recovery rather than fabricating closed states', async () => {
+    mocks.security.mockReturnValue(query<SecurityEvent | null>(undefined, mocks.refreshSecurity, {
+      isLoading: true, isPending: true, isFetching: true, isSuccess: false,
+    }));
+    const view = render(tree(pack));
+    expect(view.container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(view.container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    expect(screen.queryByText('All closed')).not.toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
 
-  mocks.security.mockReturnValue(query<SecurityEvent | null>(undefined, mocks.refreshSecurity, {
-    isError: true, error: new Error('Synthetic initial failure'), isSuccess: false,
-  }));
-  view.rerender(tree('v2'));
-  expect(screen.getByRole('alert')).toBeVisible();
-  expect(screen.queryByRole('table')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /try again|retry/i }));
-  expect(mocks.refreshSecurity).toHaveBeenCalledOnce();
+    mocks.security.mockReturnValue(query<SecurityEvent | null>(undefined, mocks.refreshSecurity, {
+      isError: true, error: new Error('Synthetic initial failure'), isSuccess: false,
+    }));
+    view.rerender(tree(pack));
+    expect(screen.getByRole('alert')).toBeVisible();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /try again|retry/i }));
+    expect(mocks.refreshSecurity).toHaveBeenCalledOnce();
 
-  mocks.security.mockReturnValue(query(snapshot(), mocks.refreshSecurity));
-  view.rerender(tree('v2'));
-  await presentation(view.container, 'elevated');
-  expectReportedRows();
-  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-});
+    mocks.security.mockReturnValue(query(snapshot(), mocks.refreshSecurity));
+    view.rerender(tree(pack));
+    await presentation(view.container, appearance);
+    expectReportedRows();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 
-it('keeps the refresh action disabled while fetching without dropping retained readings', async () => {
-  mocks.security.mockReturnValue(query(snapshot(), mocks.refreshSecurity, { isFetching: true }));
-  const view = render(tree('v3'));
-  await presentation(view.container, 'precision');
-  expectReportedRows();
-  const refresh = screen.getByRole('button', { name: /^Refresh data/i });
-  expect(refresh).toBeDisabled();
-  fireEvent.click(refresh);
-  expect(mocks.refreshSecurity).not.toHaveBeenCalled();
-});
+  it('keeps the refresh action disabled while fetching without dropping retained readings', async () => {
+    mocks.security.mockReturnValue(query(snapshot(), mocks.refreshSecurity, { isFetching: true }));
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
+    expectReportedRows();
+    const refresh = screen.getByRole('button', { name: /^Refresh data/i });
+    expect(refresh).toBeDisabled();
+    fireEvent.click(refresh);
+    expect(mocks.refreshSecurity).not.toHaveBeenCalled();
+  });
 
-it('retries vehicle discovery when unresolved and retains the fleet fallback after discovery', async () => {
-  mocks.vehicles.mockReturnValue(query<{ id: number }[]>(undefined, mocks.refreshVehicles, {
-    isError: true, error: new Error('Synthetic fleet failure'),
-  }));
-  mocks.security.mockReturnValue(query<SecurityEvent | null>(undefined, mocks.refreshSecurity));
-  const view = render(tree('v4', FULL, null));
-  expect(mocks.security).toHaveBeenLastCalledWith(0, 5_000);
-  expect(screen.getByRole('alert')).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: /try again|retry/i }));
-  expect(mocks.refreshVehicles).toHaveBeenCalledOnce();
-  expect(mocks.refreshSecurity).not.toHaveBeenCalled();
+  it('retries vehicle discovery when unresolved and retains the fleet fallback after discovery', async () => {
+    mocks.vehicles.mockReturnValue(query<{ id: number }[]>(undefined, mocks.refreshVehicles, {
+      isError: true, error: new Error('Synthetic fleet failure'),
+    }));
+    mocks.security.mockReturnValue(query<SecurityEvent | null>(undefined, mocks.refreshSecurity));
+    const view = render(tree(pack, FULL, null));
+    expect(mocks.security).toHaveBeenLastCalledWith(0, 5_000);
+    expect(screen.getByRole('alert')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /try again|retry/i }));
+    expect(mocks.refreshVehicles).toHaveBeenCalledOnce();
+    expect(mocks.refreshSecurity).not.toHaveBeenCalled();
 
-  mocks.vehicles.mockReturnValue(query([{ id: 7 }, { id: 9 }], mocks.refreshVehicles));
-  mocks.security.mockReturnValue(query(snapshot({ vehicle_id: 7 }), mocks.refreshSecurity));
-  view.rerender(tree('v4', FULL, null));
-  await presentation(view.container, 'owner');
-  expectReportedRows();
-  expect(mocks.security).toHaveBeenLastCalledWith(7, 5_000);
+    mocks.vehicles.mockReturnValue(query([{ id: 7 }, { id: 9 }], mocks.refreshVehicles));
+    mocks.security.mockReturnValue(query(snapshot({ vehicle_id: 7 }), mocks.refreshSecurity));
+    view.rerender(tree(pack, FULL, null));
+    await presentation(view.container, appearance);
+    expectReportedRows();
+    expect(mocks.security).toHaveBeenLastCalledWith(7, 5_000);
+  });
 });

@@ -28,12 +28,14 @@
  * branch) calls `useNavigate()`.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { TFunction } from 'i18next';
 
 import type { AnomalyData, AnomalyEntry } from '@/api/hooks/useAnomalies';
 import type { WidgetSize } from './types';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -138,14 +140,17 @@ function makeResult(over: Partial<AnomalyQueryResult> = {}): AnomalyQueryResult 
   };
 }
 
-function renderWidget(size: WidgetSize = { cols: 2, rows: 4 }, vehicleId?: number) {
-  const view = render(
+function renderWidget(size: WidgetSize = { cols: 2, rows: 4 }, vehicleId?: number, packId: PackId = 'classic') {
+  const content = () => (
     <MemoryRouter>
-      <AnomalyDetectorWidget size={size} vehicleId={vehicleId} />
-    </MemoryRouter>,
+      <PackBoundary requestedPackId={packId}>
+        <AnomalyDetectorWidget size={{ ...size }} vehicleId={vehicleId} />
+      </PackBoundary>
+    </MemoryRouter>
   );
+  const view = render(content());
   expect(view.container.querySelector('h3')).toHaveAccessibleName('Anomaly detector');
-  return view;
+  return { ...view, rerenderWidget: () => view.rerender(content()) };
 }
 
 beforeEach(() => {
@@ -446,4 +451,117 @@ it('uses localized structured anomaly facts in dashboard tips while retaining th
  renderWidget();
  expect(screen.getByText('ModuleTempMax value 60.00°C exceeds the safe maximum (55.00°C).')).toBeVisible();
  expect(screen.queryByText('Legacy detector prose.')).not.toBeInTheDocument();
+});
+
+async function expectTimeline(container: HTMLElement, packId: PackId) {
+  expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+  if (packId === 'classic') {
+    expect(container.querySelector('[data-timeline-appearance]')).toBeNull();
+  } else {
+    await waitFor(() => {
+      expect(container.querySelector('[data-timeline-appearance]'))
+        .toHaveAttribute('data-timeline-appearance', PACK_APPEARANCES[packId]);
+    });
+  }
+}
+
+describe.each(PACK_IDS)('AnomalyDetectorWidget — %s acceptance', packId => {
+  it('preserves ordered evidence, SI-formatted facts, invalid readings and recovery through the timeline family', async () => {
+    const refetch = vi.fn();
+    const data = makeData([
+      makeEntry({ signal: 'measured_zero', severity: 'warning', z_score: 0, detected_at: '', message: 'Measured zero evidence' }),
+      makeEntry({
+        signal: 'invalid_reading', severity: 'info', z_score: Infinity, detected_at: 'invalid-date',
+        message: 'Incomplete facts retain detector prose',
+        explanation_code: 'above_maximum', explanation_params: { value: Infinity, baseline: 17.5, maximum: 55 },
+      }),
+      makeEntry({
+        signal: 'ModuleTempMax', severity: 'critical', unit: '°C', z_score: 4.3,
+        detected_at: new Date(Date.now() - 12 * 60_000).toISOString(),
+        message: 'Superseded detector prose',
+        explanation_code: 'above_maximum', explanation_params: { value: 60, baseline: 17.5, maximum: 55 },
+      }),
+      makeEntry({ signal: 'capped_fourth', severity: 'info' }),
+    ]);
+    useVehiclesMock.mockReturnValue({ data: [{ id: 7 }] });
+    useAnomaliesMock.mockReturnValue(makeResult({ data, refetch }));
+    const view = renderWidget({ cols: 2, rows: 4 }, 42, packId);
+    await expectTimeline(view.container, packId);
+
+    expect(useAnomaliesMock).toHaveBeenLastCalledWith('42');
+    const titles = screen.getAllByText(/· z=/);
+    expect(titles).toHaveLength(3);
+    expect(titles[0]).toHaveTextContent('ModuleTempMax · z=4.30 · 12m ago');
+    expect(titles[1]).toHaveTextContent('measured_zero · z=0.00 · —');
+    expect(titles[2]).toHaveTextContent('invalid_reading · z=— · —');
+    expect(screen.getByText('ModuleTempMax value 60.00°C exceeds the safe maximum (55.00°C).')).toBeVisible();
+    expect(screen.getByText('Measured zero evidence')).toBeVisible();
+    expect(screen.getByText('Incomplete facts retain detector prose')).toBeVisible();
+    expect(screen.queryByText('Superseded detector prose')).toBeNull();
+    expect(screen.queryByText(/capped_fourth|NaN|Infinity/)).toBeNull();
+    expect(screen.getAllByText(/^(critical|warning|info)$/)).toHaveLength(3);
+
+    useAnomaliesMock.mockReturnValue(makeResult({ data, refetch, isError: true, error: new Error('Refresh failed') }));
+    view.rerenderWidget();
+    await expectTimeline(view.container, packId);
+    expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
+    expect(screen.getByText('Measured zero evidence')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps compact counts and severity distinct from authoritative empty and absent evidence', async () => {
+    useVehiclesMock.mockReturnValue({ data: [{ id: 7 }] });
+    useAnomaliesMock.mockReturnValue(makeResult({
+      data: makeData([makeEntry({ severity: 'critical' }), makeEntry({ severity: 'warning' })]),
+    }));
+    const view = renderWidget({ cols: 1, rows: 1 }, undefined, packId);
+    await expectTimeline(view.container, packId);
+    expect(useAnomaliesMock).toHaveBeenLastCalledWith('7');
+    expect(screen.getByText('2')).toBeVisible();
+    expect(screen.getByText('2 active')).toHaveClass('text-[var(--semantic-danger)]');
+
+    useAnomaliesMock.mockReturnValue(makeResult({ data: makeData([]) }));
+    view.rerenderWidget();
+    await expectTimeline(view.container, packId);
+    expect(screen.getByText('No anomalies')).toBeVisible();
+    expect(screen.queryByText(/active$/)).toBeNull();
+
+    useAnomaliesMock.mockReturnValue(makeResult({
+      data: { ...makeData([]), anomalies: null as unknown as AnomalyData['anomalies'] },
+    }));
+    view.rerenderWidget();
+    await expectTimeline(view.container, packId);
+    expect(view.container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeVisible();
+    expect(screen.queryByText('No anomalies')).toBeNull();
+    expect(screen.queryByText(/active$/)).toBeNull();
+  });
+
+  it('preserves loading, fatal error, disabled-source and empty trust states without fabricated health claims', () => {
+    useAnomaliesMock.mockReturnValue(makeResult({ data: undefined, isLoading: true, dataUpdatedAt: 0 }));
+    const view = renderWidget({ cols: 2, rows: 4 }, undefined, packId);
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+    expect(view.container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('No anomalies')).toBeNull();
+
+    useAnomaliesMock.mockReturnValue(makeResult({ data: undefined, isError: true, error: new Error('Detector unavailable') }));
+    view.rerenderWidget();
+    expect(view.container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeVisible();
+    expect(screen.queryByText('No anomalies')).toBeNull();
+
+    useAnomaliesMock.mockReturnValue(makeResult({ data: undefined }));
+    view.rerenderWidget();
+    expect(useAnomaliesMock).toHaveBeenLastCalledWith(null);
+    expect(view.container.querySelector('[data-data-state="unavailable"]')).toHaveAttribute('aria-busy', 'false');
+    expect(screen.getByText('No data available')).toBeVisible();
+    expect(screen.queryByText('No anomalies')).toBeNull();
+
+    useAnomaliesMock.mockReturnValue(makeResult({ data: makeData([]) }));
+    view.rerenderWidget();
+    expect(view.container.querySelector('[data-data-state="ok"]')).toBeInTheDocument();
+    expect(screen.getByText('No anomalies')).toBeVisible();
+  });
 });

@@ -181,28 +181,28 @@ describe.each(packs)('media now playing %s (%s)', (packId, appearance) => {
 });
 
 describe('media controller preservation', () => {
-  it('keeps the loading shell without fabricating a song, then renders the selected pack', async () => {
+  it.each(packs)('keeps the %s loading shell without fabricating a song, then renders the selected pack', async (packId, appearance) => {
     const response: { resolve?: (value: MediaSnapshot) => void } = {};
     pendingMedia = new Promise(resolve => { response.resolve = resolve; });
-    const { container } = renderWidget('v1');
+    const { container } = renderWidget(packId);
     await waitFor(() => expect(mediaCalls()).toHaveLength(1));
     expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
     expect(screen.queryByText('Night Highway')).not.toBeInTheDocument();
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     response.resolve?.(fixture);
-    await expectAppearance(container, 'studio');
+    await expectAppearance(container, appearance);
     await screen.findByText('Night Highway');
   });
 
-  it('exposes fatal read recovery without claiming empty media, then reuses the selected presentation', async () => {
+  it.each(packs)('exposes %s fatal read recovery without claiming empty media, then reuses the selected presentation', async (packId, appearance) => {
     mediaError = new Error('Media source unavailable');
-    const { container } = renderWidget('v1');
+    const { container } = renderWidget(packId);
     await waitFor(() => expect(container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument());
     expect(screen.queryByText('Nothing playing')).not.toBeInTheDocument();
     expect(screen.queryByText('Night Highway')).not.toBeInTheDocument();
     mediaError = null;
     fireEvent.click(screen.getByRole('button', { name: /^Refresh data/ }));
-    await expectAppearance(container, 'studio');
+    await expectAppearance(container, appearance);
     await screen.findByText('Night Highway');
     expect(mediaCalls()).toHaveLength(2);
   });
@@ -235,24 +235,26 @@ describe('media controller preservation', () => {
     expect(screen.queryByText('Signals')).not.toBeInTheDocument();
   });
 
-  it.each([
-    { now_playing_elapsed: -1 },
-    { now_playing_elapsed: Number.NaN },
-    { now_playing_duration: 0 },
-    { now_playing_duration: Number.POSITIVE_INFINITY },
-  ])('does not turn invalid timing %j into zero progress', async invalid => {
-    media = { ...fixture, ...invalid };
-    const { container } = renderWidget('v7');
-    await expectAppearance(container, 'pixel');
-    expect(screen.getByText('Playback progress depends on available media signals.')).toBeInTheDocument();
-    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-    expect(screen.queryByText('0:00')).not.toBeInTheDocument();
+  describe.each(packs)('%s invalid timing preservation', (packId, appearance) => {
+    it.each([
+      { now_playing_elapsed: -1 },
+      { now_playing_elapsed: Number.NaN },
+      { now_playing_duration: 0 },
+      { now_playing_duration: Number.POSITIVE_INFINITY },
+    ])('does not turn invalid timing %j into zero progress', async invalid => {
+      media = { ...fixture, ...invalid };
+      const { container } = renderWidget(packId);
+      await expectAppearance(container, appearance);
+      expect(screen.getByText('Playback progress depends on available media signals.')).toBeInTheDocument();
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      expect(screen.queryByText('0:00')).not.toBeInTheDocument();
+    });
   });
 
-  it('does not confuse measured zero elapsed time with missing progress', async () => {
+  it.each(packs)('does not confuse %s measured zero elapsed time with missing progress', async (packId, appearance) => {
     media = { ...fixture, now_playing_elapsed: 0 };
-    const { container } = renderWidget('v7');
-    await expectAppearance(container, 'pixel');
+    const { container } = renderWidget(packId);
+    await expectAppearance(container, appearance);
     expect(screen.getByRole('progressbar', { name: 'Playback progress' })).toHaveAttribute('aria-valuenow', '0');
     expect(screen.getByText('0:00')).toBeInTheDocument();
     expect(screen.getByText('3:41')).toBeInTheDocument();

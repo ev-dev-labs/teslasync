@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { TeslaEnergySite, TeslaWCChargingEntry } from '@/types/energy';
 import { chartTokens } from '@/lib/tokens';
 import { PackBoundary } from './designPacks/PackBoundary';
-import { PACK_APPEARANCES, type PackAppearance, type PackId } from './designPacks/types';
+import { PACK_APPEARANCES, PACK_IDS, type PackAppearance, type PackId } from './designPacks/types';
 import type { WidgetSize } from './types';
 import WallConnectorWidget from './WallConnectorWidget';
 
@@ -208,18 +208,21 @@ describe.each(packs)('Wall Connector %s (%s)', (packId, appearance) => {
     expect(screen.queryByText('No wall connector data')).not.toBeInTheDocument();
   });
 
-  it('keeps an unknown daily total unknown when one of today’s sessions is missing', async () => {
-    historyMock.mockReturnValue(query([
-      entry(dayKey(), 6000, '08'), entry(dayKey(), null, '18'),
-    ]));
-    const { container } = render(tree(packId));
-    await expectPack(container);
-    expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
-    expect(screen.queryByText('6.00')).not.toBeInTheDocument();
-    expect(rows()).toEqual([{ date: shortDate(dayKey()), energy_kwh: null }]);
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-  });
+  it.each([null, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    'keeps the daily total unknown when a session energy is missing or invalid (%s)',
+    async (energy) => {
+      historyMock.mockReturnValue(query([
+        entry(dayKey(), 6000, '08'), entry(dayKey(), energy, '18'),
+      ]));
+      const { container } = render(tree(packId));
+      await expectPack(container);
+      expect(screen.getByText('—')).toBeInTheDocument();
+      expect(screen.queryByText('0.00')).not.toBeInTheDocument();
+      expect(screen.queryByText('6.00')).not.toBeInTheDocument();
+      expect(rows()).toEqual([{ date: shortDate(dayKey()), energy_kwh: null }]);
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    },
+  );
 
   it('keeps the no-site explanation and refreshes discovery only', async () => {
     const sites = query<TeslaEnergySite[]>([]);
@@ -299,26 +302,30 @@ describe.each(packs)('Wall Connector %s (%s)', (packId, appearance) => {
   });
 });
 
-it.each(['sites', 'history'] as const)('keeps %s initial failure distinct from empty data', (source) => {
-  const failure = { error: new Error('failed'), isError: true, dataUpdatedAt: 0 };
-  if (source === 'sites') sitesMock.mockReturnValue(query<TeslaEnergySite[]>(undefined, failure));
-  else historyMock.mockReturnValue(query<TeslaWCChargingEntry[]>(undefined, failure));
-  render(tree('v7'));
-  expect(screen.getByRole('heading', { name: 'Wall connector' })).toBeInTheDocument();
-  expect(screen.getByRole('alert')).toBeInTheDocument();
-  expect(screen.queryByText('No Tesla energy site linked')).not.toBeInTheDocument();
-  expect(screen.queryByText('No wall connector data')).not.toBeInTheDocument();
-  expect(screen.queryByTestId('wall-bars')).not.toBeInTheDocument();
-});
+describe.each(PACK_IDS)('Wall Connector %s initial states', (packId) => {
+  it.each(['sites', 'history'] as const)('keeps %s initial failure distinct from empty data', (source) => {
+    const failure = { error: new Error('failed'), isError: true, dataUpdatedAt: 0 };
+    if (source === 'sites') sitesMock.mockReturnValue(query<TeslaEnergySite[]>(undefined, failure));
+    else historyMock.mockReturnValue(query<TeslaWCChargingEntry[]>(undefined, failure));
+    const { container } = render(tree(packId));
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+    expect(screen.getByRole('heading', { name: 'Wall connector' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No Tesla energy site linked')).not.toBeInTheDocument();
+    expect(screen.queryByText('No wall connector data')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('wall-bars')).not.toBeInTheDocument();
+  });
 
-it.each(['sites', 'history'] as const)('preserves the source-shaped skeleton during %s initial loading', (source) => {
-  const loading = { isLoading: true, dataUpdatedAt: 0 };
-  if (source === 'sites') sitesMock.mockReturnValue(query<TeslaEnergySite[]>(undefined, loading));
-  else historyMock.mockReturnValue(query<TeslaWCChargingEntry[]>(undefined, loading));
-  const { container } = render(tree('v1'));
-  expect(screen.getByRole('heading', { name: 'Wall connector' })).toBeInTheDocument();
-  expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
-  expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
-  expect(screen.queryByText('0.00')).not.toBeInTheDocument();
-  expect(screen.queryByTestId('wall-bars')).not.toBeInTheDocument();
+  it.each(['sites', 'history'] as const)('preserves the source-shaped skeleton during %s initial loading', (source) => {
+    const loading = { isLoading: true, dataUpdatedAt: 0 };
+    if (source === 'sites') sitesMock.mockReturnValue(query<TeslaEnergySite[]>(undefined, loading));
+    else historyMock.mockReturnValue(query<TeslaWCChargingEntry[]>(undefined, loading));
+    const { container } = render(tree(packId));
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+    expect(screen.getByRole('heading', { name: 'Wall connector' })).toBeInTheDocument();
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
+    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('wall-bars')).not.toBeInTheDocument();
+  });
 });

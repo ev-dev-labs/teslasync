@@ -184,11 +184,13 @@ export default function CommandHistoryWidget({ vehicleId, size }: WidgetProps) {
             t={t}
           />
         ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<Terminal className="h-5 w-5" />}
-            message={t('widget.noCommands', 'No commands sent')}
-            className="py-4"
-          />
+          <TimelinePresentation compact>
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+              icon={<Terminal className="h-5 w-5" />}
+              message={t('widget.noCommands', 'No commands sent')}
+              className="py-4"
+            />
+          </TimelinePresentation>
         )
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto">

@@ -1,13 +1,18 @@
-import { webcrypto } from 'node:crypto';
+import { createHash, webcrypto } from 'node:crypto';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ToastProvider } from '@/components/feedback';
 import WidgetDesignPackSettings from './WidgetDesignPackSettings';
+import { PACK_MANIFEST } from '@/features/dashboard/widgets/designPacks/manifest';
 
 const mocks = vi.hoisted(() => ({
   mode: vi.fn(),
   request: vi.fn(),
   eventSource: vi.fn(),
+  packId: 'classic',
+  scope: '',
+  failSave: false,
 }));
 
 vi.mock('@/api/hooks/useAuthMode', () => ({
@@ -42,17 +47,12 @@ vi.mock('react-i18next', async () => {
 });
 
 function renderSettings() {
-  return render(<ToastProvider><WidgetDesignPackSettings /></ToastProvider>);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={client}><ToastProvider><WidgetDesignPackSettings /></ToastProvider></QueryClientProvider>);
 }
 
 async function ready() {
   await screen.findByRole('button', { name: 'Classic active' });
-}
-
-function preferenceKey() {
-  const key = Object.keys(localStorage).find(key => key.startsWith('teslasync.widget-design-pack.v1.'));
-  expect(key).toBeDefined();
-  return key!;
 }
 
 beforeEach(() => {
@@ -62,7 +62,17 @@ beforeEach(() => {
   mocks.mode.mockReset();
   mocks.mode.mockResolvedValue({ isSuccess: true, data: { mode: 'forward_auth', subject: 'preview-viewer' } });
   mocks.request.mockReset();
-  mocks.request.mockRejectedValue(new Error('Preview must not read vehicle APIs'));
+  mocks.packId = 'classic';
+  mocks.scope = createHash('sha256').update('forward_auth:preview-viewer').digest('hex');
+  mocks.failSave = false;
+  mocks.request.mockImplementation(async (path: string, options?: { method?: string; body?: string }) => {
+    if (path !== '/settings/widget-design-pack') throw new Error('Preview must not read vehicle APIs');
+    if (options?.method === 'PUT') {
+      if (mocks.failSave) throw new Error('Server unavailable');
+      mocks.packId = (JSON.parse(options.body ?? '{}') as { pack_id: string }).pack_id;
+    }
+    return { pack_id: mocks.packId, scope: mocks.scope };
+  });
   mocks.eventSource.mockClear();
 });
 
@@ -76,10 +86,11 @@ afterEach(() => {
 describe('Widget design pack settings', () => {
   it('retries a failed scope verification without requiring a reload', async () => {
     mocks.mode.mockResolvedValue({ isSuccess: false });
-    render(<WidgetDesignPackSettings />);
+    renderSettings();
     const retry = await screen.findByRole('button', { name: 'Retry preference' });
     expect(screen.getByRole('button', { name: 'Use Owner pack' })).toBeDisabled();
     mocks.mode.mockResolvedValue({ isSuccess: true, data: { mode: 'open' } });
+    mocks.scope = createHash('sha256').update('open').digest('hex');
     await act(async () => fireEvent.click(retry));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Use Owner pack' })).toBeEnabled());
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -88,7 +99,7 @@ describe('Widget design pack settings', () => {
     let resolve!: (value: unknown) => void;
     mocks.mode.mockReturnValue(new Promise(done => { resolve = done; }));
     renderSettings();
-    expect(screen.getAllByRole('button', { name: /^Preview / })).toHaveLength(8);
+    expect(screen.getAllByRole('button', { name: /^Preview / })).toHaveLength(27);
     for (const button of screen.getAllByRole('button', { name: /^Use .* pack$/ })) {
       expect(button).toBeDisabled();
     }
@@ -98,17 +109,21 @@ describe('Widget design pack settings', () => {
     await ready();
   });
 
-  it('previews all eight real presentation choices without persistence, readers or commands', async () => {
+  it('previews every real presentation without saving, vehicle readers or commands', async () => {
     renderSettings();
     await ready();
     const write = vi.spyOn(Storage.prototype, 'setItem');
-    for (const name of ['Classic', 'Studio', 'Elevated', 'Precision', 'Owner', 'Iconic', 'Expressive', 'Pixel']) {
+    for (const entry of PACK_MANIFEST) {
+      const { default: en } = await import('@/i18n/en.json');
+      const name = en.dashboard.designPacks[entry.id].name;
       const opener = screen.getByRole('button', { name: `Preview ${name}` });
       opener.focus();
       fireEvent.click(opener);
       const dialog = await screen.findByRole('dialog', { name: `Preview ${name}` });
       await within(dialog).findByRole('heading', { name: 'Commands' }, { timeout: 10_000 });
       await waitFor(() => expect(within(dialog).queryByText('Loading preview...')).not.toBeInTheDocument());
+      expect(dialog.querySelector('[data-widget-pack-preview]')).toHaveAttribute('data-widget-pack-preview', entry.id);
+      expect(dialog.querySelectorAll(`[data-surface-variant="standalone"][data-widget-pack="${entry.id}"]`)).toHaveLength(5);
       for (const heading of ['Vehicle', 'Battery', 'History', 'Status']) {
         expect(within(dialog).getByRole('heading', { name: heading })).toBeInTheDocument();
       }
@@ -120,7 +135,8 @@ describe('Widget design pack settings', () => {
       expect(dialog.querySelector('[data-vehicle-studio]')).toBeInTheDocument();
       expect(dialog.querySelector('[data-vehicle-studio]')).toHaveAttribute('data-activity', 'static');
       expect(write).not.toHaveBeenCalled();
-      expect(mocks.request).not.toHaveBeenCalled();
+      expect(mocks.request.mock.calls.every(([path, options]) =>
+        path === '/settings/widget-design-pack' && options?.method !== 'PUT')).toBe(true);
       expect(mocks.eventSource).not.toHaveBeenCalled();
       fireEvent.keyDown(dialog, { key: 'Escape' });
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -128,22 +144,22 @@ describe('Widget design pack settings', () => {
     }
     expect(mocks.mode).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'Classic active' })).toBeDisabled();
-  }, 30_000);
+  }, 60_000);
 
-  it('persists stable IDs for the browser profile without changing other preferences', async () => {
+  it('saves stable IDs to the server without changing browser appearance preferences', async () => {
     localStorage.setItem('unrelated-appearance-preference', 'unchanged');
     renderSettings();
     await ready();
     fireEvent.click(screen.getByRole('button', { name: 'Use Owner pack' }));
     await screen.findByRole('button', { name: 'Owner active' });
-    const key = preferenceKey();
-    expect(JSON.parse(localStorage.getItem(key)!)).toEqual({ version: 1, packId: 'v4' });
+    expect(mocks.request).toHaveBeenCalledWith('/settings/widget-design-pack', expect.objectContaining({
+      method: 'PUT', body: JSON.stringify({ pack_id: 'v4' }),
+    }));
     expect(localStorage.getItem('unrelated-appearance-preference')).toBe('unchanged');
-    expect(key).not.toContain('preview-viewer');
-    expect(mocks.request).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Use Pixel pack' }));
-    await screen.findByRole('button', { name: 'Pixel active' });
-    expect(JSON.parse(localStorage.getItem(key)!).packId).toBe('v7');
+    expect(Object.keys(localStorage).some(key => key.startsWith('teslasync.widget-design-pack.'))).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Use Cyberdeck pack' }));
+    await screen.findByRole('button', { name: 'Cyberdeck active' });
+    expect(mocks.packId).toBe('cyber');
   });
 
   it('keeps the active preference and can close safely when the preview chunk fails', async () => {
@@ -162,20 +178,74 @@ describe('Widget design pack settings', () => {
     await waitFor(() => expect(opener).toHaveFocus());
     expect(screen.getByRole('button', { name: 'Classic active' })).toBeDisabled();
     expect(write).not.toHaveBeenCalled();
-    expect(mocks.request).not.toHaveBeenCalled();
+    expect(mocks.request.mock.calls.some(([, options]) => options?.method === 'PUT')).toBe(false);
   });
 
-  it('retains the active choice on storage failure and permits a successful retry', async () => {
+  it('retains the confirmed choice on server failure and permits a successful retry', async () => {
     renderSettings();
     await ready();
-    const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError'); });
+    mocks.failSave = true;
     fireEvent.click(screen.getByRole('button', { name: 'Use Owner pack' }));
     expect(screen.getByRole('button', { name: 'Classic active' })).toBeDisabled();
-    expect(screen.getByRole('alert')).toHaveTextContent('Your previous selection is unchanged.');
-    expect(screen.queryByText('Owner saved for this browser profile.')).not.toBeInTheDocument();
-    write.mockRestore();
+    await waitFor(() => expect(screen.getAllByRole('alert').some(alert =>
+      alert.textContent?.includes('Your last confirmed selection remains visible.'))).toBe(true));
+    mocks.failSave = false;
     fireEvent.click(screen.getByRole('button', { name: 'Use Owner pack' }));
     await screen.findByRole('button', { name: 'Owner active' });
-    expect(screen.queryByText('Your previous selection is unchanged.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Your last confirmed selection remains visible.')).not.toBeInTheDocument();
+  });
+
+  it('groups all packs by visual style instead of rollout status', async () => {
+    renderSettings();
+    await ready();
+    const style = screen.getByRole('combobox', { name: 'Design style' });
+    expect(within(style).getAllByRole('option').map(option => option.textContent)).toEqual([
+      'All styles (27)', 'Minimal & Editorial (6)', 'Soft & Atmospheric (5)',
+      'Technical & Instrumental (9)', 'Bold & Geometric (7)',
+    ]);
+    expect(screen.queryByRole('combobox', { name: 'Collection' })).not.toBeInTheDocument();
+    const groups = [
+      ['minimal', ['Classic', 'Precision', 'Owner', 'Editorial', 'Quiet Form', 'Swiss Grid']],
+      ['soft', ['Elevated', 'Iconic', 'Ambient', 'Warm Modern', 'Glass Current']],
+      ['technical', ['Studio', 'Pixel', 'Motorsport', 'Blueprint', 'Terminal', 'Atlas', 'Analog', 'Observatory', 'Cyberdeck']],
+      ['geometric', ['Expressive', 'Bauhaus', 'Material Play', 'Deco Grand', 'Kinetic Type', 'Neo Brutal', 'Memphis Pop']],
+    ] as const;
+    for (const [value, names] of groups) {
+      fireEvent.change(style, { target: { value } });
+      expect(screen.getAllByRole('button', { name: /^Preview / }).map(button =>
+        button.getAttribute('aria-label'))).toEqual(names.map(name => `Preview ${name}`));
+      expect(screen.getByRole('combobox', { name: 'Design intensity' })).toBeEnabled();
+    }
+    fireEvent.change(style, { target: { value: 'all' } });
+    expect(screen.getAllByRole('button', { name: /^Preview / })).toHaveLength(27);
+    expect(screen.getByRole('button', { name: 'Classic active' })).toBeDisabled();
+    expect(mocks.request.mock.calls.some(([, options]) => options?.method === 'PUT')).toBe(false);
+  });
+
+  it('combines style and intensity filters with a reset for empty results without saving a selection', async () => {
+    renderSettings();
+    await ready();
+    const style = screen.getByRole('combobox', { name: 'Design style' });
+    const intensity = screen.getByRole('combobox', { name: 'Design intensity' });
+    fireEvent.change(intensity, { target: { value: 'extreme' } });
+    expect(screen.getAllByRole('button', { name: /^Preview / })).toHaveLength(3);
+    fireEvent.change(style, { target: { value: 'technical' } });
+    expect(screen.getAllByRole('button', { name: /^Preview / })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Preview Cyberdeck' })).toBeVisible();
+    fireEvent.change(style, { target: { value: 'geometric' } });
+    expect(screen.getAllByRole('button', { name: /^Preview / })).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Preview Neo Brutal' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Preview Memphis Pop' })).toBeVisible();
+    fireEvent.change(style, { target: { value: 'minimal' } });
+    expect(intensity).toHaveValue('extreme');
+    expect(intensity).toBeEnabled();
+    expect(screen.queryByRole('button', { name: /^Preview / })).not.toBeInTheDocument();
+    expect(screen.getByText('No packs match these style and intensity filters.')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Show all designs' }));
+    expect(style).toHaveValue('all');
+    expect(intensity).toHaveValue('all');
+    expect(screen.getAllByRole('button', { name: /^Preview / })).toHaveLength(27);
+    expect(screen.getByRole('button', { name: 'Classic active' })).toBeDisabled();
+    expect(mocks.request.mock.calls.some(([, options]) => options?.method === 'PUT')).toBe(false);
   });
 });

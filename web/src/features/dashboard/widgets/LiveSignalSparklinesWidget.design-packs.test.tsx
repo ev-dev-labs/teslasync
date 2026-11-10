@@ -161,10 +161,10 @@ describe.each(Object.entries(PACK_APPEARANCES))('live signal sparklines %s / %s'
   });
 });
 
-it('keeps sparse sample positions, signed values and timestamps without joining across gaps', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('keeps sparse sample positions, signed values and timestamps without joining across gaps for %s / %s', async (pack, appearance) => {
   history.BatteryLevel = points(0, 1, null, 2, 3, null, -1, 4);
-  const { queryClient } = renderWidget('v7', FULL, ['BatteryLevel']);
-  await waitFor(() => expect(signalPresentation('Battery Level')).toHaveAttribute('data-widget-appearance', 'pixel'));
+  const { queryClient } = renderWidget(pack, FULL, ['BatteryLevel']);
+  await waitFor(() => expect(signalPresentation('Battery Level')).toHaveAttribute('data-widget-appearance', appearance));
   const row = signalPresentation('Battery Level');
   const plot = await within(row).findByRole('img', { name: 'Battery Level trend' });
   const lines = [...plot.querySelectorAll('polyline[fill="none"]')];
@@ -179,10 +179,10 @@ it('keeps sparse sample positions, signed values and timestamps without joining 
   expect(queryClient.getQueryData(['signal-history', 7, 'BatteryLevel', 1])).toEqual({ data: history.BatteryLevel });
 });
 
-it('retries only the failed history source while retaining the other signals and actual live reading', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('retries only the failed history source while retaining the other signals and actual live reading for %s / %s', async (pack, appearance) => {
   historyFailure = true;
-  renderWidget('v4');
-  await waitFor(() => expect(signalPresentation('Battery Level')).toHaveAttribute('data-widget-appearance', 'owner'));
+  renderWidget(pack);
+  await waitFor(() => expect(signalPresentation('Battery Level')).toHaveAttribute('data-widget-appearance', appearance));
   const battery = signalPresentation('Battery Level');
   const alert = await within(battery).findByRole('alert');
   expect(within(battery).getByText('0.0%')).toBeVisible();
@@ -198,9 +198,9 @@ it('retries only the failed history source while retaining the other signals and
   expect(countRequests('/available')).toBe(1);
 });
 
-it('retains the original plot and reports a nonblocking history refresh failure', async () => {
-  const { queryClient } = renderWidget('v3', FULL, ['BatteryLevel']);
-  await waitFor(() => expect(signalPresentation('Battery Level')).toHaveAttribute('data-widget-appearance', 'precision'));
+it.each(Object.entries(PACK_APPEARANCES))('retains the original plot and reports a nonblocking history refresh failure for %s / %s', async (pack, appearance) => {
+  const { queryClient } = renderWidget(pack, FULL, ['BatteryLevel']);
+  await waitFor(() => expect(signalPresentation('Battery Level')).toHaveAttribute('data-widget-appearance', appearance));
   const battery = signalPresentation('Battery Level');
   const plot = await within(battery).findByRole('img', { name: 'Battery Level trend' });
   const coordinates = plot.querySelector('polyline')?.getAttribute('points');
@@ -214,14 +214,14 @@ it('retains the original plot and reports a nonblocking history refresh failure'
   expect(within(battery).queryByRole('alert')).not.toBeInTheDocument();
 });
 
-it('keeps a pending history source distinct from an empty result without hiding its live reading', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('keeps a pending history source distinct from an empty result without hiding its live reading for %s / %s', async (pack, appearance) => {
   let finish: ((value: unknown) => void) | undefined;
   const pending = new Promise<unknown>(resolve => { finish = resolve; });
   const respond = api.request.getMockImplementation();
   api.request.mockImplementation(path => path.endsWith('/BatteryLevel/history?hours=1')
     ? pending : respond ? respond(path) : Promise.resolve({}));
-  renderWidget('v5', NARROW, ['BatteryLevel']);
-  await waitFor(() => expect(signalPresentation('Battery Level')).toHaveAttribute('data-widget-appearance', 'iconic'));
+  renderWidget(pack, NARROW, ['BatteryLevel']);
+  await waitFor(() => expect(signalPresentation('Battery Level')).toHaveAttribute('data-widget-appearance', appearance));
   const battery = signalPresentation('Battery Level');
   expect(within(battery).getByRole('status', { name: 'Loading signal history' })).toBeVisible();
   expect(within(battery).getByText('0.0%')).toBeVisible();

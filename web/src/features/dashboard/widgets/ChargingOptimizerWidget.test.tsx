@@ -46,12 +46,14 @@
  * dashboard tests.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, act, cleanup, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { inputPreferences } from '@/test/inputPreferences';
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 // jsdom lacks matchMedia; framer-motion (useReducedMotion, read by the
 // freshness chip) reads it at module load. Report reduced motion so the
@@ -141,7 +143,7 @@ vi.mock('@/api/hooks/useVehicles', async () => {
 import ChargingOptimizerWidget from './ChargingOptimizerWidget';
 
 it.each([1, 2, 3])('identifies the optimizer at %i columns', (cols) => {
-  renderWidget({ cols, rows: 2 });
+  renderWidgetForPack({ cols, rows: 2 });
   expect(screen.getByRole('heading', { name: 'Charging optimizer' })).toBeInTheDocument();
 });
 import type { WidgetSize } from './types';
@@ -214,10 +216,16 @@ function makeQuery(overrides: Partial<FakeQuery> = {}): FakeQuery {
   };
 }
 
-function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: number) {
+function renderWidgetForPack(
+  size: WidgetSize = { cols: 2, rows: 2 },
+  vehicleId?: number,
+  packId: PackId = 'classic',
+) {
   const view = render(
     <MemoryRouter>
-      <ChargingOptimizerWidget size={size} vehicleId={vehicleId} />
+      <PackBoundary requestedPackId={packId}>
+        <ChargingOptimizerWidget size={size} vehicleId={vehicleId} />
+      </PackBoundary>
     </MemoryRouter>,
   );
   expect(view.container.querySelector('h3')).toHaveAccessibleName('Charging optimizer');
@@ -241,7 +249,42 @@ afterEach(() => {
 
 /* ── Specs ────────────────────────────────────────────────────────── */
 
-describe('ChargingOptimizerWidget', () => {
+describe.each(PACK_IDS)('ChargingOptimizerWidget / %s', (packId) => {
+  const renderWidget = (size?: WidgetSize, vehicleId?: number) =>
+    renderWidgetForPack(size, vehicleId, packId);
+
+  it.each([{ cols: 1, rows: 1 }, { cols: 2, rows: 2 }, { cols: 4, rows: 2 }])(
+    'uses the shared timeline family without replacing optimizer content at %j',
+    async (size) => {
+      const { container } = renderWidget(size);
+      expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+      if (packId === 'classic') {
+        expect(container.querySelector('[data-timeline-appearance]')).not.toBeInTheDocument();
+      } else {
+        await waitFor(() => {
+          expect(container.querySelector('[data-timeline-appearance]')).toHaveAttribute(
+            'data-timeline-appearance', PACK_APPEARANCES[packId],
+          );
+        });
+      }
+      expect(screen.getByText('2 AM')).toBeInTheDocument();
+      if (size.cols === 1) {
+        expect(screen.getByText('SOC 80.00%')).toBeInTheDocument();
+        expect(screen.getByText('$45.00/mo')).toBeInTheDocument();
+      } else {
+        expect(screen.getByText('80.00%')).toBeInTheDocument();
+        expect(screen.getByText('$45.00')).toBeInTheDocument();
+        expect(screen.getByText('Shift to off-peak')).toBeInTheDocument();
+        expect(screen.getByText('Move charging to overnight')).toBeInTheDocument();
+        expect(screen.getByText('Peak charging: 15.00%')).toBeInTheDocument();
+      }
+      if (size.cols === 4) {
+        expect(screen.getByRole('img', { name: '24h rate timeline' }).children).toHaveLength(24);
+        expect(screen.getByTitle('2 AM — Off-peak').querySelector('svg')).toBeInTheDocument();
+      }
+    },
+  );
+
   it('keeps three real optimizer operands and midnight, zero target and zero savings without dropping the specialist timeline', () => {
     optimizerMock.mockReturnValue(makeQuery({ data: makeData({
       current_schedule: { ...SCHED, most_common_start_hour: 0, avg_charge_to_pct: 0 },
@@ -306,7 +349,9 @@ describe('ChargingOptimizerWidget', () => {
     const view = renderWidget(size);
     expect(screen.getByTitle('6 PM — Peak')).toBeInTheDocument();
     settingsMock.mockReturnValue({ settings: inputPreferences({ locale: 'en-GB' }) });
-    view.rerender(<MemoryRouter><ChargingOptimizerWidget size={size} /></MemoryRouter>);
+    view.rerender(<MemoryRouter><PackBoundary requestedPackId={packId}>
+      <ChargingOptimizerWidget size={size} />
+    </PackBoundary></MemoryRouter>);
     expect(screen.getByText('02:00')).toBeInTheDocument();
     expect(screen.getByTitle('18:00 — Peak')).toBeInTheDocument();
   });
@@ -326,7 +371,9 @@ describe('ChargingOptimizerWidget', () => {
         setGlobalPrecision(3);
         setGlobalLocale('de-DE');
       });
-      view.rerender(<MemoryRouter><ChargingOptimizerWidget size={size} /></MemoryRouter>);
+      view.rerender(<MemoryRouter><PackBoundary requestedPackId={packId}>
+        <ChargingOptimizerWidget size={size} />
+      </PackBoundary></MemoryRouter>);
       expect(screen.getByText(compact ? '€45,679/mo' : '€45,679')).toBeInTheDocument();
       expect(screen.getByText(compact ? 'SOC 80,000%' : '80,000%')).toBeInTheDocument();
       expect(cost.potential_monthly_savings).toBe(45.6789);
@@ -587,4 +634,41 @@ describe('ChargingOptimizerWidget', () => {
     renderWidget();
     expect(optimizerMock).toHaveBeenCalledWith(null);
   });
+});
+
+it('preserves the mounted retained analysis, vehicle selection and retry across pack changes', () => {
+  const refetch = vi.fn();
+  optimizerMock.mockReturnValue(makeQuery({
+    data: DATA, isError: true, error: new Error('refresh'), refetch,
+  }));
+  const size = { cols: 4, rows: 2 };
+  const view = renderWidgetForPack(size, 42);
+  const heading = screen.getByRole('heading', { name: 'Charging optimizer' });
+  const timeline = screen.getByRole('img', { name: '24h rate timeline' });
+  const brief = screen.getByTestId('dashboard-charging-optimizer-brief');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+
+  for (const packId of PACK_IDS) {
+    view.rerender(<MemoryRouter><PackBoundary requestedPackId={packId}>
+      <ChargingOptimizerWidget size={size} vehicleId={42} />
+    </PackBoundary></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Charging optimizer' })).toBe(heading);
+    expect(screen.getByRole('img', { name: '24h rate timeline' })).toBe(timeline);
+    expect(screen.getByTestId('dashboard-charging-optimizer-brief')).toBe(brief);
+    expect(screen.getByRole('dialog')).toBe(dialog);
+    expect(view.container.querySelector('[data-data-state="stale"]')).toHaveAttribute('data-widget-pack', packId);
+    expect(within(dialog).getByText('Retained readings')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Estimated')).toHaveAttribute('data-provenance', 'inferred');
+    expect(within(dialog).getByLabelText('Estimated')).toHaveAttribute('data-data-status', 'stale');
+    expect(within(brief).getByText('2 AM')).toBeInTheDocument();
+    expect(within(brief).getByText('$45.00')).toBeInTheDocument();
+    expect(screen.getByText('Shift to off-peak')).toBeInTheDocument();
+    expect(optimizerMock).toHaveBeenLastCalledWith('42');
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+  }
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+  expect(refetch).toHaveBeenCalledOnce();
 });

@@ -3512,6 +3512,9 @@
         "sync": {
           "success": "Vehicles synced"
         }
+      },
+      "widgetDesignPack": {
+        "success": "Widget design pack saved across machines on this server"
       }
     },
     "vehicles": {

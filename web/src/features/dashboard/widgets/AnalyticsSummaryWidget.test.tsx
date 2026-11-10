@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FleetAnalytics } from '@/api/types';
@@ -26,7 +26,7 @@ const state = vi.hoisted(() => ({
       avg_efficiency_wh_km: 150,
       total_cost: 250,
       vehicle_comparison: [],
-    } as FleetAnalytics | undefined,
+    } as Partial<FleetAnalytics> | undefined,
     isLoading: false,
     isError: false,
     isFetching: false,
@@ -36,6 +36,7 @@ const state = vi.hoisted(() => ({
     refetch: vi.fn(),
   },
   distance: 'km' as 'km' | 'mi',
+  analyticsOptions: vi.fn<(options: { start?: string; end?: string; widgetRange?: string }) => void>(),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -49,7 +50,10 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('@/api/hooks/useAnalytics', () => ({
-  useFleetAnalytics: () => state.query,
+  useFleetAnalytics: (options: { start?: string; end?: string; widgetRange?: string }) => {
+    state.analyticsOptions(options);
+    return state.query;
+  },
 }));
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ unitPrefs: { distance: state.distance } }),
@@ -61,13 +65,26 @@ vi.mock('@/hooks/useFormatting', () => ({
 }));
 
 import AnalyticsSummaryWidget, { toAnalyticsDistanceDisplay } from './AnalyticsSummaryWidget';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
+import type { WidgetConfig } from './types';
 
-function renderWidget(cols = 2) {
-  return render(
+async function renderWidget(packId: PackId, cols = 2, config?: WidgetConfig) {
+  const view = render(
     <MemoryRouter initialEntries={['/dashboard']}>
-      <AnalyticsSummaryWidget size={{ cols, rows: 2 }} />
+      <PackBoundary requestedPackId={packId}>
+        <AnalyticsSummaryWidget size={{ cols, rows: 2 }} config={config} />
+      </PackBoundary>
     </MemoryRouter>,
   );
+  expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+  if (packId !== 'classic' && state.query.data != null) {
+    await waitFor(() => {
+      expect(view.container.querySelector('[data-status-appearance]'))
+        .toHaveAttribute('data-status-appearance', PACK_APPEARANCES[packId]);
+    });
+  }
+  return view;
 }
 
 beforeEach(() => {
@@ -78,7 +95,7 @@ beforeEach(() => {
     avg_efficiency_wh_km: 150,
     total_cost: 250,
     vehicle_comparison: [],
-  } as unknown as FleetAnalytics;
+  };
   Object.assign(state.query, {
     isLoading: false,
     isError: false,
@@ -88,13 +105,14 @@ beforeEach(() => {
     dataUpdatedAt: Date.now(),
   });
   state.query.refetch.mockClear();
+  state.analyticsOptions.mockClear();
 });
 
 afterEach(cleanup);
 
-describe('AnalyticsSummaryWidget — After card', () => {
-  it('renders a concise 2-column analytics summary with shared units and freshness', () => {
-    const { container } = renderWidget();
+describe.each(PACK_IDS)('AnalyticsSummaryWidget — %s', (packId) => {
+  it('renders all analytics content through the selected shared presentation', async () => {
+    const { container } = await renderWidget(packId);
     const summary = within(screen.getByTestId('analytics-summary'));
     expect(summary.getByText('Distance (view range)')).toBeInTheDocument();
     expect(summary.getByText('1,000')).toBeInTheDocument();
@@ -111,7 +129,7 @@ describe('AnalyticsSummaryWidget — After card', () => {
     expect(screen.getByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 
-  it('uses the shared imperial distance unit for distance, efficiency, and cost', () => {
+  it('uses the shared imperial distance unit for distance, efficiency, and cost', async () => {
     state.distance = 'mi';
     state.query.data = {
       total_distance_km: 1609.344,
@@ -120,7 +138,7 @@ describe('AnalyticsSummaryWidget — After card', () => {
       total_cost: 321.8688,
       vehicle_comparison: [],
     };
-    renderWidget();
+    await renderWidget(packId);
     const summary = within(screen.getByTestId('analytics-summary'));
     expect(summary.getByText('1,000')).toBeInTheDocument();
     expect(summary.getByText('mi')).toBeInTheDocument();
@@ -129,7 +147,7 @@ describe('AnalyticsSummaryWidget — After card', () => {
     expect(summary.getByText('$0.32')).toBeInTheDocument();
   });
 
-  it('preserves measured zeros instead of inventing missing evidence', () => {
+  it('preserves measured zeros instead of inventing missing evidence', async () => {
     state.query.data = {
       total_distance_km: 0,
       total_energy_kwh: 0,
@@ -137,41 +155,105 @@ describe('AnalyticsSummaryWidget — After card', () => {
       total_cost: 0,
       vehicle_comparison: [],
     };
-    renderWidget();
+    await renderWidget(packId);
     expect(screen.getByTestId('analytics-summary')).toBeInTheDocument();
     expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('0.0').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('analytics-summary')).getByText('—')).toBeInTheDocument();
   });
 
-  it('shows missing measurements as unknown rather than zeros', () => {
+  it('shows missing measurements as unknown rather than zeros', async () => {
     state.query.data = {
-      totalVehicles: 3,
-      totalDrives: 0,
-      totalChargingSessions: 0,
+      total_vehicles: 3,
+      total_drives: 0,
+      total_charging_sessions: 0,
       vehicle_comparison: [],
-    } as unknown as FleetAnalytics;
-    renderWidget();
+    };
+    await renderWidget(packId);
     const summary = within(screen.getByTestId('analytics-summary'));
-    expect(summary.getAllByText('—').length).toBeGreaterThanOrEqual(4);
+    expect(summary.getAllByText('—')).toHaveLength(4);
+    expect(summary.queryByText('0')).not.toBeInTheDocument();
+    expect(summary.queryByText('0.0')).not.toBeInTheDocument();
   });
 
-  it('keeps loading and error states truthful', () => {
+  it('does not present non-finite readings or divide by an invalid distance', async () => {
+    state.query.data = {
+      total_distance_km: Number.NaN,
+      total_energy_kwh: Number.POSITIVE_INFINITY,
+      avg_efficiency_wh_km: Number.NEGATIVE_INFINITY,
+      total_cost: 250,
+    };
+    await renderWidget(packId);
+    const summary = within(screen.getByTestId('analytics-summary'));
+    expect(summary.getAllByText('—')).toHaveLength(4);
+    expect(summary.queryByText(/NaN|Infinity/)).not.toBeInTheDocument();
+  });
+
+  it('keeps loading and fatal error states truthful and retryable', async () => {
     state.query.data = undefined;
     state.query.isLoading = true;
-    const loading = renderWidget();
+    const loading = await renderWidget(packId);
     expect(loading.getByRole('heading', { name: 'Analytics summary' })).toBeInTheDocument();
+    expect(loading.container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByTestId('analytics-summary')).not.toBeInTheDocument();
+    expect(screen.queryByText(/No analytics readings/)).not.toBeInTheDocument();
     loading.unmount();
 
     state.query.isLoading = false;
     state.query.isError = true;
     state.query.error = new Error('analytics unavailable');
-    renderWidget();
+    const failed = await renderWidget(packId);
+    expect(failed.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'initialFailure');
     expect(screen.queryByTestId('analytics-summary')).not.toBeInTheDocument();
+    expect(screen.queryByText(/No analytics readings/)).not.toBeInTheDocument();
+    screen.getByRole('button', { name: /^Refresh/i }).click();
+    expect(state.query.refetch).toHaveBeenCalledOnce();
   });
 
-  it('keeps the shared refresh control wired', () => {
-    renderWidget();
+  it('keeps an explicit empty state after a successful response without analytics', async () => {
+    state.query.data = undefined;
+    await renderWidget(packId);
+    expect(screen.getByText('No analytics readings are available yet. They appear after the analytics source returns data.'))
+      .toBeInTheDocument();
+    expect(screen.queryByTestId('analytics-summary')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Analytics summary' })).toBeInTheDocument();
+  });
+
+  it('retains all readings with a source warning after a failed background refresh', async () => {
+    state.query.isError = true;
+    state.query.isStale = true;
+    state.query.error = new Error('analytics refresh unavailable');
+    const { container } = await renderWidget(packId);
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'stale');
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent(
+      'Previously loaded data remains visible while affected sources recover.',
+    );
+    const summary = within(screen.getByTestId('analytics-summary'));
+    for (const value of ['1,000', '150.0', '200.0', '$0.25']) {
+      expect(summary.getByText(value)).toBeInTheDocument();
+    }
+    screen.getByRole('button', { name: /^Refresh/i }).click();
+    expect(state.query.refetch).toHaveBeenCalledOnce();
+  });
+
+  it('preserves the widget-specific range and compact or wide layouts', async () => {
+    const compact = await renderWidget(packId, 1, { timeRange: '7d' });
+    expect(screen.getByText('Distance (selected range)')).toBeInTheDocument();
+    expect(state.analyticsOptions).toHaveBeenLastCalledWith({
+      start: expect.any(String),
+      end: expect.any(String),
+      widgetRange: '7d',
+    });
+    expect(within(screen.getByTestId('analytics-summary')).getByText('200.0')).toBeInTheDocument();
+    compact.unmount();
+    await renderWidget(packId, 4);
+    expect(screen.getByText('Distance (view range)')).toBeInTheDocument();
+    expect(within(screen.getByTestId('analytics-summary')).getByText('$0.25')).toBeInTheDocument();
+  });
+
+  it('keeps the shared refresh control wired', async () => {
+    await renderWidget(packId);
     screen.getByRole('button', { name: /^Refresh/i }).click();
     expect(state.query.refetch).toHaveBeenCalledOnce();
   });

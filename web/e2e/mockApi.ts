@@ -1,4 +1,5 @@
 import { expect, type Page, type Request as PlaywrightRequest, type Route } from '@playwright/test';
+import { createHash } from 'node:crypto';
 import type { FsdInsights } from '../src/types/fsd';
 import type { NotificationLog, NotificationReport } from '../src/api/types';
 import type { PinnedItem } from '../src/api/types';
@@ -445,6 +446,9 @@ export function resolveApiFixture(
     return { matched: false };
   }
   if (path === '/settings') return matched({ ...mockAppSettings, theme: accentTheme, mode: theme, ui_density: density });
+  if (path === '/settings/widget-design-pack') {
+    return matched({ pack_id: 'classic', scope: createHash('sha256').update('open').digest('hex') });
+  }
   if (path === '/system/auth-mode') return matched({ mode: 'open', forward_auth: false });
   if (path === '/auth/status') return matched({ authenticated: false, connected: false });
   if (path === '/auth/session') {

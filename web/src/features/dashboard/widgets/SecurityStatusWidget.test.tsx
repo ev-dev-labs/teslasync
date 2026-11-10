@@ -44,7 +44,7 @@
  * dashboard tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -109,6 +109,8 @@ vi.mock('@/api/hooks/useVehicles', async () => {
 });
 
 import SecurityStatusWidget from './SecurityStatusWidget';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 import type { WidgetSize } from './types';
 import type { SecurityEvent } from '@/api/types';
 
@@ -138,7 +140,7 @@ function makeSecurity(overrides: Partial<SecurityEvent> = {}): SecurityEvent {
 }
 
 interface FakeQuery {
-  data?: unknown;
+  data?: SecurityEvent | null;
   error: unknown;
   isLoading: boolean;
   isFetching: boolean;
@@ -162,12 +164,20 @@ function makeQuery(overrides: Partial<FakeQuery> = {}): FakeQuery {
   };
 }
 
-function renderWidget(vehicleId?: number, size: WidgetSize = { cols: 2, rows: 2 }) {
-  return render(
+async function renderWidget(
+  packId: PackId,
+  vehicleId?: number,
+  size: WidgetSize = { cols: 2, rows: 2 },
+) {
+  const view = render(
     <MemoryRouter>
-      <SecurityStatusWidget size={size} vehicleId={vehicleId} />
+      <PackBoundary requestedPackId={packId}>
+        <SecurityStatusWidget size={size} vehicleId={vehicleId} />
+      </PackBoundary>
     </MemoryRouter>,
   );
+  await act(async () => { await vi.dynamicImportSettled(); });
+  return view;
 }
 
 beforeEach(() => {
@@ -180,14 +190,14 @@ beforeEach(() => {
 
 /* ── Specs ────────────────────────────────────────────────────────── */
 
-describe('SecurityStatusWidget', () => {
-  it('uses canonical retained trust without losing the four independent tri-state readings', () => {
+describe.each(PACK_IDS)('SecurityStatusWidget (%s)', (packId) => {
+  it('uses canonical retained trust without losing the four independent tri-state readings', async () => {
     const refetch = vi.fn();
     securityMock.mockReturnValue(makeQuery({
       data: makeSecurity({ locked: null, sentry_mode: false }),
       isError: true, error: new Error('security refresh failed'), refetch,
     }));
-    const { container } = renderWidget();
+    const { container } = await renderWidget(packId);
     expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.getByText('Sentry')).toBeInTheDocument();
@@ -202,10 +212,16 @@ describe('SecurityStatusWidget', () => {
     expect(refetch).toHaveBeenCalledOnce();
   });
 
-  it('renders the titled shell with a Locked hero and three closed/active rows when fully secured', () => {
-    renderWidget();
+  it('renders the titled shell with a Locked hero and three closed/active rows when fully secured', async () => {
+    const { container } = await renderWidget(packId);
 
     expect(screen.getByText('Security')).toBeInTheDocument();
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+    if (packId !== 'classic') {
+      expect(container.querySelector('[data-status-appearance]')).toHaveAttribute(
+        'data-status-appearance', PACK_APPEARANCES[packId],
+      );
+    }
 
     // Row labels (the lock state is the hero headline, not a row).
     expect(screen.getByText('Sentry')).toBeInTheDocument();
@@ -219,11 +235,11 @@ describe('SecurityStatusWidget', () => {
     expect(screen.getAllByText('All closed')).toHaveLength(2);
   });
 
-  it('maps an unlocked car to an Unlocked hero and sentry-off to a neutral row', () => {
+  it('maps an unlocked car to an Unlocked hero and sentry-off to a neutral row', async () => {
     securityMock.mockReturnValue(
       makeQuery({ data: makeSecurity({ locked: false, sentry_mode: false }) }),
     );
-    renderWidget();
+    await renderWidget(packId);
 
     expect(screen.getByText('Unlocked')).toBeInTheDocument();
     expect(screen.getByText('Off')).toBeInTheDocument();
@@ -232,11 +248,11 @@ describe('SecurityStatusWidget', () => {
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
   });
 
-  it('regression: null lock/sentry render as unknown "—", never a false red "Unlocked"', () => {
+  it('regression: null lock/sentry render as unknown "—", never a false red "Unlocked"', async () => {
     securityMock.mockReturnValue(
       makeQuery({ data: makeSecurity({ locked: null, sentry_mode: null }) }),
     );
-    renderWidget();
+    await renderWidget(packId);
 
     // Both unknown cells collapse to the em-dash placeholder.
     expect(screen.getAllByText('—')).toHaveLength(2);
@@ -247,7 +263,7 @@ describe('SecurityStatusWidget', () => {
     expect(screen.queryByText('Error')).not.toBeInTheDocument();
   });
 
-  it('regression: absent door/window data renders unknown "—", not a false "All Closed"', () => {
+  it('regression: absent door/window data renders unknown "—", not a false "All Closed"', async () => {
     securityMock.mockReturnValue(
       makeQuery({
         data: makeSecurity({
@@ -259,7 +275,7 @@ describe('SecurityStatusWidget', () => {
         }),
       }),
     );
-    renderWidget();
+    await renderWidget(packId);
 
     // Lock + Sentry are still known.
     expect(screen.getByText('Locked')).toBeInTheDocument();
@@ -270,7 +286,7 @@ describe('SecurityStatusWidget', () => {
     expect(screen.queryByText('All closed')).not.toBeInTheDocument();
   });
 
-  it('counts open doors + windows and flags them with a warning status', () => {
+  it('counts open doors + windows and flags them with a warning status', async () => {
     securityMock.mockReturnValue(
       makeQuery({
         data: makeSecurity({
@@ -282,22 +298,22 @@ describe('SecurityStatusWidget', () => {
         }),
       }),
     );
-    renderWidget();
+    await renderWidget(packId);
 
     expect(screen.getByText('2 Open')).toBeInTheDocument();
     expect(screen.getByText('1 Open')).toBeInTheDocument();
   });
 
-  it('treats a native boolean door_state=true as one open door', () => {
+  it('treats a native boolean door_state=true as one open door', async () => {
     securityMock.mockReturnValue(
       makeQuery({ data: makeSecurity({ door_state: true }) }),
     );
-    renderWidget();
+    await renderWidget(packId);
 
     expect(screen.getByText('1 Open')).toBeInTheDocument();
   });
 
-  it('is null-safe against a garbage payload without throwing', () => {
+  it('is null-safe against a garbage payload without throwing', async () => {
     // Runtime values from the untyped backend can be the wrong kind entirely.
     securityMock.mockReturnValue(
       makeQuery({
@@ -312,14 +328,14 @@ describe('SecurityStatusWidget', () => {
       }),
     );
 
-    expect(() => renderWidget()).not.toThrow();
+    await renderWidget(packId);
     // A non-boolean "locked" and all-non-string windows collapse to unknown.
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
   });
 
-  it('shows the empty state (keeping the titled shell) when there is no snapshot', () => {
+  it('shows the empty state (keeping the titled shell) when there is no snapshot', async () => {
     securityMock.mockReturnValue(makeQuery({ data: null }));
-    renderWidget();
+    await renderWidget(packId);
 
     expect(screen.getByText('Security')).toBeInTheDocument();
     expect(screen.getByText('No security data')).toBeInTheDocument();
@@ -329,9 +345,9 @@ describe('SecurityStatusWidget', () => {
     expect(screen.queryByText('Lock')).not.toBeInTheDocument();
   });
 
-  it('renders a skeleton placeholder while the snapshot query is loading', () => {
+  it('renders a skeleton placeholder while the snapshot query is loading', async () => {
     securityMock.mockReturnValue(makeQuery({ isLoading: true, data: undefined, dataUpdatedAt: 0 }));
-    const { container } = renderWidget();
+    const { container } = await renderWidget(packId);
 
     expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     // No header/cells while loading.
@@ -339,11 +355,11 @@ describe('SecurityStatusWidget', () => {
     expect(screen.queryByText('Lock')).not.toBeInTheDocument();
   });
 
-  it('surfaces the shared error panel when a failure leaves no data to show', () => {
+  it('surfaces the shared error panel when a failure leaves no data to show', async () => {
     securityMock.mockReturnValue(
       makeQuery({ error: new Error('boom'), isError: true, data: undefined, dataUpdatedAt: 0 }),
     );
-    renderWidget();
+    await renderWidget(packId);
 
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
@@ -354,35 +370,35 @@ describe('SecurityStatusWidget', () => {
     expect(screen.queryByText('Security')).toBeInTheDocument();
   });
 
-  it('keeps the last snapshot visible on a background error instead of the error panel', () => {
+  it('keeps the last snapshot visible on a background error instead of the error panel', async () => {
     securityMock.mockReturnValue(
       makeQuery({ error: new Error('boom'), isError: true, data: makeSecurity() }),
     );
-    renderWidget();
+    await renderWidget(packId);
 
     // Data is still shown — no hard error panel over stale-but-present data.
     expect(screen.getByText('Locked')).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
   });
 
-  it('keeps the skeleton up while the default vehicle is still resolving', () => {
+  it('keeps the skeleton up while the default vehicle is still resolving', async () => {
     // No vehicleId prop + vehicles still loading: the security query is disabled
     // (id === 0, no data) so without the vehicles-loading gate the widget would
     // flash "No security data".
     vehiclesMock.mockReturnValue({ data: undefined, isLoading: true });
     securityMock.mockReturnValue(makeQuery({ data: undefined, dataUpdatedAt: 0 }));
-    const { container } = renderWidget();
+    const { container } = await renderWidget(packId);
 
     expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     expect(screen.queryByText('No security data')).not.toBeInTheDocument();
   });
 
-  it('refetches when the freshness refresh control is activated', () => {
+  it('refetches when the freshness refresh control is activated', async () => {
     const refetch = vi.fn().mockResolvedValue(undefined);
     securityMock.mockReturnValue(
       makeQuery({ data: makeSecurity(), refetch, dataUpdatedAt: Date.now() }),
     );
-    renderWidget();
+    await renderWidget(packId);
 
     const refresh = screen.getByRole('button', { name: /^Refresh/i });
     expect(refetch).not.toHaveBeenCalled();
@@ -390,15 +406,15 @@ describe('SecurityStatusWidget', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('falls back to the first vehicle when no vehicleId prop is supplied', () => {
+  it('falls back to the first vehicle when no vehicleId prop is supplied', async () => {
     vehiclesMock.mockReturnValue({ data: [{ id: 9 }], isLoading: false });
-    renderWidget();
+    await renderWidget(packId);
 
     expect(securityMock).toHaveBeenCalledWith(9, 5_000);
   });
 
-  it('uses the explicit vehicleId prop over the vehicle list', () => {
-    renderWidget(42);
+  it('uses the explicit vehicleId prop over the vehicle list', async () => {
+    await renderWidget(packId, 42);
 
     expect(securityMock).toHaveBeenCalledWith(42, 5_000);
   });

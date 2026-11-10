@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { fmtNumber } from '@/lib/numberFormat';
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { queryResult, renderWidget } from '../components/continuation-dashboard-2/testSupport';
 import DrivetrainHealthWidget from './DrivetrainHealthWidget';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS } from './designPacks/types';
 
 const hooks = vi.hoisted(() => ({ vehicles: vi.fn(), health: vi.fn(), motor: vi.fn() }));
 vi.mock('@/api/hooks/useVehicles', () => ({
@@ -28,13 +30,27 @@ beforeEach(() => {
   hooks.motor.mockReturnValue(queryResult({ motor_temp_c_front: 30, motor_temp_c_rear: 31, di_stator_temp: 32, state_front: 'Standby' }));
 });
 
-describe('categorical assessment and motor independence', () => {
-  it('keeps real motor temperatures when the inferred assessment fails and retries only the failed source', () => {
+describe.each(PACK_IDS)('categorical assessment and motor independence (%s)', (packId) => {
+  async function renderPackWidget() {
+    const result = renderWidget(
+      <PackBoundary requestedPackId={packId}>
+        <DrivetrainHealthWidget size={{ cols: 2, rows: 4 }} />
+      </PackBoundary>,
+    );
+    if (packId !== 'classic') {
+      await waitFor(() => {
+        expect(result.container.querySelector('[data-status-appearance]'))
+          .toHaveAttribute('data-status-appearance', PACK_APPEARANCES[packId]);
+      });
+    }
+  }
+
+  it('keeps real motor temperatures when the inferred assessment fails and retries only the failed source', async () => {
     const retryHealth = vi.fn();
     const retryMotor = vi.fn();
     hooks.health.mockReturnValue(queryResult(undefined, { isError: true, error: new Error('Assessment offline'), refetch: retryHealth }));
     hooks.motor.mockReturnValue(queryResult({ motor_temp_c_front: 30, motor_temp_c_rear: 31, di_stator_temp: 32 }, { refetch: retryMotor }));
-    renderWidget(<DrivetrainHealthWidget size={{ cols: 2, rows: 4 }} />);
+    await renderPackWidget();
     expect(screen.getByText('The drivetrain assessment could not be loaded.')).toBeVisible();
     expectTemperature('Motor temp', 30);
     expectTemperature('Rear motor temp', 31);
@@ -44,12 +60,12 @@ describe('categorical assessment and motor independence', () => {
     expect(retryMotor).not.toHaveBeenCalled();
   });
 
-  it('retains available health temperatures, categorical Healthy and inspection caveat while motor fails', () => {
+  it('retains available health temperatures, categorical Healthy and inspection caveat while motor fails', async () => {
     const retryHealth = vi.fn();
     const retryMotor = vi.fn();
     hooks.health.mockReturnValue(queryResult({ overallHealth: 'good', frontMotorTempC: 40, rearMotorTempC: 41, inverterTempC: 42 }, { refetch: retryHealth }));
     hooks.motor.mockReturnValue(queryResult(undefined, { isError: true, error: new Error('Motor offline'), refetch: retryMotor }));
-    renderWidget(<DrivetrainHealthWidget size={{ cols: 2, rows: 4 }} />);
+    await renderPackWidget();
     expect(screen.getAllByText('Healthy').length).toBeGreaterThan(0);
     expectTemperature('Motor temp', 40);
     expectTemperature('Rear motor temp', 41);

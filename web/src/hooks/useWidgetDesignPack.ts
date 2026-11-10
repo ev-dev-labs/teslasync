@@ -1,161 +1,135 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthMode } from '@/api/hooks/useAuthMode';
+import {
+  useSaveWidgetDesignPreference, useWidgetDesignPreference, widgetDesignScope,
+  useWidgetDesignRevalidation, widgetDesignIdentityKey,
+} from '@/api/hooks/useWidgetDesignPreference';
 import { subscribe } from '@/lib/broadcast';
 import { getServerBaseUrl } from '@/lib/serverConnection';
-import { resolveAvailablePackId } from '@/features/dashboard/widgets/designPacks/manifest';
-import type { PackId } from '@/features/dashboard/widgets/designPacks/types';
+import { resolveAvailablePackId, type PackId } from '@/features/dashboard/widgets/designPacks/types';
 
-const PREFIX = 'teslasync.widget-design-pack.v1.';
-const CHANGE_EVENT = 'teslasync:widget-design-pack-changed';
+const serverOrigin = () => getServerBaseUrl() || window.location.origin;
 const SERVER_KEY = 'teslasync-server-base-url';
 
-interface Preference {
-  version: 1;
-  packId: PackId;
-}
-
-interface Selection {
-  key: string;
-  generation: number;
-  packId: PackId;
-  error: string | null;
-}
-
-async function preferenceKey(id: string | { mode: 'open' }, origin: string): Promise<string> {
-  const bytes = new TextEncoder().encode(JSON.stringify([origin, id]));
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return PREFIX + Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
-}
-
-function readPreference(key: string): PackId {
-  const raw = window.localStorage.getItem(key);
-  if (!raw) return 'classic';
-  try {
-    const stored: unknown = JSON.parse(raw);
-    if (stored && typeof stored === 'object' && !Array.isArray(stored)) {
-      const { version, packId } = stored as Record<string, unknown>;
-      if (version === 1) return resolveAvailablePackId(packId);
-    }
-  } catch {
-    // A corrupt value only affects this preference; leave other settings intact.
-  }
-  return 'classic';
-}
-
 /**
- * Browser/profile-only preference. Open deployments use a server-confirmed
- * profile scope; authenticated deployments require a freshly confirmed user.
+ * All widgets share the identity verification and preference queries. Local
+ * storage is never read for selection and is never uploaded to the server.
  */
 export function useWidgetDesignPack() {
   const authMode = useAuthMode();
-  const origin = typeof window === 'undefined'
-    ? ''
-    : getServerBaseUrl() || window.location.origin;
-  const [selection, setSelection] = useState<Selection | null>(null);
-  const [identityError, setIdentityError] = useState<string | null>(null);
-  const [retryGeneration, setRetryGeneration] = useState(0);
+  const client = useQueryClient();
+  const origin = serverOrigin();
+  const [blocked, setBlocked] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
   const generation = useRef(0);
-
-  useEffect(() => {
-    let active = true;
-    const currentGeneration = ++generation.current;
-    setSelection(null);
-    setIdentityError(null);
-    // Revalidate rather than trusting a cached principal after a
-    // server-profile or authenticated-session change.
-    void authMode.refetch().then(async mode => {
-      if (!active || generation.current !== currentGeneration) return;
+  const pendingWrite = useRef<AbortController | null>(null);
+  const mounted = useRef(true);
+  const verified = useQuery({
+    queryKey: widgetDesignIdentityKey(origin),
+    queryFn: async ({ signal }) => {
+      // cancelRefetch:false shares the in-flight auth contract request across
+      // consumers. Cached useAuthMode.data alone is never verification.
+      const mode = await authMode.refetch({ cancelRefetch: false });
+      signal.throwIfAborted();
       if (!mode.isSuccess || !mode.data || !['open', 'forward_auth'].includes(mode.data.mode)) {
-        setIdentityError('Server authentication mode could not be verified');
-        return;
+        throw new Error('Server authentication mode could not be verified');
       }
-      const id = mode.data.mode === 'open' ? { mode: 'open' as const }
-        : typeof mode.data.subject === 'string' ? mode.data.subject.trim() : null;
-      if (!id) {
-        setIdentityError('Authenticated identity could not be verified');
-        return;
+      const subject = mode.data.mode === 'open' ? null : mode.data.subject;
+      if (subject !== null && (typeof subject !== 'string' || subject.trim() === '')) {
+        throw new Error('Authenticated identity could not be verified');
       }
-      try {
-        const key = await preferenceKey(id, origin);
-        if (!active || generation.current !== currentGeneration) return;
-        const packId = readPreference(key);
-        if (active && generation.current === currentGeneration) {
-          setSelection({ key, generation: currentGeneration, packId, error: null });
-        }
-      } catch {
-        if (active && generation.current === currentGeneration) setIdentityError('Browser preference storage is unavailable');
+      if (mode.data.mode === 'forward_auth' && subject === null) {
+        throw new Error('Authenticated identity could not be verified');
       }
-    }).catch(() => {
-      if (active && generation.current === currentGeneration) setIdentityError('Authenticated identity could not be verified');
-    });
-    return () => { active = false; ++generation.current; };
-  }, [origin, authMode.refetch, retryGeneration]);
-
-  const key = selection?.key;
-  useEffect(() => subscribe(message => {
-    if (message.type === 'auth.logout') {
-      ++generation.current;
-      setSelection(null);
-      setIdentityError('Sign in to select a widget design pack');
-    }
-  }), []);
+      const scope = await widgetDesignScope(subject ?? null);
+      signal.throwIfAborted();
+      if (serverOrigin() !== origin) throw new Error('Server profile changed');
+      return scope;
+    },
+    enabled: !blocked,
+    staleTime: Infinity,
+    gcTime: 0,
+    retry: false,
+    refetchOnWindowFocus: 'always',
+    refetchInterval: false,
+  });
+  useWidgetDesignRevalidation(origin, !blocked);
+  // An auth revalidation failure must never fall back to "open" or expose a
+  // cached identity. Preference refresh failures, in contrast, retain selection.
+  const scope = !blocked && !verified.isError ? verified.data ?? null : null;
+  const read = useWidgetDesignPreference(origin, scope, !blocked);
+  const save = useSaveWidgetDesignPreference();
+  const active = useRef({ origin, scope, blocked });
+  active.current = { origin, scope, blocked };
 
   useEffect(() => {
-    const refresh = () => {
-      if (!key) return;
-      try {
-        const packId = readPreference(key);
-        setSelection(current => current?.key === key ? { ...current, packId, error: null } : current);
-      } catch {
-        setSelection(current => current?.key === key
-          ? { ...current, error: 'Browser preference storage is unavailable' } : current);
-      }
-    };
-    const storage = (event: StorageEvent) => {
-      if (key && (event.key === key || event.key === null)) refresh();
-      if (event.key === SERVER_KEY) {
-        ++generation.current;
-        setSelection(null);
-        setIdentityError('Server profile changed; reload to verify your identity');
-      }
-    };
-    const local = (event: Event) => {
-      if ((event as CustomEvent<string>).detail === key) refresh();
-    };
-    window.addEventListener('storage', storage);
-    window.addEventListener(CHANGE_EVENT, local);
+    mounted.current = true;
+    ++generation.current;
     return () => {
-      window.removeEventListener('storage', storage);
-      window.removeEventListener(CHANGE_EVENT, local);
+      mounted.current = false;
+      ++generation.current;
+      pendingWrite.current?.abort();
     };
-  }, [key]);
+  }, [origin, scope]);
 
-  const setPackId = useCallback((requested: PackId): boolean => {
-    if (!selection || selection.generation !== generation.current || identityError) return false;
-    if (resolveAvailablePackId(requested) !== requested) {
-      setSelection(current => current ? { ...current, error: 'This pack is not available yet' } : current);
-      return false;
-    }
+  useEffect(() => {
+    const revoke = () => {
+      ++generation.current;
+      pendingWrite.current?.abort();
+      active.current.blocked = true;
+      setBlocked(true);
+      setFailure('Server identity changed; reload to verify your identity');
+      // Disabled queries may retain data; remove it rather than let a later
+      // mount trust the previous session's verification.
+      client.removeQueries({ queryKey: widgetDesignIdentityKey(origin) });
+      void client.cancelQueries({ queryKey: ['widget-design-preference', origin] });
+      client.removeQueries({ queryKey: ['widget-design-preference', origin] });
+    };
+    const unsubscribe = subscribe(message => { if (message.type === 'auth.logout') revoke(); });
+    const storage = (event: StorageEvent) => { if (event.key === SERVER_KEY || event.key === null) revoke(); };
+    window.addEventListener('storage', storage);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('storage', storage);
+    };
+  }, [client, origin]);
+
+  const isReady = !!scope && read.data?.scope === scope && !blocked;
+  const setPackId = useCallback(async (packId: PackId): Promise<boolean> => {
+    if (!isReady || !scope || pendingWrite.current || active.current.blocked ||
+      resolveAvailablePackId(packId) !== packId) return false;
+    const currentGeneration = generation.current;
+    const controller = new AbortController();
+    pendingWrite.current = controller;
+    const isCurrent = () => mounted.current && !controller.signal.aborted &&
+      currentGeneration === generation.current && !active.current.blocked &&
+      active.current.origin === origin && active.current.scope === scope && serverOrigin() === origin;
+    setFailure(null);
     try {
-      const next: Preference = { version: 1, packId: requested };
-      window.localStorage.setItem(selection.key, JSON.stringify(next));
-      setSelection(current => current?.key === selection.key
-        ? { ...current, packId: requested, error: null } : current);
-      window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: selection.key }));
-      return true;
-    } catch {
-      setSelection(current => current?.key === selection.key
-        ? { ...current, error: 'Could not save this browser preference' } : current);
+      await save.mutateAsync({ pack_id: packId, origin, scope, signal: controller.signal, isCurrent });
+      return isCurrent();
+    } catch (error) {
+      if (isCurrent()) setFailure(error instanceof Error ? error.message : 'Widget design preference could not be saved');
       return false;
+    } finally {
+      if (pendingWrite.current === controller) pendingWrite.current = null;
     }
-  }, [selection, identityError]);
+  }, [isReady, scope, origin, save.mutateAsync]);
+
+  const retry = useCallback(() => {
+    if (active.current.blocked) return; // Logout/server changes require fresh navigation.
+    setFailure(null);
+    if (verified.isError || !scope) void verified.refetch();
+    else void read.refetch();
+  }, [verified.isError, verified.refetch, read.refetch, scope]);
 
   return {
-    packId: selection?.packId ?? 'classic',
-    isReady: selection !== null && identityError === null,
-    isSaving: false,
-    error: identityError ?? selection?.error ?? null,
+    packId: isReady ? read.data!.pack_id : 'classic' as PackId,
+    isReady,
+    isSaving: isReady && save.isPending,
+    error: failure ?? verified.error?.message ?? read.error?.message ?? null,
+    retry,
     setPackId,
-    retry: () => setRetryGeneration(current => current + 1),
   };
 }

@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import type { useMQTTStatus } from '@/api/hooks/useTelemetry';
 import MQTTStatusWidget from './MQTTStatusWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
 import type { WidgetProps } from './types';
 
 type MqttPayload = NonNullable<ReturnType<typeof useMQTTStatus>['data']>;
@@ -36,10 +37,7 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
 
-const PACKS = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const PACKS = Object.entries(PACK_APPEARANCES);
 const STANDARD = { cols: 2, rows: 2 };
 const COMPACT = { cols: 1, rows: 2 };
 const HISTORY_UNAVAILABLE = 'This source provides the current message rate, not a throughput history.';
@@ -161,6 +159,63 @@ describe.each(PACKS)('MQTT %s (%s)', (packId, appearance) => {
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(mocks.refresh).toHaveBeenCalledOnce();
   });
+
+  it('keeps source sections visible for a missing payload without inventing success', async () => {
+    mocks.source.mockReturnValue(query({ data: null }));
+    await mount(packId, appearance);
+    expect(screen.getByText('No MQTT status data')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText('Total messages')).toBeInTheDocument();
+    expect(screen.getByText('Last message')).toBeInTheDocument();
+    expect(screen.getByText('Broker')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(4);
+  });
+
+  it('distinguishes an observed empty fleet and disconnected broker from missing measurements', async () => {
+    mocks.source.mockReturnValue(query({ data: payload({ connected: false, broker: '', vehicles: [] }) }));
+    await mount(packId, appearance);
+    expect(screen.getByText('Offline')).toBeInTheDocument();
+    expect(screen.getByText('0.00')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+  });
+
+  it('retains the current readings while disabling duplicate refreshes during an in-flight request', async () => {
+    mocks.source.mockReturnValue(query({ isFetching: true }));
+    const { container } = await mount(packId, appearance);
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.getByText('3.50')).toBeInTheDocument();
+    expect(screen.getByText('1,200')).toBeInTheDocument();
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
+    expect(refresh).toBeDisabled();
+    fireEvent.click(refresh);
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+
+  it('preserves fetch-time session samples, zero readings and missing-rate gaps without claiming throughput history', async () => {
+    const now = Date.now();
+    mocks.source.mockReturnValue(query({ data: payload({ sessionSamples: [
+      { timestamp: now - 60_000, value: 0 },
+      { timestamp: now - 30_000, value: null },
+      { timestamp: now, value: 3.5 },
+    ] }) }));
+    const view = await mount(packId, appearance);
+    const trend = screen.getByRole('img', { name: 'Message rates fetched in this browser session' });
+    expect(trend.querySelectorAll('circle')).toHaveLength(2);
+    expect(trend.querySelector('polyline')).toBeNull();
+    expect(screen.getByText('3.50')).toBeInTheDocument();
+    expect(screen.getByText(HISTORY_UNAVAILABLE)).toBeInTheDocument();
+    expect(screen.getByText('Session samples use fetch times, not signal timestamps; missing rates are gaps.')).toBeInTheDocument();
+
+    mocks.source.mockReturnValue(query({ data: payload({ sessionSamples: [
+      { timestamp: now, value: null },
+    ] }) }));
+    view.rerender(widget(packId));
+    expect(screen.queryByRole('img', { name: 'Message rates fetched in this browser session' })).not.toBeInTheDocument();
+    expect(screen.getByText(HISTORY_UNAVAILABLE)).toBeInTheDocument();
+    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
+  });
 });
 
 it.each(['classic', 'unrecognized-pack', undefined])('preserves Classic default/recovery for %s', packId => {
@@ -195,65 +250,33 @@ it('preserves the mounted source and refresh action while selecting every pack a
   expect(mocks.refresh).toHaveBeenCalledOnce();
 });
 
-it('keeps source sections visible for a missing payload without inventing success', async () => {
-  mocks.source.mockReturnValue(query({ data: null }));
-  await mount('v1', 'studio');
-  expect(screen.getByText('No MQTT status data')).toBeInTheDocument();
-  expect(screen.getByText('Unknown')).toBeInTheDocument();
-  expect(screen.getByText('Total messages')).toBeInTheDocument();
-  expect(screen.getByText('Last message')).toBeInTheDocument();
-  expect(screen.getByText('Broker')).toBeInTheDocument();
-  expect(screen.getAllByText('—')).toHaveLength(4);
-});
-
-it('distinguishes an observed empty fleet and disconnected broker from missing measurements', async () => {
-  mocks.source.mockReturnValue(query({ data: payload({ connected: false, broker: '', vehicles: [] }) }));
-  await mount('v7', 'pixel');
-  expect(screen.getByText('Offline')).toBeInTheDocument();
-  expect(screen.getByText('0.00')).toBeInTheDocument();
-  expect(screen.getByText('0')).toBeInTheDocument();
-  expect(screen.getAllByText('—')).toHaveLength(2);
-  expect(screen.queryByRole('meter')).not.toBeInTheDocument();
-});
-
-it('retains the current readings while disabling duplicate refreshes during an in-flight request', async () => {
-  mocks.source.mockReturnValue(query({ isFetching: true }));
-  const { container } = await mount('v6', 'expressive');
-  expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
-  expect(screen.getByText('3.50')).toBeInTheDocument();
-  expect(screen.getByText('1,200')).toBeInTheDocument();
-  const refresh = screen.getByRole('button', { name: /^Refresh/i });
-  expect(refresh).toBeDisabled();
-  fireEvent.click(refresh);
-  expect(mocks.refresh).not.toHaveBeenCalled();
-});
-
-it.each(['classic', 'v7'])('never renders broker credentials in %s readings or tooltips', async packId => {
+it.each(['classic', ...PACKS.map(([packId]) => packId)])('never renders broker credentials in %s readings or tooltips', async packId => {
   mocks.source.mockReturnValue(query({
     data: payload({ broker: 'mqtts://test-user:test-password@telemetry.example.invalid:8883' }),
   }));
   const view = render(widget(packId));
-  if (packId === 'v7') {
-    await waitFor(() => expect(view.container.querySelector('[data-widget-appearance="pixel"]')).not.toBeNull());
+  if (packId !== 'classic') {
+    await waitFor(() => expect(view.container.querySelector('[data-widget-family="line"]')).not.toBeNull());
   }
   expect(screen.getByText(BROKER)).toHaveAttribute('title', BROKER);
   expect(view.container.innerHTML).not.toContain('test-user');
   expect(view.container.innerHTML).not.toContain('test-password');
 });
 
-it('keeps the initial-loading shell without fabricated rate or connection readings', () => {
+it.each(PACKS)('keeps the %s initial-loading shell without fabricated rate or connection readings', packId => {
   mocks.source.mockReturnValue(query({ data: undefined, isLoading: true, isFetching: true }));
-  const { container } = render(widget('v2'));
+  const { container } = render(widget(packId));
   expect(screen.getByRole('heading', { name: 'MQTT status' })).toBeInTheDocument();
+  expect(container.querySelector(`[data-widget-pack="${packId}"]`)).not.toBeNull();
   expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
   expect(screen.queryByText('3.50')).not.toBeInTheDocument();
   expect(screen.queryByText('Online')).not.toBeInTheDocument();
   expect(screen.queryByText('No MQTT status data')).not.toBeInTheDocument();
 });
 
-it('shows a fatal source error and retries the same source when nothing has been retained', () => {
+it.each(PACKS)('shows a fatal source error in %s and retries the same source when nothing has been retained', packId => {
   mocks.source.mockReturnValue(query({ data: undefined, error: new Error('source down'), isError: true }));
-  render(widget('v3'));
+  render(widget(packId));
   expect(screen.getByRole('heading', { name: 'MQTT status' })).toBeInTheDocument();
   expect(screen.getByRole('alert')).toHaveTextContent("Can't reach server");
   expect(screen.queryByText('3.50')).not.toBeInTheDocument();

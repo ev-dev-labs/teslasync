@@ -1,8 +1,12 @@
 import { cn } from '@/lib/cn';
 import type { PackAppearance } from '../types';
 import type { StatusPresentationProps } from './Status.types';
+import { experimentalLayouts } from '../experimentalLayouts';
 
-const layouts: Record<PackAppearance, { root: string; headline: string; icon: string }> = {
+const layouts: Record<PackAppearance, { root: string; headline: string; icon: string; details?: string }> = {
+  ...experimentalLayouts(({ body, lead, tile, details }) => ({
+    root: body, headline: lead, icon: cn('shrink-0 [&>svg]:size-8', tile), details,
+  })),
   studio: { root: 'flex flex-col gap-4', headline: 'border-b border-[var(--border-subtle)] pb-3', icon: 'rounded-full border-2 border-[var(--border-default)] p-3' },
   elevated: { root: 'flex flex-col gap-4', headline: 'rounded-xl bg-[var(--surface-2)] p-4', icon: 'rounded-xl bg-[var(--surface-1)] p-3' },
   precision: { root: 'grid gap-4 @lg:grid-cols-2', headline: 'items-start @lg:flex-col @lg:justify-center', icon: 'p-1' },
@@ -20,10 +24,11 @@ export default function SecurityStatusLayout({ appearance, compact, headline, ic
       {icon && <span className={cn('shrink-0', layout.icon, compact && 'p-1 [&>svg]:size-5')}>{icon}</span>}
     </div>
   );
-  const content = details != null && <div key="details" className="min-w-0">{details}</div>;
+  const content = details != null && <div key="details" className={cn('min-w-0', layout.details)}>{details}</div>;
+  const factsFirst = appearance === 'owner';
   return (
     <div data-status-appearance={appearance} className={cn('min-w-0', layout.root, compact && 'gap-2 @lg:grid-cols-1')}>
-      {appearance === 'owner' ? [content, lead] : [lead, content]}
+      {factsFirst ? [content, lead] : [lead, content]}
     </div>
   );
 }

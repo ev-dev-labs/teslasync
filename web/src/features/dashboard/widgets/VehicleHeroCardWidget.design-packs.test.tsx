@@ -261,90 +261,108 @@ it('preserves the original Classic body by default and after selecting every pro
   expect(source.refetchSecurity).not.toHaveBeenCalled();
 });
 
-it.each([Number.NaN, Number.POSITIVE_INFINITY, -1, 101])(
-  'does not turn invalid battery %s or nonfinite measurements into successful readings',
-  async battery_level => {
-    source.state = observed({
-      battery_level, ideal_range: -1, inside_temp: Number.NaN, outside_temp: Number.POSITIVE_INFINITY,
-    });
-    const { container } = mountWidget('v7');
-    await expectPack(container, 'v7');
-    expect(container.querySelector('.widget-big-number')).toHaveTextContent('—');
-    for (const label of ['Range', 'Cabin', 'Outside']) {
-      expect(screen.getByText(label).parentElement).toHaveTextContent('—');
-    }
-    expect(screen.getByRole('progressbar', { name: 'Battery' })).not.toHaveAttribute('aria-valuenow');
-    expect(container.querySelector('[data-metric-fill]')).not.toBeInTheDocument();
-    expect(screen.queryByText(/NaN|Infinity/)).not.toBeInTheDocument();
-  },
-);
+describe.each(packs)('Vehicle hero %s edge and lifecycle states', pack => {
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, -1, 101])(
+    'does not turn invalid battery %s or nonfinite measurements into successful readings',
+    async battery_level => {
+      source.state = observed({
+        battery_level, ideal_range: -1, inside_temp: Number.NaN, outside_temp: Number.POSITIVE_INFINITY,
+      });
+      const { container } = mountWidget(pack);
+      await expectPack(container, pack);
+      expect(container.querySelector('.widget-big-number')).toHaveTextContent('—');
+      for (const label of ['Range', 'Cabin', 'Outside']) {
+        expect(screen.getByText(label).parentElement).toHaveTextContent('—');
+      }
+      expect(screen.getByRole('progressbar', { name: 'Battery' })).not.toHaveAttribute('aria-valuenow');
+      expect(container.querySelector('[data-metric-fill]')).not.toBeInTheDocument();
+      expect(screen.queryByText(/NaN|Infinity/)).not.toBeInTheDocument();
+    },
+  );
 
-it('keeps a genuine observed zero battery and range distinct from unknown', async () => {
-  source.state = observed({ battery_level: 0, ideal_range: 0, inside_temp: 0 });
-  const { container } = mountWidget('v7');
-  await expectPack(container, 'v7');
-  expect(screen.getByText('0.00%')).toBeInTheDocument();
-  expect(screen.getByText('0.00 km')).toBeInTheDocument();
-  expect(screen.getByText('0.00°C')).toBeInTheDocument();
-  expect(screen.getByRole('progressbar', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '0');
-});
+  it('keeps genuine observed zeros distinct from unknown without inventing charging power', async () => {
+    source.state = observed({ battery_level: 0, ideal_range: 0, inside_temp: 0, charger_power: 0 });
+    const { container } = mountWidget(pack);
+    await expectPack(container, pack);
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
+    expect(screen.getByText('0.00°C')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByText('Charging')).toBeInTheDocument();
+    expect(screen.queryByText(/kW/)).not.toBeInTheDocument();
+  });
 
-it('applies the user display units without altering raw readings', async () => {
-  source.units = { ...source.units, distance: 'mi', temperature: '°F', power: 'W' };
-  source.state = observed({ ideal_range: 160_934.4, inside_temp: 0, outside_temp: -10 });
-  const { container } = mountWidget('v3');
-  await expectPack(container, 'v3');
-  expect(screen.getByText('100.00 mi')).toBeInTheDocument();
-  expect(screen.getByText('32.00°F')).toBeInTheDocument();
-  expect(screen.getByText('14.00°F')).toBeInTheDocument();
-  expect(screen.getByText('11,000.00 W')).toBeInTheDocument();
-  expect(source.state.state?.ideal_range).toBe(160_934.4);
-  expect(source.state.state?.charger_power).toBe(11_000);
-});
+  it('applies the user display units without altering raw readings', async () => {
+    source.units = { ...source.units, distance: 'mi', temperature: '°F', power: 'W' };
+    source.state = observed({ ideal_range: 160_934.4, inside_temp: 0, outside_temp: -10 });
+    const { container } = mountWidget(pack);
+    await expectPack(container, pack);
+    expect(screen.getByText('100.00 mi')).toBeInTheDocument();
+    expect(screen.getByText('32.00°F')).toBeInTheDocument();
+    expect(screen.getByText('14.00°F')).toBeInTheDocument();
+    expect(screen.getByText('11,000.00 W')).toBeInTheDocument();
+    expect(source.state.state?.ideal_range).toBe(160_934.4);
+    expect(source.state.state?.charger_power).toBe(11_000);
+  });
 
-it('retains metrics and trust warnings on failed refresh without continuing verified driving', async () => {
-  source.state = observed({ state: 'driving', speed: 20, is_charging: false });
-  source.query.isError = true;
-  source.query.isStale = true;
-  source.query.error = new Error('Refresh unavailable');
-  const { container } = mountWidget('v4');
-  await expectPack(container, 'v4');
-  expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
-  expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-  expect(screen.getByText('72.00%')).toBeInTheDocument();
-  expect(screen.getByText('430.00 km')).toBeInTheDocument();
-  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  expect(container.querySelector('[data-vehicle-studio]')).toHaveAttribute('data-activity', 'static');
-  expect(screen.queryByTestId('vehicle-road-motion')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /^Refresh/ }));
-  expect(source.refetch).toHaveBeenCalledOnce();
-});
+  it('retains metrics and trust warnings on failed refresh without continuing verified driving', async () => {
+    source.state = observed({ state: 'driving', speed: 20, is_charging: false });
+    source.query.isError = true;
+    source.query.isStale = true;
+    source.query.error = new Error('Refresh unavailable');
+    const { container } = mountWidget(pack);
+    await expectPack(container, pack);
+    expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('72.00%')).toBeInTheDocument();
+    expect(screen.getByText('430.00 km')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-vehicle-studio]')).toHaveAttribute('data-activity', 'static');
+    expect(screen.queryByTestId('vehicle-road-motion')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/ }));
+    expect(source.refetch).toHaveBeenCalledOnce();
+  });
 
-it('retains readings while refresh is in flight and prevents duplicate refreshes', async () => {
-  source.query.isFetching = true;
-  const { container } = mountWidget('v2');
-  await expectPack(container, 'v2');
-  expect(screen.getByText('72.00%')).toBeInTheDocument();
-  const refresh = screen.getByRole('button', { name: /^Refresh/ });
-  expect(refresh).toBeDisabled();
-  fireEvent.click(refresh);
-  expect(source.refetch).not.toHaveBeenCalled();
-});
+  it('retains readings while refresh is in flight and prevents duplicate refreshes', async () => {
+    source.query.isFetching = true;
+    const { container } = mountWidget(pack);
+    await expectPack(container, pack);
+    expect(screen.getByText('72.00%')).toBeInTheDocument();
+    const refresh = screen.getByRole('button', { name: /^Refresh/ });
+    expect(refresh).toBeDisabled();
+    fireEvent.click(refresh);
+    expect(source.refetch).not.toHaveBeenCalled();
+  });
 
-it('preserves initial-loading and fatal-error chrome instead of claiming a loaded pack', () => {
-  source.state = undefined;
-  source.query.isLoading = true;
-  const { container, selectPack } = mountWidget('v6');
-  expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
-  expect(container.querySelector('[data-widget-appearance]')).not.toBeInTheDocument();
-  expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
-  source.query.isLoading = false;
-  source.query.isError = true;
-  source.query.error = new Error('Vehicle state unavailable');
-  selectPack('v6');
-  expect(container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
-  expect(screen.getByRole('alert')).toBeInTheDocument();
-  expect(container.querySelector('[data-widget-appearance]')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /retry/i }));
-  expect(source.refetch).toHaveBeenCalledOnce();
+  it.each(['fleet', 'state'] as const)(
+    'preserves initial-loading and fatal-error chrome for %s instead of claiming a loaded pack',
+    query => {
+      source.state = undefined;
+      if (query === 'fleet') {
+        source.vehicles = undefined;
+        source.fleetLoading = true;
+      } else {
+        source.query.isLoading = true;
+      }
+      const { container, selectPack } = mountWidget(pack);
+      expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+      expect(container.querySelector('[data-widget-appearance]')).not.toBeInTheDocument();
+      expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
+      expect(source.stateIds).toHaveBeenLastCalledWith(query === 'fleet' ? 0 : 7);
+      if (query === 'fleet') {
+        source.fleetLoading = false;
+        source.fleetError = true;
+      } else {
+        source.query.isLoading = false;
+        source.query.isError = true;
+        source.query.error = new Error('Vehicle state unavailable');
+      }
+      selectPack(pack);
+      expect(container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(container.querySelector('[data-widget-appearance]')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+      expect(source.refetch).toHaveBeenCalledOnce();
+    },
+  );
 });

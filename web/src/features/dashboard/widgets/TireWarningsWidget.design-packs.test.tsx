@@ -7,6 +7,7 @@ import type { Vehicle } from '@/types/vehicle';
 import * as settingsHook from '@/hooks/useSettings';
 import TireWarningsWidget from './TireWarningsWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
 import type { WidgetProps } from './types';
 
 type QueryFixture<T> = DataStateSource<T> & {
@@ -37,10 +38,7 @@ const NOW = Date.parse('2026-11-07T02:00:00.000Z');
 const RECENT = new Date(NOW - 10_000).toISOString();
 const SENSOR = new Date(NOW - 30_000).toISOString();
 const OLD = new Date(NOW - 180_000).toISOString();
-const PACKS = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const PACKS = Object.entries(PACK_APPEARANCES);
 const WHEELS = [
   ['Fl', 'FrontLeft', 'Front left', 280_000],
   ['Fr', 'FrontRight', 'Front right', 285_000],
@@ -180,7 +178,7 @@ it.each([1, 2])('keeps Classic default and unknown-pack recovery with every sour
   expect(view.container.querySelector('[data-widget-pack="classic"]')).toBeInTheDocument();
 });
 
-it('changes all seven presentations and returns to Classic without replacing data, images or issuing extra actions', async () => {
+it('changes every presentation and returns to Classic without replacing data, images or issuing extra actions', async () => {
   const view = render(tree('classic'));
   const image = view.container.querySelector('[data-vehicle-twin] img')?.getAttribute('src');
   expect(image).toBeTruthy();
@@ -198,33 +196,35 @@ it('changes all seven presentations and returns to Classic without replacing dat
   expect(mocks.refreshVehicles).not.toHaveBeenCalled();
 });
 
-it.each([
-  ['loading', undefined, { isPending: true, isLoading: true, isFetching: true, isSuccess: false }],
-  ['first failure', undefined, { isError: true, error: new Error('Signal source failed'), isSuccess: false }],
-  ['empty', { vehicle_id: 7, signals: {}, at: RECENT }, {}],
-] satisfies [string, VehicleLiveSignalsResponse | undefined, Partial<QueryFixture<VehicleLiveSignalsResponse>>][])(
-  'keeps all wheel and evidence shells during %s', async (kind, data, overrides) => {
-    mocks.live.mockReturnValue(query(data, mocks.refreshLive, overrides));
-    const view = render(tree('v4'));
-    await presentation(view.container, 'owner');
-    expectSections();
-    for (const [, , label] of WHEELS) expect(wheel(label).getByText('—')).toBeInTheDocument();
-    expect(summary().getByText('Warnings unknown')).toBeInTheDocument();
-    expect(screen.queryByText('No warnings reported')).not.toBeInTheDocument();
-    if (kind === 'loading') {
-      expect(screen.getByRole('status', { name: 'Loading Live TPMS evidence' })).toBeInTheDocument();
-    } else if (kind === 'first failure') {
-      expect(screen.getByText('Tire signal evidence is unavailable.')).toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: /^retry$/i }));
-      expect(mocks.refreshLive).toHaveBeenCalledTimes(1);
-    } else expect(screen.getByText('No tire signals have been reported for this vehicle.')).toBeInTheDocument();
-  },
-);
+describe.each(PACKS)('%s / %s source states', (pack, appearance) => {
+  it.each([
+    ['loading', undefined, { isPending: true, isLoading: true, isFetching: true, isSuccess: false }],
+    ['first failure', undefined, { isError: true, error: new Error('Signal source failed'), isSuccess: false }],
+    ['empty', { vehicle_id: 7, signals: {}, at: RECENT }, {}],
+  ] satisfies [string, VehicleLiveSignalsResponse | undefined, Partial<QueryFixture<VehicleLiveSignalsResponse>>][])(
+    'keeps all wheel and evidence shells during %s', async (kind, data, overrides) => {
+      mocks.live.mockReturnValue(query(data, mocks.refreshLive, overrides));
+      const view = render(tree(pack));
+      await presentation(view.container, appearance);
+      expectSections();
+      for (const [, , label] of WHEELS) expect(wheel(label).getByText('—')).toBeInTheDocument();
+      expect(summary().getByText('Warnings unknown')).toBeInTheDocument();
+      expect(screen.queryByText('No warnings reported')).not.toBeInTheDocument();
+      if (kind === 'loading') {
+        expect(screen.getByRole('status', { name: 'Loading Live TPMS evidence' })).toBeInTheDocument();
+      } else if (kind === 'first failure') {
+        expect(screen.getByText('Tire signal evidence is unavailable.')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /^retry$/i }));
+        expect(mocks.refreshLive).toHaveBeenCalledTimes(1);
+      } else expect(screen.getByText('No tire signals have been reported for this vehicle.')).toBeInTheDocument();
+    },
+  );
+});
 
-it('retains failed-refresh readings but never claims retained warning evidence is current, and disables an in-flight refresh', async () => {
+it.each(PACKS)('%s / %s retains failed-refresh readings but never claims retained warning evidence is current, and disables an in-flight refresh', async (pack, appearance) => {
   mocks.live.mockReturnValue(query(snapshot(), mocks.refreshLive, { isError: true, error: new Error('Refresh failed') }));
-  const view = render(tree('v7'));
-  await presentation(view.container, 'pixel');
+  const view = render(tree(pack));
+  await presentation(view.container, appearance);
   expectSections();
   expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
   expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -235,21 +235,21 @@ it('retains failed-refresh readings but never claims retained warning evidence i
   fireEvent.click(screen.getByRole('button', { name: /refresh data/i }));
   expect(mocks.refreshLive).toHaveBeenCalledTimes(1);
   mocks.live.mockReturnValue(query(snapshot(), mocks.refreshLive, { isFetching: true }));
-  view.rerender(tree('v7'));
+  view.rerender(tree(pack));
   expect(screen.getByRole('button', { name: /refresh data/i })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: /refresh data/i }));
   expect(mocks.refreshLive).toHaveBeenCalledTimes(1);
 });
 
-it('does not refresh old sensor times or stale warning reports just because the HTTP snapshot was polled recently', async () => {
+it.each(PACKS)('%s / %s does not refresh old sensor times or stale warning reports just because the HTTP snapshot was polled recently', async (pack, appearance) => {
   const overrides: Record<string, unknown> = { TpmsLastSeenPressureTimeFl: entry(Date.parse(OLD) / 1000) };
   for (const [, corner] of WHEELS) {
     overrides[`TpmsHardWarnings${corner}`] = entry(corner === 'FrontLeft', 'ValueKindBool', { ts: OLD, source: 'stale', age_ms: 180_000 });
     overrides[`TpmsSoftWarnings${corner}`] = entry(false, 'ValueKindBool', { ts: OLD, source: 'stale', age_ms: 180_000 });
   }
   mocks.live.mockReturnValue(query(snapshot(overrides), mocks.refreshLive));
-  const view = render(tree('v3'));
-  await presentation(view.container, 'precision');
+  const view = render(tree(pack));
+  await presentation(view.container, appearance);
   expect(wheel('Front left').getByText('Stale', { selector: '[data-pressure-trust]' })).toBeInTheDocument();
   expect(wheel('Front left').getByText(/^Sensor age:/)).toHaveTextContent('3m ago');
   expect(wheel('Front left').getByText(/^Last sensor report:/).querySelector('time')).toHaveAttribute('datetime', OLD);
@@ -259,7 +259,7 @@ it('does not refresh old sensor times or stale warning reports just because the 
   expect(summary().getByText('Warnings unknown')).toBeInTheDocument();
 });
 
-it('keeps unknown-source, future, malformed and absent timestamps unknown rather than clearing warnings', async () => {
+it.each(PACKS)('%s / %s keeps unknown-source, future, malformed and absent timestamps unknown rather than clearing warnings', async (pack, appearance) => {
   mocks.live.mockReturnValue(query(snapshot({
     TpmsPressureFl: entry(280_000, 'ValueKindFloat', { ts: '', source: 'l2' }),
     TpmsLastSeenPressureTimeFl: entry(0),
@@ -269,8 +269,8 @@ it('keeps unknown-source, future, malformed and absent timestamps unknown rather
     TpmsSoftWarningsFrontRight: entry(false, 'ValueKindBool', { ts: 'invalid' }),
     TpmsHardWarningsRearLeft: entry('false', 'ValueKindBool'),
   }), mocks.refreshLive));
-  const view = render(tree('v6'));
-  await presentation(view.container, 'expressive');
+  const view = render(tree(pack));
+  await presentation(view.container, appearance);
   expect(wheel('Front left').getByText(/^2\.80\s+bar$/)).toBeInTheDocument();
   expect(wheel('Front left').getByText('Freshness unknown', { selector: '[data-pressure-trust]' })).toBeInTheDocument();
   expect(wheel('Front left').getByText(/^Pressure observed:/)).toHaveTextContent('Not reported');
@@ -280,67 +280,70 @@ it('keeps unknown-source, future, malformed and absent timestamps unknown rather
   expect(screen.queryByRole('button', { name: /refresh data.*up to date/i })).not.toBeInTheDocument();
 });
 
-it('reports no warnings only from eight fresh explicit false child readings, never pressure thresholds', async () => {
+it.each(PACKS)('%s / %s reports no warnings only from eight fresh explicit false child readings, never pressure thresholds', async (pack, appearance) => {
   const overrides: Record<string, unknown> = { TpmsPressureFl: entry(0) };
   for (const [, corner] of WHEELS) {
     overrides[`TpmsHardWarnings${corner}`] = entry(false, 'ValueKindBool');
     overrides[`TpmsSoftWarnings${corner}`] = entry(false, 'ValueKindBool');
   }
   mocks.live.mockReturnValue(query(snapshot(overrides), mocks.refreshLive));
-  const view = render(tree('v1'));
-  await presentation(view.container, 'studio');
+  const view = render(tree(pack));
+  await presentation(view.container, appearance);
   expect(wheel('Front left').getByText(/^0\.00\s+bar$/)).toBeInTheDocument();
   expect(summary().getByText('No warnings reported')).toBeInTheDocument();
   expect(screen.queryByText('Hard warning reported')).not.toBeInTheDocument();
 });
 
-it('formats canonical Pa using the saved pressure preference and decimal precision', async () => {
+it.each(PACKS)('%s / %s formats canonical Pa using the saved pressure preference and decimal precision', async (pack, appearance) => {
   const base = settingsHook.useSettings();
   vi.spyOn(settingsHook, 'useSettings').mockReturnValue({
     ...base, settings: { ...base.settings, unit_of_pressure: 'psi', decimal_precision: 1 },
   });
-  const view = render(tree('v2'));
-  await presentation(view.container, 'elevated');
+  const view = render(tree(pack));
+  await presentation(view.container, appearance);
   expect(wheel('Front left').getByText(/^40\.6\s+psi$/)).toBeInTheDocument();
   expect(wheel('Rear right').getByText(/^42\.8\s+psi$/)).toBeInTheDocument();
 });
 
-it.each([
-  [{ vehicleId: 9, config: { vehicleId: 7 } }, 9],
-  [{ config: { vehicleId: 9 } }, 9],
-  [{}, 7],
-] satisfies [Partial<WidgetProps>, number][])('respects explicit, configured and fallback vehicle selection: %j', (props, id) => {
-  mocks.live.mockReturnValue(query(snapshot({}, id), mocks.refreshLive));
-  render(tree('classic', props));
-  expect(mocks.live).toHaveBeenLastCalledWith(id, { refetchInterval: 5_000 });
-  expect(wheel('Front left').getByText(/^2\.80\s+bar$/)).toBeInTheDocument();
+describe.each([['classic', null], ...PACKS])('%s vehicle selection', (pack, appearance) => {
+  it.each([
+    [{ vehicleId: 9, config: { vehicleId: 7 } }, 9],
+    [{ config: { vehicleId: 9 } }, 9],
+    [{}, 7],
+  ] satisfies [Partial<WidgetProps>, number][])('respects explicit, configured and fallback vehicle selection: %j', async (props, id) => {
+    mocks.live.mockReturnValue(query(snapshot({}, id), mocks.refreshLive));
+    const view = render(tree(pack, props));
+    if (appearance) await presentation(view.container, appearance);
+    expect(mocks.live).toHaveBeenLastCalledWith(id, { refetchInterval: 5_000 });
+    expect(wheel('Front left').getByText(/^2\.80\s+bar$/)).toBeInTheDocument();
+  });
 });
 
-it('keeps live evidence independent of the vehicle illustration source failure', async () => {
+it.each(PACKS)('%s / %s keeps live evidence independent of the vehicle illustration source failure', async (pack, appearance) => {
   mocks.vehicles.mockReturnValue(query<Vehicle[]>(undefined, mocks.refreshVehicles, { isError: true, error: new Error('Vehicles failed') }));
-  const view = render(tree('v5', { vehicleId: 7 }));
-  await presentation(view.container, 'iconic');
+  const view = render(tree(pack, { vehicleId: 7 }));
+  await presentation(view.container, appearance);
   expectSections();
   expect(screen.getByText('Vehicle illustration could not be loaded.')).toBeInTheDocument();
   expect(wheel('Front left').getByText(/^2\.80\s+bar$/)).toBeInTheDocument();
   expect(summary().getByText('Hard warning reported')).toBeInTheDocument();
 });
 
-it('does not leak a different vehicle snapshot into the selected wheel readouts', async () => {
+it.each(PACKS)('%s / %s does not leak a different vehicle snapshot into the selected wheel readouts', async (pack, appearance) => {
   mocks.live.mockReturnValue(query(snapshot({}, 9), mocks.refreshLive));
-  const view = render(tree('v4', { vehicleId: 7 }));
-  await presentation(view.container, 'owner');
+  const view = render(tree(pack, { vehicleId: 7 }));
+  await presentation(view.container, appearance);
   expectSections();
   expect(screen.getByText('Tire signal evidence is unavailable.')).toBeInTheDocument();
   for (const [, , label] of WHEELS) expect(wheel(label).getByText('—')).toBeInTheDocument();
   expect(summary().getByText('Warnings unknown')).toBeInTheDocument();
 });
 
-it('keeps all four corners and recovery visible when there is no selected vehicle', async () => {
+it.each(PACKS)('%s / %s keeps all four corners and recovery visible when there is no selected vehicle', async (pack, appearance) => {
   mocks.vehicles.mockReturnValue(query([], mocks.refreshVehicles));
   mocks.live.mockReturnValue(query<VehicleLiveSignalsResponse>(undefined, mocks.refreshLive, { isPending: true, isSuccess: false }));
-  const view = render(tree('v7'));
-  await presentation(view.container, 'pixel');
+  const view = render(tree(pack));
+  await presentation(view.container, appearance);
   expectSections();
   expect(screen.getByText('Select a vehicle')).toBeInTheDocument();
   expect(screen.getByText('Vehicle model illustration unavailable.')).toBeInTheDocument();
@@ -351,10 +354,10 @@ it('keeps all four corners and recovery visible when there is no selected vehicl
   expect(mocks.refreshLive).not.toHaveBeenCalled();
 });
 
-it('does not substitute a generic model illustration for an unrecognized vehicle model', async () => {
+it.each(PACKS)('%s / %s does not substitute a generic model illustration for an unrecognized vehicle model', async (pack, appearance) => {
   mocks.vehicles.mockReturnValue(query([{ ...vehicles[0], model: 'Cybertruck' }], mocks.refreshVehicles));
-  const view = render(tree('v1'));
-  await presentation(view.container, 'studio');
+  const view = render(tree(pack));
+  await presentation(view.container, appearance);
   expect(screen.getByText('Vehicle model illustration unavailable.')).toBeInTheDocument();
   expect(view.container.querySelector('[data-vehicle-twin]')).toBeNull();
   expect(wheel('Front left').getByText(/^2\.80\s+bar$/)).toBeInTheDocument();

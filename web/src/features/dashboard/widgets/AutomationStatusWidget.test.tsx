@@ -11,8 +11,8 @@
  *
  * Query state maps straight onto <WidgetShell>: `isLoading` → skeleton,
  * `error` → <QueryError>, and an empty list → <EmptyState>. Everything else
- * renders the status badge (getStatusBadge) and relative-time labels
- * (formatRelativeTime) for each automation.
+ * renders the status badge (getStatusBadge) and localized absolute date/time
+ * labels for each automation.
  *
  * The suite locks, facet by facet:
  *   1. The three query states (loading / error / empty) each short-circuit the
@@ -21,8 +21,7 @@
  *      is actually failing.
  *   3. Full view: summary counts + one row per automation, and every branch of
  *      the status badge (auto-disabled / disabled / failing / ok / idle).
- *   4. Relative time: past runs render "Xm/Xh/Xd ago"; a *future* next-fire time
- *      renders "in Xm";
+ *   4. Schedules: past runs and future next-fire times use localized date/time;
  *      an unparseable timestamp renders an em dash, never "NaN".
  *   5. Toggle: wide view shows accessible per-row switches that reflect each
  *      automation's enabled state and mutate with the flipped value; non-wide
@@ -37,7 +36,7 @@ import { cleanup, fireEvent, render, screen, within, act, waitFor } from '@testi
 import { getGlobalLocale, setGlobalLocale } from '@/lib/numberFormat';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { PACK_APPEARANCES, type PackId } from './designPacks/types';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 const pack = vi.hoisted(() => ({ id: 'classic' as PackId }));
 vi.mock('./designPacks/PackBoundary', async importOriginal => ({
@@ -135,16 +134,21 @@ function makeQuery(overrides: Partial<AutomationsQuery> = {}): AutomationsQuery 
   };
 }
 
-function renderWidget(size: WidgetSize, query: AutomationsQuery = makeQuery()) {
+async function renderWidget(size: WidgetSize, query: AutomationsQuery = makeQuery()) {
   MOCK_QUERY = query;
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
         <AutomationStatusWidget size={size} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  if (pack.id !== 'classic' && query.data?.length && !query.isLoading) {
+    const appearance = PACK_APPEARANCES[pack.id];
+    await waitFor(() => expect(view.container.querySelector(`[data-status-appearance="${appearance}"]`)).not.toBeNull());
+  }
+  return view;
 }
 
 /** The `.flex-1` column that wraps a single automation row (name + times). */
@@ -193,10 +197,10 @@ afterEach(() => {
 describe.each([1, 2, 3])('AutomationStatusWidget — identifying heading at cols=%i', (cols) => {
   it.each(['populated', 'loading', 'empty', 'initial failure', 'retained failure'] as const)(
     'keeps exactly one visible shell heading when %s',
-    (state) => {
+    async (state) => {
       const populated = state === 'populated' || state === 'retained failure';
       const failed = state === 'initial failure' || state === 'retained failure';
-      const { container } = renderWidget({ cols, rows: 2 }, makeQuery({
+      const { container } = await renderWidget({ cols, rows: 2 }, makeQuery({
         data: populated ? [makeAutomation({ name: 'Retained automation' })] : state === 'empty' ? [] : undefined,
         isLoading: state === 'loading',
         isError: failed,
@@ -226,9 +230,13 @@ describe.each([1, 2, 3])('AutomationStatusWidget — identifying heading at cols
   );
 });
 
-describe('AutomationStatusWidget — query states', () => {
-  it('renders a skeleton (and no content) while loading', () => {
-    const { container } = renderWidget(FULL, makeQuery({ isLoading: true, data: undefined }));
+describe.each(PACK_IDS)('AutomationStatusWidget — query states [%s]', (id) => {
+  beforeEach(() => {
+    pack.id = id;
+  });
+
+  it('renders a skeleton (and no content) while loading', async () => {
+    const { container } = await renderWidget(FULL, makeQuery({ isLoading: true, data: undefined }));
     const skeleton = container.querySelector('[aria-hidden="true"].bg-\\[var\\(--skeleton-bg\\)\\]');
     expect(skeleton).toBeInTheDocument();
     expect(skeleton).toHaveClass('h-full', 'w-full', 'min-h-24', 'rounded-xl');
@@ -240,8 +248,8 @@ describe('AutomationStatusWidget — query states', () => {
     expect(screen.queryByText('No automations configured')).toBeNull();
   });
 
-  it('surfaces a query error instead of the automation list', () => {
-    renderWidget(FULL, makeQuery({ error: new Error('boom'), isError: true, data: undefined }));
+  it('surfaces a query error instead of the automation list', async () => {
+    await renderWidget(FULL, makeQuery({ error: new Error('boom'), isError: true, data: undefined }));
     // jsdom reports navigator.onLine === true, so QueryError lands on the
     // generic network branch (role="alert").
     expect(screen.getByRole('alert')).toBeInTheDocument();
@@ -249,17 +257,21 @@ describe('AutomationStatusWidget — query states', () => {
     expect(screen.queryByText('No automations configured')).toBeNull();
   });
 
-  it('renders an accessible empty state when there are no automations', () => {
-    renderWidget(FULL, makeQuery({ data: [] }));
+  it('renders an accessible empty state when there are no automations', async () => {
+    await renderWidget(FULL, makeQuery({ data: [] }));
     const empty = screen.getByRole('status');
     expect(empty).toBeInTheDocument();
     expect(screen.getByText('No automations configured')).toBeInTheDocument();
   });
 });
 
-describe('AutomationStatusWidget — compact view', () => {
-  it('summarises enabled/total and flags failing automations', () => {
-    renderWidget(
+describe.each(PACK_IDS)('AutomationStatusWidget — compact view [%s]', (id) => {
+  beforeEach(() => {
+    pack.id = id;
+  });
+
+  it('summarises enabled/total and flags failing automations', async () => {
+    await renderWidget(
       COMPACT,
       makeQuery({
         data: [
@@ -277,8 +289,8 @@ describe('AutomationStatusWidget — compact view', () => {
     expect(screen.getByRole('heading', { name: 'Automation status', level: 3 })).toBeVisible();
   });
 
-  it('omits the failing chip when nothing is failing', () => {
-    renderWidget(
+  it('omits the failing chip when nothing is failing', async () => {
+    await renderWidget(
       COMPACT,
       makeQuery({
         data: [
@@ -291,11 +303,25 @@ describe('AutomationStatusWidget — compact view', () => {
     expect(screen.getByText('3/3')).toBeInTheDocument();
     expect(screen.queryByText(/Failing/)).toBeNull();
   });
+
+  it('preserves a measured zero active count without counting disabled failures', async () => {
+    await renderWidget(COMPACT, makeQuery({
+      data: [makeAutomation({ enabled: false, consecutive_failures: 3 })],
+    }));
+    expect(screen.getByText('0/1')).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.queryByText(/Failing/)).toBeNull();
+    expect(screen.queryByText('No automations configured')).toBeNull();
+  });
 });
 
-describe('AutomationStatusWidget — full view', () => {
-  it('reviews measured configuration counts while preserving the live per-entity action rail', () => {
-    renderWidget(WIDE, makeQuery({
+describe.each(PACK_IDS)('AutomationStatusWidget — full view [%s]', (id) => {
+  beforeEach(() => {
+    pack.id = id;
+  });
+
+  it('reviews measured configuration counts while preserving the live per-entity action rail', async () => {
+    await renderWidget(WIDE, makeQuery({
       data: [
         makeAutomation({ id: 1, name: 'Retained enabled', enabled: true }),
         makeAutomation({ id: 2, name: 'Retained failing', enabled: true, consecutive_failures: 2 }),
@@ -306,8 +332,8 @@ describe('AutomationStatusWidget — full view', () => {
     expect(screen.getByText('Active')).toBeInTheDocument();
     expect(screen.getByText('1 Failing')).toBeInTheDocument();
   });
-  it('shows a titled summary header and one row per automation', () => {
-    renderWidget(
+  it('shows a titled summary header and one row per automation', async () => {
+    await renderWidget(
       FULL,
       makeQuery({
         data: [
@@ -326,11 +352,11 @@ describe('AutomationStatusWidget — full view', () => {
   });
 
   describe('AutomationStatusWidget — retained automation evidence', () => {
-    it('reacts to locale changes for counts without recasing automation identities', () => {
+    it('reacts to locale changes for counts without recasing automation identities', async () => {
       const locale = getGlobalLocale();
       try {
         const automations = Array.from({ length: 1000 }, (_, index) => makeAutomation({ id: index + 1, name: `CaseSensitive-${index}` }));
-        renderWidget(COMPACT, makeQuery({ data: automations }));
+        await renderWidget(COMPACT, makeQuery({ data: automations }));
         act(() => setGlobalLocale('de-DE'));
         expect(screen.getByText('1.000/1.000')).toBeInTheDocument();
       } finally {
@@ -338,9 +364,9 @@ describe('AutomationStatusWidget — full view', () => {
       }
     });
 
-    it('keeps statuses and wide toggles on a failed refresh with real recovery', () => {
+    it('keeps statuses and wide toggles on a failed refresh with real recovery', async () => {
       const refetch = vi.fn();
-      renderWidget(WIDE, makeQuery({
+      await renderWidget(WIDE, makeQuery({
         data: [makeAutomation({ name: 'Retained automation', enabled: true })],
         isError: true,
         error: new Error('refresh failed'),
@@ -355,8 +381,8 @@ describe('AutomationStatusWidget — full view', () => {
     });
   });
 
-  it('renders the correct status badge for every automation state', () => {
-    renderWidget(
+  it('renders the correct status badge for every automation state', async () => {
+    await renderWidget(
       FULL,
       makeQuery({
         data: [
@@ -377,9 +403,13 @@ describe('AutomationStatusWidget — full view', () => {
   });
 });
 
-describe('AutomationStatusWidget — relative time', () => {
-  it('formats past run times as "Xm/Xh/Xd ago" and near-now as formatted time', () => {
-    renderWidget(
+describe.each(PACK_IDS)('AutomationStatusWidget — schedule times [%s]', (id) => {
+  beforeEach(() => {
+    pack.id = id;
+  });
+
+  it('formats past run times as localized absolute date/time values', async () => {
+    await renderWidget(
       FULL,
       makeQuery({
         data: [
@@ -396,8 +426,8 @@ describe('AutomationStatusWidget — relative time', () => {
     expect(within(rowOf('Now')).getByText(/\d{1,2}:\d{2}/)).toBeInTheDocument();
   });
 
-  it('formats future next-fire times as absolute date/time values', () => {
-    renderWidget(
+  it('formats future next-fire times as absolute date/time values', async () => {
+    await renderWidget(
       FULL,
       makeQuery({
         data: [
@@ -412,8 +442,8 @@ describe('AutomationStatusWidget — relative time', () => {
     expect(within(rowOf('DayFire')).getByText(/\d{1,4}/)).toBeInTheDocument();
   });
 
-  it('renders an em dash for an unparseable timestamp instead of "NaN"', () => {
-    renderWidget(
+  it('renders an em dash for an unparseable timestamp instead of "NaN"', async () => {
+    await renderWidget(
       FULL,
       makeQuery({
         data: [makeAutomation({ id: 1, name: 'Broken', last_triggered_at: 'not-a-real-date' })],
@@ -425,9 +455,13 @@ describe('AutomationStatusWidget — relative time', () => {
   });
 });
 
-describe('AutomationStatusWidget — toggle interaction', () => {
-  it('exposes accessible per-row switches in wide view that mutate with the flipped state', () => {
-    renderWidget(
+describe.each(PACK_IDS)('AutomationStatusWidget — toggle interaction [%s]', (id) => {
+  beforeEach(() => {
+    pack.id = id;
+  });
+
+  it('exposes accessible per-row switches in wide view that mutate with the flipped state', async () => {
+    await renderWidget(
       WIDE,
       makeQuery({
         data: [
@@ -452,8 +486,8 @@ describe('AutomationStatusWidget — toggle interaction', () => {
     expect(mockToggleMutate).toHaveBeenCalledTimes(2);
   });
 
-  it('does not render switches in a non-wide full view', () => {
-    renderWidget(FULL, makeQuery({ data: [makeAutomation({ id: 1, name: 'Solo' })] }));
+  it('does not render switches in a non-wide full view', async () => {
+    await renderWidget(FULL, makeQuery({ data: [makeAutomation({ id: 1, name: 'Solo' })] }));
     expect(screen.queryAllByRole('switch')).toHaveLength(0);
   });
 });

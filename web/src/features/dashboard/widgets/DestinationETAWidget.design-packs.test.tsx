@@ -124,10 +124,11 @@ describe.each(Object.entries(PACK_APPEARANCES))('Destination ETA %s / %s', (pack
     expect(mocks.refresh).toHaveBeenCalledOnce();
   });
 
-  it('distinguishes missing and invalid readings from genuine zero', async () => {
-    mocks.snapshot.mockReturnValue(query(snapshot({
-      minutes_to_arrival: Number.NaN, miles_to_arrival: -1,
-    })));
+  it.each([
+    { state: 'missing', readings: { minutes_to_arrival: undefined, miles_to_arrival: undefined } },
+    { state: 'invalid', readings: { minutes_to_arrival: Number.NaN, miles_to_arrival: -1 } },
+  ])('distinguishes $state readings from genuine zero', async ({ readings }) => {
+    mocks.snapshot.mockReturnValue(query(snapshot(readings)));
     const view = mount(packId);
     await presentation(view.container, appearance);
     expect(screen.getAllByText('—')).toHaveLength(3);
@@ -153,96 +154,96 @@ describe.each(Object.entries(PACK_APPEARANCES))('Destination ETA %s / %s', (pack
     expect(screen.queryByText('12')).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Destination map' })).not.toBeInTheDocument();
   });
-});
 
-it.each(sizes)('preserves default Classic and recovery after pack changes at $cols columns', async size => {
-  const view = mount(undefined, size);
-  const classic = () => {
-    expect(view.container.querySelector('[data-widget-family]')).toBeNull();
+  it.each(sizes)('preserves default Classic and recovery after pack changes at $cols columns', async size => {
+    const view = mount(undefined, size);
+    const classic = () => {
+      expect(view.container.querySelector('[data-widget-family]')).toBeNull();
+      expect(screen.getByText('12')).toBeInTheDocument();
+      expect(screen.queryByText('Arrival')).not.toBeInTheDocument();
+      expect(screen.queryByText('Destination coordinates unavailable')).not.toBeInTheDocument();
+      if (size.cols > 1) {
+        expect(screen.getByText('Library')).toBeInTheDocument();
+        expect(screen.getByText('10 mi')).toBeInTheDocument();
+        expect(screen.getByText('5:03 PM')).toBeInTheDocument();
+      } else expect(screen.queryByText('Library')).not.toBeInTheDocument();
+    };
+    classic();
+    view.selectPack(packId);
+    await presentation(view.container, appearance);
+    view.selectPack('classic');
+    classic();
+    view.selectPack('unknown-pack');
+    classic();
+  });
+
+  it.each([{ lat: 37.78, lon: -122.41 }, { lat: 51.48, lon: 0 }])(
+    'renders an interactive real destination map for $lat, $lon without inventing a route',
+    async ({ lat, lon }) => {
+      mocks.snapshot.mockReturnValue(query(snapshot({ destination_lat: lat, destination_lon: lon })));
+      const { container } = mount(packId);
+      await presentation(container, appearance);
+      const map = screen.getByRole('region', { name: 'Destination map' });
+      expect(map.querySelector('.leaflet-container')).not.toBeNull();
+      expect(within(map).getByRole('button', { name: 'Zoom in' })).toBeInTheDocument();
+      const marker = map.querySelector('path.leaflet-interactive');
+      expect(marker).not.toBeNull();
+      if (!marker) throw new Error('Expected the reported destination marker');
+      expect(map.querySelectorAll('path.leaflet-interactive')).toHaveLength(1);
+      fireEvent.click(marker);
+      await waitFor(() => expect(map.querySelector('.leaflet-popup-content')).toHaveTextContent('Library'));
+      expect(screen.queryByText('Destination coordinates unavailable')).not.toBeInTheDocument();
+      expect(mocks.snapshot).toHaveBeenCalledExactlyOnceWith(7);
+    },
+  );
+
+  it.each([[0, 0], [91, 20], [20, 181], [Number.POSITIVE_INFINITY, 20]])(
+    'leaves an invalid destination fix (%s, %s) unknown while retaining ETA and user distance units',
+    async (latitude, longitude) => {
+      mocks.units.mockReturnValue({ unitPrefs: { distance: 'km' } });
+      mocks.snapshot.mockReturnValue(query(snapshot({ destination_lat: latitude, destination_lon: longitude })));
+      const { container } = mount(packId);
+      await presentation(container, appearance);
+      expect(screen.getByText('12')).toBeInTheDocument();
+      expect(screen.getByText('16 km')).toBeInTheDocument();
+      expect(screen.getByText('Destination coordinates unavailable')).toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Destination map' })).not.toBeInTheDocument();
+    },
+  );
+
+  it('retains cached navigation and source warning on refresh failure, with the original retry', async () => {
+    mocks.snapshot.mockReturnValue(query(snapshot(), { error: new Error('refresh failed'), isError: true }));
+    const { container } = mount(packId);
+    await presentation(container, appearance);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('Library')).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.queryByText('Arrival')).not.toBeInTheDocument();
-    expect(screen.queryByText('Destination coordinates unavailable')).not.toBeInTheDocument();
-    if (size.cols > 1) {
-      expect(screen.getByText('Library')).toBeInTheDocument();
-      expect(screen.getByText('10 mi')).toBeInTheDocument();
-      expect(screen.getByText('5:03 PM')).toBeInTheDocument();
-    } else expect(screen.queryByText('Library')).not.toBeInTheDocument();
-  };
-  classic();
-  view.selectPack('v7');
-  await presentation(view.container, 'pixel');
-  view.selectPack('classic');
-  classic();
-  view.selectPack('unknown-pack');
-  classic();
-});
+    expect(screen.getByText('10 mi')).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(mocks.refresh).toHaveBeenCalledOnce();
+  });
 
-it.each([{ lat: 37.78, lon: -122.41 }, { lat: 51.48, lon: 0 }])(
-  'renders an interactive real destination map for $lat, $lon without inventing a route',
-  async ({ lat, lon }) => {
-    mocks.snapshot.mockReturnValue(query(snapshot({ destination_lat: lat, destination_lon: lon })));
-    const { container } = mount('v1');
-    await presentation(container, 'studio');
-    const map = screen.getByRole('region', { name: 'Destination map' });
-    expect(map.querySelector('.leaflet-container')).not.toBeNull();
-    expect(within(map).getByRole('button', { name: 'Zoom in' })).toBeInTheDocument();
-    const marker = map.querySelector('path.leaflet-interactive');
-    expect(marker).not.toBeNull();
-    if (!marker) throw new Error('Expected the reported destination marker');
-    expect(map.querySelectorAll('path.leaflet-interactive')).toHaveLength(1);
-    fireEvent.click(marker);
-    await waitFor(() => expect(map.querySelector('.leaflet-popup-content')).toHaveTextContent('Library'));
-    expect(screen.queryByText('Destination coordinates unavailable')).not.toBeInTheDocument();
-    expect(mocks.snapshot).toHaveBeenCalledExactlyOnceWith(7);
-  },
-);
+  it('does not refresh navigation again while its source is already fetching', async () => {
+    mocks.snapshot.mockReturnValue(query(snapshot(), { isFetching: true }));
+    const { container } = mount(packId);
+    await presentation(container, appearance);
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
 
-it.each([[0, 0], [91, 20], [20, 181], [Number.POSITIVE_INFINITY, 20]])(
-  'leaves an invalid destination fix (%s, %s) unknown while retaining ETA and user distance units',
-  async (latitude, longitude) => {
-    mocks.units.mockReturnValue({ unitPrefs: { distance: 'km' } });
-    mocks.snapshot.mockReturnValue(query(snapshot({ destination_lat: latitude, destination_lon: longitude })));
-    const { container } = mount('v3');
-    await presentation(container, 'precision');
-    expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.getByText('16 km')).toBeInTheDocument();
-    expect(screen.getByText('Destination coordinates unavailable')).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Destination map' })).not.toBeInTheDocument();
-  },
-);
-
-it('retains cached navigation and source warning on refresh failure, with the original retry', async () => {
-  mocks.snapshot.mockReturnValue(query(snapshot(), { error: new Error('refresh failed'), isError: true }));
-  const { container } = mount('v4');
-  await presentation(container, 'owner');
-  expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-  expect(screen.getByText('Library')).toBeInTheDocument();
-  expect(screen.getByText('12')).toBeInTheDocument();
-  expect(screen.getByText('10 mi')).toBeInTheDocument();
-  expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
-  expect(mocks.refresh).toHaveBeenCalledOnce();
-});
-
-it('does not refresh navigation again while its source is already fetching', async () => {
-  mocks.snapshot.mockReturnValue(query(snapshot(), { isFetching: true }));
-  const { container } = mount('v5');
-  await presentation(container, 'iconic');
-  fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
-  expect(mocks.refresh).not.toHaveBeenCalled();
-});
-
-it('keeps loading and fatal failure honest without presenting cached or invented navigation', async () => {
-  mocks.snapshot.mockReturnValue(query(undefined, { isLoading: true, isPending: true }));
-  const view = mount('v2');
-  expect(screen.getByRole('heading', { name: 'Destination ETA' })).toBeInTheDocument();
-  expect(view.container.querySelector('[aria-busy="true"]')).not.toBeNull();
-  expect(screen.queryByText('No location data')).not.toBeInTheDocument();
-  expect(screen.queryByText('12')).not.toBeInTheDocument();
-  mocks.snapshot.mockReturnValue(query(undefined, { error: new Error('initial failure'), isError: true }));
-  view.selectPack('v2');
-  expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
-  expect(screen.queryByText('No active navigation')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-  expect(mocks.refresh).toHaveBeenCalledOnce();
+  it('keeps loading and fatal failure honest without presenting cached or invented navigation', async () => {
+    mocks.snapshot.mockReturnValue(query(undefined, { isLoading: true, isPending: true }));
+    const view = mount(packId);
+    expect(screen.getByRole('heading', { name: 'Destination ETA' })).toBeInTheDocument();
+    expect(view.container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.queryByText('No location data')).not.toBeInTheDocument();
+    expect(screen.queryByText('12')).not.toBeInTheDocument();
+    mocks.snapshot.mockReturnValue(query(undefined, { error: new Error('initial failure'), isError: true }));
+    view.selectPack(packId);
+    expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByText('No active navigation')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(mocks.refresh).toHaveBeenCalledOnce();
+  });
 });

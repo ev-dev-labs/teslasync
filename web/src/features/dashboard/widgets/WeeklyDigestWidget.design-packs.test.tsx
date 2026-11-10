@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { WeeklyDigestData } from '@/types/analytics';
 import type { WidgetSize } from './types';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS } from './designPacks/types';
 import WeeklyDigestWidget from './WeeklyDigestWidget';
 
 const mocks = vi.hoisted(() => ({
@@ -22,10 +23,9 @@ vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({ formatTime: (value: unknown) => String(value), tz: 'UTC', locale: 'en-US' }),
 }));
 
-const PACKS = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const PACKS = PACK_IDS
+  .filter((pack): pack is keyof typeof PACK_APPEARANCES => pack !== 'classic')
+  .map(pack => [pack, PACK_APPEARANCES[pack]] as const);
 const FULL: WidgetSize = { cols: 2, rows: 2 };
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
 const CHART_LABEL = 'Drives this week compared with last week';
@@ -169,64 +169,67 @@ it('preserves Classic and unknown-ID recovery while switching presentation witho
   expect(mocks.refreshDigest).not.toHaveBeenCalled();
 });
 
-it('retains bars and comparisons on background failure with one nonblocking warning and retry action', async () => {
-  mocks.digest.mockReturnValue(query(digest(), mocks.refreshDigest, {
-    isError: true, error: new Error('synthetic refresh failure'),
-  }));
-  const { container } = await mount('v4', 'owner');
-  expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-  expect(periods()).toEqual([['last week', '5'], ['this week', '8']]);
-  expect(rail(container).getByText('Energy')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
-  expect(mocks.refreshDigest).toHaveBeenCalledOnce();
-});
+describe.each(PACKS)('WeeklyDigestWidget %s (%s) source states', (pack, appearance) => {
+  it('retains bars and comparisons on background failure with one nonblocking warning and retry action', async () => {
+    mocks.digest.mockReturnValue(query(digest(), mocks.refreshDigest, {
+      isError: true, error: new Error('synthetic refresh failure'),
+    }));
+    const { container } = await mount(pack, appearance);
+    expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    expect(periods()).toEqual([['last week', '5'], ['this week', '8']]);
+    expect(rail(container).getByText('Energy')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(mocks.refreshDigest).toHaveBeenCalledOnce();
+  });
 
-it('preserves kilometre and efficiency preferences in the production presentation', async () => {
-  mocks.units.mockReturnValue(units('km'));
-  const { container } = await mount('v3', 'precision');
-  const metrics = rail(container);
-  expect(metrics.getByText('100')).toBeInTheDocument();
-  expect(metrics.getByText('250')).toBeInTheDocument();
-  expect(metrics.getByText('Wh/km')).toBeInTheDocument();
-  expect(metrics.getByText('last week 80 km')).toBeInTheDocument();
-  expect(metrics.getByText('25.0')).toBeInTheDocument();
-  expect(periods()).toEqual([['last week', '5'], ['this week', '8']]);
-});
+  it('preserves kilometre and efficiency preferences in the production presentation', async () => {
+    mocks.units.mockReturnValue(units('km'));
+    const { container } = await mount(pack, appearance);
+    const metrics = rail(container);
+    expect(metrics.getByText('100')).toBeInTheDocument();
+    expect(metrics.getByText('250')).toBeInTheDocument();
+    expect(metrics.getByText('Wh/km')).toBeInTheDocument();
+    expect(metrics.getByText('last week 80 km')).toBeInTheDocument();
+    expect(metrics.getByText('25.0')).toBeInTheDocument();
+    expect(periods()).toEqual([['last week', '5'], ['this week', '8']]);
+  });
 
-it('shows a reported zero this week without treating an unknown prior week as zero', async () => {
-  mocks.digest.mockReturnValue(query(digest({ drives: 0, prevDrives: undefined })));
-  const { container } = await mount('v6', 'expressive');
-  expect(periods()).toEqual([['last week', '—'], ['this week', '0']]);
-  expect(container.querySelector('.widget-big-number')).toHaveTextContent('0');
-  expect(container.querySelector('.widget-big-number')).not.toHaveTextContent('—');
-});
+  it('shows a reported zero this week without treating an unknown prior week as zero', async () => {
+    mocks.digest.mockReturnValue(query(digest({ drives: 0, prevDrives: undefined })));
+    const { container } = await mount(pack, appearance);
+    expect(periods()).toEqual([['last week', '—'], ['this week', '0']]);
+    expect(container.querySelector('.widget-big-number')).toHaveTextContent('0');
+    expect(container.querySelector('.widget-big-number')).not.toHaveTextContent('—');
+  });
 
-it('keeps initial loading and fatal errors in the source shell, then retries vehicle discovery when scope is empty', async () => {
-  mocks.digest.mockReturnValue(query(undefined, mocks.refreshDigest, { isLoading: true, isPending: true }));
-  const view = render(tree('v1'));
-  expect(view.container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
-  expect(screen.queryByRole('table')).not.toBeInTheDocument();
-  view.unmount();
-  mocks.digest.mockReturnValue(query(undefined, mocks.refreshDigest, { isError: true, error: new Error('offline') }));
-  const failed = render(tree('v1'));
-  expect(screen.getByRole('alert')).toBeInTheDocument();
-  expect(screen.queryByRole('table')).not.toBeInTheDocument();
-  failed.unmount();
-  mocks.digest.mockReturnValue(query(undefined));
-  mocks.vehicles.mockReturnValue(query([], mocks.refreshVehicles));
-  await mount('v1', 'studio');
-  expect(mocks.digest).toHaveBeenLastCalledWith('');
-  fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
-  expect(mocks.refreshVehicles).toHaveBeenCalledOnce();
-  expect(mocks.refreshDigest).not.toHaveBeenCalled();
-});
+  it('keeps initial loading and fatal errors in the source shell, then retries vehicle discovery when scope is empty', async () => {
+    mocks.digest.mockReturnValue(query(undefined, mocks.refreshDigest, { isLoading: true, isPending: true }));
+    const view = render(tree(pack));
+    expect(view.container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    view.unmount();
+    mocks.digest.mockReturnValue(query(undefined, mocks.refreshDigest, { isError: true, error: new Error('offline') }));
+    const failed = render(tree(pack));
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    failed.unmount();
+    mocks.digest.mockReturnValue(query(undefined));
+    mocks.vehicles.mockReturnValue(query([], mocks.refreshVehicles));
+    await mount(pack, appearance);
+    expect(mocks.digest).toHaveBeenLastCalledWith('');
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(mocks.refreshVehicles).toHaveBeenCalledOnce();
+    expect(mocks.refreshDigest).not.toHaveBeenCalled();
+  });
 
-it.each([undefined, null, NaN, Infinity, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
-  'does not round invalid or unreported drive counts (%s) into valid measurements',
-  async value => {
-    mocks.digest.mockReturnValue(query(digest({ drives: value, prevDrives: 0 })));
-    const { container } = await mount('v7', 'pixel');
-    expect(periods()).toEqual([['last week', '0'], ['this week', '—']]);
-    expect(container.querySelector('.widget-big-number')).toHaveTextContent('—');
-  },
-);
+  it.each([undefined, null, NaN, Infinity, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+    'does not round invalid or unreported drive counts (%s) into valid measurements',
+    async value => {
+      mocks.digest.mockReturnValue(query(digest({ drives: value, prevDrives: 0 })));
+      const { container } = await mount(pack, appearance);
+      expect(periods()).toEqual([['last week', '0'], ['this week', '—']]);
+      expect(container.querySelector('.widget-big-number')).toHaveTextContent('—');
+    },
+  );
+});

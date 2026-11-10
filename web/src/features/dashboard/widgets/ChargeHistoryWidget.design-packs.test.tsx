@@ -51,16 +51,15 @@ vi.mock('@/components/charts', async (importActual) => {
 import { request } from '@/api/client';
 import ChargeHistoryWidget from './ChargeHistoryWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
-import type { PackId } from './designPacks/types';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 import type { WidgetSize } from './types';
 
 const requestMock = vi.mocked(request);
 const full: WidgetSize = { cols: 2, rows: 2 };
 const compact: WidgetSize = { cols: 1, rows: 1 };
-const packs = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const packs = PACK_IDS
+  .filter((pack): pack is Exclude<PackId, 'classic'> => pack !== 'classic')
+  .map(pack => [pack, PACK_APPEARANCES[pack]] as const);
 const clients: QueryClient[] = [];
 
 type SessionFixture = Pick<ChargingSession,
@@ -193,10 +192,10 @@ describe('ChargeHistoryWidget production design packs', () => {
     expect(requestMock).toHaveBeenCalledTimes(1);
   });
 
-  it('retains the selected presentation, plot and readings after a real refresh failure', async () => {
+  it.each(packs)('%s retains the selected presentation, plot and readings after a real refresh failure', async (pack, appearance) => {
     requestMock.mockResolvedValueOnce(sessions).mockRejectedValueOnce(new Error('Synthetic refresh failure'));
-    const { container } = renderWidget('v4');
-    await expectPack(container, 'owner');
+    const { container } = renderWidget(pack);
+    await expectPack(container, appearance);
     expect(await screen.findByText('40.00')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     await waitFor(() => expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'stale'));
@@ -207,10 +206,12 @@ describe('ChargeHistoryWidget production design packs', () => {
     expect(requestMock).toHaveBeenCalledTimes(2);
   });
 
-  it.each([null, Number.NaN, Number.POSITIVE_INFINITY])('keeps an unknown or invalid %s reading unknown, including its charger', async energy => {
+  it.each(packs.flatMap(([pack, appearance]) =>
+    [null, Number.NaN, Number.POSITIVE_INFINITY].map(energy => [pack, appearance, energy] as const),
+  ))('%s (%s) keeps an unknown or invalid %s reading unknown, including its charger', async (pack, appearance, energy) => {
     requestMock.mockResolvedValue([session(6, energy)]);
-    const { container } = renderWidget('v7');
-    await expectPack(container, 'pixel');
+    const { container } = renderWidget(pack);
+    await expectPack(container, appearance);
     await waitFor(() => expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial'));
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(historyRows()).toEqual([['2026-11-06', '—']]);
@@ -218,12 +219,14 @@ describe('ChargeHistoryWidget production design packs', () => {
     expect(screen.getByText('Last 1 sessions')).toBeInTheDocument();
   });
 
-  it.each([['v3', full], ['v6', compact]] satisfies [PackId, WidgetSize][])(
-    '%s preserves its source shell and honest empty state',
-    async (pack, size) => {
+  it.each(packs.flatMap(([pack, appearance]) =>
+    [[pack, appearance, full], [pack, appearance, compact]] as const,
+  ))(
+    '%s (%s) preserves its %j source shell and honest empty state',
+    async (pack, appearance, size) => {
       requestMock.mockResolvedValue([]);
       const { container } = renderWidget(pack, size);
-      await expectPack(container, pack === 'v3' ? 'precision' : 'expressive');
+      await expectPack(container, appearance);
       expect(await screen.findByText('No charge sessions yet')).toBeInTheDocument();
       await waitFor(() => expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'unavailable'));
       expect(screen.queryByRole('img', { name: /energy added/i })).not.toBeInTheDocument();
@@ -233,15 +236,39 @@ describe('ChargeHistoryWidget production design packs', () => {
     },
   );
 
-  it('uses the display energy preference consistently for headline, samples and axes', async () => {
+  it.each(packs)('%s uses the display energy preference consistently for headline, samples and axes', async (pack, appearance) => {
     preferences.energy = 'Wh';
     requestMock.mockResolvedValue([session(6, 42_000)]);
-    const { container } = renderWidget('v2');
-    await expectPack(container, 'elevated');
+    const { container } = renderWidget(pack);
+    await expectPack(container, appearance);
     expect(await screen.findByText('Energy added')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Energy added per recent charge session, in Wh' })).toBeInTheDocument();
     expect(historyRows()).toEqual([['2026-11-06', '42000.00 Wh']]);
     expect(container.querySelector('.recharts-yAxis')).toHaveTextContent('Wh');
     expect(screen.queryByText('kWh')).not.toBeInTheDocument();
+  });
+
+  it.each(packs)('%s keeps loading, initial failure and retry in the controller-owned shell', async (pack, appearance) => {
+    requestMock.mockRejectedValueOnce(new Error('Synthetic initial failure')).mockResolvedValueOnce(sessions);
+    const { container } = renderWidget(pack);
+    const shell = container.querySelector('[data-data-state]');
+    expect(shell).toHaveAttribute('data-widget-pack', pack);
+    expect(shell).toHaveAttribute('data-data-state', 'initial');
+    expect(shell).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('No charge sessions yet')).not.toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+
+    await waitFor(() => expect(shell).toHaveAttribute('data-data-state', 'initialFailure'));
+    expect(shell).toHaveAttribute('data-widget-pack', pack);
+    expect(shell).toHaveAttribute('aria-busy', 'false');
+    expect(within(screen.getByTestId('widget-body')).getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByTestId('widget-body')).getByRole('button', { name: 'Retry' }));
+    await expectPack(container, appearance);
+    expect(await screen.findByText('40.00')).toBeInTheDocument();
+    expect(historyRows()).toHaveLength(4);
+    expect(requestMock).toHaveBeenCalledTimes(2);
   });
 });

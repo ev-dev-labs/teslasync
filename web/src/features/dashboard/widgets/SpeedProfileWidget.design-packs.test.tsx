@@ -6,6 +6,7 @@ import type { DataStateSource } from '@/api/dataState';
 import type { SpeedProfileData } from '@/types/driving';
 import SpeedProfileWidget from './SpeedProfileWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
 import type { WidgetProps } from './types';
 
 const { useSpeedProfileMock, useVehiclesMock, useUnitsMock, refetch } = vi.hoisted(() => ({
@@ -65,15 +66,7 @@ vi.mock('@/components/charts', async (importOriginal) => {
   };
 });
 
-const packs = [
-  ['v1', 'studio'],
-  ['v2', 'elevated'],
-  ['v3', 'precision'],
-  ['v4', 'owner'],
-  ['v5', 'iconic'],
-  ['v6', 'expressive'],
-  ['v7', 'pixel'],
-] as const;
+const packs = Object.entries(PACK_APPEARANCES);
 
 function profile(overrides: Partial<SpeedProfileData> = {}): SpeedProfileData {
   return {
@@ -184,14 +177,14 @@ describe('SpeedProfileWidget production design packs', () => {
     expect(screen.getByRole('button', { name: /refresh data/i })).toBeEnabled();
   });
 
-  it('keeps Classic and unknown-pack recovery unchanged when switching presentations', async () => {
+  it.each(packs)('keeps Classic and unknown-pack recovery unchanged when switching to %s (%s)', async (pack, appearance) => {
     const view = render(widget(undefined));
     expect(view.container.querySelector('[data-widget-appearance]')).not.toBeInTheDocument();
     expect(screen.getByText('58')).toBeInTheDocument();
     expect(screen.queryByText('Average power: —')).not.toBeInTheDocument();
 
-    view.rerender(widget('v2'));
-    await expectAppearance(view.container, 'elevated');
+    view.rerender(widget(pack));
+    await expectAppearance(view.container, appearance);
     expect(screen.getAllByTestId('speed-chart')).toHaveLength(1);
     view.rerender(widget('unknown-pack'));
     expect(view.container.querySelector('[data-widget-appearance]')).not.toBeInTheDocument();
@@ -201,7 +194,7 @@ describe('SpeedProfileWidget production design packs', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('does not turn incomplete sample counts or invalid power into zero or a claimed sweet spot', async () => {
+  it.each(packs)('%s does not turn incomplete sample counts or invalid power into zero or a claimed sweet spot in %s', async (pack, appearance) => {
     useSpeedProfileMock.mockReturnValue(query({
       data: profile({
         distribution: [
@@ -210,8 +203,8 @@ describe('SpeedProfileWidget production design packs', () => {
         ],
       }),
     }));
-    const view = render(widget('v7'));
-    await expectAppearance(view.container, 'pixel');
+    const view = render(widget(pack));
+    await expectAppearance(view.container, appearance);
     expect(chartRows()).toEqual([
       { bucket: '0–8', frequency: null, power: null, sourceIndex: 0 },
       { bucket: '26–35', frequency: null, power: 9.6, sourceIndex: 1 },
@@ -222,35 +215,35 @@ describe('SpeedProfileWidget production design packs', () => {
     expect(screen.queryByText('Frequency: 0%')).not.toBeInTheDocument();
   });
 
-  it('shows an honest empty source in full and compact packs, without a zero-scale instrument', async () => {
+  it.each(packs)('%s shows an honest empty source in full and compact layouts, without a zero-scale instrument in %s', async (pack, appearance) => {
     useSpeedProfileMock.mockReturnValue(query({ data: profile({ distribution: [], optimalSpeedMps: 0 }) }));
-    const view = render(widget('v3'));
-    await expectAppearance(view.container, 'precision');
+    const view = render(widget(pack));
+    await expectAppearance(view.container, appearance);
     expect(screen.getByText('No speed data')).toBeInTheDocument();
     expect(screen.queryByTestId('speed-chart')).not.toBeInTheDocument();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     expect(screen.getByText('Observed speed samples · average power is not energy efficiency')).toBeInTheDocument();
-    view.rerender(widget('v3', { cols: 1, rows: 1 }));
-    await expectAppearance(view.container, 'precision');
+    view.rerender(widget(pack, { cols: 1, rows: 1 }));
+    await expectAppearance(view.container, appearance);
     expect(screen.getByText('No speed data')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Speed profile', level: 3 })).toBeVisible();
   });
 
-  it('keeps retained chart data and a nonblocking trust warning after a failed refresh', async () => {
+  it.each(packs)('%s keeps retained chart data and a nonblocking trust warning after a failed refresh in %s', async (pack, appearance) => {
     useSpeedProfileMock.mockReturnValue(query({
       isStale: true, isError: true, error: new Error('Refresh interrupted'),
     }));
-    const view = render(widget('v1'));
-    await expectAppearance(view.container, 'studio');
+    const view = render(widget(pack));
+    await expectAppearance(view.container, appearance);
     expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
     expect(screen.getByText('58')).toBeInTheDocument();
     expect(screen.getByTestId('speed-chart')).toBeInTheDocument();
     expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
   });
 
-  it('retains the source shell during initial loading and a fatal initial error', () => {
+  it.each(packs)('%s retains the source shell during initial loading and a fatal initial error in %s', (pack) => {
     useSpeedProfileMock.mockReturnValue(query({ data: undefined, isLoading: true }));
-    const view = render(widget('v6'));
+    const view = render(widget(pack));
     expect(screen.getByRole('heading', { name: 'Speed profile', level: 3 })).toBeVisible();
     expect(view.container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
     expect(screen.queryByTestId('speed-chart')).not.toBeInTheDocument();
@@ -258,16 +251,19 @@ describe('SpeedProfileWidget production design packs', () => {
     useSpeedProfileMock.mockReturnValue(query({
       data: undefined, isError: true, error: new Error('Speed profile unavailable'),
     }));
-    view.rerender(widget('v6'));
+    view.rerender(widget(pack));
     expect(screen.getByRole('heading', { name: 'Speed profile', level: 3 })).toBeVisible();
-    expect(within(screen.getByTestId('widget-body')).getByRole('button', { name: 'Retry' })).toBeEnabled();
+    const retry = within(screen.getByTestId('widget-body')).getByRole('button', { name: 'Retry' });
+    expect(retry).toBeEnabled();
+    fireEvent.click(retry);
+    expect(refetch).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('speed-chart')).not.toBeInTheDocument();
   });
 
-  it('formats all bucket edges, the headline and signed power in selected display units', async () => {
+  it.each(packs)('%s formats all bucket edges, the headline and signed power in selected display units in %s', async (pack, appearance) => {
     useUnitsMock.mockReturnValue({ unitPrefs: { speed: 'mph', power: 'W' } });
-    const view = render(widget('v4'));
-    await expectAppearance(view.container, 'owner');
+    const view = render(widget(pack));
+    await expectAppearance(view.container, appearance);
     expect(chartRows()).toEqual([
       { bucket: '0–5', frequency: 20, power: -3000, sourceIndex: 0 },
       { bucket: '16–22', frequency: 80, power: 9600, sourceIndex: 1 },
@@ -276,5 +272,22 @@ describe('SpeedProfileWidget production design packs', () => {
     expect(screen.getByText('36')).toBeInTheDocument();
     expect(screen.getByTestId('power-series')).toHaveAttribute('data-name', 'Average power (W)');
     expect(screen.queryByText('km/h')).not.toBeInTheDocument();
+  });
+
+  it.each(packs)('%s distinguishes zero measured power from an unknown frequency when no samples were recorded in %s', async (pack, appearance) => {
+    useSpeedProfileMock.mockReturnValue(query({
+      data: profile({
+        distribution: [{ speed_bucket: '0-5', readings: 0, avg_power_w: 0 }],
+        optimalSpeedMps: 0,
+      }),
+    }));
+    const view = render(widget(pack));
+    await expectAppearance(view.container, appearance);
+    expect(chartRows()).toEqual([{ bucket: '0–8', frequency: null, power: 0, sourceIndex: 0 }]);
+    expect(screen.getByText('Frequency: —')).toBeInTheDocument();
+    expect(screen.getByText(/Average power: 0(?:\.0+)? kW/)).toBeInTheDocument();
+    expect(screen.queryByText('Frequency: 0%')).not.toBeInTheDocument();
+    expect(screen.queryByText('58')).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 });

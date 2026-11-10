@@ -34,7 +34,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { render, screen, fireEvent, act, within } from '@testing-library/react';
+import { render, screen, fireEvent, act, within, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -88,6 +88,8 @@ import { useExportJobs } from '@/api/hooks/useAdmin';
 import type { ExportJob as ExportJobExport } from '@/types/export';
 import type { ExportJob as ExportJobAdmin } from '@/types/admin';
 import type { WidgetSize } from './types';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 const mockUseExports = vi.mocked(useExports);
 const mockUseExportJobs = vi.mocked(useExportJobs);
@@ -154,13 +156,33 @@ function makeAdmin(over: Partial<ExportJobAdmin> = {}): ExportJobAdmin {
   };
 }
 
-function renderWidget(size: WidgetSize) {
+function renderWidget(size: WidgetSize, packId: PackId = 'classic') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const content = (currentSize: WidgetSize, currentPack: PackId) => (
     <QueryClientProvider client={client}>
-      <MemoryRouter><ExportStatusWidget size={size} /></MemoryRouter>
-    </QueryClientProvider>,
+      <MemoryRouter>
+        <PackBoundary requestedPackId={currentPack}>
+          <ExportStatusWidget size={currentSize} />
+        </PackBoundary>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
+  const view = render(content(size, packId));
+  return {
+    ...view,
+    updateWidget: (nextSize = size, nextPack = packId) =>
+      view.rerender(content(nextSize, nextPack)),
+  };
+}
+
+async function expectTimelinePack(container: HTMLElement, packId: PackId) {
+  expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+  if (packId !== 'classic') {
+    await waitFor(() => {
+      expect(container.querySelector('[data-timeline-appearance]'))
+        .toHaveAttribute('data-timeline-appearance', PACK_APPEARANCES[packId]);
+    });
+  }
 }
 
 const COMPACT: WidgetSize = { cols: 1, rows: 2 };
@@ -593,4 +615,149 @@ describe('ExportStatusWidget refresh', () => {
     expect(exportsRefetch).toHaveBeenCalledTimes(1);
     expect(adminRefetch).toHaveBeenCalledTimes(1);
   });
+});
+
+describe.each(PACK_IDS)('ExportStatusWidget %s presentation acceptance', (packId) => {
+  it('preserves the merged feed, byte trust, status priority and responsive download gating', async () => {
+    mockUseExports.mockReturnValue(qr({ data: [
+      makeExport({ id: 'running', fsmState: 'processing', filePath: '/exports/complete-vehicle-evidence-with-a-long-unbroken-filename.csv' }),
+      makeExport({ id: 'queued', fsmState: 'queued', filePath: '/exports/queued.csv' }),
+      makeExport({ id: 'ready', fsmState: 'queued', filePath: '/exports/ready.csv', fileSize: 1536 }),
+      makeExport({ id: 'zero', filePath: '/exports/zero.csv', fileSize: 0 }),
+      makeExport({ id: 'unknown-size', filePath: '/exports/unknown-size.csv', fileSize: undefined }),
+      makeExport({ id: 'invalid-size', filePath: '/exports/invalid-size.csv', fileSize: Number.NaN }),
+      makeExport({ id: 'failed', fsmState: 'failed', filePath: '/exports/failed.json', format: 'json', failedReason: 'Disk quota' }),
+      makeExport({ id: 'unknown', fsmState: 'future-state', filePath: '/exports/unknown.csv', format: '', createdAt: '' }),
+    ] }));
+    mockUseExportJobs.mockReturnValue(qr({ data: [
+      makeAdmin({ id: 'ready', status: 'ready', fileSize: null }),
+      makeAdmin({ id: 'backup', type: 'backup', status: 'queued' }),
+    ] }));
+    const view = renderWidget(WIDE, packId);
+    await expectTimelinePack(view.container, packId);
+
+    const rows = screen.getAllByRole('listitem');
+    expect(rows).toHaveLength(9);
+    expect(rows.map(row => within(row).getByText(/^(Running|Queued|Done|Failed|Unknown)$/).textContent))
+      .toEqual(['Running', 'Queued', 'Queued', 'Done', 'Done', 'Done', 'Done', 'Failed', 'Unknown']);
+    expect(within(rows[0]).getByText('complete-vehicle-evidence-with-a-long-unbroken-filename.csv'))
+      .toHaveClass('whitespace-normal', '[overflow-wrap:anywhere]');
+    expect(within(rows[2]).getByText('Backup')).toBeInTheDocument();
+    expect(within(rows[3]).getByText('CSV')).toBeInTheDocument();
+    expect(within(rows[3]).getByText('1.50 KB')).toBeInTheDocument();
+    expect(rows[3]).toHaveTextContent('2024');
+    expect(within(rows[4]).getByText('0 B')).toBeInTheDocument();
+    for (const row of [rows[5], rows[6]]) {
+      expect(within(row).queryByText(/^(?:0 B|NaN|Infinity|.* [KMGT]?B)$/)).not.toBeInTheDocument();
+    }
+    expect(within(rows[7]).getByText('JSON')).toBeInTheDocument();
+    expect(rows[7]).toHaveTextContent('Disk quota');
+    expect(rows[8]).not.toHaveTextContent('2024');
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Download' }).map(link => link.getAttribute('href')))
+      .toEqual(['ready', 'zero', 'unknown-size', 'invalid-size'].map(id => `/api/v1/export/jobs/${id}/download`));
+
+    view.updateWidget(STANDARD);
+    await expectTimelinePack(view.container, packId);
+    expect(screen.getAllByRole('listitem')).toHaveLength(9);
+    expect(screen.queryByRole('link', { name: 'Download' })).not.toBeInTheDocument();
+    expect(screen.getByText('1.50 KB')).toBeInTheDocument();
+  });
+
+  it('keeps compact active, genuine idle zero and unknown summaries distinct', async () => {
+    mockUseExports.mockReturnValue(qr({ data: [
+      makeExport({ fsmState: 'processing' }),
+      makeExport({ fsmState: 'queued' }),
+      makeExport(),
+    ] }));
+    const view = renderWidget(COMPACT, packId);
+    await expectTimelinePack(view.container, packId);
+    expect(screen.getByText('Active exports')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('Running')).toBeInTheDocument();
+
+    mockUseExports.mockReturnValue(qr({ data: [makeExport()] }));
+    view.updateWidget();
+    await expectTimelinePack(view.container, packId);
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('Idle')).toBeInTheDocument();
+
+    mockUseExports.mockReturnValue(qr({ data: [makeExport({ fsmState: 'future-state' })] }));
+    view.updateWidget();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+    expect(screen.queryByText('Idle')).not.toBeInTheDocument();
+    expect(view.container.querySelector('[data-data-state="partial"]')).not.toBeNull();
+  });
+
+  it('preserves loading, initial failure, empty, partial and retained failure recovery', async () => {
+    const exportsRefetch = vi.fn();
+    const adminRefetch = vi.fn();
+    mockUseExports.mockReturnValue(qr({ data: undefined, isLoading: true, refetch: exportsRefetch }));
+    mockUseExportJobs.mockReturnValue(qr({ data: undefined, isLoading: true, refetch: adminRefetch }));
+    const view = renderWidget(WIDE, packId);
+    expect(view.container.querySelector('[data-data-state="initial"] [class*="--skeleton-bg"]')).not.toBeNull();
+    expect(screen.getByText('Export status')).toBeInTheDocument();
+
+    const failure = { data: undefined, isError: true, error: new Error('offline') };
+    mockUseExports.mockReturnValue(qr({ ...failure, refetch: exportsRefetch }));
+    mockUseExportJobs.mockReturnValue(qr({ ...failure, refetch: adminRefetch }));
+    view.updateWidget();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No export jobs')).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: /^Refresh/i })[0]);
+    expect(exportsRefetch).toHaveBeenCalledOnce();
+    expect(adminRefetch).toHaveBeenCalledOnce();
+
+    mockUseExports.mockReturnValue(qr({ data: [], refetch: exportsRefetch }));
+    mockUseExportJobs.mockReturnValue(qr({ data: [], refetch: adminRefetch }));
+    view.updateWidget();
+    expect(screen.getByText('No export jobs')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    const jobs = [makeExport({ id: 'retained', filePath: '/exports/retained.csv' })];
+    mockUseExports.mockReturnValue(qr({ data: jobs, refetch: exportsRefetch }));
+    mockUseExportJobs.mockReturnValue(qr({ data: undefined, isLoading: true, refetch: adminRefetch }));
+    view.updateWidget();
+    await expectTimelinePack(view.container, packId);
+    expect(view.container.querySelector('[data-data-state="partial"]')).not.toBeNull();
+    const download = screen.getByRole('link', { name: 'Download' });
+
+    mockUseExports.mockReturnValue(qr({ data: jobs, error: new Error('offline'), isError: true, refetch: exportsRefetch }));
+    mockUseExportJobs.mockReturnValue(qr({ data: [], error: new Error('offline'), isError: true, refetch: adminRefetch }));
+    view.updateWidget();
+    expect(view.container.querySelector('[data-data-state="stale"]')).not.toBeNull();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Download' })).toBe(download);
+    expect(download).toHaveAttribute('href', '/api/v1/export/jobs/retained/download');
+    expect(screen.getByText('Done')).toBeInTheDocument();
+    expect(screen.queryByText('No export jobs')).not.toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: /^Refresh/i })[0]);
+    expect(exportsRefetch).toHaveBeenCalledTimes(2);
+    expect(adminRefetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+it('preserves the mounted feed, scroll and download focus while switching every pack', async () => {
+  mockUseExports.mockReturnValue(qr({ data: [makeExport({ filePath: '/exports/focused.csv' })] }));
+  const view = renderWidget(WIDE);
+  const feed = screen.getByRole('list');
+  const scrollContainer = feed.parentElement;
+  const row = screen.getByRole('listitem');
+  const download = screen.getByRole('link', { name: 'Download' });
+  download.focus();
+  expect(scrollContainer).not.toBeNull();
+  if (scrollContainer) scrollContainer.scrollTop = 42;
+
+  for (const packId of PACK_IDS) {
+    view.updateWidget(WIDE, packId);
+    await expectTimelinePack(view.container, packId);
+    expect(screen.getByRole('list')).toBe(feed);
+    expect(screen.getByRole('listitem')).toBe(row);
+    expect(screen.getByRole('link', { name: 'Download' })).toBe(download);
+    expect(download).toHaveFocus();
+    expect(scrollContainer?.scrollTop).toBe(42);
+  }
 });

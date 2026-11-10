@@ -226,20 +226,30 @@ it.each(sizes)('preserves Classic and recovers it after changing or receiving an
     }
   };
   expectClassic();
-  view.selectPack('v7');
-  await expectAppearance(view.container, 'pixel');
-  view.selectPack('classic');
-  expectClassic();
+  for (const [packId, appearance] of Object.entries(PACK_APPEARANCES)) {
+    view.selectPack(packId);
+    await expectAppearance(view.container, appearance);
+    expect(view.container.querySelector('.widget-big-number')).toHaveTextContent('1');
+    if (size.cols > 1) {
+      expect(screen.getByText('Acceleration Boost')).toBeInTheDocument();
+      expect(screen.getByText('Coast drive')).toBeInTheDocument();
+    }
+    view.selectPack('classic');
+    expectClassic();
+  }
   view.selectPack('unsupported-pack');
   expectClassic();
+  expect(upgradeRefetch).not.toHaveBeenCalled();
+  expect(driveRefetch).not.toHaveBeenCalled();
+  expect(shareRefetch).not.toHaveBeenCalled();
 });
 
-it('retains sharing on an upgrades failure and retries only the failed source', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s retains sharing on an upgrades failure and retries only the failed source', async (packId, appearance) => {
   vi.mocked(useVehicleUpgrades).mockReturnValue(query<UpgradesEnvelope>(undefined, {
     isError: true, error: new Error('Upgrades unavailable'), refetch: upgradeRefetch,
   }));
-  const { container } = renderWidget('v2');
-  await expectAppearance(container, 'elevated');
+  const { container } = renderWidget(packId);
+  await expectAppearance(container, appearance);
   expect(container.querySelector('.widget-big-number')).toHaveTextContent('—');
   expect(screen.getByText('Available upgrades')).toBeInTheDocument();
   expect(screen.getByText('Share links')).toBeInTheDocument();
@@ -250,12 +260,12 @@ it('retains sharing on an upgrades failure and retries only the failed source', 
   expect(shareRefetch).not.toHaveBeenCalled();
 });
 
-it('retains upgrades on a sharing failure and retries its drive resolver and links', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s retains upgrades on a sharing failure and retries its drive resolver and links', async (packId, appearance) => {
   vi.mocked(useShareLinks).mockReturnValue(query<ShareToken[]>(undefined, {
     isError: true, error: new Error('Sharing unavailable'), refetch: shareRefetch,
   }));
-  const { container } = renderWidget('v4');
-  await expectAppearance(container, 'owner');
+  const { container } = renderWidget(packId);
+  await expectAppearance(container, appearance);
   expect(screen.getByText('Acceleration Boost')).toBeInTheDocument();
   expect(screen.getByText('Share links')).toBeInTheDocument();
   expect(screen.queryByText('No active share links')).not.toBeInTheDocument();
@@ -265,15 +275,16 @@ it('retains upgrades on a sharing failure and retries its drive resolver and lin
   expect(shareRefetch).toHaveBeenCalledOnce();
 });
 
-it('retains a failed-refresh payload, its warning, and invalid-expiry exclusions', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s retains a failed-refresh payload, its warning, and invalid-expiry exclusions', async (packId, appearance) => {
   vi.mocked(useVehicleUpgrades).mockReturnValue(query(upgrades, {
     isError: true, error: new Error('Refresh failed'), refetch: upgradeRefetch,
   }));
   vi.mocked(useShareLinks).mockReturnValue(query([
     share(), share({ id: 3, title: 'Unknown expiry', expires_at: 'invalid' }),
   ], { refetch: shareRefetch }));
-  const { container } = renderWidget('v6');
-  await expectAppearance(container, 'expressive');
+  const { container } = renderWidget(packId);
+  await expectAppearance(container, appearance);
+  expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'stale');
   expect(screen.getByText('Acceleration Boost')).toBeInTheDocument();
   expect(screen.getByText('Coast drive')).toBeInTheDocument();
   expect(screen.queryByText('Unknown expiry')).not.toBeInTheDocument();
@@ -284,9 +295,9 @@ it('retains a failed-refresh payload, its warning, and invalid-expiry exclusions
   expect(shareRefetch).toHaveBeenCalledOnce();
 });
 
-it('keeps invalid vehicle scope empty instead of displaying unrelated sharing', async () => {
-  const { container } = renderWidget('v5', sizes[1], 0);
-  await expectAppearance(container, 'iconic');
+it.each(Object.entries(PACK_APPEARANCES))('%s keeps invalid vehicle scope empty instead of displaying unrelated sharing', async (packId, appearance) => {
+  const { container } = renderWidget(packId, sizes[1], 0);
+  await expectAppearance(container, appearance);
   expect(screen.getByText('No vehicle data')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Choose vehicle' })).toHaveAttribute('href', '/vehicles');
   expect(useVehicleUpgrades).toHaveBeenCalledWith(undefined);
@@ -295,13 +306,14 @@ it('keeps invalid vehicle scope empty instead of displaying unrelated sharing', 
   expect(screen.queryByText('Live')).not.toBeInTheDocument();
 });
 
-it('keeps an initial-loading shell without fabricated availability or sharing', () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s keeps an initial-loading shell without fabricated availability or sharing', packId => {
   vi.mocked(useVehicleUpgrades).mockReturnValue(query<UpgradesEnvelope>(undefined, {
     isLoading: true, isPending: true, isFetching: true,
   }));
-  const { container } = renderWidget('v1', sizes[0]);
+  const { container } = renderWidget(packId, sizes[0]);
   expect(screen.getByRole('heading', { name: 'Upgrades & Sharing' })).toBeInTheDocument();
   expect(container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+  expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
   expect(container.querySelector('.widget-big-number')).not.toBeInTheDocument();
   expect(screen.queryByText('0')).not.toBeInTheDocument();
   expect(screen.queryByText('Coast drive')).not.toBeInTheDocument();

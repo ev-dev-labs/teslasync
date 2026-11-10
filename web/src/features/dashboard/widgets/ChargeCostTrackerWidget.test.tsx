@@ -35,11 +35,14 @@
  * `<MemoryRouter>` wraps every render because the error panel navigates.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { ChargingSession } from '@/api/types';
+import type { UnitPref } from '@/lib/unitConversion';
 import type { WidgetSize } from './types';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 // ── Hoisted mocks (referenced inside vi.mock factories) ─────────────────────────
 
@@ -194,6 +197,16 @@ function setQuery(over: QueryOverrides = {}) {
 const FULL: WidgetSize = { cols: 2, rows: 2 };
 const NONTALL: WidgetSize = { cols: 2, rows: 1 };
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
+const UNIT_PREFS: UnitPref = {
+  distance: 'mi',
+  speed: 'mph',
+  temperature: '°F',
+  pressure: 'psi',
+  energy: 'kWh',
+  duration: 'h',
+  power: 'kW',
+  locale: 'en-US',
+};
 
 it.each([
   { count: 1, label: '1 session', size: FULL },
@@ -206,14 +219,32 @@ it.each([
   expect(screen.getByText(label, { exact: true })).toBeInTheDocument();
 });
 
-function renderWidget(size: WidgetSize = FULL, vehicleId?: number, timeRange?: string) {
-  const view = render(
+function widgetTree(size: WidgetSize = FULL, vehicleId?: number, timeRange?: string, packId: PackId = 'classic') {
+  return (
     <MemoryRouter>
-      <ChargeCostTrackerWidget size={size} vehicleId={vehicleId} config={timeRange ? { timeRange } : undefined} />
-    </MemoryRouter>,
+      <PackBoundary requestedPackId={packId}>
+        <ChargeCostTrackerWidget size={size} vehicleId={vehicleId} config={timeRange ? { timeRange } : undefined} />
+      </PackBoundary>
+    </MemoryRouter>
   );
+}
+
+function renderWidget(size: WidgetSize = FULL, vehicleId?: number, timeRange?: string, packId: PackId = 'classic') {
+  const view = render(widgetTree(size, vehicleId, timeRange, packId));
   expect(view.container.querySelector('h3')).toHaveAccessibleName('Charge cost tracker');
   return view;
+}
+
+async function expectPresentation(container: HTMLElement, packId: PackId) {
+  expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+  if (packId === 'classic') {
+    expect(container.querySelector('[data-status-appearance]')).toBeNull();
+    return;
+  }
+  await waitFor(() => {
+    expect(container.querySelector('[data-status-appearance]'))
+      .toHaveAttribute('data-status-appearance', PACK_APPEARANCES[packId]);
+  });
 }
 
 /** Pull the queryFn passed to the (mocked) useQuery on the most recent render. */
@@ -242,18 +273,7 @@ beforeEach(() => {
     costPerDistanceUnit,
     estimateGasCost,
   });
-  unitsMock.mockReturnValue({
-    unitPrefs: {
-      distance: 'mi',
-      speed: 'mph',
-      temperature: '°F',
-      pressure: 'psi',
-      energy: 'kWh',
-      duration: 'h',
-      power: 'kW',
-      locale: 'en-US',
-    },
-  });
+  unitsMock.mockReturnValue({ unitPrefs: UNIT_PREFS });
   setQuery({ data: [makeSession()] });
 });
 
@@ -526,4 +546,184 @@ describe('ChargeCostTrackerWidget — interactions & a11y', () => {
 
     expect(q.refetch).toHaveBeenCalledTimes(1);
   });
+});
+
+describe.each(PACK_IDS)('ChargeCostTrackerWidget — %s presentation acceptance', (packId) => {
+  it.each([
+    { layout: 'compact', size: COMPACT },
+    { layout: 'non-tall', size: NONTALL },
+    { layout: 'tall', size: FULL },
+  ])('preserves the $layout content without a classic fallback', async ({ size }) => {
+    setQuery({ data: [makeSession({ cost: 1 })] });
+    const { container } = renderWidget(size, 7, undefined, packId);
+    await expectPresentation(container, packId);
+
+    expect(screen.getByText('$1.00')).toBeVisible();
+    expect(screen.getByText('30-day cost')).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Charge cost tracker' })).toBeVisible();
+    if (size === COMPACT) {
+      expect(screen.queryByText('Total energy')).toBeNull();
+      expect(screen.queryByText(/Saved .* vs gas/)).toBeNull();
+      expect(screen.queryByText('1 session', { exact: true })).toBeNull();
+    } else {
+      expect(screen.getByText('Total energy')).toBeVisible();
+      expect(screen.getByText('10.00')).toBeVisible();
+      expect(screen.getByText('kWh')).toBeVisible();
+      expect(screen.getByText('Cost / mi')).toBeVisible();
+      expect(screen.getByText('Avg rate')).toBeVisible();
+      expect(screen.getByText('$0.12')).toBeVisible();
+      expect(screen.getByText('Saved $3.08 vs gas')).toBeVisible();
+      expect(screen.getByText('1 session', { exact: true })).toBeVisible();
+      expect(Boolean(screen.queryByText('30-day estimate'))).toBe(size.rows >= 2);
+      expect(container.querySelector('[data-max-per-row]')).toHaveAttribute('data-max-per-row', '3');
+    }
+  });
+
+  it('preserves initial loading, failure, empty and recovery states', async () => {
+    setQuery({ data: undefined, isLoading: true });
+    const view = renderWidget(FULL, 7, undefined, packId);
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
+    expect(view.container.querySelector('.min-h-24[aria-hidden="true"]')).toBeInTheDocument();
+    expect(screen.queryByText('No charge data')).toBeNull();
+
+    setQuery({ data: undefined, isError: true });
+    view.rerender(widgetTree(FULL, 7, undefined, packId));
+    expect(screen.getByRole('alert')).toBeVisible();
+    expect(screen.getByText("Can't reach server")).toBeVisible();
+    expect(screen.queryByText('No charge data')).toBeNull();
+
+    setQuery({ data: [] });
+    view.rerender(widgetTree(FULL, 7, undefined, packId));
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByText('No charge data')).toBeVisible();
+    expect(screen.queryByText('$0.00')).toBeNull();
+    expect(screen.queryByText('30-day cost')).toBeNull();
+
+    setQuery({ data: [makeSession()] });
+    view.rerender(widgetTree(FULL, 7, undefined, packId));
+    await expectPresentation(view.container, packId);
+    expect(screen.getByText('$5.00')).toBeVisible();
+    expect(screen.queryByText('No charge data')).toBeNull();
+  });
+
+  it('retains metrics and source warnings during failed refreshes, with working refresh control', async () => {
+    const failed = setQuery({ data: [makeSession()], isError: true });
+    const view = renderWidget(FULL, 7, undefined, packId);
+    await expectPresentation(view.container, packId);
+    expect(view.container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'stale');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
+    expect(screen.getByText('$5.00')).toBeVisible();
+    expect(screen.getByText('Total energy')).toBeVisible();
+    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(failed.refetch).toHaveBeenCalledTimes(1);
+
+    setQuery({ data: [makeSession()], isFetching: true });
+    view.rerender(widgetTree(FULL, 7, undefined, packId));
+    await expectPresentation(view.container, packId);
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText('$5.00')).toBeVisible();
+    expect(screen.getByText('10.00')).toBeVisible();
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+    expect(view.container.querySelector('.min-h-24[aria-hidden="true"]')).toBeNull();
+  });
+
+  it('distinguishes unknown and invalid costs from measured zero and signed billing credits', async () => {
+    formattingMock.mockReturnValue({
+      costPerKwh: null,
+      formatCurrency,
+      costPerDistanceUnit,
+      estimateGasCost,
+    });
+    costPerDistanceUnit.mockReturnValue(null);
+    estimateGasCost.mockReturnValue(null);
+    setQuery({ data: [makeSession({ cost_decimal: null, cost: null })] });
+    const view = renderWidget(FULL, 7, undefined, packId);
+    await expectPresentation(view.container, packId);
+    expect(view.container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
+    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.getByText('10.00')).toBeVisible();
+    expect(screen.getByText('Set gas price in settings')).toBeVisible();
+    expect(screen.queryByText('$0.00')).toBeNull();
+    expect(screen.queryByText(/Saved .* vs gas/)).toBeNull();
+
+    setQuery({ data: [makeSession({ total_energy_added_wh: Number.NaN, cost_decimal: Infinity, cost: null })] });
+    view.rerender(widgetTree(FULL, 7, undefined, packId));
+    expect(view.container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
+    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.queryByText(/NaN|Infinity/)).toBeNull();
+
+    setQuery({ data: [makeSession({ total_energy_added_wh: 0, cost_decimal: 0, cost: 5 })] });
+    view.rerender(widgetTree(FULL, 7, undefined, packId));
+    expect(view.container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'ok');
+    expect(screen.getByText('$0.00')).toBeVisible();
+    expect(screen.getByText('0.00')).toBeVisible();
+    expect(screen.queryByText('No charge data')).toBeNull();
+
+    setQuery({ data: [makeSession({ total_energy_added_wh: 0, cost_decimal: -2, cost: 5 })] });
+    view.rerender(widgetTree(FULL, 7, undefined, packId));
+    expect(screen.getByText('$-2.00')).toBeVisible();
+    expect(screen.getByText('0.00')).toBeVisible();
+    expect(screen.queryByText('$5.00')).toBeNull();
+  });
+
+  it('preserves estimated selected-range cost, savings and the controller request scope', async () => {
+    setQuery({ data: [makeSession({ cost_decimal: null, cost: null })] });
+    const { container } = renderWidget(FULL, 42, '90d', packId);
+    await expectPresentation(container, packId);
+    expect(screen.getByText('Cost for selected range (estimated)')).toBeVisible();
+    expect(screen.getByText('$1.20')).toBeVisible();
+    expect(screen.getByText('Saved $2.88 vs gas')).toBeVisible();
+    expect(screen.getByText('Estimate for selected range')).toBeVisible();
+    expect(screen.queryByText('30-day cost')).toBeNull();
+    expect(screen.queryByText('30-day estimate')).toBeNull();
+
+    await lastQueryFn()({ signal: new AbortController().signal });
+    const url = new URL(String(requestMock.mock.calls[0][0]), 'http://fixture.test');
+    expect(url.pathname).toBe('/charging');
+    expect(url.searchParams.get('vehicle_id')).toBe('42');
+    expect(url.searchParams.get('limit')).toBe('1000');
+    expect(Date.parse(url.searchParams.get('end')!) - Date.parse(url.searchParams.get('start')!))
+      .toBe(90 * 24 * 60 * 60 * 1000);
+  });
+
+  it('preserves display currency and distance preferences without changing SI helper inputs', async () => {
+    const euroCurrency = vi.fn((amount: number, decimals = 2) => `€${amount.toFixed(decimals)}`);
+    formattingMock.mockReturnValue({
+      costPerKwh: COST_PER_KWH,
+      formatCurrency: euroCurrency,
+      costPerDistanceUnit,
+      estimateGasCost,
+    });
+    unitsMock.mockReturnValue({ unitPrefs: { ...UNIT_PREFS, distance: 'km' } satisfies UnitPref });
+    costPerDistanceUnit.mockReturnValue(0.02);
+    setQuery({ data: [makeSession({ cost: 1 })] });
+    const { container } = renderWidget(FULL, 7, undefined, packId);
+    await expectPresentation(container, packId);
+    expect(screen.getByText('€1.00')).toBeVisible();
+    expect(screen.getByText('Cost / km')).toBeVisible();
+    expect(screen.getByText('€0.02')).toBeVisible();
+    expect(screen.getByText('€0.12')).toBeVisible();
+    expect(screen.getByText('kWh')).toBeVisible();
+    expect(screen.getByText('10.00')).toBeVisible();
+    expect(costPerDistanceUnit).toHaveBeenLastCalledWith(10, expect.closeTo(10 * AVG_M_PER_KWH, 2));
+    expect(estimateGasCost).toHaveBeenLastCalledWith(expect.closeTo(10 * AVG_M_PER_KWH, 2));
+  });
+});
+
+it('changes presentation packs without resetting retained controller data or request scope', async () => {
+  const query = setQuery({ data: [makeSession({ cost: 1 })], isError: true });
+  const view = renderWidget(FULL, 42, '90d');
+  const initialOptions = useQueryMock.mock.calls.at(-1)?.[0] as { queryKey: readonly unknown[] };
+  for (const packId of PACK_IDS) {
+    view.rerender(widgetTree(FULL, 42, '90d', packId));
+    await expectPresentation(view.container, packId);
+    expect(screen.getByText('$1.00')).toBeVisible();
+    expect(screen.getByText('Cost for selected range')).toBeVisible();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
+    const options = useQueryMock.mock.calls.at(-1)?.[0] as { queryKey: readonly unknown[] };
+    expect(options.queryKey).toEqual(initialOptions.queryKey);
+  }
+  expect(query.refetch).not.toHaveBeenCalled();
+  expect(requestMock).not.toHaveBeenCalled();
 });

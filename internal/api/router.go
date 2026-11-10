@@ -403,6 +403,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/roadanomalysvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/widgetdesignsvc"
 	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
 	actioncenterhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
@@ -412,6 +413,7 @@ import (
 	fleetstatehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/fleetstate"
 	ownershipintelhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/ownershipintel"
 	roadanomalyhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/roadanomaly"
+	widgetdesignhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/widgetdesign"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
@@ -770,6 +772,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	installAdminLogStreamTap(logTap)
 	logStreamHandler := apiadminls.NewAdminLogStreamHandler(logTap)
 	settingsHandler := apisettings.NewSettingsHandler(db)
+	widgetDesignHandler := widgetdesignhandler.NewHandler(
+		widgetdesignsvc.New(pgadapter.NewWidgetDesignRepository(db.Pool)), cfg.Auth.ForwardAuthHeader)
 
 	// F0 AI-Off Contract (ADR-015).
 	//
@@ -3580,6 +3584,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Settings
+		// Separate from the global settings limiter: shared query polling is a
+		// read, while writes still carry the API-wide and explicit IP limits.
+		r.Get("/settings/widget-design-pack", widgetDesignHandler.ServeHTTP)
+		r.With(httprate.LimitByIP(20, time.Minute)).Put("/settings/widget-design-pack", widgetDesignHandler.ServeHTTP)
 		r.Group(func(r chi.Router) {
 			r.Use(httprate.LimitByIP(20, 1*time.Minute))
 			r.Get("/settings", settingsHandler.Get)

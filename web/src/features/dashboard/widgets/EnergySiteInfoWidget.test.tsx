@@ -11,7 +11,7 @@
  *      truthy `siteId` (disabled until the site list resolves).
  *
  *   - size.cols <= 1  → compact tile: titled header and compact detail rows.
- *   - otherwise       → full tile: titled header + the three detail rows.
+ *   - otherwise       → full tile: titled header + all five detail rows.
  *   - no sites        → the accessible "No Tesla Energy site linked" empty state.
  *   - sites but null info data → the "No site info available" empty state.
  *   - isLoading / hard error → skeleton / QueryError chrome (no rows).
@@ -35,12 +35,14 @@
  *   8. Refresh: the accessible "Refresh" freshness control refetches the sites
  *      query, and the info query only when a `siteId` is present.
  *
- * i18n is stubbed to echo the English fallback so every copy assertion is real,
- * and `@/api/hooks/useEnergy` is partially mocked (the real module is preserved,
+ * i18n is stubbed to echo the English fallback so every copy assertion is real.
+ * Every pack runs the same controller, state and interaction contracts. Non-classic
+ * content must finish loading its shared status family before assertions run.
+ * `@/api/hooks/useEnergy` is partially mocked (the real module is preserved,
  * only the two hooks the widget reads are overridden) so no network is touched.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -74,6 +76,8 @@ vi.mock('@/api/hooks/useEnergy', async (importActual) => {
 });
 
 import EnergySiteInfoWidget from './EnergySiteInfoWidget';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS } from './designPacks/types';
 import type { WidgetSize } from './types';
 import type {
   TeslaEnergySite,
@@ -167,17 +171,30 @@ interface RenderOpts {
   info?: InfoQuery;
 }
 
-function renderWidget(size: WidgetSize, opts: RenderOpts = {}) {
+describe.each(PACK_IDS)('EnergySiteInfoWidget — pack %s', (packId) => {
+async function renderWidget(size: WidgetSize, opts: RenderOpts = {}) {
   MOCK_SITES = opts.sites ?? sitesQuery();
   MOCK_INFO = opts.info ?? infoQuery();
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
-        <EnergySiteInfoWidget size={size} />
+        <PackBoundary requestedPackId={packId}>
+          <EnergySiteInfoWidget size={size} />
+        </PackBoundary>
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+  if (packId !== 'classic' && !view.container.querySelector(
+    '[data-data-state="initial"], [data-data-state="initialFailure"]',
+  )) {
+    await waitFor(() => {
+      expect(view.container.querySelector('[data-status-appearance]'))
+        .toHaveAttribute('data-status-appearance', PACK_APPEARANCES[packId]);
+    });
+  }
+  return view;
 }
 
 beforeEach(() => {
@@ -187,10 +204,10 @@ beforeEach(() => {
   mockUseSiteInfo.mockClear();
 });
 
-it('uses the canonical responsive details while preserving all three complete source values', () => {
+it('uses the canonical responsive details while preserving all five complete source values', async () => {
   const firmware = '2026.40.5-complete-energy-gateway-firmware-identity';
   const timezone = 'America/Argentina/ComodRivadavia';
-  const { container } = renderWidget(FULL, {
+  const { container } = await renderWidget(FULL, {
     sites: sitesQuery({ data: [site(42)] }),
     info: infoQuery({ data: infoResponse({
       nameplate_power: 10500, nameplate_energy: 27000, battery_count: 2,
@@ -214,8 +231,8 @@ afterEach(() => {
 // ── Full view (populated) ───────────────────────────────────────────────────
 
 describe('EnergySiteInfoWidget — full view (populated)', () => {
-  it('scales SI power/energy to kW/kWh, composes the rows, and titles the tile', () => {
-    renderWidget(FULL, {
+  it('scales SI power/energy to kW/kWh, composes the rows, and titles the tile', async () => {
+    const { container } = await renderWidget(FULL, {
       sites: sitesQuery({ data: [site(555)] }),
       info: infoQuery({ data: POPULATED }),
     });
@@ -231,15 +248,18 @@ describe('EnergySiteInfoWidget — full view (populated)', () => {
     expect(screen.getByText('Gateway firmware')).toBeInTheDocument();
     expect(screen.getByText('23.44.30.9')).toBeInTheDocument();
     expect(screen.getByText('Backup reserve')).toBeInTheDocument();
-    expect(screen.getByText('Operating mode')).toBeInTheDocument();
+    const details = within(container.querySelector('dl')!);
+    expect(details.getByText('Operating mode')).toBeInTheDocument();
     expect(screen.getByText('20%')).toBeInTheDocument();
-    expect(screen.getByText('Self-Powered')).toBeInTheDocument();
+    expect(details.getByText('Self-Powered')).toBeInTheDocument();
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'ok');
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.queryByText('Installation timezone')).not.toBeInTheDocument();
     expect(screen.queryByText('America/Los_Angeles')).not.toBeInTheDocument();
   });
 
-  it('gates the info query on the FIRST site’s energy_site_id', () => {
-    renderWidget(FULL, {
+  it('gates the info query on the FIRST site’s energy_site_id', async () => {
+    await renderWidget(FULL, {
       sites: sitesQuery({ data: [site(555), site(999)] }),
       info: infoQuery({ data: POPULATED }),
     });
@@ -247,52 +267,87 @@ describe('EnergySiteInfoWidget — full view (populated)', () => {
     expect(mockUseSiteInfo).toHaveBeenCalledWith(555);
     expect(mockUseSiteInfo).not.toHaveBeenCalledWith(999);
   });
+
+  it.each([
+    ['autonomous', 'Time-Based Control'],
+    ['backup', 'Backup Only'],
+    ['vendor-future-mode', 'vendor-future-mode'],
+  ])('preserves the operating mode %s without changing its meaning', async (mode, label) => {
+    const { container } = await renderWidget(FULL, {
+      sites: sitesQuery({ data: [site(7)] }),
+      info: infoQuery({ data: infoResponse({ ...POPULATED.data, default_real_mode: mode }) }),
+    });
+    expect(within(container.querySelector('dl')!).getByText(label)).toBeInTheDocument();
+    if (packId !== 'classic') {
+      expect(container.querySelector('.widget-big-number')).toHaveTextContent(label);
+    }
+  });
 });
 
 // ── Null-safety / partial fields ─────────────────────────────────────────────
 
 describe('EnergySiteInfoWidget — null-safety', () => {
-  it('degrades every absent field to an em dash (no undefined/NaN artefacts)', () => {
-    renderWidget(FULL, {
+  it('degrades every absent field to an em dash (no undefined/NaN artefacts)', async () => {
+    const { container } = await renderWidget(FULL, {
       sites: sitesQuery({ data: [site(1)] }),
       // Every field is unmeasured.
       info: infoQuery({ data: infoResponse({}) }),
     });
 
-    // All three rows render their labels …
+    // All five rows render their labels …
     expect(screen.getByText('Solar system')).toBeInTheDocument();
     expect(screen.getByText('Powerwalls')).toBeInTheDocument();
     expect(screen.getByText('Gateway firmware')).toBeInTheDocument();
     expect(screen.getByText('Backup reserve')).toBeInTheDocument();
-    expect(screen.getByText('Operating mode')).toBeInTheDocument();
+    const details = within(container.querySelector('dl')!);
+    expect(details.getByText('Operating mode')).toBeInTheDocument();
 
     // … but every value is the em-dash placeholder, never "undefined kW" etc.
-    expect(screen.getAllByText('—')).toHaveLength(5);
+    expect(details.getAllByText('—')).toHaveLength(5);
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
     expect(screen.queryByText(/kWh/)).toBeNull();
     expect(screen.queryByText(/kW/)).toBeNull();
     expect(screen.queryByText(/undefined/)).toBeNull();
     expect(screen.queryByText(/NaN/)).toBeNull();
+  });
+
+  it('keeps invalid measurements and blank metadata unknown without inventing zeros', async () => {
+    const { container } = await renderWidget(FULL, {
+      sites: sitesQuery({ data: [site(7)] }),
+      info: infoQuery({ data: infoResponse({
+        nameplate_power: Number.NaN,
+        nameplate_energy: Number.POSITIVE_INFINITY,
+        battery_count: Number.NEGATIVE_INFINITY,
+        backup_reserve_percent: Number.NaN,
+        version: ' ',
+        default_real_mode: ' ',
+      }) }),
+    });
+    expect(within(container.querySelector('dl')!).getAllByText('—')).toHaveLength(5);
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
+    expect(screen.queryByText(/NaN|Infinity|0\.00 kW|0%/)).not.toBeInTheDocument();
   });
 });
 
 // ── Compact view ─────────────────────────────────────────────────────────────
 
 describe('EnergySiteInfoWidget — compact view', () => {
-  it('retains the titled header and icon alongside the compact detail rows', () => {
-    renderWidget(COMPACT, {
+  it('retains the titled header and icon alongside the compact detail rows', async () => {
+    const { container } = await renderWidget(COMPACT, {
       sites: sitesQuery({ data: [site(9)] }),
       info: infoQuery({ data: POPULATED }),
     });
 
     expect(screen.getByText('10.50 kW')).toBeInTheDocument();
     expect(screen.getByText('2 · 27.00 kWh')).toBeInTheDocument();
+    expect(container.querySelectorAll('dd')).toHaveLength(5);
     const heading = screen.getByRole('heading', { name: 'Energy site', level: 3 });
     expect(heading).toBeVisible();
     expect(heading.parentElement?.querySelector('svg.lucide-home')).toBeInTheDocument();
   });
 
-  it('keeps its identity when the compact site is unlinked', () => {
-    renderWidget(COMPACT);
+  it('keeps its identity when the compact site is unlinked', async () => {
+    await renderWidget(COMPACT);
     expect(screen.getByRole('heading', { name: 'Energy site', level: 3 })).toBeVisible();
     expect(screen.getByText('No Tesla energy site linked')).toBeInTheDocument();
   });
@@ -301,8 +356,8 @@ describe('EnergySiteInfoWidget — compact view', () => {
 // ── Site resolution + query gating ───────────────────────────────────────────
 
 describe('EnergySiteInfoWidget — site resolution + gating', () => {
-  it('disables the info query and shows the no-site empty when the list is empty', () => {
-    renderWidget(FULL, { sites: sitesQuery({ data: [] }) });
+  it('disables the info query and shows the no-site empty when the list is empty', async () => {
+    await renderWidget(FULL, { sites: sitesQuery({ data: [] }) });
 
     // siteId is undefined → the info query is called disabled.
     expect(mockUseSiteInfo).toHaveBeenCalledWith(undefined);
@@ -318,8 +373,8 @@ describe('EnergySiteInfoWidget — site resolution + gating', () => {
 // ── Empty (sites present, no info data) ──────────────────────────────────────
 
 describe('EnergySiteInfoWidget — empty (no info data)', () => {
-  it('shows the no-data empty state when a linked site returns null info', () => {
-    renderWidget(FULL, {
+  it('shows the no-data empty state when a linked site returns null info', async () => {
+    await renderWidget(FULL, {
       sites: sitesQuery({ data: [site(1)] }),
       info: infoQuery({ data: infoResponse(null) }),
     });
@@ -333,8 +388,8 @@ describe('EnergySiteInfoWidget — empty (no info data)', () => {
 // ── Lifecycle (loading / error) ──────────────────────────────────────────────
 
 describe('EnergySiteInfoWidget — lifecycle', () => {
-  it('renders only a skeleton while the site list is loading', () => {
-    const { container } = renderWidget(FULL, {
+  it('renders only a skeleton while the site list is loading', async () => {
+    const { container } = await renderWidget(FULL, {
       sites: sitesQuery({ isLoading: true, data: undefined }),
     });
 
@@ -343,8 +398,8 @@ describe('EnergySiteInfoWidget — lifecycle', () => {
     expect(screen.queryByText('No Tesla energy site linked')).toBeNull();
   });
 
-  it('renders a skeleton while a resolved site’s info is loading', () => {
-    const { container } = renderWidget(FULL, {
+  it('renders a skeleton while a resolved site’s info is loading', async () => {
+    const { container } = await renderWidget(FULL, {
       sites: sitesQuery({ data: [site(3)] }),
       info: infoQuery({ isLoading: true }),
     });
@@ -354,8 +409,8 @@ describe('EnergySiteInfoWidget — lifecycle', () => {
     expect(screen.queryByText('Energy site')).toBeInTheDocument();
   });
 
-  it('surfaces the info query error instead of the detail rows', () => {
-    renderWidget(FULL, {
+  it('surfaces the info query error instead of the detail rows', async () => {
+    await renderWidget(FULL, {
       sites: sitesQuery({ data: [site(3)] }),
       info: infoQuery({ error: new Error('info boom'), isError: true }),
     });
@@ -369,8 +424,8 @@ describe('EnergySiteInfoWidget — lifecycle', () => {
 // ── Regression: sites-fetch failure must not masquerade as "no site" ─────────
 
 describe('EnergySiteInfoWidget — sites-fetch error (Bug A regression)', () => {
-  it('surfaces QueryError, never the misleading "no site linked" empty state', () => {
-    renderWidget(FULL, {
+  it('surfaces QueryError, never the misleading "no site linked" empty state', async () => {
+    await renderWidget(FULL, {
       sites: sitesQuery({
         data: undefined,
         error: new Error('sites boom'),
@@ -388,51 +443,70 @@ describe('EnergySiteInfoWidget — sites-fetch error (Bug A regression)', () => 
 // ── Refresh ──────────────────────────────────────────────────────────────────
 
 describe('EnergySiteInfoWidget — refresh', () => {
-  it.each([FULL, COMPACT])('retains every detail on cached refresh failure at %j', (size) => {
-    renderWidget(size, {
+  it('keeps cached details visible while both queries refresh', async () => {
+    const { container } = await renderWidget(FULL, {
+      sites: sitesQuery({ data: [site(7)], isFetching: true }),
+      info: infoQuery({ data: POPULATED, isFetching: true }),
+    });
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'ok');
+    expect(container.querySelectorAll('dd')).toHaveLength(5);
+    expect(screen.getByText('10.50 kW')).toBeInTheDocument();
+    expect(screen.getByText('2 · 27.00 kWh')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it.each([FULL, COMPACT])('retains every detail on cached refresh failure at %j', async (size) => {
+    const { container } = await renderWidget(size, {
       sites: sitesQuery({ data: [site(7)] }),
       info: infoQuery({ data: POPULATED, isError: true, error: new Error('refresh failed') }),
     });
     expect(screen.getByText('10.50 kW')).toBeInTheDocument();
     expect(screen.getByText('2 · 27.00 kWh')).toBeInTheDocument();
     expect(screen.getByText('23.44.30.9')).toBeInTheDocument();
+    expect(screen.getByText('20%')).toBeInTheDocument();
+    expect(within(container.querySelector('dl')!).getByText('Self-Powered')).toBeInTheDocument();
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'stale');
     expect(screen.queryByText('America/Los_Angeles')).not.toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('preserves a measured zero solar size, battery count, and energy capacity', () => {
-    renderWidget(FULL, {
+  it('preserves a measured zero solar size, battery count, and energy capacity', async () => {
+    const { container } = await renderWidget(FULL, {
       sites: sitesQuery({ data: [site(7)] }),
-      info: infoQuery({ data: infoResponse({ nameplate_power: 0, battery_count: 0, nameplate_energy: 0 }) }),
+      info: infoQuery({ data: infoResponse({
+        nameplate_power: 0, battery_count: 0, nameplate_energy: 0, backup_reserve_percent: 0,
+      }) }),
     });
     expect(screen.getByText('0.00 kW')).toBeInTheDocument();
     expect(screen.getByText('0 · 0.00 kWh')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(within(container.querySelector('dl')!).getAllByText('—')).toHaveLength(2);
   });
 
-  it('retains measured site capacity when the battery count is unknown', () => {
-    renderWidget(FULL, {
+  it('retains measured site capacity when the battery count is unknown', async () => {
+    await renderWidget(FULL, {
       sites: sitesQuery({ data: [site(7)] }),
       info: infoQuery({ data: infoResponse({ battery_count: undefined, nameplate_energy: 27_000 }) }),
     });
     expect(screen.getByText('— · 27.00 kWh')).toBeInTheDocument();
   });
 
-  it('retains long firmware values without truncating their content', () => {
+  it('retains long firmware values without truncating their content', async () => {
     const firmware = 'gateway-firmware-build-with-a-long-release-identifier';
     const timezone = 'America/Argentina/ComodRivadavia';
-    renderWidget(COMPACT, {
+    await renderWidget(COMPACT, {
       sites: sitesQuery({ data: [site(7)] }),
       info: infoQuery({ data: infoResponse({ version: firmware, installation_time_zone: timezone }) }),
     });
     expect(screen.getByText(firmware)).toBeInTheDocument();
     expect(screen.queryByText(timezone)).not.toBeInTheDocument();
   });
-  it('refetches BOTH queries when a site is linked', () => {
+  it('refetches BOTH queries when a site is linked', async () => {
     const sitesRefetch = vi.fn();
     const infoRefetch = vi.fn();
-    renderWidget(FULL, {
+    await renderWidget(FULL, {
       sites: sitesQuery({ data: [site(7)], refetch: sitesRefetch }),
       info: infoQuery({ data: POPULATED, refetch: infoRefetch }),
     });
@@ -443,10 +517,10 @@ describe('EnergySiteInfoWidget — refresh', () => {
     expect(infoRefetch).toHaveBeenCalledTimes(1);
   });
 
-  it('refetches only the sites query when no site is linked', () => {
+  it('refetches only the sites query when no site is linked', async () => {
     const sitesRefetch = vi.fn();
     const infoRefetch = vi.fn();
-    renderWidget(FULL, {
+    await renderWidget(FULL, {
       sites: sitesQuery({ data: [], refetch: sitesRefetch }),
       info: infoQuery({ refetch: infoRefetch }),
     });
@@ -457,4 +531,5 @@ describe('EnergySiteInfoWidget — refresh', () => {
     expect(sitesRefetch).toHaveBeenCalledTimes(1);
     expect(infoRefetch).not.toHaveBeenCalled();
   });
+});
 });

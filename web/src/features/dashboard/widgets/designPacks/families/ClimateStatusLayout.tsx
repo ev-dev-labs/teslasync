@@ -2,8 +2,12 @@ import { Thermometer } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { PackAppearance } from '../types';
 import type { ClimatePresentationProps } from './Climate.types';
+import { EXPERIMENTAL_LAYOUTS, experimentalLayouts, isExperimentalAppearance } from '../experimentalLayouts';
 
 const layouts: Record<PackAppearance, { main: string; readings: string }> = {
+  ...experimentalLayouts(({ lead, details }) => ({
+    main: lead, readings: cn('grid grid-cols-1 gap-3 @xs:grid-cols-2', details),
+  })),
   studio: { main: 'rounded-xl border-s-4 border-[var(--border-strong)] p-3', readings: 'grid grid-cols-1 gap-3 @xs:grid-cols-2' },
   elevated: { main: 'rounded-2xl bg-[var(--surface-2)] p-4', readings: 'flex flex-wrap justify-between gap-4' },
   precision: { main: 'border-b border-[var(--border-subtle)] pb-4', readings: 'flex flex-wrap gap-x-6 gap-y-3' },
@@ -15,6 +19,9 @@ const layouts: Record<PackAppearance, { main: string; readings: string }> = {
 
 export default function ClimateStatusLayout({ appearance, headline, status, airflow, outside, setpoint }: ClimatePresentationProps) {
   const layout = layouts[appearance];
+  const experiment = isExperimentalAppearance(appearance) ? EXPERIMENTAL_LAYOUTS[appearance] : null;
+  const airflowFirst = appearance === 'studio' || experiment?.order[0] === 'visual';
+  const ventilation = experiment ? <div key="airflow" className={experiment.visual}>{airflow}</div> : airflow;
   return (
     <div data-climate-appearance={appearance} className="flex min-w-0 flex-col gap-3">
       {appearance === 'owner' && <div className="flex flex-wrap items-center justify-between gap-3">{status}{setpoint}</div>}
@@ -26,9 +33,9 @@ export default function ClimateStatusLayout({ appearance, headline, status, airf
         {headline}
         {appearance !== 'owner' && status}
       </div>
-      {appearance === 'studio' && airflow}
+      {airflowFirst && ventilation}
       <div className={layout.readings}>{outside}{appearance !== 'owner' && setpoint}</div>
-      {appearance !== 'studio' && airflow}
+      {!airflowFirst && ventilation}
     </div>
   );
 }

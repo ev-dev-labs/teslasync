@@ -7,7 +7,7 @@ import type { BatteryCellSummary } from '@/types/energy';
 import type { WidgetSize } from './types';
 import BatteryCellsWidget from './BatteryCellsWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
-import type { PackId } from './designPacks/types';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 const mocks = vi.hoisted(() => ({
   cells: vi.fn(),
@@ -30,10 +30,9 @@ vi.mock('@/components/charts', async importOriginal => {
 
 const full: WidgetSize = { cols: 4, rows: 3 };
 const compact: WidgetSize = { cols: 1, rows: 1 };
-const packs = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const packs = PACK_IDS
+  .filter((pack): pack is Exclude<PackId, 'classic'> => pack !== 'classic')
+  .map(pack => [pack, PACK_APPEARANCES[pack]] as const);
 const fixture: BatteryCellSummary = {
   total_cells: 96, avg_voltage: 3.8, min_voltage: 3.79, max_voltage: 3.81,
   voltage_spread: 0.02, avg_temperature: 28, min_temperature: 27,
@@ -122,7 +121,7 @@ describe.each(packs)('battery-cells %s (%s)', (pack, name) => {
   );
 });
 
-it('retains the untouched Classic grid, summaries and recovery when switching packs', async () => {
+it.each(packs)('retains the untouched Classic grid, summaries and recovery when switching to %s', async (pack, name) => {
   const view = render(widget('classic'));
   expect(view.container.querySelector('[data-widget-appearance]')).not.toBeInTheDocument();
   expect(screen.queryByRole('img', { name: 'Cell voltage' })).not.toBeInTheDocument();
@@ -130,9 +129,9 @@ it('retains the untouched Classic grid, summaries and recovery when switching pa
   expect(screen.getByText('20.00')).toBeInTheDocument();
   expect(screen.getByText('Healthy < 30 mV')).toBeInTheDocument();
 
-  view.rerender(widget('v7'));
-  await appearance(view.container, 'pixel');
-  expect(view.container.querySelector('[data-instrument-appearance="pixel"] .lucide-cpu')).toBeInTheDocument();
+  view.rerender(widget(pack));
+  await appearance(view.container, name);
+  expect(view.container.querySelector(`[data-instrument-appearance="${name}"] .lucide-cpu`)).toBeInTheDocument();
   view.rerender(widget('classic'));
   expect(view.container.querySelector('[data-widget-appearance]')).not.toBeInTheDocument();
   expect(screen.getByRole('list')).toHaveTextContent('Cell 92 · M5');
@@ -141,7 +140,7 @@ it('retains the untouched Classic grid, summaries and recovery when switching pa
   expect(mocks.refetch).toHaveBeenCalledTimes(1);
 });
 
-it('keeps invalid cell readings as gaps and unknown statuses while retaining measured zero and signed temperature', async () => {
+it.each(packs)('%s keeps invalid cell readings as gaps and unknown statuses while retaining measured zero and signed temperature', async (pack, name) => {
   mocks.cells.mockReturnValue(query({
     ...fixture, avg_voltage: Number.NaN, min_voltage: 0, voltage_spread: Number.NaN,
     min_temperature: -5,
@@ -150,8 +149,8 @@ it('keeps invalid cell readings as gaps and unknown statuses while retaining mea
       { cell_id: 92, module: 5, voltage: 0, temperature: -5 },
     ],
   }));
-  const { container } = render(widget('v7'));
-  await appearance(container, 'pixel');
+  const { container } = render(widget(pack));
+  await appearance(container, name);
   const grid = screen.getByRole('list');
   expect(within(grid).getAllByText('Unknown')).toHaveLength(2);
   expect(within(grid).getByText('— / —')).toBeInTheDocument();
@@ -166,10 +165,10 @@ it('keeps invalid cell readings as gaps and unknown statuses while retaining mea
   expect(screen.queryByRole('meter')).not.toBeInTheDocument();
 });
 
-it('keeps both empty cell sections and source summary readings visible without inventing cells', async () => {
+it.each(packs)('%s keeps both empty cell sections and source summary readings visible without inventing cells', async (pack, name) => {
   mocks.cells.mockReturnValue(query({ ...fixture, cells: [] }));
-  const { container } = render(widget('v4', compact));
-  await appearance(container, 'owner');
+  const { container } = render(widget(pack, compact));
+  await appearance(container, name);
   expect(screen.getAllByText('No cell data')).toHaveLength(2);
   expect(screen.getByText('Source-reported cells: 0')).toBeInTheDocument();
   expect(screen.getByText('Min V')).toBeInTheDocument();
@@ -179,10 +178,10 @@ it('keeps both empty cell sections and source summary readings visible without i
   expect(container.querySelector('.recharts-bar')).not.toBeInTheDocument();
 });
 
-it('keeps absent observations unknown instead of reporting a successful zero spread', async () => {
+it.each(packs)('%s keeps absent observations unknown instead of reporting a successful zero spread', async (pack, name) => {
   mocks.cells.mockReturnValue(query(undefined, { data: undefined }));
-  const { container } = render(widget('v1'));
-  await appearance(container, 'studio');
+  const { container } = render(widget(pack));
+  await appearance(container, name);
   expect(screen.getAllByText('No battery cell data')).toHaveLength(2);
   expect(screen.getByText('Spread')).toBeInTheDocument();
   expect(screen.getAllByText('—')).toHaveLength(5);
@@ -190,10 +189,10 @@ it('keeps absent observations unknown instead of reporting a successful zero spr
   expect(screen.queryByText('Healthy < 30 mV')).not.toBeInTheDocument();
 });
 
-it('retains the plot and details on refresh failure, without replacing them with a fatal error', async () => {
+it.each(packs)('%s retains the plot and details on refresh failure, without replacing them with a fatal error', async (pack, name) => {
   mocks.cells.mockReturnValue(query(fixture, { error: new Error('Refresh failed'), isError: true, isStale: true }));
-  const { container } = render(widget('v3'));
-  await appearance(container, 'precision');
+  const { container } = render(widget(pack));
+  await appearance(container, name);
   expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   expect(screen.getByRole('img', { name: 'Cell voltage' })).toBeInTheDocument();
   expect(screen.getByRole('list')).toHaveTextContent('Cell 92 · M5');
@@ -203,7 +202,7 @@ it('retains the plot and details on refresh failure, without replacing them with
   expect(mocks.refetch).toHaveBeenCalledTimes(1);
 });
 
-it.each(['v2', 'v6'] satisfies PackId[])('preserves initial-loading and fatal-error recovery in %s', pack => {
+it.each(packs)('preserves initial-loading and fatal-error recovery in %s', pack => {
   mocks.cells.mockReturnValue(query(undefined, { data: undefined, isLoading: true }));
   const view = render(widget(pack));
   expect(view.container.querySelector('[aria-busy="true"][data-data-state="initial"]')).toBeInTheDocument();
@@ -215,10 +214,10 @@ it.each(['v2', 'v6'] satisfies PackId[])('preserves initial-loading and fatal-er
   expect(screen.getByRole('heading', { name: 'Battery cells' })).toBeInTheDocument();
 });
 
-it('keeps an in-flight refresh from invoking a second request', async () => {
+it.each(packs)('%s keeps an in-flight refresh from invoking a second request', async (pack, name) => {
   mocks.cells.mockReturnValue(query(fixture, { isFetching: true }));
-  const { container } = render(widget('v5'));
-  await appearance(container, 'iconic');
+  const { container } = render(widget(pack));
+  await appearance(container, name);
   fireEvent.click(screen.getByRole('button', { name: /^Refresh data/ }));
   expect(mocks.refetch).not.toHaveBeenCalled();
   expect(screen.getByRole('list')).toHaveTextContent('Cell 12 · M2');

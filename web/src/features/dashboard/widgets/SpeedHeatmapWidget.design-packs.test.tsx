@@ -8,6 +8,7 @@ import { convertSpeedFromSI, type SpeedUnitPref } from '@/lib/unitConversion';
 import { queryResult, renderWidget } from '../components/continuation-dashboard-2/testSupport';
 import SpeedHeatmapWidget from './SpeedHeatmapWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
 import type { WidgetSize } from './types';
 
 const { historyMock, vehiclesMock, unitsMock, timezoneMock, refetch } = vi.hoisted(() => ({
@@ -38,10 +39,7 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-const packs = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const packs = Object.entries(PACK_APPEARANCES);
 const gridLabel = 'Average speed by day of week and hour of day';
 const blankCells = 'Blank cells represent periods without samples, not zero speed.';
 const compactSize: WidgetSize = { cols: 1, rows: 1 };
@@ -200,18 +198,40 @@ describe.each(packs)('Speed heatmap %s / %s', (packId, packAppearance) => {
     expect(screen.queryByText('km/h')).not.toBeInTheDocument();
     expect(screen.queryByText(/^0(?:\.00)?$/)).not.toBeInTheDocument();
   });
+
+  it('distinguishes a zero-only sample from missing data in the grid and compact peak', async () => {
+    historyMock.mockReturnValue(query({ data: [drive({ avg_speed_mps: 0 })] }));
+    const view = renderWidget(widget(packId));
+    await appearance(view.container, packAppearance);
+    const cells = screen.getByRole('img', { name: gridLabel }).querySelectorAll('rect');
+    expect(cells[8].textContent).toContain(`${displaySpeed(0)} km/h (1 drive)`);
+    expect(cells[8].getAttribute('fill')).not.toBe('var(--surface-2)');
+    expect(cells[9].textContent).toContain('No data');
+    expect(cells[9]).toHaveAttribute('fill', 'var(--surface-2)');
+    expect(screen.queryByText('No drive data yet')).not.toBeInTheDocument();
+
+    view.rerender(widget(packId, compactSize));
+    await appearance(view.container, packAppearance);
+    expect(screen.getByText('Peak')).toBeInTheDocument();
+    expect(screen.getByText(displaySpeed(0))).toBeInTheDocument();
+    expect(screen.getByText('km/h')).toBeInTheDocument();
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
 });
 
-it('preserves Classic, narrow axes and unknown-pack recovery when switching appearances', async () => {
+it.each(packs)('preserves Classic, narrow axes and unknown-pack recovery when switching to %s', async (packId, packAppearance) => {
   const narrowSize = { cols: 2, rows: 2 };
   const view = renderWidget(widget(undefined, narrowSize));
   expect(view.container.querySelector('[data-widget-appearance]')).not.toBeInTheDocument();
   expect(screen.queryByText('By hour')).not.toBeInTheDocument();
   expect(screen.queryByText(blankCells)).not.toBeInTheDocument();
   expectOriginalGrid(false, false);
-  view.rerender(widget('v7', narrowSize));
-  await appearance(view.container, 'pixel');
-  expectOriginalGrid(true, false);
+  view.rerender(widget(packId, narrowSize));
+  await appearance(view.container, packAppearance);
+  expectOriginalGrid(packId === 'v7', false);
   view.rerender(widget('unrecognized-pack', narrowSize));
   expect(view.container.querySelector('[data-widget-appearance]')).not.toBeInTheDocument();
   expectOriginalGrid(false, false);
@@ -221,23 +241,23 @@ it('preserves Classic, narrow axes and unknown-pack recovery when switching appe
   expect(screen.queryByRole('img')).not.toBeInTheDocument();
 });
 
-it('retains the sampled plot and measured zero with a nonblocking warning after a failed refresh', async () => {
+it.each(packs)('retains the sampled plot and measured zero after a failed refresh in %s', async (packId, packAppearance) => {
   const updatedAt = Date.now() - 60_000;
   historyMock.mockReturnValue(query({
     error: new Error('Refresh interrupted'), isError: true, isStale: true, dataUpdatedAt: updatedAt,
   }));
-  const view = renderWidget(widget('v4'));
-  await appearance(view.container, 'owner');
-  expectOriginalGrid();
+  const view = renderWidget(widget(packId));
+  await appearance(view.container, packAppearance);
+  expectOriginalGrid(packId === 'v7');
   expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
   expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /refresh data/i }));
   expect(refetch).toHaveBeenCalledTimes(1);
 });
 
-it('shows loading and fatal-error recovery in the original source shell without fabricated readings', async () => {
+it.each(packs)('shows loading and fatal-error recovery without fabricated readings in %s', async (packId, packAppearance) => {
   historyMock.mockReturnValue(query({ data: undefined, isLoading: true, isPending: true, dataUpdatedAt: 0 }));
-  const view = renderWidget(widget('v2'));
+  const view = renderWidget(widget(packId));
   expect(view.container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Speed heatmap' })).toBeVisible();
   expect(screen.queryByRole('img')).not.toBeInTheDocument();
@@ -245,24 +265,24 @@ it('shows loading and fatal-error recovery in the original source shell without 
   historyMock.mockReturnValue(query({
     data: undefined, error: new Error('History unavailable'), isError: true, dataUpdatedAt: 0,
   }));
-  view.rerender(widget('v2'));
+  view.rerender(widget(packId));
   expect(screen.getByRole('alert')).toBeInTheDocument();
   expect(screen.queryByRole('img')).not.toBeInTheDocument();
   expect(screen.queryByText('No drive data yet')).not.toBeInTheDocument();
   historyMock.mockReturnValue(query());
-  view.rerender(widget('v2'));
-  await appearance(view.container, 'elevated');
-  expectOriginalGrid();
+  view.rerender(widget(packId));
+  await appearance(view.container, packAppearance);
+  expectOriginalGrid(packId === 'v7');
 });
 
-it('keeps SI conversion and vehicle-timezone placement at the display boundary', async () => {
+it.each(packs)('keeps SI conversion and vehicle-timezone placement at the display boundary in %s', async (packId, packAppearance) => {
   unitsMock.mockReturnValue({ unitPrefs: { speed: 'mph' } });
   timezoneMock.mockReturnValue('America/Los_Angeles');
   historyMock.mockReturnValue(query({ data: [
     drive({ start_ts: '2026-10-05T01:00:00Z', avg_speed_mps: 20 }),
   ] }));
-  const view = renderWidget(widget('v3'));
-  await appearance(view.container, 'precision');
+  const view = renderWidget(widget(packId));
+  await appearance(view.container, packAppearance);
   const cells = screen.getByRole('img', { name: gridLabel }).querySelectorAll('rect');
   expect(cells[6 * 24 + 18].textContent).toContain(`Sun 18:00 – ${displaySpeed(20, 'mph')} mph (1 drive)`);
   expect(cells[1].textContent).toContain('No data');

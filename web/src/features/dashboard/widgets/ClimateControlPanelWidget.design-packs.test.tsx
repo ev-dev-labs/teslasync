@@ -173,6 +173,30 @@ describe.each(packs)('climate control %s (%s)', (packId, appearance) => {
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 
+  it('preserves measured zero temperatures and fan speed while distinguishing explicitly off statuses', async () => {
+    mockedRequest.mockResolvedValue(climate({
+      inside_temp_c: 0, outside_temp_c: 0, driver_setpoint_c: 0,
+      hvac_power: false, fan_speed: 0, defrost_mode: 'Off',
+      seat_heater_left: 0, seat_heater_right: 0, seat_heater_rear_left: 0,
+      seat_heater_rear_center: 0, seat_heater_rear_right: 0,
+      hvac_steering_wheel_heat_level: 0, cabin_overheat_protection: false,
+      battery_heater: false,
+    }));
+    const { container } = renderPack(packId);
+    await expectAppearance(container, appearance);
+
+    expect(screen.getByText('0')).toBeVisible();
+    expect(screen.getByText('0°C')).toBeVisible();
+    expect(screen.getByText('Inside · set 0°C')).toBeVisible();
+    expect(screen.getByText('HVAC off')).toBeVisible();
+    expect(screen.getByText('Fan 0')).toBeVisible();
+    expect(screen.getByText('Defrost · Off')).toBeVisible();
+    expect(screen.getAllByText('Off')).toHaveLength(4);
+    expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-climate-airflow]')).toHaveAttribute('data-climate-airflow', 'static');
+  });
+
   it('retains the empty source shell, headline and status sections', async () => {
     mockedRequest.mockResolvedValue(null);
     const { container } = renderPack(packId);
@@ -206,7 +230,7 @@ describe.each(packs)('climate control %s (%s)', (packId, appearance) => {
   });
 });
 
-it('preserves Classic and switches all seven packs and unknown-ID recovery without another acquisition', async () => {
+it('preserves Classic and switches every supported pack and unknown-ID recovery without another acquisition', async () => {
   const view = renderPack('classic');
   await screen.findByText('21');
   expect(view.container.querySelector('[data-widget-family]')).toBeNull();
@@ -252,14 +276,16 @@ it('keeps retained readings, source age, static airflow and retry after a failed
   expect(view.client.getQueryState(['climate-latest', 7])?.dataUpdatedAt).toBe(lastSuccessAt);
   expect(view.container.querySelector('[data-climate-airflow]')).toHaveAttribute('data-climate-airflow', 'static');
 
-  view.selectPack('v7');
-  await expectAppearance(view.container, 'pixel');
-  expect(screen.getByText('FL1/3 · FR2/3 · RC3/3')).toBeVisible();
-  expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
-  expect(view.container.querySelector('[data-climate-airflow]')).toHaveAttribute('data-climate-airflow', 'static');
-  expect(mockedRequest).toHaveBeenCalledTimes(2);
-  expect(view.client.getQueryState(['climate-latest', 7])?.dataUpdatedAt).toBe(lastSuccessAt);
-  expect(screen.getByRole('button', { name: /^Refresh data/i })).toHaveAccessibleName(/error/i);
+  for (const [packId, appearance] of packs) {
+    view.selectPack(packId);
+    await expectAppearance(view.container, appearance);
+    expect(screen.getByText('FL1/3 · FR2/3 · RC3/3')).toBeVisible();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
+    expect(view.container.querySelector('[data-climate-airflow]')).toHaveAttribute('data-climate-airflow', 'static');
+    expect(mockedRequest).toHaveBeenCalledTimes(2);
+    expect(view.client.getQueryState(['climate-latest', 7])?.dataUpdatedAt).toBe(lastSuccessAt);
+    expect(screen.getByRole('button', { name: /^Refresh data/i })).toHaveAccessibleName(/error/i);
+  }
 
   fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
   await waitFor(() => expect(view.container.querySelector('[data-data-state="ok"]')).not.toBeNull());
@@ -267,14 +293,14 @@ it('keeps retained readings, source age, static airflow and retry after a failed
   expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
 });
 
-it('converts only at display, including negative outside temperatures, without a fabricated dial range', async () => {
+it.each(packs)('%s converts only at display, including negative outside temperatures, without a fabricated dial range', async (packId, appearance) => {
   source.temperature = '°F';
   mockedRequest.mockResolvedValue(climate({
     inside_temp_c: 20, outside_temp_c: -10, driver_setpoint_c: 21,
     hvac_power: false, fan_speed: 0,
   }));
-  const { container } = renderPack('v3');
-  await expectAppearance(container, 'precision');
+  const { container } = renderPack(packId);
+  await expectAppearance(container, appearance);
   expect(screen.getByText('68')).toBeVisible();
   expect(screen.getByText('°F')).toBeVisible();
   expect(screen.getByText('14°F')).toBeVisible();
@@ -285,32 +311,32 @@ it('converts only at display, including negative outside temperatures, without a
   expect(screen.queryByRole('meter')).not.toBeInTheDocument();
 });
 
-it('keeps old active observations static while preserving their measured HVAC status', async () => {
+it.each(packs)('%s keeps old active observations static while preserving their measured HVAC status', async (packId, appearance) => {
   mockedRequest.mockResolvedValue({
     ...fullClimate(), ts: new Date(Date.now() - 10 * 60_000).toISOString(),
   });
-  const { container } = renderPack('v5');
-  await expectAppearance(container, 'iconic');
+  const { container } = renderPack(packId);
+  await expectAppearance(container, appearance);
   expect(screen.getByText('HVAC on')).toBeVisible();
   expect(container.querySelector('[data-climate-airflow]')).toHaveAttribute('data-climate-airflow', 'static');
 });
 
-it('keeps loading and fatal-error recovery in the original shell rather than fabricating a reading', async () => {
+it.each(packs)('%s keeps loading and fatal-error recovery in the original shell rather than fabricating a reading', async (packId, appearance) => {
   let resolveSource: ((value: ClimateSnapshot) => void) | undefined;
   mockedRequest.mockReturnValueOnce(new Promise<ClimateSnapshot>(resolve => { resolveSource = resolve; }));
-  const loading = renderPack('v6');
+  const loading = renderPack(packId);
   expect(loading.container.querySelector('[aria-busy="true"]')).not.toBeNull();
   expect(screen.queryByText('0')).not.toBeInTheDocument();
   await act(async () => { resolveSource?.(fullClimate()); });
-  await expectAppearance(loading.container, 'expressive');
+  await expectAppearance(loading.container, appearance);
   loading.unmount();
 
   mockedRequest.mockRejectedValueOnce(new Error('Climate source failed'));
-  const failed = renderPack('v2');
+  const failed = renderPack(packId);
   await screen.findByRole('alert');
   expect(failed.container.querySelector('[data-data-state="initialFailure"]')).not.toBeNull();
   expect(screen.queryByText('HVAC off')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /^Retry$/i }));
-  await expectAppearance(failed.container, 'elevated');
+  await expectAppearance(failed.container, appearance);
   expect(screen.getByText('21')).toBeVisible();
 });

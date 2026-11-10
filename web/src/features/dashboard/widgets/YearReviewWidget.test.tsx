@@ -8,7 +8,7 @@
  *
  *   - compact (`cols <= 1`)  → one big AnimatedNumber (total distance) + unit/year
  *   - standard (`2 <= cols`) → titled stat grid, 6 core stats
- *   - wide (`cols >= 3`)     → titled stat grid, 6 core + 2 extra stats
+ *   - wide (`cols >= 4`)     → titled stat grid, 6 core + 2 extra stats
  *
  * The regression this suite pins down: the year-review API returns distances in
  * KILOMETRES (`total_distance_km`, `longest_drive.distance_km`) and speed in
@@ -33,7 +33,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -75,11 +75,16 @@ vi.mock('@/hooks/useUnits', () => ({
 }));
 
 import YearReviewWidget from './YearReviewWidget';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_IDS, PACK_APPEARANCES, type PackId } from './designPacks/types';
 
-it.each([1, 2, 3, 4])('identifies the year review at %i columns', (cols) => {
-  renderWidget(cols, 1);
-  expect(screen.getByRole('heading', { name: `Year in review ${YEAR}` })).toBeInTheDocument();
-});
+it.each(PACK_IDS.flatMap((packId) => [1, 2, 3, 4].map((cols) => ({ packId, cols }))))(
+  'identifies the year review at $cols columns in $packId',
+  ({ packId, cols }) => {
+    renderWidget(cols, 1, packId);
+    expect(screen.getByRole('heading', { name: `Year in review ${YEAR}` })).toBeInTheDocument();
+  },
+);
 import { request } from '@/api/client';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
@@ -190,20 +195,33 @@ function routeYearReview(payload: YearReview | null) {
 const yrCalls = () =>
   mockRequest.mock.calls.filter((c) => String(c[0]).startsWith('/analytics/year-review'));
 
-function renderWidget(cols: number, vehicleId?: number) {
+function renderWidget(cols: number, vehicleId?: number, packId: PackId = 'classic') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
-  const props = { vehicleId, size: { cols, rows: 2 } } as WidgetProps;
-  const view = render(
+  const props: WidgetProps = { vehicleId, size: { cols, rows: 2 } };
+  const tree = (requestedPackId: PackId) => (
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <YearReviewWidget {...props} />
+        <PackBoundary requestedPackId={requestedPackId}>
+          <YearReviewWidget {...props} />
+        </PackBoundary>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const view = render(tree(packId));
   expect(view.container.querySelector('h3')).toHaveAccessibleName(`Year in review ${YEAR}`);
-  return view;
+  expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+  return { ...view, rerenderPack: (nextPackId: PackId) => view.rerender(tree(nextPackId)) };
+}
+
+async function expectPackPresentation(container: HTMLElement, packId: PackId) {
+  if (packId === 'classic') {
+    expect(container.querySelector('[data-status-appearance]')).toBeNull();
+  } else {
+    await waitFor(() => expect(container.querySelector('[data-status-appearance]'))
+      .toHaveAttribute('data-status-appearance', PACK_APPEARANCES[packId]));
+  }
 }
 
 beforeEach(() => {
@@ -225,10 +243,10 @@ afterEach(() => {
 
 // ── Vehicle resolution + request contract ───────────────────────────────────
 
-describe('YearReviewWidget vehicle resolution', () => {
+describe.each(PACK_IDS)('YearReviewWidget vehicle resolution (%s)', (packId) => {
   it('prefers the explicit vehicleId prop and issues the snake_case request', async () => {
     mockUseVehicles.mockReturnValue({ data: [{ id: 7 }] } as never);
-    renderWidget(2, 42);
+    renderWidget(2, 42, packId);
 
     await waitFor(() =>
       expect(mockRequest).toHaveBeenCalledWith(
@@ -244,7 +262,7 @@ describe('YearReviewWidget vehicle resolution', () => {
 
   it('falls back to the first vehicle when no prop is given', async () => {
     mockUseVehicles.mockReturnValue({ data: [{ id: 7 }] } as never);
-    renderWidget(2);
+    renderWidget(2, undefined, packId);
 
     await waitFor(() =>
       expect(mockRequest).toHaveBeenCalledWith(
@@ -257,7 +275,7 @@ describe('YearReviewWidget vehicle resolution', () => {
   it('never queries when no vehicle resolves (id 0 keeps the query disabled)', async () => {
     mockUseVehicles.mockReturnValue({ data: [] } as never);
     routeYearReview(makeYearReview()); // would populate IF the guard were wrong
-    renderWidget(2);
+    renderWidget(2, undefined, packId);
 
     // Empty state (never a blank panel) and no request fired.
     expect(await screen.findByText('No year-in-review data')).toBeInTheDocument();
@@ -268,10 +286,10 @@ describe('YearReviewWidget vehicle resolution', () => {
 
 // ── States: loading / error / empty ─────────────────────────────────────────
 
-describe('YearReviewWidget states', () => {
+describe.each(PACK_IDS)('YearReviewWidget states (%s)', (packId) => {
   it('retains its heading above a loading skeleton without empty copy', () => {
     mockRequest.mockImplementation(() => new Promise(() => {})); // hang
-    const { container } = renderWidget(2, 1);
+    const { container } = renderWidget(2, 1, packId);
 
     expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.getByRole('heading', { name: `Year in review ${YEAR}` })).toBeInTheDocument();
@@ -284,7 +302,7 @@ describe('YearReviewWidget states', () => {
         ? Promise.reject(new Error('boom'))
         : Promise.resolve(null),
     );
-    renderWidget(2, 1);
+    renderWidget(2, 1, packId);
 
     // Regression: a failed request must NOT masquerade as "no data".
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
@@ -296,7 +314,7 @@ describe('YearReviewWidget states', () => {
 
   it('shows the empty state when the endpoint returns no payload', async () => {
     routeYearReview(null);
-    renderWidget(2, 1);
+    renderWidget(2, 1, packId);
 
     const empty = await screen.findByText('No year-in-review data');
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
@@ -307,18 +325,20 @@ describe('YearReviewWidget states', () => {
 
 // ── Populated: standard (2-col) ─────────────────────────────────────────────
 
-describe('YearReviewWidget standard layout', () => {
+describe.each(PACK_IDS)('YearReviewWidget standard layout (%s)', (packId) => {
   it('uses the shared locale month label without changing its calendar identity', async () => {
-    renderWidget(2, 1);
+    const { container } = renderWidget(2, 1, packId);
+    await expectPackPresentation(container, packId);
     expect(await screen.findByText(/Best month:\s*Jul/i)).toBeInTheDocument();
     expect(screen.getByText('Total distance')).toBeInTheDocument();
     expect(screen.queryByText('Total miles')).not.toBeInTheDocument();
   });
   it('renders the titled core stat grid with correctly-scaled km values', async () => {
-    renderWidget(2, 1);
+    const { container } = renderWidget(2, 1, packId);
 
     expect(await screen.findByText(`Year in review ${YEAR}`)).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    await expectPackPresentation(container, packId);
 
     expect(screen.getByText('12,000')).toBeInTheDocument();
     expect(screen.getAllByText('km').length).toBeGreaterThan(0);
@@ -338,10 +358,11 @@ describe('YearReviewWidget standard layout', () => {
 
 // ── Populated: wide (4-col) ─────────────────────────────────────────────────
 
-describe('YearReviewWidget wide layout', () => {
+describe.each(PACK_IDS)('YearReviewWidget wide layout (%s)', (packId) => {
   it('adds Driving Time and Top Speed to the grid', async () => {
-    renderWidget(4, 1);
+    const { container } = renderWidget(4, 1, packId);
 
+    await expectPackPresentation(container, packId);
     expect(await screen.findByText('Driving time')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByText('300.0')).toBeInTheDocument();
@@ -354,7 +375,8 @@ describe('YearReviewWidget wide layout', () => {
   });
 
   it('reviews all eight source quantities with calendar-year coverage and canonical time and speed', async () => {
-    renderWidget(4, 1);
+    const { container } = renderWidget(4, 1, packId);
+    await expectPackPresentation(container, packId);
     await screen.findByTestId('year-review-widget');
     expect(screen.getByText('300.0')).toBeInTheDocument();
     expect(screen.getAllByText('h').length).toBeGreaterThan(0);
@@ -366,11 +388,12 @@ describe('YearReviewWidget wide layout', () => {
 
 // ── Unit conversion regression: mi / mph ────────────────────────────────────
 
-describe('YearReviewWidget unit conversion (mi/mph)', () => {
+describe.each(PACK_IDS)('YearReviewWidget unit conversion (mi/mph, %s)', (packId) => {
   it('converts km→mi and km/h→mph via the SI floor (proves the ×1000 / ÷3.6 fix)', async () => {
     mockUseUnits.mockReturnValue(unitsResult('mi'));
-    renderWidget(4, 1);
+    const { container } = renderWidget(4, 1, packId);
 
+    await expectPackPresentation(container, packId);
     expect(await screen.findByText('7,456')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByText('112')).toBeInTheDocument();
@@ -386,10 +409,11 @@ describe('YearReviewWidget unit conversion (mi/mph)', () => {
 
 // ── Compact (1-col) ─────────────────────────────────────────────────────────
 
-describe('YearReviewWidget compact layout', () => {
+describe.each(PACK_IDS)('YearReviewWidget compact layout (%s)', (packId) => {
   it('renders a single big number with unit + year and no stat grid', async () => {
-    renderWidget(1, 1);
+    const { container } = renderWidget(1, 1, packId);
 
+    await expectPackPresentation(container, packId);
     // AnimatedNumber lands on the converted distance (reduced motion pinned).
     expect(await screen.findByText('12,000')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
@@ -406,8 +430,8 @@ describe('YearReviewWidget compact layout', () => {
 
 // ── Null-safety ─────────────────────────────────────────────────────────────
 
-describe('YearReviewWidget null-safety', () => {
-  it('preserves unknown measurements instead of inventing zero totals', async () => {
+describe.each(PACK_IDS)('YearReviewWidget null-safety (%s)', (packId) => {
+  it.each([1, 4])('preserves unknown measurements instead of inventing zero totals at %i columns', async (cols) => {
     routeYearReview(
       makeYearReview({
         total_distance_km: undefined as unknown as number,
@@ -420,17 +444,60 @@ describe('YearReviewWidget null-safety', () => {
         monthly_stats: [],
       }),
     );
-    renderWidget(4, 1);
+    const { container } = renderWidget(cols, 1, packId);
 
     await screen.findByText(`Year in review ${YEAR}`);
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    await expectPackPresentation(container, packId);
 
     // Busiest month with no monthly stats is omitted from the face.
     // Missing measurements remain placeholders rather than fabricated zeroes.
+    const body = within(screen.getByTestId('widget-body'));
+    expect(body.getAllByText('—')).toHaveLength(cols === 1 ? 1 : 7);
+    expect(body.queryByText('km')).not.toBeInTheDocument();
+    expect(body.queryByText('kWh')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Year highlights')).not.toBeInTheDocument();
     expect(screen.queryByText('0.00')).toBeNull();
     // Nothing leaked NaN / undefined into the DOM.
     expect(screen.queryByText(/NaN|undefined/)).toBeNull();
   });
+
+  it.each([1, 4].flatMap((cols) => [0, NaN, Infinity].map((value) => ({ cols, value }))))(
+    'distinguishes zero from non-finite quantities ($value) at $cols columns',
+    async ({ cols, value }) => {
+      const payload = makeYearReview({
+        total_distance_km: value,
+        total_drives: value,
+        total_energy_kwh: value,
+        total_charge_sessions: value,
+        co2_offset_kg: value,
+        total_driving_minutes: value,
+        fastest_speed_kmh: value,
+        monthly_stats: [],
+      });
+      if (payload.longest_drive) payload.longest_drive.distance_km = value;
+      routeYearReview(payload);
+      const { container } = renderWidget(cols, 1, packId);
+
+      await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+      await expectPackPresentation(container, packId);
+      const body = within(screen.getByTestId('widget-body'));
+      if (value === 0) {
+        expect(body.getAllByText('0')).toHaveLength(cols === 1 ? 1 : 5);
+        expect(body.getAllByText('km')).toHaveLength(cols === 1 ? 1 : 2);
+        if (cols === 4) {
+          expect(body.getAllByText('0.0')).toHaveLength(3);
+          expect(body.getByText('km/h')).toBeInTheDocument();
+        }
+        expect(body.queryByText('—')).not.toBeInTheDocument();
+      } else {
+        expect(body.getAllByText('—')).toHaveLength(cols === 1 ? 1 : 8);
+        expect(body.queryByText('km')).not.toBeInTheDocument();
+        expect(body.queryByText(/NaN|Infinity/)).not.toBeInTheDocument();
+      }
+      expect(screen.queryByLabelText('Year highlights')).not.toBeInTheDocument();
+    },
+  );
 
   it('picks the month with the most drives for "Best Month"', async () => {
     routeYearReview(
@@ -441,20 +508,39 @@ describe('YearReviewWidget null-safety', () => {
         ],
       }),
     );
-    renderWidget(2, 1);
+    const { container } = renderWidget(2, 1, packId);
 
+    await expectPackPresentation(container, packId);
     // November has the most drives → 'Nov'.
     expect(await screen.findByText(/Best month:\s*Nov/i)).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.queryByText('Feb')).toBeNull();
   });
+
+  it('ignores invalid month identities and drive counts without dropping the summary', async () => {
+    routeYearReview(makeYearReview({
+      monthly_stats: [
+        { month: 0, drives: 999, distance_km: 100, energy_kwh: 20, cost: 5 },
+        { month: 13, drives: 999, distance_km: 100, energy_kwh: 20, cost: 5 },
+        { month: 1.5, drives: 999, distance_km: 100, energy_kwh: 20, cost: 5 },
+        { month: 7, drives: NaN, distance_km: 100, energy_kwh: 20, cost: 5 },
+      ],
+    }));
+    const { container } = renderWidget(2, 1, packId);
+
+    await screen.findByText('12,000');
+    await expectPackPresentation(container, packId);
+    expect(screen.getByText('Total drives')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Year highlights')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Invalid|NaN|undefined/)).not.toBeInTheDocument();
+  });
 });
 
 // ── Refresh interaction ─────────────────────────────────────────────────────
 
-describe('YearReviewWidget refresh', () => {
+describe.each(PACK_IDS)('YearReviewWidget refresh (%s)', (packId) => {
   it('re-issues the year-review read when the freshness control is activated', async () => {
-    renderWidget(2, 1);
+    renderWidget(2, 1, packId);
 
     const refresh = await screen.findByRole('button', { name: /^Refresh/i });
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
@@ -464,5 +550,51 @@ describe('YearReviewWidget refresh', () => {
     fireEvent.click(refresh);
 
     await waitFor(() => expect(yrCalls().length).toBe(before + 1));
+  });
+
+  it('retains the calendar and vehicle result across pack switches and a failed refresh, then recovers', async () => {
+    const { container, rerenderPack } = renderWidget(4, 42, packId);
+    await screen.findByText('12,000');
+    await expectPackPresentation(container, packId);
+    const before = yrCalls().length;
+
+    let rejectRefresh: (reason: Error) => void = () => { throw new Error('Refresh has not started'); };
+    mockRequest.mockImplementation(() => new Promise<YearReview>((_resolve, reject) => {
+      rejectRefresh = reject;
+    }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+
+    await waitFor(() => expect(yrCalls()).toHaveLength(before + 1));
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText('12,000')).toBeInTheDocument();
+
+    const otherPack = PACK_IDS.find((id) => id !== packId) ?? 'classic';
+    rerenderPack(otherPack);
+    await expectPackPresentation(container, otherPack);
+    rerenderPack(packId);
+    await expectPackPresentation(container, packId);
+    expect(yrCalls()).toHaveLength(before + 1);
+    expect(screen.getByText('12,000')).toBeInTheDocument();
+    expect(screen.getByText(/Best month:\s*Jul/i)).toBeInTheDocument();
+
+    await act(async () => { rejectRefresh(new Error('refresh failed')); });
+    expect(await screen.findByTestId('stale-refresh-warning')).toHaveTextContent(
+      'Previously loaded data remains visible while affected sources recover.',
+    );
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'stale');
+    expect(screen.getByText('12,000')).toBeInTheDocument();
+    expect(screen.getByText('Driving time')).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    expect(screen.queryByText('No year-in-review data')).not.toBeInTheDocument();
+
+    routeYearReview(makeYearReview({ total_distance_km: 13000 }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+
+    expect(await screen.findByText('13,000')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'ok');
+    expect(yrCalls()).toHaveLength(before + 2);
+    expect(yrCalls().every(([path]) => path === `/analytics/year-review?year=${YEAR}&vehicle_id=42`)).toBe(true);
+    await expectPackPresentation(container, packId);
   });
 });

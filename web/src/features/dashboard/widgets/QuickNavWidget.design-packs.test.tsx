@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { request } from '@/api/client';
 import QuickNavWidget from './QuickNavWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS } from './designPacks/types';
 import type { WidgetProps, WidgetSize } from './types';
 
 vi.mock('react-i18next', () => ({
@@ -18,10 +19,9 @@ vi.mock('react-i18next', () => ({
 }));
 vi.mock('@/api/client', () => ({ request: vi.fn() }));
 
-const packs = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const packs = PACK_IDS.flatMap(pack => pack === 'classic'
+  ? []
+  : [[pack, PACK_APPEARANCES[pack]] as const]);
 const shortcuts = [
   ['Drives', '/drives'], ['Charging', '/charging'],
   ['Analytics', '/analytics'], ['Battery health', '/battery'],
@@ -123,9 +123,28 @@ describe.each(packs)('Quick navigation %s (%s)', (pack, appearance) => {
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
     expect(requestMock).not.toHaveBeenCalled();
   });
+
+  it('keeps navigation independent of absent, unknown or changed vehicle/configuration evidence', async () => {
+    const { container, selectPack, client } = renderWidget(pack, { size: compact });
+    await expectPack(container, appearance);
+    expectShortcuts();
+    expect(container.querySelector('[data-data-state]')).not.toBeInTheDocument();
+    for (const props of [
+      { vehicleId: 7, config: { vehicleId: 7, chartType: 'unavailable' } },
+      { vehicleId: 999, config: { vehicleId: 999 } },
+      { vehicleId: undefined, config: undefined },
+    ]) {
+      selectPack(pack, { ...props, size: compact });
+      expectShortcuts();
+      expect(screen.getByText('Navigation does not depend on telemetry freshness.')).toBeVisible();
+    }
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeInTheDocument();
+    expect(client.getQueryCache().getAll()).toHaveLength(0);
+    expect(requestMock).not.toHaveBeenCalled();
+  });
 });
 
-it('switches all seven appearances and recovers the original Classic body without a source or selection', async () => {
+it('switches every non-Classic appearance and recovers the original Classic body without a source or selection', async () => {
   const { container, selectPack, client } = renderWidget();
   const classic = expectShortcuts().outerHTML;
   expect(screen.queryByText('Shortcuts')).not.toBeInTheDocument();
@@ -141,25 +160,6 @@ it('switches all seven appearances and recovers the original Classic body withou
     expect(expectShortcuts().outerHTML).toBe(classic);
     expect(screen.queryByText('Shortcuts')).not.toBeInTheDocument();
   }
-  expect(client.getQueryCache().getAll()).toHaveLength(0);
-  expect(requestMock).not.toHaveBeenCalled();
-});
-
-it('keeps navigation independent of absent, unknown or changed vehicle/configuration evidence', async () => {
-  const { container, selectPack, client } = renderWidget('v7', { size: compact });
-  await expectPack(container, 'pixel');
-  expectShortcuts();
-  expect(container.querySelector('[data-data-state]')).not.toBeInTheDocument();
-  for (const props of [
-    { vehicleId: 7, config: { vehicleId: 7, chartType: 'unavailable' } },
-    { vehicleId: 999, config: { vehicleId: 999 } },
-    { vehicleId: undefined, config: undefined },
-  ]) {
-    selectPack('v7', { ...props, size: compact });
-    expectShortcuts();
-    expect(screen.getByText('Navigation does not depend on telemetry freshness.')).toBeVisible();
-  }
-  expect(container.querySelector('[aria-busy="true"]')).not.toBeInTheDocument();
   expect(client.getQueryCache().getAll()).toHaveLength(0);
   expect(requestMock).not.toHaveBeenCalled();
 });

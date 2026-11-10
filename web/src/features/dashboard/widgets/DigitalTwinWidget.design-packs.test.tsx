@@ -232,11 +232,21 @@ it('preserves Classic content and restores it after every production selection o
   expect(screen.getByText('Unlocked')).toBeVisible();
   expect(screen.getAllByRole('listitem')).toHaveLength(2);
   expect(screen.queryByText('Interactive digital twin')).not.toBeInTheDocument();
+  let packedScene: HTMLElement | undefined;
   for (const [packId, appearance] of Object.entries(PACK_APPEARANCES)) {
     view.rerender(widget(packId, COMPACT));
     await presentation(view.container, appearance);
     expect(screen.getByText('Selected blue car')).toBeVisible();
-    expect(screen.getByRole('img', { name: 'Vehicle visualization' })).toBeInTheDocument();
+    const scene = screen.getByRole('img', { name: 'Vehicle visualization' });
+    const photo = scene.querySelector<HTMLImageElement>('img');
+    if (!photo) throw new Error('The authentic vehicle image must remain mounted');
+    if (packedScene) {
+      expect(scene).toBe(packedScene);
+    } else {
+      packedScene = scene;
+      fireEvent.load(photo);
+    }
+    expect(photo).toHaveStyle({ opacity: '1' });
   }
   for (const packId of ['classic', 'unrecognized-pack']) {
     view.rerender(widget(packId, COMPACT));
@@ -249,24 +259,24 @@ it('preserves Classic content and restores it after every production selection o
   }
 });
 
-it('does not infer a measured charge-port position from active charging and preserves a confirmed closed reading', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s does not infer a measured charge-port position from active charging and preserves a confirmed closed reading', async (packId, appearance) => {
   chargingQuery.data = charging({ charge_port_door_open: null });
-  const view = render(widget('v7'));
-  await presentation(view.container, 'pixel');
+  const view = render(widget(packId));
+  await presentation(view.container, appearance);
   expect(detail('Charging state').getByText('Charging')).toBeVisible();
   expect(detail('Charge port').getByText('Unknown')).toBeVisible();
   chargingQuery.data = charging({ charge_port_door_open: false });
-  view.rerender(widget('v7'));
+  view.rerender(widget(packId));
   expect(detail('Charge port').getByText('Closed')).toBeVisible();
   expect(detail('Charging state').getByText('Charging')).toBeVisible();
 });
 
-it('retries one failed security source while the real twin and independent activity remain visible', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s retries one failed security source while the real twin and independent activity remain visible', async (packId, appearance) => {
   securityQuery.data = undefined;
   securityQuery.isError = true;
   securityQuery.error = new Error('Security source failed');
-  const { container } = render(widget('v4'));
-  await presentation(container, 'owner');
+  const { container } = render(widget(packId));
+  await presentation(container, appearance);
   expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
   expect(screen.getByRole('img', { name: 'Vehicle visualization' })).toBeInTheDocument();
   expect(detail('Vehicle state').getByText('Driving')).toBeVisible();
@@ -278,12 +288,12 @@ it('retries one failed security source while the real twin and independent activ
   for (const source of [vehiclesQuery, stateQuery, chargingQuery]) expect(source.refetch).not.toHaveBeenCalled();
 });
 
-it('retains the actual vehicle and access readings with a source-specific warning and recovery after a failed state refresh', async () => {
-  const view = render(widget('v6'));
-  await presentation(view.container, 'expressive');
+it.each(Object.entries(PACK_APPEARANCES))('%s retains the actual vehicle and access readings with a source-specific warning and recovery after a failed state refresh', async (packId, appearance) => {
+  const view = render(widget(packId));
+  await presentation(view.container, appearance);
   stateQuery.isError = true;
   stateQuery.error = new Error('State refresh failed');
-  view.rerender(widget('v6'));
+  view.rerender(widget(packId));
   expect(screen.getByRole('img', { name: 'Vehicle visualization' })).toBeInTheDocument();
   expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
   expect(screen.getByText('Vehicle state: previously loaded data remains visible while this source recovers.')).toBeVisible();
@@ -296,12 +306,12 @@ it('retains the actual vehicle and access readings with a source-specific warnin
   expect(securityQuery.refetch).not.toHaveBeenCalled();
   stateQuery.isError = false;
   stateQuery.error = null;
-  view.rerender(widget('v6'));
+  view.rerender(widget(packId));
   expect(view.container.querySelector('[data-data-state="ok"]')).toBeInTheDocument();
   expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
 });
 
-it('keeps loading and fatal telemetry failure distinct without fabricating a vehicle scene', () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s keeps loading and fatal telemetry failure distinct without fabricating a vehicle scene', (packId) => {
   vehiclesQuery.data = undefined;
   vehiclesQuery.isLoading = true;
   stateQuery.data = undefined;
@@ -309,7 +319,7 @@ it('keeps loading and fatal telemetry failure distinct without fabricating a veh
   securityQuery.data = undefined;
   securityQuery.isLoading = true;
   chargingQuery.data = undefined;
-  const view = render(widget('v2'));
+  const view = render(widget(packId));
   expect(view.container.querySelector('[data-data-state="initial"]')).toBeInTheDocument();
   expect(view.container.querySelector('[data-vehicle-twin]')).toBeNull();
   expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
@@ -321,7 +331,7 @@ it('keeps loading and fatal telemetry failure distinct without fabricating a veh
     source.isError = true;
     source.error = new Error('Source unavailable');
   }
-  view.rerender(widget('v2'));
+  view.rerender(widget(packId));
   expect(view.container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
   expect(view.container.querySelector('[data-vehicle-twin]')).toBeNull();
   fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Retry' }));

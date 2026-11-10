@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { DailyMileageBucket } from '@/types/analytics';
 import OdometerCounterWidget from './OdometerCounterWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
-import type { PackAppearance, PackId } from './designPacks/types';
+import { PACK_APPEARANCES, PACK_IDS, type PackAppearance, type PackId } from './designPacks/types';
 
 const { vehiclesMock, vehicleStateMock, dailyMileageMock, unitPreference } = vi.hoisted(() => ({
   vehiclesMock: vi.fn(),
@@ -30,10 +30,9 @@ vi.mock('@/hooks/useUnits', async () => {
   };
 });
 
-const appearances: [Exclude<PackId, 'classic'>, PackAppearance][] = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-];
+const appearances: [Exclude<PackId, 'classic'>, PackAppearance][] = PACK_IDS
+  .filter((pack): pack is Exclude<PackId, 'classic'> => pack !== 'classic')
+  .map(pack => [pack, PACK_APPEARANCES[pack]]);
 const compact = { cols: 1, rows: 1 };
 const full = { cols: 2, rows: 2 };
 const mileage: DailyMileageBucket[] = [
@@ -164,7 +163,7 @@ describe('OdometerCounterWidget design packs', () => {
     expect(view.container.querySelector('[data-widget-pack="classic"]')).toBeInTheDocument();
   });
 
-  it('changes all seven presentations and recovers Classic without losing measurements or actions', async () => {
+  it('changes all presentations and recovers Classic without losing measurements or actions', async () => {
     const state = stateQuery();
     const daily = dailyQuery();
     vehicleStateMock.mockReturnValue(state);
@@ -184,39 +183,39 @@ describe('OdometerCounterWidget design packs', () => {
     expect(daily.refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps history and its statistics visible when the independent odometer source fails', async () => {
+  it.each(appearances)('%s keeps history and its statistics visible when the independent odometer source fails', async (pack, appearance) => {
     vehicleStateMock.mockReturnValue({
       ...stateQuery(), data: undefined, isError: true, error: new Error('state unavailable'),
     });
-    const { container } = render(widget('v4'));
-    await expectAppearance(container, 'owner');
+    const { container } = render(widget(pack));
+    await expectAppearance(container, appearance);
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(within(comparison()).getByRole('row', { name: 'Day 3' })).toBeInTheDocument();
     expect(screen.getByText('This year')).toBeInTheDocument();
   });
 
-  it('retains the headline, chart and source warnings after background failures', async () => {
+  it.each(appearances)('%s retains the headline, chart and source warnings after background failures', async (pack, appearance) => {
     vehicleStateMock.mockReturnValue({
       ...stateQuery(), isError: true, error: new Error('state refresh unavailable'),
     });
     dailyMileageMock.mockReturnValue({
       ...dailyQuery(), isError: true, error: new Error('history refresh unavailable'),
     });
-    const { container } = render(widget('v7'));
-    await expectAppearance(container, 'pixel');
+    const { container } = render(widget(pack));
+    await expectAppearance(container, appearance);
     expect(screen.getByText('32,100')).toBeInTheDocument();
     expect(within(comparison()).getByRole('row', { name: 'Month 47' })).toBeInTheDocument();
     expect(screen.getAllByTestId('stale-refresh-warning').length).toBeGreaterThan(0);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('scopes an initial history error and retry to history without hiding the headline or statistics', async () => {
+  it.each(appearances)('%s scopes an initial history error and retry to history without hiding the headline or statistics', async (pack, appearance) => {
     const daily = {
       ...dailyQuery(), data: undefined, isError: true, error: new Error('history unavailable'),
     };
     dailyMileageMock.mockReturnValue(daily);
-    const { container } = render(widget('v2'));
-    await expectAppearance(container, 'elevated');
+    const { container } = render(widget(pack));
+    await expectAppearance(container, appearance);
     expect(screen.getByText('32,100')).toBeInTheDocument();
     expect(comparison()).toHaveAttribute('data-chart-state', 'error');
     expect(screen.getByText('This month')).toBeInTheDocument();
@@ -224,23 +223,34 @@ describe('OdometerCounterWidget design packs', () => {
     expect(daily.refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('shows independent history loading geometry beside the real headline', async () => {
+  it.each(appearances)('%s shows independent history loading geometry beside the real headline', async (pack, appearance) => {
     dailyMileageMock.mockReturnValue({ ...dailyQuery(), data: undefined, isLoading: true });
-    const { container } = render(widget('v3'));
-    await expectAppearance(container, 'precision');
+    const { container } = render(widget(pack));
+    await expectAppearance(container, appearance);
     expect(screen.getByText('32,100')).toBeInTheDocument();
     expect(comparison()).toHaveAttribute('data-chart-state', 'loading');
     expect(screen.getByText('Per day')).toBeInTheDocument();
   });
 
-  it('converts the lifetime reading and every period sample to the selected display unit', async () => {
+  it.each(appearances)('%s retains measured history while the independent odometer source is loading', async (pack, appearance) => {
+    vehicleStateMock.mockReturnValue({ ...stateQuery(), data: undefined, isLoading: true });
+    const { container } = render(widget(pack));
+    await expectAppearance(container, appearance);
+    expect(container.querySelector('[data-widget-family="bars"] [class*="--skeleton-bg"]')).toBeInTheDocument();
+    expect(within(comparison()).getByRole('row', { name: 'Day 3' })).toBeInTheDocument();
+    expect(screen.getByText('This year')).toBeInTheDocument();
+    expect(screen.queryByText('32,100')).not.toBeInTheDocument();
+    expect(screen.queryByText('No odometer data')).not.toBeInTheDocument();
+  });
+
+  it.each(appearances)('%s converts the lifetime reading and every period sample to the selected display unit', async (pack, appearance) => {
     unitPreference.distance = 'mi';
     vehicleStateMock.mockReturnValue(stateQuery(1_609_344));
     dailyMileageMock.mockReturnValue(dailyQuery([
       { ...mileage[4], total_km: 1.609344 },
     ]));
-    const { container } = render(widget('v1'));
-    await expectAppearance(container, 'studio');
+    const { container } = render(widget(pack));
+    await expectAppearance(container, appearance);
     expect(screen.getByText('1,000')).toBeInTheDocument();
     const table = within(comparison()).getByRole('table');
     expect(within(table).getByRole('columnheader', { name: 'mi' })).toBeInTheDocument();
@@ -249,47 +259,69 @@ describe('OdometerCounterWidget design packs', () => {
     }
   });
 
-  it('does not coerce null or blank distance buckets into measured zero', async () => {
+  it.each(appearances)('%s does not coerce invalid or unknown distance buckets into measured zero', async (pack, appearance) => {
     dailyMileageMock.mockReturnValue({
       ...dailyQuery([]),
       data: [
         { ...mileage[4], total_km: null },
         { ...mileage[4], total_km: '' },
         { ...mileage[4], total_km: Number.NaN },
+        { ...mileage[4], total_km: Number.POSITIVE_INFINITY },
+        { ...mileage[4], total_km: -1 },
       ],
     });
-    const { container } = render(widget('v7'));
-    await expectAppearance(container, 'pixel');
+    const { container } = render(widget(pack));
+    await expectAppearance(container, appearance);
     expect(comparison()).toHaveAttribute('data-chart-state', 'empty');
     expect(within(comparison()).getByRole('row', { name: 'Day —' })).toBeInTheDocument();
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 
-  it('shows a resolved missing compact odometer instead of an indefinite loading skeleton', async () => {
+  it.each(appearances)('%s preserves measured zero distance without showing an empty period chart', async (pack, appearance) => {
+    dailyMileageMock.mockReturnValue(dailyQuery([{ ...mileage[4], total_km: 0 }]));
+    const { container } = render(widget(pack));
+    await expectAppearance(container, appearance);
+    expect(comparison()).toHaveAttribute('data-chart-state', 'ready');
+    for (const period of ['Day', 'Week', 'Month']) {
+      expect(within(comparison()).getByRole('row', { name: `${period} 0` })).toBeInTheDocument();
+    }
+    expect(screen.queryByText('No measured distance for these periods')).not.toBeInTheDocument();
+  });
+
+  it.each(appearances)('%s shows a resolved missing compact odometer instead of an indefinite loading skeleton', async (pack, appearance) => {
     vehicleStateMock.mockReturnValue({ ...stateQuery(), data: undefined });
-    const { container } = render(widget('v7', compact));
-    await expectAppearance(container, 'pixel');
+    const { container } = render(widget(pack, compact));
+    await expectAppearance(container, appearance);
     expect(screen.getByText('No odometer data')).toBeInTheDocument();
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 
-  it.each([Number.NaN, Number.POSITIVE_INFINITY, -1])('does not present invalid odometer %s as a zero reading', async odometer => {
+  it.each(appearances.flatMap(([pack, appearance]) =>
+    [Number.NaN, Number.POSITIVE_INFINITY, -1].map(odometer => [pack, appearance, odometer] as const),
+  ))('%s (%s) does not present invalid odometer %s as a zero reading', async (pack, appearance, odometer) => {
     vehicleStateMock.mockReturnValue(stateQuery(odometer));
-    const { container } = render(widget('v5', compact));
-    await expectAppearance(container, 'iconic');
+    const { container } = render(widget(pack, compact));
+    await expectAppearance(container, appearance);
     expect(screen.getByText('No odometer data')).toBeInTheDocument();
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 
-  it('distinguishes a verified zero reading from unverified retained fields', async () => {
+  it.each(appearances)('%s distinguishes verified zero and stale readings from unverified retained fields', async (pack, appearance) => {
     vehicleStateMock.mockReturnValue(stateQuery(0));
-    const view = render(widget('v6', compact));
-    await expectAppearance(view.container, 'expressive');
+    const view = render(widget(pack, compact));
+    await expectAppearance(view.container, appearance);
     expect(screen.getByText('0')).toBeInTheDocument();
+    vehicleStateMock.mockReturnValue({
+      ...stateQuery(),
+      data: { ...stateQuery().data, freshness: 'stale', observedAt: Date.now() - 180_000 },
+    });
+    view.rerender(widget(pack, compact));
+    expect(screen.getByText('32,100')).toBeInTheDocument();
+    expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
     vehicleStateMock.mockReturnValue({
       ...stateQuery(), data: { ...stateQuery().data, freshness: 'unknown', verifiedFields: [] },
     });
-    view.rerender(widget('v6', compact));
+    view.rerender(widget(pack, compact));
     expect(screen.getByText('No odometer data')).toBeInTheDocument();
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });

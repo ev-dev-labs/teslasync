@@ -25,11 +25,9 @@ vi.mock('@/hooks/useDateFormat', () => ({
 import { request } from '@/api/client';
 import ChargeReadinessWidget from './ChargeReadinessWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
 
-const packs = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const packs = Object.entries(PACK_APPEARANCES);
 const full: WidgetSize = { cols: 2, rows: 2 };
 const compact: WidgetSize = { cols: 1, rows: 1 };
 const clients: QueryClient[] = [];
@@ -113,8 +111,8 @@ afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
 });
 
-describe('ChargeReadinessWidget real production presentations', () => {
-  it.each(packs)('%s preserves each independently reported state, timestamps and read-only meaning', async (pack, appearance) => {
+describe.each(packs)('ChargeReadinessWidget %s real production presentation', (pack, appearance) => {
+  it('preserves each independently reported state, timestamps and read-only meaning', async () => {
     const { container } = renderWidget(pack);
     await expectPack(container, appearance);
     expect(await screen.findByText('Not charging')).toBeInTheDocument();
@@ -137,7 +135,7 @@ describe('ChargeReadinessWidget real production presentations', () => {
     expect(requestMock.mock.calls.find(([path]) => path === '/signals/7/live')?.[1]?.signal).toBeDefined();
   });
 
-  it.each(packs)('%s keeps all compact evidence accessible through the shared disclosure', async (pack, appearance) => {
+  it('keeps all compact evidence accessible through the shared disclosure', async () => {
     const { container } = renderWidget(pack, compact);
     await expectPack(container, appearance);
     expect(await screen.findByText('Not charging')).toBeInTheDocument();
@@ -153,26 +151,7 @@ describe('ChargeReadinessWidget real production presentations', () => {
     expect(loadLive).toHaveBeenCalledTimes(1);
   });
 
-  it('switches every pack and recovers Classic without remounting its data controller', async () => {
-    const { container, selectPack } = renderWidget('classic');
-    expect(await screen.findByText('Not charging')).toBeInTheDocument();
-    expect(container.querySelector('[data-widget-family]')).not.toBeInTheDocument();
-    for (const [pack, appearance] of packs) {
-      selectPack(pack);
-      await expectPack(container, appearance);
-      expect(signalRow('ChargePort').getByText('CCS')).toBeInTheDocument();
-      expect(checklistRow('Port').getByText('Closed')).toBeInTheDocument();
-    }
-    for (const pack of ['classic', 'retired-pack', null]) {
-      selectPack(pack);
-      expect(container.querySelector('[data-widget-family]')).not.toBeInTheDocument();
-      expect(summary().getByText('Not charging')).toBeInTheDocument();
-      expect(signalRow('ChargingCableType').getByText('IEC')).toBeInTheDocument();
-    }
-    expect(loadLive).toHaveBeenCalledTimes(1);
-  });
-
-  it.each(packs)('%s keeps unknown source shells instead of inventing readiness or available power', async (pack, appearance) => {
+  it('keeps unknown source shells instead of inventing readiness or available power', async () => {
     loadLive.mockResolvedValue({ vehicle_id: 7, signals: {}, count: 0 });
     const { container } = renderWidget(pack);
     await expectPack(container, appearance);
@@ -187,8 +166,8 @@ describe('ChargeReadinessWidget real production presentations', () => {
   });
 
   it('refreshes real evidence once, retains it on failure, and recovers without issuing commands', async () => {
-    const { container } = renderWidget('v4');
-    await expectPack(container, 'owner');
+    const { container } = renderWidget(pack);
+    await expectPack(container, appearance);
     expect(await screen.findByText('Not charging')).toBeInTheDocument();
     loadLive.mockRejectedValueOnce(new Error('Synthetic refresh failure'));
     fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
@@ -208,8 +187,8 @@ describe('ChargeReadinessWidget real production presentations', () => {
   it('keeps checklist and evidence sections present through first loading and initial failure', async () => {
     let rejectLoad: (error: Error) => void = () => undefined;
     loadLive.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectLoad = reject; }));
-    const { container } = renderWidget('v3');
-    await expectPack(container, 'precision');
+    const { container } = renderWidget(pack);
+    await expectPack(container, appearance);
     expect(screen.getAllByText('Loading charge signals…').length).toBeGreaterThan(1);
     expect(screen.getAllByRole('listitem')).toHaveLength(4);
     rejectLoad(new Error('Synthetic initial failure'));
@@ -223,8 +202,8 @@ describe('ChargeReadinessWidget real production presentations', () => {
   });
 
   it('disables duplicate refreshes while keeping the observed checklist visible in flight', async () => {
-    const { container } = renderWidget('v1');
-    await expectPack(container, 'studio');
+    const { container } = renderWidget(pack);
+    await expectPack(container, appearance);
     expect(await screen.findByText('Not charging')).toBeInTheDocument();
     let finishRefresh: (value: VehicleLiveSignalsResponse) => void = () => undefined;
     loadLive.mockImplementationOnce(() => new Promise(resolve => { finishRefresh = resolve; }));
@@ -241,8 +220,8 @@ describe('ChargeReadinessWidget real production presentations', () => {
     loadLive.mockResolvedValue(snapshot({
       ScheduledChargingPending: envelope(false), ChargingCableType: envelope('SNA'),
     }));
-    const { container } = renderWidget('v7');
-    await expectPack(container, 'pixel');
+    const { container } = renderWidget(pack);
+    await expectPack(container, appearance);
     expect(await screen.findByText('Not charging')).toBeInTheDocument();
     expect(checklistRow('Port').getByText('Closed')).toBeInTheDocument();
     expect(checklistRow('Schedule').getByText('Not pending')).toBeInTheDocument();
@@ -259,8 +238,8 @@ describe('ChargeReadinessWidget real production presentations', () => {
         ChargeState: { ...envelope('Charging'), ts },
         DetailedChargeState: { ...envelope('Charging'), ts },
       }));
-      const { container } = renderWidget('v2');
-      await expectPack(container, 'elevated');
+      const { container } = renderWidget(pack);
+      await expectPack(container, appearance);
       await waitFor(() => expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument());
       expect(summary().getByText('Unknown')).toBeInTheDocument();
       expect(signalRow('ChargeState').getByText('Charging')).toBeInTheDocument();
@@ -270,8 +249,8 @@ describe('ChargeReadinessWidget real production presentations', () => {
 
   it('shows contradictory fresh charge states separately without choosing a successful interpretation', async () => {
     loadLive.mockResolvedValue(snapshot({ ChargeState: envelope('Charging') }));
-    const { container } = renderWidget('v5');
-    await expectPack(container, 'iconic');
+    const { container } = renderWidget(pack);
+    await expectPack(container, appearance);
     expect(await screen.findByText('Reported charge states differ; review each source.')).toBeInTheDocument();
     expect(summary().getByText('Unknown')).toBeInTheDocument();
     expect(signalRow('ChargeState').getByText('Charging')).toBeInTheDocument();
@@ -285,8 +264,8 @@ describe('ChargeReadinessWidget real production presentations', () => {
         ChargeState: { ...envelope('Charging'), ...evidence },
         DetailedChargeState: { ...envelope('Charging'), ...evidence },
       }));
-      const { container } = renderWidget('v6');
-      await expectPack(container, 'expressive');
+      const { container } = renderWidget(pack);
+      await expectPack(container, appearance);
       await waitFor(() => expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument());
       expect(summary().getByText('Unknown')).toBeInTheDocument();
       expect(signalRow('DetailedChargeState').getByText(/Stale observation/)).toBeInTheDocument();
@@ -299,8 +278,8 @@ describe('ChargeReadinessWidget real production presentations', () => {
       ChargePortLatch: envelope(0), ChargePort: envelope('UnexpectedConnector'),
       ChargeState: envelope('Unknown'), DetailedChargeState: envelope(null),
     }));
-    const { container } = renderWidget('v6');
-    await expectPack(container, 'expressive');
+    const { container } = renderWidget(pack);
+    await expectPack(container, appearance);
     await waitFor(() => expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument());
     expect(checklistRow('Port').getByText('Unknown')).toBeInTheDocument();
     expect(checklistRow('Latch').getByText('Unknown')).toBeInTheDocument();
@@ -310,7 +289,8 @@ describe('ChargeReadinessWidget real production presentations', () => {
 
   it('does not request signals without a valid target or claim that a catalog proves support', async () => {
     loadVehicles.mockResolvedValue([]);
-    renderWidget('v1', full, { vehicleId: undefined });
+    const { container } = renderWidget(pack, full, { vehicleId: undefined });
+    await expectPack(container, appearance);
     expect(await screen.findByText('Select a vehicle to inspect charge readiness.')).toBeInTheDocument();
     expect(loadLive).not.toHaveBeenCalled();
     expect(screen.getAllByRole('listitem')).toHaveLength(4);
@@ -318,8 +298,8 @@ describe('ChargeReadinessWidget real production presentations', () => {
   });
 
   it('honors configured vehicle scope and discards another vehicle’s evidence during a change', async () => {
-    const { container, selectVehicle } = renderWidget('v3', full, { vehicleId: undefined, config: { vehicleId: 9 } });
-    await expectPack(container, 'precision');
+    const { container, selectVehicle } = renderWidget(pack, full, { vehicleId: undefined, config: { vehicleId: 9 } });
+    await expectPack(container, appearance);
     expect(await screen.findByText('Not charging')).toBeInTheDocument();
     expect(loadLive).toHaveBeenCalledWith(9);
     loadLive.mockImplementationOnce(() => new Promise(() => undefined));
@@ -329,4 +309,23 @@ describe('ChargeReadinessWidget real production presentations', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(4);
     await waitFor(() => expect(loadLive).toHaveBeenCalledWith(11));
   });
+});
+
+it('switches every pack and recovers Classic without remounting its data controller', async () => {
+  const { container, selectPack } = renderWidget('classic');
+  expect(await screen.findByText('Not charging')).toBeInTheDocument();
+  expect(container.querySelector('[data-widget-family]')).not.toBeInTheDocument();
+  for (const [pack, appearance] of packs) {
+    selectPack(pack);
+    await expectPack(container, appearance);
+    expect(signalRow('ChargePort').getByText('CCS')).toBeInTheDocument();
+    expect(checklistRow('Port').getByText('Closed')).toBeInTheDocument();
+  }
+  for (const pack of ['classic', 'retired-pack', null]) {
+    selectPack(pack);
+    expect(container.querySelector('[data-widget-family]')).not.toBeInTheDocument();
+    expect(summary().getByText('Not charging')).toBeInTheDocument();
+    expect(signalRow('ChargingCableType').getByText('IEC')).toBeInTheDocument();
+  }
+  expect(loadLive).toHaveBeenCalledTimes(1);
 });

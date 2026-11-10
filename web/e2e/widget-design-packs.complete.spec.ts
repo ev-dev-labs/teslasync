@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { WIDGET_REGISTRY } from '../src/features/dashboard/widgets/registry';
 import { PACK_APPEARANCES, type PackId } from '../src/features/dashboard/widgets/designPacks/types';
@@ -20,6 +20,7 @@ if (widgets.length !== 132 || new Set(widgets.map(([id]) => id)).size !== 132
 signalReviewManifest(new Date().toISOString());
 const directory = fileURLToPath(new URL('../test-results/widget-design-packs/complete-review/', import.meta.url));
 const captures: string[] = [];
+const captureAll = process.env.WIDGET_PACK_CAPTURE_ALL !== '0';
 const batches = Array.from({ length: Math.ceil(widgets.length / 18) }, (_, index) => widgets.slice(index * 18, (index + 1) * 18));
 const fullReadings: Record<string, RegExp | RegExp[]> = {
   ...remainingReadings, ...batteryReadings, ...drivingReadings, ...vehicleReadings,
@@ -93,6 +94,7 @@ for (const theme of ['dark', 'light'] as const) {
     for (const [batchIndex, selection] of batches.entries()) {
       test(`all widgets batch ${batchIndex + 1} at ${width}px in ${theme}`, async ({ page }, info) => {
         await page.setViewportSize({ width, height: 1200 });
+        const renderChecks: string[] = [];
         const failures: string[] = [];
         page.on('pageerror', error => failures.push(error.message));
         const mocks = await installPackReview(page, theme, width, false, selection, true);
@@ -149,15 +151,24 @@ for (const theme of ['dark', 'light'] as const) {
             }
             expect(await panel.evaluate(element => element.scrollWidth > element.clientWidth + 2),
               `${pack}/${id} horizontal overflow`).toBe(false);
-            const file = `${theme}-${width}-${pack}-${id}.png`;
-            await panel.screenshot({ path: `${directory}${file}`, animations: 'disabled' });
-            captures.push(file);
+            renderChecks.push(`${theme}/${width}/${pack}/${id}`);
+            if (captureAll) {
+              const file = `${theme}-${width}-${pack}-${id}.png`;
+              await panel.screenshot({ path: `${directory}${file}`, animations: 'disabled' });
+              captures.push(file);
+            }
           }
         }
         expect(failures).toEqual([]);
         expect(mocks.requests.filter(request => request.path.endsWith('/command'))).toEqual([]);
         expect(await page.evaluate(() => localStorage.getItem('teslasync-dashboards'))).toBe(baseline);
         await assertMockApiComplete(page, mocks);
+        await writeFile(info.outputPath('render-checks.json'), JSON.stringify({
+          expected: selection.length * Object.keys(packNames).length,
+          actual: renderChecks.length,
+          captureAll,
+          checks: renderChecks,
+        }, null, 2));
       });
     }
   }

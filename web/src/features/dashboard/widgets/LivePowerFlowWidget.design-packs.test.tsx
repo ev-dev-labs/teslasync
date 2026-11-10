@@ -290,6 +290,52 @@ describe.each(Object.entries(PACK_APPEARANCES))('Live power flow — %s / %s', (
     expect(mocks.refreshSites).toHaveBeenCalledOnce();
     expect(mocks.refreshLive).toHaveBeenCalledOnce();
   });
+
+  it('preserves loading and fatal retries rather than displaying a successful empty system', async () => {
+    mocks.sites.mockReturnValue(query(undefined, mocks.refreshSites, { isLoading: true, isFetching: true, dataUpdatedAt: 0 }));
+    mocks.live.mockReturnValue(query(undefined, mocks.refreshLive, { dataUpdatedAt: 0 }));
+    const view = mount(packId);
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('No Tesla energy site linked')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /^Live power flow:/ })).not.toBeInTheDocument();
+
+    mocks.sites.mockReturnValue(query([site], mocks.refreshSites));
+    mocks.live.mockReturnValue(query(undefined, mocks.refreshLive, {
+      isLoading: true, isFetching: true, dataUpdatedAt: 0,
+    }));
+    view.selectPack(packId);
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('No live power data')).not.toBeInTheDocument();
+
+    mocks.live.mockReturnValue(query(undefined, mocks.refreshLive, {
+      isError: true, error: new Error('Initial live failure'), dataUpdatedAt: 0,
+    }));
+    view.selectPack(packId);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No live power data')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00 kW')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Retry$/i }));
+    expect(mocks.refreshSites).toHaveBeenCalledOnce();
+    expect(mocks.refreshLive).toHaveBeenCalledOnce();
+
+    mocks.live.mockReturnValue(query(snapshot(), mocks.refreshLive));
+    view.selectPack(packId);
+    await expectAppearance(view.container, appearance);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(headline(view.container).getByText('4.20 kW')).toBeInTheDocument();
+    expect(diagram().querySelectorAll('[data-flow-edge]')).toHaveLength(4);
+  });
+
+  it.each(['', 'unparseable', '2026-11-06T12:00:06.000Z'])('does not imply current flow from an unverified source time %j', async timestamp => {
+    mocks.live.mockReturnValue(query(snapshot({ timestamp }), mocks.refreshLive));
+    const { container } = mount(packId);
+    await expectAppearance(container, appearance);
+    expect(screen.getByText('Snapshot is stale or its observation time is unverified.')).toBeInTheDocument();
+    expect(container.querySelector('.widget-flow-frame')).toHaveAttribute('data-motion-suppressed', 'true');
+    expect(headline(container).getByText('4.20 kW')).toBeInTheDocument();
+    expect(diagram().querySelectorAll('[data-flow-edge]')).toHaveLength(4);
+    expect(screen.queryByText('Invalid Date')).not.toBeInTheDocument();
+  });
 });
 
 it('preserves default Classic and recovers unknown pack IDs without a presentation or duplicate controller', async () => {
@@ -306,43 +352,4 @@ it('preserves default Classic and recovers unknown pack IDs without a presentati
   expect(diagram().innerHTML).toBe(classicDiagram);
   expect(mocks.refreshSites).not.toHaveBeenCalled();
   expect(mocks.refreshLive).not.toHaveBeenCalled();
-});
-
-it('preserves loading and fatal retries rather than displaying a successful empty system', () => {
-  mocks.sites.mockReturnValue(query(undefined, mocks.refreshSites, { isLoading: true, isFetching: true, dataUpdatedAt: 0 }));
-  mocks.live.mockReturnValue(query(undefined, mocks.refreshLive, { dataUpdatedAt: 0 }));
-  const view = mount('v1');
-  expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
-  expect(screen.queryByText('No Tesla energy site linked')).not.toBeInTheDocument();
-  expect(screen.queryByRole('img', { name: /^Live power flow:/ })).not.toBeInTheDocument();
-
-  mocks.sites.mockReturnValue(query([site], mocks.refreshSites));
-  mocks.live.mockReturnValue(query(undefined, mocks.refreshLive, {
-    isLoading: true, isFetching: true, dataUpdatedAt: 0,
-  }));
-  view.selectPack('v2');
-  expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
-  expect(screen.queryByText('No live power data')).not.toBeInTheDocument();
-
-  mocks.live.mockReturnValue(query(undefined, mocks.refreshLive, {
-    isError: true, error: new Error('Initial live failure'), dataUpdatedAt: 0,
-  }));
-  view.selectPack('v3');
-  expect(screen.getByRole('alert')).toBeInTheDocument();
-  expect(screen.queryByText('No live power data')).not.toBeInTheDocument();
-  expect(screen.queryByText('0.00 kW')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /^Retry$/i }));
-  expect(mocks.refreshSites).toHaveBeenCalledOnce();
-  expect(mocks.refreshLive).toHaveBeenCalledOnce();
-});
-
-it.each(['', 'unparseable', '2026-11-06T12:00:06.000Z'])('does not imply current flow from an unverified source time %j', async timestamp => {
-  mocks.live.mockReturnValue(query(snapshot({ timestamp }), mocks.refreshLive));
-  const { container } = mount('v6');
-  await expectAppearance(container, 'expressive');
-  expect(screen.getByText('Snapshot is stale or its observation time is unverified.')).toBeInTheDocument();
-  expect(container.querySelector('.widget-flow-frame')).toHaveAttribute('data-motion-suppressed', 'true');
-  expect(headline(container).getByText('4.20 kW')).toBeInTheDocument();
-  expect(diagram().querySelectorAll('[data-flow-edge]')).toHaveLength(4);
-  expect(screen.queryByText('Invalid Date')).not.toBeInTheDocument();
 });

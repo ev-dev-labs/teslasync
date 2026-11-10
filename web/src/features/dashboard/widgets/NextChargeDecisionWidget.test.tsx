@@ -55,6 +55,9 @@ import { useNextChargeDecision } from '@/api/hooks/useCharging';
 import type { WidgetSize } from './types';
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
 import { act } from '@testing-library/react';
+import type { NextChargeDecision } from '@/types/charging';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS } from './designPacks/types';
 
 const mockVehicles = vi.mocked(useVehicles);
 const mockState = vi.mocked(useVehicleState);
@@ -76,17 +79,6 @@ function qr(over: Record<string, unknown> = {}) {
   } as never;
 }
 
-function renderWidget({ vehicleId = 1, size = SIZE }: { vehicleId?: number; size?: WidgetSize } = {}) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <NextChargeDecisionWidget vehicleId={vehicleId} size={size} />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-}
-
 beforeEach(() => {
   mockVehicles.mockReturnValue(qr({ data: [{ id: 1 }] }));
   mockState.mockReturnValue(
@@ -99,15 +91,33 @@ afterEach(() => {
   cleanup();
 });
 
-describe('NextChargeDecisionWidget', () => {
+describe.each(PACK_IDS)('NextChargeDecisionWidget (%s)', (packId) => {
+  function renderWidget({ vehicleId = 1, size = SIZE }: { vehicleId?: number; size?: WidgetSize } = {}) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <PackBoundary requestedPackId={packId}>
+            <NextChargeDecisionWidget vehicleId={vehicleId} size={size} />
+          </PackBoundary>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
   it.each([{ cols: 1, rows: 1 }, SIZE, { cols: 4, rows: 3 }])('preserves its verdict and explanation at %j', (size) => {
     mockDecision.mockReturnValue(qr({ data: {
       verdict: 'wait', reason: 'Preserved explanation', current_soc: 42, target_soc: 80, kwh_needed: 28.5,
     } }));
-    renderWidget({ size });
+    const view = renderWidget({ size });
     expect(screen.getByText('Wait for off-peak')).toBeInTheDocument();
     expect(screen.getByText('Preserved explanation')).toBeInTheDocument();
     expect(screen.getByText(/28.50 kWh needed/)).toBeInTheDocument();
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+    if (packId !== 'classic') {
+      expect(view.container.querySelector('[data-timeline-appearance]'))
+        .toHaveAttribute('data-timeline-appearance', PACK_APPEARANCES[packId]);
+    }
   });
 
   it.each([0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])('disables invalid vehicle %s', (vehicleId) => {
@@ -157,6 +167,36 @@ describe('NextChargeDecisionWidget', () => {
     expect(mockDecision).toHaveBeenLastCalledWith(1, undefined);
   });
 
+  it('shows initial loading rather than an empty decision while the request is pending', () => {
+    mockDecision.mockReturnValue(qr({ isPending: true, isLoading: true, isFetching: true }));
+    const view = renderWidget();
+    expect(view.container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'initial');
+    expect(view.container.querySelector('[data-data-state]')).toHaveAttribute('aria-busy', 'true');
+    expect(view.container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(screen.queryByText('No charge decision yet')).not.toBeInTheDocument();
+  });
+
+  it('shows the empty decision without inventing a verdict when live SOC is available', () => {
+    renderWidget();
+    expect(screen.getByText('No charge decision yet')).toBeInTheDocument();
+    expect(screen.queryByText('Enough energy')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { current_soc: 0, target_soc: 0, kwh_needed: 0, expected: '0.00% → 0.00% · 0.00 kWh needed' },
+    { current_soc: NaN, target_soc: Infinity, kwh_needed: -Infinity, expected: '—% → —% · — needed' },
+  ])('keeps zero estimates distinct from unknown estimates: $expected', ({ expected, ...estimates }) => {
+    const decision: NextChargeDecision = {
+      verdict: 'enough', reason_key: 'enough', reason: 'Existing plan',
+      horizon_hours: 12, ready_by: '2026-01-16T07:30:00Z',
+      capped_by_health_guardrail: false, ...estimates,
+    };
+    mockDecision.mockReturnValue(qr({ data: decision }));
+    renderWidget();
+    expect(screen.getByText('Enough energy')).toBeInTheDocument();
+    expect(screen.getByText(expected)).toBeInTheDocument();
+  });
+
   it('keeps the cached verdict when live SOC refresh fails and retries both sources', () => {
     const stateRetry = vi.fn();
     const decisionRetry = vi.fn();
@@ -164,6 +204,7 @@ describe('NextChargeDecisionWidget', () => {
     mockDecision.mockReturnValue(qr({ data: { verdict: 'wait', reason: 'Retained verdict' }, refetch: decisionRetry }));
     renderWidget();
     expect(screen.getByText('Retained verdict')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i })); // shell hides the warning retry; recovery is the freshness dot
     expect(stateRetry).toHaveBeenCalledOnce();
@@ -206,4 +247,28 @@ describe('NextChargeDecisionWidget', () => {
     expect(screen.getByText('Skip Everett — home is cheaper')).toBeInTheDocument();
     expect(screen.getByText(/42.00% → 80.00%/)).toBeInTheDocument();
   });
+});
+
+it('keeps the existing verdict and refresh control mounted while switching every pack', () => {
+  mockDecision.mockReturnValue(qr({ data: {
+    verdict: 'wait', reason: 'Retained across pack changes', current_soc: 42, target_soc: 80, kwh_needed: 28.5,
+  } }));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const tree = (packId: (typeof PACK_IDS)[number]) => (
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <PackBoundary requestedPackId={packId}>
+          <NextChargeDecisionWidget vehicleId={1} size={SIZE} />
+        </PackBoundary>
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+  const view = render(tree('classic'));
+  const verdict = screen.getByText('Retained across pack changes');
+  const refresh = screen.getByRole('button', { name: /^Refresh data/i });
+  for (const packId of PACK_IDS) {
+    view.rerender(tree(packId));
+    expect(screen.getByText('Retained across pack changes')).toBe(verdict);
+    expect(screen.getByRole('button', { name: /^Refresh data/i })).toBe(refresh);
+  }
 });

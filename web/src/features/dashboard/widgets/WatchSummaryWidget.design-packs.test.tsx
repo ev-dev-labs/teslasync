@@ -282,6 +282,81 @@ describe.each(packs)('Watch summary %s (%s)', (packId, appearance) => {
     expect(screen.queryByText('Setup needed')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Refresh data/ })).toBeEnabled();
   });
+
+  it('preserves initial loading, failed-read retry and recovery into the selected presentation', async () => {
+    const loading = { isLoading: true, isPending: true, isFetching: true, fetchStatus: 'fetching' } as const;
+    summaryMock.mockReturnValue(query<WatchSummary>(undefined, loading));
+    complicationMock.mockReturnValue(query<WatchComplication>(undefined, loading));
+    const view = render(tree(packId));
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+    expect(view.container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('heading', { name: 'Watch summary' })).toBeInTheDocument();
+    expect(screen.queryByText('No watch data')).not.toBeInTheDocument();
+    expect(screen.queryByText('72.00')).not.toBeInTheDocument();
+
+    const failed = { isError: true, error: new Error('Watch request failed') };
+    const summary = query<WatchSummary>(undefined, failed);
+    const complication = query<WatchComplication>(undefined, failed);
+    summaryMock.mockReturnValue(summary);
+    complicationMock.mockReturnValue(complication);
+    view.rerender(tree(packId));
+    expect(view.container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent("Can't reach server");
+    expect(screen.queryByText('No watch data')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry', exact: true }));
+    expect(summary.refetch).toHaveBeenCalledOnce();
+    expect(complication.refetch).toHaveBeenCalledOnce();
+
+    summaryMock.mockReturnValue(query(SUMMARY));
+    complicationMock.mockReturnValue(query<WatchComplication>(undefined, loading));
+    view.rerender(tree(packId));
+    await expectPack(view.container);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByText('72.00')).toBeInTheDocument();
+    expect(screen.getByText('186.41 mi')).toBeInTheDocument();
+    expect(screen.getByText('-10.00°C')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('dashboard-watch-measurements-brief'), 'Source available');
+  });
+
+  it('distinguishes a reported zero compact battery from an invalid reading without using complication strings', async () => {
+    summaryMock.mockReturnValue(query({ ...SUMMARY, battery_level: 0, range_m: 0 }));
+    const view = render(tree(packId, 1));
+    await expectPack(view.container);
+    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '0');
+    expect(hasGaugeColor(view.container, COLOR.BAD)).toBe(true);
+    expect(screen.getByText('0.00 mi')).toBeInTheDocument();
+
+    summaryMock.mockReturnValue(query({ ...SUMMARY, battery_level: Number.NaN, range_m: 0 }));
+    view.rerender(tree(packId, 1));
+    await expectPack(view.container);
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    expect(screen.getByText('Battery')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('0.00 mi')).toBeInTheDocument();
+    expect(screen.queryByText('NaN')).not.toBeInTheDocument();
+    expect(screen.queryByText('99%')).not.toBeInTheDocument();
+    expect(screen.queryByText('999 mi')).not.toBeInTheDocument();
+  });
+
+  it('keeps both source refreshes guarded while a read is in flight and converts only display units', async () => {
+    const summary = query({ ...SUMMARY, range_m: 0, inside_temp_c: 0 }, { isFetching: true });
+    const complication = query(COMPLICATION);
+    summaryMock.mockReturnValue(summary);
+    complicationMock.mockReturnValue(complication);
+    unitsMock.mockReturnValue({ unitPrefs: { distance: 'km', temperature: '°F' } });
+    const { container } = render(tree(packId));
+    await expectPack(container);
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
+    expect(screen.getByText('32.00°F')).toBeInTheDocument();
+    const refresh = screen.getByRole('button', { name: /^Refresh data/ });
+    expect(refresh).toBeDisabled();
+    fireEvent.click(refresh);
+    expect(summary.refetch).not.toHaveBeenCalled();
+    expect(complication.refetch).not.toHaveBeenCalled();
+    expect(summary.data?.range_m).toBe(0);
+    expect(summary.data?.inside_temp_c).toBe(0);
+  });
 });
 
 it.each([1, 2])('retains the %s-column Classic body by default and recovers it after changing packs', async cols => {
@@ -304,23 +379,4 @@ it.each([1, 2])('retains the %s-column Classic body by default and recovers it a
     expect(screen.getByText('Locked')).toBeInTheDocument();
     expect(screen.getByText('2h ago')).toBeInTheDocument();
   }
-});
-
-it('keeps both source refreshes guarded while a read is in flight and converts only display units', async () => {
-  const summary = query({ ...SUMMARY, range_m: 0, inside_temp_c: 0 }, { isFetching: true });
-  const complication = query(COMPLICATION);
-  summaryMock.mockReturnValue(summary);
-  complicationMock.mockReturnValue(complication);
-  unitsMock.mockReturnValue({ unitPrefs: { distance: 'km', temperature: '°F' } });
-  const { container } = render(tree('v7'));
-  await waitFor(() => expect(container.querySelector('[data-widget-appearance="pixel"]')).toBeInTheDocument());
-  expect(screen.getByText('0.00 km')).toBeInTheDocument();
-  expect(screen.getByText('32.00°F')).toBeInTheDocument();
-  const refresh = screen.getByRole('button', { name: /^Refresh data/ });
-  expect(refresh).toBeDisabled();
-  fireEvent.click(refresh);
-  expect(summary.refetch).not.toHaveBeenCalled();
-  expect(complication.refetch).not.toHaveBeenCalled();
-  expect(summary.data?.range_m).toBe(0);
-  expect(summary.data?.inside_temp_c).toBe(0);
 });

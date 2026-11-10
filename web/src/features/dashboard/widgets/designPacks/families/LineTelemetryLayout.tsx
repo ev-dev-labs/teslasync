@@ -2,6 +2,7 @@ import { Activity } from 'lucide-react';
 import { Caption, MetricLabel, MetricValue } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { LineAppearance, LineTelemetryProps } from './Line.types';
+import { experimentalLayouts } from '../experimentalLayouts';
 
 const layouts: Record<LineAppearance, {
   body: string;
@@ -9,7 +10,11 @@ const layouts: Record<LineAppearance, {
   details: string;
   plot: string;
   plotFirst?: boolean;
+  order?: readonly ('lead' | 'visual' | 'details')[];
 }> = {
+  ...experimentalLayouts(({ body, lead, details, visual, order }) => ({
+    body, headline: lead, details, plot: cn('min-h-36', visual), order,
+  })),
   studio: {
     body: 'flex flex-col gap-3',
     headline: 'flex items-center gap-3 border-b border-[var(--border-subtle)] pb-3',
@@ -76,13 +81,7 @@ export default function LineTelemetryLayout({
       ))}
     </dl>
   );
-
-  return (
-    <div data-line-appearance={appearance} className="flex h-full min-h-0 min-w-0 flex-col gap-3">
-      {context}
-      {sourceBoundary(
-        <div className={cn('min-h-0 min-w-0 flex-1', compact ? 'flex flex-col gap-3' : layout.body)}>
-          <div className={layout.headline}>
+  const lead = <div key="headline" className={layout.headline}>
             {appearance === 'pixel' ? (
               <svg viewBox="0 0 16 16" className="size-8 shrink-0" fill="currentColor" shapeRendering="crispEdges" aria-hidden="true">
                 <path d="M1 2h2v11h12v2H1zM4 9h2V7h2v3h2V4h2v5h2v2h-4V8H8v4H6v-1H4z" />
@@ -97,10 +96,18 @@ export default function LineTelemetryLayout({
                 {headline.value != null && headline.unit && <Caption className="ms-1">{headline.unit}</Caption>}
               </MetricValue>
             </dl>
-          </div>
-          {layout.plotFirst && plot}
-          {facts}
-          {!layout.plotFirst && plot}
+          </div>;
+  const slots = { lead, visual: plot, details: facts };
+  const order = layout.order ?? (layout.plotFirst
+    ? ['lead', 'visual', 'details'] as const
+    : ['lead', 'details', 'visual'] as const);
+
+  return (
+    <div data-line-appearance={appearance} className="flex h-full min-h-0 min-w-0 flex-col gap-3">
+      {context}
+      {sourceBoundary(
+        <div className={cn('min-h-0 min-w-0 flex-1', compact ? 'flex flex-col gap-3' : layout.body)}>
+          {order.map(slot => slots[slot])}
         </div>,
       )}
     </div>

@@ -28,7 +28,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -79,6 +79,8 @@ import { useCommandHistory } from '@/api/hooks/useCommands';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import type { CommandLogEntry } from '@/api/hooks/useCommands';
 import type { WidgetSize } from './types';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_IDS, PACK_APPEARANCES, type PackId } from './designPacks/types';
 
 const mockUseCommandHistory = vi.mocked(useCommandHistory);
 const mockUseVehicles = vi.mocked(useVehicles);
@@ -102,7 +104,7 @@ if (typeof window.matchMedia !== 'function') {
 const tid = (_key: string, fallback: string): string => fallback;
 
 /** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
-function qr(over: Record<string, unknown> = {}): ReturnType<typeof useCommandHistory> {
+function qr(over: Partial<ReturnType<typeof useCommandHistory>> = {}): ReturnType<typeof useCommandHistory> {
   return {
     data: [],
     isLoading: false,
@@ -130,15 +132,19 @@ function makeCmd(over: Partial<CommandLogEntry> = {}): CommandLogEntry {
   };
 }
 
-function renderWidget(size: WidgetSize, vehicleId?: number) {
+function renderWidget(size: WidgetSize, vehicleId?: number, packId: PackId = 'classic') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const tree = (pack: PackId) => (
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <CommandHistoryWidget size={size} vehicleId={vehicleId} />
+        <PackBoundary requestedPackId={pack}>
+          <CommandHistoryWidget size={size} vehicleId={vehicleId} />
+        </PackBoundary>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const result = render(tree(packId));
+  return { ...result, rerenderPack: (pack: PackId) => result.rerender(tree(pack)) };
 }
 
 const COMPACT: WidgetSize = { cols: 1, rows: 2 };
@@ -419,6 +425,105 @@ describe('CommandHistoryWidget refresh', () => {
     const refresh = screen.getByRole('button', { name: /^Refresh/i });
     fireEvent.click(refresh);
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+async function expectTimelinePack(container: HTMLElement, packId: PackId) {
+  await waitFor(() => {
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+    const timeline = container.querySelector('[data-timeline-appearance]');
+    if (packId === 'classic') expect(timeline).toBeNull();
+    else expect(timeline).toHaveAttribute('data-timeline-appearance', PACK_APPEARANCES[packId]);
+  });
+}
+
+describe.each(PACK_IDS)('CommandHistoryWidget %s presentation acceptance', (packId) => {
+  it.each([COMPACT, STANDARD])('preserves command evidence and unknown values in %o', async (size) => {
+    const commands = [
+      makeCmd({ command: 'flash_lights', status: 'queued', created_at: 'invalid' }),
+      makeCmd({ command: 'wake_up', status: 'success', created_at: '2024-05-03T10:00:00Z' }),
+      makeCmd({ command: 'lock', status: 'failed', error: 'Vehicle unavailable', created_at: '2024-05-02T10:00:00Z' }),
+      makeCmd({ command: 'set_charge_limit', status: 'pending', created_at: '2024-05-01T10:00:00Z' }),
+      makeCmd({ command: ' ', status: ' ', created_at: '' }),
+    ];
+    mockUseCommandHistory.mockReturnValue(qr({ data: commands }));
+    const { container } = renderWidget(size, 7, packId);
+    await expectTimelinePack(container, packId);
+
+    expect(screen.getByText('Command history')).toBeInTheDocument();
+    expect(screen.getByText('Flash lights')).toBeInTheDocument();
+    expect(screen.getByText('queued')).toBeInTheDocument();
+    expect(mockUseCommandHistory).toHaveBeenLastCalledWith('7');
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'ok');
+    if (size.cols === 1) {
+      expect(screen.queryByText('Wake up')).not.toBeInTheDocument();
+      expect(screen.getByText('—')).toBeInTheDocument();
+    } else {
+      const rows = within(screen.getByRole('list', { name: 'Event feed' })).getAllByRole('listitem');
+      expect(rows).toHaveLength(5);
+      expect(rows[0]).toHaveTextContent('Wake up');
+      expect(rows[1]).toHaveTextContent('Lock');
+      expect(rows[1]).toHaveTextContent('Failed');
+      expect(rows[1]).toHaveTextContent('Vehicle unavailable');
+      expect(rows[2]).toHaveTextContent('Set charge limit');
+      expect(rows[2]).toHaveTextContent('Pending');
+      expect(rows[0]).toHaveTextContent('Success');
+      expect(rows[3]).toHaveTextContent('Flash lights');
+      expect(rows[3]).toHaveTextContent('—');
+      expect(rows[4]).toHaveTextContent('Unknown');
+    }
+    expect(commands[0].command).toBe('flash_lights');
+  });
+
+  it.each([COMPACT, STANDARD])('preserves loading, retry, and empty states in %o', async (size) => {
+    const refetch = vi.fn();
+    mockUseCommandHistory.mockReturnValue(qr({ data: undefined, isLoading: true, refetch }));
+    const { container, rerenderPack } = renderWidget(size, 7, packId);
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.queryByText('No commands sent')).not.toBeInTheDocument();
+
+    mockUseCommandHistory.mockReturnValue(qr({ data: undefined, isError: true, error: new Error('history failed'), refetch }));
+    rerenderPack(packId);
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /retry/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('No commands sent')).not.toBeInTheDocument();
+
+    mockUseCommandHistory.mockReturnValue(qr({ data: [], refetch }));
+    rerenderPack(packId);
+    await expectTimelinePack(container, packId);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByText('No commands sent')).toBeInTheDocument();
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+  });
+
+  it.each([COMPACT, STANDARD])('keeps retained evidence, trust, and refresh while switching packs in %o', async (size) => {
+    const commands = [makeCmd({ status: 'failed', error: 'Vehicle unavailable' })];
+    const refetch = vi.fn();
+    mockUseCommandHistory.mockReturnValue(qr({ data: commands, refetch }));
+    const { container, rerenderPack } = renderWidget(size, 7);
+
+    mockUseCommandHistory.mockReturnValue(qr({ data: commands, isFetching: true, refetch }));
+    rerenderPack(packId);
+    await expectTimelinePack(container, packId);
+    expect(screen.getByText('Wake up')).toBeInTheDocument();
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+
+    mockUseCommandHistory.mockReturnValue(qr({ data: commands, isError: true, error: new Error('refresh failed'), refetch }));
+    rerenderPack(packId);
+    await expectTimelinePack(container, packId);
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'stale');
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
+    expect(screen.getByText('Wake up')).toBeInTheDocument();
+    expect(screen.getByText('Failed')).toBeInTheDocument();
+    if (size.cols > 1) expect(screen.getByText('Vehicle unavailable')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    rerenderPack('classic');
+    await expectTimelinePack(container, 'classic');
+    expect(screen.getByText('Wake up')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(mockUseCommandHistory).toHaveBeenLastCalledWith('7');
   });
 });
 import { COLOR, CHART_NEUTRAL } from '@/lib/colors';

@@ -36,7 +36,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -93,6 +93,8 @@ import {
   useVehicleConfigLatest,
 } from '@/api/hooks/useVehicles';
 import type { WidgetProps, WidgetSize } from './types';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 const mockVehicles = vi.mocked(useVehicles);
 const mockState = vi.mocked(useVehicleState);
@@ -143,15 +145,30 @@ function cfg(
   return qr({ data: fields, ...over });
 }
 
-function renderWidget(size: WidgetSize = FULL, props: Partial<WidgetProps> = {}) {
+function renderWidget(size: WidgetSize = FULL, props: Partial<WidgetProps> = {}, packId: PackId = 'classic') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const result = render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <SoftwareUpdateStatusWidget size={size} {...props} />
+        <PackBoundary requestedPackId={packId}>
+          <SoftwareUpdateStatusWidget size={size} {...props} />
+        </PackBoundary>
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  expect(result.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+  return result;
+}
+
+async function renderPackedWidget(packId: PackId, size: WidgetSize = FULL) {
+  const result = renderWidget(size, {}, packId);
+  if (packId !== 'classic') {
+    await waitFor(() => {
+      expect(result.container.querySelector('[data-widget-family="meter"]'))
+        .toHaveAttribute('data-widget-appearance', PACK_APPEARANCES[packId]);
+    });
+  }
+  return result;
 }
 
 beforeEach(() => {
@@ -192,8 +209,8 @@ describe('SoftwareUpdateStatusWidget — vehicle resolution', () => {
   });
 });
 
-describe('SoftwareUpdateStatusWidget — shell states', () => {
-  it('keeps complete version and scheduled values in the tall canonical presentation', () => {
+describe.each(PACK_IDS)('SoftwareUpdateStatusWidget — %s shell states', packId => {
+  it('keeps complete version and scheduled values in the tall canonical presentation', async () => {
     const current = '2026.40.5.long-current-build-identity-without-truncation';
     const update = '2026.44.10.long-pending-build-identity-without-truncation';
     const scheduled = '2026-10-31T02:30:00+13:00';
@@ -204,7 +221,7 @@ describe('SoftwareUpdateStatusWidget — shell states', () => {
       software_update_expected_duration: 37,
       software_update_scheduled_start: scheduled,
     }));
-    renderWidget(TALL);
+    await renderPackedWidget(packId, TALL);
     expect(screen.getByText(current)).toBeInTheDocument();
     expect(screen.getByText(update)).not.toHaveClass('truncate');
     expect(screen.getByText(/Scheduled:/)).toBeInTheDocument();
@@ -213,42 +230,49 @@ describe('SoftwareUpdateStatusWidget — shell states', () => {
     expect(screen.queryByRole('button', { name: /install/i })).not.toBeInTheDocument();
   });
 
-  it('preserves the installed version while config fails, without inventing up-to-date health', () => {
+  it('preserves the installed version while config fails, without inventing up-to-date health', async () => {
     const refetchState = vi.fn();
     const refetchConfig = vi.fn();
     mockState.mockReturnValue(stateResult('2025.20.1', { refetch: refetchState }));
     mockConfig.mockReturnValue(qr({ isError: true, error: new Error('Config unavailable'), refetch: refetchConfig }));
-    const { container } = renderWidget();
+    const { container } = await renderPackedWidget(packId);
     expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
     expect(screen.getByText('2025.20.1')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.queryByText('Up to date')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     expect(refetchState).toHaveBeenCalledOnce();
     expect(refetchConfig).toHaveBeenCalledOnce();
   });
 
-  it('preserves a loaded pending update while the independent current-state query is still loading', () => {
+  it('preserves a loaded pending update while the independent current-state query is still loading', async () => {
     mockState.mockReturnValue(qr({ isLoading: true, data: undefined }));
     mockConfig.mockReturnValue(cfg({ software_update_version: '2025.30.1', software_update_download_pct: 45 }));
-    const { container } = renderWidget();
+    const { container } = await renderPackedWidget(packId);
     expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
     expect(screen.getByText('2025.30.1')).toBeInTheDocument();
     expect(screen.getByText('45%')).toBeInTheDocument();
   });
 
-  it.each([Number.NaN, Number.POSITIVE_INFINITY, -1, 101])('keeps invalid progress %s out of known percentage readouts', progress => {
-    mockConfig.mockReturnValue(cfg({ software_update_version: '2025.30.1', software_update_download_pct: progress }));
-    const { container } = renderWidget();
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, -1, 101])('keeps invalid progress %s out of known percentage readouts', async progress => {
+    mockConfig.mockReturnValue(cfg({
+      software_update_version: '2025.30.1',
+      software_update_download_pct: progress,
+      software_update_install_pct: progress,
+    }));
+    const { container } = await renderPackedWidget(packId);
     expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
     expect(screen.getByText('2025.30.1')).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/NaN|Infinity|-1%|101%/);
     expect(screen.queryByText('Downloading')).not.toBeInTheDocument();
+    expect(screen.queryByText('Installing')).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 
   it('shows a skeleton (never a blank panel) and no refresh control while loading', () => {
     mockState.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     mockConfig.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
-    const { container } = renderWidget();
+    const { container } = renderWidget(FULL, {}, packId);
 
     expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Current version')).toBeNull();
@@ -259,7 +283,7 @@ describe('SoftwareUpdateStatusWidget — shell states', () => {
   it('renders an explicit empty state when neither live state nor an update exists', () => {
     mockState.mockReturnValue(noStateResult());
     mockConfig.mockReturnValue(cfg({}));
-    renderWidget();
+    renderWidget(FULL, {}, packId);
 
     expect(screen.getByText('No software data')).toBeInTheDocument();
     expect(screen.queryByText('Current version')).toBeNull();
@@ -268,7 +292,7 @@ describe('SoftwareUpdateStatusWidget — shell states', () => {
   it('is resilient when both queries resolve to undefined/null data', () => {
     mockState.mockReturnValue(qr({ data: undefined }));
     mockConfig.mockReturnValue(cfg(null));
-    renderWidget();
+    renderWidget(FULL, {}, packId);
 
     expect(screen.getByText('No software data')).toBeInTheDocument();
   });
@@ -278,34 +302,72 @@ describe('SoftwareUpdateStatusWidget — shell states', () => {
       qr({ isError: true, error: new Error('state down'), data: undefined }),
     );
     mockConfig.mockReturnValue(cfg({}));
-    const { container } = renderWidget();
+    const { container } = renderWidget(FULL, {}, packId);
 
     expect(screen.getByText('No software data')).toBeInTheDocument();
     expect(container.querySelector('[class*="bg-[var(--semantic-danger)]"]')).not.toBeNull();
   });
+
+  it('keeps retained versions and progress visible when both refreshes fail', async () => {
+    const refetchState = vi.fn();
+    const refetchConfig = vi.fn();
+    const error = new Error('Software refresh unavailable');
+    mockState.mockReturnValue(stateResult('2025.20.1', { isError: true, error, refetch: refetchState }));
+    mockConfig.mockReturnValue(cfg({
+      software_update_version: '2025.30.1',
+      software_update_download_pct: 45,
+    }, { isError: true, error, refetch: refetchConfig }));
+    const { container } = await renderPackedWidget(packId);
+
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'stale');
+    expect(screen.getByText('2025.20.1')).toBeInTheDocument();
+    expect(screen.getByText('2025.30.1')).toBeInTheDocument();
+    expect(screen.getByText('45%')).toBeInTheDocument();
+    expect(screen.queryByText('Up to date')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(refetchState).toHaveBeenCalledOnce();
+    expect(refetchConfig).toHaveBeenCalledOnce();
+  });
+
+  it('shows a retryable initial error instead of invented software content when both sources fail', () => {
+    const refetchState = vi.fn();
+    const refetchConfig = vi.fn();
+    const error = new Error('Software unavailable');
+    mockState.mockReturnValue(qr({ isError: true, error, refetch: refetchState }));
+    mockConfig.mockReturnValue(qr({ isError: true, error, refetch: refetchConfig }));
+    const { container } = renderWidget(FULL, {}, packId);
+
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'initialFailure');
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('Current version')).not.toBeInTheDocument();
+    expect(screen.queryByText('Up to date')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetchState).toHaveBeenCalledOnce();
+    expect(refetchConfig).toHaveBeenCalledOnce();
+  });
 });
 
-describe('SoftwareUpdateStatusWidget — compact (1×1)', () => {
-  it('renders the current version and status badge with no title, plus a refresh overlay', () => {
+describe.each(PACK_IDS)('SoftwareUpdateStatusWidget — %s compact (1×1)', packId => {
+  it('renders the current version and status badge with no title, plus a refresh overlay', async () => {
     mockState.mockReturnValue(stateResult('2025.20.1'));
     mockConfig.mockReturnValue(cfg({}));
-    renderWidget(COMPACT);
+    await renderPackedWidget(packId, COMPACT);
 
     expect(screen.getByText('2025.20.1')).toBeInTheDocument();
     expect(screen.getByText('Up to date')).toBeInTheDocument();
     // Compact tiles have no header title…
     expect(screen.queryByText('Software update')).toBeNull();
-    expect(screen.queryByText('Current version')).toBeNull();
+    if (packId === 'classic') expect(screen.queryByText('Current version')).toBeNull();
     // …but still expose the refresh affordance as an icon-only overlay.
     expect(screen.getByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 });
 
-describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () => {
-  it('up-to-date: no pending version → badge + message, and no update section', () => {
+describe.each(PACK_IDS)('SoftwareUpdateStatusWidget — %s updateStatus state machine (full)', packId => {
+  it('up-to-date: no pending version → badge + message, and no update section', async () => {
     mockState.mockReturnValue(stateResult('2025.20.1'));
     mockConfig.mockReturnValue(cfg({}));
-    const { container } = renderWidget(FULL);
+    const { container } = await renderPackedWidget(packId);
 
     expect(screen.getByText('Current version')).toBeInTheDocument();
     expect(screen.getByText('2025.20.1')).toBeInTheDocument();
@@ -316,9 +378,12 @@ describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () 
     expect(container.textContent).not.toContain('Ready to install');
   });
 
-  it('available: a version with no progress → "Available" badge + target version', () => {
-    mockConfig.mockReturnValue(cfg({ software_update_version: '2025.26.5' }));
-    const { container } = renderWidget(FULL);
+  it.each([
+    {},
+    { software_update_download_pct: 0, software_update_install_pct: 0 },
+  ])('available: a version with unstarted progress %j → "Available" badge + target version', async progress => {
+    mockConfig.mockReturnValue(cfg({ software_update_version: '2025.26.5', ...progress }));
+    const { container } = await renderPackedWidget(packId);
 
     expect(screen.getByText('Available')).toBeInTheDocument();
     expect(screen.getByText('2025.26.5')).toBeInTheDocument();
@@ -328,11 +393,11 @@ describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () 
     expect(container.textContent).not.toContain('Ready to install');
   });
 
-  it('downloading: 0<pct<100 → "Downloading" bar with the rounded percent readout', () => {
+  it('downloading: 0<pct<100 → "Downloading" bar with the rounded percent readout', async () => {
     mockConfig.mockReturnValue(
       cfg({ software_update_version: '2025.26.5', software_update_download_pct: 45 }),
     );
-    renderWidget(FULL);
+    await renderPackedWidget(packId);
 
     // "Downloading" appears twice: the status badge AND the MetricBar label.
     expect(screen.getAllByText('Downloading')).toHaveLength(2);
@@ -342,7 +407,7 @@ describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () 
     expect(screen.queryByText('Installing')).toBeNull();
   });
 
-  it('installing: install in flight → "Installing" bar with its percent readout', () => {
+  it('installing: install in flight → "Installing" bar with its percent readout', async () => {
     mockConfig.mockReturnValue(
       cfg({
         software_update_version: '2025.26.5',
@@ -350,18 +415,18 @@ describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () 
         software_update_install_pct: 60,
       }),
     );
-    renderWidget(FULL);
+    await renderPackedWidget(packId);
 
     expect(screen.getAllByText('Installing')).toHaveLength(2);
     expect(screen.getByText('60%')).toBeInTheDocument();
     expect(screen.queryByText('Downloading')).toBeNull();
   });
 
-  it('ready: download complete, install not started → "Ready to install" message', () => {
+  it('ready: download complete, install not started → "Ready to install" message', async () => {
     mockConfig.mockReturnValue(
       cfg({ software_update_version: '2025.26.5', software_update_download_pct: 100 }),
     );
-    const { container } = renderWidget(FULL);
+    const { container } = await renderPackedWidget(packId);
 
     expect(screen.getByText('Ready')).toBeInTheDocument(); // badge
     expect(screen.getByText('Ready to install')).toBeInTheDocument(); // message line
@@ -369,7 +434,7 @@ describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () 
     expect(container.textContent).not.toContain('%');
   });
 
-  it('installed: both percentages at 100 → "Installed" badge, no progress bar', () => {
+  it('installed: both percentages at 100 → "Installed" badge, no progress bar', async () => {
     mockConfig.mockReturnValue(
       cfg({
         software_update_version: '2025.26.5',
@@ -377,14 +442,14 @@ describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () 
         software_update_install_pct: 100,
       }),
     );
-    const { container } = renderWidget(FULL);
+    const { container } = await renderPackedWidget(packId);
 
     expect(screen.getByText('Installed')).toBeInTheDocument();
     expect(screen.getByText('2025.26.5')).toBeInTheDocument();
     expect(container.textContent).not.toContain('Ready to install');
   });
 
-  it('install-in-flight beats download-in-flight (memo precedence)', () => {
+  it('install-in-flight beats download-in-flight (memo precedence)', async () => {
     mockConfig.mockReturnValue(
       cfg({
         software_update_version: '2025.26.5',
@@ -392,7 +457,7 @@ describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () 
         software_update_install_pct: 30,
       }),
     );
-    renderWidget(FULL);
+    await renderPackedWidget(packId);
 
     expect(screen.getAllByText('Installing')).toHaveLength(2);
     expect(screen.getByText('30%')).toBeInTheDocument();
@@ -402,8 +467,8 @@ describe('SoftwareUpdateStatusWidget — updateStatus state machine (full)', () 
   });
 });
 
-describe('SoftwareUpdateStatusWidget — tall-only detail rows', () => {
-  it('shows expected duration and scheduled start only when rows ≥ 2', () => {
+describe.each(PACK_IDS)('SoftwareUpdateStatusWidget — %s tall-only detail rows', packId => {
+  it('shows expected duration and scheduled start only when rows ≥ 2', async () => {
     const config = {
       software_update_version: '2025.26.5',
       software_update_download_pct: 45,
@@ -411,7 +476,7 @@ describe('SoftwareUpdateStatusWidget — tall-only detail rows', () => {
       software_update_scheduled_start: '2025-07-01T03:00:00Z',
     };
     mockConfig.mockReturnValue(cfg(config));
-    const { container } = renderWidget(TALL);
+    const { container } = await renderPackedWidget(packId, TALL);
 
     expect(container.textContent).toContain('Est. time');
     expect(container.textContent).toContain('~30');
@@ -420,7 +485,7 @@ describe('SoftwareUpdateStatusWidget — tall-only detail rows', () => {
     expect(container.textContent).toContain('Jul 1, 2025');
   });
 
-  it('hides expected duration and scheduled start at rows = 1', () => {
+  it('hides expected duration and scheduled start at rows = 1', async () => {
     const config = {
       software_update_version: '2025.26.5',
       software_update_download_pct: 45,
@@ -428,35 +493,49 @@ describe('SoftwareUpdateStatusWidget — tall-only detail rows', () => {
       software_update_scheduled_start: '2025-07-01T03:00:00Z',
     };
     mockConfig.mockReturnValue(cfg(config));
-    const { container } = renderWidget(FULL);
+    const { container } = await renderPackedWidget(packId);
 
     expect(container.textContent).not.toContain('Est. time');
     expect(container.textContent).not.toContain('Scheduled');
     // The download bar itself still renders regardless of height.
     expect(screen.getByText('45%')).toBeInTheDocument();
   });
+
+  it('omits invalid schedule and duration without losing the update', async () => {
+    mockConfig.mockReturnValue(cfg({
+      software_update_version: '2025.26.5',
+      software_update_download_pct: 45,
+      software_update_expected_duration: Number.NaN,
+      software_update_scheduled_start: 'invalid-date',
+    }));
+    const { container } = await renderPackedWidget(packId, TALL);
+
+    expect(screen.getByText('2025.26.5')).toBeInTheDocument();
+    expect(screen.getByText('45%')).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/Est\. time|Scheduled|NaN|Invalid Date/);
+  });
 });
 
-describe('SoftwareUpdateStatusWidget — null-safety & hardening', () => {
-  it('renders "—" for the current version when software_version is missing', () => {
+describe.each(PACK_IDS)('SoftwareUpdateStatusWidget — %s null-safety & hardening', packId => {
+  it('renders "—" for the current version when software_version is missing', async () => {
     // A resolved state object with no software_version (bypasses the helper
     // default, which would otherwise swallow an explicit `undefined`).
     mockState.mockReturnValue(qr({ data: { state: {}, live: true } }));
     mockConfig.mockReturnValue(cfg({}));
-    renderWidget(FULL);
+    await renderPackedWidget(packId);
 
     expect(screen.getByText('Current version')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 
-  it('shows an in-flight update from config even when live vehicle state is absent', () => {
+  it('shows an in-flight update from config even when live vehicle state is absent', async () => {
     // Regression: the body must gate on state OR a pending update, so a live
     // gap never hides an update the config poll already reported.
     mockState.mockReturnValue(noStateResult());
     mockConfig.mockReturnValue(
       cfg({ software_update_version: '2025.30.1', software_update_download_pct: 45 }),
     );
-    renderWidget(FULL);
+    await renderPackedWidget(packId);
 
     expect(screen.queryByText('No software data')).toBeNull();
     expect(screen.getByText('2025.30.1')).toBeInTheDocument();
@@ -466,13 +545,13 @@ describe('SoftwareUpdateStatusWidget — null-safety & hardening', () => {
   });
 });
 
-describe('SoftwareUpdateStatusWidget — refresh wiring', () => {
-  it('invokes both state and config refetch when the freshness control is activated', () => {
+describe.each(PACK_IDS)('SoftwareUpdateStatusWidget — %s refresh wiring', packId => {
+  it('invokes both state and config refetch when the freshness control is activated', async () => {
     const refetch = vi.fn();
     const refetchConfig = vi.fn();
     mockState.mockReturnValue(stateResult('2025.20.1', { refetch }));
     mockConfig.mockReturnValue(cfg({}, { refetch: refetchConfig }));
-    renderWidget(FULL);
+    await renderPackedWidget(packId);
 
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
