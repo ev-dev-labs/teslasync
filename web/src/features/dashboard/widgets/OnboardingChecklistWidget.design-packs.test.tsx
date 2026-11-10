@@ -11,6 +11,7 @@ import {
 } from '@/features/onboarding/checklist';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
 import type { WidgetSize } from './types';
 import OnboardingChecklistWidget from './OnboardingChecklistWidget';
 
@@ -30,10 +31,7 @@ vi.mock('@/api/hooks/useNotifications', () => ({
   useNotificationChannels: () => queries.channels(),
 }));
 
-const packs = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const packs = Object.entries(PACK_APPEARANCES);
 const sizes = [
   { cols: 1, rows: 1 },
   { cols: 2, rows: 3 },
@@ -118,7 +116,7 @@ describe.each(packs)('Setup checklist %s (%s)', (packId, appearance) => {
     expect(within(active.getByTestId('onboarding-checklist')).getAllByRole('listitem')).toHaveLength(7);
     expect(active.getByTestId('checklist-task-connect-vehicle')).toHaveAttribute('data-complete', 'true');
     expect(active.queryByRole('button', { name: 'Connect' })).not.toBeInTheDocument();
-    const progress = active.getByRole(packId === 'v7' ? 'meter' : 'progressbar');
+    const progress = active.queryByRole('meter') ?? active.getByRole('progressbar');
     expect(progress).toHaveAttribute('aria-valuenow', '1');
     expect(progress).toHaveAttribute('aria-valuemax', '7');
     expect(container.querySelector('.lucide-rocket')).not.toBeNull();
@@ -170,7 +168,7 @@ it('retains Classic and unknown-pack recovery with the original meter, rows, hid
   expect(screen.getByText('1 of 7 done')).toBeInTheDocument();
 });
 
-it('switches all seven packs on one real checklist subscription and preserves palette and refresh actions', async () => {
+it('switches all registered packs on one real checklist subscription and preserves palette and refresh actions', async () => {
   const subscriptions = vi.spyOn(window, 'addEventListener');
   const palette = vi.fn();
   window.addEventListener('toggle-command-palette', palette);
@@ -196,14 +194,14 @@ it('switches all seven packs on one real checklist subscription and preserves pa
   window.removeEventListener('toggle-command-palette', palette);
 });
 
-it('retains completed remote evidence and recovery after refresh failures', async () => {
+it.each(packs)('retains completed remote evidence and recovery after refresh failures in %s', async (packId, appearance) => {
   const oldest = Date.now() - 60_000;
   queries.vehicles.mockReturnValue(query(refresh.vehicles, {
     data: [{ id: 7 }], dataUpdatedAt: oldest, isError: true, error: new Error('Refresh failed'),
   }));
   queries.rules.mockReturnValue(query(refresh.rules, { data: [{ id: 3 }], dataUpdatedAt: oldest + 10_000 }));
-  const { container } = renderWidget('v6');
-  const view = await presentation(container, 'expressive');
+  const { container } = renderWidget(packId);
+  const view = await presentation(container, appearance);
   expect(view.getByText('2 of 7 done')).toBeInTheDocument();
   expect(view.getByTestId('checklist-task-connect-vehicle')).toHaveAttribute('data-complete', 'true');
   expect(view.getByTestId('checklist-task-first-alert')).toHaveAttribute('data-complete', 'true');
@@ -215,13 +213,14 @@ it('retains completed remote evidence and recovery after refresh failures', asyn
   Object.values(refresh).forEach(refetch => expect(refetch).toHaveBeenCalledOnce());
 });
 
-it('distinguishes confirmed empty configuration from unknown prerequisites and never claims setup is complete', async () => {
+it.each(packs)('distinguishes confirmed empty configuration from unknown prerequisites and never claims setup is complete in %s', async (packId, appearance) => {
   queries.vehicles.mockReturnValue(query(refresh.vehicles));
-  const { container } = renderWidget('v4');
-  const view = await presentation(container, 'owner');
+  const { container } = renderWidget(packId);
+  const view = await presentation(container, appearance);
   expect(view.getByText('0 of 7 done')).toBeInTheDocument();
   expect(view.queryByText('Unknown')).not.toBeInTheDocument();
   expect(view.queryByText("You're all set! 🎉")).not.toBeInTheDocument();
   expect(view.getByRole('button', { name: 'Connect' })).toBeInTheDocument();
-  expect(view.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
+  const progress = view.queryByRole('meter') ?? view.getByRole('progressbar');
+  expect(progress).toHaveAttribute('aria-valuenow', '0');
 });

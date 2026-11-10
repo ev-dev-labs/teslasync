@@ -174,90 +174,89 @@ describe.each(productionPacks)('Weather at Car %s production appearance', packId
     expect(presentation.querySelector('.lucide-cloud-snow')).toBeNull();
     expect(reading.state?.outside_temp).toBe(0);
   });
-});
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    'treats malformed temperature %s as unknown instead of zero or extreme weather',
+    async temperature => {
+      mocks.state.mockReturnValue(makeQuery(snapshot(temperature)));
+      const { container } = renderWidget(packId);
+      const presentation = await expectPack(container, packId);
+      expect(screen.getByText('No weather data')).toBeInTheDocument();
+      expectFact('Conditions', '—');
+      expect(presentation.querySelector('.lucide-cloud-snow, .lucide-sun')).toBeNull();
+      expect(screen.queryByText(/NaN|Infinity|0°C/)).not.toBeInTheDocument();
+    },
+  );
 
-it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
-  'treats malformed temperature %s as unknown instead of zero or extreme weather',
-  async temperature => {
-    mocks.state.mockReturnValue(makeQuery(snapshot(temperature)));
-    const { container } = renderWidget('v7');
-    const presentation = await expectPack(container, 'v7');
+  it('preserves the empty source shell when no vehicle snapshot has arrived', async () => {
+    mocks.state.mockReturnValue(makeQuery(snapshot(null, { state: undefined, live: false })));
+    const { container } = renderWidget(packId);
+    await expectPack(container, packId);
+    expect(screen.getByRole('heading', { name: 'Weather at car' })).toBeInTheDocument();
     expect(screen.getByText('No weather data')).toBeInTheDocument();
+    expectFact('Source', '—');
     expectFact('Conditions', '—');
-    expect(presentation.querySelector('.lucide-cloud-snow, .lucide-sun')).toBeNull();
-    expect(screen.queryByText(/NaN|Infinity|0°C/)).not.toBeInTheDocument();
-  },
-);
+  });
 
-it('preserves the empty source shell when no vehicle snapshot has arrived', async () => {
-  mocks.state.mockReturnValue(makeQuery(snapshot(null, { state: undefined, live: false })));
-  const { container } = renderWidget('v3');
-  await expectPack(container, 'v3');
-  expect(screen.getByRole('heading', { name: 'Weather at car' })).toBeInTheDocument();
-  expect(screen.getByText('No weather data')).toBeInTheDocument();
-  expectFact('Source', '—');
-  expectFact('Conditions', '—');
-});
+  it.each([
+    { freshness: 'stale', observedAt: Date.now() - 600_000, status: 'stale' },
+    { freshness: 'unknown', observedAt: null, status: 'partial' },
+  ] as const)('retains $freshness observations without claiming fresh weather', async evidence => {
+    mocks.state.mockReturnValue(makeQuery(snapshot(18, {
+      freshness: evidence.freshness, observedAt: evidence.observedAt,
+    })));
+    const { container } = renderWidget(packId);
+    await expectPack(container, packId);
+    expect(container.querySelector(`[data-data-state="${evidence.status}"]`)).not.toBeNull();
+    expect(screen.getByText('18°C')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Refresh data · Stale/i })).toBeInTheDocument();
+    expectFact('Conditions', '—');
+  });
 
-it.each([
-  { freshness: 'stale', observedAt: Date.now() - 600_000, status: 'stale' },
-  { freshness: 'unknown', observedAt: null, status: 'partial' },
-] as const)('retains $freshness observations without claiming fresh weather', async evidence => {
-  mocks.state.mockReturnValue(makeQuery(snapshot(18, {
-    freshness: evidence.freshness, observedAt: evidence.observedAt,
-  })));
-  const { container } = renderWidget('v2');
-  await expectPack(container, 'v2');
-  expect(container.querySelector(`[data-data-state="${evidence.status}"]`)).not.toBeNull();
-  expect(screen.getByText('18°C')).toBeInTheDocument();
-  expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /^Refresh data · Stale/i })).toBeInTheDocument();
-  expectFact('Conditions', '—');
-});
+  it('keeps loading and fatal-error recovery in the shell instead of showing invented weather', async () => {
+    mocks.state.mockReturnValue(makeQuery<WeatherSnapshot>(undefined, {
+      isPending: true, isLoading: true, isFetching: true, fetchStatus: 'fetching', dataUpdatedAt: 0,
+    }));
+    const view = renderWidget(packId);
+    expect(view.container.querySelector(`[data-widget-pack="${packId}"]`)).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('18°C')).not.toBeInTheDocument();
+    expect(screen.queryByText('No weather data')).not.toBeInTheDocument();
+    const refetch = vi.fn();
+    mocks.state.mockReturnValue(makeQuery<WeatherSnapshot>(undefined, {
+      error: new Error('No source'), isError: true, dataUpdatedAt: 0, refetch,
+    }));
+    view.selectPack(packId);
+    expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByText('No weather data')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Retry/i }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
 
-it('keeps loading and fatal-error recovery in the shell instead of showing invented weather', async () => {
-  mocks.state.mockReturnValue(makeQuery<WeatherSnapshot>(undefined, {
-    isPending: true, isLoading: true, isFetching: true, fetchStatus: 'fetching', dataUpdatedAt: 0,
-  }));
-  const view = renderWidget('v1');
-  expect(view.container.querySelector('[data-widget-pack="v1"]')).toHaveAttribute('aria-busy', 'true');
-  expect(screen.queryByText('18°C')).not.toBeInTheDocument();
-  expect(screen.queryByText('No weather data')).not.toBeInTheDocument();
-  const refetch = vi.fn();
-  mocks.state.mockReturnValue(makeQuery<WeatherSnapshot>(undefined, {
-    error: new Error('No source'), isError: true, dataUpdatedAt: 0, refetch,
-  }));
-  view.selectPack('v1');
-  expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
-  expect(screen.queryByText('No weather data')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /^Retry/i }));
-  expect(refetch).toHaveBeenCalledOnce();
-});
+  it('refreshes discovery and the selected fallback vehicle', async () => {
+    const discoveryRefetch = vi.fn();
+    const stateRefetch = vi.fn();
+    mocks.vehicles.mockReturnValue(makeQuery([{ id: 42 }], { refetch: discoveryRefetch }));
+    mocks.state.mockReturnValue(makeQuery(snapshot(), { refetch: stateRefetch }));
+    const { container } = renderWidget(packId, { vehicleId: undefined });
+    await expectPack(container, packId);
+    expect(mocks.state).toHaveBeenLastCalledWith(42, { refetchInterval: 30_000 });
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(discoveryRefetch).toHaveBeenCalledOnce();
+    expect(stateRefetch).toHaveBeenCalledOnce();
+  });
 
-it('refreshes discovery and the selected fallback vehicle', async () => {
-  const discoveryRefetch = vi.fn();
-  const stateRefetch = vi.fn();
-  mocks.vehicles.mockReturnValue(makeQuery([{ id: 42 }], { refetch: discoveryRefetch }));
-  mocks.state.mockReturnValue(makeQuery(snapshot(), { refetch: stateRefetch }));
-  const { container } = renderWidget('v4', { vehicleId: undefined });
-  await expectPack(container, 'v4');
-  expect(mocks.state).toHaveBeenLastCalledWith(42, { refetchInterval: 30_000 });
-  fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
-  expect(discoveryRefetch).toHaveBeenCalledOnce();
-  expect(stateRefetch).toHaveBeenCalledOnce();
-});
-
-it('keeps the retained temperature visible and prevents duplicate refreshes while fetching', async () => {
-  const refetch = vi.fn();
-  mocks.state.mockReturnValue(makeQuery(snapshot(), { isFetching: true, fetchStatus: 'fetching', refetch }));
-  const { container } = renderWidget('v7');
-  await expectPack(container, 'v7');
-  expect(screen.getByText('18°C')).toBeInTheDocument();
-  const refresh = screen.getByRole('button', { name: /^Refresh/i });
-  expect(refresh).toBeDisabled();
-  fireEvent.click(refresh);
-  expect(refetch).not.toHaveBeenCalled();
-  expect(container.querySelector('[data-widget-pack="v7"]')).toHaveAttribute('aria-busy', 'true');
+  it('keeps the retained temperature visible and prevents duplicate refreshes while fetching', async () => {
+    const refetch = vi.fn();
+    mocks.state.mockReturnValue(makeQuery(snapshot(), { isFetching: true, fetchStatus: 'fetching', refetch }));
+    const { container } = renderWidget(packId);
+    await expectPack(container, packId);
+    expect(screen.getByText('18°C')).toBeInTheDocument();
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
+    expect(refresh).toBeDisabled();
+    fireEvent.click(refresh);
+    expect(refetch).not.toHaveBeenCalled();
+    expect(container.querySelector(`[data-widget-pack="${packId}"]`)).toHaveAttribute('aria-busy', 'true');
+  });
 });
 
 it.each([{ cols: 1, rows: 1 }, { cols: 2, rows: 2 }])(

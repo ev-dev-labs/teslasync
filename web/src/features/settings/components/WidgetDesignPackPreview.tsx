@@ -53,32 +53,32 @@ export default function WidgetDesignPackPreview({ packId }: WidgetDesignPackPrev
     button: <Button key={id} disabled variant="secondary" icon={<Icon aria-hidden="true" />}>{label}</Button>,
   }));
   const locked = <Text>{t('theme.widgetDesignPacks.sampleLocked', 'Locked')}</Text>;
-  return <div data-widget-pack={packId} data-widget-pack-preview className="space-y-4">
+  return <div data-widget-pack-preview={packId} className="space-y-4">
     {packId !== 'classic' && (!BatteryPresentation || !VehiclePresentation) && (
       <Text role="status">{t('theme.widgetDesignPacks.loading', 'Loading preview...')}</Text>
     )}
     <div className="grid min-w-0 gap-4 md:grid-cols-2">
-      <GlassPanel className="@container min-w-0 space-y-3 p-4">
-        <PanelTitle>{t('theme.widgetDesignPacks.vehicle', 'Vehicle')}</PanelTitle>
+      <GlassPanel data-widget-pack={packId} className="@container min-w-0 space-y-3 p-4">
+        <PanelTitle data-role="widget-header-title">{t('theme.widgetDesignPacks.vehicle', 'Vehicle')}</PanelTitle>
         {VehiclePresentation ? <VehiclePresentation {...vehicle} /> : <ClassicVehicleHero {...vehicle} />}
       </GlassPanel>
-      <GlassPanel className="@container min-w-0 space-y-3 p-4">
-        <PanelTitle>{t('theme.widgetDesignPacks.battery', 'Battery')}</PanelTitle>
+      <GlassPanel data-widget-pack={packId} className="@container min-w-0 space-y-3 p-4">
+        <PanelTitle data-role="widget-header-title">{t('theme.widgetDesignPacks.battery', 'Battery')}</PanelTitle>
         {BatteryPresentation ? <BatteryPresentation {...battery} /> : <ClassicBatteryGauge {...battery} />}
       </GlassPanel>
-      <GlassPanel className="@container min-w-0 space-y-3 p-4">
-        <PanelTitle>{t('theme.widgetDesignPacks.history', 'History')}</PanelTitle>
+      <GlassPanel data-widget-pack={packId} className="@container min-w-0 space-y-3 p-4">
+        <PanelTitle data-role="widget-header-title">{t('theme.widgetDesignPacks.history', 'History')}</PanelTitle>
         {appearance ? <LineTelemetryLayout appearance={appearance} compact={false} context={null}
           headline={{ label: batteryLabel, value: '72', unit: '%' }} details={[]}
           chart={chart} sourceBoundary={content => content} /> : chart}
       </GlassPanel>
-      <GlassPanel className="@container min-w-0 space-y-3 p-4">
-        <PanelTitle>{t('theme.widgetDesignPacks.status', 'Status')}</PanelTitle>
+      <GlassPanel data-widget-pack={packId} className="@container min-w-0 space-y-3 p-4">
+        <PanelTitle data-role="widget-header-title">{t('theme.widgetDesignPacks.status', 'Status')}</PanelTitle>
         {appearance ? <SecurityStatusLayout appearance={appearance} headline={locked}
           icon={<ShieldCheck aria-hidden="true" />} details={status} /> : <div>{locked}{status}</div>}
       </GlassPanel>
-      <GlassPanel className="@container min-w-0 space-y-3 p-4 md:col-span-2">
-        <PanelTitle>{t('theme.widgetDesignPacks.commands', 'Commands')}</PanelTitle>
+      <GlassPanel data-widget-pack={packId} className="@container min-w-0 space-y-3 p-4 md:col-span-2">
+        <PanelTitle data-role="widget-header-title">{t('theme.widgetDesignPacks.commands', 'Commands')}</PanelTitle>
         <Caption>{t('theme.widgetDesignPacks.inertCommands', 'Preview commands are disabled.')}</Caption>
         {appearance ? <CommandActionsLayout appearance={appearance} compact={false} actions={actions} />
           : <div className="grid grid-cols-3 gap-3">{actions.map(action => action.button)}</div>}

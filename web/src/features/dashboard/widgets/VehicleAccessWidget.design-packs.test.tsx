@@ -214,15 +214,15 @@ it('preserves Classic full rows, compact driver count and the accessible mobile 
   expect(screen.queryByText('Pending invitations')).not.toBeInTheDocument();
 });
 
-it('retries only a failed invitation source without removing drivers or mobile status', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('retries only a failed invitation source without removing drivers or mobile status in %s (%s)', async (packId, appearance) => {
   const drivers = query(DRIVERS);
   const invitations = query<VehicleInvitation[]>(undefined, { isError: true, error: new Error('Invitations unavailable') });
   const mobile = query<MobileData>({ data: { enabled: true }, fetched_at: NOW });
   driversMock.mockReturnValue(drivers);
   invitationsMock.mockReturnValue(invitations);
   mobileMock.mockReturnValue(mobile);
-  const { container } = render(widget('v4', FULL, 19));
-  await expectPresentation(container, 'owner');
+  const { container } = render(widget(packId, FULL, 19));
+  await expectPresentation(container, appearance);
   expect(screen.getByText('Alice')).toBeVisible();
   expect(screen.getByText('Mobile access enabled')).toBeVisible();
   expect(container.querySelector('[data-access-pending-count]')).toHaveTextContent('—');
@@ -234,11 +234,11 @@ it('retries only a failed invitation source without removing drivers or mobile s
   expect(invitationsMock).toHaveBeenCalledWith('19');
 });
 
-it('retains cached rows and exposes an individual retry when a driver refresh fails', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('retains cached rows and exposes an individual retry when a driver refresh fails in %s (%s)', async (packId, appearance) => {
   const drivers = query(DRIVERS, { isError: true, isStale: true, error: new Error('Driver refresh failed') });
   driversMock.mockReturnValue(drivers);
-  const { container } = render(widget('v7'));
-  await expectPresentation(container, 'pixel');
+  const { container } = render(widget(packId));
+  await expectPresentation(container, appearance);
   const source = within(screen.getByRole('region', { name: 'Authorized drivers' }));
   expect(source.getByText('Alice')).toBeVisible();
   expect(source.getByText('Bob')).toBeVisible();
@@ -250,19 +250,19 @@ it('retains cached rows and exposes an individual retry when a driver refresh fa
   expect(mobileQuery.refetch).not.toHaveBeenCalled();
 });
 
-it('does not interpret an invitation with an unknown status as zero pending invitations', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('does not interpret an invitation with an unknown status as zero pending invitations in %s (%s)', async (packId, appearance) => {
   invitationsMock.mockReturnValue(query([invitation({ status: '' })]));
-  const { container } = render(widget('v3'));
-  await expectPresentation(container, 'precision');
+  const { container } = render(widget(packId));
+  await expectPresentation(container, appearance);
   expect(container.querySelector('[data-access-pending-count]')).toHaveTextContent('—');
   expect(within(screen.getByRole('region', { name: 'Invitations' })).getByText('Unknown')).toBeVisible();
 });
 
-it('keeps partial source loading inside its own section and disables global refresh while fetching', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('keeps partial source loading inside its own section and disables global refresh while fetching in %s (%s)', async (packId, appearance) => {
   const drivers = query<VehicleDriver[]>(undefined, { isLoading: true, isPending: true, isFetching: true });
   driversMock.mockReturnValue(drivers);
-  const { container } = render(widget('v2'));
-  await expectPresentation(container, 'elevated');
+  const { container } = render(widget(packId));
+  await expectPresentation(container, appearance);
   expect(screen.getByRole('region', { name: 'Authorized drivers' })).toBeVisible();
   expect(screen.queryByText('Alice')).not.toBeInTheDocument();
   expect(screen.getByText('Carol')).toBeVisible();
@@ -274,12 +274,12 @@ it('keeps partial source loading inside its own section and disables global refr
   expect(drivers.refetch).not.toHaveBeenCalled();
 });
 
-it('preserves initial vehicle loading and fatal source recovery in the shell', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('preserves initial vehicle loading and fatal source recovery in the shell in %s (%s)', async (packId) => {
   vehiclesMock.mockReturnValue(query(undefined, { isLoading: true, isPending: true }));
   driversMock.mockReturnValue(query<VehicleDriver[]>(undefined));
   invitationsMock.mockReturnValue(query<VehicleInvitation[]>(undefined));
   mobileMock.mockReturnValue(query<MobileData>(undefined));
-  const view = render(widget('v6'));
+  const view = render(widget(packId));
   expect(view.container.querySelector('[aria-busy="true"]')).not.toBeNull();
   expect(screen.getByRole('heading', { name: 'Vehicle access', level: 3 })).toBeVisible();
   expect(screen.queryByText('0 drivers')).not.toBeInTheDocument();
@@ -292,7 +292,7 @@ it('preserves initial vehicle loading and fatal source recovery in the shell', a
   driversMock.mockReturnValue(drivers);
   invitationsMock.mockReturnValue(invitations);
   mobileMock.mockReturnValue(mobile);
-  view.rerender(widget('v6'));
+  view.rerender(widget(packId));
   expect(await screen.findByText("Can't reach server")).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: /try again|retry/i }));
   expect(drivers.refetch).toHaveBeenCalledOnce();

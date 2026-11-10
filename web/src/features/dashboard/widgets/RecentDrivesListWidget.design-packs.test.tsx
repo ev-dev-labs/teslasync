@@ -5,6 +5,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { Drive } from '@/api/types';
 import { Text } from '@/components/ui';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
 import type { WidgetProps } from './types';
 import RecentDrivesListWidget from './RecentDrivesListWidget';
 
@@ -58,10 +59,7 @@ vi.mock('@/hooks/useDateFormat', () => ({
   }),
 }));
 
-const packs = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const packs = Object.entries(PACK_APPEARANCES);
 const fullSize = { cols: 3, rows: 2 };
 const compactSize = { cols: 1, rows: 1 };
 const fullDestination = 'A complete destination address whose final words remain readable';
@@ -153,11 +151,16 @@ describe('RecentDrivesListWidget production design packs', () => {
     expect(screen.getByRole('link', { name: /^Drive: 17 km, Today/ })).toHaveAttribute('href', '/drives/17');
   });
 
-  it.each(packs)('%s distinguishes unknown readings, measured zero and an empty source in %s', async (packId, appearance) => {
+  it.each(packs)('%s distinguishes unknown, invalid and measured-zero readings from an empty source in %s', async (packId, appearance) => {
     mocks.history.mockReturnValue(query({
       data: [
         drive({ distance_m: null, duration_s: null, energy_used_wh: null, start_address: null, end_address: null }),
         drive({ id: 29, distance_m: 0, duration_s: 30, energy_used_wh: 0 }),
+        drive({
+          id: 31, distance_m: Number.NaN, duration_s: Number.POSITIVE_INFINITY,
+          energy_used_wh: Number.NEGATIVE_INFINITY, start_address: '   ', end_address: 'Office',
+        }),
+        drive({ id: 37, duration_s: 0, energy_used_wh: 0 }),
       ],
     }));
     const view = render(widgetTree(packId));
@@ -169,6 +172,12 @@ describe('RecentDrivesListWidget production design packs', () => {
     expect(within(rows[1]).getByText('0 km')).toBeInTheDocument();
     expect(within(rows[1]).getByText(/<1m/)).toBeInTheDocument();
     expect(within(rows[1]).queryByText(/Wh\/km/)).not.toBeInTheDocument();
+    expect(within(rows[2]).getByText('—')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('— → Office')).toBeInTheDocument();
+    expect(within(rows[2]).queryByText(/NaN|Infinity|Wh\/km|0 km|<1m/)).not.toBeInTheDocument();
+    expect(within(rows[3]).getByText('17 km')).toBeInTheDocument();
+    expect(within(rows[3]).getByText(/<1m/)).toBeInTheDocument();
+    expect(within(rows[3]).getByText('0 Wh/km')).toBeInTheDocument();
     expect(presentation.querySelector('.widget-big-number')).toHaveTextContent('—');
 
     mocks.history.mockReturnValue(query({ data: null }));
@@ -191,10 +200,10 @@ describe('RecentDrivesListWidget production design packs', () => {
     expect(screen.getByRole('link', { name: 'View all' })).toHaveAttribute('href', '/drives');
   });
 
-  it('converts the headline and all row efficiencies only at the display boundary', async () => {
+  it.each(packs)('%s converts the headline and all row efficiencies at the display boundary in %s', async (packId, appearance) => {
     mocks.distance = 'mi';
-    const { container } = render(widgetTree('v4'));
-    const presentation = await findPresentation(container, 'owner');
+    const { container } = render(widgetTree(packId));
+    const presentation = await findPresentation(container, appearance);
     const list = within(presentation).getByRole('list');
     expect(within(list).getAllByText('11 mi')).toHaveLength(2);
     expect(within(list).getAllByText('388 Wh/mi')).toHaveLength(2);
@@ -202,27 +211,28 @@ describe('RecentDrivesListWidget production design packs', () => {
     expect(within(presentation).queryByText(/Wh\/km|17 km/)).not.toBeInTheDocument();
   });
 
-  it('keeps refresh and both drive-list and detail navigation working across pack changes', async () => {
-    const view = render(widgetTree('classic'));
-    view.rerender(widgetTree('v5'));
-    await findPresentation(view.container, 'iconic');
+  it.each(packs)('%s keeps refresh, scope and drive navigation working across pack changes in %s', async (packId, appearance) => {
+    const props = { config: { timeRange: '7d' } };
+    const view = render(widgetTree('classic', props));
+    view.rerender(widgetTree(packId, props));
+    await findPresentation(view.container, appearance);
+    expect(mocks.history).toHaveBeenLastCalledWith(42, { kind: 'recent-list', limit: 10, range: '7d' });
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(mocks.refetch).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('link', { name: /^Drive: 17 km, Today/ }));
     expect(screen.getByTestId('location')).toHaveTextContent('/drives/17');
-    view.rerender(widgetTree('v7'));
-    await findPresentation(view.container, 'pixel');
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
     fireEvent.click(screen.getByRole('link', { name: 'View all' }));
     expect(screen.getByTestId('location')).toHaveTextContent('/drives');
-    view.rerender(widgetTree('classic'));
+    view.rerender(widgetTree('classic', props));
     expect(view.container.querySelector('[data-widget-family]')).toBeNull();
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    expect(mocks.history).toHaveBeenLastCalledWith(42, { kind: 'recent-list', limit: 10, range: '7d' });
   });
 
-  it('preserves the shell through loading/fatal failure and retains rows with refresh-failure evidence', async () => {
+  it.each(packs)('%s preserves loading/fatal failure and retained rows with refresh-failure evidence in %s', async (packId, appearance) => {
     mocks.history.mockReturnValue(query({ data: undefined, dataUpdatedAt: 0, isLoading: true }));
-    const view = render(widgetTree('v7'));
+    const view = render(widgetTree(packId));
     expect(view.container.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(screen.queryByText('No recent drives recorded')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View all' })).toBeInTheDocument();
@@ -230,7 +240,7 @@ describe('RecentDrivesListWidget production design packs', () => {
     mocks.history.mockReturnValue(query({
       data: undefined, dataUpdatedAt: 0, error: new Error('synthetic outage'), isError: true,
     }));
-    view.rerender(widgetTree('v7'));
+    view.rerender(widgetTree(packId));
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByText('No recent drives recorded')).not.toBeInTheDocument();
@@ -239,8 +249,8 @@ describe('RecentDrivesListWidget production design packs', () => {
       error: new Error('synthetic background outage'), isError: true, isStale: true,
       dataUpdatedAt: Date.now() - 60_000,
     }));
-    view.rerender(widgetTree('v7'));
-    await findPresentation(view.container, 'pixel');
+    view.rerender(widgetTree(packId));
+    await findPresentation(view.container, appearance);
     expect(view.container.querySelector('[data-data-state="stale"]')).not.toBeNull();
     expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent(
       'Previously loaded data remains visible while affected sources recover.',

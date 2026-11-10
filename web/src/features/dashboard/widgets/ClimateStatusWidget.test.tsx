@@ -34,8 +34,10 @@
  *     disabled (id 0) query when no vehicle exists — always with the 5s poll.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 // ── i18n stub: return the English fallback (2nd arg) or the key. ──
 vi.mock('react-i18next', () => ({
@@ -300,5 +302,110 @@ describe('ClimateStatusWidget — vehicle resolution', () => {
     expect(mockClimate).toHaveBeenCalledWith(0, 5000);
     // With no vehicle and no data, the widget degrades to the empty state.
     expect(screen.getByText('No climate data')).toBeInTheDocument();
+  });
+});
+
+async function expectPackPresentation(container: HTMLElement, packId: PackId) {
+  expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+  if (packId !== 'classic') {
+    await waitFor(() => {
+      expect(container.querySelector(`[data-climate-appearance="${PACK_APPEARANCES[packId]}"]`)).not.toBeNull();
+    });
+  }
+}
+
+describe.each(PACK_IDS)('ClimateStatusWidget — %s integration', packId => {
+  it('keeps measured temperatures, display preferences, active airflow and refresh when the pack changes', async () => {
+    const refetch = vi.fn();
+    const data = makeClimate({
+      inside_temp_c: 0,
+      outside_temp_c: -10,
+      driver_setpoint_c: 22,
+      ts: new Date().toISOString(),
+    });
+    setup({ climate: makeQuery({ data, refetch }) });
+    const { container, rerender } = render(
+      <PackBoundary requestedPackId="classic"><ClimateStatusWidget vehicleId={7} size={{ cols: 2, rows: 2 }} /></PackBoundary>,
+    );
+    expect(container).toHaveTextContent('0°C');
+    expect(container).toHaveTextContent('Outside -10°C');
+
+    setup({ climate: makeQuery({ data, refetch }), tempPref: '°F' });
+    rerender(
+      <PackBoundary requestedPackId={packId}><ClimateStatusWidget vehicleId={7} size={{ cols: 2, rows: 2 }} /></PackBoundary>,
+    );
+    await expectPackPresentation(container, packId);
+    expect(container).toHaveTextContent('32°F');
+    expect(container).toHaveTextContent('Outside 14°F');
+    if (packId !== 'classic') expect(container).toHaveTextContent('set 72°F');
+    expect(container).not.toHaveTextContent('°C');
+    expect(screen.getByText('HVAC on')).toBeInTheDocument();
+    expect(container.querySelector('[data-climate-airflow="active"]')).toHaveClass('h-4');
+    expect(mockClimate).toHaveBeenLastCalledWith(7, 5_000);
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves initial loading, fatal error, empty and recovered content without a classic fallback', async () => {
+    const widget = <PackBoundary requestedPackId={packId}><ClimateStatusWidget size={STANDARD} /></PackBoundary>;
+    setup({ climate: makeQuery({ data: undefined, dataUpdatedAt: 0, isLoading: true, isFetching: true }) });
+    const { container, rerender } = render(widget);
+    expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('Inside')).not.toBeInTheDocument();
+    expect(screen.queryByText('No climate data')).not.toBeInTheDocument();
+
+    const refetch = vi.fn();
+    setup({ climate: makeQuery({ data: undefined, dataUpdatedAt: 0, isError: true, error: new Error('unavailable'), refetch }) });
+    rerender(<PackBoundary requestedPackId={packId}><ClimateStatusWidget size={STANDARD} /></PackBoundary>);
+    expect(container.querySelector('[data-data-state="initialFailure"]')).not.toBeNull();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No climate data')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    setup({ climate: makeQuery({ data: null }) });
+    rerender(<PackBoundary requestedPackId={packId}><ClimateStatusWidget size={STANDARD} /></PackBoundary>);
+    expect(screen.getByText('No climate data')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Inside')).not.toBeInTheDocument();
+
+    const data = makeClimate({ ts: new Date().toISOString() });
+    setup({ climate: makeQuery({ data }) });
+    rerender(<PackBoundary requestedPackId={packId}><ClimateStatusWidget size={STANDARD} /></PackBoundary>);
+    await expectPackPresentation(container, packId);
+    expect(container).toHaveTextContent('20°C');
+    expect(screen.queryByText('No climate data')).not.toBeInTheDocument();
+
+    setup({ climate: makeQuery({ data, isError: true, error: new Error('refresh failed') }) });
+    rerender(<PackBoundary requestedPackId={packId}><ClimateStatusWidget size={STANDARD} /></PackBoundary>);
+    await expectPackPresentation(container, packId);
+    expect(container).toHaveTextContent('20°C');
+    expect(container).toHaveTextContent('Outside 10°C');
+    expect(screen.getByText('HVAC on')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-climate-airflow="static"]')).not.toBeNull();
+    expect(container.querySelector('[data-motion-suppressed="true"]')).not.toBeNull();
+  });
+
+  it('keeps invalid measurements unknown and inactive HVAC static independently of valid readings', async () => {
+    setup({ climate: makeQuery({ data: makeClimate({
+      inside_temp_c: Number.NaN,
+      outside_temp_c: -10,
+      driver_setpoint_c: Number.POSITIVE_INFINITY,
+      hvac_power: false,
+      ts: new Date().toISOString(),
+    }) }) });
+    const { container } = render(
+      <PackBoundary requestedPackId={packId}><ClimateStatusWidget size={STANDARD} /></PackBoundary>,
+    );
+    await expectPackPresentation(container, packId);
+    expect(container).toHaveTextContent('—');
+    expect(container).toHaveTextContent('Outside -10°C');
+    if (packId !== 'classic') expect(container).toHaveTextContent('set —');
+    expect(container.textContent).not.toMatch(/NaN|Infinity|(?:^|\s)0°C/);
+    expect(screen.getByText('HVAC off')).toBeInTheDocument();
+    expect(container.querySelector('[data-climate-airflow="static"]')).not.toBeNull();
+    expect(container.querySelector('.widget-airflow-motion')).toBeNull();
   });
 });

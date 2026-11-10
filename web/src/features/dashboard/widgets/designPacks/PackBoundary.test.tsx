@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Button } from '@/components/ui';
 import { PACK_MANIFEST, resolveAvailablePackId, resolvePackId } from './manifest';
 import { PackBoundary, usePackModule, usePackPresentation } from './PackBoundary';
+import { EXPERIMENTAL_PACK_IDS } from './types';
 
 vi.mock('@/lib/errorReporter', () => ({ reportFrontendError: vi.fn() }));
 
@@ -50,9 +51,10 @@ describe('PackBoundary', () => {
     expect(resolveAvailablePackId('v7')).toBe('v7');
   });
 
-  it('records all eight distinct IDs without claiming unavailable presentations are active', () => {
+  it('keeps the existing eight choices and makes every approved experiment selectable', () => {
     expect(PACK_MANIFEST.map(entry => entry.id)).toEqual([
       'classic', 'v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7',
+      ...EXPERIMENTAL_PACK_IDS,
     ]);
     expect(PACK_MANIFEST.every(entry => entry.available)).toBe(true);
     expect(resolvePackId('v5')).toBe('v5');

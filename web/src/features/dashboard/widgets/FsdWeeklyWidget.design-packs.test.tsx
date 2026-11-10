@@ -8,6 +8,7 @@ import { fsdInsights } from '@/features/driving/components/fsd-insights/__tests_
 import { getWeekRange } from '@/features/analytics/components/weekly-digest/helpers';
 import FsdWeeklyWidget from './FsdWeeklyWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS } from './designPacks/types';
 import type { WidgetProps } from './types';
 
 const { fsdRangeMock, vehiclesMock, unitsMock, distanceMock, refetch } = vi.hoisted(() => ({
@@ -42,10 +43,8 @@ vi.mock('react-i18next', async (importOriginal) => ({
   }),
 }));
 
-const packs = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const packs = PACK_IDS.filter(pack => pack !== 'classic')
+  .map(pack => [pack, PACK_APPEARANCES[pack]] as const);
 const unitPrefs: UnitPref = {
   distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'bar',
   energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US',
@@ -114,8 +113,8 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('FsdWeeklyWidget production design packs', () => {
-  it.each(packs)('%s preserves real weekly readings, both destinations and refresh in %s', async (pack, appearance) => {
+describe.each(packs)('FsdWeeklyWidget production design pack %s (%s)', (pack, appearance) => {
+  it('preserves real weekly readings, both destinations and refresh', async () => {
     const view = render(widget(pack));
     await expectAppearance(view.container, appearance);
 
@@ -153,7 +152,7 @@ describe('FsdWeeklyWidget production design packs', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
-  it.each(packs)('%s keeps unknown measurements visibly unmeasured in %s', async (pack, appearance) => {
+  it('keeps unknown measurements visibly unmeasured', async () => {
     fsdRangeMock.mockReturnValue(query({
       data: report({ distance: null, previous: null, share: null, change: null }),
     }));
@@ -173,7 +172,7 @@ describe('FsdWeeklyWidget production design packs', () => {
     expect(screen.getByRole('link', { name: 'FSD insights' })).toHaveAttribute('href', '/fsd');
   });
 
-  it.each(packs)('%s preserves the compact headline branch in %s', async (pack, appearance) => {
+  it('preserves the compact headline branch', async () => {
     const view = render(widget(pack, { size: { cols: 1, rows: 1 } }));
     await expectAppearance(view.container, appearance);
     expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16 km');
@@ -185,8 +184,8 @@ describe('FsdWeeklyWidget production design packs', () => {
 
   it('distinguishes measured zero from unmeasured and preserves negative percentage-point changes', async () => {
     fsdRangeMock.mockReturnValue(query({ data: report({ distance: 0, previous: 0, share: 0, change: -3 }) }));
-    const view = render(widget('v7'));
-    await expectAppearance(view.container, 'pixel');
+    const view = render(widget(pack));
+    await expectAppearance(view.container, appearance);
     expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('0 km');
     expectRow('This week', '0 km');
     expectRow('Last week', '0 km');
@@ -199,8 +198,8 @@ describe('FsdWeeklyWidget production design packs', () => {
     fsdRangeMock.mockReturnValue(query({
       data: report({ distance: invalid, previous: invalid, share: invalid, change: Number.NaN }),
     }));
-    const view = render(widget('v3'));
-    await expectAppearance(view.container, 'precision');
+    const view = render(widget(pack));
+    await expectAppearance(view.container, appearance);
     expect(screen.getByText('UNMEASURED')).toBeVisible();
     expect(screen.getAllByText('Not available')).toHaveLength(4);
     expect(distanceMock).not.toHaveBeenCalled();
@@ -208,8 +207,8 @@ describe('FsdWeeklyWidget production design packs', () => {
 
   it('keeps independently measured distance when the share is outside its valid range', async () => {
     fsdRangeMock.mockReturnValue(query({ data: report({ share: 101, change: null }) }));
-    const view = render(widget('v6'));
-    await expectAppearance(view.container, 'expressive');
+    const view = render(widget(pack));
+    await expectAppearance(view.container, appearance);
     expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16 km');
     expectRow('Share', 'Not available');
     expectRow('Last week', '12 km');
@@ -218,8 +217,8 @@ describe('FsdWeeklyWidget production design packs', () => {
 
   it('keeps every full-size comparison row and both links visible for a resolved empty source', async () => {
     fsdRangeMock.mockReturnValue(query({ data: undefined, isSuccess: true, dataUpdatedAt: 0 }));
-    const view = render(widget('v2'));
-    await expectAppearance(view.container, 'elevated');
+    const view = render(widget(pack));
+    await expectAppearance(view.container, appearance);
     expect(screen.getByText('UNMEASURED')).toBeVisible();
     expect(screen.getAllByText('Not available')).toHaveLength(4);
     expect(screen.getByRole('link', { name: 'FSD insights' })).toBeVisible();
@@ -229,8 +228,8 @@ describe('FsdWeeklyWidget production design packs', () => {
   it('uses the selected display preference for both real SI distances', async () => {
     distanceMock.mockImplementation((meters: number, options?: Parameters<typeof formatDistance>[2]) =>
       formatDistance(meters, { ...unitPrefs, distance: 'mi' }, options));
-    const view = render(widget('v5'));
-    await expectAppearance(view.container, 'iconic');
+    const view = render(widget(pack));
+    await expectAppearance(view.container, appearance);
     expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('10 mi');
     expectRow('This week', '10 mi');
     expectRow('Last week', '7 mi');
@@ -245,8 +244,8 @@ describe('FsdWeeklyWidget production design packs', () => {
     expect(screen.getByText('40')).toBeInTheDocument();
     expect(screen.getByText('+3')).toBeInTheDocument();
     expect(screen.queryByText('Unmeasured distance is not zero.')).not.toBeInTheDocument();
-    view.rerender(widget('v2'));
-    await expectAppearance(view.container, 'elevated');
+    view.rerender(widget(pack));
+    await expectAppearance(view.container, appearance);
     view.rerender(widget('unknown-pack'));
     expect(view.container.querySelector('[data-widget-appearance]')).not.toBeInTheDocument();
     expect(screen.getAllByTestId('fsd-weekly-distance')).toHaveLength(1);
@@ -259,8 +258,8 @@ describe('FsdWeeklyWidget production design packs', () => {
     fsdRangeMock.mockReturnValue(query(state === 'failed'
       ? { isStale: true, isError: true, error: new Error('offline') }
       : { fetchStatus: 'paused' }));
-    const view = render(widget('v4'));
-    await expectAppearance(view.container, 'owner');
+    const view = render(widget(pack));
+    await expectAppearance(view.container, appearance);
     expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
     expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
     expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16 km');
@@ -268,28 +267,32 @@ describe('FsdWeeklyWidget production design packs', () => {
     expect(screen.getByRole('link', { name: 'FSD insights' })).toBeVisible();
   });
 
-  it('keeps the source shell during initial loading and retries an initial failure', () => {
+  it('keeps the source shell during initial loading and retries an initial failure', async () => {
     fsdRangeMock.mockReturnValue(query({ data: undefined, isLoading: true, isFetching: true }));
-    const view = render(widget('v6'));
+    const view = render(widget(pack));
     expect(screen.getByRole('heading', { name: 'FSD this week', level: 3 })).toBeVisible();
     expect(view.container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
     expect(screen.queryByTestId('fsd-weekly-distance')).not.toBeInTheDocument();
     fsdRangeMock.mockReturnValue(query({ data: undefined, isError: true, error: new Error('FSD request failed') }));
-    view.rerender(widget('v6'));
+    view.rerender(widget(pack));
     expect(screen.getByRole('heading', { name: 'FSD this week', level: 3 })).toBeVisible();
     fireEvent.click(within(screen.getByTestId('widget-body')).getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('fsd-weekly-distance')).not.toBeInTheDocument();
+    fsdRangeMock.mockReturnValue(query());
+    view.rerender(widget(pack));
+    await expectAppearance(view.container, appearance);
+    expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16 km');
   });
 
   it('retains the explicit no-vehicle state and existing first-vehicle fallback', async () => {
-    const view = render(widget('v1', { vehicleId: 0 }));
-    await expectAppearance(view.container, 'studio');
+    const view = render(widget(pack, { vehicleId: 0 }));
+    await expectAppearance(view.container, appearance);
     expect(screen.getByText('Select a vehicle')).toBeVisible();
     expect(screen.queryByTestId('fsd-weekly-distance')).not.toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
     expect(fsdRangeMock.mock.lastCall?.[0]).toBeUndefined();
-    view.rerender(widget('v1', { vehicleId: undefined }));
+    view.rerender(widget(pack, { vehicleId: undefined }));
     expect(fsdRangeMock.mock.lastCall?.[0]).toBe('7');
     expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('16 km');
   });

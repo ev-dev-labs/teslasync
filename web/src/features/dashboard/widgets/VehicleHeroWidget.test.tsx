@@ -21,7 +21,7 @@
  * `@/lib/unitConversion` runs so the SI→display math is exercised end-to-end.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
@@ -80,6 +80,8 @@ vi.mock('@/hooks/useSettings', async (importOriginal) => {
 import { useVehicles, useVehicleState, useSecurityLatest } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { useSettings } from '@/hooks/useSettings';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_IDS, type PackId } from './designPacks/types';
 import VehicleHeroWidget from './VehicleHeroWidget';
 
 function renderWidget(ui: ReactNode) {
@@ -257,6 +259,7 @@ function makeVehicle(over: { id?: number; display_name?: string; vin?: string } 
 }
 
 function makeStateData(over: {
+  vehicleId?: number;
   hasState?: boolean;
   observedAt?: number | null;
   freshness?: 'fresh' | 'stale' | 'unknown';
@@ -277,7 +280,7 @@ function makeStateData(over: {
     return { state: undefined, live: false, observedAt: null, freshness: 'unknown', verifiedFields: [] };
   }
   const state: Record<string, unknown> = {
-    vehicle_id: 1,
+    vehicle_id: over.vehicleId ?? 1,
     state: over.fsmState ?? 'online',
     since: over.since,
     speed: 0,
@@ -626,6 +629,249 @@ describe('VehicleHeroWidget — state, freshness and degraded states', () => {
 
     await waitFor(() => {
       expect(mockVehicleState).toHaveBeenLastCalledWith(1, { refetchInterval: false });
+    });
+  });
+
+  function packedWidget(packId: PackId, vehicleId?: number) {
+    return <PackBoundary requestedPackId={packId}><VehicleHeroWidget vehicleId={vehicleId} size={STANDARD} /></PackBoundary>;
+  }
+
+  async function expectLoadedPresentation(container: HTMLElement, packId: PackId) {
+    await waitFor(() => {
+      expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+      if (packId !== 'classic') {
+        expect(container.querySelector(`[data-vehicle-hero-pack="${packId}"]`)).toBeInTheDocument();
+      }
+      expect(container.querySelector('[data-vehicle-studio]')).toBeInTheDocument();
+    });
+  }
+
+  describe.each(PACK_IDS)('VehicleHeroWidget — production pack integration (%s)', packId => {
+    it('preserves verified charging content, SI display values, details and refresh', async () => {
+      const data = makeStateData({ isCharging: true, etaHours: 2.5 });
+      const source = structuredClone(data);
+      const refetch = vi.fn();
+      setup({ state: makeQuery({ data, refetch }) });
+      const { container } = renderWidget(packedWidget(packId));
+      await expectLoadedPresentation(container, packId);
+
+      expect(screen.getByRole('heading', { name: 'My Tesla · Model 3 Performance' })).toBeInTheDocument();
+      expect(screen.getByText('charging')).toBeInTheDocument();
+      expect(screen.getByRole('meter', { name: 'Battery', exact: true })).toHaveAttribute('aria-valuenow', '64');
+      expect(screen.getByRole('group', { name: 'Range', exact: true })).toHaveTextContent('276 km');
+      expect(screen.getByRole('group', { name: 'Inside', exact: true })).toHaveTextContent('22°C');
+      expect(screen.getByRole('group', { name: 'Outside', exact: true })).toHaveTextContent('23°C');
+      expect(screen.getByText('Locked')).toBeInTheDocument();
+      expect(screen.getByText('On')).toBeInTheDocument();
+      expect(screen.getByText('Limit 80%')).toBeInTheDocument();
+      expect(screen.getByTestId('charge-limit-marker')).toBeInTheDocument();
+      expect(screen.getByText(/\+16%/)).toHaveTextContent('Done ~9:56 AM');
+      expect(screen.getByText(`${data.verifiedFields.length} verified fields`)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Details/ })).toHaveAttribute('href', '/vehicles/1');
+      expect(container.querySelector('[data-vehicle-studio]')).toHaveAttribute('data-activity', 'static');
+      expect(mockVehicleState).toHaveBeenLastCalledWith(1, { refetchInterval: false });
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+      expect(data).toEqual(source);
+    });
+
+    it('converts imperial readings without changing their source measurements', async () => {
+      const data = makeStateData({ ratedRangeM: 160_934 });
+      const source = structuredClone(data);
+      setup({
+        state: makeQuery({ data }),
+        units: makeUnits({ distance: 'mi', temperature: '°F' }),
+        settings: makeSettings({ isFahrenheit: true }),
+      });
+      const { container } = renderWidget(packedWidget(packId));
+      await expectLoadedPresentation(container, packId);
+
+      expect(screen.getByRole('group', { name: 'Range', exact: true })).toHaveTextContent('100 mi');
+      expect(screen.getByRole('group', { name: 'Inside', exact: true })).toHaveTextContent('72°F');
+      expect(screen.getByRole('group', { name: 'Outside', exact: true })).toHaveTextContent('73°F');
+      expect(data).toEqual(source);
+    });
+
+    it('distinguishes unverified defaults from genuine observed zeros and false flags', async () => {
+      const values = {
+        batteryLevel: 0, ratedRangeM: 0, insideTemp: 0, outsideTemp: 0,
+        isLocked: false, sentryMode: false,
+      };
+      setup({ state: makeQuery({ data: makeStateData({ ...values, verifiedFields: [] }) }) });
+      const { container, rerender } = renderWidget(packedWidget(packId));
+      await expectLoadedPresentation(container, packId);
+
+      expect(screen.queryByRole('meter', { name: 'Battery', exact: true })).not.toBeInTheDocument();
+      for (const label of ['Battery', 'Range', 'Inside', 'Outside']) {
+        expect(screen.getByRole('group', { name: label, exact: true })).toHaveAccessibleDescription('Unknown');
+      }
+      expect(screen.getByText('Unknown')).toBeInTheDocument();
+      expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
+      expect(screen.queryByText('Off')).not.toBeInTheDocument();
+      expect(screen.getByText('0 verified fields')).toBeInTheDocument();
+
+      setup({ state: makeQuery({ data: makeStateData(values) }) });
+      rerender(<MemoryRouter>{packedWidget(packId)}</MemoryRouter>);
+      await expectLoadedPresentation(container, packId);
+      expect(screen.getByRole('meter', { name: 'Battery', exact: true })).toHaveAttribute('aria-valuenow', '0');
+      for (const label of ['Range', 'Inside', 'Outside']) {
+        const reading = screen.getByRole('group', { name: label, exact: true });
+        expect(reading).toHaveTextContent(label === 'Range' ? '0 km' : '0°C');
+        expect(reading).not.toHaveAccessibleDescription('Unknown');
+      }
+      expect(screen.getByText('Unlocked')).toBeInTheDocument();
+      expect(screen.getByText('Off')).toBeInTheDocument();
+    });
+
+    it('retains observed zero readings after a failed refresh without live activity', async () => {
+      const refetch = vi.fn();
+      setup({ state: makeQuery({
+        data: makeStateData({
+          batteryLevel: 0, ratedRangeM: 0, insideTemp: 0, outsideTemp: null,
+          fsmState: 'driving', freshness: 'stale',
+        }),
+        isError: true, error: new Error('refresh failed'), refetch,
+      }) });
+      const { container } = renderWidget(packedWidget(packId));
+      await expectLoadedPresentation(container, packId);
+
+      expect(screen.getByRole('heading', { name: 'My Tesla · Model 3 Performance' })).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.getByRole('meter', { name: 'Battery', exact: true })).toHaveAttribute('aria-valuenow', '0');
+      expect(screen.getByRole('group', { name: 'Range', exact: true })).toHaveTextContent('0 km');
+      expect(screen.getByRole('group', { name: 'Inside', exact: true })).toHaveTextContent('0°C');
+      expect(screen.getByRole('group', { name: 'Outside', exact: true })).toHaveAccessibleDescription('Unknown');
+      expect(screen.getByText('Unknown')).toBeInTheDocument();
+      expect(container.querySelector('[data-vehicle-studio]')).toHaveAttribute('data-activity', 'static');
+      expect(screen.queryByTestId('vehicle-road-motion')).not.toBeInTheDocument();
+      expect(mockVehicleState).toHaveBeenLastCalledWith(1, { refetchInterval: expect.any(Number) });
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps an unknown vehicle state visible and rejects invalid numeric readings', async () => {
+      setup({ state: makeQuery({ data: makeStateData({ hasState: false }) }) });
+      const { container, rerender } = renderWidget(packedWidget(packId));
+      await expectLoadedPresentation(container, packId);
+
+      expect(screen.getByText('No vehicle readings available')).toBeInTheDocument();
+      expect(screen.getByText('Unknown')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Details/ })).toBeInTheDocument();
+      setup({ state: makeQuery({ data: makeStateData({
+        batteryLevel: Number.NaN, ratedRangeM: Number.POSITIVE_INFINITY,
+        insideTemp: Number.NaN, outsideTemp: Number.NEGATIVE_INFINITY,
+        chargeLimit: 101, isCharging: true, etaHours: Number.NaN,
+      }) }) });
+      rerender(<MemoryRouter>{packedWidget(packId)}</MemoryRouter>);
+      await expectLoadedPresentation(container, packId);
+
+      expect(screen.queryByRole('meter', { name: 'Battery', exact: true })).not.toBeInTheDocument();
+      for (const label of ['Battery', 'Range', 'Inside', 'Outside']) {
+        expect(screen.getByRole('group', { name: label, exact: true })).toHaveAccessibleDescription('Unknown');
+      }
+      expect(screen.queryByTestId('charge-limit-marker')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Done ~/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/NaN|Infinity/)).not.toBeInTheDocument();
+    });
+
+    it('preserves loading, fatal error, empty and recovered vehicle-list states', async () => {
+      setup({
+        vehicles: makeQuery({ isLoading: true }),
+        state: makeQuery({ data: makeStateData({ hasState: false }) }),
+      });
+      const { container, rerender } = renderWidget(packedWidget(packId));
+      expect(screen.getByRole('heading', { name: 'Vehicle overview' })).toBeInTheDocument();
+      expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
+      expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
+
+      setup({ vehicles: makeQuery({ isError: true, error: new Error('vehicles unavailable') }) });
+      rerender(<MemoryRouter>{packedWidget(packId)}</MemoryRouter>);
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(container.querySelector('[data-vehicle-studio]')).not.toBeInTheDocument();
+
+      const refetch = vi.fn();
+      setup({
+        vehicles: makeQuery({ data: [] }),
+        state: makeQuery({ data: makeStateData({ hasState: false }), refetch }),
+      });
+      rerender(<MemoryRouter>{packedWidget(packId)}</MemoryRouter>);
+      expect(screen.getByText('No vehicle data')).toBeInTheDocument();
+      expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+
+      setup();
+      rerender(<MemoryRouter>{packedWidget(packId)}</MemoryRouter>);
+      await expectLoadedPresentation(container, packId);
+      expect(screen.getByRole('heading', { name: 'My Tesla · Model 3 Performance' })).toBeInTheDocument();
+      expect(screen.getByRole('meter', { name: 'Battery', exact: true })).toHaveAttribute('aria-valuenow', '64');
+    });
+
+    it('switches packs without losing explicit vehicle scope or retained refresh state', async () => {
+      const refetch = vi.fn();
+      setup({
+        vehicles: makeQuery({
+          data: [makeVehicle({ id: 3, display_name: 'Three' }), makeVehicle({ id: 7, display_name: 'Seven' })],
+        }),
+        state: makeQuery({
+          data: makeStateData({ vehicleId: 7, batteryLevel: 0, freshness: 'stale' }),
+          isError: true, error: new Error('refresh failed'), refetch,
+        }),
+      });
+      const { container, rerender } = renderWidget(packedWidget('classic', 7));
+      rerender(<MemoryRouter>{packedWidget(packId, 7)}</MemoryRouter>);
+      await expectLoadedPresentation(container, packId);
+
+      expect(screen.getByRole('heading', { name: 'Seven · Model 3 Performance' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Details/ })).toHaveAttribute('href', '/vehicles/7');
+      expect(screen.getByRole('meter', { name: 'Battery', exact: true })).toHaveAttribute('aria-valuenow', '0');
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(mockVehicleState.mock.calls.every(([id]) => id === 7)).toBe(true);
+
+      rerender(<MemoryRouter>{packedWidget('classic', 7)}</MemoryRouter>);
+      expect(screen.getByRole('heading', { name: 'Seven · Model 3 Performance' })).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+      expect(mockVehicleState).toHaveBeenLastCalledWith(7, { refetchInterval: expect.any(Number) });
+    });
+
+    it('expires verified driving and lighting while retaining the studio and readings', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const observedAt = Date.now();
+        const stateRefetch = vi.fn();
+        const securityRefetch = vi.fn();
+        setup({
+          state: makeQuery({ data: makeStateData({ fsmState: 'driving', observedAt }), refetch: stateRefetch }),
+          security: makeQuery({
+            data: { vehicle_id: 1, ts: new Date(observedAt).toISOString(), lights_high_beams: true },
+            refetch: securityRefetch,
+          }),
+        });
+        const { container } = renderWidget(packedWidget(packId));
+        await expectLoadedPresentation(container, packId);
+        expect(container.querySelector('[data-vehicle-studio]')).toHaveAttribute('data-activity', 'driving');
+        expect(screen.getByTestId('vehicle-road-motion')).toBeInTheDocument();
+        expect(container.querySelectorAll('.widget-wheel-motion')).toHaveLength(2);
+        expect(container.querySelector('[data-vehicle-road-lighting]')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+        expect(stateRefetch).toHaveBeenCalledTimes(1);
+        expect(securityRefetch).toHaveBeenCalledTimes(1);
+
+        act(() => vi.advanceTimersByTime(120_001));
+        const studio = container.querySelector('[data-vehicle-studio]');
+        expect(studio).toHaveAttribute('data-activity', 'static');
+        expect(screen.queryByTestId('vehicle-road-motion')).not.toBeInTheDocument();
+        expect(container.querySelector('[data-vehicle-road-lighting]')).not.toBeInTheDocument();
+        expect(within(screen.getByTestId('widget-body')).getByText('Unknown')).toBeInTheDocument();
+        expect(screen.getByRole('meter', { name: 'Battery', exact: true })).toHaveAttribute('aria-valuenow', '64');
+        expect(screen.getByRole('link', { name: /Details/ })).toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

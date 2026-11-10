@@ -211,26 +211,26 @@ describe.each(Object.entries(PACK_APPEARANCES))('Solar production %s (%s)', (pac
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
-  it('distinguishes an unknown today and invalid buckets from measured zero', async () => {
+  it.each([null, 0])('preserves unknown buckets and measured zeros with today = %s', async todayValue => {
     historyMock.mockReturnValue(query([
       entry('2026-11-04', 0),
       entry('2026-11-05', Number.NaN),
-      entry('2026-11-06', null),
+      entry('2026-11-06', todayValue),
     ]));
     const { container } = renderWidget(packId);
     await waitFor(() => expect(container.querySelector(`[data-widget-appearance="${appearance}"]`)).not.toBeNull());
 
     const today = screen.getByText('Solar produced today').closest('.widget-big-number');
     expect(today).not.toBeNull();
-    expect(today).toHaveTextContent('—');
-    expect(today).not.toHaveTextContent('0.0');
+    expect(today).toHaveTextContent(todayValue == null ? '—' : '0.0');
+    if (todayValue == null) expect(today).not.toHaveTextContent('0.0');
     expect(screen.getByText('Daily avg').closest('.widget-big-number')).toHaveTextContent('0.0');
-    expect(dataRows()).toEqual([['Nov 4', '0'], ['Nov 5', '—'], ['Nov 6', '—']]);
+    expect(dataRows()).toEqual([['Nov 4', '0'], ['Nov 5', '—'], ['Nov 6', todayValue == null ? '—' : '0']]);
     expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'partial');
   });
 });
 
-it('preserves Classic recovery and one mounted controller while changing all seven packs', async () => {
+it('preserves Classic recovery and one mounted controller while changing every pack', async () => {
   const { container, changePack } = renderWidget();
   expect(container.querySelector('[data-widget-appearance]')).toBeNull();
   expect(screen.getByText('Today')).toBeInTheDocument();
@@ -257,78 +257,90 @@ it('preserves Classic recovery and one mounted controller while changing all sev
     siteId === 555 && period === 'day' && since === '2026-10-07')).toBe(true);
 });
 
-it.each([1, 2])('keeps the no-solar-data shell honest at %i columns', async cols => {
-  historyMock.mockReturnValue(query<TeslaEnergyHistoryEntry[]>([]));
-  const { container } = renderWidget('v1', { cols, rows: 4 });
-  await waitFor(() => expect(container.querySelector('[data-widget-appearance="studio"]')).not.toBeNull());
-  expect(screen.getByText('No solar data')).toBeInTheDocument();
-  expect(screen.queryByText('Solar produced today')).not.toBeInTheDocument();
-  expect(screen.queryByText('0.0')).not.toBeInTheDocument();
-  expect(screen.queryByRole('table')).not.toBeInTheDocument();
-});
-
-it('explains an unlinked site without claiming solar capability and refreshes only discovery', async () => {
-  const sites = query<TeslaEnergySite[]>([]);
-  const history = query<TeslaEnergyHistoryEntry[]>([]);
-  sitesMock.mockReturnValue(sites);
-  historyMock.mockReturnValue(history);
-  const { container } = renderWidget('v4');
-  await waitFor(() => expect(container.querySelector('[data-widget-appearance="owner"]')).not.toBeNull());
-  expect(screen.getByText('No Tesla energy site linked')).toBeInTheDocument();
-  expect(screen.queryByText('Home solar')).not.toBeInTheDocument();
-  expect(screen.queryByText('Solar produced today')).not.toBeInTheDocument();
-  expect(historyMock).toHaveBeenLastCalledWith(undefined, 'day', '2026-10-07');
-  fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
-  expect(sites.refetch).toHaveBeenCalledOnce();
-  expect(history.refetch).not.toHaveBeenCalled();
-});
-
-it('retains the real chart and source warning after a failed history refresh', async () => {
-  historyMock.mockReturnValue(query(HISTORY, {
-    error: new Error('Synthetic refresh failure'),
-    isError: true,
-    dataUpdatedAt: Date.now() - 60_000,
-  }));
-  const { container } = renderWidget('v3');
-  await waitFor(() => expect(container.querySelector('[data-widget-appearance="precision"]')).not.toBeNull());
-  expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-  expect(screen.getByText('12.0')).toBeInTheDocument();
-  expect(screen.getByText('11.0')).toBeInTheDocument();
-  expect(dataRows()).toHaveLength(3);
-  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'stale');
-});
-
-it('shows a real initial failure rather than a false unlinked-site state', () => {
-  const sites = query<TeslaEnergySite[]>(undefined, {
-    error: new Error('Synthetic discovery failure'), isError: true, dataUpdatedAt: 0,
+describe.each(Object.entries(PACK_APPEARANCES))('Solar production %s state handling', (packId, appearance) => {
+  it.each([1, 2])('keeps the no-solar-data shell honest at %i columns', async cols => {
+    historyMock.mockReturnValue(query<TeslaEnergyHistoryEntry[]>([]));
+    const { container } = renderWidget(packId, { cols, rows: 4 });
+    await waitFor(() => expect(container.querySelector(`[data-widget-appearance="${appearance}"]`))
+      .toHaveAttribute('data-widget-family', 'bars'));
+    expect(screen.getByText('No solar data')).toBeInTheDocument();
+    expect(screen.getByText('Energy-site data is separate from vehicle telemetry.')).toBeInTheDocument();
+    expect(screen.queryByText('Solar produced today')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
-  sitesMock.mockReturnValue(sites);
-  historyMock.mockReturnValue(query<TeslaEnergyHistoryEntry[]>());
-  const { container } = renderWidget('v5');
-  expect(container.querySelector('[data-role="widget-header-title"]')).toHaveTextContent('Solar production');
-  expect(screen.getByRole('alert')).toBeInTheDocument();
-  expect(screen.queryByText('No Tesla energy site linked')).not.toBeInTheDocument();
-  expect(screen.queryByText('Solar produced today')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
-  expect(sites.refetch).toHaveBeenCalledOnce();
-});
 
-it.each(['sites', 'history'] as const)('shows a source-shaped skeleton while %s loads, not a fabricated reading', source => {
-  if (source === 'sites') {
-    sitesMock.mockReturnValue(query<TeslaEnergySite[]>(undefined, {
-      isLoading: true, isFetching: true, dataUpdatedAt: 0,
+  it('explains an unlinked site without claiming solar capability and refreshes only discovery', async () => {
+    const sites = query<TeslaEnergySite[]>([]);
+    const history = query<TeslaEnergyHistoryEntry[]>([]);
+    sitesMock.mockReturnValue(sites);
+    historyMock.mockReturnValue(history);
+    const { container } = renderWidget(packId);
+    await waitFor(() => expect(container.querySelector(`[data-widget-appearance="${appearance}"]`))
+      .toHaveAttribute('data-widget-family', 'bars'));
+    expect(screen.getByText('No Tesla energy site linked')).toBeInTheDocument();
+    expect(screen.getByText('Energy-site data is separate from vehicle telemetry.')).toBeInTheDocument();
+    expect(screen.queryByText('Home solar')).not.toBeInTheDocument();
+    expect(screen.queryByText('Solar produced today')).not.toBeInTheDocument();
+    expect(historyMock).toHaveBeenLastCalledWith(undefined, 'day', '2026-10-07');
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
+    expect(sites.refetch).toHaveBeenCalledOnce();
+    expect(history.refetch).not.toHaveBeenCalled();
+  });
+
+  it('retains the real chart and source warning after a failed history refresh', async () => {
+    historyMock.mockReturnValue(query(HISTORY, {
+      error: new Error('Synthetic refresh failure'),
+      isError: true,
+      dataUpdatedAt: Date.now() - 60_000,
     }));
-    historyMock.mockReturnValue(query<TeslaEnergyHistoryEntry[]>());
-  } else {
-    historyMock.mockReturnValue(query<TeslaEnergyHistoryEntry[]>(undefined, {
-      isLoading: true, isFetching: true, dataUpdatedAt: 0,
-    }));
-  }
-  const { container } = renderWidget('v6');
-  expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
-  expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
-  expect(screen.queryByText('Solar produced today')).not.toBeInTheDocument();
-  expect(screen.queryByText('0.0')).not.toBeInTheDocument();
-  expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    const { container } = renderWidget(packId);
+    await waitFor(() => expect(container.querySelector(`[data-widget-appearance="${appearance}"]`))
+      .toHaveAttribute('data-widget-family', 'bars'));
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('12.0')).toBeInTheDocument();
+    expect(screen.getByText('11.0')).toBeInTheDocument();
+    expect(dataRows()).toHaveLength(3);
+    expect(screen.getByText('Energy-site data is separate from vehicle telemetry.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'stale');
+  });
+
+  it.each(['sites', 'history'] as const)('shows a real initial %s failure rather than a false empty state', source => {
+    const sites = query<TeslaEnergySite[]>(source === 'sites' ? undefined : [SITE]);
+    const history = query<TeslaEnergyHistoryEntry[]>();
+    Object.assign(source === 'sites' ? sites : history, {
+      error: new Error('Synthetic source failure'), isError: true, dataUpdatedAt: 0,
+    });
+    sitesMock.mockReturnValue(sites);
+    historyMock.mockReturnValue(history);
+    const { container } = renderWidget(packId);
+    expect(container.querySelector('[data-role="widget-header-title"]')).toHaveTextContent('Solar production');
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No Tesla energy site linked')).not.toBeInTheDocument();
+    expect(screen.queryByText('No solar data')).not.toBeInTheDocument();
+    expect(screen.queryByText('Solar produced today')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
+    expect(sites.refetch).toHaveBeenCalledOnce();
+    expect(history.refetch).toHaveBeenCalledTimes(source === 'history' ? 1 : 0);
+  });
+
+  it.each(['sites', 'history'] as const)('shows a source-shaped skeleton while %s loads, not a fabricated reading', source => {
+    if (source === 'sites') {
+      sitesMock.mockReturnValue(query<TeslaEnergySite[]>(undefined, {
+        isLoading: true, isFetching: true, dataUpdatedAt: 0,
+      }));
+      historyMock.mockReturnValue(query<TeslaEnergyHistoryEntry[]>());
+    } else {
+      historyMock.mockReturnValue(query<TeslaEnergyHistoryEntry[]>(undefined, {
+        isLoading: true, isFetching: true, dataUpdatedAt: 0,
+      }));
+    }
+    const { container } = renderWidget(packId);
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    expect(screen.queryByText('Solar produced today')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
 });

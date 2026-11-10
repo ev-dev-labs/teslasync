@@ -8,6 +8,7 @@ import type { Vehicle } from '@/types/vehicle';
 import { Text } from '@/components/ui';
 import AxleThermalWidget from './AxleThermalWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
 import type { WidgetProps } from './types';
 
 const { requestMock } = vi.hoisted(() => ({
@@ -34,10 +35,7 @@ vi.mock('@/hooks/useDateFormat', () => {
 const NOW = Date.parse('2026-11-07T02:00:00Z');
 const RECENT = new Date(NOW - 5_000).toISOString();
 const OLD = new Date(NOW - 180_000).toISOString();
-const PACKS = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const PACKS = Object.entries(PACK_APPEARANCES);
 const SECTIONS = [
   'Live axle evidence', 'Powertrain axle matrix', 'Front axle', 'Rear axle', 'Configuration & evidence limits',
 ];
@@ -186,7 +184,7 @@ describe('AxleThermalWidget production design packs', () => {
     await settled();
   });
 
-  it('switches Classic, all seven compact/full appearances and unknown-ID recovery without multiplying readers', async () => {
+  it.each(PACKS)('%s switches Classic, compact/full %s and unknown-ID recovery without multiplying readers', async (pack, appearance) => {
     const view = render(tree());
     await screen.findAllByText('Fresh observation');
     await settled();
@@ -194,14 +192,12 @@ describe('AxleThermalWidget production design packs', () => {
     expectSections();
     expect(view.container.querySelector('[data-widget-pack="classic"]')).toBeInTheDocument();
     expect(view.container.querySelector('[data-widget-family]')).not.toBeInTheDocument();
-    for (const [pack, appearance] of PACKS) {
-      for (const cols of [1, 3]) {
-        view.rerender(tree(pack, { size: { cols, rows: 4 } }));
-        await presentation(view.container, appearance);
-        expectSections();
-        expect(row('DiTorqueActualF').getByText(/^-32(?:\.0+)? Nm$/)).toBeInTheDocument();
-        expect(image(view.container)).toHaveAttribute('src', originalImage);
-      }
+    for (const cols of [1, 3]) {
+      view.rerender(tree(pack, { size: { cols, rows: 4 } }));
+      await presentation(view.container, appearance);
+      expectSections();
+      expect(row('DiTorqueActualF').getByText(/^-32(?:\.0+)? Nm$/)).toBeInTheDocument();
+      expect(image(view.container)).toHaveAttribute('src', originalImage);
     }
     view.rerender(tree('not-a-pack'));
     expectSections();
@@ -211,14 +207,14 @@ describe('AxleThermalWidget production design packs', () => {
     expect(requestCount('/vehicles')).toBe(1);
   });
 
-  it('preserves zero, negative torque and additional motor identity while converting SI only for display', async () => {
+  it.each(PACKS)('%s preserves zero, negative torque and additional motor identity while converting SI only for display in %s', async (pack, appearance) => {
     live = snapshot({
       'DiStatorTempF': entry(0), DiStatorTempR: entry(-10), DiInverterTF: entry(0),
       DiTorqueActualF: entry(-240), DiStateF: entry(0, 'ValueKindEnum'),
       DiStatorTempREL: entry(0), DiStatorTempRER: entry(70),
     });
-    const view = render(tree('v7'));
-    await presentation(view.container, 'pixel');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expect(row('DiStatorTempF').getByText(/^0(?:\.0+)?°C$/)).toBeInTheDocument();
     expect(row('DiStatorTempR').getByText(/^-10(?:\.0+)?°C$/)).toBeInTheDocument();
     expect(row('DiTorqueActualF').getByText(/^-240(?:\.0+)? Nm$/)).toBeInTheDocument();
@@ -233,7 +229,7 @@ describe('AxleThermalWidget production design packs', () => {
     expect(requestCount('/signals/7/live')).toBe(1);
   });
 
-  it('never promotes stale, future, untimed, invalid or legacy evidence into fresh/supported/active readings', async () => {
+  it.each(PACKS)('%s never promotes stale, future, untimed, invalid or legacy evidence into fresh/supported/active readings in %s', async (pack, appearance) => {
     live = snapshot({
       'DiStatorTempF': entry(60, 'ValueKindFloat', { ts: '' }),
       DiStatorTempR: entry(65, 'ValueKindFloat', { ts: new Date(NOW + 1000).toISOString() }),
@@ -245,8 +241,8 @@ describe('AxleThermalWidget production design packs', () => {
       DiStatorTempREL: entry(55, 'ValueKindFloat', { ts: '' }),
       DiStatorTempRER: entry(Number.NaN),
     });
-    const view = render(tree('v3'));
-    await presentation(view.container, 'precision');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expectSections();
     expect(row('DiTorqueActualF').getByText('Stale observation')).toBeInTheDocument();
     for (const field of ['DiStatorTempF', 'DiStatorTempR', 'DiInverterTF', 'DiInverterTR', 'DiTorqueActualR']) {
@@ -260,9 +256,9 @@ describe('AxleThermalWidget production design packs', () => {
     expect(view.container.querySelector('[data-vehicle-studio]')).toHaveAttribute('data-activity', 'static');
   });
 
-  it('retains data on refresh failure, marks its trust and recovers using the real refresh action', async () => {
-    const view = render(tree('v4'));
-    await presentation(view.container, 'owner');
+  it.each(PACKS)('%s retains data on refresh failure, marks its trust and recovers using the real refresh action in %s', async (pack, appearance) => {
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     failLive = true;
     refresh();
     await screen.findByTestId('stale-refresh-warning');
@@ -278,10 +274,10 @@ describe('AxleThermalWidget production design packs', () => {
     expect(row('DiStatorTempR').getByText('Fresh observation')).toBeInTheDocument();
   });
 
-  it('keeps every section during first failure and retries without losing the authentic vehicle', async () => {
+  it.each(PACKS)('%s keeps every section during first failure and retries without losing the authentic vehicle in %s', async (pack, appearance) => {
     failLive = true;
-    const view = render(tree('v2'));
-    await presentation(view.container, 'elevated');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expectSections();
     expect(screen.getByText('Axle signal evidence is unavailable.')).toBeInTheDocument();
     expect(image(view.container)).toBeInTheDocument();
@@ -292,12 +288,12 @@ describe('AxleThermalWidget production design packs', () => {
     await settled();
   });
 
-  it('preserves the source-shaped loading shell and disables refresh until its in-flight request settles', async () => {
+  it.each(PACKS)('%s preserves the source-shaped loading shell and disables refresh until its in-flight request settles in %s', async (pack, appearance) => {
     let finish: ((value: VehicleLiveSignalsResponse) => void) | undefined;
     pendingLive = new Promise(resolve => { finish = resolve; });
-    const view = render(tree('v5'));
+    const view = render(tree(pack));
     await waitFor(() => expect(view.container.querySelector('[data-widget-family="axle-map"]'))
-      .toHaveAttribute('data-widget-appearance', 'iconic'));
+      .toHaveAttribute('data-widget-appearance', appearance));
     expectSections();
     expect(screen.getByRole('status', { name: 'Loading Live axle evidence' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Refresh data/ })).toBeDisabled();
@@ -308,9 +304,9 @@ describe('AxleThermalWidget production design packs', () => {
     expect(row('DiStatorTempR').getByText(/^65(?:\.0+)?°C$/)).toBeInTheDocument();
   });
 
-  it('marks paused refreshes retained instead of reporting current success', async () => {
-    const view = render(tree('v6'));
-    await presentation(view.container, 'expressive');
+  it.each(PACKS)('%s marks paused refreshes retained instead of reporting current success in %s', async (pack, appearance) => {
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     const liveQuery = client.getQueryCache().find({ queryKey: telemetryKeys.liveSignals(7) });
     expect(liveQuery).toBeDefined();
     act(() => { liveQuery?.setState({ fetchStatus: 'paused' }); });
@@ -321,14 +317,14 @@ describe('AxleThermalWidget production design packs', () => {
     expect(row('DiTorqueActualF').getByText(/^-32(?:\.0+)? Nm$/)).toBeInTheDocument();
   });
 
-  it('honors config/prop vehicle scope, rejects mismatches and never reuses assembly time as observation time', async () => {
+  it.each(PACKS)('%s honors config/prop vehicle scope, rejects mismatches and never reuses assembly time as observation time in %s', async (pack, appearance) => {
     live = snapshot({}, 9);
-    const view = render(tree('v1', { vehicleId: undefined, config: { vehicleId: 9 } }));
-    await presentation(view.container, 'studio');
+    const view = render(tree(pack, { vehicleId: undefined, config: { vehicleId: 9 } }));
+    await presentation(view.container, appearance);
     expect(requestCount('/signals/9/live')).toBe(1);
     const configuredImage = image(view.container).getAttribute('src');
     live = snapshot(undefined, 9);
-    view.rerender(tree('v1', { vehicleId: 7, config: { vehicleId: 9 } }));
+    view.rerender(tree(pack, { vehicleId: 7, config: { vehicleId: 9 } }));
     await waitFor(() => expect(requestCount('/signals/7/live')).toBe(1));
     await settled();
     expectSections();
@@ -338,10 +334,10 @@ describe('AxleThermalWidget production design packs', () => {
     expect(image(view.container).getAttribute('src')).not.toBe(configuredImage);
   });
 
-  it('keeps front/rear and configuration shells without any vehicle instead of inventing a model', async () => {
+  it.each(PACKS)('%s keeps front/rear and configuration shells without any vehicle instead of inventing a model in %s', async (pack, appearance) => {
     vehicleResponse = [];
-    const view = render(tree('v7', { vehicleId: undefined }));
-    await presentation(view.container, 'pixel');
+    const view = render(tree(pack, { vehicleId: undefined }));
+    await presentation(view.container, appearance);
     expectSections();
     expect(screen.getByText('Select a vehicle')).toBeInTheDocument();
     expect(screen.getByText('Vehicle model not reported.')).toBeInTheDocument();
@@ -349,20 +345,20 @@ describe('AxleThermalWidget production design packs', () => {
     expect(requestCount('/signals/7/live')).toBe(0);
   });
 
-  it('does not erase axle observations when only vehicle metadata fails', async () => {
+  it.each(PACKS)('%s does not erase axle observations when only vehicle metadata fails in %s', async (pack, appearance) => {
     failVehicles = true;
-    const view = render(tree('v3'));
-    await presentation(view.container, 'precision');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expectSections();
     expect(screen.getByText('Vehicle illustration could not be loaded.')).toBeInTheDocument();
     expect(row('DiStatorTempR').getByText(/^65(?:\.0+)?°C$/)).toBeInTheDocument();
     expect(row('DiStateR').getByText('Enabled')).toBeInTheDocument();
   });
 
-  it('does not substitute a different model when no authentic illustration matches the selected vehicle', async () => {
+  it.each(PACKS)('%s does not substitute a different model when no authentic illustration matches the selected vehicle in %s', async (pack, appearance) => {
     vehicleResponse = vehicles.map(vehicle => ({ ...vehicle, model: 'Cybertruck' }));
-    const view = render(tree('v1'));
-    await presentation(view.container, 'studio');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expectSections();
     expect(screen.getByText('No matching vehicle illustration is available for the reported model.')).toBeInTheDocument();
     expect(view.container.querySelector('[data-vehicle-twin] img')).not.toBeInTheDocument();

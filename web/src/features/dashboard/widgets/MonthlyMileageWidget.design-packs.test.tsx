@@ -5,10 +5,13 @@ import type { ReactElement } from 'react';
 import type { MonthlyMileageBucket } from '@/types/analytics';
 import { chartTokens } from '@/lib/tokens';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 import MonthlyMileageWidget, { currentMonthKey } from './MonthlyMileageWidget';
 import type { WidgetProps } from './types';
 
 type SourceBucket = Omit<MonthlyMileageBucket, 'total_km'> & { total_km: number | null };
+
+const settingsState = vi.hoisted(() => ({ distance: 'km' as 'km' | 'mi' }));
 
 const api = vi.hoisted(() => {
   const result = {
@@ -25,13 +28,32 @@ const api = vi.hoisted(() => {
   };
   return {
     result,
-    mileage: vi.fn(() => result),
+    mileage: vi.fn<(vehicleId: string, timezone?: string) => typeof result>(() => result),
     vehicles: vi.fn(() => ({ data: [{ id: 41 }] })),
   };
 });
 
 vi.mock('@/api/hooks/useAnalytics', () => ({ useMonthlyMileage: api.mileage }));
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: api.vehicles }));
+vi.mock('@/hooks/useSettings', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return {
+    ...actual,
+    useSettings: () => ({
+      settings: {
+        unit_of_length: settingsState.distance,
+        unit_of_temp: 'C' as const,
+        unit_of_pressure: 'bar' as const,
+        decimal_precision: 2,
+        locale: 'en-US',
+      },
+      decimals: 2,
+      locale: 'en-US',
+      density: 'comfortable' as const,
+      rangeType: 'rated' as const,
+    }),
+  };
+});
 vi.mock('@/components/charts', async importOriginal => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const { cloneElement } = await import('react');
@@ -45,15 +67,9 @@ vi.mock('@/components/charts', async importOriginal => {
   };
 });
 
-const packs = [
-  ['v1', 'studio'],
-  ['v2', 'elevated'],
-  ['v3', 'precision'],
-  ['v4', 'owner'],
-  ['v5', 'iconic'],
-  ['v6', 'expressive'],
-  ['v7', 'pixel'],
-] as const;
+const packs = PACK_IDS
+  .filter((id): id is Exclude<PackId, 'classic'> => id !== 'classic')
+  .map(id => [id, PACK_APPEARANCES[id]] as const);
 
 function bucket(yearMonth: string, distance: number | null): SourceBucket {
   return {
@@ -77,6 +93,7 @@ function widget(packId: unknown, props: Partial<WidgetProps> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  settingsState.distance = 'km';
   Object.assign(api.result, {
     data: [bucket('2020-01', 77), bucket(currentMonthKey('UTC'), 123)],
     error: null,
@@ -99,6 +116,7 @@ describe.each(packs)('monthly mileage %s / %s', (packId, appearance) => {
       `[data-widget-family="bars"][data-widget-appearance="${appearance}"]`,
     )).not.toBeNull());
 
+    expect(container.querySelector('[data-data-state="ok"]')).not.toBeNull();
     expect(container.querySelector('.widget-big-number')).toHaveTextContent('123');
     expect(container.querySelector('.widget-big-number')).toHaveTextContent('km');
     expect(screen.getByText(/so far/)).toBeInTheDocument();
@@ -133,7 +151,8 @@ describe.each(packs)('monthly mileage %s / %s', (packId, appearance) => {
   });
 
   it('preserves the compact summary without mounting a plot or extra data controller', async () => {
-    const { container } = render(widget(packId, { size: { cols: 1, rows: 1 } }));
+    const view = render(widget(packId, { size: { cols: 1, rows: 1 } }));
+    const { container } = view;
     await waitFor(() => expect(container.querySelector(
       `[data-instrument-appearance="${appearance}"]`,
     )).not.toBeNull());
@@ -143,10 +162,23 @@ describe.each(packs)('monthly mileage %s / %s', (packId, appearance) => {
     expect(screen.queryByRole('img', { name: 'Distance driven by month' })).not.toBeInTheDocument();
     expect(screen.queryByText('12-month average')).not.toBeInTheDocument();
     expect(api.mileage).toHaveBeenCalledTimes(1);
+
+    api.result.data = [];
+    view.rerender(widget(packId, { size: { cols: 1, rows: 1 } }));
+    expect(container.querySelector(`[data-instrument-appearance="${appearance}"]`)).not.toBeNull();
+    expect(screen.getByText('No mileage data')).toBeInTheDocument();
+    expect(container.querySelector('.widget-big-number')).toBeNull();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
-  it('retains a missing current month as an unknown headline and chart gap, not zero', async () => {
-    api.result.data = [bucket('2020-01', 77), bucket(currentMonthKey('UTC'), null)];
+  it('retains missing and nonfinite distances as unknown readings and chart gaps, not zero', async () => {
+    api.result.data = [
+      bucket('2020-01', 77),
+      bucket('2020-02', Number.NaN),
+      bucket('2020-03', Number.POSITIVE_INFINITY),
+      bucket('2020-04', Number.NEGATIVE_INFINITY),
+      bucket(currentMonthKey('UTC'), null),
+    ];
     const { container } = render(widget(packId));
     await waitFor(() => expect(container.querySelector(
       `[data-widget-appearance="${appearance}"]`,
@@ -155,12 +187,34 @@ describe.each(packs)('monthly mileage %s / %s', (packId, appearance) => {
     expect(container.querySelector('.widget-big-number')).not.toHaveTextContent('0');
     const table = screen.getByRole('table', { name: 'Monthly mileage — data table' });
     const rows = within(table).getAllByRole('row');
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(6);
     expect(rows[1]).toHaveTextContent('77');
-    expect(rows[2]).toHaveTextContent('—');
+    for (const row of rows.slice(2)) expect(row).toHaveTextContent('—');
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3);
-    expect(screen.queryByText('NaN')).not.toBeInTheDocument();
+    expect(screen.queryByText(/NaN|Infinity/)).not.toBeInTheDocument();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+  });
+
+  it('updates retained chart distances and summaries when the display unit changes', async () => {
+    const view = render(widget(packId));
+    await waitFor(() => expect(view.container.querySelector(
+      `[data-widget-appearance="${appearance}"]`,
+    )).not.toBeNull());
+
+    settingsState.distance = 'mi';
+    view.rerender(widget(packId));
+
+    expect(view.container.querySelector('.widget-big-number')).toHaveTextContent('76');
+    expect(view.container.querySelector('.widget-big-number')).toHaveTextContent('mi');
+    expect(screen.getByText('12-month average').parentElement?.parentElement).toHaveTextContent('62');
+    const table = screen.getByRole('table', { name: 'Monthly mileage — data table' });
+    expect(within(table).getByRole('columnheader', { name: 'Distance (mi)' })).toBeInTheDocument();
+    const rows = within(table).getAllByRole('row');
+    expect(Number(within(rows[1]).getAllByRole('cell')[1].textContent)).toBeCloseTo(47.85, 2);
+    expect(Number(within(rows[2]).getAllByRole('cell')[1].textContent)).toBeCloseTo(76.43, 2);
+    expect(screen.queryByText('km')).not.toBeInTheDocument();
+    expect(api.result.refetch).not.toHaveBeenCalled();
+    expect(api.mileage.mock.calls.every(args => args[0] === '7' && args[1] === 'UTC')).toBe(true);
   });
 
   it('keeps the empty source shell and summary sections visible without invented bars', async () => {
@@ -202,6 +256,7 @@ it('retains the same controller and cached distances while switching packs after
       `[data-widget-appearance="${appearance}"]`,
     )).not.toBeNull());
     expect(view.container.querySelector('.widget-big-number')).toHaveTextContent('123');
+    expect(view.container.querySelector('[data-data-state="stale"]')).not.toBeNull();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Monthly mileage — data table' })).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
@@ -211,15 +266,15 @@ it('retains the same controller and cached distances while switching packs after
   expect(api.result.refetch).toHaveBeenCalledTimes(1);
 });
 
-it('shows initial loading and fatal failure honestly, then recovers into the requested pack', async () => {
+it.each(packs)('shows initial loading and fatal failure honestly, then recovers into %s / %s', async (packId, appearance) => {
   Object.assign(api.result, { data: undefined, isLoading: true, isPending: true, isSuccess: false });
-  const view = render(widget('v7'));
+  const view = render(widget(packId));
   expect(view.container.querySelector('[aria-busy="true"]')).not.toBeNull();
   expect(screen.queryByText('No mileage data')).not.toBeInTheDocument();
   expect(view.container.querySelector('.widget-big-number')).toBeNull();
 
   Object.assign(api.result, { isLoading: false, isPending: false, isError: true, error: new Error('Unavailable') });
-  view.rerender(widget('v7'));
+  view.rerender(widget(packId));
   expect(screen.getByText("Can't reach server")).toBeInTheDocument();
   expect(screen.queryByText('No mileage data')).not.toBeInTheDocument();
 
@@ -229,17 +284,17 @@ it('shows initial loading and fatal failure honestly, then recovers into the req
     isError: false,
     error: null,
   });
-  view.rerender(widget('v7'));
-  await waitFor(() => expect(view.container.querySelector('[data-widget-appearance="pixel"]')).not.toBeNull());
+  view.rerender(widget(packId));
+  await waitFor(() => expect(view.container.querySelector(`[data-widget-appearance="${appearance}"]`)).not.toBeNull());
   expect(view.container.querySelector('.widget-big-number')).toHaveTextContent('0');
   expect(screen.queryByText('No mileage data')).not.toBeInTheDocument();
   expect(screen.getByRole('table', { name: 'Monthly mileage — data table' })).toBeInTheDocument();
 });
 
-it('retains the plot and disables duplicate refreshes while the existing request is in flight', async () => {
+it.each(packs)('retains the plot and blocks duplicate refreshes in %s / %s while fetching', async (packId, appearance) => {
   api.result.isFetching = true;
-  const view = render(widget('v4'));
-  await waitFor(() => expect(view.container.querySelector('[data-widget-appearance="owner"]')).not.toBeNull());
+  const view = render(widget(packId));
+  await waitFor(() => expect(view.container.querySelector(`[data-widget-appearance="${appearance}"]`)).not.toBeNull());
   const refresh = screen.getByRole('button', { name: /Refresh data/ });
   expect(refresh).toBeDisabled();
   fireEvent.click(refresh);
@@ -247,7 +302,7 @@ it('retains the plot and disables duplicate refreshes while the existing request
   expect(screen.getByRole('table', { name: 'Monthly mileage — data table' })).toBeInTheDocument();
 
   api.result.isFetching = false;
-  view.rerender(widget('v4'));
+  view.rerender(widget(packId));
   expect(screen.getByRole('button', { name: /Refresh data/ })).toBeEnabled();
   fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
   expect(api.result.refetch).toHaveBeenCalledTimes(1);

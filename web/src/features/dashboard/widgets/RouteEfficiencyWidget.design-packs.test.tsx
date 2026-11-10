@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { request } from '@/api/client';
 import type { RouteEfficiencyData, RouteSummary } from '@/types/driving';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS } from './designPacks/types';
 import RouteEfficiencyWidget from './RouteEfficiencyWidget';
 
 const preferences = vi.hoisted(() => ({ distance: 'km' as 'km' | 'mi' }));
@@ -25,10 +26,8 @@ vi.mock('@/hooks/useUnits', async () => {
   };
 });
 
-const packs = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const packs = PACK_IDS.filter(id => id !== 'classic')
+  .map(id => [id, PACK_APPEARANCES[id]] as const);
 const mockRequest = vi.mocked(request);
 const clients = new Set<QueryClient>();
 
@@ -159,12 +158,12 @@ describe('RouteEfficiencyWidget production design packs', () => {
     expect(within(body).queryByRole('meter')).not.toBeInTheDocument();
   });
 
-  it('keeps the original compact three-route limit while retaining the summary and comparison details', async () => {
+  it.each(packs)('%s keeps the compact %s three-route limit, summary and comparison details', async (pack, appearance) => {
     respond(payload([route(), ...[2, 3, 4, 5].map(index => route({
       startLocation: `Stop ${index}`, avgEfficiency: 160 + index,
     }))]));
-    const view = renderWidget('v7', 1);
-    const body = await presentation(view.container, 'pixel');
+    const view = renderWidget(pack, 1);
+    const body = await presentation(view.container, appearance);
     expect(within(body).getAllByRole('listitem')).toHaveLength(3);
     expect(within(body).getByRole('list')).toHaveTextContent('Home → Office');
     expect(within(body).getByRole('list')).not.toHaveTextContent('Stop 4');
@@ -172,11 +171,11 @@ describe('RouteEfficiencyWidget production design packs', () => {
     expect(body.querySelector('.widget-big-number')).toHaveTextContent('160.00Wh/km');
   });
 
-  it('converts every summary and ranked reading at the display boundary and preserves signed source extrema', async () => {
+  it.each(packs)('%s converts every %s reading at the display boundary and preserves signed source extrema', async (pack, appearance) => {
     preferences.distance = 'mi';
     respond(payload([route({ bestEfficiency: -10 })]));
-    const view = renderWidget('v3');
-    const body = await presentation(view.container, 'precision');
+    const view = renderWidget(pack);
+    const body = await presentation(view.container, appearance);
     expect(within(body).getByRole('listitem')).toHaveTextContent('257.50 Wh/mi · 4×');
     expect(within(body).getByRole('listitem')).toHaveTextContent('best -16.09 / worst 289.68 Wh/mi');
     expect(Array.from(body.querySelectorAll('dd'), item => item.textContent)).toEqual([
@@ -186,7 +185,25 @@ describe('RouteEfficiencyWidget production design packs', () => {
     expect(body.textContent).not.toContain('Wh/km');
   });
 
-  it('changes all seven presentations without another read, recovers Classic, and retains the real refresh action', async () => {
+  it.each(packs)('%s preserves measured zero %s efficiency, extrema and trip counts', async (pack, appearance) => {
+    respond(payload([route({
+      avgEfficiency: 0, bestEfficiency: 0, worstEfficiency: 0, tripCount: 0,
+    })]));
+    const view = renderWidget(pack);
+    const body = await presentation(view.container, appearance);
+    expect(within(body).getByRole('listitem')).toHaveTextContent('0.00 Wh/km · 0×');
+    expect(within(body).getByText('Excellent')).toBeInTheDocument();
+    expect(body.querySelector('.widget-big-number')).toHaveTextContent('Home → Office0.00Wh/km');
+    expect(within(body).getByText('Drives: 0')).toBeInTheDocument();
+    expect(Array.from(body.querySelectorAll('dd'), item => item.textContent)).toEqual([
+      '0.00 Wh/km', '0.00 Wh/km', '0.00 Wh/km',
+    ]);
+    expect(body.textContent).not.toContain('—');
+    expect(within(body).queryByRole('meter')).not.toBeInTheDocument();
+    expect(within(body).queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  it('changes every presentation without another read, recovers Classic, and retains the real refresh action', async () => {
     const view = renderWidget();
     await screen.findByText('160.00 Wh/km · 4×');
     expect(view.container.querySelector('[data-widget-family]')).toBeNull();
@@ -210,9 +227,9 @@ describe('RouteEfficiencyWidget production design packs', () => {
     expect(routeCalls()).toHaveLength(2);
   });
 
-  it('retains route details and source trust when an in-flight refresh fails and can retry', async () => {
-    const view = renderWidget('v6');
-    const body = await presentation(view.container, 'expressive');
+  it.each(packs)('%s retains %s route details and source trust after a failed refresh and can retry', async (pack, appearance) => {
+    const view = renderWidget(pack);
+    const body = await presentation(view.container, appearance);
     mockRequest.mockRejectedValue(new Error('offline'));
     fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -227,11 +244,11 @@ describe('RouteEfficiencyWidget production design packs', () => {
     expect(routeCalls()).toHaveLength(3);
   });
 
-  it('keeps source-shaped loading instead of rendering fabricated summary readings', () => {
+  it.each(packs)('%s keeps source-shaped %s loading without fabricated summary readings', (pack) => {
     mockRequest.mockImplementation(path => path === '/vehicles'
       ? Promise.resolve([])
       : new Promise<never>(() => undefined));
-    const view = renderWidget('v2');
+    const view = renderWidget(pack);
     expect(screen.getByRole('heading', { name: 'Route efficiency', level: 3 })).toBeVisible();
     expect(view.container.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(screen.queryByText('Average')).not.toBeInTheDocument();
@@ -239,9 +256,9 @@ describe('RouteEfficiencyWidget production design packs', () => {
     expect(screen.queryByText(/0\.00/)).not.toBeInTheDocument();
   });
 
-  it('shows a real initial failure rather than an empty success with a selected pack', async () => {
+  it.each(packs)('%s shows a real initial %s failure instead of an empty success', async (pack) => {
     mockRequest.mockRejectedValue(new Error('offline'));
-    const view = renderWidget('v5');
+    const view = renderWidget(pack);
     expect(await screen.findByRole('alert')).toHaveTextContent("Can't reach server");
     expect(view.container.querySelector('[data-data-state="initialFailure"]')).not.toBeNull();
     expect(screen.queryByText('No route data')).not.toBeInTheDocument();

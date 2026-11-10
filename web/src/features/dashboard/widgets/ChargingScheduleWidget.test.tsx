@@ -40,8 +40,10 @@
  */
 import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 import type { VehicleState } from '@/api/types';
 import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
@@ -711,4 +713,147 @@ describe('ChargingScheduleWidget — accessibility', () => {
       screen.getByRole('button', { name: /refresh/i }),
     ).toHaveAttribute('aria-label', expect.stringMatching(/^Refresh/));
   });
+});
+
+describe.each(PACK_IDS)('ChargingScheduleWidget — presentation acceptance · %s', (pack) => {
+  const tree = (size: WidgetSize) => (
+    <MemoryRouter><PackBoundary requestedPackId={pack}>
+      <ChargingScheduleWidget size={size} vehicleId={42} />
+    </PackBoundary></MemoryRouter>
+  );
+  async function expectTimeline(container: HTMLElement) {
+    if (pack === 'classic') {
+      expect(container.querySelector('[data-timeline-appearance]')).toBeNull();
+    } else {
+      await waitFor(() => expect(container.querySelector(
+        `[data-timeline-appearance="${PACK_APPEARANCES[pack]}"]`,
+      )).not.toBeNull());
+    }
+  }
+
+  it('preserves the full schedule, independent zero/false context and refresh callbacks', async () => {
+    const retrySchedule = vi.fn();
+    const retryVehicle = vi.fn();
+    useQueryMock.mockReturnValue(makeSignalsResult({
+      data: {
+        ScheduledChargingMode: sig('DepartBy'),
+        ScheduledChargingPending: sig(true),
+        ScheduledChargingStartTime: sig('08:00'),
+        ScheduledDepartureTime: sig('09:30'),
+        ChargeLimitSoc: sig(80),
+      },
+      refetch: retrySchedule,
+    }));
+    useVehicleStateMock.mockReturnValue({
+      ...makeStateResult({ data: { state: makeState({ battery_level: 0, is_charging: false }), live: true } }),
+      refetch: retryVehicle,
+    });
+    const { container } = render(tree({ cols: 2, rows: 2 }));
+    await expectTimeline(container);
+    for (const text of ['Depart by', 'Pending', 'Starts', 'Depart', 'Limit', 'time:08:00', 'time:09:30', '80%']) {
+      expect(screen.getByText(text, { exact: true })).toBeInTheDocument();
+    }
+    const brief = screen.getByTestId('dashboard-charging-schedule-context-brief');
+    expect(within(brief).getByText('0%')).toBeInTheDocument();
+    expect(within(brief).getByText('Not charging')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Vehicle 42 · returned state snapshot', { contains: true });
+    expect(useVehicleStateMock).toHaveBeenLastCalledWith(42);
+    expect(lastQueryOptions().queryKey).toEqual(['signals', 42, 'live-schedule']);
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+    expect(retrySchedule).toHaveBeenCalledOnce();
+    expect(retryVehicle).toHaveBeenCalledOnce();
+  });
+
+  it('keeps retained compact zero distinct from an unknown limit after source recovery', async () => {
+    useQueryMock.mockReturnValue(makeSignalsResult({
+      data: { ChargeLimitSoc: sig(0) }, isError: true,
+    }));
+    const { container, rerender } = render(tree({ cols: 1, rows: 1 }));
+    await expectTimeline(container);
+    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getByText('Charge limit')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+
+    useQueryMock.mockReturnValue(makeSignalsResult({
+      data: { ScheduledChargingMode: sig('Off'), ChargeLimitSoc: sig(Infinity) },
+    }));
+    rerender(tree({ cols: 1, rows: 1 }));
+    await expectTimeline(container);
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+    expect(screen.queryByText('Infinity%')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it('preserves unknown schedule fields and loading-to-empty transitions without fabricated readings', async () => {
+    useQueryMock.mockReturnValue(makeSignalsResult({ data: undefined, isLoading: true }));
+    const { container, rerender } = render(tree({ cols: 2, rows: 1 }));
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('widget-body').querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    expect(screen.queryByText('No schedule data')).not.toBeInTheDocument();
+
+    useQueryMock.mockReturnValue(makeSignalsResult({
+      data: {
+        ScheduledChargingMode: sig('Custom'),
+        ScheduledChargingStartTime: sig('  '),
+        ScheduledDepartureTime: sig(null),
+        ChargeLimitSoc: sig(NaN),
+      },
+    }));
+    rerender(tree({ cols: 2, rows: 1 }));
+    await expectTimeline(container);
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'false');
+    expect(screen.getByText('Custom')).toBeInTheDocument();
+    for (const label of ['Starts', 'Depart', 'Limit']) expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.queryByText('NaN%')).not.toBeInTheDocument();
+
+    useQueryMock.mockReturnValue(makeSignalsResult({ data: {} }));
+    rerender(tree({ cols: 2, rows: 1 }));
+    expect(screen.getByText('No schedule data')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charging schedule' })).toBeInTheDocument();
+    expect(screen.queryByText('Custom')).not.toBeInTheDocument();
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+  });
+});
+
+it('preserves retained controller data, source trust and focused refresh while switching every pack', async () => {
+  const retrySchedule = vi.fn();
+  const retryVehicle = vi.fn();
+  useQueryMock.mockReturnValue(makeSignalsResult({
+    data: { ScheduledChargingMode: sig('DepartBy'), ScheduledChargingPending: sig(true), ChargeLimitSoc: sig(0) },
+    isError: true,
+    refetch: retrySchedule,
+  }));
+  useVehicleStateMock.mockReturnValue({ ...makeStateResult(), refetch: retryVehicle });
+  const tree = (pack: PackId) => (
+    <MemoryRouter><PackBoundary requestedPackId={pack}>
+      <ChargingScheduleWidget size={{ cols: 2, rows: 2 }} vehicleId={42} />
+    </PackBoundary></MemoryRouter>
+  );
+  const { container, rerender } = render(tree('classic'));
+  assertOperationalBriefDisclosure(screen.getByTestId('dashboard-charging-schedule-context-brief'), 'Source available');
+  const refresh = screen.getByRole('button', { name: /^Refresh data · error/ });
+  refresh.focus();
+  for (const pack of PACK_IDS) {
+    rerender(tree(pack));
+    if (pack !== 'classic') {
+      await waitFor(() => expect(container.querySelector(
+        `[data-timeline-appearance="${PACK_APPEARANCES[pack]}"]`,
+      )).not.toBeNull());
+    }
+    expect(screen.getByRole('button', { name: /^Refresh data · error/ })).toBe(refresh);
+    expect(refresh).toHaveFocus();
+    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getByText('Pending')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(within(screen.getByTestId('dashboard-charging-schedule-context-brief')).getByText('64%')).toBeInTheDocument();
+    expect(lastQueryOptions().queryKey).toEqual(['signals', 42, 'live-schedule']);
+    expect(retrySchedule).not.toHaveBeenCalled();
+    expect(retryVehicle).not.toHaveBeenCalled();
+  }
+  assertOperationalBriefDisclosure(screen.getByTestId('dashboard-charging-schedule-context-brief'), 'Source available');
+  fireEvent.click(refresh);
+  expect(retrySchedule).toHaveBeenCalledOnce();
+  expect(retryVehicle).toHaveBeenCalledOnce();
 });

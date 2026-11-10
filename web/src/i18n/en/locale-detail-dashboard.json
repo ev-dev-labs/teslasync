@@ -32,6 +32,82 @@
       "v7": {
         "name": "Pixel",
         "description": "Pixel pictograms and segmented readings."
+      },
+      "motorsport": {
+        "name": "Motorsport",
+        "description": "Race-board hierarchy, slanted readings and chart-led telemetry."
+      },
+      "blueprint": {
+        "name": "Blueprint",
+        "description": "Technical grids, measurement frames and schematic compositions."
+      },
+      "editorial": {
+        "name": "Editorial",
+        "description": "Serif readings, generous spacing and report-like separators."
+      },
+      "ambient": {
+        "name": "Ambient",
+        "description": "Soft contours, centered instruments and calm supporting details."
+      },
+      "terminal": {
+        "name": "Terminal",
+        "description": "Monospace rows, segmented instruments and explicit source evidence."
+      },
+      "atlas": {
+        "name": "Atlas",
+        "description": "Visual-first layouts with navigation-strip readings and field-guide details."
+      },
+      "analog": {
+        "name": "Analog",
+        "description": "Dial-led readings, inset instruments and mechanical framing."
+      },
+      "observatory": {
+        "name": "Observatory",
+        "description": "Orbit-like gauges, fine graph traces and observation callouts."
+      },
+      "bauhaus": {
+        "name": "Bauhaus",
+        "description": "Modular geometry, shaped metric blocks and strong dividing lines."
+      },
+      "quiet": {
+        "name": "Quiet Form",
+        "description": "A clear primary reading beside a quiet fact column and an unembellished visual."
+      },
+      "warm": {
+        "name": "Warm Modern",
+        "description": "Arched framing, relaxed serif readings and visual-first everyday observations."
+      },
+      "swiss": {
+        "name": "Swiss Grid",
+        "description": "Asymmetric hierarchy, disciplined alignment and precisely divided readings."
+      },
+      "material": {
+        "name": "Material Play",
+        "description": "Expressive shapes, tonal headline containers and independently grouped facts."
+      },
+      "glass": {
+        "name": "Glass Current",
+        "description": "Floating control islands above solid, readable data surfaces."
+      },
+      "deco": {
+        "name": "Deco Grand",
+        "description": "Symmetric framing, double rules, arched instruments and centered serif readings."
+      },
+      "kinetic": {
+        "name": "Kinetic Type",
+        "description": "Assertive type bands and evidence grids; energy from composition, not moving text."
+      },
+      "brutal": {
+        "name": "Neo Brutal",
+        "description": "Heavy outlines, hard offset shadows and exposed metric cells."
+      },
+      "cyber": {
+        "name": "Cyberdeck",
+        "description": "Technical brackets, scanline texture and visual-first console readings."
+      },
+      "memphis": {
+        "name": "Memphis Pop",
+        "description": "Dotted dividers, asymmetric rounded containers and playful patterned headers."
       }
     },
     "chargingEstimatedLabel": "{{label}} (estimated)",

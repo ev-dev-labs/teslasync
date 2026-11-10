@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
 import type { WidgetSize } from './types';
 import WeeklySummaryCardWidget from './WeeklySummaryCardWidget';
 
@@ -32,10 +33,7 @@ vi.mock('@/hooks/useFormatting', () => ({
   }),
 }));
 
-const packs = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const packs = Object.entries(PACK_APPEARANCES);
 const NOW = Date.parse('2026-11-06T12:00:00Z');
 const digest = {
   drives: 8, prevDrives: 4, distanceKm: 200, prevDistanceKm: 100,
@@ -176,10 +174,10 @@ it('switches every pack on the same controller and keeps the existing refresh co
   expect(weeklyDigestMock.mock.calls.every(([id]) => id === '7')).toBe(true);
 });
 
-it('converts the headline and both graphic samples once to the selected miles preference', async () => {
+it.each(packs)('%s converts the headline and both graphic samples once to the selected miles preference', async (packId, appearance) => {
   unitsMock.mockReturnValue({ unitPrefs: { distance: 'mi' } });
-  const { container } = renderWidget('v3');
-  const view = await presentation(container, 'precision');
+  const { container } = renderWidget(packId);
+  const view = await presentation(container, appearance);
   expect(view.getByText('124.27 mi')).toBeInTheDocument();
   expect(view.getByText('62.14 mi')).toBeInTheDocument();
   expect(view.getByText('321.87')).toBeInTheDocument();
@@ -189,19 +187,19 @@ it('converts the headline and both graphic samples once to the selected miles pr
   expect(view.queryByText('km', { exact: true })).not.toBeInTheDocument();
 });
 
-it('retains measured zero and signed monetary evidence rather than treating either as missing', async () => {
+it.each(packs)('%s retains measured zero and signed monetary evidence rather than treating either as missing', async (packId, appearance) => {
   weeklyDigestMock.mockReturnValue(query({ data: { ...digest, distanceKm: 0, cost: -1.5 } }));
-  const { container } = renderWidget('v7');
-  const view = await presentation(container, 'pixel');
+  const { container } = renderWidget(packId);
+  const view = await presentation(container, appearance);
   expect(view.getByRole('progressbar', { name: 'this week' })).toHaveAttribute('aria-valuenow', '0');
   expect(view.getByText('0.00 km')).toBeInTheDocument();
   expect(view.getByText('$-1.50')).toBeInTheDocument();
 });
 
-it('does not invent a numeric scale when both measured distance samples are zero', async () => {
+it.each(packs)('%s does not invent a numeric scale when both measured distance samples are zero', async (packId, appearance) => {
   weeklyDigestMock.mockReturnValue(query({ data: { ...digest, distanceKm: 0, prevDistanceKm: 0 } }));
-  const { container } = renderWidget('v3');
-  const view = await presentation(container, 'precision');
+  const { container } = renderWidget(packId);
+  const view = await presentation(container, appearance);
   expect(view.getByRole('group', { name: 'this week' })).not.toHaveAttribute('aria-valuemax');
   expect(view.getByRole('group', { name: 'Last week' })).not.toHaveAttribute('aria-valuemax');
   expect(view.getAllByText('0.00 km')).toHaveLength(2);
@@ -209,30 +207,30 @@ it('does not invent a numeric scale when both measured distance samples are zero
   expect(container.querySelector('[data-metric-fill]')).toBeNull();
 });
 
-it('keeps a successful empty source explicit and does not fabricate numeric content', async () => {
+it.each(packs)('%s keeps a successful empty source explicit and does not fabricate numeric content', async (packId, appearance) => {
   weeklyDigestMock.mockReturnValue(query({ data: null }));
-  const { container } = renderWidget('v4');
-  const view = await presentation(container, 'owner');
+  const { container } = renderWidget(packId);
+  const view = await presentation(container, appearance);
   expect(view.getByText('No weekly data')).toBeInTheDocument();
   expect(view.getByText('Distance this week')).toBeInTheDocument();
   expect(view.getByRole('progressbar', { name: 'this week' })).not.toHaveAttribute('aria-valuenow');
   expect(view.queryByText('$0.00')).not.toBeInTheDocument();
 });
 
-it('retains all comparisons and a trust warning when a background refresh fails', async () => {
+it.each(packs)('%s retains all comparisons and a trust warning when a background refresh fails', async (packId, appearance) => {
   weeklyDigestMock.mockReturnValue(query({ isError: true, isStale: true, error: new Error('Digest refresh failed') }));
-  const { container } = renderWidget('v6');
-  await presentation(container, 'expressive');
+  const { container } = renderWidget(packId);
+  await presentation(container, appearance);
   expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
   expect(screen.getByText('$5.60')).toBeInTheDocument();
   expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
 });
 
-it('keeps the loading shell without prematurely showing a source reading', () => {
+it.each(packs)('%s keeps the loading shell without prematurely showing a source reading', (packId) => {
   weeklyDigestMock.mockReturnValue(query({
     data: undefined, dataUpdatedAt: 0, isLoading: true, isPending: true, isFetching: true,
   }));
-  const { container } = renderWidget('v5');
+  const { container } = renderWidget(packId);
   expect(screen.getByRole('heading', { name: 'Weekly summary' })).toBeInTheDocument();
   expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
   expect(screen.queryByText('Distance this week')).not.toBeInTheDocument();
@@ -240,11 +238,11 @@ it('keeps the loading shell without prematurely showing a source reading', () =>
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
 });
 
-it('keeps the source shell and retry action on an initial failure instead of showing invented metrics', () => {
+it.each(packs)('%s keeps the source shell and retry action on an initial failure instead of showing invented metrics', (packId) => {
   weeklyDigestMock.mockReturnValue(query({
     data: undefined, dataUpdatedAt: 0, isError: true, error: new Error('Digest unavailable'),
   }));
-  const { container } = renderWidget('v1');
+  const { container } = renderWidget(packId);
   expect(screen.getByRole('heading', { name: 'Weekly summary' })).toBeInTheDocument();
   expect(container.querySelector('[data-data-state="initialFailure"]')).not.toBeNull();
   expect(screen.queryByText('$0.00')).not.toBeInTheDocument();

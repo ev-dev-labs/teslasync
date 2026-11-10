@@ -216,52 +216,54 @@ it('preserves Classic medium/expanded/compact bodies and recovers them after eve
   expect(refetch).toHaveBeenCalledOnce();
 });
 
-it.each([
-  ['null island', 0, 0],
-  ['non-finite latitude', Number.NaN, 10],
-  ['out-of-range longitude', 51.48, 181],
-] as const)('does not send %s coordinates to Leaflet', async (_label, latitude, longitude) => {
-  vehicleStateMock.mockReturnValue(stateQuery({ latitude, longitude, heading: 90 }));
-  const { container } = render(widget('v3'));
-  await expectAppearance(container, 'precision');
-  expect(screen.getByText('No location data available')).toBeInTheDocument();
-  expect(reading('Position')).toHaveTextContent('—');
-  expect(screen.queryByTestId('map')).not.toBeInTheDocument();
-});
+describe.each(Object.entries(PACK_APPEARANCES))('Location map %s / %s source states', (packId, appearance) => {
+  it.each([
+    ['null island', 0, 0],
+    ['non-finite latitude', Number.NaN, 10],
+    ['out-of-range longitude', 51.48, 181],
+  ] as const)('does not send %s coordinates to Leaflet', async (_label, latitude, longitude) => {
+    vehicleStateMock.mockReturnValue(stateQuery({ latitude, longitude, heading: 90 }));
+    const { container } = render(widget(packId));
+    await expectAppearance(container, appearance);
+    expect(screen.getByText('No location data available')).toBeInTheDocument();
+    expect(reading('Position')).toHaveTextContent('—');
+    expect(screen.queryByTestId('map')).not.toBeInTheDocument();
+  });
 
-it.each(['unknown', 'stale'] as const)('labels %s source freshness as retained, even when the payload says live', async freshness => {
-  vehicleStateMock.mockReturnValue(stateQuery(FIX, { data: { state: FIX, live: true, freshness } }));
-  const { container } = render(widget('v5'));
-  await expectAppearance(container, 'iconic');
-  expect(screen.getByText('Last known position')).toBeInTheDocument();
-  expect(screen.getByTestId('marker')).toBeInTheDocument();
-});
+  it.each(['unknown', 'stale'] as const)('labels %s source freshness as retained, even when the payload says live', async freshness => {
+    vehicleStateMock.mockReturnValue(stateQuery(FIX, { data: { state: FIX, live: true, freshness } }));
+    const { container } = render(widget(packId));
+    await expectAppearance(container, appearance);
+    expect(screen.getByText('Last known position')).toBeInTheDocument();
+    expect(screen.getByTestId('marker')).toBeInTheDocument();
+  });
 
-it('keeps the source shell while loading and exposes an initial failure with its actual retry', () => {
-  vehicleStateMock.mockReturnValue(stateQuery(undefined, { data: undefined, isLoading: true, isPending: true }));
-  const view = render(widget('v1'));
-  expect(screen.getByRole('heading', { name: 'Vehicle location map' })).toBeInTheDocument();
-  expect(view.container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
-  expect(screen.queryByText('No location data available')).not.toBeInTheDocument();
-  expect(screen.queryByTestId('map')).not.toBeInTheDocument();
+  it('keeps the source shell while loading and exposes an initial failure with its actual retry', () => {
+    vehicleStateMock.mockReturnValue(stateQuery(undefined, { data: undefined, isLoading: true, isPending: true }));
+    const view = render(widget(packId));
+    expect(screen.getByRole('heading', { name: 'Vehicle location map' })).toBeInTheDocument();
+    expect(view.container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+    expect(screen.queryByText('No location data available')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('map')).not.toBeInTheDocument();
 
-  vehicleStateMock.mockReturnValue(stateQuery(undefined, { data: undefined, isError: true, error: new Error('state unavailable') }));
-  view.rerender(widget('v1'));
-  expect(screen.getByRole('alert')).toBeInTheDocument();
-  expect(screen.queryByTestId('map')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /retry/i }));
-  expect(refetch).toHaveBeenCalledOnce();
-});
+    vehicleStateMock.mockReturnValue(stateQuery(undefined, { data: undefined, isError: true, error: new Error('state unavailable') }));
+    view.rerender(widget(packId));
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByTestId('map')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
 
-it('keeps in-flight refresh disabled and preserves theme-aware map tiles', async () => {
-  vehicleStateMock.mockReturnValue(stateQuery(FIX, { isFetching: true }));
-  const { container } = render(widget('v2'));
-  await expectAppearance(container, 'elevated');
-  const refresh = screen.getByRole('button', { name: /^Refresh/i });
-  expect(refresh).toBeDisabled();
-  fireEvent.click(refresh);
-  expect(refetch).not.toHaveBeenCalled();
-  document.documentElement.classList.add('light-mode');
-  await waitFor(() => expect(screen.getByTestId('map-tiles')).toHaveAttribute('data-map-style', 'streets'));
-  expect(screen.getByTestId('marker')).toHaveAttribute('data-position', '51.48,0');
+  it('keeps in-flight refresh disabled and preserves theme-aware map tiles', async () => {
+    vehicleStateMock.mockReturnValue(stateQuery(FIX, { isFetching: true }));
+    const { container } = render(widget(packId));
+    await expectAppearance(container, appearance);
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
+    expect(refresh).toBeDisabled();
+    fireEvent.click(refresh);
+    expect(refetch).not.toHaveBeenCalled();
+    document.documentElement.classList.add('light-mode');
+    await waitFor(() => expect(screen.getByTestId('map-tiles')).toHaveAttribute('data-map-style', 'streets'));
+    expect(screen.getByTestId('marker')).toHaveAttribute('data-position', '51.48,0');
+  });
 });

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -33,6 +33,8 @@ vi.mock('@/api/hooks/useTelemetry', () => ({
 }));
 
 import SignalHealthWidget from './SignalHealthWidget';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 import type { WidgetSize } from './types';
 
 interface StatsQuery {
@@ -54,6 +56,16 @@ const MIN = 60_000;
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
 const STANDARD: WidgetSize = { cols: 2, rows: 2 };
 const WIDE: WidgetSize = { cols: 3, rows: 2 };
+const COVERAGE_CASES: { name: string; gaps: GapMap; headline: string; status: string; coverage: string | null }[] = [
+  { name: 'no observations', gaps: {}, headline: '—', status: 'Unknown', coverage: null },
+  {
+    name: 'observed zero reporting',
+    gaps: { StaleSignal: { timestamp: ago(10 * MIN) } },
+    headline: '0/1',
+    status: 'Critical',
+    coverage: '0',
+  },
+];
 
 function makeStats(overrides: Partial<StatsQuery> = {}): StatsQuery {
   return {
@@ -62,12 +74,14 @@ function makeStats(overrides: Partial<StatsQuery> = {}): StatsQuery {
   };
 }
 
-function renderWidget(size: WidgetSize, vehicleId = 42) {
+function renderWidget(size: WidgetSize, vehicleId = 42, packId: PackId = 'classic') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
-        <SignalHealthWidget vehicleId={vehicleId} size={size} />
+        <PackBoundary requestedPackId={packId}>
+          <SignalHealthWidget vehicleId={vehicleId} size={size} />
+        </PackBoundary>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -88,15 +102,26 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('SignalHealthWidget redesign', () => {
-  it('shows one headline active/observed value, coverage, and status without timezone labels', () => {
+describe.each(PACK_IDS)('SignalHealthWidget %s', (packId) => {
+  async function renderPack(size: WidgetSize, vehicleId = 42) {
+    const result = renderWidget(size, vehicleId, packId);
+    if (packId !== 'classic') {
+      await waitFor(() => {
+        expect(result.container.querySelector('[data-instrument-family="meter"]'))
+          .toHaveAttribute('data-instrument-appearance', PACK_APPEARANCES[packId]);
+      });
+    }
+    return result;
+  }
+
+  it('shows one headline active/observed value, coverage, and status without timezone labels', async () => {
     MOCK_SIGNALS = { data: ['A', 'B', 'C'] };
     MOCK_GAPS = { data: {
       A: { timestamp: ago(30_000) },
       B: { timestamp: ago(20_000) },
       C: { timestamp: ago(10 * MIN) },
     } };
-    const { container } = renderWidget(STANDARD);
+    const { container } = await renderPack(STANDARD);
 
     expect(screen.getByText('2/3')).toBeInTheDocument();
     expect(screen.getByText('Degraded')).toBeInTheDocument();
@@ -105,14 +130,14 @@ describe('SignalHealthWidget redesign', () => {
     expect(container.textContent ?? '').not.toMatch(/\bUTC\b|\bGMT\b|time zone/i);
   });
 
-  it('uses real gap rows for the wide view and excludes active signals', () => {
+  it('uses real gap rows for the wide view and excludes active signals', async () => {
     MOCK_SIGNALS = { data: ['A', 'B', 'C'] };
     MOCK_GAPS = { data: {
       VehicleSpeed: { timestamp: ago(20_000) },
       TpmsPressureRl: { timestamp: ago(40 * MIN) },
       MissingTimestamp: { value: 1 },
     } };
-    renderWidget(WIDE);
+    await renderPack(WIDE);
 
     expect(screen.queryByText('VehicleSpeed')).toBeNull();
     expect(screen.getByText('TpmsPressureRl')).toBeInTheDocument();
@@ -121,27 +146,27 @@ describe('SignalHealthWidget redesign', () => {
     expect(screen.getByText('Gap')).toBeInTheDocument();
   });
 
-  it('counts unparseable timestamps as gaps and never fabricates freshness or NaN', () => {
+  it('counts unparseable timestamps as gaps and never fabricates freshness or NaN', async () => {
     MOCK_SIGNALS = { data: ['A', 'B', 'C'] };
     MOCK_GAPS = { data: {
       Good: { timestamp: ago(30_000) },
       Bad: { timestamp: 'not-a-real-date' },
       Missing: { value: 1 },
     } };
-    const { container } = renderWidget(STANDARD);
+    const { container } = await renderPack(STANDARD);
 
     expect(screen.getByText('1/3')).toBeInTheDocument();
     expect(screen.getByText('Critical')).toBeInTheDocument();
     expect(container.textContent ?? '').not.toContain('NaN');
   });
 
-  it('renders compact coverage with no duplicate large totals', () => {
+  it('renders compact coverage with no duplicate large totals', async () => {
     MOCK_GAPS = { data: {
       A: { timestamp: ago(30_000) },
       B: { timestamp: ago(10 * MIN) },
     } };
     MOCK_SIGNALS = { data: ['A', 'B'] };
-    renderWidget(COMPACT);
+    await renderPack(COMPACT);
 
     expect(screen.getByText('1/2')).toBeInTheDocument();
     expect(screen.getByText('50%')).toBeInTheDocument();
@@ -149,12 +174,12 @@ describe('SignalHealthWidget redesign', () => {
     expect(screen.queryByText('Total signals')).toBeNull();
   });
 
-  it('retains data on refresh failure and wires every source refresh', () => {
+  it('retains data on refresh failure and wires every source refresh', async () => {
     const stats = vi.fn(), gaps = vi.fn(), signals = vi.fn();
     MOCK_STATS = makeStats({ refetch: stats });
     MOCK_GAPS = { data: { A: { timestamp: ago(10_000) } }, isError: true, error: new Error('refresh'), refetch: gaps };
     MOCK_SIGNALS = { data: ['A'], refetch: signals };
-    const { container } = renderWidget(STANDARD);
+    const { container } = await renderPack(STANDARD);
 
     expect(screen.getByText('1/1')).toBeInTheDocument();
     expect(container.querySelector('[data-data-state="stale"]')).toBeTruthy();
@@ -164,11 +189,11 @@ describe('SignalHealthWidget redesign', () => {
     expect(signals).toHaveBeenCalledTimes(1);
   });
 
-  it('uses the empty-state action only when no source data exists', () => {
+  it('uses the empty-state action only when no source data exists', async () => {
     MOCK_STATS = makeStats({ data: undefined, dataUpdatedAt: 0 });
     MOCK_GAPS = { data: undefined, refetch: vi.fn() };
     MOCK_SIGNALS = { data: undefined, refetch: vi.fn() };
-    renderWidget(STANDARD);
+    await renderPack(STANDARD);
 
     expect(screen.getByText('No signal health data')).toBeInTheDocument();
     fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Refresh' }));
@@ -177,12 +202,74 @@ describe('SignalHealthWidget redesign', () => {
     expect(MOCK_SIGNALS.refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('resolves the vehicle scope and does not invent a vehicle result from the fleet head', () => {
+  it('resolves the vehicle scope and does not invent a vehicle result from the fleet head', async () => {
     MOCK_VEHICLES = { data: [{ id: 7 }] };
-    renderWidget(STANDARD, 42);
+    await renderPack(STANDARD, 42);
     expect(mockIds.stats).toContain(42);
     expect(mockIds.gaps).toContain(42);
     expect(mockIds.signals).toContain(42);
     expect(mockIds.stats).not.toContain(7);
+  });
+
+  it.each(COVERAGE_CASES)(
+    'distinguishes $name without fabricating a healthy reading',
+    async ({ gaps, headline, status, coverage }) => {
+      MOCK_GAPS = { data: gaps };
+      const { container } = await renderPack(WIDE);
+
+      expect(screen.getByText(headline)).toBeInTheDocument();
+      expect(screen.getByText(status)).toBeInTheDocument();
+      const meter = screen.getByRole('progressbar', { name: 'Reporting coverage' });
+      if (coverage == null) {
+        expect(meter).not.toHaveAttribute('aria-valuenow');
+        expect(screen.getByText('No observed signal gaps')).toBeInTheDocument();
+        expect(container.textContent).not.toContain('0/0');
+      } else {
+        expect(meter).toHaveAttribute('aria-valuenow', coverage);
+        expect(screen.getByText('StaleSignal')).toBeInTheDocument();
+      }
+      expect(container.textContent).not.toMatch(/NaN|Infinity/);
+    },
+  );
+
+  it('keeps the initial loading shell instead of inventing signal coverage', () => {
+    MOCK_STATS = makeStats({ data: undefined, dataUpdatedAt: 0, isLoading: true, isFetching: true });
+    MOCK_GAPS = { data: undefined };
+    MOCK_SIGNALS = { data: undefined };
+    const { container } = renderWidget(STANDARD, 42, packId);
+
+    expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText('Signal source coverage')).toBeInTheDocument();
+    expect(screen.queryByText('Signals reporting')).not.toBeInTheDocument();
+    expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
+    expect(screen.queryByRole('progressbar', { name: 'Reporting coverage' })).not.toBeInTheDocument();
+  });
+
+  it('retains observed coverage and identifies an unavailable contributing source', async () => {
+    MOCK_GAPS = { data: { A: { timestamp: ago(10_000) } } };
+    MOCK_SIGNALS = { data: undefined, isError: true, error: new Error('catalog unavailable'), refetch: vi.fn() };
+    const { container } = await renderPack(STANDARD);
+
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(screen.getByText('1/1')).toBeInTheDocument();
+    expect(screen.getByText('Signal catalog')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(MOCK_SIGNALS.refetch).toHaveBeenCalledTimes(1);
+    expect(MOCK_STATS.refetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps initial failures recoverable without presenting fabricated coverage', () => {
+    MOCK_STATS = makeStats({ data: undefined, dataUpdatedAt: 0, isError: true, error: new Error('stats unavailable') });
+    MOCK_GAPS = { data: undefined, isError: true, error: new Error('live unavailable'), refetch: vi.fn() };
+    MOCK_SIGNALS = { data: undefined, isError: true, error: new Error('catalog unavailable'), refetch: vi.fn() };
+    const { container } = renderWidget(STANDARD, 42, packId);
+
+    expect(container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
+    expect(screen.queryByText('Signals reporting')).not.toBeInTheDocument();
+    expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(MOCK_STATS.refetch).toHaveBeenCalledTimes(1);
+    expect(MOCK_GAPS.refetch).toHaveBeenCalledTimes(1);
+    expect(MOCK_SIGNALS.refetch).toHaveBeenCalledTimes(1);
   });
 });

@@ -9,6 +9,8 @@
  *     idle, the compact / medium / tall layout variants, the loading / empty /
  *     error states, the vehicle-selection fallback, and the manual-refresh
  *     interaction.
+ *   - Every presentation pack uses its real meter family while preserving
+ *     charging readings, source trust, placeholders, and refresh callbacks.
  *
  * Strategy (mirrors the repo convention, e.g. BatteryCellsWidget.test.tsx):
  *   - The three data hooks (`useVehicles`, `useVehicleState`,
@@ -28,7 +30,7 @@
  * tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
@@ -74,6 +76,8 @@ vi.mock('@/api/hooks/useVehicles', () => ({
   useChargingTelemetryLatest: chargingTelemetryMock,
 }));
 import ChargeStatusLiveWidget, { formatTimeRemaining } from './ChargeStatusLiveWidget';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 import type { WidgetSize } from './types';
 
 // ── Fixtures ───────────────────────────────────────────────────────────────
@@ -82,11 +86,11 @@ const SIZE_MEDIUM: WidgetSize = { cols: 2, rows: 1 };
 const SIZE_TALL: WidgetSize = { cols: 2, rows: 2 };
 
 interface LiveState {
-  is_charging: boolean;
-  charger_power: number;
-  charge_rate: number;
-  time_to_full_charge: number;
-  battery_level: number;
+  is_charging: boolean | null | undefined;
+  charger_power: number | null;
+  charge_rate: number | null;
+  time_to_full_charge: number | null;
+  battery_level: number | null;
   charge_limit_soc_pct?: number | null;
   charge_amps_a?: number | null;
 }
@@ -124,8 +128,20 @@ function makeStateQuery(state: LiveState | undefined, over: StateQueryOverrides 
   };
 }
 
-function renderWidget(node: ReactElement) {
-  return render(<MemoryRouter>{node}</MemoryRouter>);
+function renderWidget(node: ReactElement, packId: PackId = 'classic') {
+  return render(<MemoryRouter><PackBoundary requestedPackId={packId}>{node}</PackBoundary></MemoryRouter>);
+}
+
+async function renderPackWidget(node: ReactElement, packId: PackId) {
+  const view = renderWidget(node, packId);
+  if (packId !== 'classic') {
+    await waitFor(() => {
+      expect(view.container.querySelector('[data-instrument-family="meter"]'))
+        .toHaveAttribute('data-instrument-appearance', PACK_APPEARANCES[packId]);
+    });
+  }
+  expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+  return view;
 }
 
 beforeEach(() => {
@@ -180,7 +196,8 @@ describe('formatTimeRemaining', () => {
 
 // ── Widget render states ─────────────────────────────────────────────────────
 describe('ChargeStatusLiveWidget', () => {
-  it.each([SIZE_COMPACT, SIZE_MEDIUM, { cols: 2, rows: 4 }])('shows the charge target and actual amps at %j size', size => {
+  it.each(PACK_IDS.flatMap(packId => [SIZE_COMPACT, SIZE_MEDIUM, { cols: 2, rows: 4 }]
+    .map(size => ({ packId, size }))))('shows the charge target and actual amps with $packId at $size size', async ({ packId, size }) => {
     vehicleStateMock.mockReturnValue({
       ...makeStateQuery(makeState()),
       data: {
@@ -188,7 +205,7 @@ describe('ChargeStatusLiveWidget', () => {
         live: true, freshness: 'fresh', observedAt: Date.now(), verifiedFields: ['is_charging'],
       },
     });
-    const { container } = renderWidget(<ChargeStatusLiveWidget size={size} />);
+    const { container } = await renderPackWidget(<ChargeStatusLiveWidget size={size} />, packId);
     expect(screen.getByText('Charging')).toBeInTheDocument();
     expect(screen.getByText('Charge limit 85%')).toBeInTheDocument();
     expect(screen.getByText('Current')).toBeInTheDocument();
@@ -200,22 +217,22 @@ describe('ChargeStatusLiveWidget', () => {
     }
   });
 
-  it('keeps the target and a real zero current when charging stops', () => {
+  it.each(PACK_IDS)('keeps the target and a real zero current when charging stops with %s', async packId => {
     vehicleStateMock.mockReturnValue(makeStateQuery(makeState({
       is_charging: false, charge_limit_soc_pct: 85, charge_amps_a: 0,
     })));
-    renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
+    await renderPackWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />, packId);
     expect(screen.getByText('Not charging')).toBeInTheDocument();
     expect(screen.getByText('Charge limit 85%')).toBeInTheDocument();
     expect(screen.getByText('0.0')).toBeInTheDocument();
     expect(screen.queryByText('3.0')).not.toBeInTheDocument();
   });
 
-  it('labels retained charging evidence and preserves the target after a refresh fails', () => {
+  it.each(PACK_IDS)('labels retained charging evidence and preserves the target after a refresh fails with %s', async packId => {
     vehicleStateMock.mockReturnValue(makeStateQuery(makeState({
       charge_limit_soc_pct: 85, charge_amps_a: 6,
     }), { isError: true }));
-    const { container } = renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
+    const { container } = await renderPackWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />, packId);
     expect(screen.getByText('Charging')).toBeInTheDocument();
     expect(screen.getByText('Last reported')).toBeInTheDocument();
     expect(screen.getByText('Charge limit 85%')).toBeInTheDocument();
@@ -238,7 +255,7 @@ describe('ChargeStatusLiveWidget', () => {
     expect(screen.getByText('72')).toBeInTheDocument();
   });
 
-  it('does not infer charging activity from power when the authoritative state is unknown', () => {
+  it.each(PACK_IDS)('does not infer charging activity from power when the authoritative state is unknown with %s', async packId => {
     vehicleStateMock.mockReturnValue({
       ...makeStateQuery(makeState()),
       data: {
@@ -246,38 +263,38 @@ describe('ChargeStatusLiveWidget', () => {
         freshness: 'fresh', observedAt: Date.now(), verifiedFields: ['is_charging'],
       },
     });
-    const { container } = renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
+    const { container } = await renderPackWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />, packId);
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(container.querySelector('.widget-state-motion')).toBeNull();
   });
 
-  it('uses timestamped charging telemetry only when vehicle state is absent', () => {
+  it.each(PACK_IDS)('uses timestamped charging telemetry only when vehicle state is absent with %s', async packId => {
     vehicleStateMock.mockReturnValue(makeStateQuery(undefined));
     chargingTelemetryMock.mockReturnValue({
       data: { charging_state: 'Charging', ts: new Date().toISOString(), battery_level: 72, charger_power_w: 11_000 },
       isLoading: false, isError: false, dataUpdatedAt: Date.now(), refetch: vi.fn(),
     });
-    const { container } = renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
-    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '72');
+    const { container } = await renderPackWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />, packId);
+    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '72');
     expect(container.querySelector('.widget-cell-stream')).toHaveClass('widget-state-motion');
   });
 
   it.each([SIZE_COMPACT, SIZE_MEDIUM])('keeps missing charging status unknown at %j size', size => {
     vehicleStateMock.mockReturnValue(makeStateQuery({
       ...makeState(), is_charging: undefined, battery_level: 0,
-    } as unknown as LiveState));
+    }));
     renderWidget(<ChargeStatusLiveWidget size={size} />);
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.getByText('0%')).toBeInTheDocument();
     expect(screen.queryByText('Not charging')).not.toBeInTheDocument();
   });
-  it('renders unknown readings as placeholders and keeps cached state if sessions fail', () => {
+  it.each(PACK_IDS)('renders unknown readings as placeholders and keeps cached state if sessions fail with %s', async packId => {
     vehicleStateMock.mockReturnValue(makeStateQuery({
       ...makeState(),
       charger_power: null,
       battery_level: null,
       charge_rate: null,
-    } as unknown as LiveState));
+    }));
     chargingTelemetryMock.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -288,15 +305,56 @@ describe('ChargeStatusLiveWidget', () => {
       dataUpdatedAt: 0,
       refetch: vi.fn(),
     });
-    renderWidget(<ChargeStatusLiveWidget size={SIZE_TALL} />);
+    await renderPackWidget(<ChargeStatusLiveWidget size={SIZE_TALL} />, packId);
     expect(screen.queryByText('0 kW')).not.toBeInTheDocument();
     expect(screen.queryByText('0%')).not.toBeInTheDocument();
     expect(screen.getAllByText('Time left').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
   });
-  it('renders the full charging view: title, badge, power, energy and time', () => {
-    renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
+
+  it.each(PACK_IDS)('keeps invalid readings unknown without discarding real zero readings with %s', async packId => {
+    vehicleStateMock.mockReturnValue(makeStateQuery(makeState({
+      battery_level: Number.NaN, charger_power: Number.POSITIVE_INFINITY,
+      charge_amps_a: Number.NaN, charge_limit_soc_pct: Number.NaN,
+      time_to_full_charge: Number.POSITIVE_INFINITY,
+    })));
+    chargingTelemetryMock.mockReturnValue({
+      data: {
+        charger_power_w: Number.NaN, charger_voltage: Number.POSITIVE_INFINITY,
+        charger_actual_current: Number.NaN, charge_energy_added_wh: Number.NaN,
+      },
+      isLoading: false, isError: false, refetch: vi.fn(),
+    });
+    const view = await renderPackWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />, packId);
+    expect(view.container.querySelector('[data-charge-pack]')).toHaveAttribute('data-charge-pack', 'unknown');
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    expect(screen.getByTestId('widget-body')).not.toHaveTextContent(/NaN|Infinity|0%|0m/);
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(7);
+
+    vehicleStateMock.mockReturnValue(makeStateQuery(makeState({
+      battery_level: 0, charger_power: 0, charge_amps_a: 0,
+      charge_limit_soc_pct: 0, time_to_full_charge: 0,
+    })));
+    chargingTelemetryMock.mockReturnValue({
+      data: { charger_power_w: 0, charger_voltage: 0, charge_energy_added_wh: 0 },
+      isLoading: false, isError: false, refetch: vi.fn(),
+    });
+    view.rerender(
+      <MemoryRouter><PackBoundary requestedPackId={packId}>
+        <ChargeStatusLiveWidget size={SIZE_MEDIUM} />
+      </PackBoundary></MemoryRouter>,
+    );
+    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByText('Charge limit 0%')).toBeInTheDocument();
+    expect(screen.getByText('0.0')).toBeInTheDocument();
+    expect(screen.getByText('0m')).toBeInTheDocument();
+    expect(screen.getByTestId('widget-body')).toHaveTextContent(/Power\s*0\s*kW/);
+    expect(screen.getByTestId('widget-body')).toHaveTextContent(/Energy added\s*0\s*kWh/);
+  });
+
+  it.each(PACK_IDS)('renders the full charging view: title, badge, power, energy and time with %s', async packId => {
+    await renderPackWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />, packId);
     expect(screen.getByText('Charge status')).toBeInTheDocument();
     expect(screen.getByText('1h 30m')).toBeInTheDocument();
     expect(screen.getByText('48')).toBeInTheDocument();
@@ -317,8 +375,8 @@ describe('ChargeStatusLiveWidget', () => {
     expect(screen.getByText('Done')).toBeInTheDocument();
   });
 
-  it('renders the compact charging view without the title chrome', () => {
-    renderWidget(<ChargeStatusLiveWidget size={SIZE_COMPACT} />);
+  it.each(PACK_IDS)('renders the compact charging view without the title chrome with %s', async packId => {
+    await renderPackWidget(<ChargeStatusLiveWidget size={SIZE_COMPACT} />, packId);
 
     // Compact tiles retain an explicit status instead of relying on animation.
     expect(screen.queryByText('Charge status')).not.toBeInTheDocument();
@@ -330,12 +388,12 @@ describe('ChargeStatusLiveWidget', () => {
     expect(screen.getByText('80%')).toBeInTheDocument();
   });
 
-  it('renders the idle full view with the last-session summary', () => {
+  it.each(PACK_IDS)('renders the idle full view with the last-session summary with %s', async packId => {
     vehicleStateMock.mockReturnValue(
       makeStateQuery(makeState({ is_charging: false, battery_level: 64 })),
     );
 
-    renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
+    await renderPackWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />, packId);
 
     expect(screen.getByText('Not charging')).toBeInTheDocument();
     expect(screen.getByText('64%')).toBeInTheDocument();
@@ -343,34 +401,34 @@ describe('ChargeStatusLiveWidget', () => {
     expect(screen.queryByText('Charging')).not.toBeInTheDocument();
   });
 
-  it('renders the compact idle view (no last-session block) in a 1x1 tile', () => {
+  it.each(PACK_IDS)('renders the compact idle view (no last-session block) in a 1x1 tile with %s', async packId => {
     vehicleStateMock.mockReturnValue(
       makeStateQuery(makeState({ is_charging: false, battery_level: 64 })),
     );
 
-    renderWidget(<ChargeStatusLiveWidget size={SIZE_COMPACT} />);
+    await renderPackWidget(<ChargeStatusLiveWidget size={SIZE_COMPACT} />, packId);
 
     expect(screen.getByText('Not charging')).toBeInTheDocument();
     expect(screen.getByText('64%')).toBeInTheDocument();
     expect(screen.queryByText('Charge status')).not.toBeInTheDocument();
   });
 
-  it('shows the empty state (role=status) when no live state has arrived', () => {
+  it.each(PACK_IDS)('shows the empty state (role=status) when no live state has arrived with %s', packId => {
     vehicleStateMock.mockReturnValue(makeStateQuery(undefined));
     chargingTelemetryMock.mockReturnValue({ data: undefined, isLoading: false, isFetching: false, isError: false });
 
-    renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
+    renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />, packId);
 
     expect(screen.getByText('No charge data')).toBeInTheDocument();
     expect(screen.getByText('No charge data').closest('[role="status"]')).toBeInTheDocument();
     expect(screen.queryByText('Charging')).not.toBeInTheDocument();
   });
 
-  it('renders a loading skeleton with no body while the state query loads', () => {
+  it.each(PACK_IDS)('renders a loading skeleton with no body while the state query loads with %s', packId => {
     vehicleStateMock.mockReturnValue(makeStateQuery(undefined, { isLoading: true }));
     chargingTelemetryMock.mockReturnValue({ data: undefined, isLoading: true, isFetching: false, isError: false });
 
-    const { container } = renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
+    const { container } = renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />, packId);
 
     expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('No charge data')).not.toBeInTheDocument();
@@ -390,11 +448,11 @@ describe('ChargeStatusLiveWidget', () => {
     expect(screen.getByText('kW')).toBeInTheDocument();
   });
 
-  it('shows a retryable error when no data is present', () => {
+  it.each(PACK_IDS)('shows a retryable error when no data is present with %s', packId => {
     vehicleStateMock.mockReturnValue(makeStateQuery(undefined, { isError: true }));
     chargingTelemetryMock.mockReturnValue({ data: undefined, isLoading: false, isFetching: false, isError: true });
 
-    renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
+    renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />, packId);
 
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
   });
@@ -426,8 +484,9 @@ describe('ChargeStatusLiveWidget', () => {
     expect(screen.getByText('No charge data')).toBeInTheDocument();
   });
 
-  it('invokes refetch when the freshness/refresh control is activated', () => {
+  it.each(PACK_IDS)('invokes both refetches for the selected vehicle when the refresh control is activated with %s', async packId => {
     const refetch = vi.fn();
+    const telemetryRefetch = vi.fn();
     vehicleStateMock.mockReturnValue(
       makeStateQuery(makeState({ is_charging: true }), {
         refetch,
@@ -436,11 +495,19 @@ describe('ChargeStatusLiveWidget', () => {
       }),
     );
 
-    renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
+    chargingTelemetryMock.mockReturnValue({
+      data: { charging_state: 'Charging', battery_level: 80, charger_power_w: 48000 },
+      isLoading: false, isFetching: false, isStale: false, isError: false,
+      dataUpdatedAt: Date.now(), refetch: telemetryRefetch,
+    });
+    await renderPackWidget(<ChargeStatusLiveWidget vehicleId={7} size={SIZE_MEDIUM} />, packId);
 
     const refreshBtn = screen.getByRole('button', { name: /refresh/i });
     fireEvent.click(refreshBtn);
 
     expect(refetch).toHaveBeenCalledTimes(1);
+    expect(telemetryRefetch).toHaveBeenCalledTimes(1);
+    expect(vehicleStateMock).toHaveBeenCalledWith(7, { refetchInterval: 5000 });
+    expect(chargingTelemetryMock).toHaveBeenCalledWith(7, 5000);
   });
 });

@@ -5,6 +5,7 @@ import type { DataStateSource } from '@/api/dataState';
 import type { VehicleLiveSignalsResponse, UseVehicleLiveSignalsOptions } from '@/api/hooks/useTelemetry';
 import type { WidgetProps, WidgetSize } from './types';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS } from './designPacks/types';
 import UnitContextWidget from './UnitContextWidget';
 
 type QueryFixture<T> = DataStateSource<T> & {
@@ -35,10 +36,8 @@ vi.mock('@/hooks/useMotionPreference', () => ({
   useMotionPreference: () => ({ reduce: true, durationMs: 0 }),
 }));
 
-const packs = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const packs = PACK_IDS.filter(pack => pack !== 'classic')
+  .map(pack => [pack, PACK_APPEARANCES[pack]] as const);
 const full: WidgetSize = { cols: 2, rows: 4 };
 const compact: WidgetSize = { cols: 1, rows: 2 };
 const NOW = Date.parse('2026-11-07T02:25:00Z');
@@ -152,7 +151,7 @@ describe('UnitContextWidget production design packs', () => {
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 
-  it('keeps Classic as default and invalid-pack recovery while switching all seven presentations and sizes', async () => {
+  it('keeps Classic as default and invalid-pack recovery while switching all presentations and sizes', async () => {
     const view = render(tree());
     preservedSections();
     expect(view.container.querySelector('[data-widget-pack="classic"]')).not.toBeNull();
@@ -173,7 +172,7 @@ describe('UnitContextWidget production design packs', () => {
     }
   });
 
-  it('shows source enum preferences, not converted measurements, and accepts a real zero observation age', async () => {
+  it.each(packs)('%s shows source enum preferences, not converted measurements, and accepts a real zero observation age', async (pack, appearance) => {
     const values = {
       SettingDistanceUnit: 'Miles', SettingTemperatureUnit: 'Celsius',
       SettingTirePressureUnit: 'Bar', SettingChargeUnit: 'Distance',
@@ -183,8 +182,8 @@ describe('UnitContextWidget production design packs', () => {
         field, { kind: 'ValueKindEnum', value: values[field], ts: new Date(NOW).toISOString(), source: 'l1', age_ms: 0 },
       ])),
     }, mocks.refreshLive));
-    const view = render(tree('v2'));
-    await presentation(view.container, 'elevated');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     fields.forEach(([field, label]) => expect(setting(label).getByText(values[field])).toBeInTheDocument());
     expect(screen.getAllByText('Fresh observation')).toHaveLength(4);
     expect(screen.getByText('Normalization context: Unknown')).toBeInTheDocument();
@@ -207,7 +206,7 @@ describe('UnitContextWidget production design packs', () => {
     expect(setting('Distance').queryByText('Fresh observation')).not.toBeInTheDocument();
   });
 
-  it('does not reinterpret invalid enums, missing timestamps, legacy freshness or stale values as usable context', async () => {
+  it.each(packs)('%s does not reinterpret invalid enums, missing timestamps, legacy freshness or stale values as usable context', async (pack, appearance) => {
     mocks.live.mockReturnValue(query({
       vehicle_id: 42, signals: {
         SettingDistanceUnit: { kind: 'ValueKindEnum', value: 0, ts: OBSERVED, source: 'l1', age_ms: 10_000 },
@@ -216,8 +215,8 @@ describe('UnitContextWidget production design packs', () => {
         SettingChargeUnit: { kind: 'ValueKindEnum', value: 'Distance', ts: new Date(NOW + 1_000).toISOString(), source: 'l1', age_ms: -1_000 },
       },
     }, mocks.refreshLive));
-    const view = render(tree('v7'));
-    await presentation(view.container, 'pixel');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     preservedSections();
     expect(setting('Distance').getByText('Unknown context')).toBeInTheDocument();
     expect(setting('Distance').getByText('Unknown')).toBeInTheDocument();
@@ -230,30 +229,34 @@ describe('UnitContextWidget production design packs', () => {
     expect(screen.queryByText('Fresh observation')).not.toBeInTheDocument();
   });
 
-  it.each(['error', 'paused'] as const)('retains settings with an honest %s notice and independent retry', async condition => {
-    mocks.live.mockReturnValue(query(snapshot(), mocks.refreshLive, {
-      error: condition === 'error' ? new Error('synthetic refresh outage') : null,
-      isError: condition === 'error', fetchStatus: condition === 'paused' ? 'paused' : 'idle',
-    }));
-    const view = render(tree('v4'));
-    await presentation(view.container, 'owner');
-    preservedSections();
-    expect(view.container.querySelector('[data-data-state="stale"]')).not.toBeNull();
-    expect(screen.getByText(retainedNotice)).toBeInTheDocument();
-    expect(screen.getAllByText('Retained observation')).toHaveLength(4);
-    expect(setting('Distance').getByText('Kilometers')).toBeInTheDocument();
-    expect(screen.queryByText('Fresh observation')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(mocks.refreshLive).toHaveBeenCalledOnce();
-    expect(mocks.refreshVehicles).not.toHaveBeenCalled();
+  it.each(packs)('%s retains settings through failed and paused refreshes with independent retry', async (pack, appearance) => {
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
+    for (const condition of ['error', 'paused'] as const) {
+      mocks.refreshLive.mockClear();
+      mocks.live.mockReturnValue(query(snapshot(), mocks.refreshLive, {
+        error: condition === 'error' ? new Error('synthetic refresh outage') : null,
+        isError: condition === 'error', fetchStatus: condition === 'paused' ? 'paused' : 'idle',
+      }));
+      view.rerender(tree(pack));
+      preservedSections();
+      expect(view.container.querySelector('[data-data-state="stale"]')).not.toBeNull();
+      expect(screen.getByText(retainedNotice)).toBeInTheDocument();
+      expect(screen.getAllByText('Retained observation')).toHaveLength(4);
+      expect(setting('Distance').getByText('Kilometers')).toBeInTheDocument();
+      expect(screen.queryByText('Fresh observation')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(mocks.refreshLive).toHaveBeenCalledOnce();
+      expect(mocks.refreshVehicles).not.toHaveBeenCalled();
+    }
   });
 
-  it('keeps every section during first loading/failure and disables duplicate refresh while in flight', async () => {
+  it.each(packs)('%s keeps every section during first loading/failure and disables duplicate refresh while in flight', async (pack, appearance) => {
     mocks.live.mockReturnValue(query<VehicleLiveSignalsResponse>(undefined, mocks.refreshLive, {
       isLoading: true, isPending: true, isSuccess: false, isFetching: true, dataUpdatedAt: 0,
     }));
-    const view = render(tree('v1'));
-    await presentation(view.container, 'studio');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     preservedSections();
     expect(screen.getByRole('status', { name: 'Loading Signal unit context' })).toBeInTheDocument();
     expect(view.container.querySelector('[data-data-state="initial"]')).not.toBeNull();
@@ -266,7 +269,7 @@ describe('UnitContextWidget production design packs', () => {
     mocks.live.mockReturnValue(query<VehicleLiveSignalsResponse>(undefined, mocks.refreshLive, {
       isError: true, error: new Error('synthetic initial outage'), dataUpdatedAt: 0,
     }));
-    view.rerender(tree('v1'));
+    view.rerender(tree(pack));
     preservedSections();
     expect(screen.getByText('Unit-setting evidence could not be loaded.')).toBeInTheDocument();
     expect(view.container.querySelector('[data-data-state="initialFailure"]')).not.toBeNull();
@@ -274,25 +277,25 @@ describe('UnitContextWidget production design packs', () => {
     expect(mocks.refreshLive).toHaveBeenCalledOnce();
   });
 
-  it('honors explicit/configured vehicle scope and never displays another vehicle’s retained settings', async () => {
-    const view = render(tree('v3', full, { config: { vehicleId: 8 } }));
-    await presentation(view.container, 'precision');
+  it.each(packs)('%s honors explicit/configured vehicle scope and never displays another vehicle’s retained settings', async (pack, appearance) => {
+    const view = render(tree(pack, full, { config: { vehicleId: 8 } }));
+    await presentation(view.container, appearance);
     expect(mocks.live).toHaveBeenLastCalledWith(8, { refetchInterval: 5_000 });
     expect(setting('Distance').getByText('Unknown')).toBeInTheDocument();
     expect(screen.queryByText('Kilometers')).not.toBeInTheDocument();
-    view.rerender(tree('v3', full, { vehicleId: 42, config: { vehicleId: 8 } }));
+    view.rerender(tree(pack, full, { vehicleId: 42, config: { vehicleId: 8 } }));
     expect(setting('Distance').getByText('Kilometers')).toBeInTheDocument();
     expect(mocks.live).toHaveBeenLastCalledWith(42, { refetchInterval: 5_000 });
     mocks.live.mockReturnValue(query(snapshot(7), mocks.refreshLive));
-    view.rerender(tree('v3', full, {}));
+    view.rerender(tree(pack, full, {}));
     expect(mocks.live).toHaveBeenLastCalledWith(7, { refetchInterval: 5_000 });
     expect(setting('Distance').getByText('Kilometers')).toBeInTheDocument();
   });
 
-  it('keeps no-vehicle context unknown and refreshes vehicle discovery rather than a disabled signal query', async () => {
+  it.each(packs)('%s keeps no-vehicle context unknown and refreshes vehicle discovery rather than a disabled signal query', async (pack, appearance) => {
     mocks.vehicles.mockReturnValue(query([], mocks.refreshVehicles));
-    const view = render(tree('v5', compact, {}));
-    await presentation(view.container, 'iconic');
+    const view = render(tree(pack, compact, {}));
+    await presentation(view.container, appearance);
     preservedSections();
     expect(screen.getByText('Select a vehicle to inspect its unit context.')).toBeInTheDocument();
     expect(mocks.live).toHaveBeenLastCalledWith(undefined, { refetchInterval: 5_000 });

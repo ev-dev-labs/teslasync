@@ -157,7 +157,7 @@ describe.each(packs)('Vampire drain %s (%s)', (pack, appearance) => {
   });
 });
 
-it('preserves Classic bars and recovers the original body after switching among production packs', async () => {
+it('preserves Classic bars and recovers the original body after switching among all supported packs', async () => {
   const view = render(tree('classic'));
   await waitFor(() => expect(view.container.querySelector('.recharts-bar')).not.toBeNull());
   expect(view.container.querySelector('[data-widget-family]')).toBeNull();
@@ -165,13 +165,14 @@ it('preserves Classic bars and recovers the original body after switching among 
   expect(screen.getByText(/Highest: 2.4%\/day on/)).toBeVisible();
   expect(screen.queryByText('Charging excluded')).not.toBeInTheDocument();
 
-  for (const pack of ['v1', 'v7'] as const) {
+  for (const [pack, appearance] of packs) {
     view.rerender(tree(pack));
-    await waitFor(() => expect(view.container.querySelector(`[data-widget-appearance="${PACK_APPEARANCES[pack]}"]`)).not.toBeNull());
+    await waitFor(() => expect(view.container.querySelector(`[data-widget-appearance="${appearance}"]`))
+      .toHaveAttribute('data-widget-family', 'line'));
     expect(screen.getByText('0.8')).toBeVisible();
+    expect(view.container.querySelector(`[data-widget-appearance="${appearance}"] .lucide-battery-warning`)).not.toBeNull();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   }
-  expect(view.container.querySelector('[data-widget-appearance="pixel"] .lucide-battery-warning')).not.toBeNull();
   view.rerender(tree('classic'));
   await waitFor(() => expect(view.container.querySelector('.recharts-bar')).not.toBeNull());
   expect(view.container.querySelector('[data-widget-family]')).toBeNull();
@@ -181,91 +182,93 @@ it('preserves Classic bars and recovers the original body after switching among 
   expect(mocks.refreshEvents).toHaveBeenCalledOnce();
 });
 
-it('does not trust an aggregate average with an empty measured population', async () => {
-  mocks.stats.mockReturnValue(query({ ...stats, event_count: 0 }));
-  const { container } = render(tree('v3'));
-  await waitFor(() => expect(container.querySelector('[data-widget-appearance="precision"]')).not.toBeNull());
-  expect(screen.getByText('Average unavailable')).toBeVisible();
-  expect(screen.queryByText('0.8')).not.toBeInTheDocument();
-  expect(screen.getByText(/Highest: 2.4%\/day on/)).toBeVisible();
-  expect(screen.getByRole('table', { name: 'Recent parked drain — data table' })).toBeInTheDocument();
-});
+describe.each(packs)('Vampire drain %s (%s) source and controller states', (pack, appearance) => {
+  it('does not trust an aggregate average with an empty measured population', async () => {
+    mocks.stats.mockReturnValue(query({ ...stats, event_count: 0 }));
+    const { container } = render(tree(pack));
+    await waitFor(() => expect(container.querySelector(`[data-widget-appearance="${appearance}"]`)).not.toBeNull());
+    expect(screen.getByText('Average unavailable')).toBeVisible();
+    expect(screen.queryByText('0.8')).not.toBeInTheDocument();
+    expect(screen.getByText(/Highest: 2.4%\/day on/)).toBeVisible();
+    expect(screen.getByRole('table', { name: 'Recent parked drain — data table' })).toBeInTheDocument();
+  });
 
-it('retains a genuinely measured zero rather than treating it as missing', async () => {
-  mocks.stats.mockReturnValue(query({ ...stats, avg_drain_pct_per_day: 0, event_count: 1 }));
-  const { container } = render(tree('v7', { cols: 1 }));
-  await waitFor(() => expect(container.querySelector('[data-widget-appearance="pixel"]')).not.toBeNull());
-  expect(screen.getByText('0.0')).toBeVisible();
-  expect(screen.getByText('%/day')).toBeVisible();
-  expect(screen.getByLabelText('Normal')).toBeVisible();
-  expect(screen.queryByText('Average unavailable')).not.toBeInTheDocument();
-});
+  it('retains a genuinely measured zero rather than treating it as missing', async () => {
+    mocks.stats.mockReturnValue(query({ ...stats, avg_drain_pct_per_day: 0, event_count: 1 }));
+    const { container } = render(tree(pack, { cols: 1 }));
+    await waitFor(() => expect(container.querySelector(`[data-widget-appearance="${appearance}"]`)).not.toBeNull());
+    expect(screen.getByText('0.0')).toBeVisible();
+    expect(screen.getByText('%/day')).toBeVisible();
+    expect(screen.getByLabelText('Normal')).toBeVisible();
+    expect(screen.queryByText('Average unavailable')).not.toBeInTheDocument();
+  });
 
-it('keeps other source sections usable when the aggregate fails its initial request', async () => {
-  mocks.stats.mockReturnValue(query(undefined, { isError: true, error: new Error('Statistics failed') }));
-  const { container } = render(tree('v4'));
-  await waitFor(() => expect(container.querySelector('[data-widget-appearance="owner"]')).not.toBeNull());
-  expect(container.querySelector('[data-data-state="partial"]')).not.toBeNull();
-  expect(screen.getByText('Average unavailable')).toBeVisible();
-  expect(screen.getByText(/Highest: 2.4%\/day on/)).toBeVisible();
-  expect(screen.getByRole('table', { name: 'Recent parked drain — data table' })).toBeInTheDocument();
-});
+  it('keeps other source sections usable when the aggregate fails its initial request', async () => {
+    mocks.stats.mockReturnValue(query(undefined, { isError: true, error: new Error('Statistics failed') }));
+    const { container } = render(tree(pack));
+    await waitFor(() => expect(container.querySelector(`[data-widget-appearance="${appearance}"]`)).not.toBeNull());
+    expect(container.querySelector('[data-data-state="partial"]')).not.toBeNull();
+    expect(screen.getByText('Average unavailable')).toBeVisible();
+    expect(screen.getByText(/Highest: 2.4%\/day on/)).toBeVisible();
+    expect(screen.getByRole('table', { name: 'Recent parked drain — data table' })).toBeInTheDocument();
+  });
 
-it('keeps the measured headline and retries only the parked-window source after its initial failure', async () => {
-  mocks.events.mockReturnValue(query(undefined, {
-    isError: true, error: new Error('Drain windows failed'), refetch: mocks.refreshEvents,
-  }));
-  const { container } = render(tree('v5'));
-  await waitFor(() => expect(container.querySelector('[data-widget-appearance="iconic"]')).not.toBeNull());
-  expect(screen.getByText('0.8')).toBeVisible();
-  expect(screen.getByText('Highest parked drain unavailable')).toBeVisible();
-  expect(screen.queryByText('No vampire drain data')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-  expect(mocks.refreshEvents).toHaveBeenCalledOnce();
-  expect(mocks.refreshStats).not.toHaveBeenCalled();
-  expect(mocks.refreshWatch).not.toHaveBeenCalled();
-});
+  it('keeps the measured headline and retries only the parked-window source after its initial failure', async () => {
+    mocks.events.mockReturnValue(query(undefined, {
+      isError: true, error: new Error('Drain windows failed'), refetch: mocks.refreshEvents,
+    }));
+    const { container } = render(tree(pack));
+    await waitFor(() => expect(container.querySelector(`[data-widget-appearance="${appearance}"]`)).not.toBeNull());
+    expect(screen.getByText('0.8')).toBeVisible();
+    expect(screen.getByText('Highest parked drain unavailable')).toBeVisible();
+    expect(screen.queryByText('No vampire drain data')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(mocks.refreshEvents).toHaveBeenCalledOnce();
+    expect(mocks.refreshStats).not.toHaveBeenCalled();
+    expect(mocks.refreshWatch).not.toHaveBeenCalled();
+  });
 
-it('shows initial loading without fabricated readings and then renders the resolved source', async () => {
-  const pending = { isPending: true, isLoading: true, isFetching: true, dataUpdatedAt: 0 };
-  mocks.stats.mockReturnValue(query(undefined, pending));
-  mocks.events.mockReturnValue(query(undefined, pending));
-  mocks.watch.mockReturnValue(query(undefined, pending));
-  const view = render(tree('v5'));
-  expect(view.container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
-  expect(screen.queryByText('0.8')).not.toBeInTheDocument();
-  expect(screen.queryByText('0.0')).not.toBeInTheDocument();
-  expect(screen.queryByText('No vampire drain data')).not.toBeInTheDocument();
-  mocks.stats.mockReturnValue(query(stats));
-  mocks.events.mockReturnValue(query(events));
-  mocks.watch.mockReturnValue(query(watch));
-  view.rerender(tree('v5'));
-  await waitFor(() => expect(view.container.querySelector('[data-widget-appearance="iconic"]')).not.toBeNull());
-  expect(screen.getByText('0.8')).toBeVisible();
-});
+  it('shows initial loading without fabricated readings and then renders the resolved source', async () => {
+    const pending = { isPending: true, isLoading: true, isFetching: true, dataUpdatedAt: 0 };
+    mocks.stats.mockReturnValue(query(undefined, pending));
+    mocks.events.mockReturnValue(query(undefined, pending));
+    mocks.watch.mockReturnValue(query(undefined, pending));
+    const view = render(tree(pack));
+    expect(view.container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('0.8')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+    expect(screen.queryByText('No vampire drain data')).not.toBeInTheDocument();
+    mocks.stats.mockReturnValue(query(stats));
+    mocks.events.mockReturnValue(query(events));
+    mocks.watch.mockReturnValue(query(watch));
+    view.rerender(tree(pack));
+    await waitFor(() => expect(view.container.querySelector(`[data-widget-appearance="${appearance}"]`)).not.toBeNull());
+    expect(screen.getByText('0.8')).toBeVisible();
+  });
 
-it('retains readings and the original source age warning when a background refresh fails', async () => {
-  mocks.stats.mockReturnValue(query(stats, {
-    isError: true, error: new Error('Refresh failed'), isStale: true,
-    dataUpdatedAt: Date.now() - 3_600_000, refetch: mocks.refreshStats,
-  }));
-  const { container } = render(tree('v2'));
-  await waitFor(() => expect(container.querySelector('[data-widget-appearance="elevated"]')).not.toBeNull());
-  expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
-  expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
-  expect(screen.getByText('0.8')).toBeVisible();
-  expect(screen.getByText(/Highest: 2.4%\/day on/)).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: /Refresh data.*error/ }));
-  expect(mocks.refreshStats).toHaveBeenCalledOnce();
-});
+  it('retains readings and the original source age warning when a background refresh fails', async () => {
+    mocks.stats.mockReturnValue(query(stats, {
+      isError: true, error: new Error('Refresh failed'), isStale: true,
+      dataUpdatedAt: Date.now() - 3_600_000, refetch: mocks.refreshStats,
+    }));
+    const { container } = render(tree(pack));
+    await waitFor(() => expect(container.querySelector(`[data-widget-appearance="${appearance}"]`)).not.toBeNull());
+    expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
+    expect(screen.getByText('0.8')).toBeVisible();
+    expect(screen.getByText(/Highest: 2.4%\/day on/)).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data.*error/ }));
+    expect(mocks.refreshStats).toHaveBeenCalledOnce();
+  });
 
-it('keeps refresh disabled while its existing source queries are in flight', async () => {
-  mocks.events.mockReturnValue(query(events, { isFetching: true, refetch: mocks.refreshEvents }));
-  const { container } = render(tree('v6'));
-  await waitFor(() => expect(container.querySelector('[data-widget-appearance="expressive"]')).not.toBeNull());
-  expect(screen.getByText('0.8')).toBeVisible();
-  const refresh = screen.getByRole('button', { name: /Refresh data/ });
-  expect(refresh).toBeDisabled();
-  fireEvent.click(refresh);
-  expect(mocks.refreshEvents).not.toHaveBeenCalled();
+  it('keeps refresh disabled while its existing source queries are in flight', async () => {
+    mocks.events.mockReturnValue(query(events, { isFetching: true, refetch: mocks.refreshEvents }));
+    const { container } = render(tree(pack));
+    await waitFor(() => expect(container.querySelector(`[data-widget-appearance="${appearance}"]`)).not.toBeNull());
+    expect(screen.getByText('0.8')).toBeVisible();
+    const refresh = screen.getByRole('button', { name: /Refresh data/ });
+    expect(refresh).toBeDisabled();
+    fireEvent.click(refresh);
+    expect(mocks.refreshEvents).not.toHaveBeenCalled();
+  });
 });

@@ -11,6 +11,8 @@ import ChargingSessionDetailWidget from './ChargingSessionDetailWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
 import { PACK_APPEARANCES, type PackId } from './designPacks/types';
 
+const presentationPackIds = Object.keys(PACK_APPEARANCES) as Exclude<PackId, 'classic'>[];
+
 const mocks = vi.hoisted(() => ({
   sessions: vi.fn(),
   detail: vi.fn(),
@@ -159,7 +161,7 @@ afterEach(() => {
   setGlobalPrecision(2);
 });
 
-describe.each(Object.keys(PACK_APPEARANCES) as Exclude<PackId, 'classic'>[])('charging-session-detail %s', packId => {
+describe.each(presentationPackIds)('charging-session-detail %s', packId => {
   it('retains the real dual-axis plot, every sample and summary, selected vehicle and refresh action', async () => {
     const { container } = await mount(packId);
     expect(container.querySelector('[data-role="widget-header-title"]')).toHaveAccessibleName('Charge session detail');
@@ -226,6 +228,31 @@ describe.each(Object.keys(PACK_APPEARANCES) as Exclude<PackId, 'classic'>[])('ch
       .toEqual([sampleTimes[2], '—', '72']);
   });
 
+  it('keeps invalid measurements unknown without replacing them with zero', async () => {
+    mocks.detail.mockReturnValue(query({
+      ...detail,
+      total_energy_added_wh: Number.NaN,
+      duration_s: -60,
+      peak_power_w: Number.POSITIVE_INFINITY,
+      charger_type: '<invalid>',
+    }, mocks.retryDetail));
+    mocks.telemetry.mockReturnValue(query([
+      reading(detail.started_at, Number.POSITIVE_INFINITY, Number.NaN),
+      reading(detail.ended_at!, Number.NaN, Number.NEGATIVE_INFINITY),
+    ], mocks.retryTelemetry));
+    await mount(packId);
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText('Last sampled power').closest('.widget-big-number')).toHaveTextContent('—');
+    for (const label of ['Energy added', 'Duration', 'Peak power']) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    expect(screen.getAllByText('—')).toHaveLength(8);
+    const rows = within(sourceTable()).getAllByRole('row').slice(1);
+    expect(rows.map(row => within(row).getAllByRole('cell').slice(1).map(cell => cell.textContent)))
+      .toEqual([['—', '—'], ['—', '—']]);
+    expect(screen.queryByText(/NaN|Infinity/)).not.toBeInTheDocument();
+  });
+
   it('keeps the telemetry and summary shells visible for an empty session list', async () => {
     mocks.sessions.mockReturnValue(query([], mocks.retrySessions));
     mocks.detail.mockReturnValue(query<ApiChargingSession>(undefined, mocks.retryDetail));
@@ -253,13 +280,13 @@ it.each(['classic', 'unrecognized-pack'])('preserves the original layout for %s'
   expect(within(sourceTable()).getAllByRole('row')).toHaveLength(4);
 });
 
-it('retains the legend selection across packs without refetching source data', async () => {
+it.each(presentationPackIds)('retains the legend selection when switching to %s without refetching source data', async packId => {
   const view = await mount('v1');
   const legend = await screen.findByRole('button', { name: 'SOC %' });
   fireEvent.click(legend);
   expect(screen.getByRole('button', { name: 'SOC %' })).toHaveAttribute('aria-pressed', 'true');
-  view.rerender(widget('v7'));
-  await waitFor(() => expect(view.container.querySelector('[data-widget-appearance="pixel"]')).toBeInTheDocument());
+  view.rerender(widget(packId));
+  await waitFor(() => expect(view.container.querySelector(`[data-widget-appearance="${PACK_APPEARANCES[packId]}"]`)).toBeInTheDocument());
   expect(screen.getByRole('button', { name: 'SOC %' })).toHaveAttribute('aria-pressed', 'true');
   expect(within(sourceTable()).getAllByRole('row')).toHaveLength(4);
   fireEvent.click(screen.getByRole('button', { name: 'SOC %' }));
@@ -269,13 +296,13 @@ it('retains the legend selection across packs without refetching source data', a
   expect(mocks.retryTelemetry).not.toHaveBeenCalled();
 });
 
-it('preserves signed and measured-zero readings during a failed background refresh', async () => {
+it.each(presentationPackIds)('%s preserves signed and measured-zero readings during a failed background refresh', async packId => {
   mocks.detail.mockReturnValue(query({ ...detail, total_energy_added_wh: 0 }, mocks.retryDetail));
   mocks.telemetry.mockReturnValue(query([
     reading(detail.started_at, -2_000, 30),
     reading(detail.ended_at!, 0, 72),
   ], mocks.retryTelemetry, { error: new Error('Refresh failed'), isError: true }));
-  await mount('v6');
+  await mount(packId);
   expect(screen.getAllByTestId('stale-refresh-warning').length).toBeGreaterThan(0);
   expect(screen.getByText('Previously loaded charging telemetry remains visible while it refreshes.')).toBeInTheDocument();
   const rows = within(sourceTable()).getAllByRole('row').slice(1);
@@ -284,17 +311,17 @@ it('preserves signed and measured-zero readings during a failed background refre
   expect(screen.queryByText('Charging telemetry could not be loaded.')).not.toBeInTheDocument();
 });
 
-it('keeps ready summary data while telemetry loads or fails and retries only the failed source', async () => {
+it.each(presentationPackIds)('%s keeps ready summary data while telemetry loads or fails and retries only the failed source', async packId => {
   mocks.telemetry.mockReturnValue(query<ChargeTelemetryReading[]>(undefined, mocks.retryTelemetry, {
     isLoading: true,
   }));
-  const view = await mount('v2');
+  const view = await mount(packId);
   expect(screen.getByRole('status', { name: 'Loading Charging telemetry' })).toBeInTheDocument();
   expect(screen.getByText('42.0')).toBeInTheDocument();
   mocks.telemetry.mockReturnValue(query<ChargeTelemetryReading[]>(undefined, mocks.retryTelemetry, {
     error: new Error('Source unavailable'), isError: true,
   }));
-  view.rerender(widget('v2'));
+  view.rerender(widget(packId));
   expect(screen.getByText('Charging telemetry could not be loaded.')).toBeInTheDocument();
   expect(screen.getByText('42.0')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /retry/i }));
@@ -303,9 +330,9 @@ it('keeps ready summary data while telemetry loads or fails and retries only the
   expect(mocks.retrySessions).not.toHaveBeenCalled();
 });
 
-it('does not allow a refresh to duplicate an in-flight request', async () => {
+it.each(presentationPackIds)('%s does not allow a refresh to duplicate an in-flight request', async packId => {
   mocks.detail.mockReturnValue(query(detail, mocks.retryDetail, { isFetching: true }));
-  await mount('v3');
+  await mount(packId);
   const refresh = screen.getByRole('button', { name: /^Refresh data/ });
   expect(refresh).toBeDisabled();
   fireEvent.click(refresh);

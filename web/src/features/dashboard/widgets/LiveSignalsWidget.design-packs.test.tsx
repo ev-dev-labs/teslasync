@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { VehicleLiveSignalsResponse } from '@/api/hooks/useTelemetry';
 import type { SignalHistoryResponse } from '@/types/telemetry';
 import { PackBoundary } from './designPacks/PackBoundary';
-import type { PackId } from './designPacks/types';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 import LiveSignalsWidget from './LiveSignalsWidget';
 
 const { requestMock } = vi.hoisted(() => ({
@@ -36,10 +36,9 @@ vi.mock('@/hooks/useDateFormat', () => ({
 const NOW = Date.parse('2026-11-07T02:00:00Z');
 const OBSERVED = '2026-11-07T01:59:50Z';
 const NAMES = ['BatteryLevel', 'ACChargingPower', 'InsideTemp', 'OutsideTemp', 'RatedRange'] as const;
-const PACKS = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const PACKS = PACK_IDS
+  .filter((pack): pack is Exclude<PackId, 'classic'> => pack !== 'classic')
+  .map((pack) => [pack, PACK_APPEARANCES[pack]] as const);
 const VALUES = [64, 7000, 22.2, 23, 275000];
 let live: VehicleLiveSignalsResponse;
 let historiesEmpty: boolean;
@@ -145,7 +144,7 @@ describe('LiveSignalsWidget design packs', () => {
     expect(requestMock.mock.calls.filter(([path]) => path === '/signals/7/InsideTemp/history?hours=1')).toHaveLength(2);
   });
 
-  it('switches all seven packs, compact/full and Classic without adding source requests', async () => {
+  it('switches every pack, compact/full and Classic without adding source requests', async () => {
     const view = render(tree('classic'));
     await screen.findByText('64 %');
     await settled();
@@ -165,9 +164,9 @@ describe('LiveSignalsWidget design packs', () => {
     await settled();
   });
 
-  it('keeps irregular history spacing and explicit gaps without changing the Classic renderer', async () => {
-    const view = render(tree('v7'));
-    await presentation(view.container, 'pixel');
+  it.each(PACKS)('%s keeps irregular history spacing and explicit gaps without changing the Classic renderer', async (pack, appearance) => {
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     const original = history('BatteryLevel');
     const samples = [
       [0, 0], [10, 10], [20, null], [90, 90], [100, 100],
@@ -206,7 +205,7 @@ describe('LiveSignalsWidget design packs', () => {
     }
   });
 
-  it('distinguishes real zero, stale observations, invalid values and timestamp-free legacy values', async () => {
+  it.each(PACKS)('%s distinguishes real zero, stale observations, invalid values and timestamp-free legacy values', async (pack, appearance) => {
     live = { signals: {
       BatteryLevel: { value: 0, timestamp: OBSERVED, source: 'l1' },
       ACChargingPower: { value: -7000, timestamp: '2026-11-07T01:00:00Z', source: 'stale' },
@@ -214,8 +213,8 @@ describe('LiveSignalsWidget design packs', () => {
       OutsideTemp: 23,
       RatedRange: { value: 275000, timestamp: 'not-an-instant' },
     } };
-    const view = render(tree('v7'));
-    await presentation(view.container, 'pixel');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expect(signalRow('BatteryLevel').getByText('0 %')).toBeInTheDocument();
     expect(signalRow('BatteryLevel').getByText('Fresh observation')).toBeInTheDocument();
     expect(signalRow('ACChargingPower').getByText('-7.0 kW')).toBeInTheDocument();
@@ -226,17 +225,19 @@ describe('LiveSignalsWidget design packs', () => {
     }
   });
 
-  it.each([['BatteryLevel', 101], ['RatedRange', -1]] as const)('does not present an invalid %s as a fresh measurement', async (name, value) => {
-    live = { signals: { [name]: { value, timestamp: OBSERVED, source: 'l1' } } };
-    const view = render(tree('v1'));
-    await presentation(view.container, 'studio');
-    expect(signalRow(name).getByText('—')).toBeInTheDocument();
-    expect(signalRow(name).getByText('Unknown observation')).toBeInTheDocument();
+  describe.each(PACKS)('%s domain-invalid measurements', (pack, appearance) => {
+    it.each([['BatteryLevel', 101], ['RatedRange', -1]] as const)('does not present an invalid %s as a fresh measurement', async (name, value) => {
+      live = { signals: { [name]: { value, timestamp: OBSERVED, source: 'l1' } } };
+      const view = render(tree(pack));
+      await presentation(view.container, appearance);
+      expect(signalRow(name).getByText('—')).toBeInTheDocument();
+      expect(signalRow(name).getByText('Unknown observation')).toBeInTheDocument();
+    });
   });
 
-  it('retains all readings and trends on failed background refresh and retries the affected sources', async () => {
-    const view = render(tree('v4'));
-    await presentation(view.container, 'owner');
+  it.each(PACKS)('%s retains all readings and trends on failed background refresh and retries the affected sources', async (pack, appearance) => {
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     failLive = true;
     failHistory = 'BatteryLevel';
     fireEvent.click(screen.getByRole('button', { name: /^Refresh data/ }));
@@ -244,6 +245,7 @@ describe('LiveSignalsWidget design packs', () => {
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.getByText('64 %')).toBeInTheDocument();
     expect(screen.getAllByRole('img', { name: /trend$/ })).toHaveLength(5);
+    expect(signalRow('BatteryLevel').getByText('Retained observation')).toBeInTheDocument();
     failLive = false;
     failHistory = null;
     fireEvent.click(screen.getByRole('button', { name: /^Refresh data/ }));
@@ -251,10 +253,10 @@ describe('LiveSignalsWidget design packs', () => {
     await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
   });
 
-  it('preserves independent histories when the initial live snapshot fails', async () => {
+  it.each(PACKS)('%s preserves independent histories when the initial live snapshot fails', async (pack, appearance) => {
     failLive = true;
-    const view = render(tree('v3'));
-    await presentation(view.container, 'precision');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expect(screen.getAllByRole('listitem')).toHaveLength(5);
     expect(screen.getAllByRole('img', { name: /trend$/ })).toHaveLength(5);
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
@@ -262,15 +264,48 @@ describe('LiveSignalsWidget design packs', () => {
     expect(screen.queryByText('64 %')).not.toBeInTheDocument();
   });
 
-  it('shows a per-signal initial history error without erasing the other four trends', async () => {
+  it.each(PACKS)('%s shows a per-signal initial history error without erasing the other four trends', async (pack, appearance) => {
     failHistory = 'BatteryLevel';
-    const view = render(tree('v2'));
-    await presentation(view.container, 'elevated');
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
     expect(screen.getByText('Trend unavailable')).toBeInTheDocument();
     expect(screen.getAllByRole('img', { name: /trend$/ })).toHaveLength(4);
     expect(screen.getByText('64 %')).toBeInTheDocument();
     failHistory = null;
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /^Refresh data/ })); });
     await screen.findByRole('img', { name: 'BatteryLevel trend' });
+  });
+
+  it.each(PACKS)('%s preserves initial loading and independently pending history without inventing readings', async (pack, appearance) => {
+    let resolveLive!: (value: VehicleLiveSignalsResponse) => void;
+    let resolveHistory!: (value: SignalHistoryResponse) => void;
+    const pendingLive = new Promise<VehicleLiveSignalsResponse>((resolve) => { resolveLive = resolve; });
+    const pendingHistory = new Promise<SignalHistoryResponse>((resolve) => { resolveHistory = resolve; });
+    const originalRequest = requestMock.getMockImplementation();
+    requestMock.mockImplementation((path) => {
+      if (path === '/signals/7/live') return pendingLive;
+      if (path === '/signals/7/BatteryLevel/history?hours=1') return pendingHistory;
+      if (!originalRequest) throw new Error('Missing API mock');
+      return originalRequest(path);
+    });
+
+    const view = render(tree(pack));
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'initial');
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('64 %')).not.toBeInTheDocument();
+    expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
+
+    await act(async () => { resolveLive(live); });
+    await waitFor(() => expect(view.container.querySelector('[data-widget-family="list"]'))
+      .toHaveAttribute('data-widget-appearance', appearance));
+    expect(signalRow('BatteryLevel').getByText('64 %')).toBeInTheDocument();
+    expect(signalRow('BatteryLevel').getByText('Loading trend')).toBeInTheDocument();
+    expect(signalRow('BatteryLevel').queryByRole('img', { name: 'BatteryLevel trend' })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByRole('img', { name: /trend$/ })).toHaveLength(4));
+
+    await act(async () => { resolveHistory(history('BatteryLevel')); });
+    await settled();
+    await screen.findByRole('img', { name: 'BatteryLevel trend' });
+    expect(screen.queryByText('Loading trend')).not.toBeInTheDocument();
   });
 });

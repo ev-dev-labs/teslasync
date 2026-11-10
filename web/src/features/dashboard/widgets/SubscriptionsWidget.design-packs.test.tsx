@@ -243,15 +243,15 @@ it('keeps the original compact Classic body as the recovery for an unknown pack'
   expect(screen.queryByText('Premium Connectivity')).not.toBeInTheDocument();
 });
 
-it('only displays an actual renewal date, keeps a zero price, and summarizes real inactive subscriptions', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s only displays an actual renewal date, keeps a zero price, and summarizes real inactive subscriptions', async (packId, appearance) => {
   subscriptionsMock.mockReturnValue(queryResult({
     subscriptions: [
       { name: 'Free service', status: 'active', price: 0, billing_period: 'month' },
       { name: 'Invalid expiry', status: 'expired', expiry_date: 'not-a-date' },
     ],
   }));
-  const view = render(widget('v3'));
-  await expectPresentation(view.container, 'precision');
+  const view = render(widget(packId));
+  await expectPresentation(view.container, appearance);
   expect(screen.getByText('$0.00')).toBeVisible();
   expect(screen.getByText('$0.00 / month')).toBeVisible();
   expect(screen.queryByText(/^date:/)).not.toBeInTheDocument();
@@ -260,21 +260,21 @@ it('only displays an actual renewal date, keeps a zero price, and summarizes rea
   subscriptionsMock.mockReturnValue(queryResult({
     subscriptions: [{ name: 'Expired service', status: 'expired', expiry_date: PAST_EXPIRY }],
   }));
-  view.rerender(widget('v3'));
+  view.rerender(widget(packId));
   expect(screen.getByText('0')).toBeVisible();
   expect(screen.getByText('0 active')).toBeVisible();
   expect(screen.getByText('Expired')).toBeVisible();
 });
 
-it('retains the selected vehicle, source warning and complete list after a refresh failure', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s retains the selected vehicle, source warning and complete list after a refresh failure', async (packId, appearance) => {
   subscriptionsMock.mockReturnValue({
     ...queryResult(),
     isError: true,
     isStale: true,
     error: new Error('Subscription refresh failed'),
   });
-  const { container } = render(widget('v4', FULL, 19));
-  await expectPresentation(container, 'owner');
+  const { container } = render(widget(packId, FULL, 19));
+  await expectPresentation(container, appearance);
   expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
   expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
   expectSubscriptionList();
@@ -283,10 +283,10 @@ it('retains the selected vehicle, source warning and complete list after a refre
   expect(refetchSubscriptions).toHaveBeenCalledOnce();
 });
 
-it('retains the list and blocks repeated refresh while a request is in flight', async () => {
+it.each(Object.entries(PACK_APPEARANCES))('%s retains the list and blocks repeated refresh while a request is in flight', async (packId, appearance) => {
   subscriptionsMock.mockReturnValue({ ...queryResult(), isFetching: true });
-  const { container } = render(widget('v6'));
-  await expectPresentation(container, 'expressive');
+  const { container } = render(widget(packId));
+  await expectPresentation(container, appearance);
   expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
   expectSubscriptionList();
   const refresh = screen.getByRole('button', { name: /^Refresh/i });
@@ -295,11 +295,11 @@ it('retains the list and blocks repeated refresh while a request is in flight', 
   expect(refetchSubscriptions).not.toHaveBeenCalled();
 });
 
-it('keeps the source shell visible during loading and exposes retry instead of an empty success on fatal failure', async () => {
+it.each(Object.keys(PACK_APPEARANCES))('%s keeps the source shell visible during loading and exposes retry instead of an empty success on fatal failure', async (packId) => {
   subscriptionsMock.mockReturnValue({
     ...queryResult(), data: undefined, dataUpdatedAt: 0, isLoading: true, isFetching: true,
   });
-  const view = render(widget('v2'));
+  const view = render(widget(packId));
   expect(view.container.querySelector('[aria-busy="true"]')).not.toBeNull();
   expect(screen.getByRole('heading', { name: 'Subscriptions', level: 3 })).toBeVisible();
   expect(screen.queryByText('No subscriptions')).not.toBeInTheDocument();
@@ -308,7 +308,7 @@ it('keeps the source shell visible during loading and exposes retry instead of a
   subscriptionsMock.mockReturnValue({
     ...queryResult(), data: undefined, dataUpdatedAt: 0, isError: true, error: new Error('Subscriptions unavailable'),
   });
-  view.rerender(widget('v2'));
+  view.rerender(widget(packId));
   const error = await screen.findByRole('alert');
   expect(within(error).getByText("Can't reach server")).toBeVisible();
   expect(screen.queryByText('No subscriptions')).not.toBeInTheDocument();
@@ -316,7 +316,7 @@ it('keeps the source shell visible during loading and exposes retry instead of a
   expect(refetchSubscriptions).toHaveBeenCalledOnce();
 });
 
-it('retries vehicle discovery rather than a disabled subscription request when the vehicle source fails', () => {
+it.each(Object.keys(PACK_APPEARANCES))('%s retries vehicle discovery rather than a disabled subscription request when the vehicle source fails', (packId) => {
   vehiclesMock.mockReturnValue({
     data: undefined,
     isError: true,
@@ -325,7 +325,7 @@ it('retries vehicle discovery rather than a disabled subscription request when t
     refetch: refetchVehicles,
   });
   subscriptionsMock.mockReturnValue({ ...queryResult(), data: undefined, dataUpdatedAt: 0 });
-  render(widget('v7'));
+  render(widget(packId));
   expect(subscriptionsMock).toHaveBeenCalledWith(undefined);
   fireEvent.click(screen.getByRole('button', { name: /retry|try again/i }));
   expect(refetchVehicles).toHaveBeenCalledOnce();

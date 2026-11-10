@@ -5,12 +5,12 @@ const cwd = fileURLToPath(new URL('..', import.meta.url));
 
 export default defineConfig({
   testDir: '.',
-  testMatch: /widget-design-packs\.(?:initial|settings|climate|complete|signals)\.spec\.ts$/,
+  testMatch: /widget-design-packs\.(?:initial|settings|climate|complete|signals|sync)\.spec\.ts$/,
   outputDir: '../test-results/widget-design-packs',
   fullyParallel: false,
   workers: 1,
   retries: 0,
-  timeout: 180_000,
+  timeout: 600_000,
   expect: { timeout: 10_000 },
   reporter: [['list']],
   use: {

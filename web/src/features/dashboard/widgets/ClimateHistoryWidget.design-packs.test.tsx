@@ -204,7 +204,7 @@ describe.each(packs)('climate history %s (%s)', (packId, appearance) => {
   });
 });
 
-it('preserves Classic and changes all seven presentations without a second data acquisition', async () => {
+it('preserves Classic and changes every pack presentation without a second data acquisition', async () => {
   const view = renderPack('classic');
   await screen.findByTestId('climate-history-plot');
   expect(view.container.querySelector('[data-widget-family]')).toBeNull();
@@ -237,11 +237,58 @@ it('retains source readings and the last chart on a failed refresh, including a 
   expect(screen.getByTestId('climate-history-plot')).toBeInTheDocument();
   expect(plot.data).toEqual(expectedSamples);
 
-  view.selectPack('v7');
-  await expectAppearance(view.container, 'pixel');
-  expect(screen.getByText('21.0')).toBeInTheDocument();
-  expect(screen.getByTestId('climate-history-plot')).toBeInTheDocument();
-  expect(mockedRequest).toHaveBeenCalledTimes(2);
+  for (const [packId, appearance] of packs) {
+    view.selectPack(packId);
+    await expectAppearance(view.container, appearance);
+    expect(view.container.querySelector('[data-data-state="stale"]')).not.toBeNull();
+    expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+    expect(screen.getByText('21.0')).toBeInTheDocument();
+    expect(screen.getByTestId('climate-history-plot')).toBeInTheDocument();
+    expect(plot.data).toEqual(expectedSamples);
+    expect(mockedRequest).toHaveBeenCalledTimes(2);
+  }
+});
+
+it('preserves loading and initial failure across pack changes and recovers through the same refresh action', async () => {
+  let rejectInitial: (error: Error) => void = () => undefined;
+  mockedRequest.mockReturnValueOnce(new Promise<ClimateState[]>((_resolve, reject) => {
+    rejectInitial = reject;
+  }));
+  const view = renderPack('classic');
+
+  for (const [packId] of packs) {
+    view.selectPack(packId);
+    expect(view.container.querySelector(
+      `[data-widget-pack="${packId}"][data-data-state="initial"][aria-busy="true"]`,
+    )).not.toBeNull();
+    expect(view.container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    expect(screen.queryByTestId('climate-history-plot')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+  }
+
+  rejectInitial(new Error('History unavailable'));
+  await screen.findByText("Can't reach server");
+  for (const [packId] of packs) {
+    view.selectPack(packId);
+    expect(view.container.querySelector(
+      `[data-widget-pack="${packId}"][data-data-state="initialFailure"]`,
+    )).not.toBeNull();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByTestId('climate-history-plot')).not.toBeInTheDocument();
+    expect(screen.queryByText('No climate history')).not.toBeInTheDocument();
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+  }
+
+  fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+  await screen.findByTestId('climate-history-plot');
+  for (const [packId, appearance] of packs) {
+    view.selectPack(packId);
+    await expectAppearance(view.container, appearance);
+    expect(screen.getByText('21.0')).toBeInTheDocument();
+    expect(view.container.querySelector('[data-data-state="partial"]')).not.toBeNull();
+    expect(mockedRequest).toHaveBeenCalledTimes(2);
+  }
 });
 
 it('does not convert invalid temperatures into a successful cabin reading or bridge their plot gaps', async () => {
@@ -249,17 +296,23 @@ it('does not convert invalid temperatures into a successful cabin reading or bri
     { created_at: '2026-07-01T00:00:00Z', insideTemp: Number.NaN, outsideTemp: null },
     { created_at: '2026-07-01T01:00:00Z', insideTemp: null, outsideTemp: Number.POSITIVE_INFINITY },
   ] satisfies ClimateState[]);
-  const { container } = renderPack('v7');
-  await expectAppearance(container, 'pixel');
-  expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3);
-  expect(screen.queryByText('0.0')).not.toBeInTheDocument();
-  expect(screen.queryByText('+0.0')).not.toBeInTheDocument();
-  expect(plot.data).toEqual([
-    { time: '2026-07-01T00:00:00Z', inside: null, outside: null },
-    { time: '2026-07-01T01:00:00Z', inside: null, outside: null },
-  ]);
-  expect(container.querySelector('[data-data-state="partial"]')).not.toBeNull();
-  expect(screen.getByTestId('climate-history-plot')).toBeInTheDocument();
+  const view = renderPack('classic');
+  await screen.findByTestId('climate-history-plot');
+  for (const [packId, appearance] of packs) {
+    view.selectPack(packId);
+    await expectAppearance(view.container, appearance);
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3);
+    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+    expect(screen.queryByText('+0.0')).not.toBeInTheDocument();
+    expect(plot.data).toEqual([
+      { time: '2026-07-01T00:00:00Z', inside: null, outside: null },
+      { time: '2026-07-01T01:00:00Z', inside: null, outside: null },
+    ]);
+    expect(view.container.querySelector('[data-data-state="partial"]')).not.toBeNull();
+    expect(screen.getByTestId('climate-history-plot')).toBeInTheDocument();
+    expect(plot.lines.inside.connectNulls).toBe(false);
+    expect(plot.lines.outside.connectNulls).toBe(false);
+  }
 });
 
 it.each([
@@ -272,22 +325,31 @@ it.each([
     { created_at: '2026-07-01T00:00:00Z', insideTemp: first, outsideTemp: null },
     { created_at: '2026-07-01T01:00:00Z', insideTemp: last, outsideTemp: null },
   ] satisfies ClimateState[]);
-  const { container } = renderPack('v3');
-  await expectAppearance(container, 'precision');
-  expect(screen.getAllByText(headline).length).toBeGreaterThan(0);
-  expect(screen.getAllByText(change).length).toBeGreaterThan(0);
-  expect(screen.getByRole('columnheader', { name: `Cabin (${temperature})` })).toBeInTheDocument();
-  expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+  const view = renderPack('classic');
+  await screen.findByTestId('climate-history-plot');
+  for (const [packId, appearance] of packs) {
+    view.selectPack(packId);
+    await expectAppearance(view.container, appearance);
+    expect(screen.getAllByText(headline).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(change).length).toBeGreaterThan(0);
+    expect(screen.getByRole('columnheader', { name: `Cabin (${temperature})` })).toBeInTheDocument();
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+  }
 });
 
 it('does not infer a cabin change from a single known temperature', async () => {
   mockedRequest.mockResolvedValue([samples[0]]);
-  const { container } = renderPack('v2');
-  await expectAppearance(container, 'elevated');
-  expect(screen.getByText('21.0')).toBeInTheDocument();
-  expect(screen.getByText('Cabin change')).toBeInTheDocument();
-  expect(screen.getByText('—')).toBeInTheDocument();
-  expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+  const view = renderPack('classic');
+  await screen.findByTestId('climate-history-plot');
+  for (const [packId, appearance] of packs) {
+    view.selectPack(packId);
+    await expectAppearance(view.container, appearance);
+    expect(screen.getByText('21.0')).toBeInTheDocument();
+    expect(screen.getByText('Cabin change')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+  }
 });
 
 it('keeps the existing URL-owned series visibility when the appearance changes', async () => {
@@ -295,9 +357,12 @@ it('keeps the existing URL-owned series visibility when the appearance changes',
   await expectAppearance(view.container, 'iconic');
   expect(plot.lines.inside.hide).toBe(false);
   expect(plot.lines.outside.hide).toBe(true);
-  view.selectPack('v6');
-  await expectAppearance(view.container, 'expressive');
-  expect(plot.lines.outside.hide).toBe(true);
-  expect(plot.data).toEqual(expectedSamples);
-  expect(mockedRequest).toHaveBeenCalledTimes(1);
+  for (const [packId, appearance] of packs) {
+    view.selectPack(packId);
+    await expectAppearance(view.container, appearance);
+    expect(plot.lines.inside.hide).toBe(false);
+    expect(plot.lines.outside.hide).toBe(true);
+    expect(plot.data).toEqual(expectedSamples);
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+  }
 });

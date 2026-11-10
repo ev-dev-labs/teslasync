@@ -536,3 +536,18 @@ migrations:
     irreversible_justification: Explicit down loses captured vehicle identities that cannot always be reconstructed from retained messages or current rule scope.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-05"
+
+  - version: 257
+    name: widget_design_preferences
+    forward_compatible: true
+    forward_compatibility_notes: Additive isolated table; previous binaries ignore personal widget design preferences.
+    rollback_notes: Leave applied on application rollback. Explicit down drops saved selections; export this table separately before dropping it if retention is required.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: none
+    lock_details: Creates a new empty table and primary key index only; no existing table locks.
+    reversible: false
+    irreversible_justification: Explicit down loses personal widget selections. No browser cache is migrated or used to reconstruct them.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-09"

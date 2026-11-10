@@ -2,8 +2,10 @@ import { MetricBar, SegmentedMeter } from '@/components/data-display';
 import { cn } from '@/lib/cn';
 import type { PackAppearance } from '../types';
 import type { InstrumentPresentationProps } from './Instrument.types';
+import { EXPERIMENTAL_LAYOUTS, experimentalLayouts, isExperimentalAppearance } from '../experimentalLayouts';
 
 const layouts: Record<PackAppearance, { body: string; lead: string; details: string }> = {
+  ...experimentalLayouts(({ body, lead, details }) => ({ body, lead, details })),
   studio: {
     body: 'grid items-center gap-3 @md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]',
     lead: 'flex min-w-0 items-center justify-center gap-3',
@@ -45,12 +47,16 @@ export default function InstrumentLayout({
   appearance, family, compact, headline, reading, icon, context, instrument, details,
 }: InstrumentPresentationProps) {
   const layout = layouts[appearance];
+  const experiment = isExperimentalAppearance(appearance) ? EXPERIMENTAL_LAYOUTS[appearance] : null;
+  const segmented = appearance === 'pixel' || experiment?.segmented;
   const validScale = reading != null && Number.isFinite(reading.max) && reading.max > 0;
   const ratio = validScale && reading.value != null && Number.isFinite(reading.value)
     ? Math.max(0, Math.min(1, reading.value / reading.max))
     : null;
-  const radial = family === 'ring' && reading?.value != null && Number.isFinite(reading.value)
-    && (appearance === 'studio' || appearance === 'iconic');
+  const radial = (family === 'ring' || (family === 'meter' && experiment?.radial))
+    && reading?.value != null && Number.isFinite(reading.value)
+    && (appearance === 'studio' || appearance === 'iconic' || experiment?.radial);
+  const needleAngle = ratio != null ? (ratio * 270 - 225) * Math.PI / 180 : null;
   const hasLead = headline != null || icon != null;
   const lead = hasLead ? (
     <div key="lead" className={layout.lead}>
@@ -62,7 +68,16 @@ export default function InstrumentLayout({
       <div className={cn('relative min-w-0', radial && 'flex size-32 shrink-0 items-center justify-center p-4')}>
         {radial && <svg viewBox="0 0 100 100" className="absolute inset-0 size-full -rotate-90" aria-hidden="true">
           <circle cx="50" cy="50" r="45" fill="none" stroke="var(--border-subtle)" strokeWidth="5" />
-          {ratio != null && <circle cx="50" cy="50" r="45" fill="none"
+          {appearance === 'analog' && Array.from({ length: 11 }, (_, tick) => {
+            const angle = (tick * 27 - 225) * Math.PI / 180;
+            return <line key={tick} x1={50 + 38 * Math.cos(angle)} y1={50 + 38 * Math.sin(angle)}
+              x2={50 + 43 * Math.cos(angle)} y2={50 + 43 * Math.sin(angle)}
+              stroke="var(--text-secondary)" strokeWidth="1" />;
+          })}
+          {appearance === 'analog' && needleAngle != null && <line
+            x1="50" y1="50" x2={50 + 35 * Math.cos(needleAngle)} y2={50 + 35 * Math.sin(needleAngle)}
+            stroke={reading?.color ?? 'var(--theme-primary)'} strokeWidth="2" />}
+          {ratio != null && appearance !== 'analog' && <circle cx="50" cy="50" r="45" fill="none"
             stroke={reading?.color ?? 'var(--theme-primary)'} strokeWidth={appearance === 'iconic' ? 8 : 5}
             pathLength="100" strokeDasharray={`${ratio * 100} 100`} />}
         </svg>}
@@ -71,23 +86,28 @@ export default function InstrumentLayout({
     </div>
   ) : null;
   const facts = details && <div key="details" className={layout.details}>{details}</div>;
+  const visual = (instrument || (validScale && (segmented || !radial))) && (
+    <div key="instrument" className={cn(
+      'min-w-0 space-y-3', experiment?.visual,
+      !compact && ['studio', 'iconic'].includes(appearance) && '@md:col-span-2',
+    )}>
+      {validScale && segmented && <SegmentedMeter value={reading.value} max={reading.max} color={reading.color} label={reading.label} />}
+      {validScale && !instrument && !radial && !segmented && <MetricBar
+        value={reading.value} max={reading.max} ariaLabel={reading.label}
+        color={reading.color ?? 'var(--theme-primary)'} fill="solid" showHeader={false}
+        size={appearance === 'precision' || appearance === 'quiet' ? 'slim' : 'default'} />}
+      {instrument}
+    </div>
+  );
+  const slots = { lead, visual, details: facts };
+  const order = experiment?.order ?? (appearance === 'owner'
+    ? ['details', 'lead', 'visual'] as const
+    : ['lead', 'visual', 'details'] as const);
   return (
     <div data-widget-family={family} data-widget-appearance={appearance} data-instrument-family={family} data-instrument-appearance={appearance} className="flex h-full min-w-0 flex-col gap-3">
       {context}
       <div className={cn('min-w-0', compact || !hasLead ? 'flex flex-col gap-3' : layout.body)}>
-        {appearance === 'owner' && facts}
-        {lead}
-        {(instrument || (validScale && (appearance === 'pixel' || !radial))) && (
-        <div key="instrument" className={cn('min-w-0 space-y-3', !compact && ['studio', 'iconic'].includes(appearance) && '@md:col-span-2')}>
-          {validScale && appearance === 'pixel' && <SegmentedMeter value={reading.value} max={reading.max} color={reading.color} label={reading.label} />}
-          {validScale && !instrument && !radial && appearance !== 'pixel' && <MetricBar
-            value={reading.value} max={reading.max} ariaLabel={reading.label}
-            color={reading.color ?? 'var(--theme-primary)'} fill="solid" showHeader={false}
-            size={appearance === 'precision' ? 'slim' : 'default'} />}
-          {instrument}
-        </div>
-        )}
-        {appearance !== 'owner' && facts}
+        {order.map(slot => slots[slot])}
       </div>
     </div>
   );

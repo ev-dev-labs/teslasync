@@ -305,6 +305,9 @@ const MODE_INDEPENDENT_MUTATIONS = {
     'useUpsertVehicleSetting',
     'useResetVehicleSetting',
   ],
+  // Cosmetic account preference, independent of the displayed telemetry time.
+  // The hook still rejects offline saves instead of queuing deferred writes.
+  'hooks/useWidgetDesignPreference.ts': ['useSaveWidgetDesignPreference'],
   'hooks/useVehicles.ts': [
     'useRefreshVehicleMobileEnabled',
     'useRefreshVehicleOptions',

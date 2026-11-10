@@ -36,13 +36,15 @@
  * reach for router context.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { TFunction } from 'i18next';
 
 import type { SecurityEvent } from '@/api/types';
 import SentryEventLogWidget, { deriveEvent } from './SentryEventLogWidget';
 import type { WidgetSize } from './types';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -164,12 +166,24 @@ function minsAgo(mins: number): string {
   return new Date(Date.now() - mins * 60_000).toISOString();
 }
 
-function renderWidget(size: WidgetSize = { cols: 3, rows: 2 }, vehicleId?: number) {
+function renderWidget(size: WidgetSize = { cols: 3, rows: 2 }, vehicleId?: number, packId: PackId = 'classic') {
   return render(
     <MemoryRouter>
-      <SentryEventLogWidget size={size} vehicleId={vehicleId} />
+      <PackBoundary requestedPackId={packId}>
+        <SentryEventLogWidget size={size} vehicleId={vehicleId} />
+      </PackBoundary>
     </MemoryRouter>,
   );
+}
+
+async function expectPresentation(container: HTMLElement, packId: PackId) {
+  expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+  if (packId === 'classic') {
+    expect(container.querySelector('[data-timeline-appearance]')).toBeNull();
+  } else {
+    await waitFor(() => expect(container.querySelector('[data-timeline-appearance]'))
+      .toHaveAttribute('data-timeline-appearance', PACK_APPEARANCES[packId]));
+  }
 }
 
 beforeEach(() => {
@@ -342,31 +356,55 @@ describe('SentryEventLogWidget — query wiring', () => {
 
 // ── Render states ────────────────────────────────────────────────────────────
 
-describe('SentryEventLogWidget — states', () => {
+describe.each(PACK_IDS)('SentryEventLogWidget — %s states', (packId) => {
   it('renders a loading skeleton while the query is pending', () => {
     useQueryMock.mockReturnValue(makeResult({ isLoading: true, data: undefined }));
-    const { container } = renderWidget();
+    const { container } = renderWidget(undefined, undefined, packId);
     expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No security events recorded')).toBeNull();
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
   });
 
-  it('shows the empty state when there are no events', () => {
+  it('shows the empty state when there are no events', async () => {
     useQueryMock.mockReturnValue(makeResult({ data: [] }));
-    renderWidget();
+    const { container } = renderWidget(undefined, undefined, packId);
+    await expectPresentation(container, packId);
     expect(screen.getByText('No security events recorded')).toBeInTheDocument();
+    expect(screen.getByText('0 events')).toBeInTheDocument();
+    expect(screen.queryByRole('list')).toBeNull();
   });
 
   it('shows a DISTINCT error message (never the misleading empty copy) on failure', () => {
     useQueryMock.mockReturnValue(makeResult({ isError: true, data: undefined }));
-    renderWidget();
+    renderWidget(undefined, undefined, packId);
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText('No security events recorded')).toBeNull();
   });
 
-  it('wires the freshness Refresh control back to refetch', () => {
+  it('wires the freshness Refresh control back to refetch', async () => {
     const refetch = vi.fn();
     useQueryMock.mockReturnValue(makeResult({ data: [], dataUpdatedAt: Date.now(), refetch }));
-    renderWidget();
+    const { container } = renderWidget(undefined, undefined, packId);
+    await expectPresentation(container, packId);
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps false-valued history and retry available after a failed refresh', async () => {
+    const refetch = vi.fn();
+    useQueryMock.mockReturnValue(makeResult({
+      data: [makeEvent({ locked: false, sentry_mode: false })],
+      isError: true,
+      error: new Error('refresh failed'),
+      refetch,
+    }));
+    const { container } = renderWidget(undefined, undefined, packId);
+    await expectPresentation(container, packId);
+    expect(screen.getByText('Sentry mode deactivated')).toBeInTheDocument();
+    expect(screen.getByText('🔓 Unlocked · Sentry off')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'stale');
+    expect(screen.queryByText('No security events recorded')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -374,66 +412,84 @@ describe('SentryEventLogWidget — states', () => {
 
 // ── Populated feed ───────────────────────────────────────────────────────────
 
-describe('SentryEventLogWidget — populated', () => {
-  it('renders one row per event with its derived title', () => {
+describe.each(PACK_IDS)('SentryEventLogWidget — %s populated', (packId) => {
+  it('renders one row per event with its derived title', async () => {
     useQueryMock.mockReturnValue(
       makeResult({
         data: [
           makeEvent({ id: 1, locked: false, ts: minsAgo(5), created_at: minsAgo(5) }),
           makeEvent({ id: 2, sentry_mode: 'Armed', ts: minsAgo(9), created_at: minsAgo(9) }),
+          makeEvent({ id: 3, door_state: 'FrontLeftOpen', locked: true, sentry_mode: 'Armed' }),
+          makeEvent({ id: 4, sentry_mode: 'Off' }),
+          makeEvent({ id: 5, sentry_mode: 'SentryModeStateUnknown' }),
         ],
       }),
     );
-    renderWidget({ cols: 3, rows: 2 });
+    const { container } = renderWidget({ cols: 3, rows: 2 }, 42, packId);
+    await expectPresentation(container, packId);
     expect(screen.getByText('Vehicle unlocked')).toBeInTheDocument();
     expect(screen.getByText('Sentry mode activated')).toBeInTheDocument();
-    expect(screen.getByText('2 events')).toBeInTheDocument();
+    expect(screen.getByText('Door open: FrontLeftOpen')).toBeInTheDocument();
+    expect(screen.getByText('Sentry mode deactivated')).toBeInTheDocument();
+    expect(screen.getByText('Security state updated')).toBeInTheDocument();
+    expect(screen.getByText('5 events')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(5);
+    expect(lastQueryOptions().queryKey).toEqual(['security-events', 42, 'sentry-log-10']);
   });
 
-  it('REGRESSION: an Off sentry event renders "deactivated", not "activated"', () => {
+  it('REGRESSION: an Off sentry event renders "deactivated", not "activated"', async () => {
     useQueryMock.mockReturnValue(
       makeResult({
         data: [makeEvent({ id: 1, sentry_mode: 'Off', ts: minsAgo(3), created_at: minsAgo(3) })],
       }),
     );
-    renderWidget({ cols: 3, rows: 2 });
+    const { container } = renderWidget({ cols: 3, rows: 2 }, undefined, packId);
+    await expectPresentation(container, packId);
     expect(screen.getByText('Sentry mode deactivated')).toBeInTheDocument();
     expect(screen.queryByText('Sentry mode activated')).toBeNull();
   });
 
-  it('shows the subtitle on a wide widget but hides it when narrow', () => {
+  it('shows the subtitle on a wide widget but hides it when narrow', async () => {
     const data = [
       makeEvent({ id: 1, locked: true, sentry_mode: 'Armed', ts: minsAgo(4), created_at: minsAgo(4) }),
     ];
     useQueryMock.mockReturnValue(makeResult({ data }));
 
-    const wide = renderWidget({ cols: 3, rows: 2 });
+    const wide = renderWidget({ cols: 3, rows: 2 }, undefined, packId);
+    await expectPresentation(wide.container, packId);
     expect(screen.getByText(/🛡️ Sentry on/)).toBeInTheDocument();
     wide.unmount();
 
-    renderWidget({ cols: 2, rows: 2 });
+    const narrow = renderWidget({ cols: 2, rows: 2 }, undefined, packId);
+    await expectPresentation(narrow.container, packId);
     expect(screen.queryByText(/🛡️ Sentry on/)).toBeNull();
     // The primary title still renders in the narrow variant.
     expect(screen.getByText('Sentry mode activated')).toBeInTheDocument();
   });
 
-  it('orders the feed newest-first', () => {
+  it('orders the feed newest-first and retains an invalid timestamp last with a placeholder', async () => {
     useQueryMock.mockReturnValue(
       makeResult({
         data: [
           makeEvent({ id: 1, locked: true, ts: minsAgo(60), created_at: minsAgo(60) }),
+          makeEvent({ id: 3, sentry_mode: 'Unknown', ts: 'invalid', created_at: 'invalid' }),
           makeEvent({ id: 2, locked: false, ts: minsAgo(5), created_at: minsAgo(5) }),
         ],
       }),
     );
-    renderWidget({ cols: 3, rows: 2 });
+    const { container } = renderWidget({ cols: 3, rows: 2 }, undefined, packId);
+    await expectPresentation(container, packId);
     const newest = screen.getByText('Vehicle unlocked');
     const oldest = screen.getByText('Vehicle locked');
     // The newest event's node must precede the oldest one in document order.
     expect(newest.compareDocumentPosition(oldest) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const rows = screen.getAllByRole('listitem');
+    expect(within(rows[2]).getByText('Security state updated')).toBeInTheDocument();
+    expect(within(rows[2]).getAllByText('—')).toHaveLength(2);
+    expect(screen.queryByText(/NaN|Invalid Date/)).toBeNull();
   });
 
-  it('hides the decorative row icons from the accessibility tree', () => {
+  it('hides the decorative row icons from the accessibility tree', async () => {
     useQueryMock.mockReturnValue(
       makeResult({
         data: [
@@ -443,7 +499,8 @@ describe('SentryEventLogWidget — populated', () => {
         ],
       }),
     );
-    const { container } = renderWidget({ cols: 3, rows: 2 });
+    const { container } = renderWidget({ cols: 3, rows: 2 }, undefined, packId);
+    await expectPresentation(container, packId);
     // One aria-hidden icon per row (plus the header icon).
     expect(container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThanOrEqual(3);
   });

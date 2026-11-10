@@ -45,10 +45,12 @@
  * primitives reach for router context.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, within, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, within, cleanup, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ProjectedRangeData } from '@/types/energy';
 import ProjectedRangeWidget from './ProjectedRangeWidget';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 // jsdom lacks matchMedia; AnimatedNumber (the range big number) and FreshnessDot
 // both read it during render. Report `prefers-reduced-motion: reduce` so the
@@ -148,12 +150,33 @@ function makeQuery(overrides: Partial<QueryState> = {}): QueryState {
 function renderWidget(
   size: { cols: number; rows: number } = { cols: 2, rows: 2 },
   vehicleId?: number,
+  packId: PackId = 'classic',
 ) {
-  return render(
+  const content = (nextSize = size, nextVehicleId = vehicleId, nextPackId = packId) => (
     <MemoryRouter>
-      <ProjectedRangeWidget size={size} vehicleId={vehicleId} />
-    </MemoryRouter>,
+      <PackBoundary requestedPackId={nextPackId}>
+        <ProjectedRangeWidget size={nextSize} vehicleId={nextVehicleId} />
+      </PackBoundary>
+    </MemoryRouter>
   );
+  const result = render(content());
+  return {
+    ...result,
+    rerenderWidget: (nextSize = size, nextVehicleId = vehicleId, nextPackId = packId) =>
+      result.rerender(content(nextSize, nextVehicleId, nextPackId)),
+  };
+}
+
+async function expectPack(container: HTMLElement, packId: PackId) {
+  expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+  if (packId === 'classic') {
+    expect(container.querySelector('[data-widget-family]')).toBeNull();
+  } else {
+    await waitFor(() => {
+      expect(container.querySelector('[data-widget-family="meter"]'))
+        .toHaveAttribute('data-widget-appearance', PACK_APPEARANCES[packId]);
+    });
+  }
 }
 
 /** The inner fill <div> inside the comparison bar's progressbar track. */
@@ -562,5 +585,156 @@ describe('ProjectedRangeWidget — freshness interaction', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Refresh data\b/i }));
 
     expect(refetch).not.toHaveBeenCalled();
+  });
+});
+
+describe.each(PACK_IDS)('ProjectedRangeWidget — %s acceptance', packId => {
+  it.each(['km', 'mi'] as const)('preserves the wide range, EPA, factors and inferred source in %s', async distance => {
+    useUnitsMock.mockReturnValue({ unitPrefs: { distance } });
+    useProjectedRangeMock.mockReturnValue(makeQuery({ data: makeData({
+      current_range_km: 350, new_range_km: 500, health_score: 92,
+      degradation_pct: 8.5, avg_daily_km: 40, current_capacity_pct: 91.2, total_cycles: 512,
+    }) }));
+
+    const { container } = renderWidget({ cols: 3, rows: 4 }, 7, packId);
+    await expectPack(container, packId);
+
+    expect(screen.getByRole('heading', { name: 'Projected range', level: 3 })).toBeVisible();
+    expect(screen.getByText(distance === 'km' ? '350' : '217')).toBeInTheDocument();
+    expect(screen.getByText(distance === 'km' ? 'EPA: 500 km' : 'EPA: 311 mi')).toBeInTheDocument();
+    expect(screen.getByText('Excellent · 92%')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Projected range vs EPA rated' }))
+      .toHaveAttribute('aria-valuenow', '70');
+    expect(screen.getByText('70% of EPA rated')).toBeInTheDocument();
+    const brief = screen.getByTestId('dashboard-projected-range-factors-brief');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(4);
+    expect(within(brief).getByText('9%')).toBeInTheDocument();
+    expect(within(brief).getByText(distance === 'km' ? '40 km' : '25 mi')).toBeInTheDocument();
+    expect(within(brief).getByText('91%')).toBeInTheDocument();
+    expect(within(brief).getByText('512')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('Vehicle 7 · inferred range analysis');
+    expect(drawer).toHaveTextContent('exact observation bounds and recording completeness are not supplied');
+    expect(within(drawer).getByLabelText('Estimated')).toHaveAttribute('data-provenance', 'inferred');
+    expect(drawer).toHaveTextContent('not a vehicle speed');
+    expect(drawer).toHaveTextContent('not assumed to be an integer event population');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('keeps responsive content, vehicle resolution and refresh behavior after the family loads', async () => {
+    const refetch = vi.fn();
+    const data = makeData({ current_range_km: 350, new_range_km: 500, health_score: 95 });
+    useVehiclesMock.mockReturnValue({ data: [{ id: 42 }] });
+    useProjectedRangeMock.mockReturnValue(makeQuery({ data, refetch }));
+    const view = renderWidget({ cols: 1, rows: 2 }, undefined, packId);
+    await expectPack(view.container, packId);
+
+    expect(useProjectedRangeMock).toHaveBeenLastCalledWith('42');
+    expect(screen.getByText('350')).toBeInTheDocument();
+    expect(screen.getByText('Excellent')).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(screen.queryByText(/EPA:/)).toBeNull();
+    expect(screen.queryByText('Range factors')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data\b/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    view.rerenderWidget({ cols: 2, rows: 2 }, 7);
+    await expectPack(view.container, packId);
+    expect(useProjectedRangeMock).toHaveBeenLastCalledWith('7');
+    expect(screen.getByText('Excellent · 95%')).toBeInTheDocument();
+    expect(screen.getByText('EPA: 500 km')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '70');
+    expect(screen.queryByText('Range factors')).toBeNull();
+
+    useProjectedRangeMock.mockReturnValue(makeQuery({ data, refetch, isFetching: true }));
+    view.rerenderWidget({ cols: 2, rows: 2 }, 7);
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data\b/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText('350')).toBeInTheDocument();
+  });
+
+  it('distinguishes invalid or missing readings, genuine zeros and an unavailable EPA denominator', async () => {
+    useProjectedRangeMock.mockReturnValue(makeQuery({ data: makeData({
+      current_range_km: Number.NaN, new_range_km: Number.POSITIVE_INFINITY,
+      health_score: Number.NaN, degradation_pct: Number.NaN, avg_daily_km: Number.POSITIVE_INFINITY,
+      current_capacity_pct: Number.NaN, total_cycles: Number.POSITIVE_INFINITY,
+    }) }));
+    const view = renderWidget({ cols: 3, rows: 4 }, 7, packId);
+    await expectPack(view.container, packId);
+
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText(/NaN|Infinity|Excellent|Good|Fair|Poor/)).toBeNull();
+    expect(screen.queryByText(/EPA:/)).toBeNull();
+    expect(screen.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow');
+    const brief = screen.getByTestId('dashboard-projected-range-factors-brief');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(brief).toHaveTextContent('No metric values are available yet.');
+
+    useProjectedRangeMock.mockReturnValue(makeQuery({ data: {} as ProjectedRangeData }));
+    view.rerenderWidget();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText(/Excellent|Good|Fair|Poor|EPA:/)).toBeNull();
+    expect(screen.queryByText('No projected range data')).toBeNull();
+    expect(screen.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+
+    useProjectedRangeMock.mockReturnValue(makeQuery({ data: makeData({ new_range_km: 500 }) }));
+    view.rerenderWidget();
+    expect(screen.getAllByText('0')).toHaveLength(2);
+    expect(screen.getByText('Poor · 0%')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByText('0% of EPA rated')).toBeInTheDocument();
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(4);
+    expect(brief).toHaveTextContent('0 km');
+
+    useProjectedRangeMock.mockReturnValue(makeQuery({ data: makeData() }));
+    view.rerenderWidget();
+    expect(screen.getByText('EPA: 0 km')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow');
+    expect(screen.queryByText(/of EPA rated/)).toBeNull();
+  });
+
+  it('preserves loading, empty, retry and retained-error states across presentations', async () => {
+    const refetch = vi.fn();
+    useProjectedRangeMock.mockReturnValue(makeQuery({ isLoading: true, isFetching: true, refetch }));
+    const view = renderWidget({ cols: 3, rows: 4 }, 7, packId);
+    expect(screen.getByRole('heading', { name: 'Projected range', level: 3 })).toBeVisible();
+    expect(view.container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
+    expect(screen.queryByText('No projected range data')).toBeNull();
+
+    useProjectedRangeMock.mockReturnValue(makeQuery({ refetch }));
+    view.rerenderWidget();
+    await expectPack(view.container, packId);
+    expect(screen.getByText('No projected range data')).toBeInTheDocument();
+    expect(screen.getByText('Range factors')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow');
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    useProjectedRangeMock.mockReturnValue(makeQuery({ isError: true, error: new Error('offline'), refetch }));
+    view.rerenderWidget();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No projected range data')).toBeNull();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button'));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    useProjectedRangeMock.mockReturnValue(makeQuery({
+      data: makeData({ current_range_km: 350, new_range_km: 500, health_score: 95 }),
+      isError: true, error: new Error('refresh failed'), isStale: true, refetch,
+    }));
+    view.rerenderWidget();
+    await expectPack(view.container, packId);
+    expect(screen.getByText('350')).toBeInTheDocument();
+    expect(screen.getByText('70% of EPA rated')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('dashboard-projected-range-factors-brief')
+      .querySelectorAll('[data-operational-value]')).toHaveLength(4);
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'stale');
+    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data\b/i }));
+    expect(refetch).toHaveBeenCalledTimes(2);
   });
 });

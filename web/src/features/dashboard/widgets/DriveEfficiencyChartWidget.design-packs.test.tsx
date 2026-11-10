@@ -6,6 +6,7 @@ import type { Drive } from '@/api/types';
 import type { DataStateSource } from '@/api/dataState';
 import type { WidgetProps } from './types';
 import type { PackId, PackAppearance } from './designPacks/types';
+import { PACK_IDS, PACK_APPEARANCES } from './designPacks/types';
 import { PackBoundary } from './designPacks/PackBoundary';
 import DriveEfficiencyChartWidget from './DriveEfficiencyChartWidget';
 
@@ -61,10 +62,9 @@ vi.mock('@/components/charts', async importOriginal => {
   };
 });
 
-const appearances: readonly [PackId, PackAppearance][] = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-];
+const appearances = PACK_IDS
+  .filter((id): id is Exclude<PackId, 'classic'> => id !== 'classic')
+  .map(id => [id, PACK_APPEARANCES[id]] as const);
 const standard = { cols: 2, rows: 4 };
 const compact = { cols: 1, rows: 1 };
 const fixtureNow = Date.now();
@@ -179,7 +179,10 @@ describe.each(appearances)('drive efficiency %s (%s)', (packId, appearance) => {
   });
 
   it('keeps the empty source shell and unknown readings instead of claiming zero consumption', async () => {
-    mocks.history.mockReturnValue(query([drive(1, 2, null), drive(2, 3, Number.NaN)]));
+    mocks.history.mockReturnValue(query([
+      drive(1, 2, null), drive(2, 3, Number.NaN), drive(3, 4, 0),
+      drive(4, 5, Number.POSITIVE_INFINITY), drive(5, 6, -1000),
+    ]));
     const { container } = await mount(packId, appearance);
     expect(screen.getByText('Drive efficiency')).toBeInTheDocument();
     expect(screen.getByText('No efficiency data yet')).toBeInTheDocument();
@@ -216,20 +219,20 @@ it('preserves Classic and unknown-ID recovery without the alternate headline or 
   expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', 'classic');
 });
 
-it('changes presentation without adding data controllers or triggering a refresh', async () => {
+it.each(appearances)('changes presentation to %s (%s) without adding data controllers or triggering a refresh', async (packId, appearance) => {
   const view = await mount('v1', 'studio');
   mocks.history.mockClear();
-  view.rerender(widget('v7'));
-  await waitFor(() => expect(view.container.querySelector('[data-widget-appearance="pixel"]')).not.toBeNull());
+  view.rerender(widget(packId));
+  await waitFor(() => expect(view.container.querySelector(`[data-widget-appearance="${appearance}"]`)).not.toBeNull());
   expect(mocks.history).toHaveBeenCalledTimes(1);
   expect(mocks.refresh).not.toHaveBeenCalled();
   expect(screen.getByText('130')).toBeInTheDocument();
   expect(plot.series.rollingAvg.strokeDasharray).toBe('4 2');
 });
 
-it('converts every series and the reference line at the display boundary for miles', async () => {
+it.each(appearances)('converts every series and the reference line at the display boundary for miles in %s (%s)', async (packId, appearance) => {
   mocks.units.mockReturnValue({ unitPrefs: { distance: 'mi' } });
-  await mount('v7', 'pixel');
+  await mount(packId, appearance);
   expect(screen.getByText('209')).toBeInTheDocument();
   expect(screen.getByText('Wh/mi')).toBeInTheDocument();
   expect(screen.getByText('257 Wh/mi')).toBeInTheDocument();
@@ -240,9 +243,9 @@ it('converts every series and the reference line at the display boundary for mil
   expect(plot.reference.y).toBeCloseTo(209.21472);
 });
 
-it('forwards the selected range and keeps its returned measurements rather than applying the default cutoff', async () => {
+it.each(appearances)('forwards the selected range and keeps its returned measurements in %s (%s)', async (packId, appearance) => {
   mocks.history.mockReturnValue(query([drive(1, 40, 1000)]));
-  await mount('v3', 'precision', { vehicleId: 7, config: { timeRange: '90d' } });
+  await mount(packId, appearance, { vehicleId: 7, config: { timeRange: '90d' } });
   expect(mocks.history).toHaveBeenCalledWith(7, { kind: 'efficiency', limit: 60, range: '90d' });
   expect(screen.getByText('Selected-range average')).toBeInTheDocument();
   expect(screen.getByText('100')).toBeInTheDocument();
@@ -250,30 +253,32 @@ it('forwards the selected range and keeps its returned measurements rather than 
   expect(screen.queryByText('7-day avg')).not.toBeInTheDocument();
 });
 
-it.each([
-  { label: 'null', data: null },
-  { label: 'list', data: [] as Drive[] },
-])('handles an empty $label API payload without synthesizing a plot', async ({ data }) => {
-  mocks.history.mockReturnValue(query(data));
-  await mount('v4', 'owner');
-  expect(screen.getByText('No efficiency data yet')).toBeInTheDocument();
-  expect(screen.queryByTestId('embedded-chart')).not.toBeInTheDocument();
-  expect(screen.queryByText('0')).not.toBeInTheDocument();
-});
+describe.each(appearances)('drive efficiency %s (%s) source states', (packId, appearance) => {
+  it.each([
+    { label: 'null', data: null },
+    { label: 'list', data: [] as Drive[] },
+  ])('handles an empty $label API payload without synthesizing a plot', async ({ data }) => {
+    mocks.history.mockReturnValue(query(data));
+    await mount(packId, appearance);
+    expect(screen.getByText('No efficiency data yet')).toBeInTheDocument();
+    expect(screen.queryByTestId('embedded-chart')).not.toBeInTheDocument();
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+  });
 
-it('keeps initial loading and fatal source failures honest and retryable', async () => {
-  mocks.history.mockReturnValue(query(undefined, { isLoading: true, isFetching: true }));
-  const view = render(widget('v6'));
-  expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
-  expect(screen.queryByText('130')).not.toBeInTheDocument();
-  expect(screen.queryByText('No efficiency data yet')).not.toBeInTheDocument();
+  it('keeps initial loading and fatal source failures honest and retryable', async () => {
+    mocks.history.mockReturnValue(query(undefined, { isLoading: true, isFetching: true }));
+    const view = render(widget(packId));
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('130')).not.toBeInTheDocument();
+    expect(screen.queryByText('No efficiency data yet')).not.toBeInTheDocument();
 
-  mocks.history.mockReturnValue(query(undefined, { error: new Error('offline'), isError: true }));
-  view.rerender(widget('v6'));
-  const alert = await screen.findByRole('alert');
-  expect(within(alert).getByText("Can't reach server")).toBeInTheDocument();
-  expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'initialFailure');
-  expect(screen.queryByTestId('embedded-chart')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /Refresh data/i }));
-  expect(mocks.refresh).toHaveBeenCalledOnce();
+    mocks.history.mockReturnValue(query(undefined, { error: new Error('offline'), isError: true }));
+    view.rerender(widget(packId));
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText("Can't reach server")).toBeInTheDocument();
+    expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'initialFailure');
+    expect(screen.queryByTestId('embedded-chart')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/i }));
+    expect(mocks.refresh).toHaveBeenCalledOnce();
+  });
 });

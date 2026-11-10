@@ -224,10 +224,86 @@ describe.each(Object.entries(PACK_APPEARANCES) as Array<[Exclude<PackId, 'classi
       expect(screen.queryByTestId('motor-plot')).not.toBeInTheDocument();
       expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     });
+
+    it('keeps genuine zero readings while excluding non-finite temperatures and torque', async () => {
+      state.history = [
+        snapshot({ ts: '2026-05-10T11:00:00Z', di_stator_temp: Number.NaN, di_torque: Infinity }),
+        snapshot({ di_stator_temp: 0, di_torque: 0 }),
+        snapshot({ ts: '2026-05-10T13:00:00Z', di_stator_temp: -Infinity, di_torque: -240 }),
+      ];
+      const { container } = mountWidget(pack);
+      await expectPack(container, pack);
+      expect(plottedReadings().map(row => [row.temperature, row.torque])).toEqual([
+        [null, null], [0, 0], [null, -240],
+      ]);
+      expect(container.querySelector('.widget-big-number')).toHaveTextContent('0');
+      expect(screen.getByText('Danger zone not reached')).toBeInTheDocument();
+      expect(screen.getByTestId('axis-temp')).toHaveAttribute('data-domain', '[0,130]');
+      expect(screen.getAllByRole('cell', { name: '0.0' })).toHaveLength(2);
+      expect(screen.queryByText('No motor history')).not.toBeInTheDocument();
+      expect(screen.queryByText('Awaiting temperature reading')).not.toBeInTheDocument();
+    });
+
+    it('uses the display preference for every sample, threshold, tooltip and accessible column', async () => {
+      state.temperature = '°F';
+      state.history = [snapshot({ di_stator_temp: 65, di_torque: -240 })];
+      const { container } = mountWidget(pack);
+      await expectPack(container, pack);
+      expect(screen.getByText('149')).toBeInTheDocument();
+      expect(plottedReadings()[0].temperature).toBe(149);
+      expect(screen.getByTestId('danger-zone')).toHaveAttribute('data-min', '248');
+      expect(screen.getByText('Danger zone above 248 °F')).toBeInTheDocument();
+      expect(screen.getByTestId('motor-tooltip')).toHaveAttribute('data-temperature', '149.0 °F');
+      expect(screen.getByRole('columnheader', { name: 'Stator (°F)' })).toBeInTheDocument();
+    });
+
+    it('keeps retained observations and source trust visible when a refresh fails', async () => {
+      state.query.isError = true;
+      state.query.isStale = true;
+      state.query.error = new Error('Motor history refresh failed');
+      const { container } = mountWidget(pack);
+      await expectPack(container, pack);
+      expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
+      expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent(
+        'Previously loaded data remains visible while affected sources recover.',
+      );
+      expect(screen.getByText('125')).toBeInTheDocument();
+      expect(plottedReadings()).toHaveLength(3);
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh data/ }));
+      expect(state.refetch).toHaveBeenCalledOnce();
+    });
+
+    it('keeps in-flight refresh disabled while retaining the observed chart', async () => {
+      state.query.isFetching = true;
+      const { container } = mountWidget(pack);
+      await expectPack(container, pack);
+      const refresh = screen.getByRole('button', { name: /^Refresh data/ });
+      expect(refresh).toBeDisabled();
+      fireEvent.click(refresh);
+      expect(state.refetch).not.toHaveBeenCalled();
+      expect(plottedReadings()).toHaveLength(3);
+    });
+
+    it('retains loading and fatal-error shells instead of rendering success with no source', () => {
+      state.history = undefined;
+      state.query.isLoading = true;
+      state.query.isPending = true;
+      const { container, selectPack } = mountWidget(pack);
+      expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+      expect(screen.queryByTestId('motor-plot')).not.toBeInTheDocument();
+      state.query.isLoading = false;
+      state.query.isPending = false;
+      state.query.isError = true;
+      state.query.error = new Error('Motor history unavailable');
+      selectPack(pack);
+      expect(container.querySelector('[data-data-state="initialFailure"]')).not.toBeNull();
+      expect(screen.queryByTestId('motor-plot')).not.toBeInTheDocument();
+      expect(screen.queryByText('Danger zone not reached')).not.toBeInTheDocument();
+    });
   },
 );
 
-it('keeps Classic as the default and restores its full original body after all seven pack selections', async () => {
+it('keeps Classic as the default and restores its full original body after all pack selections', async () => {
   const { container, selectPack } = mountWidget();
   expect(container.querySelector('[data-widget-appearance]')).toBeNull();
   expect(screen.getByTestId('motor-plot')).toBeInTheDocument();
@@ -244,61 +320,4 @@ it('keeps Classic as the default and restores its full original body after all s
   expect(screen.getByText('Danger threshold reached')).toBeInTheDocument();
   expect(plottedReadings()).toEqual(originalRows);
   expect(screen.getByTestId('series-torque')).not.toHaveAttribute('data-dash');
-});
-
-it('uses the display preference for every pack sample, threshold, tooltip and accessible column', async () => {
-  state.temperature = '°F';
-  state.history = [snapshot({ di_stator_temp: 65, di_torque: -240 })];
-  const { container } = mountWidget('v7');
-  await expectPack(container, 'v7');
-  expect(screen.getByText('149')).toBeInTheDocument();
-  expect(plottedReadings()[0].temperature).toBe(149);
-  expect(screen.getByTestId('danger-zone')).toHaveAttribute('data-min', '248');
-  expect(screen.getByText('Danger zone above 248 °F')).toBeInTheDocument();
-  expect(screen.getByTestId('motor-tooltip')).toHaveAttribute('data-temperature', '149.0 °F');
-  expect(screen.getByRole('columnheader', { name: 'Stator (°F)' })).toBeInTheDocument();
-});
-
-it('keeps retained observations and source trust visible when a pack refresh fails', async () => {
-  state.query.isError = true;
-  state.query.isStale = true;
-  state.query.error = new Error('Motor history refresh failed');
-  const { container } = mountWidget('v4');
-  await expectPack(container, 'v4');
-  expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
-  expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent(
-    'Previously loaded data remains visible while affected sources recover.',
-  );
-  expect(screen.getByText('125')).toBeInTheDocument();
-  expect(plottedReadings()).toHaveLength(3);
-  fireEvent.click(screen.getByRole('button', { name: /^Refresh data/ }));
-  expect(state.refetch).toHaveBeenCalledOnce();
-});
-
-it('keeps in-flight refresh disabled while retaining the observed chart', async () => {
-  state.query.isFetching = true;
-  const { container } = mountWidget('v2');
-  await expectPack(container, 'v2');
-  const refresh = screen.getByRole('button', { name: /^Refresh data/ });
-  expect(refresh).toBeDisabled();
-  fireEvent.click(refresh);
-  expect(state.refetch).not.toHaveBeenCalled();
-  expect(plottedReadings()).toHaveLength(3);
-});
-
-it('retains loading and fatal-error shells instead of rendering a successful pack with no source', () => {
-  state.history = undefined;
-  state.query.isLoading = true;
-  state.query.isPending = true;
-  const { container, selectPack } = mountWidget('v6');
-  expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
-  expect(screen.queryByTestId('motor-plot')).not.toBeInTheDocument();
-  state.query.isLoading = false;
-  state.query.isPending = false;
-  state.query.isError = true;
-  state.query.error = new Error('Motor history unavailable');
-  selectPack('v6');
-  expect(container.querySelector('[data-data-state="initialFailure"]')).not.toBeNull();
-  expect(screen.queryByTestId('motor-plot')).not.toBeInTheDocument();
-  expect(screen.queryByText('Danger zone not reached')).not.toBeInTheDocument();
 });

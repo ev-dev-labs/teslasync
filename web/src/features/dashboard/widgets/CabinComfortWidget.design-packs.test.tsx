@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { VehicleLiveSignal, VehicleLiveSignalsResponse } from '@/api/hooks/useTelemetry';
 import type { WidgetConfig } from './types';
-import type { PackId } from './designPacks/types';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 import { PackBoundary } from './designPacks/PackBoundary';
 import CabinComfortWidget from './CabinComfortWidget';
 
@@ -38,10 +38,8 @@ vi.mock('@/hooks/useDateFormat', () => {
 
 const NOW = Date.parse('2026-11-07T02:00:00Z');
 const OBSERVED = '2026-11-07T01:59:50Z';
-const PACKS = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const PACKS = PACK_IDS.filter((pack): pack is Exclude<PackId, 'classic'> => pack !== 'classic')
+  .map(pack => [pack, PACK_APPEARANCES[pack]] as const);
 const SECTIONS = ['Reported temperatures', 'Front seat climate', 'Occupancy and belts', 'Ventilation', 'Observation limits'];
 const FIELDS = [
   'InsideTemp', 'OutsideTemp', 'DriverSeatOccupied', 'DriverSeatBelt', 'PassengerSeatBelt',
@@ -171,7 +169,7 @@ describe('CabinComfortWidget production design packs', () => {
     expect(screen.queryByText('Buckled', { exact: true })).not.toBeInTheDocument();
   });
 
-  it('switches Classic, seven packs and compact/full without remounting the live reader', async () => {
+  it('switches Classic, all supported packs and compact/full without remounting the live reader', async () => {
     const view = render(tree('classic', 1));
     await settled();
     sections();
@@ -179,10 +177,13 @@ describe('CabinComfortWidget production design packs', () => {
     expect(view.container.querySelector('[data-widget-family]')).not.toBeInTheDocument();
     expect(view.container.querySelector('[data-climate-readout]')).not.toBeInTheDocument();
     const count = requestMock.mock.calls.length;
-    for (const [pack, appearance] of PACKS) {
-      view.rerender(tree(pack, pack === 'v1' ? 1 : 3));
+    for (const [index, [pack, appearance]] of PACKS.entries()) {
+      preferences.temperature = index % 2 === 0 ? 'C' : 'F';
+      view.rerender(tree(pack, index % 2 === 0 ? 1 : 3));
       await presentation(view.container, appearance);
       sections();
+      expect(signal('InsideTemp')).toHaveTextContent(index % 2 === 0 ? '20.0°C' : '68.0°F');
+      expect(signal('OutsideTemp')).toHaveTextContent(index % 2 === 0 ? '-10.0°C' : '14.0°F');
       expect(signal('DriverSeatBelt')).toHaveTextContent('Buckled');
     }
     preferences.temperature = 'C';
@@ -194,7 +195,7 @@ describe('CabinComfortWidget production design packs', () => {
     expect(requestMock).toHaveBeenCalledTimes(count);
   });
 
-  it('distinguishes per-field stale, unknown freshness, historical and valid zero evidence', async () => {
+  it.each(PACKS)('%s distinguishes per-field stale, unknown freshness, historical and valid zero evidence', async (pack, appearance) => {
     live = { vehicle_id: 7, signals: {
       InsideTemp: envelope(0),
       OutsideTemp: envelope(-15, 'ValueKindFloat', { ts: '2026-11-07T01:50:00Z' }),
@@ -203,8 +204,9 @@ describe('CabinComfortWidget production design packs', () => {
       PassengerSeatBelt: envelope(true, 'ValueKindBool', { source: 'log' }),
       HvacFanSpeed: envelope(0, 'ValueKindFloat', { age_ms: 180_000 }),
     } };
-    render(tree());
-    await settled();
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
+    sections();
     expect(signal('InsideTemp')).toHaveTextContent('32.0°F');
     expect(signal('InsideTemp')).toHaveTextContent('Fresh observation');
     expect(signal('OutsideTemp')).toHaveTextContent('Stale reading');
@@ -216,7 +218,7 @@ describe('CabinComfortWidget production design packs', () => {
     expect(signal('HvacFanSpeed')).toHaveTextContent('Stale reading');
   });
 
-  it('does not coerce invalid scalars, wrong kinds, or prefixed enum strings into success', async () => {
+  it.each(PACKS)('%s does not coerce invalid scalars, wrong kinds, or prefixed enum strings into success', async (pack, appearance) => {
     live = { vehicle_id: 7, signals: {
       InsideTemp: envelope(Number.NaN), OutsideTemp: envelope(Number.POSITIVE_INFINITY),
       DriverSeatOccupied: envelope('false', 'ValueKindBool'),
@@ -227,18 +229,22 @@ describe('CabinComfortWidget production design packs', () => {
       ClimateSeatCoolingFrontRight: envelope(2, 'ValueKindString'),
       HvacFanSpeed: envelope(null),
     } };
-    render(tree('v7'));
-    await settled();
+    const view = render(tree(pack));
+    await presentation(view.container, appearance);
+    sections();
     for (const field of FIELDS) expect(signal(field)).toHaveTextContent('Unknown or invalid reading');
     expect(screen.queryByText('Buckled', { exact: true })).not.toBeInTheDocument();
   });
 
-  it('keeps all sections while initially loading, then exposes first-failure retry and recovery', async () => {
+  it.each(PACKS)('%s keeps all sections while initially loading, then exposes first-failure retry and recovery', async (pack, appearance) => {
     requestMock.mockImplementation(async path => path === '/vehicles' ? []
       : new Promise<VehicleLiveSignalsResponse>(() => undefined));
-    const view = render(tree('v3'));
+    const view = render(tree(pack));
+    await waitFor(() => expect(view.container.querySelector('[data-widget-family="climate"]'))
+      .toHaveAttribute('data-widget-appearance', appearance));
     await waitFor(() => expect(screen.getByText('Loading cabin observations…')).toBeInTheDocument());
     sections();
+    expect(screen.getByRole('button', { name: 'Refresh cabin observations' })).toBeDisabled();
     view.unmount();
     client.clear();
     failLive = true;
@@ -247,7 +253,8 @@ describe('CabinComfortWidget production design packs', () => {
       if (failLive) throw new Error('Cabin source failed');
       return live;
     });
-    render(tree('v3'));
+    const recovered = render(tree(pack));
+    await presentation(recovered.container, appearance);
     await screen.findByRole('button', { name: 'Retry' });
     sections();
     expect(signal('InsideTemp')).not.toHaveTextContent('68.0°F');
@@ -271,10 +278,10 @@ describe('CabinComfortWidget production design packs', () => {
     expect(signal('DriverSeatBelt')).not.toHaveTextContent('Fresh observation');
   });
 
-  it('uses the configured vehicle, ignores an unrelated vehicle-list failure, and rejects mismatched payloads', async () => {
+  it.each(PACKS)('%s uses the configured vehicle, ignores an unrelated vehicle-list failure, and rejects mismatched payloads', async (pack, appearance) => {
     failVehicles = true;
-    const view = render(tree('v1', 2, null, { vehicleId: 7 }));
-    await presentation(view.container, 'studio');
+    const view = render(tree(pack, 2, null, { vehicleId: 7 }));
+    await presentation(view.container, appearance);
     expect(signal('InsideTemp')).toHaveTextContent('68.0°F');
     expect(requestMock.mock.calls.some(([path]) => path === '/signals/7/live')).toBe(true);
     live = { ...live, vehicle_id: 9 };
@@ -283,8 +290,9 @@ describe('CabinComfortWidget production design packs', () => {
     expect(signal('InsideTemp')).not.toHaveTextContent('68.0°F');
   });
 
-  it('does not request a live endpoint without a selected vehicle', async () => {
-    render(tree('classic', 1, 0));
+  it.each(PACKS)('%s does not request a live endpoint without a selected vehicle', async (pack, appearance) => {
+    const view = render(tree(pack, 1, 0));
+    await presentation(view.container, appearance);
     await screen.findByText('Select a vehicle to view reported cabin observations.');
     await settled();
     sections();

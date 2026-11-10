@@ -5,6 +5,7 @@ import { Button } from '@/components/ui';
 import { reportFrontendError } from '@/lib/errorReporter';
 import { resolveAvailablePackId } from './manifest';
 import type { PackId } from './types';
+import './experimental.css';
 
 const PackPresentationContext = createContext<PackId>('classic');
 const PackLoadingContext = createContext<{

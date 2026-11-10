@@ -44,10 +44,12 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act, waitFor } from '@testing-library/react';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { MemoryRouter } from 'react-router-dom';
 import { Car } from 'lucide-react';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 // Hoisted navigate spy so the react-router-dom factory can reference it.
 const navigateSpy = vi.hoisted(() => vi.fn());
@@ -164,12 +166,21 @@ function makeState(over: Partial<ChecklistState> = {}): ChecklistState {
   };
 }
 
-function renderWidget() {
+function renderWidget(packId: PackId = 'classic') {
   return render(
     <MemoryRouter>
-      <OnboardingChecklistWidget size={SIZE} />
+      <PackBoundary requestedPackId={packId}>
+        <OnboardingChecklistWidget size={SIZE} />
+      </PackBoundary>
     </MemoryRouter>,
   );
+}
+
+async function waitForPack(container: HTMLElement, packId: PackId) {
+  if (packId === 'classic') return;
+  await waitFor(() => expect(container.querySelector(
+    `[data-widget-family="empty"][data-widget-appearance="${PACK_APPEARANCES[packId]}"]`,
+  )).not.toBeNull());
 }
 
 beforeEach(() => {
@@ -259,7 +270,7 @@ describe('OnboardingChecklistWidget — hidden footprint', () => {
     expect(restart).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the celebratory title once complete but past the celebration window', () => {
+  it.each(PACK_IDS)('shows the celebratory title once complete but past the celebration window in %s', async packId => {
     const staleCompletedAt = Date.now() - (CELEBRATION_WINDOW_MS + 60_000);
     mockUseChecklist.mockReturnValue(
       makeState({
@@ -268,7 +279,8 @@ describe('OnboardingChecklistWidget — hidden footprint', () => {
         visibleTasks: [makeTask({ complete: true })],
       }),
     );
-    renderWidget();
+    const { container } = renderWidget(packId);
+    await waitForPack(container, packId);
 
     // shouldHideChecklist (real) hides it; the title flips to the "all set" copy.
     expect(screen.getByText("You're all set! 🎉")).toBeInTheDocument();
@@ -410,7 +422,7 @@ describe('OnboardingChecklistWidget — dismiss & completion', () => {
     expect(dismiss).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the full hero at 100% (no CTAs, single header Dismiss) inside the celebration window', () => {
+  it.each(PACK_IDS)('renders the full hero at 100% (no CTAs, single header Dismiss) inside the celebration window in %s', async packId => {
     const dismiss = vi.fn();
     const recentCompletedAt = Date.now() - 60_000;
     const tasks = [
@@ -427,14 +439,18 @@ describe('OnboardingChecklistWidget — dismiss & completion', () => {
         completeCount: 2,
       }),
     );
-    renderWidget();
+    const { container } = renderWidget(packId);
+    await waitForPack(container, packId);
 
     // Still inside the 24h window — the full checklist stays visible.
     expect(screen.getByTestId('onboarding-checklist')).toBeInTheDocument();
     expect(screen.getByText('2 of 2 done')).toBeInTheDocument();
-    const bar = screen.getByRole('progressbar');
+    const bar = screen.queryByRole('meter') ?? screen.getByRole('progressbar');
     expect(bar).toHaveAttribute('aria-valuenow', '2');
-    expect((bar.firstElementChild as HTMLElement | null)?.style.width).toBe('100%');
+    expect(bar).toHaveAttribute('aria-valuemax', '2');
+    if (packId === 'classic') {
+      expect((bar.firstElementChild as HTMLElement | null)?.style.width).toBe('100%');
+    }
     // After design has no celebration footer; the headline carries completion.
     expect(screen.queryByText("You're all set! 🎉")).toBeNull();
     // Every task complete → no CTAs.
@@ -449,11 +465,12 @@ describe('OnboardingChecklistWidget — dismiss & completion', () => {
 });
 
 describe('OnboardingChecklistWidget — empty state', () => {
-  it('shows an explicit empty state (never a blank panel) when there are no visible tasks', () => {
+  it.each(PACK_IDS)('shows an explicit empty state (never a blank panel) when there are no visible tasks in %s', async packId => {
     mockUseChecklist.mockReturnValue(
       makeState({ visibleTasks: [], totalCount: 0, completeCount: 0 }),
     );
-    renderWidget();
+    const { container } = renderWidget(packId);
+    await waitForPack(container, packId);
 
     expect(
       screen.getByText('No setup steps available right now.'),

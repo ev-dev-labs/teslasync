@@ -7,6 +7,7 @@ import type { VehicleLiveSignal, VehicleLiveSignalsResponse } from '@/api/hooks/
 import type { SignalHistoryResponse } from '@/types/telemetry';
 import type { WidgetConfig } from './types';
 import type { PackId } from './designPacks/types';
+import { PACK_APPEARANCES, PACK_IDS } from './designPacks/types';
 import { PackBoundary } from './designPacks/PackBoundary';
 import SignalExplorerWidget from './SignalExplorerWidget';
 
@@ -49,10 +50,8 @@ vi.mock('@/hooks/useDateFormat', () => {
 
 const NOW = Date.parse('2026-11-07T02:00:00Z');
 const OBSERVED = '2026-11-07T01:59:50Z';
-const PACKS = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const PACKS = PACK_IDS.filter((pack): pack is Exclude<PackId, 'classic'> => pack !== 'classic')
+  .map(pack => [pack, PACK_APPEARANCES[pack]] as const);
 const SECTION_NAMES = ['Signal inventory', 'Current observation', 'Signal history', 'Routing and evidence'];
 let client: QueryClient;
 let catalog: AvailableSignalsResponse;
@@ -252,7 +251,7 @@ describe('SignalExplorerWidget design packs', () => {
     expect(currentRow('PackCurrent').getByText('-12.0 A')).toBeInTheDocument();
   });
 
-  it('switches Classic, seven packs and compact/full without multiplying readers or losing field selection', async () => {
+  it('switches Classic, every pack and compact/full without multiplying readers or losing field selection', async () => {
     const view = render(tree('classic', 1));
     await screen.findByRole('combobox', { name: 'Signal field' });
     await settled();
@@ -288,132 +287,134 @@ describe('SignalExplorerWidget design packs', () => {
     for (const name of SECTION_NAMES) expect(screen.getByRole('region', { name })).toBeInTheDocument();
   });
 
-  it.each([
-    ['HvacPower', 'No', 'Yes'],
-    ['DestinationName', 'Home', 'Work'],
-    ['BMSState', '0', '2'],
-  ])('adapts %s to a typed state/text timeline rather than a numeric trend', async (name, first, last) => {
-    const view = render(tree('v3', 2, { signalName: name }));
-    await presentation(view.container, 'precision');
-    const timeline = within(screen.getByRole('region', { name: 'Signal history' })).getByRole('list', { name: `${name} — Signal history` });
-    expect(within(timeline).getByText(first)).toBeInTheDocument();
-    expect(within(timeline).getByText(last)).toBeInTheDocument();
-    expect(within(timeline).getAllByText(/Origin: fleet_telemetry_mqtt/)).toHaveLength(2);
-    expect(screen.queryByRole('table')).not.toBeInTheDocument();
-  });
+  describe.each(PACKS)('%s source evidence', (pack, appearance) => {
+    it.each([
+      ['HvacPower', 'No', 'Yes'],
+      ['DestinationName', 'Home', 'Work'],
+      ['BMSState', '0', '2'],
+    ])('adapts %s to a typed state/text timeline rather than a numeric trend', async (name, first, last) => {
+      const view = render(tree(pack, 2, { signalName: name }));
+      await presentation(view.container, appearance);
+      const timeline = within(screen.getByRole('region', { name: 'Signal history' })).getByRole('list', { name: `${name} — Signal history` });
+      expect(within(timeline).getByText(first)).toBeInTheDocument();
+      expect(within(timeline).getByText(last)).toBeInTheDocument();
+      expect(within(timeline).getAllByText(/Origin: fleet_telemetry_mqtt/)).toHaveLength(2);
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    });
 
-  it.each([
-    ['Gear', 'No signal_log route; generic history is unavailable for this field.'],
-    ['SettingDistanceUnit', 'Unit settings use a separate unit-history source, not signal_log.'],
-    ['TestDropped', 'Dropped; unavailable'],
-  ])('does not request unproved generic history for %s or turn dropped evidence into live data', async (name, message) => {
-    const view = render(tree('v7', 1, { signalName: name }));
-    await presentation(view.container, 'pixel');
-    expect(within(screen.getByRole('region', { name: 'Signal history' })).getByText(message)).toBeInTheDocument();
-    expect(historyRequests(name)).toHaveLength(0);
-    if (name === 'TestDropped') {
-      expect(currentRow(name).getByText('Unknown')).toBeInTheDocument();
-      expect(currentRow(name).queryByText('99.00')).not.toBeInTheDocument();
-    }
-  });
+    it.each([
+      ['Gear', 'No signal_log route; generic history is unavailable for this field.'],
+      ['SettingDistanceUnit', 'Unit settings use a separate unit-history source, not signal_log.'],
+      ['TestDropped', 'Dropped; unavailable'],
+    ])('does not request unproved generic history for %s or turn dropped evidence into live data', async (name, message) => {
+      const view = render(tree(pack, 1, { signalName: name }));
+      await presentation(view.container, appearance);
+      expect(within(screen.getByRole('region', { name: 'Signal history' })).getByText(message)).toBeInTheDocument();
+      expect(historyRequests(name)).toHaveLength(0);
+      if (name === 'TestDropped') {
+        expect(currentRow(name).getByText('Unknown')).toBeInTheDocument();
+        expect(currentRow(name).queryByText('99.00')).not.toBeInTheDocument();
+      }
+    });
 
-  it.each([
-    ['zero', envelope(0), '0.0 %', 'Fresh observation'],
-    ['stale', envelope(72, 'ValueKindDouble', { ts: '2026-11-07T01:00:00Z' }), '72.0 %', 'Stale observation'],
-    ['log', envelope(72, 'ValueKindDouble', { source: 'log' }), '72.0 %', 'Historical fallback'],
-    ['unknown source', envelope(72, 'ValueKindDouble', { source: 'unknown' }), '72.0 %', 'Freshness unknown'],
-    ['future', envelope(72, 'ValueKindDouble', { ts: '2026-11-08T01:00:00Z' }), '72.0 %', 'Freshness unknown'],
-    ['invalid', envelope('72'), 'Unknown', 'Freshness unknown'],
-    ['out of range', envelope(101), 'Unknown', 'Freshness unknown'],
-    ['legacy scalar', 72, 'Unknown', 'Freshness unknown'],
-  ] as const)('keeps %s evidence distinct from a fresh measurement', async (_label, reading, value, trust) => {
-    live = { signals: { BatteryLevel: reading } };
-    const view = render(tree('v4'));
-    await presentation(view.container, 'owner');
-    expect(currentRow('BatteryLevel').getByText(value)).toBeInTheDocument();
-    expect(currentRow('BatteryLevel').getByText(trust)).toBeInTheDocument();
-  });
+    it.each([
+      ['zero', envelope(0), '0.0 %', 'Fresh observation'],
+      ['stale', envelope(72, 'ValueKindDouble', { ts: '2026-11-07T01:00:00Z' }), '72.0 %', 'Stale observation'],
+      ['log', envelope(72, 'ValueKindDouble', { source: 'log' }), '72.0 %', 'Historical fallback'],
+      ['unknown source', envelope(72, 'ValueKindDouble', { source: 'unknown' }), '72.0 %', 'Freshness unknown'],
+      ['future', envelope(72, 'ValueKindDouble', { ts: '2026-11-08T01:00:00Z' }), '72.0 %', 'Freshness unknown'],
+      ['invalid', envelope('72'), 'Unknown', 'Freshness unknown'],
+      ['out of range', envelope(101), 'Unknown', 'Freshness unknown'],
+      ['legacy scalar', 72, 'Unknown', 'Freshness unknown'],
+    ] as const)('keeps %s evidence distinct from a fresh measurement', async (_label, reading, value, trust) => {
+      live = { signals: { BatteryLevel: reading } };
+      const view = render(tree(pack));
+      await presentation(view.container, appearance);
+      expect(currentRow('BatteryLevel').getByText(value)).toBeInTheDocument();
+      expect(currentRow('BatteryLevel').getByText(trust)).toBeInTheDocument();
+    });
 
-  it('formats raw Pa through the shared pressure boundary without claiming hot-table history', async () => {
-    const view = render(tree('v2', 2, { signalName: 'TpmsPressureFl' }));
-    await presentation(view.container, 'elevated');
-    expect(currentRow('TpmsPressureFl').getByText('2.2 bar')).toBeInTheDocument();
-    expect(historyRequests('TpmsPressureFl')).toHaveLength(0);
-  });
+    it('formats raw Pa through the shared pressure boundary without claiming hot-table history', async () => {
+      const view = render(tree(pack, 2, { signalName: 'TpmsPressureFl' }));
+      await presentation(view.container, appearance);
+      expect(currentRow('TpmsPressureFl').getByText('2.2 bar')).toBeInTheDocument();
+      expect(historyRequests('TpmsPressureFl')).toHaveLength(0);
+    });
 
-  it('resolves a configured flattened field to its real parent and queries only the selected child', async () => {
-    const view = render(tree('v1', 2, { signalName: 'DoorStateDriverRear' }));
-    await presentation(view.container, 'studio');
-    expect(screen.getByRole('combobox', { name: 'Signal field' })).toHaveValue('DoorState');
-    expect(screen.getByRole('combobox', { name: 'Compound child' })).toHaveValue('DoorStateDriverRear');
-    expect(historyRequests('DoorStateDriverRear')).toHaveLength(1);
-    expect(historyRequests('DoorState')).toHaveLength(0);
-    expect(historyRequests('DoorStateDriverFront')).toHaveLength(0);
-  });
+    it('resolves a configured flattened field to its real parent and queries only the selected child', async () => {
+      const view = render(tree(pack, 2, { signalName: 'DoorStateDriverRear' }));
+      await presentation(view.container, appearance);
+      expect(screen.getByRole('combobox', { name: 'Signal field' })).toHaveValue('DoorState');
+      expect(screen.getByRole('combobox', { name: 'Compound child' })).toHaveValue('DoorStateDriverRear');
+      expect(historyRequests('DoorStateDriverRear')).toHaveLength(1);
+      expect(historyRequests('DoorState')).toHaveLength(0);
+      expect(historyRequests('DoorStateDriverFront')).toHaveLength(0);
+    });
 
-  it('retains independent readings and all history samples on failed refresh, then recovers', async () => {
-    const view = render(tree('v4'));
-    await presentation(view.container, 'owner');
-    failures.add('/signals/7/live');
-    failures.add('/signals/7/BatteryLevel/history');
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh signal evidence' }));
-    await settled();
-    expect(currentRow('BatteryLevel').getByText('72.0 %')).toBeInTheDocument();
-    expect(currentRow('BatteryLevel').getByText('Retained snapshot')).toBeInTheDocument();
-    expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.')).toHaveLength(2);
-    expect(within(screen.getByRole('region', { name: 'Signal history' })).getByRole('table')).toBeInTheDocument();
-    failures.clear();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh signal evidence' }));
-    await settled();
-    expect(currentRow('BatteryLevel').getByText('Fresh observation')).toBeInTheDocument();
-    expect(screen.queryByText('Previously loaded data remains visible while affected sources recover.')).not.toBeInTheDocument();
-  });
+    it('retains independent readings and all history samples on failed refresh, then recovers', async () => {
+      const view = render(tree(pack));
+      await presentation(view.container, appearance);
+      failures.add('/signals/7/live');
+      failures.add('/signals/7/BatteryLevel/history');
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh signal evidence' }));
+      await settled();
+      expect(currentRow('BatteryLevel').getByText('72.0 %')).toBeInTheDocument();
+      expect(currentRow('BatteryLevel').getByText('Retained snapshot')).toBeInTheDocument();
+      expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.')).toHaveLength(2);
+      expect(within(screen.getByRole('region', { name: 'Signal history' })).getByRole('table')).toBeInTheDocument();
+      failures.clear();
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh signal evidence' }));
+      await settled();
+      expect(currentRow('BatteryLevel').getByText('Fresh observation')).toBeInTheDocument();
+      expect(screen.queryByText('Previously loaded data remains visible while affected sources recover.')).not.toBeInTheDocument();
+    });
 
-  it('isolates an initial live failure without removing inventory, routing or historical evidence', async () => {
-    failures.add('/signals/7/live');
-    const view = render(tree('v5'));
-    await presentation(view.container, 'iconic');
-    expect(screen.getByText('Live signal evidence could not be loaded.')).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Signal field' })).toBeInTheDocument();
-    expect(within(screen.getByRole('region', { name: 'Signal history' })).getByRole('table')).toBeInTheDocument();
-    for (const name of SECTION_NAMES) expect(screen.getByRole('region', { name })).toBeInTheDocument();
-  });
+    it('isolates an initial live failure without removing inventory, routing or historical evidence', async () => {
+      failures.add('/signals/7/live');
+      const view = render(tree(pack));
+      await presentation(view.container, appearance);
+      expect(screen.getByText('Live signal evidence could not be loaded.')).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Signal field' })).toBeInTheDocument();
+      expect(within(screen.getByRole('region', { name: 'Signal history' })).getByRole('table')).toBeInTheDocument();
+      for (const name of SECTION_NAMES) expect(screen.getByRole('region', { name })).toBeInTheDocument();
+    });
 
-  it('does not turn a routing failure into permission to query unproved history', async () => {
-    failures.add('/tesla/fleet-telemetry/coverage');
-    const view = render(tree('v6'));
-    await presentation(view.container, 'expressive');
-    expect(screen.getByText('Routing evidence could not be loaded.')).toBeInTheDocument();
-    expect(currentRow('BatteryLevel').getByText('72.0 %')).toBeInTheDocument();
-    expect(screen.getByText('History eligibility is unknown until routing evidence is available.')).toBeInTheDocument();
-    expect(historyRequests('BatteryLevel')).toHaveLength(0);
-  });
+    it('does not turn a routing failure into permission to query unproved history', async () => {
+      failures.add('/tesla/fleet-telemetry/coverage');
+      const view = render(tree(pack));
+      await presentation(view.container, appearance);
+      expect(screen.getByText('Routing evidence could not be loaded.')).toBeInTheDocument();
+      expect(currentRow('BatteryLevel').getByText('72.0 %')).toBeInTheDocument();
+      expect(screen.getByText('History eligibility is unknown until routing evidence is available.')).toBeInTheDocument();
+      expect(historyRequests('BatteryLevel')).toHaveLength(0);
+    });
 
-  it('keeps every source shell and the shared presentation mounted while the catalog is loading', async () => {
-    let resolveCatalog: ((value: AvailableSignalsResponse) => void) | undefined;
-    const pending = new Promise<AvailableSignalsResponse>(resolve => { resolveCatalog = resolve; });
-    const implementation = requestMock.getMockImplementation();
-    if (!implementation) throw new Error('Missing fixture implementation');
-    requestMock.mockImplementation(path => path === '/signals/7/available' ? pending : implementation(path));
-    const view = render(tree('v1'));
-    await waitFor(() => expect(view.container.querySelector('[data-widget-appearance="studio"]')).toBeInTheDocument());
-    for (const name of SECTION_NAMES) expect(screen.getByRole('region', { name })).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Loading Signal inventory' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Refresh signal evidence' })).toBeDisabled();
-    await act(async () => { resolveCatalog?.(catalog); });
-    await settled();
-    expect(currentRow('BatteryLevel').getByText('72.0 %')).toBeInTheDocument();
-  });
+    it('keeps every source shell and the shared presentation mounted while the catalog is loading', async () => {
+      let resolveCatalog: ((value: AvailableSignalsResponse) => void) | undefined;
+      const pending = new Promise<AvailableSignalsResponse>(resolve => { resolveCatalog = resolve; });
+      const implementation = requestMock.getMockImplementation();
+      if (!implementation) throw new Error('Missing fixture implementation');
+      requestMock.mockImplementation(path => path === '/signals/7/available' ? pending : implementation(path));
+      const view = render(tree(pack));
+      await waitFor(() => expect(view.container.querySelector(`[data-widget-appearance="${appearance}"]`)).toBeInTheDocument());
+      for (const name of SECTION_NAMES) expect(screen.getByRole('region', { name })).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: 'Loading Signal inventory' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Refresh signal evidence' })).toBeDisabled();
+      await act(async () => { resolveCatalog?.(catalog); });
+      await settled();
+      expect(currentRow('BatteryLevel').getByText('72.0 %')).toBeInTheDocument();
+    });
 
-  it('keeps source shells for an empty catalog and never invents a default measurement', async () => {
-    catalog = { ...catalog, count: 0, signals: [] };
-    live = { signals: {} };
-    const view = render(tree('v7'));
-    await presentation(view.container, 'pixel');
-    expect(screen.getByText('No catalog fields are available.')).toBeInTheDocument();
-    for (const name of SECTION_NAMES) expect(screen.getByRole('region', { name })).toBeInTheDocument();
-    expect(screen.queryByText('0.0 %')).not.toBeInTheDocument();
-    expect(requestMock.mock.calls.some(([path]) => path.includes('/history?'))).toBe(false);
+    it('keeps source shells for an empty catalog and never invents a default measurement', async () => {
+      catalog = { ...catalog, count: 0, signals: [] };
+      live = { signals: {} };
+      const view = render(tree(pack));
+      await presentation(view.container, appearance);
+      expect(screen.getByText('No catalog fields are available.')).toBeInTheDocument();
+      for (const name of SECTION_NAMES) expect(screen.getByRole('region', { name })).toBeInTheDocument();
+      expect(screen.queryByText('0.0 %')).not.toBeInTheDocument();
+      expect(requestMock.mock.calls.some(([path]) => path.includes('/history?'))).toBe(false);
+    });
   });
 
   it('honors explicit configuration changes and never silently falls back from an unknown configured field', async () => {

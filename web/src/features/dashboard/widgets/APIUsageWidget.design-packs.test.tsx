@@ -177,57 +177,64 @@ it('preserves Classic by default, on explicit selection and as the unknown-pack 
   expect(mocks.refresh).not.toHaveBeenCalled();
 });
 
-it('retains empty source shells and independent supporting metric placeholders', async () => {
-  mocks.stats.mockReturnValue(makeQuery(null));
-  const { container } = mount('v4');
-  await expectPack(container, 'owner');
-  expect(screen.getByRole('heading', { name: 'API usage' })).toBeInTheDocument();
-  expect(screen.getByText('No API usage data')).toBeInTheDocument();
-  expect(screen.getByText('No method breakdown available')).toBeInTheDocument();
-  expect(screen.getByText('Avg response')).toBeInTheDocument();
-  expect(screen.getByText('Error rate')).toBeInTheDocument();
-  expect(screen.queryByText('0')).not.toBeInTheDocument();
-});
-
-it('keeps valid aggregate metrics when the server omits the optional breakdown', async () => {
-  mocks.stats.mockReturnValue(makeQuery({ ...stats, by_method: undefined }));
-  const { container } = mount('v6');
-  await expectPack(container, 'expressive');
-  expect(screen.getByText('180')).toBeInTheDocument();
-  expect(screen.getByText('82.00')).toBeInTheDocument();
-  expect(screen.getByText('0.50')).toBeInTheDocument();
-  expect(screen.getByText('No method breakdown available')).toBeInTheDocument();
-  expect(container.querySelector('.recharts-bar')).toBeNull();
-  expect(screen.queryByText('6h')).not.toBeInTheDocument();
-  expect(screen.queryByText('Top endpoints')).not.toBeInTheDocument();
-});
-
-it('preserves measured zero counts and leaves invalid grouped readings unknown', async () => {
-  mocks.stats.mockReturnValue(makeQuery({
-    ...stats, last24h: 0, by_method: { GET: 0, POST: Number.NaN, PATCH: -1 },
-  }));
-  const { container } = mount('v3');
-  await expectPack(container, 'precision');
-  const table = screen.getByRole('table');
-  expect(within(table).getByRole('row', { name: 'GET 0' })).toBeInTheDocument();
-  expect(within(table).getByRole('row', { name: 'POST —' })).toBeInTheDocument();
-  expect(within(table).getByRole('row', { name: 'PATCH —' })).toBeInTheDocument();
-  expect(screen.queryByText('NaN')).not.toBeInTheDocument();
-  expect(screen.queryByText('-1')).not.toBeInTheDocument();
-});
-
-it('uses the existing initial-loading and fatal-error boundaries with a working retry', () => {
-  mocks.stats.mockReturnValue({ ...makeQuery(undefined), data: undefined, isLoading: true });
-  const { container, selectPack } = mount('v2');
-  expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
-  expect(screen.queryByText('180')).not.toBeInTheDocument();
-
-  mocks.stats.mockReturnValue({
-    ...makeQuery(), data: undefined, isError: true, error: new Error('initial failure'),
+describe.each(Object.entries(PACK_APPEARANCES))('API usage source states %s (%s)', (packId, appearance) => {
+  it('retains empty source shells and independent supporting metric placeholders', async () => {
+    mocks.stats.mockReturnValue(makeQuery(null));
+    const { container } = mount(packId);
+    await expectPack(container, appearance);
+    expect(screen.getByRole('heading', { name: 'API usage' })).toBeInTheDocument();
+    expect(screen.getByText('No API usage data')).toBeInTheDocument();
+    expect(screen.getByText('No method breakdown available')).toBeInTheDocument();
+    expect(screen.getByText('Avg response')).toBeInTheDocument();
+    expect(screen.getByText('Error rate')).toBeInTheDocument();
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
-  selectPack('v5');
-  expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /retry/i }));
-  expect(mocks.refresh).toHaveBeenCalledTimes(1);
-  expect(screen.queryByRole('figure')).not.toBeInTheDocument();
+
+  it('keeps valid aggregate metrics when the server omits the optional breakdown', async () => {
+    mocks.stats.mockReturnValue(makeQuery({ ...stats, by_method: undefined }));
+    const { container } = mount(packId);
+    await expectPack(container, appearance);
+    expect(screen.getByText('180')).toBeInTheDocument();
+    expect(screen.getByText('82.00')).toBeInTheDocument();
+    expect(screen.getByText('0.50')).toBeInTheDocument();
+    expect(screen.getByText('No method breakdown available')).toBeInTheDocument();
+    expect(container.querySelector('.recharts-bar')).toBeNull();
+    expect(screen.queryByText('6h')).not.toBeInTheDocument();
+    expect(screen.queryByText('Top endpoints')).not.toBeInTheDocument();
+  });
+
+  it('preserves measured zero counts and leaves invalid grouped readings unknown', async () => {
+    mocks.stats.mockReturnValue(makeQuery({
+      ...stats, last24h: 0, avgDurationMs: 0, errorRate: 0,
+      by_method: { GET: 0, POST: Number.NaN, PATCH: -1 },
+    }));
+    const { container } = mount(packId);
+    await expectPack(container, appearance);
+    expect(screen.getAllByText('0')).toHaveLength(2);
+    expect(screen.getAllByText('0.00')).toHaveLength(2);
+    expect(screen.getByText('ms')).toBeInTheDocument();
+    expect(screen.getByText('%')).toBeInTheDocument();
+    const table = screen.getByRole('table');
+    expect(within(table).getByRole('row', { name: 'GET 0' })).toBeInTheDocument();
+    expect(within(table).getByRole('row', { name: 'POST —' })).toBeInTheDocument();
+    expect(within(table).getByRole('row', { name: 'PATCH —' })).toBeInTheDocument();
+    expect(screen.queryByText('NaN')).not.toBeInTheDocument();
+    expect(screen.queryByText('-1')).not.toBeInTheDocument();
+  });
+
+  it('uses the existing initial-loading and fatal-error boundaries with a working retry', () => {
+    mocks.stats.mockReturnValue({ ...makeQuery(undefined), data: undefined, isLoading: true });
+    const { container, selectPack } = mount(packId);
+    expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('180')).not.toBeInTheDocument();
+
+    mocks.stats.mockReturnValue({
+      ...makeQuery(), data: undefined, isError: true, error: new Error('initial failure'),
+    });
+    selectPack(packId);
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(mocks.refresh).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('figure')).not.toBeInTheDocument();
+  });
 });

@@ -34,7 +34,7 @@
  * tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
@@ -109,6 +109,8 @@ import RecentlyUnlockedAchievementsWidget, {
 } from './RecentlyUnlockedAchievements';
 import type { WidgetSize } from './types';
 import type { AchievementCelebrationPrefs } from '@/hooks/useAchievementCelebrationPrefs';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS } from './designPacks/types';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 const SIZE_NARROW: WidgetSize = { cols: 1, rows: 2 };
@@ -174,10 +176,6 @@ const DEFAULT_PREFS: AchievementCelebrationPrefs = {
   pushOnUnlock: true,
 };
 
-function renderWidget(node: ReactElement) {
-  return render(<MemoryRouter>{node}</MemoryRouter>);
-}
-
 // A well-spread, deliberately out-of-order set. Newest → oldest by unlocked_at:
 // March, February, January, then December (previous year). The locked entry has
 // no timestamp and must be excluded regardless of the `unlocked` flag.
@@ -224,7 +222,15 @@ describe('unlockedTs', () => {
 });
 
 // ── Widget: badge strip ───────────────────────────────────────────────────────
-describe('RecentlyUnlockedAchievementsWidget', () => {
+describe.each(PACK_IDS)('RecentlyUnlockedAchievementsWidget (%s)', packId => {
+  function renderWidget(node: ReactElement) {
+    return render(
+      <MemoryRouter>
+        <PackBoundary requestedPackId={packId}>{node}</PackBoundary>
+      </MemoryRouter>,
+    );
+  }
+
   it('recovers initial failures without claiming no achievements have been unlocked', () => {
     const refetch = vi.fn();
     lifetimeMock.mockReturnValue(makeLifetimeQuery(undefined, { isError: true, refetch }));
@@ -266,6 +272,16 @@ describe('RecentlyUnlockedAchievementsWidget', () => {
   it('renders unlocked badges newest-first, capped at 3 in the narrow layout, excluding locked/undated', () => {
     renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} />);
 
+    const list = screen.getByTestId('recently-unlocked-list');
+    expect(list.closest('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+    if (packId === 'classic') {
+      expect(list).not.toHaveAttribute('data-timeline-appearance');
+      expect(list).toHaveClass('grid', 'grid-cols-3');
+    } else {
+      expect(list).toHaveAttribute('data-timeline-appearance', PACK_APPEARANCES[packId]);
+      expect(list).toHaveClass('flex', 'flex-col');
+    }
+
     const links = achievementLinks();
     // 5 supplied → 1 locked excluded → top 3 by unlocked_at desc.
     expect(links).toHaveLength(3);
@@ -304,6 +320,31 @@ describe('RecentlyUnlockedAchievementsWidget', () => {
     expect(links[0]).toHaveAttribute('aria-label', 'View achievement: March');
     expect(links[1]).toHaveAttribute('aria-label', 'View achievement: January');
     expect(links[2]).toHaveAttribute('aria-label', 'View achievement: BadDate');
+    expect(within(links[2]).getByText('—')).toBeInTheDocument();
+  });
+
+  it('preserves badge focus, content, and refresh ownership when the presentation changes', () => {
+    const refetch = vi.fn();
+    lifetimeMock.mockReturnValue(makeLifetimeQuery([MARCH], { refetch }));
+    const widget = <RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} vehicleId={42} />;
+    const { rerender } = render(
+      <MemoryRouter><PackBoundary requestedPackId="classic">{widget}</PackBoundary></MemoryRouter>,
+    );
+    const link = screen.getByRole('link', { name: 'View achievement: March' });
+    link.focus();
+
+    rerender(
+      <MemoryRouter><PackBoundary requestedPackId={packId}>{widget}</PackBoundary></MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: 'View achievement: March' })).toBe(link);
+    expect(link).toHaveFocus();
+    expect(link).toHaveAttribute('href', '/lifetime?achievement=m');
+    expect(within(link).getByText('🏆')).toBeInTheDocument();
+    expect(lifetimeMock).toHaveBeenLastCalledWith('42');
+    expect(refetch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+    expect(refetch).toHaveBeenCalledOnce();
   });
 
   it('deep-links to the lifetime page with a URL-encoded achievement id on click', () => {

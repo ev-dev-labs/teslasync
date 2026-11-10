@@ -15,6 +15,7 @@ import { WidgetShell } from './WidgetShell';
 import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import { usePackPresentation } from './designPacks/PackBoundary';
 import type { PackId } from './designPacks/types';
+import { EXPERIMENTAL_BAR_RADII } from './designPacks/experimentalLayouts';
 import type { WidgetProps } from './types';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
@@ -24,6 +25,7 @@ import { classifyChargingSource, type ChargerKind } from '@/lib/chargerKind';
 import { CHARGER_COLORS } from '@/lib/colors';
 
 const barRadii: Record<PackId, [number, number, number, number]> = {
+  ...EXPERIMENTAL_BAR_RADII,
   classic: [4, 4, 0, 0], v1: [7, 7, 3, 3], v2: [8, 8, 4, 4],
   v3: [6, 6, 2, 2], v4: [8, 8, 4, 4], v5: [4, 4, 0, 0],
   v6: [16, 16, 5, 5], v7: [2, 2, 0, 0],

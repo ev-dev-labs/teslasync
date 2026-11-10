@@ -46,7 +46,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, renderHook, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, renderHook, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -97,20 +97,14 @@ vi.mock('@/api/hooks/useVehicleSystems', async (importActual) => {
   return { ...actual, useSafetyHistory: vi.fn() };
 });
 
-describe('SafetyHistoryWidget retained snapshot semantics', () => {
-  it('does not classify unknown enum readings as active warnings', () => {
-    expect(classifySnapshot({
-      forward_collision_warning: 'ForwardCollisionSensitivityUnknown',
-      lane_departure_avoidance: 'LaneAssistLevelUnknown',
-    }).type).toBe('general');
-  });
-
-  it.each([{ cols: 1, rows: 1 }, { cols: 2, rows: 2 }, { cols: 4, rows: 4 }])('keeps cached snapshots and bounded summary trust in %o', (size) => {
+describe.each(PACK_IDS)('SafetyHistoryWidget %s retained snapshot semantics', (packId) => {
+  it.each([{ cols: 1, rows: 1 }, { cols: 2, rows: 2 }, { cols: 4, rows: 4 }])('keeps cached snapshots and bounded summary trust in %o', async (size) => {
     mockSafety.mockReturnValue(qr({
       data: [snap({ automatic_emergency_braking_off: true })],
       error: new Error('refresh failed'), isError: true,
     }));
-    renderWidget(size);
+    const { container } = renderWidget(size, {}, packId);
+    await expectTimeline(container, packId);
     expect(screen.getByText('Summary of returned safety snapshots, not activation counts')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
     if (size.cols === 1) expect(screen.getByText('1 events (30d)')).toBeInTheDocument();
@@ -120,15 +114,16 @@ describe('SafetyHistoryWidget retained snapshot semantics', () => {
 
   it('does not fabricate stable trend or epoch timestamps from absent evidence', () => {
     mockSafety.mockReturnValue(qr({ data: [snap({ created_at: undefined })] }));
-    renderWidget(STANDARD);
+    renderWidget(STANDARD, {}, packId);
     expect(screen.queryByText('Stable')).toBeNull();
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
   });
 
   it('keeps returned-window zero distinct from missing history and disclaims complete event coverage', () => {
     mockSafety.mockReturnValue(qr({ data: [snap({ created_at: daysAgo(40) })] }));
-    renderWidget(STANDARD);
+    renderWidget(STANDARD, {}, packId);
     expect(screen.getByText('No safety events recorded')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
   });
 });
 vi.mock('@/api/hooks/useVehicles', async (importActual) => {
@@ -159,6 +154,8 @@ import { useSafetyHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import type { SafetySnapshot } from '@/types/vehicle-systems';
 import type { WidgetProps, WidgetSize } from './types';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 const mockSafety = vi.mocked(useSafetyHistory);
 const mockVehicles = vi.mocked(useVehicles);
@@ -191,15 +188,28 @@ function snap(over: Partial<SafetySnapshot> = {}): SafetySnapshot {
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
 const STANDARD: WidgetSize = { cols: 2, rows: 2 };
 
-function renderWidget(size: WidgetSize, props: Partial<WidgetProps> = {}) {
+function renderWidget(size: WidgetSize, props: Partial<WidgetProps> = {}, packId: PackId = 'classic') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <SafetyHistoryWidget size={size} {...props} />
+        <PackBoundary requestedPackId={packId}>
+          <SafetyHistoryWidget size={size} {...props} />
+        </PackBoundary>
       </MemoryRouter>
     </QueryClientProvider>,
   );
+}
+
+async function expectTimeline(container: HTMLElement, packId: PackId) {
+  if (packId === 'classic') {
+    expect(container.querySelector('[data-timeline-appearance]')).toBeNull();
+  } else {
+    await waitFor(() => {
+      expect(container.querySelector('[data-timeline-appearance]'))
+        .toHaveAttribute('data-timeline-appearance', PACK_APPEARANCES[packId]);
+    });
+  }
 }
 
 beforeEach(() => {
@@ -259,6 +269,13 @@ describe('classifySnapshot', () => {
     expect(
       classifySnapshot({ lane_departure_avoidance: 'LaneAssistLevelOff' }).type,
     ).toBe('general');
+  });
+
+  it('does not classify unknown enum readings as active warnings', () => {
+    expect(classifySnapshot({
+      forward_collision_warning: 'ForwardCollisionSensitivityUnknown',
+      lane_departure_avoidance: 'LaneAssistLevelUnknown',
+    }).type).toBe('general');
   });
 });
 
@@ -343,10 +360,14 @@ describe('buildSubtitle', () => {
 
 // ── Widget: shell states ───────────────────────────────────────────────────
 
+describe.each(PACK_IDS)('SafetyHistoryWidget — %s presentation', (packId) => {
+  const renderForPack = (size: WidgetSize, props: Partial<WidgetProps> = {}) =>
+    renderWidget(size, props, packId);
+
 describe('SafetyHistoryWidget — shell states', () => {
   it('shows a skeleton (never a blank panel) and no rows while loading', () => {
     mockSafety.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
-    const { container } = renderWidget(STANDARD);
+    const { container } = renderForPack(STANDARD);
 
     expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Safety history')).toBeInTheDocument();
@@ -357,7 +378,7 @@ describe('SafetyHistoryWidget — shell states', () => {
     mockSafety.mockReturnValue(
       qr({ isError: true, error: new Error('safety down'), data: undefined }),
     );
-    renderWidget(STANDARD);
+    renderForPack(STANDARD);
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
@@ -367,25 +388,27 @@ describe('SafetyHistoryWidget — shell states', () => {
   });
 
   it('renders the title + explicit empty state when there is no history (standard)', () => {
-    renderWidget(STANDARD);
+    renderForPack(STANDARD);
 
     expect(screen.getByText('Safety history')).toBeInTheDocument();
     // The measured zero stays; unknown readings are omitted with an explanation.
     expect(screen.getByText('Events')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
     // … and the feed shows an empty state rather than a blank panel.
     expect(screen.getByText('No safety events recorded')).toBeInTheDocument();
   });
 
   it('renders the compact empty note when there is no history (compact)', () => {
-    renderWidget(COMPACT);
+    renderForPack(COMPACT);
 
     expect(screen.getByText('No safety events recorded')).toBeInTheDocument();
   });
 
   it('is resilient when the query resolves to undefined data', () => {
     mockSafety.mockReturnValue(qr({ data: undefined }));
-    renderWidget(STANDARD);
+    const { container } = renderForPack(STANDARD);
 
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'unavailable');
     expect(screen.getByText('Safety history')).toBeInTheDocument();
     expect(screen.getByText('No safety events recorded')).toBeInTheDocument();
   });
@@ -394,7 +417,7 @@ describe('SafetyHistoryWidget — shell states', () => {
 // ── Widget: populated ──────────────────────────────────────────────────────
 
 describe('SafetyHistoryWidget — compact layout', () => {
-  it('summarises the 30-day count and most-common type on one line', () => {
+  it('summarises the 30-day count and most-common type on one line', async () => {
     mockSafety.mockReturnValue(
       qr({
         data: [
@@ -403,7 +426,8 @@ describe('SafetyHistoryWidget — compact layout', () => {
         ],
       }),
     );
-    renderWidget(COMPACT);
+    const { container } = renderForPack(COMPACT);
+    await expectTimeline(container, packId);
 
     expect(screen.getByText('2 events (30d)')).toBeInTheDocument();
     // most-common label ("AEB") + trend ("—") on the caption line.
@@ -412,7 +436,7 @@ describe('SafetyHistoryWidget — compact layout', () => {
 });
 
 describe('SafetyHistoryWidget — standard layout', () => {
-  it('renders the stat strip and a feed row with a CLEANED subtitle (R2)', () => {
+  it('renders the stat strip and a feed row with a CLEANED subtitle (R2)', async () => {
     mockSafety.mockReturnValue(
       qr({
         data: [
@@ -425,7 +449,8 @@ describe('SafetyHistoryWidget — standard layout', () => {
         ],
       }),
     );
-    renderWidget(STANDARD);
+    const { container } = renderForPack(STANDARD);
+    await expectTimeline(container, packId);
 
     // Stat strip (no preceding window exists, so the trend is unknown).
     expect(screen.getByText('Events')).toBeInTheDocument();
@@ -438,7 +463,7 @@ describe('SafetyHistoryWidget — standard layout', () => {
     expect(screen.queryByText(/SpeedAssistLevel/)).toBeNull();
   });
 
-  it('shows an increasing trend (↑) with its sublabel', () => {
+  it('shows an increasing trend (↑) with its sublabel', async () => {
     mockSafety.mockReturnValue(
       qr({
         data: [
@@ -448,13 +473,14 @@ describe('SafetyHistoryWidget — standard layout', () => {
         ],
       }),
     );
-    renderWidget(STANDARD);
+    const { container } = renderForPack(STANDARD);
+    await expectTimeline(container, packId);
 
     expect(screen.getByText('↑')).toBeInTheDocument();
     expect(screen.getByText('Increasing')).toBeInTheDocument();
   });
 
-  it('shows a decreasing trend (↓) with its sublabel', () => {
+  it('shows a decreasing trend (↓) with its sublabel', async () => {
     mockSafety.mockReturnValue(
       qr({
         data: [
@@ -464,9 +490,35 @@ describe('SafetyHistoryWidget — standard layout', () => {
         ],
       }),
     );
-    renderWidget(STANDARD);
+    const { container } = renderForPack(STANDARD);
+    await expectTimeline(container, packId);
 
     expect(screen.getByText('↓')).toBeInTheDocument();
+  });
+
+  it('preserves unknown and inactive safety readings, zero advisories, and invalid-date exclusion', async () => {
+    mockSafety.mockReturnValue(qr({
+      data: [
+        snap({
+          forward_collision_warning: 'ForwardCollisionSensitivityUnknown',
+          lane_departure_avoidance: 'LaneAssistLevelOff',
+          speed_limit_warning: false,
+          cruise_follow_distance: 0,
+        }),
+        snap({ id: 2, created_at: 'invalid-date', automatic_emergency_braking_off: true }),
+      ],
+    }));
+    const { container } = renderForPack(STANDARD);
+    await expectTimeline(container, packId);
+
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('snapshot')).toBeInTheDocument();
+    expect(screen.getByText('General')).toBeInTheDocument();
+    expect(screen.getByText('Safety state update')).toBeInTheDocument();
+    expect(screen.getByText(/Speed limit: Off · Follow: 0/)).toBeInTheDocument();
+    expect(screen.queryByText('Automatic emergency braking disabled')).toBeNull();
+    expect(screen.queryByText('Stable')).toBeNull();
+    expect(screen.queryByText(/ForwardCollisionSensitivity|LaneAssistLevel|Invalid Date|1970/)).toBeNull();
   });
 });
 
@@ -474,18 +526,18 @@ describe('SafetyHistoryWidget — standard layout', () => {
 
 describe('SafetyHistoryWidget — vehicle resolution', () => {
   it('uses the explicit vehicleId prop when provided', () => {
-    renderWidget(STANDARD, { vehicleId: 42 });
+    renderForPack(STANDARD, { vehicleId: 42 });
     expect(mockSafety).toHaveBeenCalledWith('42');
   });
 
   it('falls back to the first vehicle when no prop is supplied', () => {
-    renderWidget(STANDARD);
+    renderForPack(STANDARD);
     expect(mockSafety).toHaveBeenCalledWith('7');
   });
 });
 
 describe('SafetyHistoryWidget — refresh wiring', () => {
-  it('invokes the query refetch when the freshness control is activated', () => {
+  it('invokes the query refetch when the freshness control is activated', async () => {
     const refetch = vi.fn();
     mockSafety.mockReturnValue(
       qr({
@@ -493,11 +545,13 @@ describe('SafetyHistoryWidget — refresh wiring', () => {
         refetch,
       }),
     );
-    renderWidget(STANDARD);
+    const { container } = renderForPack(STANDARD);
+    await expectTimeline(container, packId);
 
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
   });
+});
 });
 import { COLOR, DATA_VISUAL_COLORS, CHART_NEUTRAL } from '@/lib/colors';

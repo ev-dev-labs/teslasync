@@ -57,11 +57,27 @@ export const reviewWidgets = [
 export const packNames: Record<PackId, string> = {
   classic: 'Classic', v1: 'Studio', v2: 'Elevated', v3: 'Precision',
   v4: 'Owner', v5: 'Iconic', v6: 'Expressive', v7: 'Pixel',
+  motorsport: 'Motorsport', blueprint: 'Blueprint', editorial: 'Editorial',
+  ambient: 'Ambient', terminal: 'Terminal', atlas: 'Atlas', analog: 'Analog',
+  observatory: 'Observatory', bauhaus: 'Bauhaus', quiet: 'Quiet Form',
+  warm: 'Warm Modern', swiss: 'Swiss Grid', material: 'Material Play',
+  glass: 'Glass Current', deco: 'Deco Grand', kinetic: 'Kinetic Type',
+  brutal: 'Neo Brutal', cyber: 'Cyberdeck', memphis: 'Memphis Pop',
 };
 export const reviewOrigin = 'http://127.0.0.1:4189';
 const reviewIdentity = 'widget-design-review';
-export const preferenceKey = 'teslasync.widget-design-pack.v1.'
-  + createHash('sha256').update(JSON.stringify([reviewOrigin, { mode: 'open' }])).digest('hex');
+
+export interface ReviewPreferenceStore {
+  pack_id: PackId;
+  scope: string;
+}
+
+export function createReviewPreference(subject?: string): ReviewPreferenceStore {
+  return {
+    pack_id: 'classic',
+    scope: createHash('sha256').update(subject ? `forward_auth:${subject}` : 'open').digest('hex'),
+  };
+}
 
 export function presentationSelector(widgetId: string, packId: Exclude<PackId, 'classic'>) {
   if (widgetId === 'vehicle-hero') return `[data-vehicle-hero-pack="${packId}"]`;
@@ -80,6 +96,7 @@ export async function installPackReview(
   page: Page, theme: 'light' | 'dark', width: number, unknown = false,
   selection: readonly (readonly [string, string])[] = reviewWidgets,
   fullCatalogue = false,
+  preferenceStore = createReviewPreference(),
 ) {
   if (process.env.E2E_MOCKS === '0') throw new Error('Widget design review requires isolated synthetic fixtures');
   await seedBrowserState(page, theme, '/', { preserveDashboardState: true });
@@ -92,20 +109,28 @@ export async function installPackReview(
     widgets, layouts: orderedLayouts(widgets), settings: mergeDashboardSettings({ vehicleId: 7 }),
     isDefault: true, createdAt: now, updatedAt: now,
   };
-  await page.addInitScript(({ saved, key }) => {
+  await page.addInitScript(({ saved }) => {
     sessionStorage.setItem('teslasync-watch-key', 'synthetic-review-key');
     localStorage.setItem('teslasync-dashboards', JSON.stringify([saved]));
     localStorage.setItem('teslasync-active-dashboard', saved.id);
-    if (localStorage.getItem(key) == null) {
-      localStorage.setItem(key, JSON.stringify({ version: 1, packId: 'classic' }));
-    }
-  }, { saved: dashboard, key: preferenceKey });
+  }, { saved: dashboard });
   await page.route('**/*', route => {
     return new URL(route.request().url()).origin === reviewOrigin
       ? route.continue() : route.abort('blockedbyclient');
   });
   const mocks = await installApiMocks(page, 'populated', theme);
   if (!mocks) throw new Error('Missing isolated API fixtures');
+  await page.route('**/api/v1/settings/widget-design-pack', async route => {
+    if (route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON() as { pack_id: PackId };
+      if (!Object.hasOwn(packNames, body.pack_id)) {
+        await fulfillApiFixture(route, mocks, { status: 400, json: { error: 'Unknown design pack' } });
+        return;
+      }
+      preferenceStore.pack_id = body.pack_id;
+    }
+    await fulfillApiFixture(route, mocks, { json: preferenceStore });
+  });
   await installDashboardWidgetSources(page, mocks);
   const analytics = catalogueAnalyticsSources(now);
   await installCatalogueRoutes(page, mocks, {
@@ -172,8 +197,17 @@ export async function installPackReview(
 }
 
 export async function selectReviewPack(page: Page, packId: PackId) {
-  await page.evaluate(({ key, selected }) => {
-    localStorage.setItem(key, JSON.stringify({ version: 1, packId: selected }));
-    window.dispatchEvent(new CustomEvent('teslasync:widget-design-pack-changed', { detail: key }));
-  }, { key: preferenceKey, selected: packId });
+  await page.evaluate(async selected => {
+    const saved = await fetch('/api/v1/settings/widget-design-pack', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pack_id: selected }),
+    });
+    if (!saved.ok) throw new Error('Synthetic preference write failed');
+    const channel = new BroadcastChannel('teslasync');
+    channel.postMessage({
+      _from: 'design-review-harness', _ts: Date.now(),
+      msg: { type: 'queryInvalidate', keys: [['widget-design-preference']] },
+    });
+    channel.close();
+  }, packId);
 }

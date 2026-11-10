@@ -183,54 +183,56 @@ it.each(productionPacks)('converts all %s comparison readings and labels to the 
   expect(screen.queryByText(/\bkm\b/)).not.toBeInTheDocument();
 });
 
-it.each([
-  { rated_range: 0, ideal_range: 0, battery_level: 0, rated: '0 km', ideal: '0 km', battery: '0%' },
-  { rated_range: Number.NaN, ideal_range: -10, battery_level: 101, rated: '—', ideal: '—', battery: '—' },
-  { rated_range: null, ideal_range: 430_000, battery_level: null, rated: '—', ideal: '430 km', battery: '—' },
-])('distinguishes zero, invalid and partial source readings: %j', async reading => {
-  query = makeQuery({ data: { state: makeState(reading), live: true } });
-  const { container } = renderWidget('v7');
-  await expectPack(container, 'v7');
-  const table = within(screen.getByRole('figure', { name: comparisonTitle })).getByRole('table');
-  expect(within(table).getByRole('row', { name: `Rated range ${reading.rated}` })).toBeInTheDocument();
-  expect(within(table).getByRole('row', { name: `Ideal range ${reading.ideal}` })).toBeInTheDocument();
-  const facts = screen.getByText('Battery').closest('li');
-  expect(facts).not.toBeNull();
-  expect(within(facts!).getByText(reading.battery)).toBeInTheDocument();
-  expect(screen.queryByText('NaN')).not.toBeInTheDocument();
-  expect(screen.queryByText('-0 km')).not.toBeInTheDocument();
-});
+describe.each(productionPacks)('Range Estimate %s source and controller states', packId => {
+  it.each([
+    { rated_range: 0, ideal_range: 0, battery_level: 0, rated: '0 km', ideal: '0 km', battery: '0%' },
+    { rated_range: Number.NaN, ideal_range: -10, battery_level: 101, rated: '—', ideal: '—', battery: '—' },
+    { rated_range: null, ideal_range: 430_000, battery_level: null, rated: '—', ideal: '430 km', battery: '—' },
+  ])('distinguishes zero, invalid and partial source readings: %j', async reading => {
+    query = makeQuery({ data: { state: makeState(reading), live: true } });
+    const { container } = renderWidget(packId);
+    await expectPack(container, packId);
+    const table = within(screen.getByRole('figure', { name: comparisonTitle })).getByRole('table');
+    expect(within(table).getByRole('row', { name: `Rated range ${reading.rated}` })).toBeInTheDocument();
+    expect(within(table).getByRole('row', { name: `Ideal range ${reading.ideal}` })).toBeInTheDocument();
+    const facts = screen.getByText('Battery').closest('li');
+    expect(facts).not.toBeNull();
+    expect(within(facts!).getByText(reading.battery)).toBeInTheDocument();
+    expect(screen.queryByText('NaN')).not.toBeInTheDocument();
+    expect(screen.queryByText('-0 km')).not.toBeInTheDocument();
+  });
 
-it('preserves Classic during default, unknown selection and recovery from a production appearance', async () => {
-  const refetch = vi.fn();
-  query = makeQuery({ refetch });
-  const view = renderWidget();
-  expect(view.container.querySelector('[data-widget-pack="classic"]')).not.toBeNull();
-  expect(screen.getByText('410 km')).toBeInTheDocument();
-  expect(screen.getByText('430 km')).toBeInTheDocument();
-  expect(screen.queryByRole('figure')).not.toBeInTheDocument();
-  expect(screen.queryByText('Battery')).not.toBeInTheDocument();
-  expect(screen.queryByText(disclaimer)).not.toBeInTheDocument();
-  view.selectPack('v4');
-  await expectPack(view.container, 'v4');
-  fireEvent.click(screen.getAllByRole('button', { name: /^Refresh/i })[0]);
-  expect(refetch).toHaveBeenCalledTimes(1);
-  view.selectPack('unknown-pack');
-  expect(view.container.querySelector('[data-widget-pack="classic"]')).not.toBeNull();
-  expect(screen.getByText('410 km')).toBeInTheDocument();
-  expect(screen.getByText('430 km')).toBeInTheDocument();
-  expect(screen.queryByRole('figure')).not.toBeInTheDocument();
-});
+  it('preserves Classic during default, unknown selection and recovery from a production appearance', async () => {
+    const refetch = vi.fn();
+    query = makeQuery({ refetch });
+    const view = renderWidget();
+    expect(view.container.querySelector('[data-widget-pack="classic"]')).not.toBeNull();
+    expect(screen.getByText('410 km')).toBeInTheDocument();
+    expect(screen.getByText('430 km')).toBeInTheDocument();
+    expect(screen.queryByRole('figure')).not.toBeInTheDocument();
+    expect(screen.queryByText('Battery')).not.toBeInTheDocument();
+    expect(screen.queryByText(disclaimer)).not.toBeInTheDocument();
+    view.selectPack(packId);
+    await expectPack(view.container, packId);
+    fireEvent.click(screen.getAllByRole('button', { name: /^Refresh/i })[0]);
+    expect(refetch).toHaveBeenCalledTimes(1);
+    view.selectPack('unknown-pack');
+    expect(view.container.querySelector('[data-widget-pack="classic"]')).not.toBeNull();
+    expect(screen.getByText('410 km')).toBeInTheDocument();
+    expect(screen.getByText('430 km')).toBeInTheDocument();
+    expect(screen.queryByRole('figure')).not.toBeInTheDocument();
+  });
 
-it('keeps the source shell while loading and uses fatalError only when no data is retained', () => {
-  query = makeQuery({ data: undefined, isLoading: true, dataUpdatedAt: 0 });
-  const view = renderWidget('v1');
-  expect(view.container.querySelector('[data-widget-pack="v1"]')).toHaveAttribute('aria-busy', 'true');
-  expect(screen.queryByText('410 km')).not.toBeInTheDocument();
-  query = makeQuery({ data: undefined, error: new Error('No source'), isError: true, dataUpdatedAt: 0 });
-  view.selectPack('v1');
-  expect(screen.getByRole('alert')).toBeInTheDocument();
-  expect(screen.queryByRole('figure')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /retry/i }));
-  expect(query.refetch).toHaveBeenCalledTimes(1);
+  it('keeps the source shell while loading and uses fatalError only when no data is retained', () => {
+    query = makeQuery({ data: undefined, isLoading: true, dataUpdatedAt: 0 });
+    const view = renderWidget(packId);
+    expect(view.container.querySelector(`[data-widget-pack="${packId}"]`)).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('410 km')).not.toBeInTheDocument();
+    query = makeQuery({ data: undefined, error: new Error('No source'), isError: true, dataUpdatedAt: 0 });
+    view.selectPack(packId);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByRole('figure')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(query.refetch).toHaveBeenCalledTimes(1);
+  });
 });

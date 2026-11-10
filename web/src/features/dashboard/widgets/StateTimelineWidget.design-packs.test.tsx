@@ -7,6 +7,7 @@ import type { TimelineEvent } from '@/types/analytics';
 import { fmtNumber } from '@/lib/numberFormat';
 import StateTimelineWidget from './StateTimelineWidget';
 import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES } from './designPacks/types';
 import type { WidgetSize } from './types';
 
 type QueryFixture<T> = DataStateSource<T> & {
@@ -42,10 +43,7 @@ vi.mock('react-i18next', async () => {
   return { ...actual, useTranslation: () => ({ t: i18n.getFixedT('en'), i18n }) };
 });
 
-const packs = [
-  ['v1', 'studio'], ['v2', 'elevated'], ['v3', 'precision'], ['v4', 'owner'],
-  ['v5', 'iconic'], ['v6', 'expressive'], ['v7', 'pixel'],
-] as const;
+const packs = Object.entries(PACK_APPEARANCES);
 const wide: WidgetSize = { cols: 3, rows: 3 };
 const full: WidgetSize = { cols: 2, rows: 2 };
 const compact: WidgetSize = { cols: 1, rows: 2 };
@@ -266,25 +264,41 @@ it('preserves the same source readings while changing packs and returning to Cla
   expect(mocks.refreshTimeline).not.toHaveBeenCalled();
 });
 
-it('keeps a measured zero distinct from an absent observation', async () => {
+it.each(packs)('keeps a measured zero distinct from an absent observation in %s', async (packId, appearance) => {
   mocks.summary.mockReturnValue(query([
     { state: 'driving', total_seconds: 0, percentage: 0, transition_count: 0 },
     { state: 'idle', total_seconds: 3600, percentage: 100, transition_count: 1 },
   ], mocks.refreshSummary));
-  const { container } = render(tree('v7', full));
-  const selected = await presentation(container, 'pixel');
+  const { container } = render(tree(packId, full));
+  const selected = await presentation(container, appearance);
   expect(within(selected).getAllByText('0m')).toHaveLength(2);
   expect(within(selected).getByRole('img', { name: 'driving: 0m, 0%; idle: 1h 0m, 100%' })).toBeInTheDocument();
 });
 
-it('retains loading and fatal source recovery instead of presenting a successful empty reading', () => {
+it.each(packs)('preserves unknown state observations without relabeling them as a known state in %s', async (packId, appearance) => {
+  mocks.summary.mockReturnValue(query([
+    { state: 'unknown', total_seconds: 600, percentage: 25, transition_count: 1 },
+    { state: 'idle', total_seconds: 1800, percentage: 75, transition_count: 1 },
+  ], mocks.refreshSummary));
+  const { container } = render(tree(packId, full));
+  const selected = await presentation(container, appearance);
+  expect(within(selected).getByRole('img', { name: 'unknown: 10m, 25%; idle: 30m, 75%' })).toBeVisible();
+  const rows = within(within(selected).getByRole('list')).getAllByRole('listitem');
+  expect(rows[0]).toHaveTextContent('unknown');
+  expect(rows[0]).toHaveTextContent('10m');
+  expect(rows[0]).toHaveTextContent('25.00%');
+  expect(within(selected).queryByText('driving')).not.toBeInTheDocument();
+  expect(within(selected).queryByText('No state data available')).not.toBeInTheDocument();
+});
+
+it.each(packs)('retains loading and fatal source recovery instead of presenting a successful empty reading in %s', (packId) => {
   mocks.summary.mockReturnValue(query<VehicleStateSummaryRow[]>(undefined, mocks.refreshSummary, {
     isLoading: true,
   }));
   mocks.timeline.mockReturnValue(query<TimelineEvent[]>(undefined, mocks.refreshTimeline, {
     isLoading: true,
   }));
-  const view = render(tree('v3'));
+  const view = render(tree(packId));
   expect(screen.getByRole('heading', { name: 'State timeline' })).toBeVisible();
   expect(view.container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
   expect(screen.queryByText('No state data available')).not.toBeInTheDocument();
@@ -295,7 +309,7 @@ it('retains loading and fatal source recovery instead of presenting a successful
   mocks.timeline.mockReturnValue(query<TimelineEvent[]>(undefined, mocks.refreshTimeline, {
     isError: true, error: new Error('Transitions unavailable'),
   }));
-  view.rerender(tree('v3'));
+  view.rerender(tree(packId));
   expect(screen.getByRole('alert')).toBeVisible();
   expect(screen.queryByText('No state data available')).not.toBeInTheDocument();
   fireEvent.click(within(screen.getByRole('alert')).getByRole('button'));
@@ -303,12 +317,12 @@ it('retains loading and fatal source recovery instead of presenting a successful
   expect(mocks.refreshTimeline).toHaveBeenCalledOnce();
 });
 
-it('keeps independently loading summary and transition sections distinct from empty history', async () => {
+it.each(packs)('keeps independently loading summary and transition sections distinct from empty history in %s', async (packId, appearance) => {
   mocks.summary.mockReturnValue(query<VehicleStateSummaryRow[]>(undefined, mocks.refreshSummary, {
     isLoading: true,
   }));
-  const view = render(tree('v1'));
-  let selected = await presentation(view.container, 'studio');
+  const view = render(tree(packId));
+  let selected = await presentation(view.container, appearance);
   expect(within(selected).getByText('Last 24 hours')).toBeInTheDocument();
   expect(within(selected).queryByText('No state data available')).not.toBeInTheDocument();
   expect(selected.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
@@ -317,14 +331,14 @@ it('keeps independently loading summary and transition sections distinct from em
   mocks.timeline.mockReturnValue(query<TimelineEvent[]>(undefined, mocks.refreshTimeline, {
     isLoading: true,
   }));
-  view.rerender(tree('v1'));
-  selected = await presentation(view.container, 'studio');
+  view.rerender(tree(packId));
+  selected = await presentation(view.container, appearance);
   expect(within(selected).getByRole('img', { name: summaryLabel })).toBeVisible();
   expect(within(selected).queryByText('No state data available')).not.toBeInTheDocument();
   expect(selected.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
 });
 
-it('retains fleet discovery navigation when there is no selected or discovered vehicle', async () => {
+it.each(packs)('retains fleet discovery navigation when there is no selected or discovered vehicle in %s', async (packId, appearance) => {
   mocks.vehicles.mockReturnValue({ data: [] });
   mocks.summary.mockReturnValue(query([], mocks.refreshSummary));
   mocks.timeline.mockReturnValue(query([], mocks.refreshTimeline));
@@ -332,13 +346,13 @@ it('retains fleet discovery navigation when there is no selected or discovered v
     <MemoryRouter>
       <Routes>
         <Route path="/" element={
-          <PackBoundary requestedPackId="v4"><StateTimelineWidget size={full} /></PackBoundary>
+          <PackBoundary requestedPackId={packId}><StateTimelineWidget size={full} /></PackBoundary>
         } />
         <Route path="/vehicles" element={<div>Fleet destination</div>} />
       </Routes>
     </MemoryRouter>,
   );
-  await presentation(container, 'owner');
+  await presentation(container, appearance);
   fireEvent.click(screen.getByRole('link', { name: 'Fleet' }));
   expect(screen.getByText('Fleet destination')).toBeInTheDocument();
   expect(mocks.summary).toHaveBeenLastCalledWith('', expect.any(Object));

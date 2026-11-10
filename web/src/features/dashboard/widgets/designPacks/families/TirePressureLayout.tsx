@@ -2,6 +2,7 @@ import { MetricLabel, MetricValue, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { PackAppearance } from '../types';
 import type { TirePressurePresentationProps, TireReading } from './Tire.types';
+import { EXPERIMENTAL_LAYOUTS, experimentalLayouts, isExperimentalAppearance } from '../experimentalLayouts';
 
 const positions: Record<TireReading['position'], string> = {
   fl: '@md:col-start-1 @md:row-start-1',
@@ -14,6 +15,7 @@ const tones: Record<TireReading['variant'], string> = {
   danger: 'text-[var(--semantic-danger)]', neutral: 'text-[var(--text-secondary)]',
 };
 const tiles: Record<PackAppearance, string> = {
+  ...experimentalLayouts(({ tile }) => tile),
   studio: 'rounded-lg border-s-2 border-[var(--border-strong)] ps-3',
   elevated: 'rounded-xl bg-[var(--surface-2)] p-3',
   precision: 'border-b border-[var(--border-subtle)] py-3',
@@ -24,10 +26,12 @@ const tiles: Record<PackAppearance, string> = {
 };
 
 export default function TirePressureLayout({ appearance, vehicle, tires, summary, unit }: TirePressurePresentationProps) {
-  const diagram = appearance !== 'precision';
+  const experiment = isExperimentalAppearance(appearance) ? EXPERIMENTAL_LAYOUTS[appearance] : null;
+  const diagram = appearance !== 'precision' && !experiment?.listTires;
+  const factsFirst = appearance === 'owner';
   return (
     <div data-tire-appearance={appearance} className="flex min-w-0 flex-col gap-3">
-      {appearance === 'owner' && summary}
+      {factsFirst && summary}
       <div className={cn(
         'grid min-w-0 grid-cols-2 items-center gap-3',
         diagram ? '@md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)]' : '@lg:grid-cols-3',
@@ -46,7 +50,7 @@ export default function TirePressureLayout({ appearance, vehicle, tires, summary
           </div>
         ))}
       </div>
-      {appearance !== 'owner' && summary}
+      {!factsFirst && summary}
     </div>
   );
 }

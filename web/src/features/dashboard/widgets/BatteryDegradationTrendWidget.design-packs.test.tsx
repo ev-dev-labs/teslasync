@@ -256,59 +256,61 @@ it('keeps Classic and unknown-ID recovery intact while switching the same contro
   expect(refetch).toHaveBeenCalledTimes(1);
 });
 
-it('retains the actual samples and last successful source time when a refresh fails', async () => {
-  query.dataUpdatedAt = Date.now() - 125_000;
-  const view = renderWidget('v7');
-  await expectPack(view.container, 'pixel');
-  query = { ...query, isError: true, isStale: true, error: new Error('Refresh failed') };
-  view.selectPack('v7');
-  expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
-  expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-  expect(screen.getByTestId('range-plot')).toBeInTheDocument();
-  expect(view.container.querySelector('.widget-big-number')).toHaveTextContent('385');
-  expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /Refresh data.*error.*2m ago/ }));
-  expect(refetch).toHaveBeenCalledTimes(1);
-});
+describe.each(Object.entries(PACK_APPEARANCES))('battery degradation state fidelity %s / %s', (packId, appearance) => {
+  it('retains the actual samples and last successful source time when a refresh fails', async () => {
+    query.dataUpdatedAt = Date.now() - 125_000;
+    const view = renderWidget(packId);
+    await expectPack(view.container, appearance);
+    query = { ...query, isError: true, isStale: true, error: new Error('Refresh failed') };
+    view.selectPack(packId);
+    expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('range-plot')).toBeInTheDocument();
+    expect(view.container.querySelector('.widget-big-number')).toHaveTextContent('385');
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data.*error.*2m ago/ }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
 
-it('keeps loading and fatal-error recovery in the shell instead of announcing empty data', async () => {
-  query = { ...query, data: undefined, dataUpdatedAt: 0, isLoading: true, isFetching: true };
-  const view = renderWidget('v3');
-  expect(view.container.querySelector('[data-data-state="initial"][aria-busy="true"]')).toBeInTheDocument();
-  expect(view.container.querySelector('.widget-big-number')).not.toBeInTheDocument();
-  query = { ...query, isLoading: false, isFetching: false, isError: true, error: new Error('Unavailable') };
-  view.selectPack('v3');
-  expect(screen.getByRole('alert')).toBeInTheDocument();
-  expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-  expect(screen.queryByText('No degradation data')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /Retry/ }));
-  expect(refetch).toHaveBeenCalledTimes(1);
-});
+  it('keeps loading and fatal-error recovery in the shell instead of announcing empty data', async () => {
+    query = { ...query, data: undefined, dataUpdatedAt: 0, isLoading: true, isFetching: true };
+    const view = renderWidget(packId);
+    expect(view.container.querySelector('[data-data-state="initial"][aria-busy="true"]')).toBeInTheDocument();
+    expect(view.container.querySelector('.widget-big-number')).not.toBeInTheDocument();
+    query = { ...query, isLoading: false, isFetching: false, isError: true, error: new Error('Unavailable') };
+    view.selectPack(packId);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByText('No degradation data')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Retry/ }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
 
-it('keeps empty compact recovery actionable without a fabricated reading', async () => {
-  query = { ...query, data: undefined, dataUpdatedAt: 0 };
-  const view = renderWidget('v4', COMPACT);
-  await expectPack(view.container, 'owner');
-  expect(screen.getByText('No degradation data')).toBeInTheDocument();
-  expect(view.container.querySelector('.widget-big-number')).toHaveTextContent('—');
-  fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-  expect(refetch).toHaveBeenCalledTimes(1);
-});
+  it('keeps empty compact recovery actionable without a fabricated reading', async () => {
+    query = { ...query, data: undefined, dataUpdatedAt: 0 };
+    const view = renderWidget(packId, COMPACT);
+    await expectPack(view.container, appearance);
+    expect(screen.getByText('No degradation data')).toBeInTheDocument();
+    expect(view.container.querySelector('.widget-big-number')).toHaveTextContent('—');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
 
-it('applies the selected display preference consistently to the headline, every sample and signed change', async () => {
-  preferences.distance = 'mi';
-  const view = renderWidget('v2');
-  await expectPack(view.container, 'elevated');
-  expect(view.container.querySelector('.widget-big-number')).toHaveTextContent('239');
-  expect(view.container.querySelector('.widget-big-number')).toHaveTextContent('mi');
-  expect(screen.getByText('−9')).toBeInTheDocument();
-  expect(screen.getByTestId('range-series')).toHaveAttribute('data-unit', 'mi');
-  const samples = JSON.parse(screen.getByTestId('range-plot').getAttribute('data-samples') ?? '[]') as {
-    month: string; range: number | null;
-  }[];
-  expect(samples).toHaveLength(3);
-  expect(samples[0].range).toBeCloseTo(248.548, 2);
-  expect(samples[1].range).toBeNull();
-  expect(samples[2].range).toBeCloseTo(239.228, 2);
-  expect(within(screen.getByRole('table')).getAllByRole('row')[1]).toHaveTextContent('249 mi');
+  it('applies the selected display preference consistently to the headline, every sample and signed change', async () => {
+    preferences.distance = 'mi';
+    const view = renderWidget(packId);
+    await expectPack(view.container, appearance);
+    expect(view.container.querySelector('.widget-big-number')).toHaveTextContent('239');
+    expect(view.container.querySelector('.widget-big-number')).toHaveTextContent('mi');
+    expect(screen.getByText('−9')).toBeInTheDocument();
+    expect(screen.getByTestId('range-series')).toHaveAttribute('data-unit', 'mi');
+    const samples = JSON.parse(screen.getByTestId('range-plot').getAttribute('data-samples') ?? '[]') as {
+      month: string; range: number | null;
+    }[];
+    expect(samples).toHaveLength(3);
+    expect(samples[0].range).toBeCloseTo(248.548, 2);
+    expect(samples[1].range).toBeNull();
+    expect(samples[2].range).toBeCloseTo(239.228, 2);
+    expect(within(screen.getByRole('table')).getAllByRole('row')[1]).toHaveTextContent('249 mi');
+  });
 });

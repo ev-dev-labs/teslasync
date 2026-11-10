@@ -40,7 +40,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -104,6 +104,8 @@ import { useMaintenance, useServiceRecords, useMaintenanceForecast } from '@/api
 import { useUnits } from '@/hooks/useUnits';
 import type { MaintenanceItem, ServiceRecord } from '@/types/vehicle-systems';
 import type { WidgetProps, WidgetSize } from './types';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 const mockMaintenance = vi.mocked(useMaintenance);
 const mockRecords = vi.mocked(useServiceRecords);
@@ -151,12 +153,14 @@ function makeRecord(over: Partial<ServiceRecord> = {}): ServiceRecord {
 const COMPACT: WidgetSize = { cols: 1, rows: 2 };
 const STANDARD: WidgetSize = { cols: 2, rows: 4 };
 
-function renderWidget(size: WidgetSize, props: Partial<WidgetProps> = {}) {
+function renderWidgetForPack(size: WidgetSize, props: Partial<WidgetProps>, pack: PackId) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <MaintenanceTrackerWidget size={size} {...props} />
+        <PackBoundary requestedPackId={pack}>
+          <MaintenanceTrackerWidget size={size} {...props} />
+        </PackBoundary>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -208,6 +212,10 @@ describe('urgencyBadgeVariant & urgencyLabel', () => {
     expect(t).toHaveBeenCalledWith('widget.maintenance.soon', 'Soon');
   });
 });
+
+describe.each(PACK_IDS)('MaintenanceTrackerWidget — %s presentation', pack => {
+  const renderWidget = (size: WidgetSize, props: Partial<WidgetProps> = {}) =>
+    renderWidgetForPack(size, props, pack);
 
 describe('MaintenanceTrackerWidget — compact layout', () => {
   it('shows the soonest item (by interval months), the caption, and its name', () => {
@@ -278,7 +286,7 @@ describe('MaintenanceTrackerWidget — standard layout', () => {
     expect(screen.getByText('left', { exact: true })).toBeInTheDocument();
   });
 
-  it('renders the After-card Upcoming and Last service sections', () => {
+  it('renders the Upcoming and Last service sections through the selected timeline family', async () => {
     mockMaintenance.mockReturnValue(
       qr({
         data: [
@@ -292,13 +300,20 @@ describe('MaintenanceTrackerWidget — standard layout', () => {
         ],
       }),
     );
-    renderWidget(STANDARD);
+    const { container } = renderWidget(STANDARD);
 
     expect(screen.getByText('Maintenance')).toBeInTheDocument();
     expect(screen.getByText('Upcoming')).toBeInTheDocument();
     expect(screen.getByText('Last service')).toBeInTheDocument();
     expect(screen.getByText('Brake Fluid')).toBeInTheDocument();
     expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', pack);
+    if (pack !== 'classic') {
+      await waitFor(() => {
+        expect(container.querySelector('.widget-detail-list')?.parentElement)
+          .toHaveAttribute('data-timeline-appearance', PACK_APPEARANCES[pack]);
+      });
+    }
   });
 
   it('preserves a real zero estimated cost', () => {
@@ -527,4 +542,5 @@ describe('MaintenanceTrackerWidget — forecast banner', () => {
     expect(screen.getByRole('status', { name: 'Maintenance forecast status' })).toBeInTheDocument();
     expect(screen.getAllByText('0')).toHaveLength(2);
   });
+});
 });

@@ -28,6 +28,8 @@
  *   8. Loading → heading and skeleton (no empty copy / list).
  *   9. Failure path → the tile surfaces the shared error card, not the children.
  *  10. Refresh: the accessible "Refresh" freshness control refetches on click.
+ *  11. Every pack uses its timeline family without changing billing facts,
+ *      trust states, recency, or the query when switching presentations.
  *
  * i18n is stubbed to echo the English fallback so visible copy is deterministic;
  * the shared `request` seam is mocked so no network is touched; `useUnits` /
@@ -63,8 +65,11 @@ vi.mock('@/api/client', async () => {
 });
 
 import SuperchargerHistoryWidget from './SuperchargerHistoryWidget';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 it.each([1, 2, 3])('identifies supercharger history at %i columns', (cols) => {
+  mockedRequest.mockReturnValue(new Promise(() => {}));
   renderWidget({ cols, rows: 4 });
   expect(screen.getByRole('heading', { name: 'Supercharger history' })).toBeInTheDocument();
 });
@@ -77,9 +82,7 @@ import type {
   TeslaChargingHistoryResponse,
 } from '@/api/hooks/useCharging';
 
-// The generic `request<T>` fights `mockResolvedValue`'s inference; the repo's
-// convention is to treat it as a plain untyped mock at the call site.
-const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
+const mockedRequest = vi.mocked(request);
 
 const FULL: WidgetSize = { cols: 2, rows: 2 };
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
@@ -132,17 +135,33 @@ function makeResponse(
   return { entries, summary };
 }
 
-function renderWidget(size: WidgetSize) {
+function renderWidget(size: WidgetSize, packId: PackId = 'classic') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const view = render(
+  const tree = (currentPackId: PackId) => (
     <QueryClientProvider client={qc}>
       <MemoryRouter>
-        <SuperchargerHistoryWidget size={size} />
+        <PackBoundary requestedPackId={currentPackId}>
+          <SuperchargerHistoryWidget size={size} />
+        </PackBoundary>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const view = render(tree(packId));
   expect(view.container.querySelector('h3')).toHaveAccessibleName('Supercharger history');
-  return view;
+  expect(view.container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+  return { ...view, rerenderPack: (nextPackId: PackId) => view.rerender(tree(nextPackId)) };
+}
+
+async function waitForTimeline(packId: PackId) {
+  await waitFor(() => {
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+    const timeline = document.querySelector('[data-timeline-appearance]');
+    if (packId === 'classic') {
+      expect(timeline).toBeNull();
+    } else {
+      expect(timeline).toHaveAttribute('data-timeline-appearance', PACK_APPEARANCES[packId]);
+    }
+  });
 }
 
 beforeEach(() => {
@@ -170,7 +189,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('SuperchargerHistoryWidget — full view', () => {
+describe.each(PACK_IDS)('SuperchargerHistoryWidget — full view (%s)', (packId) => {
   it('renders a recent, kWh-formatted session list with cost badges and a summary footer', async () => {
     mockedRequest.mockResolvedValue(
       makeResponse(
@@ -179,6 +198,7 @@ describe('SuperchargerHistoryWidget — full view', () => {
             id: 1,
             site_location_name: 'Fremont Supercharger',
             charge_start_datetime: '2026-07-03T00:00:00Z', // newest
+            charge_stop_datetime: '2026-07-03T00:30:00Z',
             usage_wh: 30_000, // 30.0 kWh
             total_due: 12.5, // $12.50
           }),
@@ -200,13 +220,18 @@ describe('SuperchargerHistoryWidget — full view', () => {
         makeSummary({ total_wh: 60_000, total_spend: 17.5 }),
       ),
     );
-    renderWidget(FULL);
+    const { rerenderPack } = renderWidget(FULL);
 
     // The full tile shows a header title once the query resolves.
     expect(await screen.findByText('Supercharger history')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    await waitForTimeline('classic');
+    rerenderPack(packId);
+    await waitForTimeline(packId);
+    expect(document.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', packId);
+    expect(document.querySelector('[data-data-state="ok"]')).toBeInTheDocument();
 
     // Un-prefixed endpoint — no /api/v1 double-prefix, no query params.
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
     expect(mockedRequest.mock.calls[0]?.[0]).toBe(HISTORY_ENDPOINT);
 
     // Every site is listed and every SI watt-hours value is formatted to kWh.
@@ -216,6 +241,7 @@ describe('SuperchargerHistoryWidget — full view', () => {
     expect(screen.getByText('30 kWh')).toBeInTheDocument();
     expect(screen.getByText('10 kWh')).toBeInTheDocument();
     expect(screen.getByText('20 kWh')).toBeInTheDocument();
+    expect(within(screen.getAllByRole('term')[0]).getByText(/ · 30 min$/)).toBeInTheDocument();
 
     // Known session costs get a currency badge, including the free ($0) session.
     expect(screen.getByText('$12.50')).toBeInTheDocument();
@@ -223,9 +249,8 @@ describe('SuperchargerHistoryWidget — full view', () => {
     expect(screen.getByText('$0.00')).toBeInTheDocument();
 
     // Rows preserve source recency descending: Fremont (newest) → Harris → Kettleman.
-    const rowLabels = Array.from(
-      screen.getByText('Fremont Supercharger').closest('dl')!.children,
-    ).map((row) => within(row as HTMLElement).getByText(/Supercharger|Ranch|City/).textContent);
+    const rowLabels = screen.getAllByRole('term')
+      .map((row) => within(row).getByText(/Supercharger|Ranch|City/).textContent);
     expect(rowLabels).toEqual(['Fremont Supercharger', 'Harris Ranch', 'Kettleman City']);
 
     // The footer remains the canonical summary (3 sessions, $17.50 spent).
@@ -260,14 +285,14 @@ describe('SuperchargerHistoryWidget — full view', () => {
       }),
     ];
     mockedRequest.mockResolvedValue(makeResponse([...old, ...recent]));
-    renderWidget(FULL);
+    renderWidget(FULL, packId);
 
     // A recent session confirms the list mounted.
-    expect(await screen.findByText('Recent 9')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    await waitForTimeline(packId);
+    expect(screen.getByText('Recent 9')).toBeInTheDocument();
 
     // Exactly ten rows, and neither high-energy old row survived the date slice.
-    expect(screen.getByText('Recent 9').closest('dl')!.children).toHaveLength(10);
+    expect(screen.getAllByRole('term')).toHaveLength(10);
     expect(screen.queryByText('OldSiteA')).toBeNull();
     expect(screen.queryByText('OldSiteB')).toBeNull();
   });
@@ -291,12 +316,12 @@ describe('SuperchargerHistoryWidget — full view', () => {
       usage_wh: 999_000,
     });
     mockedRequest.mockResolvedValue(makeResponse([broken, ...recent]));
-    renderWidget(FULL);
+    renderWidget(FULL, packId);
 
-    expect(await screen.findByText('Valid 9')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    await waitForTimeline(packId);
+    expect(screen.getByText('Valid 9')).toBeInTheDocument();
     // No crash, ten rows, and the malformed-date row was sliced out as oldest.
-    expect(screen.getByText('Valid 9').closest('dl')!.children).toHaveLength(10);
+    expect(screen.getAllByRole('term')).toHaveLength(10);
     expect(screen.queryByText('BrokenSite')).toBeNull();
   });
 
@@ -314,38 +339,69 @@ describe('SuperchargerHistoryWidget — full view', () => {
         makeSummary({ total_sessions: 1, total_wh: null, total_spend: null }),
       ),
     );
-    renderWidget(FULL);
+    renderWidget(FULL, packId);
 
     // Missing site name and usage fall back to em dashes in their row.
     expect((await screen.findAllByText('—')).length).toBeGreaterThanOrEqual(2);
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    await waitForTimeline(packId);
+    expect(document.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
 
     // Missing usage stays unknown in both the row and the source summary.
     expect(screen.queryByText('0.00 kWh')).toBeNull();
 
     // Missing cost carries no badge, independently of the source summary.
-    expect(within(document.querySelector('dl') as HTMLElement).queryByText(/\$/)).toBeNull();
+    expect(within(screen.getByTestId('widget-body')).queryByText(/\$/)).toBeNull();
 
     // Missing summary spend is not invented as $0.00.
     expect(screen.queryByText('$0.00')).toBeNull();
   });
+
+  it('distinguishes zero energy and cost from invalid billing values and dates', async () => {
+    const response = makeResponse([
+      makeEntry({ id: 1, site_location_name: 'Zero session', usage_wh: 0, total_due: 0 }),
+      makeEntry({
+        id: 2,
+        site_location_name: 'Invalid session',
+        usage_wh: Number.NaN,
+        total_due: Number.POSITIVE_INFINITY,
+        charge_start_datetime: 'invalid',
+        charge_stop_datetime: 'invalid',
+      }),
+    ], makeSummary({ total_sessions: 2, total_wh: Number.NEGATIVE_INFINITY, total_spend: Number.NaN }));
+    mockedRequest.mockResolvedValue(response);
+    renderWidget(FULL, packId);
+
+    await screen.findByText('Invalid session');
+    await waitForTimeline(packId);
+    expect(document.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    const definitions = screen.getAllByRole('definition');
+    expect(within(definitions[0]).getByText('0 kWh')).toBeInTheDocument();
+    expect(within(definitions[0]).getByText('$0.00')).toBeInTheDocument();
+    expect(within(definitions[1]).getByText('—')).toBeInTheDocument();
+    expect(within(definitions[1]).queryByText(/\$/)).toBeNull();
+    expect(within(screen.getAllByRole('term')[1]).getByText('—')).toBeInTheDocument();
+    expect(screen.getByText(/2 sessions\s*—/)).toBeInTheDocument();
+    expect(screen.queryByText(/NaN|Infinity|Invalid Date/)).toBeNull();
+    expect(Number.isNaN(response.entries[1].usage_wh)).toBe(true);
+  });
 });
 
-describe('SuperchargerHistoryWidget — compact view', () => {
+describe.each(PACK_IDS)('SuperchargerHistoryWidget — compact view (%s)', (packId) => {
   it('reacts to currency and locale preferences without changing billing facts', async () => {
     const response = makeResponse([makeEntry()], makeSummary({ total_spend: 120.5 }));
     mockedRequest.mockResolvedValue(response);
     const client = new QueryClient();
-    const tree = () => <QueryClientProvider client={client}><MemoryRouter><SuperchargerHistoryWidget size={COMPACT} /></MemoryRouter></QueryClientProvider>;
+    const tree = () => <QueryClientProvider client={client}><MemoryRouter><PackBoundary requestedPackId={packId}><SuperchargerHistoryWidget size={COMPACT} /></PackBoundary></MemoryRouter></QueryClientProvider>;
     const view = render(tree());
-    const headline = await screen.findByRole('group', { name: '30-day Supercharger' });
-    await within(headline).findByText('$120.50');
+    await waitForTimeline(packId);
+    const headline = screen.getByRole('group', { name: '30-day Supercharger' });
+    expect(within(headline).getByText('$120.50')).toBeInTheDocument();
     const settings = renderHook(() => useSettings()).result.current.settings;
     const original = { currency_symbol: settings.currency_symbol, locale: settings.locale, decimal_precision: settings.decimal_precision };
     try {
       Object.assign(settings, { currency_symbol: '€', locale: 'de-DE', decimal_precision: 3 });
       view.rerender(tree());
-      expect(within(headline).getByText('€120,500')).toBeInTheDocument();
+      expect(within(screen.getByRole('group', { name: '30-day Supercharger' })).getByText('€120,500')).toBeInTheDocument();
       expect(response.summary.total_spend).toBe(120.5);
     } finally {
       Object.assign(settings, original);
@@ -356,54 +412,78 @@ describe('SuperchargerHistoryWidget — compact view', () => {
     mockedRequest.mockResolvedValue(
       makeResponse([makeEntry({ id: 1 })], makeSummary({ total_spend: 120 })),
     );
-    renderWidget(COMPACT);
+    renderWidget(COMPACT, packId);
 
     // The spend lands as a big number (reduced-motion → synchronous commit).
-    const headline = await screen.findByRole('group', { name: '30-day Supercharger' });
-    expect(await within(headline).findByText('$120.00')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(within(headline).getByText('30-day Supercharger')).toBeInTheDocument();
+    await waitForTimeline(packId);
+    const headline = screen.getByRole('group', { name: '30-day Supercharger' });
+    expect(within(headline).getByText('$120.00')).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: '30-day Supercharger' })).getByText('30-day Supercharger')).toBeInTheDocument();
 
     // A compact tile keeps its heading but does not add a ranked session list.
     expect(screen.getByRole('heading', { name: 'Supercharger history' })).toBeInTheDocument();
     expect(document.querySelector('ul li')).toBeNull();
+    expect(screen.queryByRole('term')).toBeNull();
   });
 
   it('shows the accessible empty state (not a big number) when there are no sessions', async () => {
     mockedRequest.mockResolvedValue(makeResponse([], makeSummary({ total_spend: 0 })));
-    renderWidget(COMPACT);
+    renderWidget(COMPACT, packId);
 
     expect(await screen.findByText('No Supercharger sessions')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    expect(document.querySelector('[data-data-state="unavailable"]')).toBeInTheDocument();
     expect(screen.getByText('No Supercharger sessions').closest('[role="status"]')).toBeInTheDocument();
     // The big-number label only renders in the populated compact path.
     expect(screen.queryByText('30-day Supercharger')).toBeNull();
   });
+
+  it.each([0, null, Number.NaN])('preserves a compact spend of %s without inventing billing facts', async (spend) => {
+    mockedRequest.mockResolvedValue(
+      makeResponse([makeEntry()], makeSummary({ total_spend: spend })),
+    );
+    renderWidget(COMPACT, packId);
+
+    await screen.findByRole('group', { name: '30-day Supercharger' });
+    await waitForTimeline(packId);
+    const headline = within(screen.getByRole('group', { name: '30-day Supercharger' }));
+    expect(headline.getByText(spend === 0 ? '$0.00' : '—')).toBeInTheDocument();
+    expect(document.querySelector('[data-data-state]')).toHaveAttribute(
+      'data-data-state', spend === 0 ? 'ok' : 'partial',
+    );
+    expect(screen.queryByText('No Supercharger sessions')).toBeNull();
+    expect(screen.queryByRole('term')).toBeNull();
+  });
 });
 
-describe('SuperchargerHistoryWidget — empty / lifecycle states', () => {
+describe.each(PACK_IDS)('SuperchargerHistoryWidget — empty / lifecycle states (%s)', (packId) => {
   it.each([COMPACT, FULL, { cols: 4, rows: 2 }])('preserves billing content and recovers stale history at %j', async (size) => {
     mockedRequest.mockResolvedValue(makeResponse([makeEntry()], makeSummary()));
-    renderWidget(size);
+    renderWidget(size, packId);
     const content = size.cols === 1
       ? within(await screen.findByRole('group', { name: '30-day Supercharger' }))
       : screen;
     await content.findByText(size.cols === 1 ? '$17.50' : 'Fremont Supercharger');
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    await waitForTimeline(packId);
     mockedRequest.mockRejectedValueOnce(new Error('refresh'));
     fireEvent.click(screen.getByRole('button', { name: /^Refresh data/ }));
     await screen.findByTestId('stale-refresh-warning');
     expect(document.querySelector('[data-data-state="stale"]')).not.toBeNull();
-    expect(content.getByText(size.cols === 1 ? '$17.50' : 'Fremont Supercharger')).toBeInTheDocument();
+    const retainedContent = size.cols === 1
+      ? within(screen.getByRole('group', { name: '30-day Supercharger' }))
+      : screen;
+    expect(retainedContent.getByText(size.cols === 1 ? '$17.50' : 'Fremont Supercharger')).toBeInTheDocument();
+    await waitForTimeline(packId);
     expect(screen.queryByText("Can't reach server")).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i })); // shell hides the warning retry; recovery is the freshness dot
     await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).toBeNull());
+    expect(document.querySelector('[data-data-state="ok"]')).toBeInTheDocument();
     expect(mockedRequest).toHaveBeenCalledTimes(3);
   });
 
   it('normalizes nullable entries without inventing spend or energy', async () => {
     mockedRequest.mockResolvedValue({ entries: null, summary: null });
-    renderWidget(FULL);
+    renderWidget(FULL, packId);
     await screen.findByText('No Supercharger sessions');
     expect(screen.queryByText('$0.00')).toBeNull();
     expect(screen.queryByText('0.00 kWh')).toBeNull();
@@ -411,10 +491,11 @@ describe('SuperchargerHistoryWidget — empty / lifecycle states', () => {
 
   it('shows an accessible empty state (not a list) when the history is empty', async () => {
     mockedRequest.mockResolvedValue(makeResponse([]));
-    renderWidget(FULL);
+    renderWidget(FULL, packId);
 
     expect(await screen.findByText('No Supercharger sessions')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    expect(document.querySelector('[data-data-state="unavailable"]')).toBeInTheDocument();
     expect(screen.getByText('No Supercharger sessions').closest('[role="status"]')).toBeInTheDocument();
     expect(document.querySelector('ul li')).toBeNull();
     // No totals row when there is nothing to summarise.
@@ -423,9 +504,10 @@ describe('SuperchargerHistoryWidget — empty / lifecycle states', () => {
 
   it('retains its heading above a pending skeleton without empty copy or list', () => {
     mockedRequest.mockReturnValue(new Promise(() => {})); // never resolves
-    const { container } = renderWidget(FULL);
+    const { container } = renderWidget(FULL, packId);
 
     expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
+    expect(container.querySelector('[data-data-state="initial"]')).toBeInTheDocument();
     expect(screen.queryByText('Supercharger history')).toBeInTheDocument();
     expect(screen.queryByText('No Supercharger sessions')).toBeNull();
     expect(screen.queryByRole('listitem')).toBeNull();
@@ -433,12 +515,13 @@ describe('SuperchargerHistoryWidget — empty / lifecycle states', () => {
 
   it('surfaces the shared error card (not the children) when the request rejects', async () => {
     mockedRequest.mockRejectedValue(new Error('boom'));
-    renderWidget(FULL);
+    renderWidget(FULL, packId);
 
     // The error branch renders WidgetShell's <QueryError> — an alert card — and
     // suppresses the list / empty state entirely.
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    expect(document.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(mockedRequest.mock.calls[0]?.[0]).toBe(HISTORY_ENDPOINT);
     expect(screen.queryByText('No Supercharger sessions')).toBeNull();
@@ -449,15 +532,15 @@ describe('SuperchargerHistoryWidget — empty / lifecycle states', () => {
   });
 });
 
-describe('SuperchargerHistoryWidget — refresh', () => {
+describe.each(PACK_IDS)('SuperchargerHistoryWidget — refresh (%s)', (packId) => {
   it('refetches when the accessible "Refresh" freshness control is activated', async () => {
     mockedRequest.mockResolvedValue(makeResponse([makeEntry({ id: 1 })]));
-    renderWidget(FULL);
+    renderWidget(FULL, packId);
 
     // Wait for the first load to settle — a visible title implies the query is
     // no longer fetching, so the refresh control is armed.
     expect(await screen.findByText('Supercharger history')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    await waitForTimeline(packId);
     expect(mockedRequest).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));

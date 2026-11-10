@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, within } from '@testing-library/react';
-import { queryResult, renderWidget } from '../components/continuation-dashboard-2/testSupport';
+import type { ReactElement } from 'react';
+import { queryResult, renderWidget as renderController } from '../components/continuation-dashboard-2/testSupport';
 import MaintenanceTrackerWidget from './MaintenanceTrackerWidget';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_IDS } from './designPacks/types';
 
 const hooks = vi.hoisted(() => ({ items: vi.fn(), records: vi.fn(), forecast: vi.fn() }));
 vi.mock('@/api/hooks/useVehicleSystems', () => ({
@@ -31,7 +34,10 @@ beforeEach(() => {
   }));
 });
 
-describe('maintenance independent source preservation', () => {
+describe.each(PACK_IDS)('maintenance independent source preservation — %s', pack => {
+  const renderWidget = (element: ReactElement) =>
+    renderController(<PackBoundary requestedPackId={pack}>{element}</PackBoundary>);
+
   it('keeps forecast zero counts and signed distance pace separate from configured intervals and service records', () => {
     hooks.forecast.mockReturnValue(queryResult({
       vehicle_id: 7, overdue_count: 0, due_soon_count: 0, km_per_day: -2.5,
@@ -91,5 +97,48 @@ describe('maintenance independent source preservation', () => {
     expect(screen.getByText('Intervals are recommendations, not time remaining.')).toBeVisible();
     expect(screen.queryByText(/days remaining|months remaining/i)).not.toBeInTheDocument();
     expect(items.map(item => item.id)).toEqual(['long', 'short']);
+  });
+
+  it('retains independently cached intervals, service notes, and forecast evidence after refresh failures', () => {
+    const failure = { isError: true, error: new Error('Refresh offline') };
+    hooks.items.mockReturnValue(queryResult(items, failure));
+    hooks.records.mockReturnValue(queryResult(records, failure));
+    hooks.forecast.mockReturnValue(queryResult({
+      vehicle_id: 7, overdue_count: 0, due_soon_count: 0, km_per_day: 0,
+      items: [],
+    }, failure));
+    const { container } = renderWidget(<MaintenanceTrackerWidget size={{ cols: 2, rows: 4 }} />);
+
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-data-state', 'stale');
+    expect(screen.getByText('Previously loaded maintenance intervals remain visible while they refresh.')).toBeVisible();
+    expect(screen.getByText('Previously loaded service records remain visible while they refresh.')).toBeVisible();
+    expect(screen.getByText('Long interval')).toBeVisible();
+    expect(screen.getByRole('list', { name: 'Recent service' })).toHaveTextContent('Complete service note 3');
+    expect(screen.getByTestId('dashboard-maintenance-forecast-brief')).toHaveTextContent('0.00 km/day');
+  });
+
+  it('preserves the open forecast drawer and mounted service rows when the selected pack changes', () => {
+    const controller = (requestedPackId: string) => (
+      <PackBoundary requestedPackId={requestedPackId}>
+        <MaintenanceTrackerWidget size={{ cols: 2, rows: 4 }} />
+      </PackBoundary>
+    );
+    const { container, rerender } = renderController(controller('classic'));
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    const list = screen.getByRole('list', { name: 'Recent service' });
+    const newestRecord = within(list).getAllByRole('listitem')[0];
+
+    rerender(controller(pack));
+    expect(container.querySelector('[data-widget-pack]')).toHaveAttribute('data-widget-pack', pack);
+    expect(screen.getByRole('dialog')).toBe(drawer);
+    expect(screen.getByRole('list', { name: 'Recent service' })).toBe(list);
+    expect(within(list).getAllByRole('listitem')[0]).toBe(newestRecord);
+    expect(newestRecord).toHaveTextContent('Complete service note 3');
+
+    rerender(controller('classic'));
+    expect(screen.getByRole('dialog')).toBe(drawer);
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

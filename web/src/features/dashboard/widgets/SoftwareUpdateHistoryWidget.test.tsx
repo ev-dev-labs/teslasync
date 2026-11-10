@@ -29,7 +29,7 @@
  * tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
@@ -85,6 +85,8 @@ import SoftwareUpdateHistoryWidget, {
 } from './SoftwareUpdateHistoryWidget';
 import type { SoftwareUpdate } from '@/types/vehicle-systems';
 import type { WidgetSize } from './types';
+import { PackBoundary } from './designPacks/PackBoundary';
+import { PACK_APPEARANCES, PACK_IDS, type PackId } from './designPacks/types';
 
 // ── Fixtures ───────────────────────────────────────────────────────────────
 const SIZE_COMPACT: WidgetSize = { cols: 1, rows: 1 };
@@ -125,8 +127,22 @@ function makeQuery(data?: SoftwareUpdate[], over: QueryOverrides = {}) {
   };
 }
 
-function renderWidget(node: ReactElement) {
-  return render(<MemoryRouter>{node}</MemoryRouter>);
+function widgetTree(node: ReactElement, packId: PackId = 'classic') {
+  return <MemoryRouter><PackBoundary requestedPackId={packId}>{node}</PackBoundary></MemoryRouter>;
+}
+
+function renderWidget(node: ReactElement, packId: PackId = 'classic') {
+  return render(widgetTree(node, packId));
+}
+
+async function expectTimeline(container: HTMLElement, packId: PackId) {
+  if (packId === 'classic') {
+    expect(container.querySelector('[data-timeline-appearance]')).toBeNull();
+  } else {
+    await waitFor(() => expect(
+      container.querySelector(`[data-timeline-appearance="${PACK_APPEARANCES[packId]}"]`),
+    ).toBeInTheDocument());
+  }
 }
 
 beforeEach(() => {
@@ -135,6 +151,160 @@ beforeEach(() => {
   // Sensible defaults: one vehicle, a single installed update.
   vehiclesMock.mockReturnValue({ data: [{ id: 42 }] });
   softwareUpdatesMock.mockReturnValue(makeQuery([makeUpdate()]));
+});
+
+describe.each(PACK_IDS)('SoftwareUpdateHistoryWidget pack acceptance: %s', (packId) => {
+  it('preserves compact latest status, a genuine zero yearly count, navigation and refresh', async () => {
+    const refetch = vi.fn();
+    const year = new Date().getUTCFullYear();
+    softwareUpdatesMock.mockReturnValue(makeQuery([
+      makeUpdate({ id: 'old', installedAt: `${year - 1}-06-01T10:00:00Z` }),
+      makeUpdate({
+        id: 'new', version: '2026.40.1', status: 'downloading',
+        installedAt: null, createdAt: `${year}-06-01T10:00:00Z`,
+      }),
+    ], { refetch }));
+
+    const { container } = renderWidget(<SoftwareUpdateHistoryWidget size={SIZE_COMPACT} vehicleId={7} />, packId);
+    await expectTimeline(container, packId);
+    expect(screen.getByText('2026.40.1')).toBeInTheDocument();
+    expect(screen.getByText('Downloading')).toBeInTheDocument();
+    expect(screen.queryByText('Current')).not.toBeInTheDocument();
+    expect(screen.queryByText('2024.44.25')).not.toBeInTheDocument();
+    expect(screen.getByText('0 updates this year')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Changelogs' })).toHaveAttribute('href', '/software-updates');
+    expect(softwareUpdatesMock).toHaveBeenLastCalledWith('7');
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+
+  it('preserves source chronology, the 15-row cap, all status evidence and the classic footer', async () => {
+    const year = new Date().getUTCFullYear();
+    const statuses: (string | null)[] = [
+      'installed', 'installed', 'rolling_back', null, 'scheduled', 'available', 'installing', 'downloading',
+    ];
+    const history = Array.from({ length: 16 }, (_, index) => {
+      const timestamp = `${year}-01-${String(index + 1).padStart(2, '0')}T10:00:00Z`;
+      const status = index < statuses.length ? statuses[index] : 'available';
+      return {
+        ...makeUpdate({ id: String(index), version: `build-${index}`, createdAt: timestamp }),
+        status,
+        installedAt: status === 'installed' ? timestamp : null,
+        scheduledAt: status === 'scheduled' ? timestamp : null,
+      };
+    });
+    softwareUpdatesMock.mockReturnValue({ ...makeQuery(), data: history, dataUpdatedAt: Date.now() });
+
+    const node = () => <SoftwareUpdateHistoryWidget size={SIZE_MEDIUM} />;
+    const view = renderWidget(node());
+    const classicSummary = screen.getByText(/^\d+ updates this year$/).textContent;
+    view.rerender(widgetTree(node(), packId));
+    await expectTimeline(view.container, packId);
+    const rows = within(screen.getByRole('list', { name: 'Event feed' })).getAllByRole('listitem');
+    expect(rows).toHaveLength(15);
+    expect(rows.map(row => within(row).getByText(/^build-/).textContent)).toEqual(
+      Array.from({ length: 15 }, (_, index) => `build-${15 - index}`),
+    );
+    expect(screen.queryByText('build-0')).not.toBeInTheDocument();
+    expect(within(rows[14]).getByText('Current')).toBeInTheDocument();
+    expect(within(rows[14]).getByText(/^Installed /)).toBeInTheDocument();
+    expect(screen.getAllByText('Current')).toHaveLength(1);
+    for (const label of ['Downloading', 'Installing', 'Scheduled', 'rolling_back', '—']) {
+      expect(screen.getByText(label, { exact: true })).toBeInTheDocument();
+    }
+    expect(screen.getAllByText('Available').length).toBeGreaterThan(0);
+    expect(screen.getByText(/^\d+ updates this year$/).textContent).toBe(classicSummary);
+    expect(history.map(update => update.id)).toEqual(Array.from({ length: 16 }, (_, index) => String(index)));
+  });
+
+  it('keeps invalid dates and missing version or status explicit instead of inventing source values', async () => {
+    softwareUpdatesMock.mockReturnValue(makeQuery([makeUpdate({ installedAt: 'invalid-date' })]));
+    const view = renderWidget(<SoftwareUpdateHistoryWidget size={SIZE_MEDIUM} />, packId);
+    await expectTimeline(view.container, packId);
+    expect(screen.getByText('Installed —')).toBeInTheDocument();
+    expect(screen.getByText('0 updates this year')).toBeInTheDocument();
+    expect(screen.queryByText(/Invalid Date|NaN/)).not.toBeInTheDocument();
+
+    softwareUpdatesMock.mockReturnValue({
+      ...makeQuery(),
+      data: [{ ...makeUpdate(), version: null, status: null, installedAt: null }],
+      dataUpdatedAt: Date.now(),
+    });
+    view.rerender(widgetTree(<SoftwareUpdateHistoryWidget size={SIZE_COMPACT} />, packId));
+    await expectTimeline(view.container, packId);
+    expect(screen.getAllByText('—', { exact: true })).toHaveLength(2);
+    expect(screen.queryByText('Current')).not.toBeInTheDocument();
+    expect(screen.queryByText('Installed')).not.toBeInTheDocument();
+  });
+
+  it('preserves loading, initial failure, retained refresh, empty and partial-source recovery', async () => {
+    const refetch = vi.fn();
+    const tree = () => widgetTree(<SoftwareUpdateHistoryWidget size={SIZE_MEDIUM} />, packId);
+    softwareUpdatesMock.mockReturnValue(makeQuery(undefined, { isLoading: true, refetch }));
+    const view = render(tree());
+    const shell = () => view.container.querySelector('[data-data-state]');
+    expect(shell()).toHaveAttribute('data-data-state', 'initial');
+    expect(shell()).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('No update history')).not.toBeInTheDocument();
+
+    softwareUpdatesMock.mockReturnValue(makeQuery(undefined, { isError: true, refetch }));
+    view.rerender(tree());
+    expect(shell()).toHaveAttribute('data-data-state', 'initialFailure');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry', exact: true }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    softwareUpdatesMock.mockReturnValue(makeQuery([makeUpdate()], { isFetching: true, refetch }));
+    view.rerender(tree());
+    await expectTimeline(view.container, packId);
+    expect(shell()).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText('2024.44.25')).toBeInTheDocument();
+
+    softwareUpdatesMock.mockReturnValue(makeQuery([makeUpdate()], { isError: true, refetch }));
+    view.rerender(tree());
+    expect(shell()).toHaveAttribute('data-data-state', 'stale');
+    expect(screen.getByText('2024.44.25')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+    expect(refetch).toHaveBeenCalledTimes(2);
+
+    softwareUpdatesMock.mockReturnValue(makeQuery([]));
+    view.rerender(tree());
+    expect(shell()).toHaveAttribute('data-data-state', 'ok');
+    expect(screen.getByText('No update history')).toBeInTheDocument();
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Changelogs' })).not.toBeInTheDocument();
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      softwareUpdatesMock.mockReturnValue({ ...makeQuery(), data: { unexpected: true } });
+      view.rerender(tree());
+      expect(shell()).toHaveAttribute('data-data-state', 'partial');
+      expect(screen.getByText('No update history')).toBeInTheDocument();
+      expect(screen.queryByText('0 updates this year')).not.toBeInTheDocument();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});
+
+it('keeps the mounted refresh control, its focus and vehicle scope while switching every pack', async () => {
+  const refetch = vi.fn();
+  softwareUpdatesMock.mockReturnValue(makeQuery([makeUpdate()], { refetch }));
+  const node = () => <SoftwareUpdateHistoryWidget size={SIZE_MEDIUM} vehicleId={7} />;
+  const view = renderWidget(node());
+  const refresh = screen.getByRole('button', { name: /^Refresh data/i });
+  refresh.focus();
+  for (const packId of PACK_IDS) {
+    view.rerender(widgetTree(node(), packId));
+    await expectTimeline(view.container, packId);
+    expect(screen.getByRole('button', { name: /^Refresh data/i })).toBe(refresh);
+    expect(refresh).toHaveFocus();
+    expect(screen.getByText('2024.44.25')).toBeInTheDocument();
+    expect(screen.getByText('Current')).toBeInTheDocument();
+    expect(softwareUpdatesMock).toHaveBeenLastCalledWith('7');
+  }
+  fireEvent.click(refresh);
+  expect(refetch).toHaveBeenCalledOnce();
 });
 
 describe('SoftwareUpdateHistoryWidget trust and recovery', () => {

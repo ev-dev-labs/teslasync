@@ -15,6 +15,22 @@ and `/settings#appearance` continue to work. Switching categories preserves
 unsaved form edits and does not save automatically. Each section retains its own
 save or instant-apply behavior.
 
+**Widget design packs** in Appearance & experience offers 27 presentations,
+including Classic. Browse by **Minimal & Editorial**, **Soft & Atmospheric**,
+**Technical & Instrumental**, or **Bold & Geometric**, and combine a style with
+the independent Mild, Balanced, Bold, or Extreme intensity filter. Filtering
+does not change the active pack; **Show all designs** clears filters when no
+packs match. Previews use sample readings and existing vehicle images, with
+vehicle commands disabled.
+
+**Use pack** saves the selection to this TeslaSync server for the identity
+verified by the external authentication provider. Another machine using the
+same identity and server restores it; an already-open browser checks for
+changes every 20 seconds. Deployments explicitly configured without
+authentication share one server selection. A failed save keeps the last
+confirmed pack. Pack selection does not change dashboard layouts, units,
+fonts, or accent preferences, and does not add a separate TeslaSync login.
+
 **Decimal precision** in Units, language & costs controls measurement, currency
 and percentage displays across pages, tables, widgets and chart tooltips.
 Changing the saved preference updates mounted displays without reloading data.

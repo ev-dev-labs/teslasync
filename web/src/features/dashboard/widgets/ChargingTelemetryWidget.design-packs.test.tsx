@@ -233,41 +233,59 @@ describe.each(Object.entries(PACK_APPEARANCES) as [Exclude<PackId, 'classic'>, s
       expect(flow().querySelectorAll('.flow-active')).toHaveLength(0);
       expect(container.querySelector('[data-charge-level="0"]')).toBeInTheDocument();
     });
+
+    it('retains reported electrical readings after charging completes without inventing charging activity', async () => {
+      mocks.telemetry.mockReturnValue(query(telemetry({ charging_state: 'Complete' })));
+      const { container } = mount(packId);
+      await expectAppearance(container);
+      expect(screen.getByRole('button', { name: 'Not charging' })).toBeInTheDocument();
+      expect(screen.getByText('Not currently charging')).toBeInTheDocument();
+      expect(headline(container).getByText('11.0')).toBeInTheDocument();
+      expect(headline(container).getByText('kW')).toBeInTheDocument();
+      expect(screen.getByText('230')).toBeInTheDocument();
+      expect(screen.getByText('16')).toBeInTheDocument();
+      expect(screen.getByText('32')).toBeInTheDocument();
+      expect(container.querySelector('[data-charge-level="72"]')).toBeInTheDocument();
+      expect(flow().querySelectorAll('.flow-active')).toHaveLength(0);
+      expect(container.querySelector('.widget-state-motion')).toBeNull();
+      expect(screen.queryByText('AC')).not.toBeInTheDocument();
+      expect(screen.queryByText('DC')).not.toBeInTheDocument();
+    });
+
+    it('preserves loading and fatal-error recovery in the shell rather than manufacturing a presentation', () => {
+      mocks.telemetry.mockReturnValue(query(undefined, { data: undefined, isLoading: true }));
+      const view = mount(packId);
+      expect(screen.getByRole('heading', { name: 'Charging telemetry' })).toBeInTheDocument();
+      expect(view.container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+      expect(view.container.querySelector('[data-widget-family]')).not.toBeInTheDocument();
+
+      const failed = query(undefined, { data: undefined, isError: true, error: new Error('network failed') });
+      mocks.telemetry.mockReturnValue(failed);
+      view.selectPack(packId);
+      expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+      expect(view.container.querySelector('[data-widget-family]')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /^Retry/i }));
+      expect(failed.refetch).toHaveBeenCalledOnce();
+    });
+
+    it('rejects invalid measurements and unknown charging evidence without zero substitution', async () => {
+      mocks.telemetry.mockReturnValue(query(telemetry({
+        charging_state: null, charger_voltage: Number.NaN, charger_power_w: Number.POSITIVE_INFINITY,
+        charger_actual_current: null, charger_phases: null, charger_pilot_current: null,
+        battery_level: 101, ts: 'invalid',
+      })));
+      const { container } = mount(packId);
+      await expectAppearance(container);
+      expect(headline(container).getByText('—')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Unknown' })).toBeInTheDocument();
+      expect(screen.getByText('Telemetry sample: —')).toBeInTheDocument();
+      expect(container.querySelector('[data-charge-pack="unknown"]')).toBeInTheDocument();
+      expect(container.querySelector('.widget-state-motion')).toBeNull();
+      expect(screen.queryByText(/NaN|Infinity|101%/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^0(?:\.0)?$/)).not.toBeInTheDocument();
+    });
   },
 );
-
-it('preserves loading and fatal-error recovery in the shell rather than manufacturing a presentation', () => {
-  mocks.telemetry.mockReturnValue(query(undefined, { data: undefined, isLoading: true }));
-  const view = mount('v7');
-  expect(screen.getByRole('heading', { name: 'Charging telemetry' })).toBeInTheDocument();
-  expect(view.container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
-  expect(view.container.querySelector('[data-widget-family]')).not.toBeInTheDocument();
-
-  const failed = query(undefined, { data: undefined, isError: true, error: new Error('network failed') });
-  mocks.telemetry.mockReturnValue(failed);
-  view.selectPack('v7');
-  expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-  expect(view.container.querySelector('[data-widget-family]')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /^Retry/i }));
-  expect(failed.refetch).toHaveBeenCalledOnce();
-});
-
-it('rejects invalid measurements and unknown charging evidence in Pixel without zero substitution', async () => {
-  mocks.telemetry.mockReturnValue(query(telemetry({
-    charging_state: null, charger_voltage: Number.NaN, charger_power_w: Number.POSITIVE_INFINITY,
-    charger_actual_current: null, charger_phases: null, charger_pilot_current: null,
-    battery_level: 101, ts: 'invalid',
-  })));
-  const { container } = mount('v7');
-  await waitFor(() => expect(container.querySelector('[data-widget-appearance="pixel"]')).toBeInTheDocument());
-  expect(headline(container).getByText('—')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Unknown' })).toBeInTheDocument();
-  expect(screen.getByText('Telemetry sample: —')).toBeInTheDocument();
-  expect(container.querySelector('[data-charge-pack="unknown"]')).toBeInTheDocument();
-  expect(container.querySelector('.widget-state-motion')).toBeNull();
-  expect(screen.queryByText(/NaN|Infinity|101%/)).not.toBeInTheDocument();
-  expect(screen.queryByText(/^0(?:\.0)?$/)).not.toBeInTheDocument();
-});
 
 it('retains Classic recovery for an unknown stored pack ID and idle readings', () => {
   mocks.telemetry.mockReturnValue(query(telemetry({ charging_state: 'Complete' })));
