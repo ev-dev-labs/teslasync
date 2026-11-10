@@ -24,6 +24,7 @@ import { render, screen, cleanup, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { ToastProvider } from '@/components/feedback'
 
 import {
   chooseDashboardPreset,
@@ -155,7 +156,9 @@ function mountDashboard() {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/']}>
-        <DashboardPage />
+        <ToastProvider>
+          <DashboardPage />
+        </ToastProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   )

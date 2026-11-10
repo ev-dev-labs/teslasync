@@ -20,4 +20,16 @@ describe('additive widget implementation preservation', () => {
     expect(() => catalogBeforeWidgetImplementation(changed)).toThrow();
     expect(catalog.dashboard.designPacks.classic).not.toBe('Unverified replacement');
   });
+
+  it('pins synchronized selection and style copy without changing historical checkpoints', () => {
+    const changedScope = structuredClone(catalog);
+    changedScope.theme.widgetDesignPacks.scope = 'Saved only in this browser';
+    expect(() => catalogBeforeWidgetImplementation(changedScope)).toThrow();
+    const changedStyle = structuredClone(catalog);
+    changedStyle.theme.widgetDesignPacks.styleTechnical = 'Experimental';
+    expect(() => catalogBeforeWidgetImplementation(changedStyle)).toThrow();
+    const changedPack = structuredClone(catalog);
+    changedPack.dashboard.designPacks.analog.name = 'Unreviewed';
+    expect(() => catalogBeforeWidgetImplementation(changedPack)).toThrow();
+  });
 });

@@ -216,11 +216,15 @@ describe.each(Object.entries(PACK_APPEARANCES))('arrival energy %s / %s', (pack,
     failure = true;
     const { container } = mount(pack);
     await waitFor(() => expect(container.querySelector('[data-widget-family="map"]')).toHaveAttribute('data-widget-appearance', appearance));
-    const alert = await screen.findByRole('alert');
+    await screen.findByRole('alert');
     for (const name of ['arrival-charge', 'destination-map', 'route-details']) expect(section(container, name)).toBeVisible();
     expect(screen.getByText('ETA')).toBeVisible();
+    const attempts = calls('/signals/7/live');
     failure = false;
-    fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    });
+    expect(calls('/signals/7/live')).toBe(attempts + 1);
     await expectArrivalCharge(container, '65.00');
   });
 

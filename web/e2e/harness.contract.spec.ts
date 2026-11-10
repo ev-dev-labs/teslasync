@@ -38,6 +38,14 @@ test('theme fixture honors the requested project theme', () => {
   expect(resolveApiFixture('/settings', 'GET', 'populated', 'light').body).toMatchObject({ mode: 'light' });
 });
 
+test('shared shell fixture resolves the server-backed widget preference', () => {
+  expect(resolveApiFixture('/settings/widget-design-pack', 'GET', 'populated')).toMatchObject({
+    matched: true,
+    body: { pack_id: 'classic', scope: expect.stringMatching(/^[a-f0-9]{64}$/) },
+  });
+  expect(resolveApiFixture('/settings/unknown-preference', 'GET', 'populated').matched).toBe(false);
+});
+
 test('browser globals are not monkeypatched by state seeding', () => {
   const source = readFileSync(resolve(process.cwd(), 'e2e', 'mockApi.ts'), 'utf8');
   expect(source).not.toContain("Object.defineProperty(window, 'Date'");

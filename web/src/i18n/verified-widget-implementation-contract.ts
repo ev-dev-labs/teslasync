@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { expect } from 'vitest';
 import transition from './__fixtures__/widget-implementation-transition.json';
+import packCopyChanges from './__fixtures__/widget-design-pack-copy.json';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 
@@ -25,6 +26,15 @@ export function restoreWidgetImplementationSource(file: string, source: string):
 
 export function catalogBeforeWidgetImplementation<T extends Record<string, unknown>>(catalog: T): T {
   const previous = structuredClone(catalog);
+  for (const change of packCopyChanges) {
+    const parts = change.path.split('.');
+    let parent: Record<string, unknown> = previous;
+    for (const part of parts.slice(0, -1)) parent = parent[part] as Record<string, unknown>;
+    const leaf = parts[parts.length - 1];
+    expect(parent[leaf], change.path).toEqual(change.current);
+    if ('previous' in change) parent[leaf] = change.previous;
+    else delete parent[leaf];
+  }
   for (const addition of transition.catalogAdditions) {
     let parent: Record<string, unknown> = previous;
     for (const part of addition.path.slice(0, -1)) {
