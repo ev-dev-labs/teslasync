@@ -12,6 +12,7 @@ import { ServerGate } from '@/features/server/ServerGate'
 import { NativeDeepLinks } from '@/features/server/NativeDeepLinks'
 import { DemoModeBanner } from '@/components/feedback/DemoModeBanner'
 import { DensityApplier } from '@/components/ui/DensityApplier'
+import { AppDesignBridge } from '@/components/ui/AppDesignBridge'
 import { ContextMenuRoot } from '@/components/ui/ContextMenu'
 import { RouteAnnouncer, RouteFocusManager } from '@/components/a11y'
 import { recordPageView, resolvePageLabel } from '@/lib/recentPages'
@@ -570,7 +571,7 @@ export default function App() {
           <SafeRoute name="SharedLibraryReference"><SharedLibraryReference /></SafeRoute>
         </main>
       } />}
-      <Route path="/" element={<Layout />}>
+      <Route path="/" element={<><AppDesignBridge /><Layout /></>}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
         <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
         {MobileGridReference && <Route path="dev/grid-states" element={<SafeRoute name="MobileGridReference"><MobileGridReference /></SafeRoute>} />}

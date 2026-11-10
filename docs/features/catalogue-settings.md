@@ -15,13 +15,24 @@ and `/settings#appearance` continue to work. Switching categories preserves
 unsaved form edits and does not save automatically. Each section retains its own
 save or instant-apply behavior.
 
-**Widget design packs** in Appearance & experience offers 27 presentations,
+**App design packs** in Appearance & experience offers 27 presentations,
 including Classic. Browse by **Minimal & Editorial**, **Soft & Atmospheric**,
 **Technical & Instrumental**, or **Bold & Geometric**, and combine a style with
 the independent Mild, Balanced, Bold, or Extreme intensity filter. Filtering
 does not change the active pack; **Show all designs** clears filters when no
 packs match. Previews use sample readings and existing vehicle images, with
 vehicle commands disabled.
+
+**Apply design to** defaults to **Widgets only**, including for existing saved
+selections. Explicitly choose **Entire application** to extend that same pack
+to navigation, shared panels, form controls, tables, headings and dialogs.
+Changing the pack then updates widgets and the app together. Returning to
+**Widgets only** keeps the selected pack. The scope choice is saved atomically
+with the pack and syncs across machines too; older clients that save only a
+pack preserve it. Display mode, accent, fonts, text scale, density, semantic
+status/chart colors and reduced-motion preferences stay independent. Print,
+OS high contrast, and standalone public/connect routes retain their existing
+appearance. The preview demonstrates shared app chrome without saving.
 
 **Use pack** saves the selection to this TeslaSync server for the identity
 verified by the external authentication provider. Another machine using the

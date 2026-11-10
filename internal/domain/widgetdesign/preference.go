@@ -5,6 +5,11 @@ import (
 	"encoding/hex"
 )
 
+type Preference struct {
+	PackID  string
+	AppWide bool
+}
+
 // ValidPackID deliberately accepts only shipped designs, never arbitrary CSS.
 func ValidPackID(id string) bool {
 	switch id {

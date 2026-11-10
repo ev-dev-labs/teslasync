@@ -64,17 +64,19 @@ export const packNames: Record<PackId, string> = {
   glass: 'Glass Current', deco: 'Deco Grand', kinetic: 'Kinetic Type',
   brutal: 'Neo Brutal', cyber: 'Cyberdeck', memphis: 'Memphis Pop',
 };
-export const reviewOrigin = 'http://127.0.0.1:4189';
+export const reviewOrigin = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:4189';
 const reviewIdentity = 'widget-design-review';
 
 export interface ReviewPreferenceStore {
   pack_id: PackId;
   scope: string;
+  app_wide: boolean;
 }
 
 export function createReviewPreference(subject?: string): ReviewPreferenceStore {
   return {
     pack_id: 'classic',
+    app_wide: false,
     scope: createHash('sha256').update(subject ? `forward_auth:${subject}` : 'open').digest('hex'),
   };
 }
@@ -97,6 +99,7 @@ export async function installPackReview(
   selection: readonly (readonly [string, string])[] = reviewWidgets,
   fullCatalogue = false,
   preferenceStore = createReviewPreference(),
+  allowedOrigin = reviewOrigin,
 ) {
   if (process.env.E2E_MOCKS === '0') throw new Error('Widget design review requires isolated synthetic fixtures');
   await seedBrowserState(page, theme, '/', { preserveDashboardState: true });
@@ -115,19 +118,20 @@ export async function installPackReview(
     localStorage.setItem('teslasync-active-dashboard', saved.id);
   }, { saved: dashboard });
   await page.route('**/*', route => {
-    return new URL(route.request().url()).origin === reviewOrigin
+    return new URL(route.request().url()).origin === allowedOrigin
       ? route.continue() : route.abort('blockedbyclient');
   });
   const mocks = await installApiMocks(page, 'populated', theme);
   if (!mocks) throw new Error('Missing isolated API fixtures');
   await page.route('**/api/v1/settings/widget-design-pack', async route => {
     if (route.request().method() === 'PUT') {
-      const body = route.request().postDataJSON() as { pack_id: PackId };
+      const body = route.request().postDataJSON() as { pack_id: PackId; app_wide?: boolean };
       if (!Object.hasOwn(packNames, body.pack_id)) {
         await fulfillApiFixture(route, mocks, { status: 400, json: { error: 'Unknown design pack' } });
         return;
       }
       preferenceStore.pack_id = body.pack_id;
+      if (body.app_wide !== undefined) preferenceStore.app_wide = body.app_wide;
     }
     await fulfillApiFixture(route, mocks, { json: preferenceStore });
   });

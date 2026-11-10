@@ -26,7 +26,7 @@ for (const theme of ['dark', 'light'] as const) {
           .getByRole('button', { name: /Appearance & experience/ }).click();
       }
       const selector = page.locator('[aria-labelledby="settings-widget-design-packs"]');
-      await expect(selector.getByRole('heading', { name: 'Widget design packs' })).toBeVisible();
+      await expect(selector.getByRole('heading', { name: 'App design packs' })).toBeVisible();
       await expect(selector.getByRole('button', { name: 'Classic active', exact: true })).toBeDisabled();
       const geometry = await selector.locator('section').evaluateAll(cards => cards.map(card => {
         const stage = card.firstElementChild!.getBoundingClientRect();

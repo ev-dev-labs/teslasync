@@ -1,0 +1,188 @@
+/* Existing tokens remain owned by ThemeProvider, FontProvider and density.
+   This opt-in layer changes their design treatment, never saved colors or sizes.
+   Screen-only rules leave print and OS high-contrast rendering unchanged. */
+@media screen and (forced-colors: none) {
+  :is(:root, [data-app-design-preview])[data-app-design-pack] {
+    --app-border-width: 1px;
+    --app-rule-style: solid;
+    --app-heading-style: normal;
+    --app-pattern: none;
+    --app-nav-radius: var(--radius-md);
+    --app-shadow: 0 0 0 transparent;
+    --panel-radius: var(--radius-lg);
+    --panel-shadow: var(--app-shadow);
+    --panel-shadow-hover: var(--app-shadow);
+    --elevation-1: var(--app-shadow);
+    --elevation-2: var(--app-shadow);
+    --elevation-3: 0 16px 48px color-mix(in srgb, var(--text-primary) 16%, transparent);
+  }
+
+  [data-app-design-preview][data-app-design-pack] {
+    --radius-sm: 6px; --radius-md: 8px; --radius-lg: 10px; --radius-xl: 14px;
+    --panel-border: var(--border-default);
+    --control-border: var(--text-muted);
+    --control-bg: var(--surface-2);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v1"] {
+    --radius-sm: 3px; --radius-md: 4px; --radius-lg: 6px; --radius-xl: 8px;
+    --app-shadow: inset 0 2px var(--theme-accent);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v2"] {
+    --radius-sm: 10px; --radius-md: 14px; --radius-lg: 18px; --radius-xl: 24px;
+    --app-shadow: 0 6px 24px color-mix(in srgb, var(--text-primary) 9%, transparent);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v3"] {
+    --radius-sm: 2px; --radius-md: 2px; --radius-lg: 3px; --radius-xl: 4px;
+    --panel-border: var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v4"] {
+    --radius-sm: 6px; --radius-md: 8px; --radius-lg: 10px; --radius-xl: 12px;
+    --app-shadow: 0 1px 3px color-mix(in srgb, var(--text-primary) 6%, transparent);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v5"] {
+    --radius-sm: 12px; --radius-md: 18px; --radius-lg: 24px; --radius-xl: 28px;
+    --app-shadow: inset 0 3px var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v6"] {
+    --radius-sm: 16px; --radius-md: 20px; --radius-lg: 28px 8px 28px 8px; --radius-xl: 32px;
+    --app-nav-radius: 999px;
+    --app-shadow: 0 3px var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="v7"] {
+    --radius-sm: 0px; --radius-md: 0px; --radius-lg: 0px; --radius-xl: 0px;
+    --app-border-width: 2px;
+    --app-shadow: 3px 3px 0 var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] {
+    --radius-sm: 2px; --radius-md: 3px; --radius-lg: 4px; --radius-xl: 6px;
+    --app-heading-style: italic;
+    --app-shadow: inset 4px 0 var(--theme-accent);
+    --app-pattern: repeating-linear-gradient(120deg, transparent 0 18px, color-mix(in srgb, var(--theme-accent) 4%, transparent) 18px 20px);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="blueprint"] {
+    --radius-sm: 1px; --radius-md: 2px; --radius-lg: 2px; --radius-xl: 4px;
+    --app-rule-style: dashed;
+    --app-pattern: repeating-linear-gradient(0deg, transparent 0 23px, var(--border-subtle) 23px 24px), repeating-linear-gradient(90deg, transparent 0 23px, var(--border-subtle) 23px 24px);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="editorial"] {
+    --radius-sm: 2px; --radius-md: 2px; --radius-lg: 0px; --radius-xl: 2px;
+    --app-heading-style: italic;
+    --app-rule-style: double;
+    --app-shadow: inset 0 3px var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="ambient"] {
+    --radius-sm: 16px; --radius-md: 22px; --radius-lg: 28px; --radius-xl: 32px;
+    --app-nav-radius: 999px;
+    --app-shadow: 0 10px 32px color-mix(in srgb, var(--theme-accent) 6%, transparent);
+    --app-pattern: radial-gradient(ellipse at top right, color-mix(in srgb, var(--theme-accent) 7%, transparent), transparent 70%);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="terminal"] {
+    --radius-sm: 0px; --radius-md: 0px; --radius-lg: 0px; --radius-xl: 0px;
+    --app-rule-style: dashed;
+    --app-shadow: inset 0 -2px var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="atlas"] {
+    --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px; --radius-xl: 16px;
+    --app-pattern: repeating-radial-gradient(ellipse at top left, transparent 0 17px, var(--border-subtle) 18px 19px, transparent 20px 34px);
+    --app-shadow: inset 0 3px var(--theme-accent);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="analog"] {
+    --radius-sm: 6px; --radius-md: 10px; --radius-lg: 18px; --radius-xl: 20px;
+    --app-shadow: inset 0 1px var(--border-strong), 0 3px 0 var(--border-subtle);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="observatory"] {
+    --radius-sm: 10px; --radius-md: 16px; --radius-lg: 20px; --radius-xl: 28px;
+    --app-nav-radius: 999px;
+    --app-pattern: radial-gradient(circle, var(--border-strong) 1px, transparent 1px);
+    --app-shadow: 0 0 0 3px var(--border-subtle);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="bauhaus"] {
+    --radius-sm: 0px; --radius-md: 0px; --radius-lg: 0px; --radius-xl: 0px;
+    --app-border-width: 2px;
+    --app-shadow: 5px 0 var(--theme-accent);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="quiet"] {
+    --radius-sm: 3px; --radius-md: 4px; --radius-lg: 4px; --radius-xl: 6px;
+    --panel-border: var(--border-subtle);
+    --control-bg: var(--surface-1);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="warm"] {
+    --radius-sm: 10px; --radius-md: 14px; --radius-lg: 18px 18px 8px 8px; --radius-xl: 24px;
+    --app-shadow: 0 3px 12px color-mix(in srgb, var(--text-primary) 5%, transparent);
+    --app-pattern: linear-gradient(135deg, var(--border-subtle), transparent 60%);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="swiss"] {
+    --radius-sm: 0px; --radius-md: 0px; --radius-lg: 0px; --radius-xl: 0px;
+    --app-shadow: inset 0 2px var(--text-secondary);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="material"] {
+    --radius-sm: 12px; --radius-md: 16px; --radius-lg: 24px; --radius-xl: 32px;
+    --app-nav-radius: 999px;
+    --control-bg: color-mix(in srgb, var(--theme-accent) 7%, var(--surface-1));
+    --app-shadow: 0 3px 8px color-mix(in srgb, var(--text-primary) 10%, transparent);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="glass"] {
+    --radius-sm: 10px; --radius-md: 16px; --radius-lg: 22px; --radius-xl: 28px;
+    --app-shadow: inset 0 1px var(--border-strong), 0 8px 28px color-mix(in srgb, var(--text-primary) 8%, transparent);
+    --app-pattern: linear-gradient(120deg, color-mix(in srgb, var(--theme-accent) 6%, transparent), transparent 65%);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="deco"] {
+    --radius-sm: 2px; --radius-md: 4px; --radius-lg: 18px 2px 18px 2px; --radius-xl: 20px;
+    --app-rule-style: double;
+    --app-border-width: 3px;
+    --app-shadow: inset 0 0 0 2px var(--surface-1), inset 0 0 0 3px var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="kinetic"] {
+    --radius-sm: 2px; --radius-md: 4px; --radius-lg: 6px; --radius-xl: 8px;
+    --app-heading-style: italic;
+    --app-shadow: inset 0 -4px var(--theme-accent);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="brutal"] {
+    --radius-sm: 0px; --radius-md: 0px; --radius-lg: 0px; --radius-xl: 0px;
+    --app-border-width: 3px;
+    --panel-border: var(--text-secondary);
+    --control-border: var(--text-secondary);
+    --app-shadow: 4px 4px 0 var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="cyber"] {
+    --radius-sm: 0px; --radius-md: 2px; --radius-lg: 0px 12px 0px 12px; --radius-xl: 12px;
+    --app-rule-style: dashed;
+    --app-shadow: inset 2px 0 var(--theme-accent), 0 0 16px color-mix(in srgb, var(--theme-accent) 8%, transparent);
+    --app-pattern: repeating-linear-gradient(0deg, transparent 0 5px, var(--border-subtle) 5px 6px);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack="memphis"] {
+    --radius-sm: 12px 2px 12px 2px; --radius-md: 18px 4px 18px 4px;
+    --radius-lg: 28px 8px 28px 8px; --radius-xl: 32px;
+    --app-border-width: 2px;
+    --app-shadow: 4px 4px 0 color-mix(in srgb, var(--theme-accent) 24%, var(--surface-2));
+    --app-pattern: radial-gradient(circle, color-mix(in srgb, var(--theme-accent) 12%, transparent) 1px, transparent 1px);
+  }
+
+  :is(:root, [data-app-design-preview])[data-app-design-pack] :where([data-surface-variant="standalone"], [data-grid-variant="standalone"]) {
+    border-width: var(--app-border-width);
+    border-style: var(--app-rule-style);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack] [data-grid-variant="standalone"] {
+    border-radius: var(--panel-radius);
+    box-shadow: var(--panel-shadow);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack] :where([data-role="page-header"], [data-role="workspace-header"], [data-role="appbar"]) {
+    background-image: var(--app-pattern);
+    background-size: 32px 32px;
+    border-block-end: var(--app-border-width) var(--app-rule-style) var(--border-strong);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack] [data-heading-level] {
+    font-style: var(--app-heading-style);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack] :where(.sidenav-rail-item, .sidenav-icon, .sidenav-utility, .sidenav-page-row > a) {
+    border-radius: var(--app-nav-radius);
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack] :where(.sidenav-rail, .sidenav-phone-tabs, .sidenav-panel) {
+    background-image: var(--app-pattern);
+    background-size: 32px 32px;
+  }
+  :is(:root, [data-app-design-preview])[data-app-design-pack] [role="dialog"] {
+    border-style: var(--app-rule-style);
+    box-shadow: var(--elevation-3), var(--app-shadow);
+  }
+}

@@ -43,7 +43,7 @@ const HEADING_ROLE: Record<HeadingLevel, TypographyRole> = {
 export function Heading({ level = 'section', as, className, children, ...rest }: HeadingProps) {
   const Tag = as ?? HEADING_TAG[level]
   return (
-    <Tag className={cn(typography.role[HEADING_ROLE[level]], className)} {...rest}>
+    <Tag data-heading-level={level} className={cn(typography.role[HEADING_ROLE[level]], className)} {...rest}>
       {children}
     </Tag>
   )

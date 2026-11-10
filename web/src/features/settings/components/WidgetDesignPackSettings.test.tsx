@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   request: vi.fn(),
   eventSource: vi.fn(),
   packId: 'classic',
+  appWide: false,
   scope: '',
   failSave: false,
 }));
@@ -63,15 +64,18 @@ beforeEach(() => {
   mocks.mode.mockResolvedValue({ isSuccess: true, data: { mode: 'forward_auth', subject: 'preview-viewer' } });
   mocks.request.mockReset();
   mocks.packId = 'classic';
+  mocks.appWide = false;
   mocks.scope = createHash('sha256').update('forward_auth:preview-viewer').digest('hex');
   mocks.failSave = false;
   mocks.request.mockImplementation(async (path: string, options?: { method?: string; body?: string }) => {
     if (path !== '/settings/widget-design-pack') throw new Error('Preview must not read vehicle APIs');
     if (options?.method === 'PUT') {
       if (mocks.failSave) throw new Error('Server unavailable');
-      mocks.packId = (JSON.parse(options.body ?? '{}') as { pack_id: string }).pack_id;
+      const body = JSON.parse(options.body ?? '{}') as { pack_id: string; app_wide?: boolean };
+      mocks.packId = body.pack_id;
+      if (body.app_wide !== undefined) mocks.appWide = body.app_wide;
     }
-    return { pack_id: mocks.packId, scope: mocks.scope };
+    return { pack_id: mocks.packId, app_wide: mocks.appWide, scope: mocks.scope };
   });
   mocks.eventSource.mockClear();
 });
@@ -104,6 +108,7 @@ describe('Widget design pack settings', () => {
       expect(button).toBeDisabled();
     }
     expect(screen.queryByRole('button', { name: / active$/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Apply design to' })).toBeDisabled();
     expect(localStorage.length).toBe(0);
     resolve({ isSuccess: true, data: { mode: 'forward_auth', subject: 'preview-viewer' } });
     await ready();
@@ -179,6 +184,29 @@ describe('Widget design pack settings', () => {
     expect(screen.getByRole('button', { name: 'Classic active' })).toBeDisabled();
     expect(write).not.toHaveBeenCalled();
     expect(mocks.request.mock.calls.some(([, options]) => options?.method === 'PUT')).toBe(false);
+  });
+
+  it('explicitly enables app scope, retains it when switching designs and restores widgets without changing the pack', async () => {
+    renderSettings();
+    await ready();
+    const scope = screen.getByRole('combobox', { name: 'Apply design to' });
+    expect(scope).toHaveValue('widgets');
+    fireEvent.change(scope, { target: { value: 'app' } });
+    await waitFor(() => expect(scope).toHaveValue('app'));
+    expect(mocks.request).toHaveBeenCalledWith('/settings/widget-design-pack', expect.objectContaining({
+      method: 'PUT', body: JSON.stringify({ pack_id: 'classic', app_wide: true }),
+    }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use Material Play pack' }));
+    await screen.findByRole('button', { name: 'Material Play active' });
+    expect(scope).toHaveValue('app');
+    mocks.failSave = true;
+    fireEvent.change(scope, { target: { value: 'widgets' } });
+    await waitFor(() => expect(screen.getAllByRole('alert').length).toBeGreaterThan(0));
+    expect(scope).toHaveValue('app');
+    mocks.failSave = false;
+    fireEvent.change(scope, { target: { value: 'widgets' } });
+    await waitFor(() => expect(scope).toHaveValue('widgets'));
+    expect(mocks.packId).toBe('material');
   });
 
   it('retains the confirmed choice on server failure and permits a successful retry', async () => {

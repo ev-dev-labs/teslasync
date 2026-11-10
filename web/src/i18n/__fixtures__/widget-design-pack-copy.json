@@ -1,5 +1,22 @@
 [
   {
+    "path": "theme.widgetDesignPacks.title",
+    "current": "App design packs",
+    "previous": "Widget design packs"
+  },
+  { "path": "theme.widgetDesignPacks.applyTo", "current": "Apply design to" },
+  { "path": "theme.widgetDesignPacks.appPreview", "current": "Application preview" },
+  {
+    "path": "theme.widgetDesignPacks.appPreviewHelp",
+    "current": "Shared navigation, headings, controls and panels use this design when applied to the entire application."
+  },
+  { "path": "theme.widgetDesignPacks.widgetsOnly", "current": "Widgets only" },
+  { "path": "theme.widgetDesignPacks.entireApp", "current": "Entire application" },
+  {
+    "path": "theme.widgetDesignPacks.appScopeHelp",
+    "current": "Entire application styles navigation, panels, controls, tables and dialogs with the same pack. Color mode, accent, fonts, density and accessibility preferences stay unchanged. This choice also syncs across machines."
+  },
+  {
     "path": "dashboard.designPacks.motorsport",
     "current": { "name": "Motorsport", "description": "Race-board hierarchy, slanted readings and chart-led telemetry." }
   },

@@ -14,6 +14,7 @@ const server = vi.hoisted(() => ({
   authError: false,
   wrongScope: false,
   values: new Map<string, string>(),
+  appScopes: new Map<string, boolean>(),
   listeners: new Set<(message: { type: string }) => void>(),
   request: vi.fn(),
   success: vi.fn(),
@@ -51,7 +52,7 @@ async function ready(instance?: QueryClient) {
   return hook;
 }
 function response() {
-  return { pack_id: server.values.get(storageKey()) ?? 'classic', scope: server.wrongScope ? 'wrong' : scope() };
+  return { pack_id: server.values.get(storageKey()) ?? 'classic', app_wide: server.appScopes.get(storageKey()) ?? false, scope: server.wrongScope ? 'wrong' : scope() };
 }
 function logout() {
   act(() => server.listeners.forEach(listener => listener({ type: 'auth.logout' })));
@@ -85,6 +86,7 @@ describe('durable widget design pack preference', () => {
     server.authError = false;
     server.wrongScope = false;
     server.values.clear();
+    server.appScopes.clear();
     server.request.mockReset();
     server.success.mockClear();
     server.error.mockClear();
@@ -96,8 +98,9 @@ describe('durable widget design pack preference', () => {
       if (path !== '/settings/widget-design-pack') throw new Error(`Unexpected endpoint: ${path}`);
       if (options?.method === 'PUT') {
         if (server.writeError) throw new Error('save failed');
-        const body = JSON.parse(String(options.body)) as { pack_id: string };
+        const body = JSON.parse(String(options.body)) as { pack_id: string; app_wide?: boolean };
         server.values.set(storageKey(), body.pack_id);
+        if (body.app_wide !== undefined) server.appScopes.set(storageKey(), body.app_wide);
       } else if (server.readError) throw new Error('refresh failed');
       return response();
     });
@@ -132,21 +135,63 @@ describe('durable widget design pack preference', () => {
 
   it('separates exact opaque subjects, open deployments and server origins', async () => {
     const a = await ready();
-    await act(async () => { await a.result.current.setPackId('v4'); });
+    await act(async () => { await a.result.current.setPackId('v4', true); });
     a.unmount();
     server.subject = 'opaque/ACCOUNT-a';
     const b = await ready();
     expect(b.result.current.packId).toBe('classic');
+    expect(b.result.current.appWide).toBe(false);
     b.unmount();
     server.mode = 'open';
     const open = await ready();
     expect(open.result.current.packId).toBe('classic');
+    expect(open.result.current.appWide).toBe(false);
     await act(async () => { await open.result.current.setPackId('analog'); });
     expect(server.values.get(`${server.origin}:${hash('open')}`)).toBe('analog');
     open.unmount();
     server.origin = 'https://server-b.example';
     const other = await ready();
     expect(other.result.current.packId).toBe('classic');
+    expect(other.result.current.appWide).toBe(false);
+  });
+
+  it('syncs explicit app scope between browsers, preserves it on pack-only saves and allows opting out', async () => {
+    const first = await ready();
+    expect(first.result.current.appWide).toBe(false);
+    await act(async () => { await first.result.current.setPackId('quiet', true); });
+    expect(first.result.current.appWide).toBe(true);
+    first.unmount();
+    const second = await ready(client());
+    expect(second.result.current).toMatchObject({ packId: 'quiet', appWide: true });
+    await act(async () => { await second.result.current.setPackId('brutal'); });
+    expect(second.result.current).toMatchObject({ packId: 'brutal', appWide: true });
+    server.writeError = true;
+    await act(async () => { expect(await second.result.current.setPackId('brutal', false)).toBe(false); });
+    expect(second.result.current.appWide).toBe(true);
+    server.writeError = false;
+    await act(async () => { await second.result.current.setPackId('brutal', false); });
+    expect(second.result.current).toMatchObject({ packId: 'brutal', appWide: false });
+    second.unmount();
+    const third = await ready(client());
+    expect(third.result.current.appWide).toBe(false);
+    await act(async () => { await third.result.current.setPackId('brutal', true); });
+    logout();
+    expect(third.result.current).toMatchObject({ isReady: false, packId: 'classic', appWide: false });
+  });
+
+  it('keeps older server responses widget-only and rejects malformed scope flags', async () => {
+    const request = server.request.getMockImplementation()!;
+    let appWide: unknown = undefined;
+    server.request.mockImplementation(async (path: string, options?: RequestInit) => {
+      const result = await request(path, options);
+      return path === '/settings/widget-design-pack' ? { ...result, app_wide: appWide } : result;
+    });
+    const hook = await ready();
+    expect(hook.result.current.appWide).toBe(false);
+    appWide = 'true';
+    act(() => hook.result.current.retry());
+    await waitFor(() => expect(hook.result.current.error).toMatch(/mismatch/));
+    expect(hook.result.current.appWide).toBe(false);
   });
 
   it.each(['', '   '])('fails closed without verified identity: %j', async subject => {
@@ -225,9 +270,10 @@ describe('durable widget design pack preference', () => {
     expect(timer.mock.calls.filter(([, delay]) => delay === 20_000)).toHaveLength(1);
     // Simulate a change from another machine, then the single shared poll.
     server.values.set(storageKey(), 'cyber');
+    server.appScopes.set(storageKey(), true);
     const tick = timer.mock.calls.find(([, delay]) => delay === 20_000)![0] as () => void;
     act(() => tick());
-    await waitFor(() => expect(hooks.every(hook => hook.result.current.packId === 'cyber')).toBe(true));
+    await waitFor(() => expect(hooks.every(hook => hook.result.current.packId === 'cyber' && hook.result.current.appWide)).toBe(true));
     expect(server.request.mock.calls.filter(([path]) => path === '/settings/widget-design-pack')).toHaveLength(2);
     expect(server.request.mock.calls.filter(([path]) => path === '/system/auth-mode')).toHaveLength(2);
   });
@@ -272,7 +318,7 @@ describe('durable widget design pack preference', () => {
       path === '/settings/widget-design-pack' ? pending.promise : transport(path, options));
     const hook = mount();
     await waitFor(() => expect(server.request.mock.calls.some(([path]) => path === '/settings/widget-design-pack')).toBe(true));
-    const old = { pack_id: 'v4', scope: scope() };
+    const old = { pack_id: 'v4', app_wide: true, scope: scope() };
     if (reason === 'logout') logout();
     else act(() => {
       server.origin = 'https://new.example';
@@ -290,10 +336,10 @@ describe('durable widget design pack preference', () => {
     server.request.mockImplementation((path: string, options?: RequestInit) =>
       options?.method === 'PUT' ? pending.promise : transport(path, options));
     let result!: Promise<boolean>;
-    act(() => { result = hook.result.current.setPackId('v4'); });
+    act(() => { result = hook.result.current.setPackId('v4', true); });
     await waitFor(() => expect(hook.result.current.isSaving).toBe(true));
     await waitFor(() => expect(server.request.mock.calls.some(([, options]) => options?.method === 'PUT')).toBe(true));
-    const old = { pack_id: 'v4', scope: scope() };
+    const old = { pack_id: 'v4', app_wide: true, scope: scope() };
     const options = server.request.mock.calls.find(([, options]) => options?.method === 'PUT')![1] as RequestInit;
     if (reason === 'logout') logout();
     else act(() => {

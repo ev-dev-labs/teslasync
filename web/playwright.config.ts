@@ -63,6 +63,7 @@ export const baseConfig: PlaywrightTestConfig = {
       name: 'chromium-smoke',
       testMatch: [
         /\.smoke\.spec\.ts/,
+        /widget-design-packs\.app\.spec\.ts$/,
         /operationalbrief-contracts[\\/][^\\/]+\.supported\.spec\.ts$/,
       ],
       testIgnore: [/performance\.perf\.spec\.ts/, /accessibility\.smoke\.spec\.ts/],
