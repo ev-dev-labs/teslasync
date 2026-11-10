@@ -16,13 +16,14 @@
     "@capacitor/ios": "^7.6.9"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5",
+    "@capacitor/assets": "^4.0.0",
     "@capacitor/cli": "^7.0.0",
     "typescript": "^7.0.2"
   },
   "overrides": {
     "sharp": "0.35.5",
     "tar": "7.5.22",
-    "uuid": "11.1.1"
+    "uuid": "11.1.1",
+    "glob@>=9.0.0 <=14.0.1": "^14.0.4"
   }
 }

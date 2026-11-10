@@ -140,7 +140,7 @@ describe('Vampire drain modernization — authored runtime preservation', () => 
     const { client } = mount();
     const table = await screen.findByRole('table', { name: 'Drain sessions' });
     for (const name of ['Started', 'Duration', 'Start %', 'End %', 'Loss %', 'Rate %/day', 'Ambient']) {
-      expect(within(table).getByRole('columnheader', { name: new RegExp(name.replace('%', '%')) })).toBeInTheDocument();
+      expect(within(table).getByRole('columnheader', { name: new RegExp(name) })).toBeInTheDocument();
     }
     expect(client.getQueryData(['vampire-drain-stats', '7'])).toEqual(stats);
     expect(client.getQueryData(['vampire-drain-events', '7'])).toEqual({ vehicle_id: 7, events: [event] });

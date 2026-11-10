@@ -218,7 +218,7 @@ describe('BackgroundWorkersCard', () => {
     expect(first).toHaveAttribute('title', host)
     expect(first).toHaveClass('break-all')
     expect(first).not.toHaveClass('truncate')
-    expect(screen.getByText(error.replace('\n', ' ')).textContent).toBe(error)
+    expect(screen.getByText(error.replaceAll('\n', ' ')).textContent).toBe(error)
     expect(screen.getByText('0 ms')).toBeInTheDocument()
     const row = first.closest('li')!
     expect(within(row).getByRole('img', { name: 'instance status: down' })).toBeInTheDocument()
