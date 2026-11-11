@@ -264,7 +264,7 @@ describe.each(Object.entries(PACK_APPEARANCES))('Location map %s / %s source sta
     const { container } = render(widget(packId));
     await expectAppearance(container, appearance);
     const refresh = screen.getByRole('button', { name: /^Refresh/i });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(refetch).not.toHaveBeenCalled();
     document.documentElement.classList.add('light-mode');

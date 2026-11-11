@@ -85,6 +85,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.doUnmock('./WidgetDesignPackPreview');
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -130,6 +131,8 @@ describe('Widget design pack settings', () => {
   });
 
   it('previews every real presentation without saving, vehicle readers or commands', async () => {
+    // Keep the 20s background identity poll outside this preview-only case, regardless of runner speed.
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     const observers: MockResizeObserver[] = [];
     vi.stubGlobal('ResizeObserver', class extends MockResizeObserver {
       constructor(callback: ResizeObserverCallback) {

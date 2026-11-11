@@ -1372,8 +1372,8 @@ describe('VehicleListPage — loading, error & empty states', () => {
 
     const header = document.querySelector('header') as HTMLElement;
     expect(header).not.toBeNull();
-    expect(within(header).getByText(/10m ago/)).toBeInTheDocument();
-    expect(within(header).queryByText('just now')).toBeNull();
+    expect(within(header).getByRole('button', { name: /10m ago/ })).toBeInTheDocument();
+    expect(within(header).queryByRole('button', { name: /just now/ })).toBeNull();
   });
 
   it('surfaces a refresh error even though the wrapper batch resolved successfully', () => {
@@ -1404,8 +1404,8 @@ describe('VehicleListPage — loading, error & empty states', () => {
       const view = renderPage();
       const header = document.querySelector('header') as HTMLElement;
       // …the observation age does not.
-      expect(within(header).queryByText('just now')).toBeNull();
-      expect(within(header).getByText(/10m ago/)).toBeInTheDocument();
+      expect(within(header).queryByRole('button', { name: /just now/ })).toBeNull();
+      expect(within(header).getByRole('button', { name: /10m ago/ })).toBeInTheDocument();
       view.unmount();
     }
   });
@@ -1585,8 +1585,8 @@ describe('VehicleListPage — loading, error & empty states', () => {
     renderPage();
 
     const header = document.querySelector('header') as HTMLElement;
-    expect(within(header).getByText(/10m ago/)).toBeInTheDocument();
-    expect(within(header).queryByText('just now')).toBeNull();
+    expect(within(header).getByRole('button', { name: /10m ago/ })).toBeInTheDocument();
+    expect(within(header).queryByRole('button', { name: /just now/ })).toBeNull();
   });
 
   it('describes a total outage as unresolved, never as a fleet of offline vehicles', () => {

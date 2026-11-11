@@ -273,7 +273,7 @@ describe.each(PACK_IDS)('FleetStatsBarWidget — %s', (packId) => {
     expect(screen.getByTestId('fleet-stats-bar')).toHaveTextContent('1,234');
     expect(screen.getByTestId('fleet-stats-bar')).toHaveTextContent('250.0');
     const refresh = screen.getByRole('button', { name: /^Refresh/i });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(state.vehicles.refetch).not.toHaveBeenCalled();
     expect(state.analytics.refetch).not.toHaveBeenCalled();

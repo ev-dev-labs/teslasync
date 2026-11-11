@@ -208,7 +208,7 @@ describe.each(packs)('ChargeReadinessWidget %s real production presentation', (p
     let finishRefresh: (value: VehicleLiveSignalsResponse) => void = () => undefined;
     loadLive.mockImplementationOnce(() => new Promise(resolve => { finishRefresh = resolve; }));
     fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
-    await waitFor(() => expect(screen.getByRole('button', { name: /^Refresh data/i })).toBeDisabled());
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Refresh data/i })).toHaveAttribute('aria-disabled', 'true'));
     expect(checklistRow('Port').getByText('Closed')).toBeInTheDocument();
     expect(signalRow('ChargePort').getByText('CCS')).toBeInTheDocument();
     expect(loadLive).toHaveBeenCalledTimes(2);

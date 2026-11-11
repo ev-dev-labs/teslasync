@@ -99,8 +99,8 @@ const cold: ColdStartSummary = {
     distanceM: 20000, outsideTempAvgC: null, estimatedAvoidableWh: 0,
   }],
 };
-const baseCss = postcss.parse(readFileSync(resolve('src\\components\\ui\\app-designs\\base.css'), 'utf8'));
-const feedbackCss = postcss.parse(readFileSync(resolve('src\\components\\ui\\app-designs\\feedback.css'), 'utf8'));
+const baseCss = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'base.css'), 'utf8'));
+const feedbackCss = postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'feedback.css'), 'utf8'));
 const identityCss = new Map<PackId, postcss.Root>(PACK_IDS.map(pack => [
   pack, postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8')),
 ]));

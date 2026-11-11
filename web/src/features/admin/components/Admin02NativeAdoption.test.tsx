@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -44,7 +44,7 @@ function rules(name: string): Rule[] {
   return result;
 }
 const feedbackRules = rules('feedback.css');
-const identityRules = new Map(PACK_IDS.map(pack => [pack, rules(`packs\\${pack}.css`)]));
+const identityRules = new Map(PACK_IDS.map(pack => [pack, rules(join('packs', `${pack}.css`))]));
 const initialAttributes = Object.keys(getAppDesignAttributes('classic'))
   .map(name => [name, document.documentElement.getAttribute(name)] as const);
 const releases: Array<() => void> = [];

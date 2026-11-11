@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import postcss, { type Rule } from 'postcss';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -104,7 +104,7 @@ describe('FSD native source-to-consumer contracts (source-only)', () => {
       expect(within(resets[1]).queryByRole('link')).toBeNull();
       const links = host.querySelectorAll('a[href^="/drives/"]');
       expect(links).toHaveLength(5);
-      const packRules = rules(`packs\\${pack}.css`);
+      const packRules = rules(join('packs', `${pack}.css`));
       for (const link of links) {
         expect(link).toHaveAttribute('data-app-part', 'button');
         expect(link).toHaveAttribute('data-app-variant', 'ghost');

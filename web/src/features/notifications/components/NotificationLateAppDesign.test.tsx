@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { ReactNode } from 'react';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -68,7 +68,7 @@ function css(file: string): Rule[] {
     .walkRules(rule => { result.push(rule); });
   return result;
 }
-const identities = new Map(PACK_IDS.map(pack => [pack, css(`packs\\${pack}.css`)]));
+const identities = new Map(PACK_IDS.map(pack => [pack, css(join('packs', `${pack}.css`))]));
 function expectIdentity(node: Element, pack: typeof PACK_IDS[number], part: string) {
   expect(identities.get(pack)!.some(rule => rule.selectors.some(selector =>
     selector.includes(`[data-app-part~="${part}"]`) && node.matches(selector)))).toBe(true);

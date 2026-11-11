@@ -1,6 +1,6 @@
 import './__tests__/TeslaChargingHistoryPage.test';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { parse } from 'postcss';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -45,7 +45,7 @@ function buttonSelectors(filename: string, neutralOnly = false) {
 }
 
 const neutralControlSelectors = buttonSelectors('controls.css', true);
-const packButtonSelectors = new Map(PACK_IDS.map(id => [id, buttonSelectors(`packs\\${id}.css`)]));
+const packButtonSelectors = new Map(PACK_IDS.map(id => [id, buttonSelectors(join('packs', `${id}.css`))]));
 
 function readExport(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {

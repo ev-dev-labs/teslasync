@@ -84,7 +84,7 @@ function consumes(node: Element, rules: readonly Rule[], contract: string, prope
       && (property === undefined || declaration.prop === property)));
 }
 
-function checkSurfaceActivation(host: Element, surfaces: Element[], part: 'card' | 'panel') {
+function checkSurfaceActivation(host: Element, surfaces: Element[], part: 'card' | 'panel', embedded: readonly Element[] = []) {
   const contract = `[data-app-part~="${part}"]`;
   const text = surfaces.map(surface => surface.textContent);
   for (const surface of surfaces) {
@@ -97,6 +97,15 @@ function checkSurfaceActivation(host: Element, surfaces: Element[], part: 'card'
     const release = observeAppDesignScopes(host);
     try {
       for (const surface of surfaces) {
+        if (embedded.includes(surface)) {
+          expect(surface).toHaveAttribute('data-surface-variant', 'embedded');
+          expect(consumes(surface, baseRules, contract, 'border-radius')).toBe(false);
+          expect(consumes(surface, packRules.get(pack)!, contract), pack).toBe(false);
+          const frame = surface.parentElement!.closest('[data-surface-variant="standalone"]')!;
+          expect(frame).not.toBeNull();
+          expect(consumes(frame, packRules.get(pack)!, contract), pack).toBe(true);
+          continue;
+        }
         expect(surface).toHaveAttribute('data-surface-variant', 'standalone');
         expect(consumes(surface, baseRules, contract, 'border-radius')).toBe(true);
         expect(consumes(surface, packRules.get(pack)!, contract), pack).toBe(true);
@@ -159,7 +168,7 @@ describe('Advanced intelligence recorded surface gaps (source-only)', () => {
       expect(surfaces).toHaveLength(Page === BehavioralSentinelPage ? 3 : count);
       const formValues = [...container.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select')]
         .map(input => input.value);
-      checkSurfaceActivation(container, surfaces, 'card');
+      checkSurfaceActivation(container, surfaces, 'card', Page === BehavioralSentinelPage ? surfaces.slice(1) : []);
       expect([...container.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select')]
         .map(input => input.value)).toEqual(formValues);
       expect(state.write).not.toHaveBeenCalled();

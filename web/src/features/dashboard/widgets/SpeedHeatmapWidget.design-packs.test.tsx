@@ -157,7 +157,7 @@ describe.each(packs)('Speed heatmap %s / %s', (packId, packAppearance) => {
     historyMock.mockReturnValue(query({ isFetching: true }));
     view.rerender(widget(packId, fullSize, 42));
     const refresh = screen.getByRole('button', { name: /refresh data/i });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(refetch).toHaveBeenCalledTimes(1);
   });

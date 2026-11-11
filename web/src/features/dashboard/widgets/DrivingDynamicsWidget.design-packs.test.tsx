@@ -220,7 +220,7 @@ describe("DrivingDynamicsWidget production design packs", () => {
     const { container } = render(widget(packId));
     await waitForPack(container, appearance);
     const refresh = screen.getByRole("button", { name: /refresh data/i });
-    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(refresh);
     expect(distributionRefetch).not.toHaveBeenCalled();
     expect(dynamicsRefetch).not.toHaveBeenCalled();

@@ -369,7 +369,7 @@ describe('OptimizerSection — cost heatmap (always-on panel)', () => {
 });
 
 describe('OptimizerSection — recommendations', () => {
-  it('activates the existing painted card and badge consumers for every complete design without rewriting recommendations', () => {
+  it('activates the enclosing frame and badge consumers without adding nested frames or rewriting recommendations', () => {
     const surfaceSelectors: string[] = [];
     const badgeSelectors: string[] = [];
     postcss.parse(readFileSync(resolve(process.cwd(),
@@ -396,7 +396,11 @@ describe('OptimizerSection — recommendations', () => {
       const release = observeAppDesignScopes(container);
       try {
         records.forEach((record, index) => {
-          expect(surfaceSelectors.some(selector => record.matches(selector)), pack).toBe(true);
+          const frame = record.parentElement!.closest('[data-surface-variant="standalone"]')!;
+          expect(frame).not.toBeNull();
+          expect(surfaceSelectors.some(selector => frame.matches(selector)), pack).toBe(true);
+          expect(record).toHaveAttribute('data-surface-variant', 'embedded');
+          expect(surfaceSelectors.some(selector => record.matches(selector)), pack).toBe(false);
           expect(record).toHaveTextContent(baseRecs[index].title);
           expect(record).toHaveTextContent(baseRecs[index].detail);
         });
@@ -431,7 +435,7 @@ describe('OptimizerSection — recommendations', () => {
     expect(screen.queryByText('Monthly savings: ~0.00')).toBeNull();
     for (const rec of baseRecs) {
       const record = screen.getByText(rec.title).closest('[data-app-part="card"]');
-      expect(record).toHaveAttribute('data-surface-variant', 'standalone');
+      expect(record).toHaveAttribute('data-surface-variant', 'embedded');
       expect(record).toHaveTextContent(rec.detail);
       expect(within(record as HTMLElement).getByText(rec.priority)).toHaveAttribute('data-app-part', 'badge');
     }

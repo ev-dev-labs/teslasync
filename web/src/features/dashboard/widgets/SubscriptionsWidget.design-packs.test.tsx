@@ -290,7 +290,7 @@ it.each(Object.entries(PACK_APPEARANCES))('%s retains the list and blocks repeat
   expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
   expectSubscriptionList();
   const refresh = screen.getByRole('button', { name: /^Refresh/i });
-  expect(refresh).toBeDisabled();
+  expect(refresh).toHaveAttribute('aria-disabled', 'true');
   fireEvent.click(refresh);
   expect(refetchSubscriptions).not.toHaveBeenCalled();
 });

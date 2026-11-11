@@ -63,7 +63,7 @@ describe('VehicleReadinessPanel readiness paint', () => {
     expect(screen.getByText('Delivered 9.80 kWh of 20.00 kWh needed')).toBeInTheDocument();
     expect(screen.getByText('Departure slot #0')).toBeInTheDocument();
     expect(screen.getByText('Departure slot #4')).toBeInTheDocument();
-    const cards = container.querySelectorAll('[data-app-part="card"][data-surface-variant="standalone"]');
+    const cards = container.querySelectorAll('[data-app-part="card"][data-surface-variant="embedded"]');
     expect(cards).toHaveLength(2);
     expect(cards[0].parentElement).toHaveAttribute('data-app-part', 'grid');
     expect(cards[0]).toContainElement(readyArc);

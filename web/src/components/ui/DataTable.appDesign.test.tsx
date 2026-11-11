@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -34,7 +34,7 @@ function surfaceRules(name: string) {
 }
 
 const baseRules = surfaceRules('base.css');
-const packRules = new Map(PACK_IDS.map(pack => [pack, surfaceRules(`packs\\${pack}.css`)]));
+const packRules = new Map(PACK_IDS.map(pack => [pack, surfaceRules(join('packs', `${pack}.css`))]));
 function matchingRules(node: Element, rules: readonly Rule[]) {
   return rules.filter(rule => rule.selectors.some(selector => node.matches(selector)));
 }

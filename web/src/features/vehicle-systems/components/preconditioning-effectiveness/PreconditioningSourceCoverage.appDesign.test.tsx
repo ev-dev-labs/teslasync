@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { ReactNode } from 'react';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -83,7 +83,7 @@ function rules(file: string) {
 
 const baseRules = rules('base.css');
 const feedbackRules = rules('feedback.css');
-const identityRules = new Map(PACK_IDS.map(pack => [pack, rules(`packs\\${pack}.css`)]));
+const identityRules = new Map(PACK_IDS.map(pack => [pack, rules(join('packs', `${pack}.css`))]));
 const releases: Array<() => void> = [];
 
 function mount(children: ReactNode, pack?: PackId) {

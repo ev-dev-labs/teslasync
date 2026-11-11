@@ -414,10 +414,22 @@ describe('CarbonIntelligencePage', () => {
         const packRules: Rule[] = [];
         postcss.parse(readFileSync(resolve('src', 'components', 'ui', 'app-designs', 'packs', `${pack}.css`), 'utf8'))
           .walkRules(rule => { packRules.push(rule); });
-        for (const card of [...sourceCards, ...methodCards, scoreCard]) {
+        for (const card of [...sourceCards, scoreCard]) {
+          expect(card).toHaveAttribute('data-surface-variant', 'standalone');
           expect(packRules.some(rule => rule.selectors.some(selector =>
             selector.includes('[data-app-part~="card"]') && card.matches(selector))),
             `${pack}: independent card frame`).toBe(true);
+        }
+        for (const card of methodCards) {
+          expect(card).toHaveAttribute('data-surface-variant', 'embedded');
+          const frame = card.parentElement!.closest('[data-surface-variant="standalone"]')!;
+          expect(frame).not.toBeNull();
+          expect(packRules.some(rule => rule.selectors.some(selector =>
+            selector.includes('[data-app-part~="card"]') && card.matches(selector))),
+            `${pack}: no duplicate method frame`).toBe(false);
+          expect(packRules.some(rule => rule.selectors.some(selector =>
+            selector.includes('[data-app-part~="panel"]') && frame.matches(selector))),
+            `${pack}: inherited method frame`).toBe(true);
         }
         for (const node of [records[0]!, records[0]!.querySelector('[data-app-part~="record-body"]')!]) {
           expect(ownershipRules.some(rule => rule.selectors.some(selector =>

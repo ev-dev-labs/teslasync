@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
@@ -79,7 +79,7 @@ function rules(name: string): Rule[] {
 const baseRules = rules('base.css');
 const feedbackRules = rules('feedback.css');
 const chartRules = rules('charts.css');
-const packRules = new Map(PACK_IDS.map(pack => [pack, rules(`packs\\${pack}.css`)] as const));
+const packRules = new Map(PACK_IDS.map(pack => [pack, rules(join('packs', `${pack}.css`))] as const));
 function selectors(rule: Rule): string[] {
   const parent = rule.parent;
   return parent?.type === 'rule'

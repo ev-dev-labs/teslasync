@@ -261,7 +261,7 @@ describe.each(Object.entries(PACK_APPEARANCES) as [Exclude<PackId, 'classic'>, s
       expect(container.querySelector('.widget-flow-frame')).toHaveAttribute('data-motion-suppressed', 'true');
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       const refresh = screen.getByRole('button', { name: /^Refresh/i });
-      expect(refresh).toBeDisabled();
+      expect(refresh).toHaveAttribute('aria-disabled', 'true');
       fireEvent.click(refresh);
       expect(refetch).not.toHaveBeenCalled();
 

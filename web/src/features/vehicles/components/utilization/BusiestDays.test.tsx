@@ -100,9 +100,12 @@ describe('Utilization native records and methodology surfaces', () => {
           const notices = feedbackSelectors.filter(selector =>
             selector.includes(`[data-app-feedback="${APPLICATION_DESIGNS[pack].feedback}"]`));
           expect(notices.some(selector => notice.matches(selector))).toBe(true);
-          expect(frames.every(frame => surfaceSelectors.some(selector => frame.matches(selector)))).toBe(true);
           for (const frame of frames) {
-            expect(frame).toHaveAttribute('data-surface-variant', 'standalone');
+            expect(frame).toHaveAttribute('data-surface-variant', 'embedded');
+            expect(surfaceSelectors.some(selector => frame.matches(selector))).toBe(false);
+            const enclosingFrame = frame.parentElement!.closest('[data-surface-variant="standalone"]')!;
+            expect(enclosingFrame).not.toBeNull();
+            expect(surfaceSelectors.some(selector => enclosingFrame.matches(selector))).toBe(true);
             expect(frame).toHaveClass('bg-transparent', 'shadow-none');
           }
           expect(host.textContent).toBe(content);
